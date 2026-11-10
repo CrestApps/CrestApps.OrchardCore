@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Currencies;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -478,7 +479,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
         // Its own lock, not the command lock: completing the checkout records the payment through the commands, which
         // take the command lock themselves.
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(ChargeLockPrefix + transactionId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(ChargeLockPrefix + transactionId, _lockTimeout, _lockExpiration, "transactions.charge");
 
         if (!locked)
         {
@@ -705,7 +706,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             return result.Fail(S["The transaction could not be found."]);
         }
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockPrefix + transactionId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockPrefix + transactionId, _lockTimeout, _lockExpiration, "transactions.transaction");
 
         if (!locked)
         {

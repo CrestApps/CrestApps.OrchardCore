@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -509,7 +510,7 @@ public sealed class CouponRedemptionService : ICouponRedemptionService
     }
 
     private Task<(ILocker Locker, bool Locked)> LockAsync(string code)
-        => _distributedLock.TryAcquireLockAsync("COUPON_" + code.Trim().ToUpperInvariant(), _lockTimeout, _lockExpiration);
+        => _distributedLock.TryAcquireMeasuredLockAsync("COUPON_" + code.Trim().ToUpperInvariant(), _lockTimeout, _lockExpiration, "checkout.coupon");
 
     private readonly record struct CouponCustomer(string Id, string Email)
     {

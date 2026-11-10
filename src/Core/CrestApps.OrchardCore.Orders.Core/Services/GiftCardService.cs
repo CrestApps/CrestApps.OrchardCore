@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Payments;
 using OrchardCore;
@@ -81,7 +82,7 @@ public sealed class GiftCardService
     /// </summary>
     public async Task<GiftCard> AdjustAsync(string itemId, decimal amount, string reason, string actor, CancellationToken cancellationToken = default)
     {
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(OrderConstants.GiftCardTenderKey, itemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(CheckoutTenderLocks.GetKey(OrderConstants.GiftCardTenderKey, itemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30), "orders.gift_card");
 
         if (!locked)
         {

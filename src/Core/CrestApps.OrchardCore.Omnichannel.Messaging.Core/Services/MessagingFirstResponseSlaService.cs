@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -103,6 +104,16 @@ public sealed class MessagingFirstResponseSlaService : IMessagingFirstResponseSl
                     BreachedUtc = now,
                 },
                 cancellationToken);
+
+            MessagingTelemetry.RecordSlaBreached(conversation.Channel);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.FirstResponseBreached(
+                    conversation.ItemId.SanitizeLogValue(),
+                    MessagingTelemetry.GetChannelTag(conversation.Channel),
+                    (long)(now - (conversation.FirstResponseDueUtc ?? now)).TotalSeconds);
+            }
 
             escalated++;
         }

@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Webhooks.Core;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
 using CrestApps.OrchardCore.Webhooks.Core.Services;
+using CrestApps.OrchardCore.Webhooks.Core.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -23,13 +25,17 @@ public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
     private const int BatchSize = 20;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => SendDueAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task SendDueAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var now = serviceProvider.GetRequiredService<IClock>().UtcNow;
         var store = serviceProvider.GetRequiredService<IWebhookDeliveryStore>();
         var dispatcher = serviceProvider.GetRequiredService<WebhookDispatcher>();
         var session = serviceProvider.GetRequiredService<global::YesSql.ISession>();
         var due = (await store.ListDueAsync(now, BatchSize, cancellationToken)).Select(delivery => delivery.ItemId).ToArray();
+        var deleted = 0;
 
         // Each is saved as soon as it's sent, so a run that stops half way, or the next one, never sends it again.
         // A save detaches what was loaded before it, so each is loaded afresh.
@@ -39,8 +45,18 @@ public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
             {
                 await dispatcher.SendAsync(delivery, cancellationToken);
                 await session.SaveChangesAsync(cancellationToken);
+
+                run.AddItems(1, delivery.Status switch
+                {
+                    WebhookDeliveryStatus.Delivered => "delivered",
+                    WebhookDeliveryStatus.Failed => "failed",
+                    _ => "retry_scheduled",
+                });
             }
         }
+
+        // How many are still waiting for an attempt: the backlog a subscriber that stopped answering builds up.
+        WebhookTelemetry.RecordPendingDeliveries(await store.CountPendingAsync(cancellationToken));
 
         // The log is kept for a month by default; one batch a minute keeps up with any store. The deliveries of the
         // events a feature keeps (AI Webhooks keeps every AI event) are never purged.
@@ -48,7 +64,14 @@ public sealed class WebhookDeliveriesBackgroundTask : IBackgroundTask
 
         if (retention.DeliveryRetention > TimeSpan.Zero)
         {
-            await store.DeleteOlderThanAsync(now - retention.DeliveryRetention, BatchSize, [.. retention.KeptEventNames], cancellationToken);
+            deleted = await store.DeleteOlderThanAsync(now - retention.DeliveryRetention, BatchSize, [.. retention.KeptEventNames], cancellationToken);
+
+            run.AddItems(deleted, "purged");
+        }
+
+        if (due.Length == 0 && deleted == 0)
+        {
+            run.Skip();
         }
     }
 }

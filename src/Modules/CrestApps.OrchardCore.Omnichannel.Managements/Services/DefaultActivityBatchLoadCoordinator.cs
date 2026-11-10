@@ -1,6 +1,11 @@
+using System.Diagnostics;
 using CrestApps.Core.Services;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
+using CrestApps.OrchardCore.Omnichannel.Managements.Telemetry;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -149,7 +154,26 @@ public sealed class DefaultActivityBatchLoadCoordinator : IActivityBatchLoadCoor
             IsPreview = true,
         };
 
-        await loader.LoadAsync(context, cancellationToken);
+        // Counted in the request that asked, so its time is the time the editor waits for the count.
+        using (var telemetry = TelemetryScope.Start(OmnichannelTelemetry.ActivitySource, "crestapps.omnichannel.batch.load.preview", OmnichannelTelemetry.BatchLoadPreviewDuration))
+        {
+            try
+            {
+                await loader.LoadAsync(context, cancellationToken);
+
+                telemetry.SetOutcome(context.StopReason is null
+                    ? CrestAppsOrchardCoreTelemetry.OutcomeOk
+                    : OmnichannelTelemetry.OutcomeStopped);
+                telemetry.SetSpanTag("crestapps.omnichannel.batch.matched", batch.TotalMatched ?? 0);
+                OmnichannelTelemetry.Record(OmnichannelTelemetry.BatchLoadPreviewMatched, batch.TotalMatched ?? 0);
+            }
+            catch (Exception ex)
+            {
+                telemetry.Fail(ex);
+
+                throw;
+            }
+        }
 
         return new ActivityBatchLoadPreview
         {
@@ -167,11 +191,45 @@ public sealed class DefaultActivityBatchLoadCoordinator : IActivityBatchLoadCoor
 
     private async Task RunAsync(OmnichannelActivityBatch batch, ActivityBatchLoadContext context, CancellationToken cancellationToken)
     {
+        var trigger = context.IsResume
+            ? OmnichannelTelemetry.TriggerResume
+            : OmnichannelTelemetry.TriggerStart;
+
         if (!_registry.TryBegin(batch.ItemId))
         {
-            // This process is running the load already; a second run would load its records twice.
+            // This process is running the load already; a second run would load its records twice. It used to return
+            // without a word, which left a second Load click looking as if it had been ignored.
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                var batchId = batch.ItemId.SanitizeLogValue();
+
+                OmnichannelLog.BatchLoadAlreadyRunning(_logger, batchId);
+            }
+
+            OmnichannelTelemetry.Add(OmnichannelTelemetry.BatchLoads, 1, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.OutcomeTag, CrestAppsOrchardCoreTelemetry.OutcomeSkipped },
+                { CrestAppsOrchardCoreTelemetry.TriggerTag, trigger },
+            });
+
             return;
         }
+
+        using var logScope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["BatchId"] = batch.ItemId,
+        });
+
+        using var telemetry = TelemetryScope.Start(
+            OmnichannelTelemetry.ActivitySource,
+            "crestapps.omnichannel.batch.load",
+            OmnichannelTelemetry.BatchLoadDuration,
+            new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.TriggerTag, trigger },
+            });
+
+        telemetry.SetSpanTag(OmnichannelTelemetry.BatchIdSpanTag, batch.ItemId);
 
         try
         {
@@ -185,9 +243,15 @@ public sealed class DefaultActivityBatchLoadCoordinator : IActivityBatchLoadCoor
             try
             {
                 await loader.LoadAsync(context, cancellationToken);
+
+                telemetry.SetOutcome(context.StopReason is null
+                    ? OmnichannelTelemetry.OutcomeCompleted
+                    : OmnichannelTelemetry.OutcomeStopped);
             }
             catch (Exception ex)
             {
+                telemetry.Fail(ex);
+
                 _logger.LogError(ex, "An error occurred while loading activities for the batch with ID '{BatchId}'.", batch.ItemId);
 
                 // The loader can have committed part-way through, and a committed session no longer tracks the batch
@@ -205,6 +269,19 @@ public sealed class DefaultActivityBatchLoadCoordinator : IActivityBatchLoadCoor
         finally
         {
             _registry.End(batch.ItemId);
+
+            OmnichannelTelemetry.Add(OmnichannelTelemetry.BatchLoads, 1, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.OutcomeTag, telemetry.Outcome },
+                { CrestAppsOrchardCoreTelemetry.TriggerTag, trigger },
+            });
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                var batchId = batch.ItemId.SanitizeLogValue();
+
+                OmnichannelLog.BatchLoadEnded(_logger, trigger, batchId, telemetry.Outcome, telemetry.Elapsed.TotalSeconds);
+            }
         }
     }
 

@@ -3,10 +3,13 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
+using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -55,7 +58,12 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
     /// </summary>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => RecoverAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private static async Task RecoverAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<SmsOwedReplyRecoveryBackgroundTask>>();
 
@@ -75,6 +83,8 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
 
         if (handler is null)
         {
+            run.Skip();
+
             return;
         }
 
@@ -87,6 +97,8 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
 
         long documentId = 0;
         var processedCount = 0;
+        var redrivenCount = 0;
+        var failedCount = 0;
 
         while (processedCount < _maxConversationsPerInvocation && clock.UtcNow < deadline)
         {
@@ -109,7 +121,10 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
             {
                 if (clock.UtcNow >= deadline)
                 {
-                    return;
+                    // The rest waits for the next run; the outer loop stops on the same deadline.
+                    run.BudgetExceeded();
+
+                    break;
                 }
 
                 documentId = activity.Id;
@@ -117,17 +132,36 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
 
                 try
                 {
-                    await TryRecoverAsync(activity, chatSessionManager, promptStore, endpointCatalog, handler, conversationGate, owedReplyCutoff, logger, cancellationToken);
+                    if (await TryRecoverAsync(activity, chatSessionManager, promptStore, endpointCatalog, handler, conversationGate, owedReplyCutoff, logger, cancellationToken))
+                    {
+                        MessagingTelemetry.RecordOwedReplyRecovery(OmnichannelConstants.Channels.Sms, MessagingTelemetry.OwedReplyResults.Redriven);
+                        run.AddItems(1, MessagingTelemetry.OwedReplyResults.Redriven);
+                        redrivenCount++;
+                    }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogError(ex, "Failed to recover the owed automated SMS reply for Activity {ActivityId}.", activity.ItemId.SanitizeLogValue());
+                    MessagingTelemetry.RecordOwedReplyRecovery(OmnichannelConstants.Channels.Sms, MessagingTelemetry.ResultError);
+                    run.AddItems(1, MessagingTelemetry.ResultError);
+                    failedCount++;
                 }
             }
         }
+
+        if (processedCount >= _maxConversationsPerInvocation)
+        {
+            run.BudgetExceeded();
+        }
+
+        if (redrivenCount + failedCount > 0)
+        {
+            logger.OwedReplyRecoveryCompleted(processedCount, redrivenCount, failedCount);
+        }
     }
 
-    private static async Task TryRecoverAsync(
+    // Returns whether the conversation's owed reply was re-driven.
+    private static async Task<bool> TryRecoverAsync(
         OmnichannelActivity activity,
         IAIChatSessionManager chatSessionManager,
         IAIChatSessionPromptStore promptStore,
@@ -140,21 +174,21 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
     {
         if (string.IsNullOrWhiteSpace(activity.AISessionId))
         {
-            return;
+            return false;
         }
 
         // A live inbound is already composing a reply for this conversation on this node; leave it alone. After a
         // restart the registry is empty, so genuinely stranded conversations are not skipped here.
         if (conversationGate.IsGenerating(activity.AISessionId))
         {
-            return;
+            return false;
         }
 
         var chatSession = await chatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
 
         if (chatSession is null)
         {
-            return;
+            return false;
         }
 
         var prompts = (await promptStore.GetPromptsAsync(chatSession.SessionId))
@@ -167,7 +201,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
 
         if (lastPrompt is null || lastPrompt.Role != ChatRole.User || string.IsNullOrWhiteSpace(lastPrompt.Content))
         {
-            return;
+            return false;
         }
 
         // Only answer a recently stranded message. An owed reply lost to a restart is recovered on the next scheduled
@@ -176,12 +210,12 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
         // which is safely treated as too old.
         if (lastPrompt.CreatedUtc < owedReplyCutoff)
         {
-            return;
+            return false;
         }
 
         if (string.IsNullOrEmpty(activity.ChannelEndpointId))
         {
-            return;
+            return false;
         }
 
         var endpoint = await endpointCatalog.FindByIdAsync(activity.ChannelEndpointId, cancellationToken);
@@ -190,7 +224,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
             !string.Equals(endpoint.Channel, activity.Channel, StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(endpoint.Value))
         {
-            return;
+            return false;
         }
 
         if (logger.IsEnabled(LogLevel.Information))
@@ -217,5 +251,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
         };
 
         await handler.HandleAsync(omnichannelEvent, cancellationToken);
+
+        return true;
     }
 }

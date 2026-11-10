@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OrchardCore.Locking.Distributed;
 
@@ -34,10 +35,11 @@ public sealed class ContactCenterDistributedLockHealthCheck : IHealthCheck
     {
         try
         {
-            (var locker, var acquired) = await _distributedLock.TryAcquireLockAsync(
+            (var locker, var acquired) = await _distributedLock.TryAcquireMeasuredLockAsync(
                 ProbeLockKey,
                 _acquireTimeout,
-                _lockExpiration);
+                _lockExpiration,
+                "contactcenter.health_probe");
 
             if (!acquired)
             {

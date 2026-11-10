@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using ProviderVoiceEvent = CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent;
 using VoiceCallState = CrestApps.OrchardCore.Telephony.Models.VoiceCallState;
@@ -183,7 +185,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
 
         try
         {
-            providerResult = await _commandExecutor.ExecuteAsync(commandCancellationToken =>
+            providerResult = await _commandExecutor.ExecuteAsync(interaction.ProviderName, "Transfer", commandCancellationToken =>
                 transferProvider.TransferAsync(new ContactCenterVoiceTransferRequest
                 {
                     InteractionId = interaction.ItemId,
@@ -195,14 +197,22 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         }
         catch (TimeoutException)
         {
+            ContactCenterDiagnostics.RecordTransfer("blind_external", CrestAppsOrchardCoreTelemetry.Unknown);
+
             return TransferResult.Unknown(
                 "The voice provider did not confirm the call transfer before the server timeout; the provider outcome is unknown.");
         }
         catch (OperationCanceledException)
         {
+            ContactCenterDiagnostics.RecordTransfer("blind_external", CrestAppsOrchardCoreTelemetry.Unknown);
+
             return TransferResult.Unknown(
                 "The call transfer was interrupted before the provider outcome could be confirmed.");
         }
+
+        ContactCenterDiagnostics.RecordTransfer(
+            "blind_external",
+            providerResult?.Succeeded == true && !providerResult.OutcomeUnknown ? CrestAppsOrchardCoreTelemetry.OutcomeOk : CrestAppsOrchardCoreTelemetry.OutcomeError);
 
         if (providerResult?.Succeeded != true || providerResult.OutcomeUnknown)
         {

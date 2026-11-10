@@ -3,10 +3,10 @@ using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Memory.Migrations;
@@ -18,7 +18,7 @@ internal sealed class MemoryMetadataMigrations : DataMigration
     /// </summary>
     public static int Create()
     {
-        ShellScope.AddDeferredTask(async scope =>
+        MigrationTelemetry.Defer(nameof(MemoryMetadataMigrations), async scope =>
         {
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
             var profileStore = scope.ServiceProvider.GetRequiredService<IAIProfileStore>();

@@ -1,16 +1,19 @@
+using System.Diagnostics;
 using System.Net;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Stripe.Core.Telemetry;
 using CrestApps.OrchardCore.Stripe.Workflows;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Stripe.Services;
 
 /// <summary>
-/// Observes outgoing Stripe API calls and raises the Stripe "request failed" workflow event when an
-/// authentication or connectivity problem is detected, so operators can build alerting workflows. The
-/// event is throttled per tenant to avoid flooding when many calls fail in quick succession.
+/// Observes outgoing Stripe API calls: it records each call's resource, outcome and duration on the Stripe meter, and
+/// raises the Stripe "request failed" workflow event when an authentication or connectivity problem is detected, so
+/// operators can build alerting workflows. The event is throttled per tenant to avoid flooding when many calls fail
+/// in quick succession.
 /// </summary>
 public sealed class StripeApiFailureHandler : DelegatingHandler
 {
@@ -39,16 +42,32 @@ public sealed class StripeApiFailureHandler : DelegatingHandler
     {
         HttpResponseMessage response;
 
+        var operation = StripeTelemetry.GetApiOperation(request.RequestUri);
+        var startTimestamp = Stopwatch.GetTimestamp();
+
         try
         {
             response = await base.SendAsync(request, cancellationToken);
         }
         catch (HttpRequestException ex)
         {
+            StripeTelemetry.RecordApiRequest(operation, StripeTelemetry.ApiConnectivityError, statusCode: null, Stopwatch.GetElapsedTime(startTimestamp));
             NotifyFailure("connectivity_error", ex.Message);
 
             throw;
         }
+        catch (Exception ex)
+        {
+            StripeTelemetry.RecordApiRequest(operation, CrestAppsOrchardCoreTelemetry.GetOutcome(ex), statusCode: null, Stopwatch.GetElapsedTime(startTimestamp));
+
+            throw;
+        }
+
+        StripeTelemetry.RecordApiRequest(
+            operation,
+            StripeTelemetry.GetApiOutcome((int)response.StatusCode),
+            (int)response.StatusCode,
+            Stopwatch.GetElapsedTime(startTimestamp));
 
         if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
@@ -68,7 +87,7 @@ public sealed class StripeApiFailureHandler : DelegatingHandler
         _memoryCache.Set(_throttleCacheKey, true, _throttleWindow);
 
         // The workflow event is raised after the request's scope completes, in a scope of its own.
-        ShellScope.AddDeferredTask(async deferredScope =>
+        DeferredWork.Add("stripe_request_failed", async deferredScope =>
         {
             var notifier = deferredScope.ServiceProvider.GetService<StripeWorkflowNotifier>();
 

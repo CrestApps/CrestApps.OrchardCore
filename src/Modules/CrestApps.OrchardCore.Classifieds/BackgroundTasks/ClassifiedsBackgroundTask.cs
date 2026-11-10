@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Classifieds.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 
@@ -16,5 +17,12 @@ namespace CrestApps.OrchardCore.Classifieds.BackgroundTasks;
 public sealed class ClassifiedsBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<ClassifiedService>().ExpireDueAsync(200, cancellationToken);
+    {
+        return this.RunAsync(async run =>
+        {
+            var expired = await serviceProvider.GetRequiredService<ClassifiedService>().ExpireDueAsync(200, cancellationToken);
+
+            run.AddItems(expired, "expired");
+        });
+    }
 }

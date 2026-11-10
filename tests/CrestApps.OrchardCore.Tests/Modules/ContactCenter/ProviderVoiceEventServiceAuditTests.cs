@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking.Distributed;
@@ -301,7 +302,8 @@ public sealed class ProviderVoiceEventServiceAuditTests
                 new VoiceIngressGate(distributedLock.Object),
                 clock.Object,
                 NullLogger<ProviderVoiceEventService>.Instance,
-                Mock.Of<IDialerAbandonmentTracker>());
+                Mock.Of<IDialerAbandonmentTracker>(),
+                RedactorProviderFactory.Create());
         }
 
         public Interaction Interaction { get; }

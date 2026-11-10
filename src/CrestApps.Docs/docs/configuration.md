@@ -270,8 +270,8 @@ OrchardCore__CrestApps__AI__Connections__0__AuthenticationType=ManagedIdentity
 
 Keys: `Temperature`, `MaxOutputTokens`, `TopP` (default `1`), `FrequencyPenalty` (`0`), `PresencePenalty`
 (`0`), `PastMessagesCount` (`10`), `MaximumIterationsPerRequest` (`10`),
-`AbsoluteMaximumIterationsPerRequest` (`100`), `EnableOpenTelemetry` (`false`) and
-`EnableDistributedCaching` (`true`). The defaults come from CrestApps.Core.
+`AbsoluteMaximumIterationsPerRequest` (`100`), `EnableOpenTelemetry` (`false`), `EnableSensitiveData` (`false`) and
+`EnableDistributedCaching` (`true`). The defaults come from CrestApps.Core. `EnableOpenTelemetry` adds the `gen_ai.*` spans and metrics of the AI clients, and `EnableSensitiveData` adds prompts, responses and tool arguments to those spans; see [Observability](observability.md).
 
 ```json
 {
@@ -1941,6 +1941,25 @@ TenantHierarchy__DatabasePools__firms__DatabaseProvider=Postgres
 A parent's policy is set on the platform's **Policy** screen and stored in the parent's shell settings. See
 [Tenant Hierarchy](modules/tenant-hierarchy.md#configuration).
 
+## Observability
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:OpenTelemetry` (read once by the host, for every tenant) |
+| **Controls** | What the CrestApps metrics carry |
+
+Keys: `Metrics:IncludeTenantName` (default `false`) adds a `tenant` tag to the metrics recorded through the shared telemetry helpers (background tasks, deferred work, locks, retries, operation scopes and external calls). It multiplies the series a collector stores by the number of tenants, so leave it off unless you need per-tenant charts; spans and logs carry the tenant either way.
+
+The host collects and exports telemetry only when an OTLP endpoint is set, through the standard `OTEL_EXPORTER_OTLP_ENDPOINT` value or Orchard Core's `OrchardCore:OpenTelemetry:Otlp:Endpoint`. Orchard Core's `OrchardCore:OpenTelemetry` section controls sampling, the service name and which signals are exported.
+
+```text
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+OTEL_SERVICE_NAME=OrchardCoreCMS
+OrchardCore__CrestApps__OpenTelemetry__Metrics__IncludeTenantName=true
+```
+
+See [Observability](observability.md).
+
 ## Orchard Core sections the modules depend on
 
 Some features rely on Orchard Core's own configuration. These sections belong to Orchard Core; see its
@@ -1952,6 +1971,7 @@ documentation for their keys.
 | `OrchardCore_HealthChecks` | The route of Orchard Core's shared health endpoint. Contact Center warns when it still claims a liveness route. See [Health checks](contact-center/production-support.md#health-checks). |
 | `OrchardCore_Elasticsearch` | Orchard Core's Elasticsearch feature, which owns the Orchard-managed search indexes. |
 | `OrchardCore_Sms_Twilio` | Orchard Core's configuration-backed Twilio SMS provider. |
+| `OpenTelemetry` | Orchard Core's OpenTelemetry support: sampling, the service name, the OTLP endpoint and protocol, and extra sources and meters. See [Observability](observability.md). |
 
 ```text
 OrchardCore__OrchardCore_Redis__Configuration=<redis-connection-string>
@@ -1970,7 +1990,8 @@ the CMS needs no per-feature setup. It sets:
 - an Ollama connection at `OrchardCore__CrestApps__AI__Connections__90__*`, a high index so it is added
   beside your own connections rather than replacing the first one;
 - `AuthenticationType` `None` for the MCP server and the A2A host, for local clients only;
-- the `OrchardCore__CrestApps__Asterisk__Default__*` keys for the local Asterisk container.
+- the `OrchardCore__CrestApps__Asterisk__Default__*` keys for the local Asterisk container;
+- `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_SERVICE_NAME`, set by Aspire itself, so the CMS sends its traces, metrics and logs to the Aspire dashboard (see [Observability](observability.md)).
 
 The app host's own credentials are Aspire parameters (`Parameters:PostgresUser`,
 `Parameters:PostgresPassword`, `Parameters:ElasticsearchPassword`), which you can set with user secrets in

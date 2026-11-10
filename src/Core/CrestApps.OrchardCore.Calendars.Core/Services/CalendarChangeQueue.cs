@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Calendars.Core.Telemetry;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -36,7 +38,7 @@ public sealed class CalendarChangeQueue
 
         _scheduled = true;
 
-        ShellScope.AddDeferredTask(async scope =>
+        DeferredWork.Add(CalendarsTelemetry.EventChangesWork, async scope =>
         {
             var changes = _pending.ToList();
 
@@ -56,6 +58,7 @@ public sealed class CalendarChangeQueue
                     }
                     catch (Exception ex)
                     {
+                        CalendarsTelemetry.RecordObserverFailure(observer.GetType(), item.Kind.ToString());
                         logger.LogError(ex, "A calendar event observer ({Observer}) failed to handle a {Kind} change of the event '{EventId}'.", observer.GetType().Name, item.Kind, item.Event?.ItemId);
                     }
                 }

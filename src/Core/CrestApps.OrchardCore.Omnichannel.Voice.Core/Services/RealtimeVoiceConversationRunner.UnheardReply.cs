@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -122,6 +123,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 }
 
                 attempts++;
+                VoiceTelemetry.RecordUnheardPrompt();
 
                 if (_logger.IsEnabled(LogLevel.Information))
                 {

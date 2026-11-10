@@ -1,10 +1,10 @@
 ﻿using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Extensions;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.OpenAI.Azure.Migrations;
 
@@ -39,7 +39,7 @@ internal sealed class AzureOpenAIFeatureMigrations : DataMigration
             return 1;
         }
 
-        ShellScope.AddDeferredTask(async scope =>
+        MigrationTelemetry.Defer(nameof(AzureOpenAIFeatureMigrations), async scope =>
         {
             var shellFeaturesManager = scope.ServiceProvider.GetRequiredService<IShellFeaturesManager>();
             var extensionManager = scope.ServiceProvider.GetRequiredService<IExtensionManager>();

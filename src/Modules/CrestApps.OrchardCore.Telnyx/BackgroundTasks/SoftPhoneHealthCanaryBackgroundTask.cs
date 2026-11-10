@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -30,13 +31,23 @@ public sealed class SoftPhoneHealthCanaryBackgroundTask : IBackgroundTask
 
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run =>
+        {
+            Check(serviceProvider, run);
+
+            return Task.CompletedTask;
+        });
+
+    private static void Check(IServiceProvider serviceProvider, MeasuredTaskRun run)
     {
         var options = serviceProvider.GetRequiredService<IOptionsMonitor<TelnyxOptions>>().CurrentValue;
 
         // Nothing to canary when the provider is not configured.
         if (!options.IsConfigured)
         {
-            return Task.CompletedTask;
+            run.Skip();
+
+            return;
         }
 
         var metrics = serviceProvider.GetRequiredService<ISoftPhoneHealthMetrics>();
@@ -56,7 +67,7 @@ public sealed class SoftPhoneHealthCanaryBackgroundTask : IBackgroundTask
                 snapshot.WebhooksProcessed,
                 snapshot.WebhookFailures);
 
-            return Task.CompletedTask;
+            return;
         }
 
         if (logger.IsEnabled(LogLevel.Information))
@@ -71,7 +82,5 @@ public sealed class SoftPhoneHealthCanaryBackgroundTask : IBackgroundTask
                 snapshot.WebhookSuccessRate,
                 snapshot.SinceUtc);
         }
-
-        return Task.CompletedTask;
     }
 }

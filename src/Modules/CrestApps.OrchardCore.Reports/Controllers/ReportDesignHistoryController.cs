@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Core.Http;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
@@ -239,6 +240,15 @@ public sealed class ReportDesignHistoryController : Controller
     /// <returns>The result.</returns>
     internal static IActionResult ConflictResult(ReportHistoryResult result)
     {
+        ReportTelemetry.Count(
+            ReportTelemetry.DesignConflicts,
+            (CrestAppsOrchardCoreTelemetry.ReasonTag, result.Status switch
+            {
+                ReportHistoryStatus.Conflict => "conflict",
+                ReportHistoryStatus.Busy => "busy",
+                _ => CrestAppsOrchardCoreTelemetry.Other,
+            }));
+
         return new JsonResult(new
         {
             Conflict = result.Status == ReportHistoryStatus.Conflict,

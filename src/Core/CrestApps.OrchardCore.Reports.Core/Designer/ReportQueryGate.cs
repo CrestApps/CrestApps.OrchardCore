@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
@@ -31,12 +33,36 @@ public sealed class ReportQueryGate
         }
 
         var semaphore = GetSemaphore(context.Limits.MaxConcurrentRuns);
+        var tags = ReportTelemetry.Tags(context);
 
-        await semaphore.WaitAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // A run that gets the gate at once doesn't wait, and isn't counted among the runs that wait.
+        if (!semaphore.Wait(0, CancellationToken.None))
+        {
+            var started = Stopwatch.GetTimestamp();
+
+            ReportTelemetry.GateWaiting.Add(1, tags);
+
+            try
+            {
+                await semaphore.WaitAsync(cancellationToken);
+            }
+            finally
+            {
+                ReportTelemetry.GateWaiting.Add(-1, tags);
+                ReportTelemetry.GateWait.Record(Stopwatch.GetElapsedTime(started).TotalSeconds, tags);
+            }
+        }
+        else
+        {
+            ReportTelemetry.GateWait.Record(0, tags);
+        }
 
         properties[RunKey] = true;
+        ReportTelemetry.GateActive.Add(1, tags);
 
-        return new Lease(semaphore, properties);
+        return new Lease(semaphore, properties, tags);
     }
 
     private SemaphoreSlim GetSemaphore(int size)
@@ -58,15 +84,20 @@ public sealed class ReportQueryGate
 
     private sealed class Lease : IAsyncDisposable
     {
-        public static readonly Lease None = new(null, null);
+        public static readonly Lease None = new(null, null, default);
 
         private readonly SemaphoreSlim _semaphore;
         private readonly IDictionary<string, object> _properties;
+        private readonly TagList _tags;
 
-        public Lease(SemaphoreSlim semaphore, IDictionary<string, object> properties)
+        public Lease(
+            SemaphoreSlim semaphore,
+            IDictionary<string, object> properties,
+            TagList tags)
         {
             _semaphore = semaphore;
             _properties = properties;
+            _tags = tags;
         }
 
         public ValueTask DisposeAsync()
@@ -75,6 +106,7 @@ public sealed class ReportQueryGate
             {
                 _properties.Remove(RunKey);
                 _semaphore.Release();
+                ReportTelemetry.GateActive.Add(-1, _tags);
             }
 
             return ValueTask.CompletedTask;

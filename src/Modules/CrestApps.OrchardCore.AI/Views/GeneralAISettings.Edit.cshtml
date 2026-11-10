@@ -41,7 +41,19 @@
             <label class="form-check-label" asp-for="EnableOpenTelemetry">
                 @T["Enable OpenTelemetry"]
             </label>
-            <span class="hint dashed">@T["When enabled, AI requests emit OpenTelemetry instrumentation where supported."]</span>
+            <span class="hint dashed">@T["Adds the OpenTelemetry generative AI (gen_ai) spans and metrics to the requests of the AI clients. The CrestApps spans and metrics are emitted either way; an exporter must be configured to collect them."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableSensitiveData" />
+            <label class="form-check-label" asp-for="EnableSensitiveData">
+                @T["Include prompts and responses in telemetry"]
+            </label>
+            <span class="hint dashed">@T["Adds prompts, responses and tool arguments to the gen_ai spans. They can contain personal data. Applies only while OpenTelemetry is enabled."]</span>
         </div>
     </div>
 </div>

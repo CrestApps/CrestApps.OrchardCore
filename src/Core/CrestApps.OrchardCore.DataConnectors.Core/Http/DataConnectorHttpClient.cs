@@ -1,9 +1,14 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using CrestApps.OrchardCore.DataConnectors.Models;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
@@ -14,6 +19,11 @@ namespace CrestApps.OrchardCore.DataConnectors.Http;
 /// failed calls a few times, follows redirects only on the same origin, and turns failures into
 /// <see cref="DataConnectorException"/>s whose messages never hold a secret or a query string.
 /// </summary>
+/// <remarks>
+/// Each retry is counted on <c>crestapps.dataconnector.http.retries</c> and <c>crestapps.retry.attempts</c> and
+/// logged as a warning with its attempt number, never with the URL. The URL, without its query string, is logged at
+/// Debug only, because an API key can be in the query string.
+/// </remarks>
 internal sealed class DataConnectorHttpClient
 {
     private const int _maxAttempts = 4;
@@ -24,17 +34,20 @@ internal sealed class DataConnectorHttpClient
     private readonly HttpRequestAuthenticator _authenticator;
     private readonly DataConnectorNetworkOptions _networkOptions;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     public DataConnectorHttpClient(
         IHttpClientFactory httpClientFactory,
         HttpRequestAuthenticator authenticator,
         IOptions<DataConnectorNetworkOptions> networkOptions,
-        IClock clock)
+        IClock clock,
+        ILogger<DataConnectorHttpClient> logger = null)
     {
         _httpClientFactory = httpClientFactory;
         _authenticator = authenticator;
         _networkOptions = networkOptions.Value;
         _clock = clock;
+        _logger = logger ?? NullLogger<DataConnectorHttpClient>.Instance;
     }
 
     /// <summary>
@@ -123,6 +136,45 @@ internal sealed class DataConnectorHttpClient
         ArgumentNullException.ThrowIfNull(method);
         ArgumentNullException.ThrowIfNull(uri);
 
+        var call = new HttpCall();
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
+
+        try
+        {
+            var response = await SendWithRetriesAsync(settings, secrets, cacheKey, method, uri, createContent, call, ensureSuccess, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
+            }
+
+            return response;
+        }
+        catch (Exception exception)
+        {
+            outcome = call.TimedOut
+                ? CrestAppsOrchardCoreTelemetry.OutcomeTimeout
+                : CrestAppsOrchardCoreTelemetry.GetOutcome(exception);
+
+            throw;
+        }
+        finally
+        {
+            DataConnectorsTelemetry.RecordHttpAttempts(call.Requests, outcome, call.StatusCode);
+        }
+    }
+
+    private async Task<HttpResponseMessage> SendWithRetriesAsync(
+        HttpConnectionSettings settings,
+        IDataConnectorSecrets secrets,
+        string cacheKey,
+        HttpMethod method,
+        Uri uri,
+        Func<HttpContent> createContent,
+        HttpCall call,
+        bool ensureSuccess,
+        CancellationToken cancellationToken)
+    {
         var origin = uri;
         var current = uri;
         var currentMethod = method;
@@ -157,6 +209,9 @@ internal sealed class DataConnectorHttpClient
             timeout.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
             HttpResponseMessage response;
+            var sentTimestamp = Stopwatch.GetTimestamp();
+
+            call.Requests++;
 
             try
             {
@@ -164,7 +219,8 @@ internal sealed class DataConnectorHttpClient
             }
             catch (HttpRequestException exception) when (attempt < _maxAttempts && exception.InnerException is not DataConnectorException)
             {
-                await Delay(RetryDelay(attempt, null), cancellationToken);
+                LogNoAnswer(currentMethod, current, call.Requests, DataConnectorsTelemetry.RetryNetwork);
+                await RetryAsync(DataConnectorsTelemetry.RetryNetwork, null, attempt, RetryDelay(attempt, null), cancellationToken);
 
                 continue;
             }
@@ -174,22 +230,32 @@ internal sealed class DataConnectorHttpClient
             }
             catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
             {
+                LogNoAnswer(currentMethod, current, call.Requests, DataConnectorsTelemetry.RetryTimeout);
+
                 if (attempt < _maxAttempts)
                 {
-                    await Delay(RetryDelay(attempt, null), cancellationToken);
+                    await RetryAsync(DataConnectorsTelemetry.RetryTimeout, null, attempt, RetryDelay(attempt, null), cancellationToken);
 
                     continue;
                 }
 
+                call.TimedOut = true;
+
                 throw new DataConnectorException($"{Describe(current)} didn't answer within {timeoutSeconds} seconds.", exception) { IsTransient = true };
+            }
+
+            var status = (int)response.StatusCode;
+            call.StatusCode = status;
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.HttpResponded(currentMethod.Method, Describe(current), status, (long)Stopwatch.GetElapsedTime(sentTimestamp).TotalMilliseconds, call.Requests);
             }
 
             if (response.IsSuccessStatusCode)
             {
                 return response;
             }
-
-            var status = (int)response.StatusCode;
 
             if (status is >= 300 and < 400 && response.Headers.Location is { } location)
             {
@@ -214,6 +280,8 @@ internal sealed class DataConnectorHttpClient
                     currentMethod = HttpMethod.Get;
                 }
 
+                // Following a redirect isn't a retry of a failure, so it is only counted here.
+                DataConnectorsTelemetry.RecordHttpRetry(DataConnectorsTelemetry.RetryRedirect);
                 attempt--;
 
                 continue;
@@ -225,6 +293,7 @@ internal sealed class DataConnectorHttpClient
                 response.Dispose();
                 _authenticator.Invalidate(cacheKey);
                 refreshedToken = true;
+                RecordRetry(DataConnectorsTelemetry.RetryTokenRefresh, status, attempt, TimeSpan.Zero);
                 attempt--;
 
                 continue;
@@ -233,9 +302,10 @@ internal sealed class DataConnectorHttpClient
             if (IsTransient(response.StatusCode) && attempt < _maxAttempts)
             {
                 var delay = RetryDelay(attempt, response.Headers.RetryAfter);
+                var reason = GetRetryReason(response.StatusCode);
                 response.Dispose();
 
-                await Delay(delay, cancellationToken);
+                await RetryAsync(reason, status, attempt, delay, cancellationToken);
 
                 continue;
             }
@@ -298,6 +368,39 @@ internal sealed class DataConnectorHttpClient
         => statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or HttpStatusCode.InternalServerError
             or HttpStatusCode.BadGateway or HttpStatusCode.ServiceUnavailable or HttpStatusCode.GatewayTimeout;
 
+    private static string GetRetryReason(HttpStatusCode statusCode)
+    {
+        return statusCode switch
+        {
+            HttpStatusCode.TooManyRequests => DataConnectorsTelemetry.RetryStatus429,
+            HttpStatusCode.RequestTimeout => DataConnectorsTelemetry.RetryTimeout,
+            _ => DataConnectorsTelemetry.RetryStatus5xx,
+        };
+    }
+
+    private async Task RetryAsync(string reason, int? statusCode, int attempt, TimeSpan delay, CancellationToken cancellationToken)
+    {
+        RecordRetry(reason, statusCode, attempt, delay);
+
+        await Delay(delay, cancellationToken);
+    }
+
+    // The warning names the attempt, the reason and the status, never the URL, which can hold an API key.
+    private void RecordRetry(string reason, int? statusCode, int attempt, TimeSpan delay)
+    {
+        DataConnectorsTelemetry.RecordHttpRetry(reason);
+        RetryTelemetry.RecordRetry(DataConnectorsTelemetry.RetryArea, reason, attempt + 1);
+        _logger.HttpRetrying(reason, statusCode, attempt + 1, _maxAttempts, (long)delay.TotalMilliseconds);
+    }
+
+    private void LogNoAnswer(HttpMethod method, Uri uri, int request, string reason)
+    {
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.HttpNoAnswer(method.Method, Describe(uri), request, reason);
+        }
+    }
+
     private TimeSpan RetryDelay(int attempt, RetryConditionHeaderValue retryAfter)
     {
         var delay = retryAfter?.Delta
@@ -330,6 +433,16 @@ internal sealed class DataConnectorHttpClient
         {
             return string.Empty;
         }
+    }
+
+    // What one call sent and received, for the attempts histogram.
+    private sealed class HttpCall
+    {
+        public int Requests { get; set; }
+
+        public int? StatusCode { get; set; }
+
+        public bool TimedOut { get; set; }
     }
 
     private sealed class LimitedStream : Stream

@@ -1,11 +1,14 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using CrestApps.Core.Support;
 using OrchardCore.ContentManagement;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -31,13 +34,27 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
     // The lease is a compile-time attribute argument, so it stays a constant; everything else the pass does is
     // read from options at run time.
 
+    // What became of each activity the pass went through, as counted on its telemetry.
+    private const string ResultStarted = "started";
+    private const string ResultNotInService = "not_in_service";
+    private const string ResultRefused = "refused";
+    private const string ResultDeclined = "declined";
+    private const string ResultRetryScheduled = "retry_scheduled";
+    private const string ResultFailed = "failed";
+    private const string ResultDeferred = "deferred";
+    private const string ResultExpired = "expired";
 
     /// <summary>
     /// Asynchronously performs the do work operation.
     /// </summary>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => ProcessAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private static async Task ProcessAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var options = serviceProvider.GetRequiredService<IOptions<OmnichannelAutomationOptions>>().Value;
         var batchSize = options.ProcessorBatchSize;
@@ -53,6 +70,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         if (processors.Count == 0)
         {
             logger.LogWarning("No omnichannel processors were found. Make sure at least one processor is registered.");
+
+            run.Skip();
 
             return;
         }
@@ -70,13 +89,16 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         // slow send or expiry cannot overrun it by more than one item.
         var deadline = now.AddMilliseconds(_leaseMilliseconds * 0.6);
 
-        await ExpireNoResponseActivitiesAsync(serviceProvider, session, clock, now, deadline, batchSize, maxActivitiesPerInvocation, logger, cancellationToken);
+        var expiredCount = await ExpireNoResponseActivitiesAsync(serviceProvider, session, clock, now, deadline, batchSize, maxActivitiesPerInvocation, logger, cancellationToken);
 
         // Commit the expiry pass on its own so its changes are durable regardless of what the processing loop does.
         await session.SaveChangesAsync(cancellationToken);
 
+        RecordResult(run, ResultExpired, expiredCount);
+
         long documentId = 0;
         var processedCount = 0;
+        var drained = false;
 
         // AI calls are placed at the pace the tenant can hold: no more ringing or in progress at once than allowed.
         var maxConcurrentCalls = options.MaxConcurrentAICalls;
@@ -107,6 +129,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
             if (!activities.Any())
             {
+                drained = true;
+
                 break;
             }
 
@@ -126,6 +150,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 if (isCall && maxConcurrentCalls > 0 && liveCalls >= maxConcurrentCalls)
                 {
                     // Left due: the next run places it once a call has finished.
+                    RecordResult(run, ResultDeferred);
+
                     continue;
                 }
 
@@ -149,14 +175,16 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
                         await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
 
+                        // The number itself stays out of the log.
                         if (logger.IsEnabled(LogLevel.Information))
                         {
-                            logger.LogInformation(
-                                "Activity '{ActivityId}' was cancelled instead of started on '{Channel}' because '{PhoneNumber}' is known not to be in service.",
-                                activity.ItemId.SanitizeLogValue(),
-                                activity.Channel.SanitizeLogValue(),
-                                activity.PreferredDestination.SanitizeLogValue());
+                            var activityId = activity.ItemId.SanitizeLogValue();
+                            var channel = activity.Channel.SanitizeLogValue();
+
+                            OmnichannelLog.AutomatedActivityNotInService(logger, activityId, channel);
                         }
+
+                        RecordResult(run, ResultNotInService);
 
                         continue;
                     }
@@ -186,6 +214,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                                 activity.Channel.SanitizeLogValue(),
                                 refusal.SanitizeLogValue());
                         }
+
+                        RecordResult(run, ResultRefused);
 
                         continue;
                     }
@@ -218,10 +248,14 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                                 reason.SanitizeLogValue());
                         }
 
+                        RecordResult(run, ResultDeclined);
+
                         continue;
                     }
 
                     await processor.StartAsync(activity, cancellationToken);
+
+                    RecordResult(run, ResultStarted);
 
                     if (isCall)
                     {
@@ -248,10 +282,14 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                         {
                             activity.Notes = "The automated activity failed after exhausting the maximum number of processing attempts.";
                         }
+
+                        RecordResult(run, ResultFailed);
                     }
                     else
                     {
                         activity.ScheduledUtc = now.AddMinutes(retryDelayMinutes * activity.ProcessingAttempts);
+
+                        RecordResult(run, ResultRetryScheduled);
                     }
                 }
 
@@ -267,9 +305,21 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
             // the whole backlog.
             await session.SaveChangesAsync(cancellationToken);
         }
+
+        // The run stopped at its own time or item budget, so due work may be waiting for the next run.
+        if (!drained)
+        {
+            run.BudgetExceeded();
+        }
     }
 
-    private static async Task ExpireNoResponseActivitiesAsync(
+    private static void RecordResult(MeasuredTaskRun run, string result, long count = 1)
+    {
+        run.AddItems(count, result);
+        OmnichannelTelemetry.Add(OmnichannelTelemetry.AutomatedActivities, count, CrestAppsOrchardCoreTelemetry.ResultTag, result);
+    }
+
+    private static async Task<int> ExpireNoResponseActivitiesAsync(
         IServiceProvider serviceProvider,
         ISession session,
         IClock clock,
@@ -296,7 +346,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
         if (timeoutSubjectTypes.Length == 0)
         {
-            return;
+            return 0;
         }
 
         long documentId = 0;
@@ -347,6 +397,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
             }
         }
+
+        return processedCount;
     }
 
     /// <summary>

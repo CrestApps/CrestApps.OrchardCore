@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
+using CrestApps.OrchardCore.Dispatch.Core.Telemetry;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -380,6 +381,8 @@ public sealed class VisitRiskMonitor
                 continue;
             }
 
+            DispatchTelemetry.RecordVisitEvent(DispatchConstants.Events.AtRisk, visit.Status);
+
             foreach (var observer in _observers)
             {
                 try
@@ -388,6 +391,7 @@ public sealed class VisitRiskMonitor
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
+                    DispatchTelemetry.RecordObserverFailure(observer.GetType(), DispatchConstants.Events.AtRisk);
                     _logger.LogError(exception, "A visit observer failed on the at-risk event of visit {VisitNumber}.", visit.Number);
                 }
             }

@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -56,10 +58,17 @@ public sealed class ActivityDialerProfileIndexBackfillBackgroundTask : IBackgrou
     private bool _completed;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => BackfillAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private async Task BackfillAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         if (_completed)
         {
+            run.Skip();
+
             return;
         }
 
@@ -69,6 +78,7 @@ public sealed class ActivityDialerProfileIndexBackfillBackgroundTask : IBackgrou
         if (state.Completed.Contains(BackfillName))
         {
             _completed = true;
+            run.Skip();
 
             return;
         }
@@ -117,6 +127,9 @@ public sealed class ActivityDialerProfileIndexBackfillBackgroundTask : IBackgrou
             await session.SaveChangesAsync(cancellationToken);
         }
 
+        run.AddItems(reindexed, "reindexed");
+        OmnichannelTelemetry.RecordBackfill("activity_dialer_profile", "reindexed", reindexed);
+
         if (reindexed > 0)
         {
             var logger = serviceProvider.GetRequiredService<ILogger<ActivityDialerProfileIndexBackfillBackgroundTask>>();
@@ -136,6 +149,9 @@ public sealed class ActivityDialerProfileIndexBackfillBackgroundTask : IBackgrou
         else
         {
             state.Cursors[BackfillName] = cursor;
+
+            // The run read its pages and stopped; the activities after its cursor wait for the next run.
+            run.BudgetExceeded();
         }
 
         await stateManager.UpdateAsync(state);

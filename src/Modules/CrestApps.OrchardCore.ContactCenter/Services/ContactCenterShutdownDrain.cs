@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -98,6 +100,13 @@ internal sealed class ContactCenterShutdownDrain : ModularTenantEvents, IDisposa
     /// </remarks>
     internal void Drain()
     {
+        using var telemetry = ContactCenterDiagnostics.StartShutdownDrain();
+
+        DrainCore(telemetry);
+    }
+
+    private void DrainCore(TelemetryScope telemetry)
+    {
         foreach (var featureId in RoutingFeatures)
         {
             _workManager.Quiesce(featureId);
@@ -107,6 +116,8 @@ internal sealed class ContactCenterShutdownDrain : ModularTenantEvents, IDisposa
 
         if (_drainTimeout <= TimeSpan.Zero)
         {
+            telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
+
             return;
         }
 
@@ -116,9 +127,13 @@ internal sealed class ContactCenterShutdownDrain : ModularTenantEvents, IDisposa
             Task.WhenAll(RoutingFeatures.Select(featureId => _workManager.DrainAsync(featureId, _drainTimeout)))
                 .GetAwaiter()
                 .GetResult();
+
+            telemetry.Succeed();
         }
-        catch (TimeoutException)
+        catch (TimeoutException ex)
         {
+            telemetry.Fail(ex);
+
             _logger.LogWarning(
                 "Contact Center routing work was still running {Seconds} seconds into shutdown; the recovery sweeps will settle whatever it leaves unfinished.",
                 _drainTimeout.TotalSeconds);
@@ -126,6 +141,7 @@ internal sealed class ContactCenterShutdownDrain : ModularTenantEvents, IDisposa
         catch (Exception ex)
         {
             // Shutdown must go on whatever happens here.
+            telemetry.Fail(ex);
             _logger.LogWarning(ex, "Could not wait for Contact Center routing work to finish during shutdown.");
         }
     }

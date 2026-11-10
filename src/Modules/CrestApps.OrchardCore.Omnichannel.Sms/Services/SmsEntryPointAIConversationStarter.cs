@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -159,11 +160,15 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
 
             if (latest is not null && !latest.Status.IsTerminal())
             {
+                RecordStart(MessagingTelemetry.ActivityStartResults.AlreadyActive);
+
                 return true;
             }
 
             if (latest is not null && _clock.UtcNow - (latest.CompletedUtc ?? latest.CreatedUtc) < RestartQuietPeriod)
             {
+                RecordStart(MessagingTelemetry.ActivityStartResults.QuietPeriod);
+
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
                     _logger.LogInformation(
@@ -178,6 +183,8 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
 
             if (await HasOpenHumanConversationAsync(message, address, cancellationToken))
             {
+                RecordStart(MessagingTelemetry.ActivityStartResults.HumanConversation);
+
                 return false;
             }
 
@@ -189,6 +196,7 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
                     "Entry point '{EntryPointId}' routes texts to the AI profile '{ProfileId}', which is missing or not a chat profile; the text is left to people.",
                     routing.EntryPointId.SanitizeLogValue(),
                     routing.AIProfileId.SanitizeLogValue());
+                RecordStart(MessagingTelemetry.ActivityStartResults.ProfileMissing);
 
                 return false;
             }
@@ -198,12 +206,15 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
             if (activity is null)
             {
                 // A starting workflow declined the conversation; the text is left to people.
+                RecordStart(MessagingTelemetry.ActivityStartResults.Declined);
+
                 return false;
             }
 
             // Committed now, while the lock is held: the other delivery of this customer's texts, and the other handler
             // of this one, must find the conversation rather than start a second.
             await _session.SaveChangesAsync(cancellationToken);
+            RecordStart(MessagingTelemetry.ActivityStartResults.Started);
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
@@ -218,6 +229,9 @@ public sealed class SmsEntryPointAIConversationStarter : IMessagingAIConversatio
             return true;
         }
     }
+
+    private static void RecordStart(string result)
+        => MessagingTelemetry.RecordActivityStart(OmnichannelConstants.Channels.Sms, MessagingTelemetry.ActivityStartResults.TriggerEntryPoint, result);
 
     // A person already talking with the customer on this number keeps the conversation: an AI taking over a thread a
     // person is working, or one marked spam, would answer for them.

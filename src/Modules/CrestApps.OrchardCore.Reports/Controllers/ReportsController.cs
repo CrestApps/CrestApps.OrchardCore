@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
 using CrestApps.OrchardCore.Reports.ViewModels;
@@ -101,7 +102,7 @@ public sealed class ReportsController : Controller
 
         var filter = await BuildFilterAsync(descriptor.Name);
         var filterShape = await _filterDisplayManager.BuildEditorAsync(filter, _updateModelAccessor.ModelUpdater, false);
-        var document = await _reportManager.GetReport(descriptor.Name).RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
+        var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(descriptor.Name), descriptor, new ReportContext(filter), HttpContext.RequestAborted);
         document.Title = _localizerFactory.Localize(descriptor.DisplayName).Value;
 
         await _displayValueResolver.ResolveNonTableValuesAsync(document);
@@ -132,24 +133,29 @@ public sealed class ReportsController : Controller
             return NotFound();
         }
 
+        var exportFormat = _exportManager.GetDescriptor(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
+
         if (!await _authorizationService.AuthorizeAsync(User, report.Permission) || !await CanExportAsync(report))
         {
+            ReportTelemetry.RecordExport(ReportRunSources.Admin, exportFormat?.Name, ReportTelemetry.OutcomeForbidden);
+
             return Forbid();
         }
 
-        var exportFormat = _exportManager.GetDescriptor(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
-
         if (exportFormat is null)
         {
+            // The format comes from the address, so an unknown one is tagged "other", never as typed.
+            ReportTelemetry.RecordExport(ReportRunSources.Admin, null, ReportTelemetry.OutcomeNotFound);
+
             return NotFound();
         }
 
         var filter = await BuildFilterAsync(report.Name);
-        var document = await _reportManager.GetReport(report.Name).RunAsync(new ReportContext(filter, ReportRunMode.Export), HttpContext.RequestAborted);
+        var document = await ReportTelemetry.RunCodedReportAsync(_reportManager.GetReport(report.Name), report, new ReportContext(filter, ReportRunMode.Export), HttpContext.RequestAborted);
         document.Title = _localizerFactory.Localize(report.DisplayName).Value;
 
         await _displayValueResolver.ResolveAsync(document);
-        var content = _exportManager.GetFormat(exportFormat.Name).Serialize(document);
+        var content = ReportTelemetry.Serialize(_exportManager.GetFormat(exportFormat.Name), exportFormat, document, ReportRunSources.Admin);
         var range = filter.GetDateRange();
         var fileName = GetFileName(report.Name, range) + exportFormat.Extension;
 

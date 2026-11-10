@@ -1,12 +1,14 @@
 using CrestApps.Core;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -94,9 +96,32 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
 
         var channel = _channelResolver.Get(message.Channel);
 
+        // The channel tag is the enabled channel's own name, never the value the provider sent.
+        using var telemetry = MessagingTelemetry.StartInbound(channel?.Name);
+        telemetry.SetSpanTag(MessagingTelemetry.ProviderMessageIdSpanTag, message.ProviderMessageId);
+
+        try
+        {
+            return await ProcessCoreAsync(channel, message, telemetry, cancellationToken);
+        }
+        catch (Exception ex) when (!telemetry.IsCompleted)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<MessagingConversation> ProcessCoreAsync(
+        IMessagingChannel channel,
+        OmnichannelMessage message,
+        MessagingMeasurement telemetry,
+        CancellationToken cancellationToken)
+    {
         if (channel is null)
         {
             _logger.LogWarning("An inbound message arrived on channel '{Channel}', which no enabled messaging channel serves.", message.Channel?.SanitizeLogValue());
+            telemetry.Complete(MessagingTelemetry.InboundResults.UnknownChannel, CrestAppsOrchardCoreTelemetry.OutcomeError);
 
             return null;
         }
@@ -107,6 +132,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         if (string.IsNullOrEmpty(serviceAddress) || string.IsNullOrEmpty(contactAddress))
         {
             _logger.LogWarning("An inbound {Channel} message arrived without both a service and a contact address.", channel.Name);
+            telemetry.Complete(MessagingTelemetry.InboundResults.MissingAddress, CrestAppsOrchardCoreTelemetry.OutcomeError);
 
             return null;
         }
@@ -116,6 +142,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         if (endpoint is null)
         {
             _logger.LogWarning("No channel endpoint found for an incoming {Channel} message. Service Address: {ServiceAddress}", channel.Name, _addressRedactor.Redact(message.ServiceAddress));
+            telemetry.Complete(MessagingTelemetry.InboundResults.NoEndpoint, CrestAppsOrchardCoreTelemetry.OutcomeError);
 
             return null;
         }
@@ -130,13 +157,17 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
 
         // Find-or-create and the thread roll-up are serialized per address pair. Without this, two messages arriving
         // in the same second from a new contact each see "no conversation" and each create one.
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             $"MessagingConversation:{channel.Name}:{serviceAddress}:{contactAddress}",
             _options.ConversationLockTimeout,
-            _options.ConversationLockExpiration);
+            _options.ConversationLockExpiration,
+            "messaging.conversation");
 
         if (!locked)
         {
+            _logger.InboundLockTimeout(channel.Name, message.ProviderMessageId.SanitizeLogValue());
+            telemetry.Complete(MessagingTelemetry.InboundResults.LockTimeout, CrestAppsOrchardCoreTelemetry.OutcomeTimeout);
+
             // Dropping the message would lose it silently. Failing lets the durable provider inbox redeliver it.
             throw new InvalidOperationException(
                 "The inbound message could not acquire its conversation lock. The delivery will be retried.");
@@ -144,7 +175,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
 
         await using (locker)
         {
-            return await ProcessLockedAsync(channel, message, endpoint, serviceAddress, contactAddress, cancellationToken);
+            return await ProcessLockedAsync(channel, message, endpoint, serviceAddress, contactAddress, telemetry, cancellationToken);
         }
     }
 
@@ -154,6 +185,7 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         OmnichannelChannelEndpoint endpoint,
         string serviceAddress,
         string contactAddress,
+        MessagingMeasurement telemetry,
         CancellationToken cancellationToken)
     {
         // Yield to the automated (AI) path while a live automated activity owns the contact on this endpoint — whether
@@ -171,6 +203,8 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
 
         if (automatedActivity is not null && !automatedActivity.Status.IsTerminal())
         {
+            telemetry.Complete(MessagingTelemetry.InboundResults.Automated);
+
             return null;
         }
 
@@ -180,6 +214,8 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         {
             if (await starter.TryStartAsync(message, endpoint, cancellationToken))
             {
+                telemetry.Complete(MessagingTelemetry.InboundResults.AIStarted);
+
                 return null;
             }
         }
@@ -200,6 +236,9 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
                     message.ProviderMessageId.SanitizeLogValue(),
                     conversation.ItemId.SanitizeLogValue());
             }
+
+            telemetry.SetSpanTag(MessagingTelemetry.ConversationIdSpanTag, conversation.ItemId);
+            telemetry.Complete(MessagingTelemetry.InboundResults.Duplicate, CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
 
             return conversation;
         }
@@ -280,6 +319,14 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         message.ConversationId = conversation.ItemId;
 
         await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+
+        telemetry.SetSpanTag(MessagingTelemetry.ConversationIdSpanTag, conversation.ItemId);
+        telemetry.Complete(MessagingTelemetry.InboundResults.Routed);
+
+        if (message.CreatedUtc != default)
+        {
+            MessagingTelemetry.RecordInboundLag(channel.Name, _clock.UtcNow - message.CreatedUtc);
+        }
 
         // A thread routing pushed to an agent is announced as theirs before its message is, so the agent hears it was
         // assigned to them rather than only that someone wrote.

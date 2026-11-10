@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Payments;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -234,7 +235,7 @@ public sealed class CheckoutTenderLedger : ICheckoutTenderLedger
         => _providers.FirstOrDefault(provider => string.Equals(provider.Key, key, StringComparison.Ordinal));
 
     private Task<(ILocker Locker, bool Locked)> LockAsync(string providerKey, string reference)
-        => _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(providerKey, reference), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
+        => _distributedLock.TryAcquireMeasuredLockAsync(CheckoutTenderLocks.GetKey(providerKey, reference), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30), "checkout.tender");
 
     private Task<CheckoutTenderHold> FindAsync(string sessionId, string providerKey, string reference, string status, CancellationToken cancellationToken)
         => _session

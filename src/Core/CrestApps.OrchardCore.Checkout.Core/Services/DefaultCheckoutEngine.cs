@@ -1,7 +1,11 @@
+using System.Diagnostics;
+using CrestApps.OrchardCore.Checkout.Core.Telemetry;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Entities;
@@ -115,6 +119,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         var returnInfo = CreateReturnInfo(request);
 
+        using var telemetry = CheckoutTelemetry.StartOperation(CheckoutTelemetry.OperationStart, sessionId: null);
+
         var session = await _sessionStore.NewAsync(
             referenceType,
             referenceId,
@@ -160,6 +166,9 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         await _sessionStore.SaveAsync(session, cancellationToken);
 
+        telemetry.SetSpanTag(CheckoutTelemetry.SessionIdTag, session.SessionId);
+        telemetry.Succeed();
+
         return session;
     }
 
@@ -170,13 +179,30 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrEmpty(options.ProviderKey);
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        using var telemetry = CheckoutTelemetry.StartOperation(CheckoutTelemetry.OperationBeginPayment, sessionId);
+
+        try
+        {
+            return await BeginPaymentCoreAsync(sessionId, options, telemetry, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            telemetry.Fail(exception);
+            CheckoutTelemetry.RecordPaymentBegin(CrestAppsOrchardCoreTelemetry.Unknown, telemetry.Outcome);
+
+            throw;
+        }
+    }
+
+    private async Task<PaymentBeginOutcome> BeginPaymentCoreAsync(string sessionId, BeginPaymentOptions options, TelemetryScope telemetry, CancellationToken cancellationToken)
+    {
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration, "checkout.session");
 
         if (!locked)
         {
             // Another request is already beginning payment for this session. Refusing is safer than racing:
             // two concurrent begins could create two sets of attempts and charge the customer twice.
-            return PaymentBeginOutcome.Failure("Your payment is already being processed. Please wait a moment before trying again.");
+            return Refused(telemetry, provider: null, "busy", PaymentBeginOutcome.Failure("Your payment is already being processed. Please wait a moment before trying again."));
         }
 
         await using (locker)
@@ -185,17 +211,17 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             if (session is null)
             {
-                return PaymentBeginOutcome.Failure("The checkout could not be found.");
+                return Refused(telemetry, provider: null, "not_found", PaymentBeginOutcome.Failure("The checkout could not be found."));
             }
 
             if (IsTerminal(session.Status))
             {
-                return PaymentBeginOutcome.Failure("This checkout has already been finalized.");
+                return Refused(telemetry, provider: null, "finalized", PaymentBeginOutcome.Failure("This checkout has already been finalized."));
             }
 
             if (!session.TryGet<CheckoutInvoice>(out var invoice))
             {
-                return PaymentBeginOutcome.Failure("The checkout has no invoice to pay.");
+                return Refused(telemetry, provider: null, "no_invoice", PaymentBeginOutcome.Failure("The checkout has no invoice to pay."));
             }
 
             var provider = _providerResolver.GetProvider(options.ProviderKey);
@@ -204,7 +230,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             // leaves it out, but a request can name any provider.
             if (provider is null || !await CheckoutPaymentMethodSelector.IsAvailableAsync(provider, session, cancellationToken))
             {
-                return PaymentBeginOutcome.Failure("The selected payment method is not available.");
+                return Refused(telemetry, provider, "provider_unavailable", PaymentBeginOutcome.Failure("The selected payment method is not available."));
             }
 
             // What the purchase needs is held before any provider is contacted, so a buyer who can't have it, such as
@@ -217,7 +243,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
                 refused.InvoiceChanged = gate.InvoiceChanged;
 
-                return refused;
+                return Refused(telemetry, provider, "gate_refused", refused);
             }
 
             // A gate may have changed the invoice (it saves the session when it does), so it is read again.
@@ -228,12 +254,15 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             if (expectedObligations.Count == 0)
             {
                 // Nothing is owed, so there is nothing to begin. The checkout can complete directly.
+                telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
+                CheckoutTelemetry.RecordPaymentBegin(CheckoutTelemetry.GetProviderTag(provider), CrestAppsOrchardCoreTelemetry.OutcomeSkipped, "nothing_due");
+
                 return new PaymentBeginOutcome { Succeeded = true };
             }
 
             if (!TryValidateCapabilities(provider, expectedObligations, session.SettlesExistingBalance, session.SavePaymentMethod, out var capabilityError))
             {
-                return PaymentBeginOutcome.Failure(capabilityError);
+                return Refused(telemetry, provider, "unsupported", PaymentBeginOutcome.Failure(capabilityError));
             }
 
             if (session.SavePaymentMethod)
@@ -274,6 +303,15 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                     failure.Declined = declined;
                     failure.RequiresAuthentication = requiresAuthentication;
 
+                    var failureOutcome = requiresAuthentication
+                        ? CheckoutTelemetry.PaymentBeginRequiresAuthentication
+                        : declined
+                            ? CheckoutTelemetry.PaymentBeginDeclined
+                            : CrestAppsOrchardCoreTelemetry.OutcomeError;
+
+                    telemetry.SetOutcome(failureOutcome);
+                    CheckoutTelemetry.RecordPaymentBegin(CheckoutTelemetry.GetProviderTag(provider), failureOutcome, declined ? null : "provider_error");
+
                     return failure;
                 }
 
@@ -289,8 +327,25 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             // created instead of creating a second set.
             await _session.SaveChangesAsync(cancellationToken);
 
+            var begun = outcome.Steps.Any(step => step.RequiresAction)
+                ? CheckoutTelemetry.PaymentBeginRequiresAction
+                : CheckoutTelemetry.PaymentBeginOk;
+
+            telemetry.SetOutcome(begun);
+            CheckoutTelemetry.RecordPaymentBegin(CheckoutTelemetry.GetProviderTag(provider), begun);
+
             return outcome;
         }
+    }
+
+    // Records a payment that was refused before any provider was asked, and returns the refusal.
+    private static PaymentBeginOutcome Refused(TelemetryScope telemetry, ICheckoutPaymentProvider provider, string reason, PaymentBeginOutcome outcome)
+    {
+        telemetry.SetOutcome(CheckoutTelemetry.PaymentBeginRefused);
+        telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
+        CheckoutTelemetry.RecordPaymentBegin(CheckoutTelemetry.GetProviderTag(provider), CheckoutTelemetry.PaymentBeginRefused, reason);
+
+        return outcome;
     }
 
     /// <inheritdoc/>
@@ -298,7 +353,27 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        using var telemetry = CheckoutTelemetry.StartOperation(CheckoutTelemetry.OperationComplete, sessionId);
+
+        try
+        {
+            var result = await TryCompleteCoreAsync(sessionId, cancellationToken);
+
+            CheckoutTelemetry.SetResult(telemetry, result.Status);
+
+            return result;
+        }
+        catch (Exception exception)
+        {
+            telemetry.Fail(exception);
+
+            throw;
+        }
+    }
+
+    private async Task<CheckoutCompletionResult> TryCompleteCoreAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration, "checkout.session");
 
         if (!locked)
         {
@@ -472,7 +547,27 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        using var telemetry = CheckoutTelemetry.StartOperation(CheckoutTelemetry.OperationCancel, sessionId);
+
+        try
+        {
+            var result = await CancelCoreAsync(sessionId, reason, cancellationToken);
+
+            CheckoutTelemetry.SetResult(telemetry, result.Status);
+
+            return result;
+        }
+        catch (Exception exception)
+        {
+            telemetry.Fail(exception);
+
+            throw;
+        }
+    }
+
+    private async Task<CheckoutCompletionResult> CancelCoreAsync(string sessionId, string reason, CancellationToken cancellationToken)
+    {
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration, "checkout.session");
 
         if (!locked)
         {
@@ -508,6 +603,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             await _sessionStore.SaveAsync(session, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
+            CheckoutTelemetry.RecordSessionEnded(CheckoutTelemetry.SessionCancelled, session.ModifiedUtc - session.CreatedUtc);
+
             // The cancellation is durable before the handlers hear of it, and a handler that fails can't undo it;
             // whatever they let go is committed with it, still inside the lock.
             await _handlers.InvokeAsync((handler, context) => handler.CanceledAsync(context), new CheckoutFlowCanceledContext(new CheckoutFlow(session), reason), _logger);
@@ -522,7 +619,27 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     {
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        using var telemetry = CheckoutTelemetry.StartOperation(CheckoutTelemetry.OperationExpire, sessionId);
+
+        try
+        {
+            var result = await ExpireCoreAsync(sessionId, cancellationToken);
+
+            CheckoutTelemetry.SetResult(telemetry, result.Status);
+
+            return result;
+        }
+        catch (Exception exception)
+        {
+            telemetry.Fail(exception);
+
+            throw;
+        }
+    }
+
+    private async Task<CheckoutCompletionResult> ExpireCoreAsync(string sessionId, CancellationToken cancellationToken)
+    {
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration, "checkout.session");
 
         if (!locked)
         {
@@ -564,6 +681,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             await _sessionStore.SaveAsync(session, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
+
+            CheckoutTelemetry.RecordSessionEnded(CheckoutTelemetry.SessionExpired, session.ModifiedUtc - session.CreatedUtc);
 
             await _handlers.InvokeAsync((handler, context) => handler.ExpiredAsync(context), new CheckoutFlowExpiredContext(new CheckoutFlow(session)), _logger);
             await CommitHandlerWorkAsync(session, cancellationToken);
@@ -704,6 +823,16 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         PaymentBeginResult result;
 
+        // The provider's own work, such as a call to its API, as a client span of the begin.
+        using var providerCall = TelemetryScope.Start(
+            CheckoutTelemetry.ActivitySource,
+            "crestapps.checkout.provider.begin",
+            duration: null,
+            new TagList { { CrestAppsOrchardCoreTelemetry.ProviderTag, CheckoutTelemetry.GetProviderTag(provider) } },
+            ActivityKind.Client);
+
+        providerCall.SetSpanTag(CheckoutTelemetry.AttemptIdTag, attempt.ItemId);
+
         try
         {
             // A recurring obligation establishes a billing agreement rather than taking a single charge, so it
@@ -731,6 +860,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         }
         catch (Exception exception)
         {
+            providerCall.Fail(exception);
             _logger.LogError(exception, "Provider '{ProviderKey}' threw while beginning obligation '{ObligationId}' of checkout '{SessionId}'.", provider.Key, obligationId, session.SessionId);
 
             return (null, null, false, false);
@@ -738,6 +868,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         if (!result.Succeeded)
         {
+            providerCall.Fail(result.Declined ? CheckoutTelemetry.PaymentBeginDeclined : "provider_error");
+
             _logger.LogWarning("Provider '{ProviderKey}' refused to begin obligation '{ObligationId}' of checkout '{SessionId}': {Error}", provider.Key, obligationId, session.SessionId, result.ErrorMessage);
 
             if (result.Declined)
@@ -758,6 +890,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             return (null, result.ErrorMessage, result.Declined, result.Declined && result.RequiresAuthentication);
         }
+
+        providerCall.Succeed();
 
         // Record the provider's reference immediately so the remote resource can always be found again,
         // even if the rest of this checkout fails.
@@ -1083,9 +1217,13 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             // Commit the fulfillment writes and the status transition together, inside the lock, so a
             // concurrent completion sees a completed session instead of fulfilling a second time.
             await _session.SaveChangesAsync(cancellationToken);
+
+            CheckoutTelemetry.RecordSessionEnded(CheckoutTelemetry.SessionCompleted, session.CompletedUtc.Value - session.CreatedUtc);
         }
         catch (Exception exception)
         {
+            CheckoutTelemetry.RecordFulfillmentDeferred();
+            Activity.Current?.SetTag("crestapps.checkout.fulfillment_deferred", true);
             _logger.LogError(exception, "A completing handler failed for checkout '{SessionId}'. The payment is confirmed; the fulfillment is retried by the reconciliation sweep.", session.SessionId);
 
             // Discarding the transaction throws away every write a completing handler made, which is the
@@ -1121,6 +1259,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         await _sessionStore.SaveAsync(session, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
+
+        CheckoutTelemetry.RecordSessionEnded(CheckoutTelemetry.SessionFailed, session.ModifiedUtc - session.CreatedUtc);
 
         await _handlers.InvokeAsync((handler, context) => handler.FailedAsync(context), new CheckoutFlowFailedContext(flow), _logger);
 
@@ -1182,9 +1322,13 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                         Reason = "The checkout could not be completed, so the settled obligations were returned.",
                     },
                     cancellationToken);
+
+                CheckoutTelemetry.RecordCompensation(attempt.ProviderKey, CheckoutTelemetry.CompensationRefunded);
             }
             catch (Exception exception)
             {
+                CheckoutTelemetry.RecordCompensation(attempt.ProviderKey, CheckoutTelemetry.CompensationFailed);
+
                 // The customer's money is at stake, so a failure here is loud: an operator has to resolve it, so it is
                 // listed as a payment issue as well as logged.
                 _logger.LogError(exception, "Failed to compensate settled obligation '{ObligationId}' of checkout '{SessionId}'. This payment must be refunded manually.", attempt.ObligationId, session.SessionId);

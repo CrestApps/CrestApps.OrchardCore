@@ -5,13 +5,13 @@ using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.DataSources;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Migrations;
+using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
 
@@ -43,7 +43,7 @@ internal sealed class AIDataSourceIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateAIDataSourceIndexSchemaAsync(_option);
 
-        ShellScope.AddDeferredTask(scope => ImportLegacyDataSourcesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(AIDataSourceIndexMigrations), scope => ImportLegacyDataSourcesAsync(scope.ServiceProvider));
 
         return 2;
     }

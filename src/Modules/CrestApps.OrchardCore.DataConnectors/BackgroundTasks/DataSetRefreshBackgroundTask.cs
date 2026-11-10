@@ -1,5 +1,5 @@
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.DataConnectors.BackgroundTasks;
@@ -9,7 +9,8 @@ namespace CrestApps.OrchardCore.DataConnectors.BackgroundTasks;
 /// </summary>
 /// <remarks>
 /// The task's lock keeps one instance of the site refreshing at a time, and each refresh also locks its data set, so a
-/// refresh started from the admin and a scheduled one never overlap.
+/// refresh started from the admin and a scheduled one never overlap. The refresh service logs a summary of each run
+/// that had data sets due.
 /// </remarks>
 [BackgroundTask(
     Title = "Connected Data Set Refresh",
@@ -20,28 +21,35 @@ namespace CrestApps.OrchardCore.DataConnectors.BackgroundTasks;
 public sealed class DataSetRefreshBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
+        return this.RunAsync(run => RefreshDueAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private static async Task RefreshDueAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
+    {
         // Absent when the feature's services aren't in this tenant's container, which isn't an error.
         var refreshService = serviceProvider.GetService<IDataSetRefreshService>();
 
         if (refreshService is null)
         {
+            run.Skip();
+
             return;
         }
 
         var count = await refreshService.RefreshDueAsync(cancellationToken);
 
-        if (count > 0)
+        if (count == 0)
         {
-            var logger = serviceProvider.GetRequiredService<ILogger<DataSetRefreshBackgroundTask>>();
+            run.Skip();
 
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Refreshed {Count} imported data set(s).", count);
-            }
+            return;
         }
+
+        // Succeeded and failed refreshes alike; crestapps.dataconnector.refreshes tells them apart.
+        run.AddItems(count);
     }
 }

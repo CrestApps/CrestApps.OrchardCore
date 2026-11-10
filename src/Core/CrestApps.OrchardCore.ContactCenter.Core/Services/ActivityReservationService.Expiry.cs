@@ -1,7 +1,10 @@
+using System.Diagnostics;
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -143,10 +146,11 @@ public sealed partial class ActivityReservationService
         TimeSpan lockWait,
         CancellationToken cancellationToken)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetReservationLockKey(reservationId),
             lockWait,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation");
 
         if (!locked)
         {
@@ -167,11 +171,16 @@ public sealed partial class ActivityReservationService
             return (DeadlineOutcome.NotDue, reservation.ExpiresUtc);
         }
 
-        await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
+        using var activity = ContactCenterDiagnostics.StartOffer("expire", reservation.QueueId);
+
+        var settlement = await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
         await CommitTransitionAsync(
             reservation.ActivityItemId,
             reservation.AgentId,
+            "reservation.expire",
             cancellationToken);
+
+        RecordSettlement(activity, reservation, settlement);
 
         return (DeadlineOutcome.Expired, reservation.ExpiresUtc);
     }
@@ -186,7 +195,8 @@ public sealed partial class ActivityReservationService
     /// <param name="agentUnreachable">Whether the leg rung to the agent's phone failed, after they accepted the offer or
     /// while it was still ringing: the queue's unanswered-offer action applies as it does to an offer that rang out, and
     /// the agent is set Away rather than returned to work.</param>
-    private async Task ReleaseAsync(
+    /// <returns>How the offer was settled, for the offer metrics.</returns>
+    private async Task<OfferSettlement> ReleaseAsync(
         ActivityReservation reservation,
         ReservationStatus status,
         CancellationToken cancellationToken,
@@ -234,7 +244,7 @@ public sealed partial class ActivityReservationService
 
             await RecordOfferSettledAsync(reservation, interaction: null, obsoleteAgent, now, CallLifecycleReasons.Superseded, cancellationToken);
 
-            return;
+            return new OfferSettlement(wasAccepted ? null : ContactCenterDiagnostics.OfferSuperseded, Channel: null, now);
         }
 
         var queue = !string.IsNullOrEmpty(reservation.QueueId)
@@ -449,11 +459,15 @@ public sealed partial class ActivityReservationService
             _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
                 processor.DispatchAsync(providerCommand.CommandId, CancellationToken.None));
         }
+
+        // An accepted offer was counted when the agent took it, so releasing it settles nothing more.
+        return new OfferSettlement(wasAccepted ? null : ResolveOfferOutcome(status, agentUnreachable), interaction?.Channel, now);
     }
 
     private async Task CommitTransitionAsync(
         string activityItemId,
         string agentId,
+        string site,
         CancellationToken cancellationToken)
     {
         try
@@ -462,6 +476,8 @@ public sealed partial class ActivityReservationService
         }
         catch (ConcurrencyException)
         {
+            ContactCenterDiagnostics.RecordCasConflict(site);
+
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
@@ -473,6 +489,33 @@ public sealed partial class ActivityReservationService
             throw;
         }
     }
+
+    /// <summary>
+    /// Records how an offer was settled, once the transition that settled it committed.
+    /// </summary>
+    private static void RecordSettlement(Activity activity, ActivityReservation reservation, OfferSettlement settlement)
+    {
+        if (settlement.Outcome is not null)
+        {
+            ContactCenterDiagnostics.RecordOfferSettled(activity, settlement.Outcome, reservation, settlement.Channel, settlement.SettledUtc);
+        }
+    }
+
+    private static string ResolveOfferOutcome(ReservationStatus status, bool agentUnreachable)
+        => agentUnreachable
+            ? ContactCenterDiagnostics.OfferUnreachable
+            : status switch
+            {
+                ReservationStatus.Expired => ContactCenterDiagnostics.OfferExpired,
+                ReservationStatus.Rejected => ContactCenterDiagnostics.OfferDeclined,
+                _ => ContactCenterDiagnostics.OfferCancelled,
+            };
+
+    /// <summary>
+    /// How an offer was settled: an <c>Offer*</c> outcome of <see cref="ContactCenterDiagnostics"/>, or
+    /// <see langword="null"/> when the offer had already been settled by its acceptance.
+    /// </summary>
+    private readonly record struct OfferSettlement(string Outcome, InteractionChannel? Channel, DateTime SettledUtc);
 
     private enum DeadlineOutcome
     {

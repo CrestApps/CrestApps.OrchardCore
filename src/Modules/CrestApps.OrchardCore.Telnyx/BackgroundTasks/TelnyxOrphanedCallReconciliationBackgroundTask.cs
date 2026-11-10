@@ -1,4 +1,5 @@
 ﻿using CrestApps.OrchardCore.Telnyx.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -23,7 +24,10 @@ namespace CrestApps.OrchardCore.Telnyx.BackgroundTasks;
 public sealed class TelnyxOrphanedCallReconciliationBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => ReconcileAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task ReconcileAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var reconciler = serviceProvider.GetRequiredService<TelnyxOrphanedCallReconciler>();
         var logger = serviceProvider.GetRequiredService<ILogger<TelnyxOrphanedCallReconciliationBackgroundTask>>();
@@ -31,6 +35,15 @@ public sealed class TelnyxOrphanedCallReconciliationBackgroundTask : IBackground
         try
         {
             var result = await reconciler.ReconcileAsync(cancellationToken);
+
+            // Not configured yet, or the listing was refused: nothing was reconciled this pass.
+            if (!result.Succeeded)
+            {
+                run.Skip();
+            }
+
+            run.AddItems(result.OrphansEnded, "ended");
+            run.AddItems(result.OrphansFound - result.OrphansEnded, "left_up");
 
             if (result.OrphansFound > 0 && logger.IsEnabled(LogLevel.Information))
             {
@@ -40,12 +53,14 @@ public sealed class TelnyxOrphanedCallReconciliationBackgroundTask : IBackground
                     result.OrphansEnded);
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
             // The tenant is shutting down; stop quietly rather than logging the cancellation as a failure.
+            run.ReportError(ex);
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while reconciling orphaned Telnyx calls.");
         }
     }

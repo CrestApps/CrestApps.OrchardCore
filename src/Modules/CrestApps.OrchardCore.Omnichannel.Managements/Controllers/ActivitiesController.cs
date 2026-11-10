@@ -4,13 +4,16 @@ using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
@@ -43,6 +46,7 @@ using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
 using YesSql.Services;
+using TagList = System.Diagnostics.TagList;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
@@ -1428,6 +1432,8 @@ public sealed class ActivitiesController : Controller
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="filterDisplayManager">The filter display manager.</param>
     /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
+    /// <param name="campaignManager">The campaign manager, which checks the campaign a bulk action moves activities to.</param>
+    /// <param name="logger">The logger that records who ran a bulk action, on how many activities.</param>
     [HttpPost]
     [ActionName(nameof(ManageActivities))]
     [FormValueRequired("submit.BulkAction")]
@@ -1437,7 +1443,8 @@ public sealed class ActivitiesController : Controller
         PagerParameters pagerParameters,
         [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager,
         [FromServices] IOptions<ActivitySourceOptions> activitySourceOptions,
-        [FromServices] ICatalogManager<OmnichannelCampaign> campaignManager)
+        [FromServices] ICatalogManager<OmnichannelCampaign> campaignManager,
+        [FromServices] ILogger<ActivitiesController> logger)
     {
         var requiredPermission = viewModel.BulkAction == BulkActivityAction.Purge
             ? OmnichannelConstants.Permissions.PurgeActivity
@@ -1535,56 +1542,91 @@ public sealed class ActivitiesController : Controller
         }
 
         var processedCount = 0;
+        var actionTag = OmnichannelTelemetry.GetBulkActionTag(viewModel.BulkAction);
+        var actingUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var loggedUserId = actingUserId.SanitizeLogValue();
 
-        switch (viewModel.BulkAction)
+        // The action runs in this request over every activity it was given, a destructive purge included, so who ran
+        // it on how many is logged before and after it, counts only.
+        OmnichannelLog.BulkActionStarting(logger, loggedUserId, actionTag, activities.Count, applyToAllMatching, inFlightCount);
+
+        using (var telemetry = TelemetryScope.Start(
+            OmnichannelTelemetry.ActivitySource,
+            "crestapps.omnichannel.bulk_action",
+            OmnichannelTelemetry.BulkActionDuration,
+            new TagList
+            {
+                { OmnichannelTelemetry.ActionTag, actionTag },
+            }))
         {
-            case BulkActivityAction.Assign:
-                processedCount = await BulkAssignAsync(activities, viewModel.AssignToUserIds);
-                break;
+            telemetry.SetSpanTag("crestapps.omnichannel.bulk_action.activities", activities.Count);
+            telemetry.SetSpanTag("crestapps.omnichannel.bulk_action.all_matching", applyToAllMatching);
 
-            case BulkActivityAction.Reschedule:
-                processedCount = await BulkRescheduleAsync(activities, viewModel.NewScheduledDate);
-                break;
+            try
+            {
+                switch (viewModel.BulkAction)
+                {
+                    case BulkActivityAction.Assign:
+                        processedCount = await BulkAssignAsync(activities, viewModel.AssignToUserIds);
+                        break;
 
-            case BulkActivityAction.Purge:
-                var purgedAtUtc = _clock.UtcNow;
-                var purgedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var purgedByUsername = User.Identity?.Name;
+                    case BulkActivityAction.Reschedule:
+                        processedCount = await BulkRescheduleAsync(activities, viewModel.NewScheduledDate);
+                        break;
 
-                processedCount = await BulkPurgeAsync(
-                    activities,
-                    purgedAtUtc,
-                    purgedById,
-                    purgedByUsername);
-                break;
+                    case BulkActivityAction.Purge:
+                        var purgedAtUtc = _clock.UtcNow;
+                        var purgedByUsername = User.Identity?.Name;
 
-            case BulkActivityAction.SetInstructions:
-                processedCount = await BulkSetInstructionsAsync(activities, viewModel.Instructions);
-                break;
+                        processedCount = await BulkPurgeAsync(
+                            activities,
+                            purgedAtUtc,
+                            actingUserId,
+                            purgedByUsername);
+                        break;
 
-            case BulkActivityAction.SetUrgencyLevel:
-                processedCount = await BulkSetUrgencyLevelAsync(activities, viewModel.NewUrgencyLevel);
-                break;
+                    case BulkActivityAction.SetInstructions:
+                        processedCount = await BulkSetInstructionsAsync(activities, viewModel.Instructions);
+                        break;
 
-            case BulkActivityAction.ChangeSubject:
-                processedCount = await BulkChangeSubjectAsync(activities, viewModel.NewSubjectContentType);
-                break;
+                    case BulkActivityAction.SetUrgencyLevel:
+                        processedCount = await BulkSetUrgencyLevelAsync(activities, viewModel.NewUrgencyLevel);
+                        break;
 
-            case BulkActivityAction.ClearAssignment:
-                processedCount = await BulkClearAssignmentAsync(activities);
-                break;
+                    case BulkActivityAction.ChangeSubject:
+                        processedCount = await BulkChangeSubjectAsync(activities, viewModel.NewSubjectContentType);
+                        break;
 
-            case BulkActivityAction.ChangeSource:
-                processedCount = await BulkChangeSourceAsync(activities, newSourceEntry.Source, viewModel.NewInteractionType, viewModel.ClearCurrentAssignment);
-                break;
+                    case BulkActivityAction.ClearAssignment:
+                        processedCount = await BulkClearAssignmentAsync(activities);
+                        break;
 
-            case BulkActivityAction.ChangeDialerProfile:
-                processedCount = await BulkChangeDialerProfileAsync(activities, viewModel.NewDialerProfileId, targetCampaignId);
-                break;
+                    case BulkActivityAction.ChangeSource:
+                        processedCount = await BulkChangeSourceAsync(activities, newSourceEntry.Source, viewModel.NewInteractionType, viewModel.ClearCurrentAssignment);
+                        break;
 
-            case BulkActivityAction.ChangeCampaign:
-                processedCount = await BulkChangeCampaignAsync(activities, targetCampaignId);
-                break;
+                    case BulkActivityAction.ChangeDialerProfile:
+                        processedCount = await BulkChangeDialerProfileAsync(activities, viewModel.NewDialerProfileId, targetCampaignId);
+                        break;
+
+                    case BulkActivityAction.ChangeCampaign:
+                        processedCount = await BulkChangeCampaignAsync(activities, targetCampaignId);
+                        break;
+                }
+
+                telemetry.Succeed();
+            }
+            catch (Exception ex)
+            {
+                telemetry.Fail(ex);
+                OmnichannelLog.BulkActionFailed(logger, ex, actionTag, loggedUserId, activities.Count, telemetry.Elapsed.TotalSeconds);
+
+                throw;
+            }
+
+            telemetry.SetSpanTag("crestapps.omnichannel.bulk_action.processed", processedCount);
+            RecordBulkAction(actionTag, activities.Count, processedCount, inFlightCount);
+            OmnichannelLog.BulkActionFinished(logger, loggedUserId, actionTag, processedCount, activities.Count, telemetry.Elapsed.TotalSeconds);
         }
 
         if (processedCount > 0)
@@ -1597,6 +1639,27 @@ public sealed class ActivitiesController : Controller
         }
 
         return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
+    }
+
+    private static void RecordBulkAction(string actionTag, int activityCount, int processedCount, int inFlightCount)
+    {
+        OmnichannelTelemetry.Record(OmnichannelTelemetry.BulkActionSize, activityCount, new TagList
+        {
+            { OmnichannelTelemetry.ActionTag, actionTag },
+        });
+
+        AddBulkActionActivities(actionTag, "processed", processedCount);
+        AddBulkActionActivities(actionTag, "unchanged", activityCount - processedCount);
+        AddBulkActionActivities(actionTag, "in_flight", inFlightCount);
+    }
+
+    private static void AddBulkActionActivities(string actionTag, string result, int count)
+    {
+        OmnichannelTelemetry.Add(OmnichannelTelemetry.BulkActionActivities, count, new TagList
+        {
+            { OmnichannelTelemetry.ActionTag, actionTag },
+            { CrestAppsOrchardCoreTelemetry.ResultTag, result },
+        });
     }
 
     private static void AddPagerRouteValues(RouteValueDictionary routeValues, PagerParameters pagerParameters)

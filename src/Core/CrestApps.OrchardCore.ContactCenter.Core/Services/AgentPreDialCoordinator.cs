@@ -1,6 +1,8 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -525,7 +527,21 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
 
         // Never cancelled once asked for: inside the answer command, its timeout cancels the work while the provider may
         // already be joining the two, and a bridge abandoned halfway was never recorded.
-        var result = await provider.BridgePreDialedAgentAsync(leg.ProviderCallId, leg.AgentLegId, CancellationToken.None);
+        ContactCenterVoiceProviderResult result;
+
+        using (var telemetry = ContactCenterDiagnostics.StartPreDialBridge(leg.ProviderName))
+        {
+            result = await provider.BridgePreDialedAgentAsync(leg.ProviderCallId, leg.AgentLegId, CancellationToken.None);
+
+            if (result?.Succeeded == true)
+            {
+                telemetry.Succeed();
+            }
+            else
+            {
+                telemetry.Fail("refused");
+            }
+        }
 
         if (result?.Succeeded == true)
         {
@@ -667,8 +683,9 @@ public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
     }
 
     private Task<(ILocker Locker, bool Locked)> AcquireAsync(string reservationId)
-        => _distributedLock.TryAcquireLockAsync(
+        => _distributedLock.TryAcquireMeasuredLockAsync(
             $"ContactCenterAgentPreDial:{reservationId}",
             _options.ReservationLockTimeout,
-            _options.ReservationLockExpiration);
+            _options.ReservationLockExpiration,
+            "contactcenter.predial");
 }

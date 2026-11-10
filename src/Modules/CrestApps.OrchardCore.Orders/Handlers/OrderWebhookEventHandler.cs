@@ -1,11 +1,11 @@
 using CrestApps.OrchardCore.Commerce.Webhooks;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Orders.Api;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Orders.Handlers;
 
@@ -37,7 +37,7 @@ internal sealed class OrderWebhookEventHandler : OrderEventHandlerBase
 
         var orderId = context.Order.ItemId;
 
-        ShellScope.AddDeferredTask(async scope =>
+        DeferredWork.Add("order_webhooks", async scope =>
         {
             if (await scope.ServiceProvider.GetRequiredService<IOrderStore>().FindByIdAsync(orderId) is { Status: not OrderStatus.Canceled } order)
             {

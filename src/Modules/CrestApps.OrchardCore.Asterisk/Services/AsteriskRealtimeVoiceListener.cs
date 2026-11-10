@@ -22,6 +22,7 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
     private readonly ShellSettings _shellSettings;
     private readonly AsteriskCoordinationOptions _coordinationOptions;
     private readonly ILogger<AsteriskRealtimeVoiceListener> _logger;
+    private readonly TimeProvider _timeProvider;
     private readonly Lock _lock = new();
     private CancellationTokenSource _listenerCancellationTokenSource;
     private Task _listenerTask;
@@ -30,12 +31,14 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
         IShellHost shellHost,
         ShellSettings shellSettings,
         IOptions<AsteriskCoordinationOptions> coordinationOptions,
-        ILogger<AsteriskRealtimeVoiceListener> logger)
+        ILogger<AsteriskRealtimeVoiceListener> logger,
+        TimeProvider timeProvider = null)
     {
         _shellHost = shellHost;
         _shellSettings = shellSettings;
         _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public Task StartAsync(IReadOnlyList<AsteriskResolvedSettings> listeners)
@@ -176,6 +179,10 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
 
         AsteriskDiagnostics.RecordRealtimeConnected(settings.ProviderName);
 
+        // Counts as connected, and feeds the event-age and queue-depth gauges, until this method returns: every way
+        // out of it is the connection ending.
+        using var tracking = AsteriskDiagnostics.TrackRealtimeListener(settings.ProviderName);
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
@@ -196,6 +203,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
             SingleWriter = true,
             FullMode = BoundedChannelFullMode.Wait,
         });
+
+        tracking.ObserveQueue(() => channel.Reader.CanCount ? channel.Reader.Count : 0);
 
         var ingestion = new AsteriskRealtimeIngestionWriter(
             channel.Writer,
@@ -256,6 +265,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
 
                 var payload = Encoding.UTF8.GetString(message.ToArray());
 
+                tracking.EventReceived();
+
                 // Apply real backpressure rather than dropping the connection on the first full write: the receive
                 // loop stops draining the socket while the buffer is full, so TCP flow control slows the provider.
                 // Only if the reader cannot catch up within the bounded window do we reconnect and reconcile.
@@ -308,6 +319,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
                 }
                 catch (Exception ex)
                 {
+                    AsteriskDiagnostics.RecordRealtimeEvent(settings.ProviderName, eventType: null, AsteriskDiagnostics.EventFailed);
+
                     _logger.LogError(
                         ex,
                         "Failed to dispatch an Asterisk real-time payload for provider {ProviderName}; the listener will continue processing subsequent events.",
@@ -387,6 +400,8 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
 
         if (!AsteriskRealtimeVoiceEventMapper.TryMap(providerName, payload, out var voiceEvent))
         {
+            AsteriskDiagnostics.RecordRealtimeEvent(providerName, voiceEvent?.EventType, AsteriskDiagnostics.EventIgnored);
+
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
@@ -407,11 +422,16 @@ internal sealed class AsteriskRealtimeVoiceListener : IAsteriskRealtimeVoiceList
                 voiceEvent.State);
         }
 
+        AsteriskDiagnostics.RecordRealtimeEventLag(providerName, voiceEvent.OccurredUtc, _timeProvider.GetUtcNow().UtcDateTime);
+
         await ExecuteInTenantScopeAsync(async serviceProvider =>
         {
             var dispatcher = serviceProvider.GetRequiredService<AsteriskRealtimeVoiceEventDispatcher>();
             await dispatcher.HandleAsync(voiceEvent, cancellationToken);
         });
+
+        // Counted once dispatched: a dispatch that throws is counted as failed by the worker instead.
+        AsteriskDiagnostics.RecordRealtimeEvent(providerName, voiceEvent.EventType, AsteriskDiagnostics.EventApplied);
     }
 
     private async Task ExecuteInTenantScopeAsync(Func<IServiceProvider, Task> action)

@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -56,7 +57,7 @@ public sealed class TelephonyVoicemailSendGuard : ITelephonyVoicemailSendGuard
 
         try
         {
-            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key + ":lock", _lockTimeout, _lockExpiration);
+            var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(key + ":lock", _lockTimeout, _lockExpiration, "telephony.voicemail_send");
 
             if (!locked)
             {

@@ -1,5 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -22,6 +25,7 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IContentManager _contentManager;
+    private readonly Redactor _addressRedactor;
 
     internal readonly IStringLocalizer S;
 
@@ -34,15 +38,18 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer for this task.</param>
     /// <param name="contentManager">The content manager used to read the contact's content type.</param>
+    /// <param name="redactorProvider">The redactors the telephony feature registers, used to keep the callback number out of the logs.</param>
     public ScheduleCallbackTask(
         ICallbackService callbackService,
         IWorkflowExpressionEvaluator expressionEvaluator,
         IClock clock,
         ILogger<ScheduleCallbackTask> logger,
         IStringLocalizer<ScheduleCallbackTask> stringLocalizer,
-        IContentManager contentManager)
+        IContentManager contentManager,
+        IRedactorProvider redactorProvider)
     {
         _contentManager = contentManager;
+        _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
         _callbackService = callbackService;
         _expressionEvaluator = expressionEvaluator;
         _clock = clock;
@@ -153,7 +160,8 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while scheduling a callback to '{Destination}'.", destination);
+            // The destination is a phone number: it goes through the address redactor.
+            ContactCenterModuleLog.CallbackSchedulingFailed(_logger, ex, _addressRedactor.Redact(destination));
 
             return WorkflowOutcomeResults.From("Failed");
         }

@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
@@ -117,6 +119,17 @@ public sealed class ReportViewSnapshotRefresher
         var statuses = await _store.ListStatusesAsync();
         var utcNow = _clock.UtcNow;
 
+        // The age of the oldest stored rows a scheduled view serves, so a refresh that keeps failing shows.
+        var oldest = views
+            .Select(view => statuses.GetValueOrDefault(view.ItemId)?.RefreshedUtc)
+            .Where(refreshedUtc => refreshedUtc.HasValue)
+            .Min();
+
+        if (oldest.HasValue)
+        {
+            ReportTelemetry.RecordSnapshotAge(utcNow - oldest.Value);
+        }
+
         return views
             .Where(view => IsDue(view, statuses.GetValueOrDefault(view.ItemId), utcNow))
             .Select(view => view.ItemId)
@@ -138,6 +151,8 @@ public sealed class ReportViewSnapshotRefresher
 
         if (view is null)
         {
+            ReportTelemetry.RecordViewRefresh("not_found", Trigger(onlyWhenDue));
+
             return new ReportViewRefreshResult { Status = ReportViewRefreshStatus.NotFound };
         }
 
@@ -155,12 +170,36 @@ public sealed class ReportViewSnapshotRefresher
     {
         ArgumentNullException.ThrowIfNull(view);
 
+        var trigger = Trigger(onlyWhenDue);
+        var result = await RefreshCoreAsync(view, onlyWhenDue, trigger, cancellationToken);
+
+        ReportTelemetry.RecordViewRefresh(result.Status switch
+        {
+            ReportViewRefreshStatus.Refreshed => "refreshed",
+            ReportViewRefreshStatus.Failed => "failed",
+            ReportViewRefreshStatus.NotDue => "not_due",
+            ReportViewRefreshStatus.Busy => "busy",
+            ReportViewRefreshStatus.NotScheduled => "not_scheduled",
+            _ => "not_found",
+        }, trigger);
+
+        return result;
+    }
+
+    // The scheduled refresh skips the views that are not due; a person's "Refresh now" refreshes the view at once.
+    private static string Trigger(bool onlyWhenDue)
+    {
+        return onlyWhenDue ? ReportTelemetry.TriggerSchedule : ReportTelemetry.TriggerManual;
+    }
+
+    private async Task<ReportViewRefreshResult> RefreshCoreAsync(ReportView view, bool onlyWhenDue, string trigger, CancellationToken cancellationToken)
+    {
         if (view.RefreshIntervalMinutes <= ReportViewRefreshIntervals.Live)
         {
             return new ReportViewRefreshResult { Status = ReportViewRefreshStatus.NotScheduled };
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(view.ItemId), _lockTimeout, _lockExpiration);
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey(view.ItemId), _lockTimeout, _lockExpiration, "reports.view_snapshot");
 
         if (!locked)
         {
@@ -187,6 +226,14 @@ public sealed class ReportViewSnapshotRefresher
 
             var started = Stopwatch.GetTimestamp();
             var status = ReportViewRefreshStatus.Refreshed;
+            var tags = new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.TriggerTag, trigger },
+            };
+
+            using var telemetry = TelemetryScope.Start(ReportTelemetry.ActivitySource, "report.view.refresh", ReportTelemetry.ViewRefreshDuration, tags);
+
+            telemetry.SetSpanTag(ReportTelemetry.ViewIdTag, view.ItemId);
 
             try
             {
@@ -199,15 +246,33 @@ public sealed class ReportViewSnapshotRefresher
                 snapshot.DurationMilliseconds = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
                 snapshot.LastError = null;
                 snapshot.LastErrorUtc = null;
+                telemetry.SetOutcome("refreshed");
+                telemetry.SetSpanTag("crestapps.report.view.snapshot.rows", snapshot.RowCount);
+
+                if (ReportTelemetry.SnapshotRows.Enabled)
+                {
+                    var rowTags = new TagList();
+
+                    CrestAppsOrchardCoreTelemetry.AddTenantTag(ref rowTags);
+                    ReportTelemetry.SnapshotRows.Record(snapshot.RowCount, rowTags);
+                }
 
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
                     _logger.LogInformation("Refreshed the report view '{ViewId}': {RowCount} rows in {DurationMilliseconds} ms.", view.ItemId, snapshot.RowCount, snapshot.DurationMilliseconds);
                 }
             }
+            catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+            {
+                telemetry.Fail(exception);
+
+                throw;
+            }
             catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
             {
                 // The previous rows stay, so the reports that read the view keep working with older data.
+                telemetry.Fail(exception);
+                telemetry.SetOutcome("failed");
                 status = ReportViewRefreshStatus.Failed;
                 snapshot.LastError = exception is ReportQueryException
                     ? exception.Message

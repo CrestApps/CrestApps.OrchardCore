@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telnyx.Telemetry;
 using CrestApps.OrchardCore.WebSockets;
 using Microsoft.Extensions.Logging;
 
@@ -55,6 +56,9 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
     private WebSocketRendezvous _standby;
     private int _generation;
     private long _lastReplacedTimestamp;
+
+    // When the stream was first seen broken, for crestapps.telnyx.media.stream.reconnect.duration; zero while it works.
+    private long _brokenSinceTimestamp;
     private int _streamFailed;
     private int _lost;
 
@@ -455,6 +459,12 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
             replacedConnection = _connection;
             _standby = null;
 
+            var brokenSince = Interlocked.Exchange(ref _brokenSinceTimestamp, 0);
+
+            TelnyxTelemetry.RecordMediaStreamReconnect(
+                TelnyxTelemetry.MediaStreamReconnected,
+                brokenSince == 0 ? null : Stopwatch.GetElapsedTime(brokenSince));
+
             Volatile.Write(ref _webSocket, webSocket);
             Volatile.Write(ref _connection, connection);
             Interlocked.Exchange(ref _lastReplacedTimestamp, Stopwatch.GetTimestamp());
@@ -489,6 +499,8 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
         }
 
         var waitStarted = Stopwatch.GetTimestamp();
+
+        Interlocked.CompareExchange(ref _brokenSinceTimestamp, waitStarted, 0);
 
         while (true)
         {
@@ -544,6 +556,9 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
             return;
         }
 
+        TelnyxTelemetry.RecordMediaStreamFailure();
+        Interlocked.CompareExchange(ref _brokenSinceTimestamp, Stopwatch.GetTimestamp(), 0);
+
         _ = RecoverAsync(Volatile.Read(ref _generation));
     }
 
@@ -585,6 +600,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
         }
 
         Volatile.Write(ref _lost, 1);
+        TelnyxTelemetry.RecordMediaStreamReconnect(TelnyxTelemetry.MediaStreamLost, brokenFor: null);
 
         _reconnect.Logger?.LogError(
             "The media stream for call {CallControlId} failed and did not come back within {Seconds} seconds; the call is handed on.",

@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
@@ -27,7 +28,7 @@ internal static class ProfileDocumentChunkIndexer
             return;
         }
 
-        ShellScope.AddDeferredTask(scope => IndexDocumentChunksAsync(scope, documents));
+        DeferredWork.Add("ai_document_chunk_indexing", scope => IndexDocumentChunksAsync(scope, documents));
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, IReadOnlyCollection<AIDocument> documents)

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -20,7 +21,10 @@ namespace CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 public sealed class AsteriskRecordingIngestBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => IngestAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task IngestAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var ingestService = serviceProvider.GetRequiredService<IAsteriskRecordingIngestService>();
         var logger = serviceProvider.GetRequiredService<ILogger<AsteriskRecordingIngestBackgroundTask>>();
@@ -28,6 +32,8 @@ public sealed class AsteriskRecordingIngestBackgroundTask : IBackgroundTask
         try
         {
             var ingested = await ingestService.ProcessDueAsync(cancellationToken);
+
+            run.AddItems(ingested);
 
             if (ingested > 0 && logger.IsEnabled(LogLevel.Debug))
             {
@@ -40,6 +46,7 @@ public sealed class AsteriskRecordingIngestBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while ingesting Asterisk recordings.");
         }
     }

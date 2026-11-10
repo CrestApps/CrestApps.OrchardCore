@@ -1,11 +1,11 @@
 using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 
 namespace CrestApps.OrchardCore.AI.Documents.Migrations;
@@ -22,7 +22,7 @@ internal sealed class AIDocumentLegacyTypeNameMigrations : DataMigration
 
     public static int Create()
     {
-        ShellScope.AddDeferredTask(scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(AIDocumentLegacyTypeNameMigrations), scope => RewriteLegacyTypeNamesAsync(scope.ServiceProvider));
 
         return 1;
     }

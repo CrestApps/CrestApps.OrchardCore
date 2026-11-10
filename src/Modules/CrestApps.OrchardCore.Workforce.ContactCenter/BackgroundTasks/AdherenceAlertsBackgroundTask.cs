@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,18 +19,24 @@ namespace CrestApps.OrchardCore.Workforce.ContactCenter.BackgroundTasks;
 public sealed class AdherenceAlertsBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var logger = serviceProvider.GetRequiredService<ILogger<AdherenceAlertsBackgroundTask>>();
+        return this.RunAsync(async run =>
+        {
+            var logger = serviceProvider.GetRequiredService<ILogger<AdherenceAlertsBackgroundTask>>();
 
-        try
-        {
-            await serviceProvider.GetRequiredService<AdherenceService>().RaiseAlertsAsync(cancellationToken);
-            await serviceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            logger.LogError(ex, "An error occurred while raising the adherence alerts.");
-        }
+            try
+            {
+                var raised = await serviceProvider.GetRequiredService<AdherenceService>().RaiseAlertsAsync(cancellationToken);
+                await serviceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
+
+                run.AddItems(raised, "raised");
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                run.ReportError(ex);
+                logger.LogError(ex, "An error occurred while raising the adherence alerts.");
+            }
+        });
     }
 }

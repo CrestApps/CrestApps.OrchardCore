@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -71,7 +72,7 @@ internal sealed class DataSourceContentHandler : ContentHandlerBase
         var updatedItems = _updatedContentItems;
         var removedIds = _removedContentItemIds;
 
-        ShellScope.AddDeferredTask(scope => ProcessChangesAsync(scope, updatedItems, removedIds));
+        DeferredWork.Add("ai_datasource_content_sync", scope => ProcessChangesAsync(scope, updatedItems, removedIds));
     }
 
     private static async Task ProcessChangesAsync(

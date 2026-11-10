@@ -1,6 +1,8 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -16,10 +18,13 @@ public sealed partial class ActivityReservationService
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        using var activity = ContactCenterDiagnostics.StartOffer("release_unreachable");
+
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation");
 
         if (!locked)
         {
@@ -41,12 +46,15 @@ public sealed partial class ActivityReservationService
             return null;
         }
 
-        await ReleaseAsync(reservation, ReservationStatus.Canceled, cancellationToken, agentUnreachable: true);
+        var settlement = await ReleaseAsync(reservation, ReservationStatus.Canceled, cancellationToken, agentUnreachable: true);
 
         await CommitTransitionAsync(
             reservation.ActivityItemId,
             reservation.AgentId,
+            "reservation.release_unreachable",
             cancellationToken);
+
+        RecordSettlement(activity, reservation, settlement);
 
         _logger.LogWarning(
             "Released accepted offer '{ReservationId}' for activity '{ActivityItemId}' because agent '{AgentId}' could not be reached; the caller follows the unanswered-offer action of queue '{QueueId}' and the agent was set away.",
@@ -64,10 +72,13 @@ public sealed partial class ActivityReservationService
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
         ArgumentException.ThrowIfNullOrEmpty(agentId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        using var activity = ContactCenterDiagnostics.StartOffer("release_unreachable");
+
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation");
 
         if (!locked)
         {
@@ -90,12 +101,15 @@ public sealed partial class ActivityReservationService
             return null;
         }
 
-        await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken, agentUnreachable: true);
+        var settlement = await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken, agentUnreachable: true);
 
         await CommitTransitionAsync(
             reservation.ActivityItemId,
             reservation.AgentId,
+            "reservation.release_unreachable",
             cancellationToken);
+
+        RecordSettlement(activity, reservation, settlement);
 
         _logger.LogWarning(
             "Released offer '{ReservationId}' for activity '{ActivityItemId}' as unanswered because the phone of agent '{AgentId}' refused it as unavailable; the caller follows the unanswered-offer action of queue '{QueueId}' and the agent was set away.",

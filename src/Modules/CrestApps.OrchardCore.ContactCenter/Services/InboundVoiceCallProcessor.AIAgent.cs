@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -122,6 +123,9 @@ public sealed partial class InboundVoiceCallProcessor
         result.Routed = true;
         result.Reason = "The call is answered by the entry point's AI voice agent.";
         result.ReasonCode = AIAgentReasonCode;
+
+        // How long the caller waited, from when the provider received the call, before the AI was told to answer it.
+        ContactCenterDiagnostics.RecordInboundAIAnswer(inboundEvent.ProviderName, _clock.UtcNow - now);
 
         var providerCallId = inboundEvent.ProviderCallId;
         var activityId = activity.ItemId;

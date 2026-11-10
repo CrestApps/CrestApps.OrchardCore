@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.StateMachines;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
@@ -63,10 +65,11 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         ArgumentException.ThrowIfNullOrEmpty(registration.CommandId);
         ArgumentException.ThrowIfNullOrEmpty(registration.ProviderName);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             $"ContactCenterProviderCommand:Register:{registration.CommandId}",
             _registrationLockTimeout,
-            _registrationLockExpiration);
+            _registrationLockExpiration,
+            "contactcenter.provider_command.register");
 
         if (!locked)
         {
@@ -93,6 +96,10 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         command.RemoveReservationFromQueueOnFailure = registration.RemoveReservationFromQueueOnFailure;
         command.DialerProfileId = registration.DialerProfileId;
         command.RequestPayload = registration.RequestPayload;
+
+        // The work that registers the command, such as a dialer attempt or an offer that rang out; every dispatch of it,
+        // inline or from the recovery pass, links back to that trace.
+        command.TraceParent = TraceContextPropagation.Capture();
         command.Status = ProviderCommandStatus.Pending;
         command.FenceToken = 0;
         command.OwnerToken = null;

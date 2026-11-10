@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Taxation.Core.Models;
+using CrestApps.OrchardCore.Taxation.Core.Telemetry;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -112,17 +113,35 @@ public sealed class TaxService : ITaxService
                 continue;
             }
 
+            var providerName = provider.GetType().Name;
+
+            using var providerTelemetry = TaxationTelemetry.StartDetermination(providerName, external: true);
+
             // A service that can't answer, such as a tax connector that's down, leaves the order to the store's own
             // rules rather than stopping the sale.
             try
             {
-                return await provider.DetermineAsync(context, cancellationToken);
+                var determined = await provider.DetermineAsync(context, cancellationToken);
+
+                providerTelemetry.Succeed();
+
+                return determined;
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                _logger.LogWarning(exception, "The tax provider '{Provider}' couldn't work out the tax; the store's own rules did instead.", provider.GetType().Name);
+                providerTelemetry.Fail(exception);
+                TaxationTelemetry.RecordFallback(providerName, providerTelemetry.Outcome);
+                _logger.LogWarning(exception, "The tax provider '{Provider}' couldn't work out the tax; the store's own rules did instead.", providerName);
+            }
+            catch (OperationCanceledException exception)
+            {
+                providerTelemetry.Fail(exception);
+
+                throw;
             }
         }
+
+        using var telemetry = TaxationTelemetry.StartDetermination(TaxationTelemetry.StoreRulesProvider, external: false);
 
         var result = new TaxCalculationResult
         {
@@ -153,6 +172,8 @@ public sealed class TaxService : ITaxService
         result.TaxableAmount = _roundingStrategy.Round(sumNet, context.Currency);
         result.TaxAmount = totalTax;
         result.TotalAmount = _roundingStrategy.Round(sumNominal, context.Currency) + exclusiveTax;
+
+        telemetry.Succeed();
 
         return result;
     }

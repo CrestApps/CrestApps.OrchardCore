@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Outreach;
 using CrestApps.OrchardCore.Outreach.Models;
@@ -39,6 +40,8 @@ public sealed class MessagingBroadcastRunObserver : IOutreachRunObserver
             return;
         }
 
+        var previousStatus = broadcast.Status;
+
         broadcast.SentCount = run.Sent;
         broadcast.FailedCount = run.Failed;
         broadcast.SkippedCount = run.Skipped;
@@ -48,6 +51,17 @@ public sealed class MessagingBroadcastRunObserver : IOutreachRunObserver
             OutreachRunStatus.Failed or OutreachRunStatus.Canceled => MessagingBroadcastStatus.Failed,
             _ => MessagingBroadcastStatus.Running,
         };
+
+        // Counted on the update that finishes the broadcast; the engine reports a finished run more than once.
+        if (broadcast.Status != previousStatus &&
+            broadcast.Status is MessagingBroadcastStatus.Completed or MessagingBroadcastStatus.Failed)
+        {
+            MessagingTelemetry.RecordBroadcast(
+                broadcast.Channel,
+                broadcast.Status == MessagingBroadcastStatus.Completed
+                    ? MessagingTelemetry.BroadcastResults.Completed
+                    : MessagingTelemetry.BroadcastResults.Failed);
+        }
 
         if (run.IsFinished)
         {

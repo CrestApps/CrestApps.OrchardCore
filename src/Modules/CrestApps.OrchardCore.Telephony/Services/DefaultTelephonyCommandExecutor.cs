@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -6,6 +10,11 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// <summary>
 /// Executes telephony provider mutations with the configured server-owned deadline.
 /// </summary>
+/// <remarks>
+/// Every command is measured on <c>crestapps.telephony.command.duration</c> and in a <c>crestapps.telephony.command</c>
+/// span, with the outcome <c>ok</c>, <c>error</c>, <c>timeout</c> (the provider's outcome is unknown),
+/// <c>cancelled</c> or <c>not_admitted</c>.
+/// </remarks>
 public sealed class DefaultTelephonyCommandExecutor : ITelephonyCommandExecutor
 {
     private readonly TelephonyCommandOptions _options;
@@ -34,10 +43,62 @@ public sealed class DefaultTelephonyCommandExecutor : ITelephonyCommandExecutor
     }
 
     /// <inheritdoc/>
-    public async Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
+    public Task<TResult> ExecuteAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
+        => ExecuteAsync(providerName: null, command: null, operation);
+
+    /// <inheritdoc/>
+    public async Task<TResult> ExecuteAsync<TResult>(string providerName, string command, Func<CancellationToken, Task<TResult>> operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
 
+        var tags = new TagList
+        {
+            { TelephonyTelemetry.CommandTag, string.IsNullOrEmpty(command) ? CrestAppsOrchardCoreTelemetry.Unknown : command },
+        };
+
+        if (!string.IsNullOrEmpty(providerName))
+        {
+            tags.Add(CrestAppsOrchardCoreTelemetry.ProviderTag, providerName);
+        }
+
+        using var telemetry = TelemetryScope.Start(
+            TelephonyTelemetry.ActivitySource,
+            "crestapps.telephony.command",
+            TelephonyTelemetry.CommandDuration,
+            tags);
+
+        try
+        {
+            var result = await ExecuteCoreAsync(operation);
+
+            // A command the provider refused came back in time, but it did not do what was asked.
+            if (result is TelephonyResult { Succeeded: false } refused)
+            {
+                telemetry.Fail(refused.OutcomeUnknown ? CrestAppsOrchardCoreTelemetry.Unknown : null);
+            }
+            else
+            {
+                telemetry.Succeed();
+            }
+
+            return result;
+        }
+        catch (TelephonyCommandNotAdmittedException)
+        {
+            telemetry.SetOutcome(TelephonyTelemetry.ResultNotAdmitted);
+
+            throw;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<TResult> ExecuteCoreAsync<TResult>(Func<CancellationToken, Task<TResult>> operation)
+    {
         // Once the host is stopping, stop admitting new commands: refuse before the provider is ever
         // contacted so the caller can treat the command as definitely-not-applied rather than as an
         // indeterminate in-flight interruption.

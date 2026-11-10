@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Customers.Core.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -57,7 +58,7 @@ public sealed class DefaultCustomerService : ICustomerService
         }
 
         // Two requests of the same user (two tabs checking out) must not each make a customer.
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync("CUSTOMER_FOR_USER_" + userId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync("CUSTOMER_FOR_USER_" + userId, _lockTimeout, _lockExpiration, "customers.user_customer");
 
         if (!locked)
         {

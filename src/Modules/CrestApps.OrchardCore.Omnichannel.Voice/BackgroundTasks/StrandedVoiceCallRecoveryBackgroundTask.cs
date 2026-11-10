@@ -1,11 +1,13 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -41,7 +43,10 @@ public sealed class StrandedVoiceCallRecoveryBackgroundTask : IBackgroundTask
     ];
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => RecoverAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task RecoverAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
@@ -65,6 +70,13 @@ public sealed class StrandedVoiceCallRecoveryBackgroundTask : IBackgroundTask
             .ListAsync(cancellationToken);
 
         var concluded = 0;
+        var failed = 0;
+
+        // A full page means there may be more stranded calls than one run takes on.
+        if (candidates.Count >= MaxCallsPerRun)
+        {
+            run.BudgetExceeded();
+        }
 
         foreach (var activity in candidates)
         {
@@ -97,13 +109,19 @@ public sealed class StrandedVoiceCallRecoveryBackgroundTask : IBackgroundTask
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                failed++;
                 logger.LogError(ex, "Failed to recover stranded AI voice activity '{ActivityId}'.", activity.ItemId.SanitizeLogValue());
             }
         }
 
-        if (concluded > 0 && logger.IsEnabled(LogLevel.Information))
+        run.AddItems(concluded, "concluded");
+        run.AddItems(failed, "failed");
+
+        if ((concluded > 0 || failed > 0) && logger.IsEnabled(LogLevel.Information))
         {
-            logger.LogInformation("Concluded {Count} automated voice call(s) whose end was never reported.", concluded);
+            var candidateCount = candidates.Count;
+
+            VoiceLog.StrandedRecoveryRun(logger, candidateCount, concluded, failed);
         }
     }
 }

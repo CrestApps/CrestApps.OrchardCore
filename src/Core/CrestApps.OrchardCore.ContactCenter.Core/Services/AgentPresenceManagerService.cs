@@ -1,6 +1,7 @@
 ﻿using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -93,10 +94,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
             onLiveCall = await _agentWorkStateHealingService.HasLiveCallAsync(profile.ItemId, cancellationToken);
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            "contactcenter.agent.presence");
 
         if (!locked)
         {
@@ -181,10 +183,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            "contactcenter.agent.presence");
 
         if (!locked)
         {
@@ -288,10 +291,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
 
         await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            "contactcenter.agent.presence");
 
         if (!locked)
         {
@@ -364,10 +368,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         // it, exactly as an explicit sign-out does. Only the memberships survive.
         await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            "contactcenter.agent.presence");
 
         if (!locked)
         {
@@ -458,10 +463,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
 
         var resolvedReason = await ResolveReasonAsync(reason, context, cancellationToken);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            "contactcenter.agent.presence");
 
         if (!locked)
         {

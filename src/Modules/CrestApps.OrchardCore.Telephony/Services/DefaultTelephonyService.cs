@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 
@@ -82,6 +83,8 @@ public sealed class DefaultTelephonyService : ITelephonyService
 
         if (!decision.IsAllowed)
         {
+            TelephonyTelemetry.RecordDialScreening(TelephonyTelemetry.ScreeningStageDestinationPolicy, allowed: false, decision.Outcome.ToString());
+
             return TelephonyResult.Failed(decision.Reason);
         }
 
@@ -94,6 +97,12 @@ public sealed class DefaultTelephonyService : ITelephonyService
                 Origin = OutboundCallOrigin.SoftPhone,
             },
             cancellationToken);
+
+        // The code a screener denies with is a stable machine-readable value, such as DoNotCall; never the number.
+        TelephonyTelemetry.RecordDialScreening(
+            TelephonyTelemetry.ScreeningStageCompliance,
+            allowed: screening?.IsAllowed == true,
+            screening is null ? "no_decision" : screening.Reason);
 
         if (screening is null || !screening.IsAllowed)
         {

@@ -1,5 +1,8 @@
 using CrestApps.OrchardCore.ContentTransfer.Services;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
@@ -14,9 +17,28 @@ public sealed class ContentTransferUploadCleanupBackgroundTask : IBackgroundTask
 {
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
-        var chunkFileUploadService = serviceProvider.GetRequiredService<IContentTransferChunkFileUploadService>();
-        chunkFileUploadService.PurgeTempDirectory();
+        return this.RunAsync(run =>
+        {
+            var chunkFileUploadService = serviceProvider.GetRequiredService<IContentTransferChunkFileUploadService>();
+            var deleted = chunkFileUploadService.PurgeTempDirectory();
 
-        return Task.CompletedTask;
+            if (deleted == 0)
+            {
+                run.Skip();
+
+                return Task.CompletedTask;
+            }
+
+            run.AddItems(deleted, "deleted");
+
+            var logger = serviceProvider.GetRequiredService<ILogger<ContentTransferUploadCleanupBackgroundTask>>();
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                ContentTransferLog.UploadTempFilesPurged(logger, deleted);
+            }
+
+            return Task.CompletedTask;
+        });
     }
 }

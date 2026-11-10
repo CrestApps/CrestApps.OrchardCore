@@ -1,7 +1,11 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Telemetry;
 using CrestApps.OrchardCore.Webhooks.Models;
 using CrestApps.OrchardCore.WorkQueues;
 using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
@@ -167,13 +171,16 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         // provider aliases resolve to a single stable identity and share one durable uniqueness constraint.
         var providerName = _providerNameNormalizer.Normalize(delivery.ProviderName);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetDeliveryLockKey(providerName, delivery.DeliveryId),
             _acceptanceLockTimeout,
-            _acceptanceLockExpiration);
+            _acceptanceLockExpiration,
+            "webhook.inbox.accept");
 
         if (!locked)
         {
+            WebhookTelemetry.RecordInboxAccepted(providerName, "busy");
+
             return new ProviderWebhookInboxAcceptanceResult
             {
                 Status = ProviderWebhookInboxAcceptanceStatus.Busy,
@@ -188,6 +195,8 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         if (existing is not null)
         {
+            WebhookTelemetry.RecordInboxAccepted(providerName, "duplicate");
+
             return new ProviderWebhookInboxAcceptanceResult
             {
                 Status = ProviderWebhookInboxAcceptanceStatus.Duplicate,
@@ -203,6 +212,10 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             DeliveryId = delivery.DeliveryId,
             HandlerName = delivery.HandlerName,
             Payload = delivery.Payload,
+
+            // The request that delivered the payload, as the provider endpoint captured it or as current now; the
+            // dispatch, inline or on the retry pass, links back to it.
+            TraceParent = delivery.TraceParent ?? TraceContextPropagation.Capture(),
             Status = ProviderWebhookInboxStatus.Pending,
             NextAttemptUtc = now,
             CreatedUtc = now,
@@ -211,6 +224,8 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         await _queue.EnqueueAsync(message, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
+
+        WebhookTelemetry.RecordInboxAccepted(providerName, "accepted");
 
         return new ProviderWebhookInboxAcceptanceResult
         {
@@ -224,10 +239,11 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     {
         ArgumentException.ThrowIfNullOrEmpty(messageId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetDispatchLockKey(messageId),
             _dispatchLockTimeout,
-            _dispatchLockExpiration);
+            _dispatchLockExpiration,
+            "webhook.inbox.dispatch");
 
         if (!locked)
         {
@@ -245,6 +261,14 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         var ownerToken = message.OwnerToken;
         var fenceToken = message.FenceToken;
+        var delivery = message.AttemptCount == 0 ? "first" : "retry";
+
+        using var activity = TraceContextPropagation.StartLinkedActivity(WebhookTelemetry.ActivitySource, "crestapps.webhook.inbox.dispatch", message.TraceParent);
+        activity?.SetTag("crestapps.webhook.inbox.message.id", message.ItemId);
+        activity?.SetTag(CrestAppsOrchardCoreTelemetry.ProviderTag, message.ProviderName);
+        activity?.SetTag("crestapps.webhook.inbox.handler", message.HandlerName);
+        activity?.SetTag("crestapps.webhook.inbox.attempt", message.AttemptCount + 1);
+        WebhookTelemetry.RecordInboxLag(delivery, _clock.UtcNow - message.CreatedUtc);
 
         var handler = _handlers.FirstOrDefault(candidate =>
             string.Equals(candidate.TechnicalName, message.HandlerName, StringComparison.Ordinal));
@@ -253,6 +277,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         {
             // Waiting for a handler that is not enabled yet does not use up an attempt.
             await _queue.RetryAsync(message, "HandlerUnavailable", _ => _missingHandlerDelay, countAttempt: false, cancellationToken: cancellationToken);
+            WebhookTelemetry.RecordInboxDispatch(activity, delivery, "handler_unavailable");
 
             _logger.LogError(
                 "No provider webhook inbox handler named '{HandlerName}' is registered for message '{MessageId}'.",
@@ -262,25 +287,36 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             return false;
         }
 
+        var handlerStarted = Stopwatch.GetTimestamp();
+
         try
         {
             await _scopeExecutor.ExecuteAsync(inbox =>
                 inbox.DispatchHandlerAsync(message.HandlerName, message.Payload, cancellationToken));
 
-            return await SettleInFreshScopeAsync(
+            WebhookTelemetry.RecordInboxHandler(message.HandlerName, Stopwatch.GetElapsedTime(handlerStarted), exception: null);
+
+            var completed = await SettleInFreshScopeAsync(
                 message.ItemId,
                 ownerToken,
                 fenceToken,
                 true,
                 null,
                 cancellationToken);
+
+            WebhookTelemetry.RecordInboxDispatch(activity, delivery, "completed");
+
+            return completed;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (ConcurrencyException)
+        catch (ConcurrencyException exception)
         {
+            WebhookTelemetry.RecordInboxHandler(message.HandlerName, Stopwatch.GetElapsedTime(handlerStarted), exception);
+            WebhookTelemetry.RecordInboxDispatch(activity, delivery, "conflict");
+
             // Another worker committed a conflicting change to an aggregate this delivery touched (for
             // example a concurrent provider event for the same call). The YesSql session is now canceled and
             // must never be reused, so do not schedule a retry here. The durable claim expires and the message
@@ -289,6 +325,9 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         }
         catch (Exception exception)
         {
+            WebhookTelemetry.RecordInboxHandler(message.HandlerName, Stopwatch.GetElapsedTime(handlerStarted), exception);
+            CrestAppsOrchardCoreTelemetry.RecordException(activity, exception);
+
             await SettleInFreshScopeAsync(
                 message.ItemId,
                 ownerToken,
@@ -296,6 +335,8 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
                 false,
                 exception.GetType().FullName,
                 cancellationToken);
+
+            WebhookTelemetry.RecordInboxDispatch(activity, delivery, "retry");
 
             _logger.LogError(
                 exception,
@@ -376,8 +417,12 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     {
         await PurgeExpiredTombstonesAsync(cancellationToken);
 
-        var due = await _store.GetDueAsync(_clock.UtcNow, MaxBatchSize, cancellationToken);
+        var now = _clock.UtcNow;
+        var due = await _store.GetDueAsync(now, MaxBatchSize, cancellationToken);
         var completed = 0;
+
+        // The batch is already in hand, so how far behind the inbox is costs no extra read.
+        WebhookTelemetry.RecordInboxPendingAge(due.Count == 0 ? TimeSpan.Zero : now - due.Min(message => message.CreatedUtc));
 
         foreach (var message in due)
         {
@@ -478,8 +523,11 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         string errorType,
         CancellationToken cancellationToken)
     {
+        ProviderWebhookInboxMessage settled = null;
         var status = await _queue.RetryAsync(claim, errorType, _backoff, update: message =>
         {
+            settled = message;
+
             if (message.Status == ProviderWebhookInboxStatus.DeadLettered)
             {
                 // This is the age settled deliveries are purged by. Without it a dead letter is never selected.
@@ -491,6 +539,19 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         {
             throw new ConcurrencyException(new Document());
         }
+
+        var messageId = claim.ItemId.SanitizeLogValue();
+
+        if (status == LeasedWorkItemStatus.DeadLettered)
+        {
+            // A dead letter used to be silent: the delivery simply stopped being retried.
+            WebhookTelemetry.RecordInboxDeadLettered(settled?.ProviderName, settled?.HandlerName);
+            WebhookLog.InboxMessageDeadLettered(_logger, messageId, settled?.ProviderName, settled?.HandlerName, settled?.AttemptCount ?? MaxAttempts, errorType);
+
+            return;
+        }
+
+        WebhookLog.InboxRetryScheduled(_logger, messageId, settled?.HandlerName, settled?.AttemptCount ?? 0);
     }
 
     private static string GetDeliveryLockKey(string providerName, string deliveryId)

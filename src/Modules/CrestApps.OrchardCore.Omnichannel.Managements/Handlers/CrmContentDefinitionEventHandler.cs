@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,7 +99,7 @@ internal sealed class CrmContentDefinitionEventHandler : IContentDefinitionEvent
 
         _scheduled = true;
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider
+        DeferredWork.Add("omnichannel_opportunity_contact_sync", scope => scope.ServiceProvider
             .GetRequiredService<OpportunityContactFieldSynchronizer>()
             .SynchronizeAsync());
     }

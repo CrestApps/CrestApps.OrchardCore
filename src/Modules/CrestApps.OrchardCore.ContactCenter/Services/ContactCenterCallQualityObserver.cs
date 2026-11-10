@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -85,6 +86,9 @@ public sealed class ContactCenterCallQualityObserver : ICallQualityObserver
         CallQualityRecordFigures.Apply(record);
 
         await _recordStore.CreateAsync(record, cancellationToken);
+
+        // Each leg's report is recorded once (its record key de-duplicates it), so it is measured once.
+        ContactCenterDiagnostics.RecordCallQuality(record.Mos, record.JitterMs / 1000, record.LossPercent / 100);
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {

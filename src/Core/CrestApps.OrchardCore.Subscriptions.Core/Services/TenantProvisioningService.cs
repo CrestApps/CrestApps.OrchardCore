@@ -1,6 +1,10 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Core.Security;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Telemetry;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
@@ -11,6 +15,7 @@ using OrchardCore.Abstractions.Setup;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Recipes.Models;
 using OrchardCore.Settings;
 using OrchardCore.Setup.Services;
 using OrchardCore.Workflows.Services;
@@ -98,10 +103,15 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     {
         ArgumentException.ThrowIfNullOrEmpty(jobId);
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync("TENANT_PROVISIONING_" + jobId, _lockTimeout, _lockExpiration);
+        using var telemetry = SubscriptionsTelemetry.StartProvisioning(jobId);
+        using var logScope = _logger.BeginScope(new Dictionary<string, object> { ["ProvisioningJobId"] = jobId });
+
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync("TENANT_PROVISIONING_" + jobId, _lockTimeout, _lockExpiration, "subscriptions.tenant_provisioning");
 
         if (!locked)
         {
+            telemetry.SetOutcome(SubscriptionsTelemetry.ProvisioningBusy);
+
             // Another node holds this job. Reporting it as still running is honest and leaves the sweep to
             // pick it up later if that node dies.
             return TenantProvisioningStatus.Running;
@@ -114,22 +124,29 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
         if (job is null || job.IsTerminal)
         {
+            telemetry.SetOutcome(SubscriptionsTelemetry.ProvisioningSkipped);
+
             return job?.Status ?? TenantProvisioningStatus.Abandoned;
         }
 
         job.Status = TenantProvisioningStatus.Running;
         job.AttemptCount++;
 
+        telemetry.AddMetricTag(SubscriptionsTelemetry.AttemptTag, Math.Clamp(job.AttemptCount, 1, MaxAttempts));
+
         // The next attempt is scheduled before the work starts, so a process that dies mid-setup still leaves
         // a job that becomes due again rather than one stuck in Running forever.
         job.NextAttemptUtc = _clock.UtcNow.Add(GetBackOff(job.AttemptCount));
 
-        await _jobStore.UpdateAsync(job, cancellationToken);
+        using (SubscriptionsTelemetry.StartProvisioningStep("claim"))
+        {
+            await _jobStore.UpdateAsync(job, cancellationToken);
 
-        // Committed now rather than at the end of the scope. Setting up a tenant takes long enough that the
-        // process can die in the middle of it, and a claim that only existed in memory would leave the job
-        // looking never-attempted, to be picked up again and again by every node.
-        await _session.SaveChangesAsync(cancellationToken);
+            // Committed now rather than at the end of the scope. Setting up a tenant takes long enough that the
+            // process can die in the middle of it, and a claim that only existed in memory would leave the job
+            // looking never-attempted, to be picked up again and again by every node.
+            await _session.SaveChangesAsync(cancellationToken);
+        }
 
         string failure;
 
@@ -137,13 +154,16 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         {
             failure = await SetupAsync(job);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException exception)
         {
+            telemetry.Fail(exception);
+
             // Preserve cancellation semantics; the job stays claimable and is retried.
             throw;
         }
         catch (Exception exception)
         {
+            telemetry.Fail(exception);
             _logger.LogError(exception, "Failed to provision the tenant '{TenantName}' for job '{JobId}'.", job.TenantName, job.ItemId);
 
             failure = exception.Message;
@@ -191,7 +211,23 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
         await _jobStore.UpdateAsync(job, cancellationToken);
 
-        await RaiseAsync(job, failure);
+        if (failure is null)
+        {
+            telemetry.SetOutcome(SubscriptionsTelemetry.ProvisioningSucceeded);
+            SubscriptionsLog.TenantProvisioned(_logger, job.ItemId, job.AttemptCount, telemetry.Elapsed.TotalSeconds);
+        }
+        else
+        {
+            telemetry.Activity?.SetStatus(ActivityStatusCode.Error, "The site could not be created.");
+            telemetry.SetOutcome(job.Status == TenantProvisioningStatus.Abandoned
+                ? SubscriptionsTelemetry.ProvisioningAbandoned
+                : SubscriptionsTelemetry.ProvisioningFailed);
+        }
+
+        using (SubscriptionsTelemetry.StartProvisioningStep("raise_workflow"))
+        {
+            await RaiseAsync(job, failure);
+        }
 
         return job.Status;
     }
@@ -212,16 +248,28 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         }
 
         var adminPassword = UnprotectAdminPassword(job);
-        var recipes = await _setupService.GetSetupRecipesAsync();
+        IEnumerable<RecipeDescriptor> recipes;
+
+        using (SubscriptionsTelemetry.StartProvisioningStep("get_recipes"))
+        {
+            recipes = await _setupService.GetSetupRecipesAsync();
+        }
 
         if (!recipes.Any())
         {
             return "No setup recipes are available.";
         }
 
-        var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
+        ShellSettings shellSettings;
 
-        using var shellSettings = CreateShellSettings(job, onboarding);
+        using (SubscriptionsTelemetry.StartProvisioningStep("create_shell_settings"))
+        {
+            var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
+
+            shellSettings = CreateShellSettings(job, onboarding);
+        }
+
+        using var disposableShellSettings = shellSettings;
 
         var setupContext = new SetupContext
         {
@@ -243,7 +291,16 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             },
         };
 
-        await _setupService.SetupAsync(setupContext);
+        // The heavy step: it creates the database tables and runs the recipe.
+        using (var step = SubscriptionsTelemetry.StartProvisioningStep("setup"))
+        {
+            await _setupService.SetupAsync(setupContext);
+
+            if (setupContext.Errors.Count > 0)
+            {
+                step?.SetStatus(ActivityStatusCode.Error, "The setup reported errors.");
+            }
+        }
 
         return setupContext.Errors.Count == 0
             ? null

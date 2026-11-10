@@ -6,8 +6,10 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Modules;
@@ -33,6 +35,7 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
     private readonly ILocalClock _localClock;
     private readonly EnterpriseActivityReportKind _kind;
     private readonly IStringLocalizer _stringLocalizer;
+    private readonly ILogger _logger;
 
     public EnterpriseActivityReportProvider(
         ISession session,
@@ -43,7 +46,8 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
         IOmnichannelChannelEndpointStore addressStore,
         ILocalClock localClock,
         EnterpriseActivityReportKind kind,
-        IStringLocalizer<EnterpriseActivityReportProvider> stringLocalizer)
+        IStringLocalizer<EnterpriseActivityReportProvider> stringLocalizer,
+        ILogger<EnterpriseActivityReportProvider> logger = null)
     {
         _session = session;
         _campaignManager = campaignManager;
@@ -54,6 +58,7 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
         _localClock = localClock;
         _kind = kind;
         _stringLocalizer = stringLocalizer;
+        _logger = logger;
     }
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
@@ -74,6 +79,10 @@ internal sealed class EnterpriseActivityReportProvider : IReportRunner
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken))
             .ToArray();
+
+        // The report is registered once per kind, so the kind names it with a bounded value.
+        ReportTelemetry.RecordCodedIndexRows("omnichannel-enterprise-" + _kind.ToString(), activities.Length, _logger);
+
         var filteredActivities = OmnichannelReportQuery.Filter(
             activities,
             await OmnichannelReportFilter.GetCriteriaAsync(context.Filter, _campaignManager, _activitySourceOptions, cancellationToken));

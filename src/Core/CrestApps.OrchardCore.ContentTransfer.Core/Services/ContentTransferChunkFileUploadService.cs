@@ -2,6 +2,8 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.ContentTransfer.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -16,6 +18,9 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
 {
     private const string UploadIdFormKey = "__chunkedFileUploadId";
     private const string TempFolderName = "CrestAppsContentTransferUploads";
+    private const string ChunkResultStored = "stored";
+    private const string ChunkResultCompleted = "completed";
+    private const string ChunkResultRejected = "rejected";
 
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -62,16 +67,24 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
             || !range.HasLength
             || !range.HasRange)
         {
+            RecordChunk(ChunkResultRejected);
+
             return await invalidAsync(ContentTransferUploadError.InvalidRequest);
         }
 
         if (options.MaxUploadFileSize > 0 && range.Length > options.MaxUploadFileSize)
         {
+            RecordChunk(ChunkResultRejected);
+
             return await invalidAsync(ContentTransferUploadError.MaxFileSizeExceeded);
         }
 
-        if (range.To.Value - range.From.Value + 1 > options.MaxUploadChunkSize)
+        var chunkSize = range.To.Value - range.From.Value + 1;
+
+        if (chunkSize > options.MaxUploadChunkSize)
         {
+            RecordChunk(ChunkResultRejected);
+
             return await invalidAsync(ContentTransferUploadError.MaxChunkSizeExceeded);
         }
 
@@ -83,24 +96,31 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
             await formFile.CopyToAsync(fileStream, request.HttpContext.RequestAborted);
         }
 
-        return range.To.Value + 1 < range.Length.Value
-            ? await chunkAsync(uploadId, formFile, range)
-            : await CompleteUploadAsync(uploadId, formFile, completedAsync);
+        var isLastChunk = range.To.Value + 1 >= range.Length.Value;
+
+        RecordChunk(isLastChunk ? ChunkResultCompleted : ChunkResultStored);
+        ContentTransferDiagnostics.Record(ContentTransferDiagnostics.UploadChunkSize, chunkSize);
+
+        return isLastChunk
+            ? await CompleteUploadAsync(uploadId, formFile, completedAsync)
+            : await chunkAsync(uploadId, formFile, range);
     }
 
-    public void PurgeTempDirectory()
+    public int PurgeTempDirectory()
     {
         var tempFolderPath = GetTempFolderPath();
         var lifetime = _options.Value.TemporaryFileLifetime;
 
         if (lifetime <= TimeSpan.Zero || !Directory.Exists(tempFolderPath))
         {
-            return;
+            return 0;
         }
 
         var staleFiles = Directory.GetFiles(tempFolderPath, _tempFileNamePrefix + "*")
             .Select(filePath => new FileInfo(filePath))
             .Where(fileInfo => fileInfo.LastWriteTimeUtc + lifetime < _clock.UtcNow);
+
+        var deleted = 0;
 
         foreach (var fileInfo in staleFiles)
         {
@@ -108,7 +128,11 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
             {
                 break;
             }
+
+            deleted++;
         }
+
+        return deleted;
     }
 
     private async Task<IActionResult> CompleteUploadAsync(
@@ -126,6 +150,11 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
         {
             DeleteTemporaryFile(GetTempFilePath(uploadId, formFile));
         }
+    }
+
+    private static void RecordChunk(string result)
+    {
+        ContentTransferDiagnostics.Add(ContentTransferDiagnostics.UploadChunks, 1, CrestAppsOrchardCoreTelemetry.ResultTag, result);
     }
 
     private bool DeleteTemporaryFile(string tempFilePath)

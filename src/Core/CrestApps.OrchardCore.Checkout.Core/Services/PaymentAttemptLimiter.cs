@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
@@ -50,10 +51,11 @@ public sealed class PaymentAttemptLimiter : IPaymentAttemptLimiter
         var key = $"{_shellSettings.Name}_CheckoutRateLimit_{scope}_{discriminator}";
         var lockKey = $"{key}_LOCK";
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             lockKey,
             TimeSpan.FromSeconds(5),
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(10),
+            "checkout.payment_limit");
 
         if (!locked)
         {

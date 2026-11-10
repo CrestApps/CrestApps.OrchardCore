@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using OrchardCore.Locking.Distributed;
@@ -38,7 +39,7 @@ internal sealed class SharedSkillsCatalogBackfill
             return;
         }
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockName, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(1));
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockName, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(1), "contactcenter.shared_skills.backfill");
 
         if (!locked)
         {

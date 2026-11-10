@@ -29,6 +29,7 @@
     <PackageReference Include="OrchardCore.PublishLater" />
     <PackageReference Include="OrchardCore.Taxonomies" />
     <PackageReference Include="OrchardCore.Title" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ContentTransfer.Abstractions\CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
   </ItemGroup>
 

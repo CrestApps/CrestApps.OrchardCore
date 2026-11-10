@@ -1,8 +1,14 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.Storage;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 using OrchardCore.DataSources;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
@@ -17,24 +23,31 @@ internal sealed class ImportedDataSource : IDataSource
 {
     private const int _keysPerRead = 500;
 
+    // The data sets already logged as read before their first import, so a report that keeps reading one doesn't flood
+    // the log.
+    private static readonly ConcurrentDictionary<string, bool> _loggedNotImported = new(StringComparer.Ordinal);
+
     private readonly IConnectedDataSetStore _dataSetStore;
     private readonly IDataConnectionStore _connectionStore;
     private readonly IDataSetRowStore _rowStore;
     private readonly ConnectedDataSetAuthorizer _authorizer;
     private readonly ILocalClock _localClock;
+    private readonly ILogger _logger;
 
     public ImportedDataSource(
         IConnectedDataSetStore dataSetStore,
         IDataConnectionStore connectionStore,
         IDataSetRowStore rowStore,
         ConnectedDataSetAuthorizer authorizer,
-        ILocalClock localClock)
+        ILocalClock localClock,
+        ILogger<ImportedDataSource> logger)
     {
         _dataSetStore = dataSetStore;
         _connectionStore = connectionStore;
         _rowStore = rowStore;
         _authorizer = authorizer;
         _localClock = localClock;
+        _logger = logger;
     }
 
     public static string Name => DataConnectorConstants.ImportedDataSourceName;
@@ -100,7 +113,15 @@ internal sealed class ImportedDataSource : IDataSource
 
         if (string.IsNullOrEmpty(version))
         {
-            // Not imported yet: the data set is empty, but its fields are known.
+            // Not imported yet: the data set is empty, but its fields are known. A report reading it runs on no data
+            // without saying so, so the read is counted and logged.
+            DataConnectorsTelemetry.Add(DataConnectorsTelemetry.EmptyReads);
+
+            if (_loggedNotImported.TryAdd(record.ItemId, true))
+            {
+                _logger.ReadBeforeFirstImport(record.Name.SanitizeLogValue());
+            }
+
             yield return new DataBatch(fields, []);
 
             yield break;
@@ -115,7 +136,7 @@ internal sealed class ImportedDataSource : IDataSource
             while (remaining > 0)
             {
                 var take = (int)Math.Min(batchSize, remaining);
-                var stored = await _rowStore.ReadAsync(record.ItemId, version, afterId, take, keys, cancellationToken);
+                var stored = await ReadPageAsync(record.ItemId, version, afterId, take, keys, cancellationToken);
 
                 if (stored.Count == 0)
                 {
@@ -152,6 +173,39 @@ internal sealed class ImportedDataSource : IDataSource
         if (!any)
         {
             yield return new DataBatch(fields, []);
+        }
+    }
+
+    private async Task<IReadOnlyList<StoredDataSetRow>> ReadPageAsync(
+        string dataSetId,
+        string version,
+        long afterId,
+        int take,
+        string[] keys,
+        CancellationToken cancellationToken)
+    {
+        var startTimestamp = Stopwatch.GetTimestamp();
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
+
+        try
+        {
+            var rows = await _rowStore.ReadAsync(dataSetId, version, afterId, take, keys, cancellationToken);
+            outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
+
+            return rows;
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = CrestAppsOrchardCoreTelemetry.OutcomeCancelled;
+
+            throw;
+        }
+        finally
+        {
+            DataConnectorsTelemetry.RecordDuration(DataConnectorsTelemetry.RowStoreReadDuration, Stopwatch.GetElapsedTime(startTimestamp), outcome, new TagList
+            {
+                { CrestAppsOrchardCoreTelemetry.OperationTag, keys is null ? "scan" : "keys" },
+            });
         }
     }
 

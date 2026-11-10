@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -18,13 +19,18 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class ProviderCallStateReconciliationBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
         using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
 
         if (workLease is null)
         {
+            run.SkipForLease();
+
             return;
         }
 
@@ -37,6 +43,7 @@ public sealed class ProviderCallStateReconciliationBackgroundTask : IBackgroundT
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while reconciling Contact Center provider call state.");
         }
     }

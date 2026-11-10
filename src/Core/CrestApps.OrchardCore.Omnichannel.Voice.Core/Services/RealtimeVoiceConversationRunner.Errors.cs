@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -48,6 +49,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         if (kind == RealtimeSessionErrorKind.Unexpected && !heardFromSession)
         {
+            VoiceTelemetry.RecordSessionError("setup_refused", continued: false);
             _meter?.Failed();
             _logger.LogError(
                 "The realtime voice session on activity '{ActivityId}' refused its set-up, so it has neither the profile's instructions nor its tools, and is not carried on: {Error}",
@@ -60,6 +62,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         if (kind == RealtimeSessionErrorKind.Fatal ||
             (kind == RealtimeSessionErrorKind.Unexpected && consecutiveErrors >= MaximumConsecutiveErrors))
         {
+            VoiceTelemetry.RecordSessionError(kind == RealtimeSessionErrorKind.Fatal ? "fatal" : "repeated", continued: false);
             _meter?.Failed();
             _logger.LogError(
                 "A realtime voice session reported an error on activity '{ActivityId}' that it cannot continue from: {Error}",
@@ -69,6 +72,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             return false;
         }
 
+        VoiceTelemetry.RecordSessionError(kind == RealtimeSessionErrorKind.Refused ? "refused" : "unexpected", continued: true);
         _logger.LogWarning(
             "A realtime voice session reported an error on activity '{ActivityId}' and carries on: {Error}",
             activityId,

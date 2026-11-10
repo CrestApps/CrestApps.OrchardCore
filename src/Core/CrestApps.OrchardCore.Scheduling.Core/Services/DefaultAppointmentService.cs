@@ -786,7 +786,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
     // Every key is taken in ordinal order, resources and customers alike, so two requests never wait on each other in a circle.
     private Task<ILocker> LockAsync(IEnumerable<string> keys)
     {
-        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration);
+        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration, area: "scheduling.appointment");
     }
 
     private static async Task ReleaseAsync(ILocker locker)

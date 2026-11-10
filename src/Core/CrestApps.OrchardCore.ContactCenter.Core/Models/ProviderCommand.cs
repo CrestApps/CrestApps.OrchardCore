@@ -130,6 +130,12 @@ public sealed class ProviderCommand : CatalogItem, IModifiedUtcAwareModel
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the W3C <c>traceparent</c> of the work that registered the command, so each dispatch of it, inline or
+    /// from the recovery pass, links back to that trace.
+    /// </summary>
+    public string TraceParent { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether the command is in a terminal state and can no longer transition.
     /// </summary>
     public bool IsTerminal => Status is ProviderCommandStatus.Confirmed

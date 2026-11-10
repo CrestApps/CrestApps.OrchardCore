@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Text.Json;
 using CrestApps.OrchardCore.Core.Http;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
@@ -238,6 +240,8 @@ public sealed class ReportDesignerApiController : Controller
         {
             var plan = await _planner.PlanAsync(query, new DataSourceContext { User = User }, HttpContext.RequestAborted);
 
+            RecordValidationErrors(plan.Errors.Count);
+
             return Json(new
             {
                 Fields = plan.Fields.Values.Select(field => new
@@ -261,12 +265,33 @@ public sealed class ReportDesignerApiController : Controller
         }
         catch (ReportQueryException exception)
         {
+            RecordValidationErrors(exception.Errors.Count);
+
             return Json(new
             {
                 Fields = Array.Empty<object>(),
                 Columns = Array.Empty<object>(),
                 exception.Errors,
             }, ReportDesignerJson.Options);
+        }
+    }
+
+    // The problems the designer shows while someone builds a query: a debug log and a count, never their text.
+    private void RecordValidationErrors(int count)
+    {
+        if (count == 0)
+        {
+            return;
+        }
+
+        ReportsModuleLog.DesignValidationFailed(_logger, count);
+
+        if (ReportTelemetry.DesignValidationErrors.Enabled)
+        {
+            var tags = new TagList();
+
+            CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
+            ReportTelemetry.DesignValidationErrors.Add(count, tags);
         }
     }
 

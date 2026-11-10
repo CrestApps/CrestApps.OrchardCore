@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Reports.Designer.Indexes;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
@@ -180,7 +182,7 @@ public sealed class ReportDesignHistoryService
         ArgumentException.ThrowIfNullOrEmpty(designId);
         ArgumentNullException.ThrowIfNull(user);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(designId), _lockTimeout, _lockExpiration);
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey(designId), _lockTimeout, _lockExpiration, "reports.design");
 
         if (!locked)
         {
@@ -310,6 +312,23 @@ public sealed class ReportDesignHistoryService
         ArgumentNullException.ThrowIfNull(incoming);
         ArgumentNullException.ThrowIfNull(user);
 
+        var result = await PublishCoreAsync(incoming, existing, revision, force, user, canSharePublicly);
+
+        ReportTelemetry.Count(ReportTelemetry.DesignPublishes, (CrestAppsOrchardCoreTelemetry.OutcomeTag, result.Status switch
+        {
+            ReportHistoryStatus.Saved => "saved",
+            ReportHistoryStatus.Invalid => "invalid",
+            ReportHistoryStatus.Conflict => "conflict",
+            ReportHistoryStatus.Busy => "busy",
+            ReportHistoryStatus.NotFound => "not_found",
+            _ => CrestAppsOrchardCoreTelemetry.Other,
+        }));
+
+        return result;
+    }
+
+    private async Task<ReportHistoryResult> PublishCoreAsync(ReportDesign incoming, ReportDesign existing, long revision, bool force, ClaimsPrincipal user, bool canSharePublicly)
+    {
         if (existing is null && string.IsNullOrEmpty(incoming.ItemId))
         {
             var created = await _designService.SaveAsync(incoming, null, user, canSharePublicly);
@@ -332,7 +351,7 @@ public sealed class ReportDesignHistoryService
 
         var designId = existing?.ItemId ?? incoming.ItemId;
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(designId), _lockTimeout, _lockExpiration);
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey(designId), _lockTimeout, _lockExpiration, "reports.design");
 
         if (!locked)
         {
@@ -447,7 +466,7 @@ public sealed class ReportDesignHistoryService
 
     private async Task<ReportHistoryResult> ChangeDraftAsync(string designId, long revision, bool force, ReportDesignChangeKind kind, ClaimsPrincipal user, Func<ReportDesignDraft, Task<int?>> change)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(designId), _lockTimeout, _lockExpiration);
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(LockKey(designId), _lockTimeout, _lockExpiration, "reports.design");
 
         if (!locked)
         {

@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -48,7 +50,12 @@ public sealed class ActivityBatchLoadWatchdogBackgroundTask : IBackgroundTask
     ];
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => SweepAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private static async Task SweepAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var registry = serviceProvider.GetRequiredService<ActivityBatchLoadRegistry>();
@@ -62,15 +69,28 @@ public sealed class ActivityBatchLoadWatchdogBackgroundTask : IBackgroundTask
 
         var now = clock.UtcNow;
 
-        // One load is resumed a run; any other stalled load is picked up on a following run.
-        var stalled = batches
+        var stalledLoads = batches
             .Where(batch => !registry.IsRunning(batch.ItemId) && IsStalled(batch, now))
+            .ToList();
+
+        // Recorded on every sweep from the loads it just read, so the gauge never queries the database itself.
+        OmnichannelTelemetry.Record(OmnichannelTelemetry.BatchLoadsStalled, stalledLoads.Count);
+
+        // One load is resumed a run; any other stalled load is picked up on a following run.
+        var stalled = stalledLoads
             .OrderBy(batch => batch.LoadHeartbeatUtc ?? batch.LoadStartedUtc ?? DateTime.MinValue)
             .FirstOrDefault();
 
         if (stalled is null)
         {
+            run.Skip();
+
             return;
+        }
+
+        if (stalledLoads.Count > 1)
+        {
+            run.BudgetExceeded();
         }
 
         // A load that was loading before loads recorded where they had got to cannot be carried on: started again from
@@ -87,6 +107,8 @@ public sealed class ActivityBatchLoadWatchdogBackgroundTask : IBackgroundTask
                 "The activity load '{BatchId}' was left loading with no record of where it had got to; it was stopped so it can be loaded again.",
                 stalled.ItemId);
 
+            RecordAction(run, OmnichannelTelemetry.WatchdogReset);
+
             return;
         }
 
@@ -102,6 +124,8 @@ public sealed class ActivityBatchLoadWatchdogBackgroundTask : IBackgroundTask
                 "The activity load '{BatchId}' stopped part-way {Count} times and was given up.",
                 stalled.ItemId,
                 stalled.LoadResumeCount + 1);
+
+            RecordAction(run, OmnichannelTelemetry.WatchdogGaveUp);
 
             return;
         }
@@ -120,7 +144,15 @@ public sealed class ActivityBatchLoadWatchdogBackgroundTask : IBackgroundTask
             stalled.LoadResumeCount,
             MaxResumes);
 
+        RecordAction(run, OmnichannelTelemetry.WatchdogResumed);
+
         await serviceProvider.GetRequiredService<IActivityBatchLoadCoordinator>().ResumeAsync(stalled.ItemId, cancellationToken);
+    }
+
+    private static void RecordAction(MeasuredTaskRun run, string action)
+    {
+        run.AddItems(1, action);
+        OmnichannelTelemetry.Add(OmnichannelTelemetry.BatchLoadWatchdogActions, 1, OmnichannelTelemetry.ActionTag, action);
     }
 
     /// <summary>

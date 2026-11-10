@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -25,7 +26,10 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var leases = new List<IDisposable>();
 
@@ -37,13 +41,16 @@ public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
 
                 if (lease is null)
                 {
+                    // A feature holding the inbox back, such as Contact Center Voice while it drains.
+                    run.SkipForLease();
+
                     return;
                 }
 
                 leases.Add(lease);
             }
 
-            await DispatchAsync(serviceProvider, cancellationToken);
+            await DispatchAsync(serviceProvider, run, cancellationToken);
         }
         finally
         {
@@ -54,7 +61,7 @@ public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
         }
     }
 
-    private static async Task DispatchAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    private static async Task DispatchAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var inbox = serviceProvider.GetRequiredService<IProviderWebhookInbox>();
         var logger = serviceProvider.GetRequiredService<ILogger<ProviderWebhookInboxBackgroundTask>>();
@@ -62,6 +69,8 @@ public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
         try
         {
             var processed = await inbox.DispatchDueAsync(cancellationToken);
+
+            run.AddItems(processed);
 
             if (processed > 0 && logger.IsEnabled(LogLevel.Debug))
             {
@@ -74,6 +83,9 @@ public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
         }
         catch (Exception exception)
         {
+            // Swallowed so the next pass runs, but no longer invisible: the run is reported as failed.
+            run.ReportError(exception);
+
             logger.LogError(
                 exception,
                 "An error occurred while dispatching the provider webhook inbox.");

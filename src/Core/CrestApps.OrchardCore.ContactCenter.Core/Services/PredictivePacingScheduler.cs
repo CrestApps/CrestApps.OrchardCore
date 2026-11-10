@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -142,6 +143,7 @@ public sealed class PredictivePacingScheduler : IPredictivePacingScheduler
         catch (Exception ex) when (ex is not OperationCanceledException && recorder is not null)
         {
             observation?.End();
+            ContactCenterDiagnostics.RecordDialerPacingCycle(DialerPacingCycleOutcome.Failed, DialerMode.Predictive, elapsed: null);
 
             // The scope this cycle ran on fails with the exception, and what waits for a failed scope never runs.
             await recorder.RecordNowAsync(new DialerPacingCycle
@@ -172,6 +174,7 @@ public sealed class PredictivePacingScheduler : IPredictivePacingScheduler
                 await DescribeOverDialDecisionAsync(services, record, startedUtc, cancellationToken);
             }
 
+            ContactCenterDiagnostics.RecordDialerPacingCycle(record.Outcome, DialerMode.Predictive, _clock.UtcNow - startedUtc, started);
             await recorder.RecordAsync(record);
         }
 

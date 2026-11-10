@@ -3,6 +3,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.DataConnectors.Http;
 using CrestApps.OrchardCore.DataConnectors.Relational;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OrchardCore.DataSources;
 using OrchardCore.Localization;
@@ -98,10 +100,14 @@ internal sealed class SqlServerDataConnector : RelationalDataConnector, IDataCon
     public const string PasswordSecret = "Password";
 
     private readonly DataConnectorNetworkOptions _networkOptions;
+    private readonly ILogger _logger;
 
-    public SqlServerDataConnector(IOptions<DataConnectorNetworkOptions> networkOptions)
+    public SqlServerDataConnector(
+        IOptions<DataConnectorNetworkOptions> networkOptions,
+        ILogger<SqlServerDataConnector> logger = null)
     {
         _networkOptions = networkOptions.Value;
+        _logger = logger ?? NullLogger<SqlServerDataConnector>.Instance;
     }
 
     public static string Name => DataConnectorConstants.Connectors.SqlServer;
@@ -215,7 +221,7 @@ internal sealed class SqlServerDataConnector : RelationalDataConnector, IDataCon
 
         // The server goes through the same network rule as any other connector, so a connection can't reach the
         // site's own network unless the configuration allows it.
-        await DataConnectorNetwork.ResolveAllowedAsync(GetHost(settings.Server), _networkOptions, cancellationToken);
+        await DataConnectorNetwork.ResolveAllowedAsync(GetHost(settings.Server), _networkOptions, _logger, cancellationToken);
 
         var connection = new SqlConnection(builder.ConnectionString);
 

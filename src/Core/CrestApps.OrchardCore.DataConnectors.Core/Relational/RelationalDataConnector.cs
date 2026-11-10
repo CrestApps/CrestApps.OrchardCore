@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Runtime.CompilerServices;
 using System.Text;
 using CrestApps.Core;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
 using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.DataConnectors.Relational;
@@ -160,7 +161,7 @@ public abstract class RelationalDataConnector
         command.CommandText = ListResourcesSql;
         command.CommandTimeout = 60;
 
-        await using var reader = await ExecuteAsync(() => command.ExecuteReaderAsync(cancellationToken));
+        await using var reader = await ExecuteAsync(context, () => command.ExecuteReaderAsync(cancellationToken));
 
         while (await reader.ReadAsync(cancellationToken))
         {
@@ -197,7 +198,7 @@ public abstract class RelationalDataConnector
 
         IReadOnlyList<DbColumn> columns;
 
-        await using (var reader = await ExecuteAsync(() => command.ExecuteReaderAsync(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo, cancellationToken)))
+        await using (var reader = await ExecuteAsync(context, () => command.ExecuteReaderAsync(CommandBehavior.SchemaOnly | CommandBehavior.KeyInfo, cancellationToken)))
         {
             columns = await reader.GetColumnSchemaAsync(cancellationToken);
         }
@@ -238,7 +239,7 @@ public abstract class RelationalDataConnector
         command.CommandText = BuildRead(context, settings, command);
         BindParameters(command, context.Parameters);
 
-        await using var reader = await ExecuteAsync(() => command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken));
+        await using var reader = await ExecuteAsync(context, () => command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken));
 
         var fields = Enumerable.Range(0, reader.FieldCount)
             .Select(index => new DataField(reader.GetName(index), reader.GetName(index), DataFieldType.Text))
@@ -246,7 +247,7 @@ public abstract class RelationalDataConnector
         var rows = new List<object[]>(batchSize);
         var any = false;
 
-        while (await ReadAsync(reader, cancellationToken))
+        while (await ReadAsync(reader, context, cancellationToken))
         {
             var row = new object[fields.Length];
 
@@ -538,11 +539,14 @@ public abstract class RelationalDataConnector
         }
         catch (DbException exception)
         {
-            throw new DataConnectorException($"Couldn't connect to the database: {exception.Message}", exception) { IsTransient = IsTransient(exception) };
+            var transient = IsTransient(exception);
+            DataConnectorsTelemetry.RecordDbError(context.Connection?.Connector, "connect", transient);
+
+            throw new DataConnectorException($"Couldn't connect to the database: {exception.Message}", exception) { IsTransient = transient };
         }
     }
 
-    private async Task<T> ExecuteAsync<T>(Func<Task<T>> execute)
+    private async Task<T> ExecuteAsync<T>(DataConnectorContext context, Func<Task<T>> execute)
     {
         try
         {
@@ -550,11 +554,14 @@ public abstract class RelationalDataConnector
         }
         catch (DbException exception)
         {
-            throw new DataConnectorException($"The database refused the query: {exception.Message}", exception) { IsTransient = IsTransient(exception) };
+            var transient = IsTransient(exception);
+            DataConnectorsTelemetry.RecordDbError(context.Connection?.Connector, "query", transient);
+
+            throw new DataConnectorException($"The database refused the query: {exception.Message}", exception) { IsTransient = transient };
         }
     }
 
-    private async Task<bool> ReadAsync(DbDataReader reader, CancellationToken cancellationToken)
+    private async Task<bool> ReadAsync(DbDataReader reader, DataConnectorContext context, CancellationToken cancellationToken)
     {
         try
         {
@@ -562,7 +569,10 @@ public abstract class RelationalDataConnector
         }
         catch (DbException exception)
         {
-            throw new DataConnectorException($"The database failed while reading: {exception.Message}", exception) { IsTransient = IsTransient(exception) };
+            var transient = IsTransient(exception);
+            DataConnectorsTelemetry.RecordDbError(context.Connection?.Connector, "read", transient);
+
+            throw new DataConnectorException($"The database failed while reading: {exception.Message}", exception) { IsTransient = transient };
         }
     }
 }

@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -2623,7 +2624,8 @@ public sealed class ProviderVoiceEventServiceTests
             new VoiceIngressGate(distributedLock),
             clock,
             logger,
-            Mock.Of<IDialerAbandonmentTracker>());
+            Mock.Of<IDialerAbandonmentTracker>(),
+            RedactorProviderFactory.Create());
     }
 
     private static IAgentProfileManager CreateAgentManager()

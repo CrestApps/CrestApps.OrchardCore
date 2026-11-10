@@ -20,6 +20,8 @@ public sealed class GeneralAIOptionsRegistrationTests
             EnableDistributedCaching = false,
             OverrideEnableOpenTelemetry = true,
             EnableOpenTelemetry = true,
+            OverrideEnableSensitiveData = true,
+            EnableSensitiveData = true,
         };
 
         var services = new ServiceCollection();
@@ -37,6 +39,8 @@ public sealed class GeneralAIOptionsRegistrationTests
         Assert.False(options.EnableDistributedCaching);
         Assert.True(options.OverrideEnableOpenTelemetry);
         Assert.True(options.EnableOpenTelemetry);
+        Assert.True(options.OverrideEnableSensitiveData);
+        Assert.True(options.EnableSensitiveData);
     }
 
     private static ISiteService CreateSiteService(GeneralAISettings settings)

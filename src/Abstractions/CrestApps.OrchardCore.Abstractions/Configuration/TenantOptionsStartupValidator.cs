@@ -1,3 +1,5 @@
+using System.Diagnostics.Metrics;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -30,6 +32,15 @@ namespace CrestApps.OrchardCore.Configuration;
 /// </remarks>
 public sealed class TenantOptionsStartupValidator : ModularTenantEvents
 {
+    /// <summary>
+    /// The number of tenant activations stopped by an invalid configuration, tagged with the <c>options.type</c>
+    /// that failed (its class name, or <c>unknown</c>).
+    /// </summary>
+    public static Counter<long> ValidationFailures { get; } = CrestAppsOrchardCoreTelemetry.PlatformMeter.CreateCounter<long>(
+        "crestapps.tenant.activation.validation_failures",
+        "{failure}",
+        "The number of tenant activations stopped by an invalid configuration.");
+
     private readonly IServiceProvider _serviceProvider;
     private readonly ShellSettings _shellSettings;
     private readonly ILogger _logger;
@@ -68,6 +79,8 @@ public sealed class TenantOptionsStartupValidator : ModularTenantEvents
         }
         catch (OptionsValidationException ex)
         {
+            ValidationFailures.Add(1, new KeyValuePair<string, object>("options.type", ex.OptionsType?.Name ?? CrestAppsOrchardCoreTelemetry.Unknown));
+
             if (_logger.IsEnabled(LogLevel.Critical))
             {
                 _logger.LogCritical(
@@ -81,6 +94,11 @@ public sealed class TenantOptionsStartupValidator : ModularTenantEvents
         }
         catch (AggregateException ex)
         {
+            foreach (var optionsType in ex.InnerExceptions.Select(inner => (inner as OptionsValidationException)?.OptionsType?.Name ?? CrestAppsOrchardCoreTelemetry.Unknown))
+            {
+                ValidationFailures.Add(1, new KeyValuePair<string, object>("options.type", optionsType));
+            }
+
             if (_logger.IsEnabled(LogLevel.Critical))
             {
                 _logger.LogCritical(

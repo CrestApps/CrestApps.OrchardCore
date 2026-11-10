@@ -2,7 +2,9 @@ using System.Globalization;
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -220,6 +222,21 @@ public sealed class DialerAttemptService : IDialerAttemptService
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(reservation);
 
+        // The provider command this attempt registers links back to this span.
+        using var attemptActivity = ContactCenterDiagnostics.StartDialerAttempt(profile.Mode);
+        var result = await DialCoreAsync(profile, reservation, cancellationToken);
+
+        ContactCenterDiagnostics.RecordDialerAttempt(
+            attemptActivity,
+            profile.Mode,
+            result.Started ? "dialed" : result.Suppression is not null ? "suppressed" : "not_started",
+            result.Suppression?.Reason.ToString());
+
+        return result;
+    }
+
+    private async Task<DialerAttemptResult> DialCoreAsync(DialerProfile profile, ActivityReservation reservation, CancellationToken cancellationToken)
+    {
         var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
         if (activity is null)
@@ -305,10 +322,11 @@ public sealed class DialerAttemptService : IDialerAttemptService
         ArgumentNullException.ThrowIfNull(queueItem);
 
         // The same lock routing takes to reserve the activity, so the dial and an agent offer can never both claim it.
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             ActivityReservationLockKeys.ForActivity(queueItem.ActivityItemId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation.activity");
 
         if (!locked)
         {

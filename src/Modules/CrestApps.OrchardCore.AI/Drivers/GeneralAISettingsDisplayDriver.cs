@@ -59,6 +59,7 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
             model.AbsoluteMaximumIterationsPerRequest = _defaultAIOptions.AbsoluteMaximumIterationsPerRequest;
             model.EnableDistributedCaching = settings.EnableDistributedCaching;
             model.EnableOpenTelemetry = settings.EnableOpenTelemetry;
+            model.EnableSensitiveData = settings.EnableSensitiveData;
         }).Location("Content:1%General;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
@@ -78,7 +79,10 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
             settings.EnablePreemptiveMemoryRetrieval != model.EnablePreemptiveMemoryRetrieval ||
             settings.MaximumIterationsPerRequest != maximumIterationsPerRequest ||
             settings.EnableDistributedCaching != model.EnableDistributedCaching ||
-            settings.EnableOpenTelemetry != model.EnableOpenTelemetry;
+            settings.EnableOpenTelemetry != model.EnableOpenTelemetry ||
+            settings.EnableSensitiveData != model.EnableSensitiveData ||
+            !settings.OverrideEnableOpenTelemetry ||
+            !settings.OverrideEnableSensitiveData;
 
         if (model.MaximumIterationsPerRequest < 1)
         {
@@ -98,7 +102,12 @@ public sealed class GeneralAISettingsDisplayDriver : SiteDisplayDriver<GeneralAI
         settings.EnablePreemptiveMemoryRetrieval = model.EnablePreemptiveMemoryRetrieval;
         settings.MaximumIterationsPerRequest = maximumIterationsPerRequest;
         settings.EnableDistributedCaching = model.EnableDistributedCaching;
+
+        // The override flags make the saved values win over configuration; without them the toggles had no effect.
+        settings.OverrideEnableOpenTelemetry = true;
         settings.EnableOpenTelemetry = model.EnableOpenTelemetry;
+        settings.OverrideEnableSensitiveData = true;
+        settings.EnableSensitiveData = model.EnableSensitiveData;
 
         if (settingsChanged)
         {

@@ -2,8 +2,10 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 using YesSql;
@@ -19,6 +21,7 @@ public sealed class LeadConversionReportProvider : OmnichannelReportBase, IRepor
 {
     private readonly ISession _session;
     private readonly LeadSourceProvider _sources;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadConversionReportProvider"/> class.
@@ -26,14 +29,17 @@ public sealed class LeadConversionReportProvider : OmnichannelReportBase, IRepor
     /// <param name="session">The YesSql session.</param>
     /// <param name="sources">The lead sources, which name the source of each lead.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="logger">The logger, which warns when the report reads more index rows than it should hold in memory.</param>
     public LeadConversionReportProvider(
         ISession session,
         LeadSourceProvider sources,
-        IStringLocalizer<LeadConversionReportProvider> stringLocalizer)
+        IStringLocalizer<LeadConversionReportProvider> stringLocalizer,
+        ILogger<LeadConversionReportProvider> logger = null)
         : base(stringLocalizer)
     {
         _session = session;
         _sources = sources;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -68,6 +74,8 @@ public sealed class LeadConversionReportProvider : OmnichannelReportBase, IRepor
                 index.CreatedUtc <= to)
             .ListAsync(cancellationToken))
             .ToList();
+
+        ReportTelemetry.RecordCodedIndexRows(Name, leads.Count, _logger);
 
         var sourceNames = await _sources.GetNamesAsync();
         var unknownSource = S["(Unknown source)"].Value;

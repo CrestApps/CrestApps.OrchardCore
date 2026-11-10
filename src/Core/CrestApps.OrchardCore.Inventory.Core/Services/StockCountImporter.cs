@@ -1,4 +1,8 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Inventory.Core.Models;
+using CrestApps.OrchardCore.Inventory.Core.Telemetry;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Inventory.Core.Services;
 
@@ -7,15 +11,30 @@ namespace CrestApps.OrchardCore.Inventory.Core.Services;
 /// the difference. Like every stock change, the counts are made in the caller's unit of work, and the caller commits
 /// them all or none.
 /// </summary>
+/// <remarks>
+/// Each import is measured on <see cref="InventoryTelemetry"/>: a span, its duration and its rows by what became of
+/// them, and it is logged with the numbers, since it runs in the request (or the recipe) that sent the file.
+/// </remarks>
 public sealed class StockCountImporter
 {
     private readonly IStockItemStore _items;
     private readonly IInventoryService _inventory;
+    private readonly ILogger _logger;
 
-    public StockCountImporter(IStockItemStore items, IInventoryService inventory)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StockCountImporter"/> class.
+    /// </summary>
+    /// <param name="items">The store of the stock items.</param>
+    /// <param name="inventory">The inventory service the counts are set through.</param>
+    /// <param name="logger">The logger, or <see langword="null"/> to log nothing.</param>
+    public StockCountImporter(
+        IStockItemStore items,
+        IInventoryService inventory,
+        ILogger<StockCountImporter> logger = null)
     {
         _items = items;
         _inventory = inventory;
+        _logger = logger ?? NullLogger<StockCountImporter>.Instance;
     }
 
     /// <summary>
@@ -34,10 +53,95 @@ public sealed class StockCountImporter
         return string.IsNullOrEmpty(row.Sku) ? null : await _items.FindBySkuAsync(row.Sku, cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    /// Applies the counts of the rows, in the caller's unit of work.
+    /// </summary>
+    /// <param name="rows">The rows of the count.</param>
+    /// <param name="reason">The reason recorded on each movement.</param>
+    /// <param name="actor">Who made the count.</param>
+    /// <param name="cancellationToken">The token that cancels the import.</param>
+    /// <returns>How many items were counted, and the rows that were not applied.</returns>
     public async Task<StockCountImportResult> ImportAsync(IEnumerable<StockCountRow> rows, string reason, StockActor actor, CancellationToken cancellationToken = default)
+    {
+        using var telemetry = TelemetryScope.Start(InventoryTelemetry.ActivitySource, InventoryTelemetry.StockCountSpanName, InventoryTelemetry.StockCountDuration);
+
+        StockCountImportResult result;
+        int rejected;
+        int truncatedAtLine;
+
+        try
+        {
+            (result, rejected, truncatedAtLine) = await ApplyAsync(rows, reason, actor, cancellationToken);
+            telemetry.SetOutcome(truncatedAtLine > 0 ? InventoryTelemetry.OutcomeTruncated : CrestAppsOrchardCoreTelemetry.OutcomeOk);
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+
+        var notApplied = Record(result, rejected, telemetry);
+
+        if (truncatedAtLine > 0)
+        {
+            InventoryLog.StockCountTruncated(_logger, truncatedAtLine);
+        }
+
+        InventoryLog.StockCountApplied(_logger, result.Counted, result.Unchanged, notApplied, telemetry.Elapsed.TotalMilliseconds);
+
+        return result;
+    }
+
+    // Records the rows by what became of them, and returns how many were not applied.
+    private static int Record(StockCountImportResult result, int rejected, TelemetryScope telemetry)
+    {
+        var notFound = 0;
+        var invalidCount = 0;
+        var duplicate = 0;
+
+        foreach (var problem in result.Problems)
+        {
+            switch (problem.Kind)
+            {
+                case StockCountProblemKind.NotFound:
+                    notFound++;
+                    break;
+
+                case StockCountProblemKind.InvalidCount:
+                    invalidCount++;
+                    break;
+
+                case StockCountProblemKind.Duplicate:
+                    duplicate++;
+                    break;
+            }
+        }
+
+        // A count the inventory refused is reported as an invalid count; it is told apart here.
+        invalidCount = Math.Max(0, invalidCount - rejected);
+
+        InventoryTelemetry.RecordStockCountRows(InventoryTelemetry.RowCounted, result.Counted);
+        InventoryTelemetry.RecordStockCountRows(InventoryTelemetry.RowUnchanged, result.Unchanged);
+        InventoryTelemetry.RecordStockCountRows(InventoryTelemetry.RowNotFound, notFound);
+        InventoryTelemetry.RecordStockCountRows(InventoryTelemetry.RowInvalidCount, invalidCount);
+        InventoryTelemetry.RecordStockCountRows(InventoryTelemetry.RowDuplicate, duplicate);
+        InventoryTelemetry.RecordStockCountRows(InventoryTelemetry.RowRejected, rejected);
+
+        var notApplied = notFound + invalidCount + duplicate + rejected;
+
+        telemetry.SetSpanTag("crestapps.inventory.rows.counted", result.Counted);
+        telemetry.SetSpanTag("crestapps.inventory.rows.unchanged", result.Unchanged);
+        telemetry.SetSpanTag("crestapps.inventory.rows.not_applied", notApplied);
+
+        return notApplied;
+    }
+
+    private async Task<(StockCountImportResult Result, int Rejected, int TruncatedAtLine)> ApplyAsync(IEnumerable<StockCountRow> rows, string reason, StockActor actor, CancellationToken cancellationToken)
     {
         var result = new StockCountImportResult();
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var rejected = 0;
 
         foreach (var row in rows ?? [])
         {
@@ -45,7 +149,7 @@ public sealed class StockCountImporter
             {
                 result.Problems.Add(new StockCountProblem(row.Line, StockCountProblemKind.TooManyRows, null));
 
-                break;
+                return (result, rejected, row.Line);
             }
 
             if (row.OnHand is not { } count || count < 0)
@@ -88,11 +192,12 @@ public sealed class StockCountImporter
             }
             else
             {
+                rejected++;
                 result.Problems.Add(new StockCountProblem(row.Line, StockCountProblemKind.InvalidCount, item.Sku ?? item.Title));
             }
         }
 
-        return result;
+        return (result, rejected, 0);
     }
 }
 

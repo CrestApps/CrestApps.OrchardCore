@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using CrestApps.Core;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.DataSources;
@@ -8,7 +10,11 @@ using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Extensions;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Indexing;
@@ -39,6 +45,9 @@ public sealed class DataSourceIndexingService
 
     private const int BatchSize = 500;
     private const int MaxRetries = 3;
+
+    // The lock.area of the data source indexing lock, and the area of its retries, on the platform instruments.
+    private const string TelemetryArea = "ai.datasource_indexing";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSourceIndexingService"/> class.
@@ -111,10 +120,11 @@ public sealed class DataSourceIndexingService
         }
 
         // Acquire a lock scoped to this specific data source (not the entire index).
-        var (locker, isLocked) = await _distributedLock.TryAcquireLockAsync(
+        var (locker, isLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             $"DataSourceIndexing-{dataSource.ItemId}",
             TimeSpan.FromSeconds(5),
-        TimeSpan.FromMinutes(60));
+            TimeSpan.FromMinutes(60),
+            TelemetryArea);
 
         if (!isLocked)
         {
@@ -441,6 +451,9 @@ public sealed class DataSourceIndexingService
 
                 await documentIndexManager.DeleteDocumentsAsync(masterProfile, chunkIds);
 
+                // Counted by source document; the chunk ids above are guesses, not chunks that existed.
+                AIModuleTelemetry.RecordDocuments(idList.Count, masterProfile.ProviderName, AIModuleTelemetry.ModeIncremental, AIModuleTelemetry.ActionRemoved);
+
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
                     _logger.LogInformation("Removed documents {DocumentIds} from master index '{IndexName}'.",
@@ -509,6 +522,8 @@ public sealed class DataSourceIndexingService
             }
 
             await documentIndexManager.DeleteDocumentsAsync(masterProfile, chunkIds);
+
+            AIModuleTelemetry.RecordDocuments(idList.Count, masterProfile.ProviderName, AIModuleTelemetry.ModeIncremental, AIModuleTelemetry.ActionRemoved);
         }
         catch (Exception ex)
         {
@@ -521,6 +536,32 @@ public sealed class DataSourceIndexingService
         IndexProfile masterProfile,
         IAIDataSourceSourceHandler sourceHandler,
         List<string> documentIds,
+        CancellationToken cancellationToken)
+    {
+        var progress = new SyncProgress();
+        using var telemetry = StartSyncTelemetry(dataSource, masterProfile, AIModuleTelemetry.ModeIncremental);
+
+        try
+        {
+            await IndexSpecificDocumentsCoreAsync(dataSource, masterProfile, sourceHandler, documentIds, progress, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+            RecordSyncedDocuments(masterProfile, AIModuleTelemetry.ModeIncremental, progress);
+
+            throw;
+        }
+
+        CompleteSyncTelemetry(telemetry, masterProfile, AIModuleTelemetry.ModeIncremental, progress, cancellationToken);
+    }
+
+    private async Task IndexSpecificDocumentsCoreAsync(
+        AIDataSource dataSource,
+        IndexProfile masterProfile,
+        IAIDataSourceSourceHandler sourceHandler,
+        List<string> documentIds,
+        SyncProgress progress,
         CancellationToken cancellationToken)
     {
         var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(masterProfile.ProviderName);
@@ -550,6 +591,8 @@ public sealed class DataSourceIndexingService
         {
             return;
         }
+
+        progress.Started = true;
 
         // Set the timestamp before reading the record.
         var timestamp = _clock.UtcNow;
@@ -596,6 +639,8 @@ public sealed class DataSourceIndexingService
 
                 if (embeddings == null || embeddings.Count != chunkTexts.Count)
                 {
+                    progress.Failed++;
+
                     continue;
                 }
 
@@ -638,12 +683,17 @@ public sealed class DataSourceIndexingService
                     await _documentIndexHandlers.InvokeAsync((x, ctx) => x.BuildIndexAsync(ctx), buildContext, _logger);
 
                     documents.Add(documentIndex);
+                    progress.Chunks++;
                 }
+
+                progress.Indexed++;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error re-indexing document '{ReferenceId}' for data source '{DataSourceId}'.",
                 referenceId, dataSource.ItemId);
+
+                progress.Failed++;
             }
         }
 
@@ -662,6 +712,8 @@ public sealed class DataSourceIndexingService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error writing re-indexed documents to master index '{IndexName}'.", masterProfile.IndexName);
+
+                progress.WriteFailed = true;
             }
         }
     }
@@ -720,8 +772,10 @@ public sealed class DataSourceIndexingService
 
                 var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
 
-                _logger.LogWarning(ex, "Error syncing data source '{DataSourceId}' (attempt {Attempt}/{MaxAttempts}). Retrying in {Delay} seconds.",
-                dataSource.ItemId, attempt + 1, MaxRetries + 1, delay.TotalSeconds);
+                AICoreLog.DataSourceSyncRetrying(_logger, ex, dataSource.ItemId.SanitizeLogValue(), attempt + 1, MaxRetries + 1, delay.TotalSeconds);
+
+                // The attempt about to be made, starting at 2 for the first retry.
+                RetryTelemetry.RecordRetry(TelemetryArea, CrestAppsOrchardCoreTelemetry.GetOutcome(ex), attempt + 2);
 
                 await Task.Delay(delay, cancellationToken);
             }
@@ -747,10 +801,11 @@ public sealed class DataSourceIndexingService
         }
 
         // Acquire a distributed lock scoped to this data source to prevent concurrent indexing.
-        var (locker, isLocked) = await _distributedLock.TryAcquireLockAsync(
+        var (locker, isLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             $"DataSourceIndexing-{dataSource.ItemId}",
             TimeSpan.FromSeconds(5),
-        TimeSpan.FromMinutes(60));
+            TimeSpan.FromMinutes(60),
+            TelemetryArea);
 
         if (!isLocked)
         {
@@ -771,6 +826,46 @@ public sealed class DataSourceIndexingService
     }
 
     private async Task SyncDataSourceLockedAsync(AIDataSource dataSource, IndexProfile masterProfile, CancellationToken cancellationToken)
+    {
+        var progress = new SyncProgress();
+        using var telemetry = StartSyncTelemetry(dataSource, masterProfile, AIModuleTelemetry.ModeFull);
+
+        try
+        {
+            await SyncDataSourceDocumentsAsync(dataSource, masterProfile, progress, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+            RecordSyncedDocuments(masterProfile, AIModuleTelemetry.ModeFull, progress);
+
+            throw;
+        }
+
+        CompleteSyncTelemetry(telemetry, masterProfile, AIModuleTelemetry.ModeFull, progress, cancellationToken);
+
+        if (!progress.Started)
+        {
+            return;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            var dataSourceId = dataSource.ItemId.SanitizeLogValue();
+            var indexName = masterProfile.IndexName.SanitizeLogValue();
+
+            AICoreLog.DataSourceSynced(
+                _logger,
+                progress.Chunks,
+                progress.Indexed,
+                dataSourceId,
+                indexName,
+                (long)telemetry.Elapsed.TotalMilliseconds,
+                progress.Failed);
+        }
+    }
+
+    private async Task SyncDataSourceDocumentsAsync(AIDataSource dataSource, IndexProfile masterProfile, SyncProgress progress, CancellationToken cancellationToken)
     {
         var documentIndexManager = _serviceProvider.GetKeyedService<IDocumentIndexManager>(masterProfile.ProviderName);
 
@@ -822,13 +917,14 @@ public sealed class DataSourceIndexingService
             return;
         }
 
+        progress.Started = true;
+
         var sourceDocuments = sourceHandler.ReadAsync(dataSource, cancellationToken);
         var referenceType = await sourceHandler.GetReferenceTypeAsync(dataSource, cancellationToken);
 
         var documents = new List<DocumentIndex>();
 
         var timestamp = _clock.UtcNow;
-        var documentCount = 0;
 
         await foreach (var (referenceId, sourceDoc) in sourceDocuments)
         {
@@ -868,6 +964,8 @@ public sealed class DataSourceIndexingService
                     _logger.LogWarning("Failed to generate embeddings for document '{ReferenceId}' in data source '{DataSourceId}'.",
                     referenceId, dataSource.ItemId);
 
+                    progress.Failed++;
+
                     continue;
                 }
 
@@ -906,7 +1004,7 @@ public sealed class DataSourceIndexingService
                     await _documentIndexHandlers.InvokeAsync((x, ctx) => x.BuildIndexAsync(ctx), buildContext, _logger);
 
                     documents.Add(documentIndex);
-                    documentCount++;
+                    progress.Chunks++;
 
                     // Write batch to master index when batch size is reached.
                     if (documents.Count >= BatchSize)
@@ -919,16 +1017,22 @@ public sealed class DataSourceIndexingService
                         {
                             _logger.LogError(ex, "Error writing batch to master index '{IndexName}' for data source '{DataSourceId}'.",
                             masterProfile.IndexName, dataSource.ItemId);
+
+                            progress.WriteFailed = true;
                         }
 
                         documents.Clear();
                     }
                 }
+
+                progress.Indexed++;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing document '{ReferenceId}' for data source '{DataSourceId}'. Continuing with remaining documents.",
                 referenceId, dataSource.ItemId);
+
+                progress.Failed++;
             }
         }
 
@@ -943,14 +1047,61 @@ public sealed class DataSourceIndexingService
             {
                 _logger.LogError(ex, "Error writing final batch to master index '{IndexName}' for data source '{DataSourceId}'.",
                 masterProfile.IndexName, dataSource.ItemId);
+
+                progress.WriteFailed = true;
             }
         }
+    }
 
-        if (_logger.IsEnabled(LogLevel.Information))
+    private static TelemetryScope StartSyncTelemetry(AIDataSource dataSource, IndexProfile masterProfile, string mode)
+    {
+        var telemetry = TelemetryScope.Start(
+            AIModuleTelemetry.ActivitySource,
+            AIModuleTelemetry.DataSourceSyncSpanName,
+            AIModuleTelemetry.DataSourceSyncDuration,
+            new TagList
+            {
+                { AIModuleTelemetry.ProviderTag, masterProfile.ProviderName ?? CrestAppsOrchardCoreTelemetry.Unknown },
+                { AIModuleTelemetry.ModeTag, mode },
+            });
+
+        // Ids and index names go on the span only; on a metric they would be unbounded.
+        telemetry.SetSpanTag(AITelemetry.DataSourceIdAttribute, dataSource.ItemId);
+        telemetry.SetSpanTag("crestapps.index.name", masterProfile.IndexName);
+
+        return telemetry;
+    }
+
+    private static void CompleteSyncTelemetry(TelemetryScope telemetry, IndexProfile masterProfile, string mode, SyncProgress progress, CancellationToken cancellationToken)
+    {
+        if (!progress.Started)
         {
-            _logger.LogInformation("Synced {DocumentCount} chunks for data source '{DataSourceId}' to master index '{IndexName}'.",
-            documentCount, dataSource.ItemId, masterProfile.IndexName);
+            telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
         }
+        else if (cancellationToken.IsCancellationRequested)
+        {
+            telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeCancelled);
+        }
+        else if (progress.Failed > 0 || progress.WriteFailed)
+        {
+            // Documents were lost on the way, though the sync went on.
+            telemetry.SetOutcome(AIModuleTelemetry.OutcomePartial);
+        }
+        else
+        {
+            telemetry.Succeed();
+        }
+
+        telemetry.SetSpanTag("crestapps.data_source.documents.indexed", progress.Indexed);
+        telemetry.SetSpanTag("crestapps.data_source.documents.failed", progress.Failed);
+
+        RecordSyncedDocuments(masterProfile, mode, progress);
+    }
+
+    private static void RecordSyncedDocuments(IndexProfile masterProfile, string mode, SyncProgress progress)
+    {
+        AIModuleTelemetry.RecordDocuments(progress.Indexed, masterProfile.ProviderName, mode, AIModuleTelemetry.ActionIndexed);
+        AIModuleTelemetry.RecordDocuments(progress.Failed, masterProfile.ProviderName, mode, AIModuleTelemetry.ActionFailed);
     }
 
     private async Task<AIDeployment> ResolveEmbeddingDeploymentAsync(
@@ -1175,5 +1326,36 @@ public sealed class DataSourceIndexingService
         var filters = new Dictionary<string, object>(sourceFields, StringComparer.OrdinalIgnoreCase);
 
         return filters.Count > 0 ? filters : null;
+    }
+
+    /// <summary>
+    /// What one sync did, for its telemetry and its summary log.
+    /// </summary>
+    private sealed class SyncProgress
+    {
+        /// <summary>
+        /// Gets or sets a value indicating whether the sync got as far as reading the source documents.
+        /// </summary>
+        public bool Started { get; set; }
+
+        /// <summary>
+        /// Gets or sets the source documents written to the index.
+        /// </summary>
+        public int Indexed { get; set; }
+
+        /// <summary>
+        /// Gets or sets the source documents that could not be embedded or prepared, and were skipped.
+        /// </summary>
+        public int Failed { get; set; }
+
+        /// <summary>
+        /// Gets or sets the chunks prepared for the index.
+        /// </summary>
+        public int Chunks { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether a batch of chunks could not be written to the index.
+        /// </summary>
+        public bool WriteFailed { get; set; }
     }
 }

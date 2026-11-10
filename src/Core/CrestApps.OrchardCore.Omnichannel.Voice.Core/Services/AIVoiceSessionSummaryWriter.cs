@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -168,6 +169,16 @@ internal sealed class AIVoiceSessionSummaryWriter
         (summary.EstimatedCost, summary.CostCurrency) = AICallMetrics.EstimateCost(summary, carrier, deployment?.GetPricing());
 
         await _summaries.SaveAsync(summary, cancellationToken);
+
+        // Here, where the one summary of a call is decided, rather than where the call hands it over: a live call is
+        // handed over twice. The call is counted by its first summary, and its audio by the one summary that has it.
+        VoiceTelemetry.RecordSession(
+            summary.Engine,
+            summary.Outcome,
+            summary.DeploymentName,
+            summary.ProviderName,
+            measured,
+            countSession: existing is null);
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {

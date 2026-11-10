@@ -1,9 +1,12 @@
 using System.Globalization;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Workforce.Core.Telemetry;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -26,6 +29,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
     private readonly IServiceProvider _serviceProvider;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -41,6 +45,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         IServiceProvider serviceProvider,
         ISession session,
         IClock clock,
+        ILogger<DefaultPayrollExportService> logger,
         IStringLocalizer<DefaultPayrollExportService> stringLocalizer)
     {
         _providers = providers;
@@ -54,14 +59,41 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         _serviceProvider = serviceProvider;
         _session = session;
         _clock = clock;
+        _logger = logger;
         S = stringLocalizer;
     }
 
     public async Task<PlanningResult<PayrollExportBatch>> RunAsync(string providerName, string payPeriodCalendarId, DateOnly periodStart, bool includeExported, string actor, CancellationToken cancellationToken = default)
     {
+        using var telemetry = WorkforceTelemetry.StartPayrollExport();
+
+        telemetry.SetSpanTag(WorkforceTelemetry.PayPeriodCalendarIdTag, payPeriodCalendarId);
+
+        try
+        {
+            return await ExportAsync(providerName, payPeriodCalendarId, periodStart, includeExported, actor, telemetry, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            if (ex is not OperationCanceledException)
+            {
+                WorkforceLog.PayrollExportFailed(_logger, ex, periodStart);
+            }
+
+            throw;
+        }
+    }
+
+    private async Task<PlanningResult<PayrollExportBatch>> ExportAsync(string providerName, string payPeriodCalendarId, DateOnly periodStart, bool includeExported, string actor, TelemetryScope telemetry, CancellationToken cancellationToken)
+    {
         var result = new PlanningResult<PayrollExportBatch>();
         var provider = _providers.FirstOrDefault(provider => string.Equals(provider.Name, providerName, StringComparison.OrdinalIgnoreCase));
         var calendar = string.IsNullOrEmpty(payPeriodCalendarId) ? null : await _calendarStore.FindByIdAsync(payPeriodCalendarId, cancellationToken);
+
+        // The provider's registered name, never the requested one, so the tag stays bounded.
+        telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ProviderTag, provider?.Name ?? CrestAppsOrchardCoreTelemetry.Unknown);
 
         if (provider is null)
         {
@@ -75,14 +107,21 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
         if (!result.Succeeded)
         {
+            WorkforceTelemetry.RejectPayrollExport(telemetry, provider is null ? WorkforceTelemetry.ReasonNoProvider : WorkforceTelemetry.ReasonNoCalendar);
+
             return result;
         }
 
         var (start, end) = calendar.PeriodOn(periodStart);
-        var lockers = await _locks.LockAsync([TimeOffLocks.PayrollExport(calendar.ItemId, start)]);
+
+        WorkforceLog.PayrollExportStarted(_logger, calendar.ItemId, start, end, provider.Name);
+
+        var lockers = await _locks.LockAsync([TimeOffLocks.PayrollExport(calendar.ItemId, start)], TimeOffLocks.PayrollExportArea);
 
         if (lockers is null)
         {
+            WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonBusy);
+            WorkforceLog.PayrollExportBusy(_logger, calendar.ItemId, start);
             result.Fail(S["This period is being exported by someone else. Try again in a moment."]);
 
             return result;
@@ -94,6 +133,8 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
             if (locked.Count == 0)
             {
+                WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonNoneLocked);
+                WorkforceLog.PayrollExportRejected(_logger, calendar.ItemId, start, WorkforceTelemetry.ReasonNoneLocked);
                 result.Fail(S["No timesheets of {0} to {1} are locked yet. Approve them, then lock the period.", start.ToString("d", CultureInfo.CurrentCulture), end.ToString("d", CultureInfo.CurrentCulture)]);
 
                 return result;
@@ -106,6 +147,8 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
             if (timesheets.Count == 0)
             {
+                WorkforceTelemetry.RejectPayrollExport(telemetry, WorkforceTelemetry.ReasonAllExported);
+                WorkforceLog.PayrollExportRejected(_logger, calendar.ItemId, start, WorkforceTelemetry.ReasonAllExported);
                 result.Fail(S["Every locked timesheet of this period was exported already. Choose to export them again to include them."]);
 
                 return result;
@@ -150,6 +193,11 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
             await MarkPredictabilityPayExportedAsync(timesheets, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
+
+            telemetry.SetSpanTag(WorkforceTelemetry.PayrollBatchIdTag, batch.ItemId);
+            telemetry.Succeed();
+            WorkforceTelemetry.RecordPayrollExportRows(provider.Name, batch.RowCount);
+            WorkforceLog.PayrollExportCompleted(_logger, timesheets.Count, batch.RowCount, calendar.ItemId, start, batch.ItemId, (long)telemetry.Elapsed.TotalMilliseconds);
 
             result.Value = batch;
 

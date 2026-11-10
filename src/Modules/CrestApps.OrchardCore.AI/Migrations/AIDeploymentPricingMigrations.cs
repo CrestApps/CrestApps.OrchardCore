@@ -3,10 +3,10 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
@@ -25,7 +25,7 @@ internal sealed class AIDeploymentPricingMigrations : DataMigration
     /// </summary>
     public static int Create()
     {
-        ShellScope.AddDeferredTask(scope => MovePricesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(AIDeploymentPricingMigrations), scope => MovePricesAsync(scope.ServiceProvider));
 
         return 1;
     }

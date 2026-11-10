@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
@@ -17,5 +18,5 @@ public sealed class SlaMonitorBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => serviceProvider.GetRequiredService<SlaMonitor>().CheckAsync(cancellationToken);
+        => this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<SlaMonitor>().CheckAsync(cancellationToken), "raised"));
 }

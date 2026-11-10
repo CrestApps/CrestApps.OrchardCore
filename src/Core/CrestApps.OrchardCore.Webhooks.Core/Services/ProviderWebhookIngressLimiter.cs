@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
 using CrestApps.OrchardCore.Webhooks.Core.Models;
+using CrestApps.OrchardCore.Webhooks.Core.Telemetry;
 using CrestApps.OrchardCore.Webhooks.Models;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
@@ -57,6 +58,11 @@ public sealed class ProviderWebhookIngressLimiter : IProviderWebhookIngressLimit
     {
         var lease = await _concurrencyLimiter.AcquireAsync(1, cancellationToken);
 
+        if (!lease.IsAcquired)
+        {
+            WebhookTelemetry.RecordIngressLimited("concurrency");
+        }
+
         return new ProviderWebhookIngressLease(lease);
     }
 
@@ -67,6 +73,11 @@ public sealed class ProviderWebhookIngressLimiter : IProviderWebhookIngressLimit
 
         var limiter = _providerRateLimiters.GetOrAdd(provider, _ => CreateProviderRateLimiter());
         var lease = await limiter.AcquireAsync(1, cancellationToken);
+
+        if (!lease.IsAcquired)
+        {
+            WebhookTelemetry.RecordIngressLimited("rate");
+        }
 
         return new ProviderWebhookIngressLease(lease);
     }

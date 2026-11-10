@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using CrestApps.OrchardCore.WebSockets.Telemetry;
 
 namespace CrestApps.OrchardCore.WebSockets.Services;
 
@@ -10,7 +12,7 @@ namespace CrestApps.OrchardCore.WebSockets.Services;
 /// </summary>
 internal sealed class InMemoryWebSocketConnectionRegistry : IWebSocketConnectionRegistry
 {
-    private readonly ConcurrentDictionary<string, WebSocketRendezvous> _pending =
+    private readonly ConcurrentDictionary<string, PendingRendezvous> _pending =
         new(StringComparer.Ordinal);
 
     /// <inheritdoc/>
@@ -20,10 +22,14 @@ internal sealed class InMemoryWebSocketConnectionRegistry : IWebSocketConnection
 
         var rendezvous = new WebSocketRendezvous();
 
-        if (!_pending.TryAdd(key, rendezvous))
+        if (!_pending.TryAdd(key, new PendingRendezvous(rendezvous, Stopwatch.GetTimestamp())))
         {
+            WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultConflict);
+
             throw new InvalidOperationException("A WebSocket rendezvous is already pending for this key.");
         }
+
+        WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultRegistered);
 
         return Task.FromResult(rendezvous);
     }
@@ -36,19 +42,28 @@ internal sealed class InMemoryWebSocketConnectionRegistry : IWebSocketConnection
             return Task.FromResult<WebSocketRendezvous>(null);
         }
 
-        _pending.TryRemove(key, out var rendezvous);
+        if (!_pending.TryRemove(key, out var pending))
+        {
+            WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultMiss);
 
-        return Task.FromResult(rendezvous);
+            return Task.FromResult<WebSocketRendezvous>(null);
+        }
+
+        WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultClaimed, pending.RegisteredTimestamp);
+
+        return Task.FromResult(pending.Rendezvous);
     }
 
     /// <inheritdoc/>
     public Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
-        if (!string.IsNullOrWhiteSpace(key))
+        if (!string.IsNullOrWhiteSpace(key) && _pending.TryRemove(key, out _))
         {
-            _pending.TryRemove(key, out _);
+            WebSocketsTelemetry.Record(WebSocketsTelemetry.ResultRemoved);
         }
 
         return Task.CompletedTask;
     }
+
+    private readonly record struct PendingRendezvous(WebSocketRendezvous Rendezvous, long RegisteredTimestamp);
 }

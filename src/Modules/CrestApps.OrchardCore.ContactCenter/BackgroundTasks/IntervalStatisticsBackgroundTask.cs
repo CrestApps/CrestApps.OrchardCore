@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.IntervalStatistics;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -19,7 +20,10 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class IntervalStatisticsBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var roller = serviceProvider.GetRequiredService<IntervalStatisticsRoller>();
         var logger = serviceProvider.GetRequiredService<ILogger<IntervalStatisticsBackgroundTask>>();
@@ -35,6 +39,7 @@ public sealed class IntervalStatisticsBackgroundTask : IBackgroundTask
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while updating the Contact Center interval statistics.");
         }
     }

@@ -1,6 +1,9 @@
 using System.Net;
 using System.Security.Cryptography;
 using CrestApps.Core;
+using CrestApps.OrchardCore.AI.Core.Telemetry;
+using CrestApps.OrchardCore.AI.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Webhooks.Models;
 using Fluid;
@@ -11,6 +14,8 @@ using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
 using OrchardCore.Workflows.Services;
+using ActivityKind = System.Diagnostics.ActivityKind;
+using TagList = System.Diagnostics.TagList;
 
 namespace CrestApps.OrchardCore.AI.Workflows.Models;
 
@@ -27,6 +32,9 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
     public const string ProtectorPurpose = "CrestApps.OrchardCore.AI.SendSignedWebhookTask";
 
     private static readonly TimeSpan[] _retryDelays = [TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(9), TimeSpan.FromSeconds(27)];
+
+    // The area of the retries on crestapps.retry.attempts.
+    private const string RetryArea = "ai.signed_webhook";
 
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
     private readonly IWebhookSender _webhookSender;
@@ -132,9 +140,19 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
         workflowContext.Output["Webhook"] = result;
         workflowContext.LastResult = result;
 
+        // The URL, the host and the event name are free text, so they never become tags.
+        using var telemetry = TelemetryScope.Start(
+            AIModuleTelemetry.ActivitySource,
+            "crestapps.ai.webhook.deliver",
+            AIModuleTelemetry.WebhookDeliveryDuration,
+            kind: ActivityKind.Client);
+
+        telemetry.SetSpanTag("crestapps.webhook.delivery.id", deliveryId);
+
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
         {
             result["Error"] = "The address is not an http or https URL.";
+            RecordDelivery(telemetry, "invalid_url", statusCode: null);
 
             return Outcome("Failed");
         }
@@ -143,6 +161,7 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
         {
             // Unsigned, the receiver cannot trust it.
             result["Error"] = "The signing secret is missing or can't be read. Enter it again.";
+            RecordDelivery(telemetry, "missing_secret", statusCode: null);
 
             return Outcome("Failed");
         }
@@ -158,16 +177,22 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
             Body = body,
         };
 
+        var failureReason = "exhausted";
+        int? lastStatusCode = null;
+
         for (var attempt = 1; attempt <= attempts; attempt++)
         {
             result["Attempts"] = attempt;
 
             var sent = await _webhookSender.SendAsync(request);
             result["StatusCode"] = sent.StatusCode;
+            lastStatusCode = sent.StatusCode;
 
             if (sent.Succeeded)
             {
                 result["Error"] = null;
+                telemetry.SetSpanTag("crestapps.webhook.attempts", attempt);
+                RecordDelivery(telemetry, failureReason: null, sent.StatusCode);
 
                 return Outcome("Delivered");
             }
@@ -178,14 +203,22 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
             // again is refused again.
             if (sent.EgressRefused || (sent.StatusCode is { } statusCode && !IsWorthRetrying((HttpStatusCode)statusCode)))
             {
+                failureReason = sent.EgressRefused ? "egress_refused" : "rejected";
+
                 break;
             }
 
             if (attempt < attempts)
             {
+                AIModuleLog.SignedWebhookRetrying(_logger, deliveryId, sent.StatusCode, attempt + 1, attempts);
+                RetryTelemetry.RecordRetry(RetryArea, GetRetryReason(sent.StatusCode), attempt + 1);
+
                 await Task.Delay(_retryDelays[attempt - 1]);
             }
         }
+
+        telemetry.SetSpanTag("crestapps.webhook.attempts", result["Attempts"]);
+        RecordDelivery(telemetry, failureReason, lastStatusCode);
 
         _logger.LogWarning("The signed webhook '{DeliveryId}' to '{Host}' failed after {Attempts} attempts: {Error}", deliveryId, uri.Host, result["Attempts"], result["Error"]);
 
@@ -198,6 +231,57 @@ public sealed class SendSignedWebhookTask : TaskActivity<SendSignedWebhookTask>
     /// <param name="statusCode">The response's status code.</param>
     internal static bool IsWorthRetrying(HttpStatusCode statusCode)
         => statusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests || (int)statusCode >= 500;
+
+    /// <summary>
+    /// The bounded reason a failed attempt is tried again, for <c>crestapps.retry.attempts</c>.
+    /// </summary>
+    /// <param name="statusCode">The status code of the failed attempt, or <see langword="null"/> when no response came.</param>
+    internal static string GetRetryReason(int? statusCode)
+        => statusCode switch
+        {
+            null => "network",
+            (int)HttpStatusCode.RequestTimeout => CrestAppsOrchardCoreTelemetry.OutcomeTimeout,
+            (int)HttpStatusCode.TooManyRequests => "status_429",
+            >= 500 => "status_5xx",
+            _ => CrestAppsOrchardCoreTelemetry.Other,
+        };
+
+    /// <summary>
+    /// Records how a delivery ended: delivered when <paramref name="failureReason"/> is <see langword="null"/>, failed
+    /// for that bounded reason otherwise.
+    /// </summary>
+    /// <param name="telemetry">The delivery's scope.</param>
+    /// <param name="failureReason">Why the delivery failed, or <see langword="null"/> when it was delivered.</param>
+    /// <param name="statusCode">The status code of the last response, or <see langword="null"/>.</param>
+    private static void RecordDelivery(TelemetryScope telemetry, string failureReason, int? statusCode)
+    {
+        var statusClass = ExternalCallTelemetry.GetStatusClass(statusCode);
+        telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.StatusClassTag, statusClass);
+
+        if (statusCode is { } code)
+        {
+            telemetry.SetSpanTag("http.response.status_code", code);
+        }
+
+        var tags = new TagList
+        {
+            { CrestAppsOrchardCoreTelemetry.StatusClassTag, statusClass },
+        };
+
+        if (failureReason is null)
+        {
+            telemetry.Succeed();
+            tags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, CrestAppsOrchardCoreTelemetry.OutcomeOk);
+        }
+        else
+        {
+            telemetry.Fail(failureReason);
+            tags.Add(CrestAppsOrchardCoreTelemetry.OutcomeTag, CrestAppsOrchardCoreTelemetry.OutcomeError);
+            tags.Add(CrestAppsOrchardCoreTelemetry.ReasonTag, failureReason);
+        }
+
+        AIModuleTelemetry.Add(AIModuleTelemetry.WebhookDeliveries, tags);
+    }
 
     private string UnprotectSecret()
     {

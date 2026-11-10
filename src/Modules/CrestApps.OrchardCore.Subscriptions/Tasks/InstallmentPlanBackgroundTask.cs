@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,10 @@ namespace CrestApps.OrchardCore.Subscriptions.Tasks;
 public sealed class InstallmentPlanBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => ProcessOpenPlansAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task ProcessOpenPlansAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var store = serviceProvider.GetRequiredService<IInstallmentPlanStore>();
         var planService = serviceProvider.GetRequiredService<IInstallmentPlanService>();
@@ -34,9 +38,13 @@ public sealed class InstallmentPlanBackgroundTask : IBackgroundTask
                 break;
             }
 
+            using var logScope = logger.BeginScope(new Dictionary<string, object> { ["InstallmentPlanId"] = plan.ItemId });
+
             try
             {
                 var result = await planService.ProcessAsync(plan.ItemId, waitForLock: true, cancellationToken);
+
+                run.AddItems(1, result.Succeeded ? "processed" : "not_processed");
 
                 if (!result.Succeeded && logger.IsEnabled(LogLevel.Debug))
                 {
@@ -46,6 +54,7 @@ public sealed class InstallmentPlanBackgroundTask : IBackgroundTask
             catch (Exception ex)
             {
                 // One plan's problem must not stop the others from being collected.
+                run.AddItems(1, CrestAppsOrchardCoreTelemetry.OutcomeError);
                 logger.LogError(ex, "Failed to process installment plan '{PlanId}'.", plan.ItemId);
             }
         }

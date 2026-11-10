@@ -8,11 +8,14 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
+using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -72,7 +75,12 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
     /// </summary>
     /// <param name="serviceProvider">The service provider.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => ReEngageAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private static async Task ReEngageAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<SmsReEngagementBackgroundTask>>();
 
@@ -101,6 +109,9 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
         long documentId = 0;
         var processedCount = 0;
+        var sentCount = 0;
+        var failedCount = 0;
+        var heldBackCount = 0;
 
         while (processedCount < _maxConversationsPerInvocation && clock.UtcNow < deadline)
         {
@@ -123,7 +134,10 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             {
                 if (clock.UtcNow >= deadline)
                 {
-                    return;
+                    // The rest waits for the next run; the outer loop stops on the same deadline.
+                    run.BudgetExceeded();
+
+                    break;
                 }
 
                 documentId = activity.Id;
@@ -131,7 +145,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
                 try
                 {
-                    await TryReEngageAsync(
+                    var result = await TryReEngageAsync(
                         activity,
                         clock,
                         chatSessionManager,
@@ -152,16 +166,55 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                         conversationGate,
                         logger,
                         cancellationToken);
+
+                    // Conversations that are not due are not counted: every quiet conversation is checked every run.
+                    if (result is null)
+                    {
+                        continue;
+                    }
+
+                    MessagingTelemetry.RecordReEngagement(OmnichannelConstants.Channels.Sms, result);
+                    run.AddItems(1, result);
+
+                    switch (result)
+                    {
+                        case MessagingTelemetry.ReEngagementResults.Sent:
+                            sentCount++;
+                            break;
+
+                        case MessagingTelemetry.ReEngagementResults.SendFailed:
+                            failedCount++;
+                            break;
+
+                        default:
+                            heldBackCount++;
+                            break;
+                    }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogError(ex, "Failed to re-engage the automated SMS contact for Activity {ActivityId}.", activity.ItemId.SanitizeLogValue());
+                    MessagingTelemetry.RecordReEngagement(OmnichannelConstants.Channels.Sms, MessagingTelemetry.ResultError);
+                    run.AddItems(1, MessagingTelemetry.ResultError);
+                    failedCount++;
                 }
             }
         }
+
+        if (processedCount >= _maxConversationsPerInvocation)
+        {
+            run.BudgetExceeded();
+        }
+
+        if (sentCount + failedCount + heldBackCount > 0)
+        {
+            logger.ReEngagementPassCompleted(processedCount, sentCount, failedCount, heldBackCount);
+        }
     }
 
-    private static async Task TryReEngageAsync(
+    // Returns what became of the conversation's nudge, from MessagingTelemetry.ReEngagementResults, or null when it
+    // is not due one.
+    private static async Task<string> TryReEngageAsync(
         OmnichannelActivity activity,
         IClock clock,
         IAIChatSessionManager chatSessionManager,
@@ -187,7 +240,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             string.IsNullOrWhiteSpace(activity.AISessionId) ||
             string.IsNullOrEmpty(activity.ChannelEndpointId))
         {
-            return;
+            return null;
         }
 
         var cadence = await cadenceCatalog.FindByIdAsync(activity.CadenceId, cancellationToken);
@@ -198,7 +251,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             cadence.Steps is not { Count: > 0 } ||
             activity.ReEngagementAttempts >= cadence.Steps.Count)
         {
-            return;
+            return null;
         }
 
         var step = cadence.Steps[activity.ReEngagementAttempts];
@@ -206,14 +259,14 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         // A live inbound is composing a reply for this conversation right now; the customer is active, so leave it.
         if (conversationGate.IsGenerating(activity.AISessionId))
         {
-            return;
+            return MessagingTelemetry.ReEngagementResults.Busy;
         }
 
         var chatSession = await chatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
 
         if (chatSession is null)
         {
-            return;
+            return null;
         }
 
         var prompts = (await promptStore.GetPromptsAsync(chatSession.SessionId))
@@ -226,7 +279,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
         if (lastPrompt is null || lastPrompt.Role != ChatRole.Assistant)
         {
-            return;
+            return null;
         }
 
         var now = clock.UtcNow;
@@ -237,7 +290,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         if (step.DelayMinutes <= 0 ||
             chatSession.LastActivityUtc > now.AddMinutes(-step.DelayMinutes))
         {
-            return;
+            return null;
         }
 
         var endpoint = await endpointCatalog.FindByIdAsync(activity.ChannelEndpointId, cancellationToken);
@@ -246,7 +299,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             !string.Equals(endpoint.Channel, activity.Channel, StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(endpoint.Value))
         {
-            return;
+            return null;
         }
 
         // Resolve the contact's local time zone so business hours are evaluated where the customer actually is.
@@ -270,7 +323,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                 logger.LogDebug("Skipping SMS re-engagement for Activity {ActivityId}: the contact has opted out of text messages.", activity.ItemId.SanitizeLogValue());
             }
 
-            return;
+            return MessagingTelemetry.ReEngagementResults.OptedOut;
         }
 
         // Every send here is background-initiated, so it must respect business hours. An activity that names a
@@ -288,7 +341,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                     logger.LogDebug("Skipping SMS re-engagement for Activity {ActivityId}: its business-hours calendar cannot be evaluated.", activity.ItemId.SanitizeLogValue());
                 }
 
-                return;
+                return MessagingTelemetry.ReEngagementResults.OutsideHours;
             }
         }
 
@@ -299,21 +352,21 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                 logger.LogDebug("Skipping SMS re-engagement for Activity {ActivityId}: outside business hours.", activity.ItemId.SanitizeLogValue());
             }
 
-            return;
+            return MessagingTelemetry.ReEngagementResults.OutsideHours;
         }
 
         var profileId = string.IsNullOrWhiteSpace(chatSession.ProfileId) ? activity.AIProfileId : chatSession.ProfileId;
 
         if (string.IsNullOrWhiteSpace(profileId))
         {
-            return;
+            return null;
         }
 
         var profile = await profileManager.FindByIdAsync(profileId, cancellationToken);
 
         if (profile is null || profile.Type != AIProfileType.Chat)
         {
-            return;
+            return null;
         }
 
         // Serialize against the live reply path on the same per-conversation lock. If a reply is being sent we simply
@@ -325,7 +378,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
         if (!locked)
         {
-            return;
+            return MessagingTelemetry.ReEngagementResults.Busy;
         }
 
         await using (locker)
@@ -337,7 +390,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                 currentActivity.Status != ActivityStatus.AwaitingCustomerAnswer ||
                 currentActivity.ReEngagementAttempts >= cadence.Steps.Count)
             {
-                return;
+                return null;
             }
 
             var latestPrompts = (await promptStore.GetPromptsAsync(chatSession.SessionId))
@@ -347,7 +400,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             if (latestPrompts.LastOrDefault()?.Role != ChatRole.Assistant)
             {
                 // The customer replied in the meantime; nothing to nudge.
-                return;
+                return null;
             }
 
             string message;
@@ -370,7 +423,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
                 if (deployment is null)
                 {
-                    return;
+                    return MessagingTelemetry.ReEngagementResults.NoContent;
                 }
 
                 using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Sms, purpose: AIUsageFeaturePurposes.ReEngagement);
@@ -387,11 +440,11 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             {
                 logger.LogWarning("The re-engagement step produced no content for Activity {ActivityId}; skipping.", activity.ItemId.SanitizeLogValue());
 
-                return;
+                return MessagingTelemetry.ReEngagementResults.NoContent;
             }
 
             // The nudge leaves through the provider that owns the endpoint's number, as the conversation's replies do.
-            var result = await smsService.SendAsync(new SmsMessage
+            var result = await SmsAutomatedSend.SendAsync(smsService, new SmsMessage
             {
                 To = currentActivity.PreferredDestination,
                 From = endpoint.Value,
@@ -402,7 +455,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             {
                 logger.LogWarning("The SMS provider reported a failed re-engagement send for Activity {ActivityId}.", activity.ItemId.SanitizeLogValue());
 
-                return;
+                return MessagingTelemetry.ReEngagementResults.SendFailed;
             }
 
             await promptStore.CreateAsync(new AIChatSessionPrompt
@@ -435,6 +488,8 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             {
                 logger.LogInformation("Sent SMS re-engagement {Attempt}/{Max} for Activity {ActivityId}.", currentActivity.ReEngagementAttempts, cadence.Steps.Count, activity.ItemId.SanitizeLogValue());
             }
+
+            return MessagingTelemetry.ReEngagementResults.Sent;
         }
     }
 }

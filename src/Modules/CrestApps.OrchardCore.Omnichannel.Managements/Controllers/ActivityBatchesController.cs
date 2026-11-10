@@ -1,10 +1,13 @@
 using System.Security.Claims;
 using CrestApps.Core.Services;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.BackgroundJobs;
@@ -577,15 +581,30 @@ public sealed class ActivityBatchesController : Controller
         await _manager.UpdateAsync(model);
         var batchId = model.ItemId;
 
+        // The load runs after the request, in a trace of its own that links back to the request that started it.
+        var traceParent = TraceContextPropagation.Capture();
+
         ShellScope.AddDeferredTask(async s =>
         {
             // Resolve the loader that matches the batch source and let it query the contacts,
             // apply the source-specific filters, and create the activities in the background.
-            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", loaderId, loaderUserName, batchId, async (scope, userId, userName, id) =>
+            await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("load-activity-batch", loaderId, loaderUserName, batchId, traceParent, static async (scope, userId, userName, id, parent) =>
             {
-                var coordinator = scope.ServiceProvider.GetRequiredService<IActivityBatchLoadCoordinator>();
+                try
+                {
+                    await DeferredWork.RunAsync(
+                        "omnichannel_batch_load",
+                        parent,
+                        scope,
+                        jobScope => jobScope.ServiceProvider.GetRequiredService<IActivityBatchLoadCoordinator>().LoadAsync(id, userId, userName));
+                }
+                catch (Exception ex)
+                {
+                    // Nothing else reports a load job that failed once the request had ended.
+                    var logger = scope.ServiceProvider.GetRequiredService<ILogger<ActivityBatchesController>>();
 
-                await coordinator.LoadAsync(id, userId, userName);
+                    OmnichannelLog.BatchLoadJobFailed(logger, ex, id.SanitizeLogValue());
+                }
             });
         });
 

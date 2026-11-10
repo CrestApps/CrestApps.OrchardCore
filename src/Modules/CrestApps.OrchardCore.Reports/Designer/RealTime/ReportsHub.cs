@@ -1,8 +1,12 @@
 using System.Security.Claims;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.SignalR.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Reports.Designer.RealTime;
@@ -21,6 +25,7 @@ public sealed class ReportsHub : Hub
     private readonly ReportDesignService _designService;
     private readonly IAuthorizationService _authorizationService;
     private readonly string _tenantName;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportsHub"/> class.
@@ -28,14 +33,29 @@ public sealed class ReportsHub : Hub
     /// <param name="designService">The design service used to find the report.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="shellSettings">The current tenant.</param>
+    /// <param name="logger">The logger, or <see langword="null"/> to log nothing.</param>
     public ReportsHub(
         ReportDesignService designService,
         IAuthorizationService authorizationService,
-        ShellSettings shellSettings)
+        ShellSettings shellSettings,
+        ILogger<ReportsHub> logger = null)
     {
         _designService = designService;
         _authorizationService = authorizationService;
         _tenantName = shellSettings.Name;
+        _logger = logger ?? NullLogger<ReportsHub>.Instance;
+    }
+
+    /// <summary>
+    /// Counts the open connection.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    public override Task OnConnectedAsync()
+    {
+        ReportTelemetry.HubConnections.Add(1);
+        ReportsModuleLog.HubConnected(_logger);
+
+        return base.OnConnectedAsync();
     }
 
     /// <summary>
@@ -45,8 +65,21 @@ public sealed class ReportsHub : Hub
     /// <returns><see langword="true"/> when subscribed.</returns>
     public async Task<bool> Subscribe(string designId)
     {
-        if (string.IsNullOrEmpty(designId) || !await CanEditAsync(designId))
+        if (string.IsNullOrEmpty(designId))
         {
+            return false;
+        }
+
+        if (!await CanEditAsync(designId))
+        {
+            ReportTelemetry.Count(ReportTelemetry.HubDenied, (CrestAppsOrchardCoreTelemetry.OperationTag, "subscribe"));
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                var reportId = designId.SanitizeLogValue();
+
+                ReportsModuleLog.HubCallDenied(_logger, "subscribe", reportId);
+            }
+
             return false;
         }
 
@@ -97,6 +130,9 @@ public sealed class ReportsHub : Hub
     /// <inheritdoc/>
     public override async Task OnDisconnectedAsync(Exception exception)
     {
+        ReportTelemetry.HubConnections.Add(-1);
+        ReportsModuleLog.HubDisconnected(_logger, exception, Subscriptions.Count);
+
         foreach (var designId in Subscriptions)
         {
             await Clients.Group(Group(_tenantName, designId)).SendAsync("PresenceLeft", Context.ConnectionId);

@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
@@ -11,15 +13,20 @@ namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 /// </summary>
 public sealed class PdfReportExportFormat : IReportExportFormat
 {
+    private readonly ILogger _logger;
     private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PdfReportExportFormat"/> class.
     /// </summary>
     /// <param name="stringLocalizer">The localizer of the text the format writes, such as the page numbers.</param>
-    public PdfReportExportFormat(IStringLocalizer<PdfReportExportFormat> stringLocalizer)
+    /// <param name="logger">The logger, or <see langword="null"/> to log nothing.</param>
+    public PdfReportExportFormat(
+        IStringLocalizer<PdfReportExportFormat> stringLocalizer,
+        ILogger<PdfReportExportFormat> logger = null)
     {
         S = stringLocalizer;
+        _logger = logger ?? NullLogger<PdfReportExportFormat>.Instance;
     }
 
     /// <inheritdoc/>
@@ -39,6 +46,14 @@ public sealed class PdfReportExportFormat : IReportExportFormat
     {
         ArgumentNullException.ThrowIfNull(document);
 
-        return new ReportPdfDocumentBuilder(document, S["Page {0} of {1}"].Value, ReportPdfFonts.Installed).Build();
+        var fonts = ReportPdfFonts.Installed;
+
+        // Without a TrueType font the PDF falls back to Helvetica, which shows only Latin-1 text.
+        if (fonts.Regular is null)
+        {
+            ReportPdfTelemetry.RecordFontFallback(_logger);
+        }
+
+        return new ReportPdfDocumentBuilder(document, S["Page {0} of {1}"].Value, fonts).Build();
     }
 }

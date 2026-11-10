@@ -5,13 +5,13 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.Core.Migrations;
+using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Sql;
 
@@ -48,7 +48,7 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
     /// </summary>
     public static int Create()
     {
-        ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(AIProfileDocumentMigrations), scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
 
         return 3;
     }
@@ -58,7 +58,7 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom1()
     {
-        ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(AIProfileDocumentMigrations), scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
 
         return 3;
     }
@@ -68,7 +68,7 @@ internal sealed class AIProfileDocumentMigrations : DataMigration
     /// </summary>
     public static int UpdateFrom2()
     {
-        ShellScope.AddDeferredTask(scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(AIProfileDocumentMigrations), scope => ImportAndNormalizeProfilesAsync(scope.ServiceProvider));
 
         return 3;
     }

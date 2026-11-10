@@ -102,7 +102,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         }
 
         var (start, end) = calendar.PeriodOn(date);
-        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(worker.ItemId)]);
+        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(worker.ItemId)], TimeOffLocks.TimeClockArea);
 
         if (lockers is null)
         {
@@ -175,7 +175,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
             return (timesheet, await BuildAsync(timesheet, worker, policy, calendar, cancellationToken));
         }
 
-        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(worker.ItemId)]);
+        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(worker.ItemId)], TimeOffLocks.TimeClockArea);
 
         if (lockers is null)
         {
@@ -427,7 +427,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
             return result;
         }
 
-        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(worker.ItemId)]);
+        var lockers = await _locks.LockAsync([TimeOffLocks.TimeClock(worker.ItemId)], TimeOffLocks.TimeClockArea);
 
         if (lockers is null)
         {

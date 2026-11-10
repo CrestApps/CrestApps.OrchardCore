@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.Locking;
 using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -121,10 +122,11 @@ internal sealed class ContentTransferEntryManager : IContentTransferEntryManager
             return;
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetProcessingLockKey(entry),
             _deleteLockTimeout,
-            _deleteLockExpiration);
+            _deleteLockExpiration,
+            "contenttransfer.delete");
 
         if (!locked)
         {

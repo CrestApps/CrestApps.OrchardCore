@@ -3,6 +3,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -29,7 +30,10 @@ public sealed class AITestRunBackgroundTask : IBackgroundTask
     private static readonly TimeSpan _passBudget = TimeSpan.FromMinutes(8);
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(pass => DoWorkCoreAsync(pass, serviceProvider, cancellationToken));
+
+    private static async Task DoWorkCoreAsync(MeasuredTaskRun pass, IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var runStore = serviceProvider.GetRequiredService<IAITestRunStore>();
         var runner = serviceProvider.GetRequiredService<AITestRunner>();
@@ -37,10 +41,27 @@ public sealed class AITestRunBackgroundTask : IBackgroundTask
         var logger = serviceProvider.GetRequiredService<ILogger<AITestRunBackgroundTask>>();
         var elapsed = Stopwatch.StartNew();
 
-        foreach (var run in await runStore.ListQueuedAsync(RunsPerPass, cancellationToken))
+        var queued = await runStore.ListQueuedAsync(RunsPerPass, cancellationToken);
+
+        if (queued.Count == 0)
         {
-            if (cancellationToken.IsCancellationRequested || elapsed.Elapsed > _passBudget)
+            pass.Skip();
+
+            return;
+        }
+
+        foreach (var run in queued)
+        {
+            if (cancellationToken.IsCancellationRequested)
             {
+                break;
+            }
+
+            if (elapsed.Elapsed > _passBudget)
+            {
+                // The rest wait for the next pass.
+                pass.BudgetExceeded();
+
                 break;
             }
 
@@ -53,10 +74,15 @@ public sealed class AITestRunBackgroundTask : IBackgroundTask
 
                 await runner.RunAsync(run, cancellationToken);
                 await session.SaveChangesAsync(cancellationToken);
+
+                pass.AddItems(1, "ran");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogError(ex, "AI test run '{RunId}' failed in the background.", run.ItemId.SanitizeLogValue());
+
+                pass.AddItems(1, "failed");
+                pass.ReportError(ex);
             }
         }
     }

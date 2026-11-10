@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -18,7 +20,10 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class AgentSessionCleanupBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var sessionService = serviceProvider.GetRequiredService<IAgentSessionService>();
         var logger = serviceProvider.GetRequiredService<ILogger<AgentSessionCleanupBackgroundTask>>();
@@ -27,6 +32,10 @@ public sealed class AgentSessionCleanupBackgroundTask : IBackgroundTask
         {
             var expired = await sessionService.ExpireStaleAsync(cancellationToken);
 
+            // A session goes stale when its heartbeat stops: the agent's screen went away without signing out.
+            run.AddItems(expired, "expired");
+            ContactCenterDiagnostics.RecordHeartbeatLost(expired);
+
             if (expired > 0 && logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug("Expired {Count} stale Contact Center agent session(s).", expired);
@@ -34,6 +43,7 @@ public sealed class AgentSessionCleanupBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(ex, "An error occurred while expiring stale Contact Center agent sessions.");
         }
     }

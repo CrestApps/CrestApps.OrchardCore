@@ -1,3 +1,6 @@
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Subscriptions.Models;
 using CrestApps.OrchardCore.Reports.Subscriptions.Services;
@@ -99,24 +102,100 @@ public sealed class ReportSubscriptionsAdminMenu : AdminNavigationProvider
     LockExpiration = 600_000)]
 public sealed class ReportSubscriptionsBackgroundTask : IBackgroundTask
 {
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => SweepAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private static async Task SweepAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<ReportSubscriptionsBackgroundTask>>();
+        using var activity = ReportTelemetry.Start("report.subscription.sweep");
+        IReadOnlyCollection<ReportSubscription> due;
+        ReportSubscriptionService service;
+        DateTime now;
 
         try
         {
-            var now = serviceProvider.GetRequiredService<IClock>().UtcNow;
-            var service = serviceProvider.GetRequiredService<ReportSubscriptionService>();
-
-            foreach (var subscription in await serviceProvider.GetRequiredService<IReportSubscriptionStore>().ListDueAsync(now, cancellationToken))
-            {
-                // A run is for its scheduled time, so a late one still covers the period it was due for.
-                await service.SendAsync(subscription, subscription.NextRunUtc ?? now, reschedule: true, cancellationToken);
-            }
+            now = serviceProvider.GetRequiredService<IClock>().UtcNow;
+            service = serviceProvider.GetRequiredService<ReportSubscriptionService>();
+            due = [.. await serviceProvider.GetRequiredService<IReportSubscriptionStore>().ListDueAsync(now, cancellationToken)];
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "An error occurred while emailing report subscriptions.");
+            // As before, nothing is thrown out of the task: a failure is logged, a shutdown ends the run quietly.
+            run.ReportError(ex);
+            CrestAppsOrchardCoreTelemetry.RecordException(activity, ex);
+
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(ex, "An error occurred while emailing report subscriptions.");
+            }
+
+            return;
+        }
+
+        activity?.SetTag("crestapps.report.subscriptions.due", due.Count);
+
+        if (due.Count == 0)
+        {
+            run.Skip();
+
+            return;
+        }
+
+        var sent = 0;
+        var notSent = 0;
+        var failed = 0;
+
+        try
+        {
+            foreach (var subscription in due)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                // One subscription that fails, even with a timeout of its email provider, never stops the others.
+                try
+                {
+                    using (logger.BeginScope(new Dictionary<string, object> { ["ReportSubscriptionId"] = subscription.ItemId }))
+                    {
+                        // A run is for its scheduled time, so a late one still covers the period it was due for.
+                        if (await service.SendAsync(subscription, subscription.NextRunUtc ?? now, reschedule: true, cancellationToken))
+                        {
+                            sent++;
+                        }
+                        else
+                        {
+                            notSent++;
+                        }
+                    }
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    failed++;
+                    ReportsModuleLog.SubscriptionFailed(logger, ex, subscription.ItemId.SanitizeLogValue());
+                }
+                catch (Exception ex)
+                {
+                    // The tenant is shutting down: the rest of the due subscriptions run on the next pass.
+                    run.ReportError(ex);
+
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            run.AddItems(sent, "sent");
+            run.AddItems(notSent, "not_sent");
+            run.AddItems(failed, "failed");
+            activity?.SetTag("crestapps.report.subscriptions.sent", sent);
+            activity?.SetTag("crestapps.report.subscriptions.not_sent", notSent);
+            activity?.SetTag("crestapps.report.subscriptions.failed", failed);
+            ReportsModuleLog.SubscriptionSweepCompleted(logger, due.Count, sent, notSent, failed);
         }
     }
 }

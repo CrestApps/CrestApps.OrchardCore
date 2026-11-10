@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,14 +37,23 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
     internal const int PageSize = 200;
 
     private const int PagesPerRun = 10;
+    private const string TelemetryBackfillName = "contact_phone_numbers";
+    private const string ResultReindexed = "reindexed";
 
     private bool _completed;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    {
+        return this.RunAsync(run => BackfillAsync(serviceProvider, run, cancellationToken));
+    }
+
+    private async Task BackfillAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         if (_completed)
         {
+            run.Skip();
+
             return;
         }
 
@@ -52,6 +63,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
         if (state.Completed.Contains(BackfillName))
         {
             _completed = true;
+            run.Skip();
 
             return;
         }
@@ -64,6 +76,8 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
             serviceProvider.GetRequiredService<ILogger<ContactPhoneNumberIndexBackfillBackgroundTask>>(),
             cancellationToken);
 
+        run.AddItems(step.Reindexed, ResultReindexed);
+
         if (step.Completed)
         {
             state.Completed.Add(BackfillName);
@@ -73,6 +87,9 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
         else
         {
             state.Cursors[BackfillName] = step.Cursor;
+
+            // The run read its pages and stopped; the records after its cursor wait for the next run.
+            run.BudgetExceeded();
         }
 
         await stateManager.UpdateAsync(state);
@@ -87,8 +104,8 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
     /// <param name="pages">How many pages to read before returning.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The new cursor, and whether every record has now been read.</returns>
-    internal static async Task<(long Cursor, bool Completed)> RunStepAsync(
+    /// <returns>The new cursor, whether every record has now been read, and how many records were indexed again.</returns>
+    internal static async Task<(long Cursor, bool Completed, int Reindexed)> RunStepAsync(
         IStore store,
         IContactMethodsAccessor contactMethods,
         long cursor,
@@ -108,7 +125,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
             {
                 Log(logger, reindexed);
 
-                return (cursor, true);
+                return (cursor, true, reindexed);
             }
 
             cursor = pageCursor;
@@ -117,7 +134,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
 
         Log(logger, reindexed);
 
-        return (cursor, false);
+        return (cursor, false, reindexed);
     }
 
     private static async Task<(long Cursor, int Reindexed, bool Found)> IndexPageAsync(
@@ -227,6 +244,9 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
 
     private static void Log(ILogger logger, int reindexed)
     {
+        // Counted here, after the pages were committed, so a page rolled back by a concurrent save is not counted.
+        OmnichannelTelemetry.RecordBackfill(TelemetryBackfillName, ResultReindexed, reindexed);
+
         if (reindexed > 0 && logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation("Indexed every phone number of {RecordCount} contacts and leads saved before each number was indexed.", reindexed);

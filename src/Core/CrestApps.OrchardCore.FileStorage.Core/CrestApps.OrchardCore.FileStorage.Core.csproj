@@ -25,4 +25,8 @@
     <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
 </Project>

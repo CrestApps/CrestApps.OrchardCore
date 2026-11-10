@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -15,7 +18,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <see cref="IProviderCommandTypeExecutor"/>; a missing or duplicate registration causes safe compensation
 /// without any provider contact.
 /// </summary>
-public sealed class ProviderCommandProcessor : IProviderCommandProcessor
+public sealed partial class ProviderCommandProcessor : IProviderCommandProcessor
 {
     private const int MaxRecoveryBatchSize = 25;
     private static readonly TimeSpan _leaseDuration = TimeSpan.FromMinutes(5);
@@ -91,13 +94,34 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             return command;
         }
 
-        return command.Status switch
+        // Linked to the trace that registered the command, which may have ended long before this dispatch or recovery.
+        using var activity = ContactCenterDiagnostics.StartProviderCommand(command);
+        using var logScope = _logger.BeginScope(new Dictionary<string, object> { ["ProviderCommandId"] = commandId, ["ProviderCommandType"] = command.CommandType });
+        var startStatus = command.Status;
+        var started = Stopwatch.GetTimestamp();
+
+        try
         {
-            ProviderCommandStatus.Pending => await DispatchPendingAsync(command, cancellationToken),
-            ProviderCommandStatus.OutcomeUnknown => await ReconcileAsync(command, cancellationToken),
-            ProviderCommandStatus.Compensating => await CompensateAsync(command, cancellationToken),
-            _ => command,
-        };
+            var result = command.Status switch
+            {
+                ProviderCommandStatus.Pending => await DispatchPendingAsync(command, cancellationToken),
+                ProviderCommandStatus.OutcomeUnknown => await ReconcileAsync(command, cancellationToken),
+                ProviderCommandStatus.Compensating => await CompensateAsync(command, cancellationToken),
+                _ => command,
+            };
+
+            ContactCenterDiagnostics.RecordProviderCommand(activity, command, startStatus, result?.Status, Stopwatch.GetElapsedTime(started));
+            LogSettled(command, startStatus, result);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            CrestAppsOrchardCoreTelemetry.RecordException(activity, ex);
+            ContactCenterDiagnostics.RecordProviderCommand(activity, command, startStatus, endStatus: null, Stopwatch.GetElapsedTime(started));
+
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -163,6 +187,8 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         {
             candidateIds.Add(command.CommandId);
         }
+
+        ContactCenterDiagnostics.RecordProviderCommandsRecovered(candidateIds.Count);
 
         var attempted = 0;
 
@@ -456,6 +482,8 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         try
         {
             result = await _commandExecutor.ExecuteAsync(
+                command.ProviderName,
+                command.CommandType.ToString(),
                 commandCancellationToken => executor.ExecuteAsync(command, claim, commandCancellationToken));
         }
         catch (TimeoutException)

@@ -1,7 +1,9 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -30,6 +32,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     private const string TargetQueueMissingReasonCode = "target_queue_missing";
     private const string TargetQueueDisabledReasonCode = "target_queue_disabled";
     private const string InboundQueueUnavailableReasonCode = "inbound_queue_unavailable";
+    private const string AlreadyTrackedReason = "The provider call is already tracked by the Contact Center.";
 
     private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
@@ -153,6 +156,28 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     {
         ArgumentNullException.ThrowIfNull(inboundEvent);
 
+        using var telemetry = ContactCenterDiagnostics.StartInboundRoute(inboundEvent.ProviderName);
+        using var logScope = _logger.BeginScope(new Dictionary<string, object> { ["ProviderCallId"] = inboundEvent.ProviderCallId });
+
+        try
+        {
+            var result = await RouteInboundMeasuredAsync(inboundEvent, cancellationToken);
+
+            // A redelivered or retried inbound webhook finds its call already tracked: counted as a duplicate, not routed again.
+            ContactCenterDiagnostics.CompleteInboundRoute(telemetry, result, duplicate: string.Equals(result?.Reason, AlreadyTrackedReason, StringComparison.Ordinal));
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+    }
+
+    private async Task<InboundVoiceRoutingResult> RouteInboundMeasuredAsync(InboundVoiceEvent inboundEvent, CancellationToken cancellationToken)
+    {
         using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
 
         if (workLease is null)
@@ -168,10 +193,11 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             return await RouteInboundCoreAsync(inboundEvent, cancellationToken);
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetInboundLockKey(inboundEvent),
             _inboundLockTimeout,
-            _inboundLockExpiration);
+            _inboundLockExpiration,
+            "contactcenter.inbound.route");
 
         if (!locked)
         {
@@ -227,7 +253,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
             result.Routed = !string.IsNullOrEmpty(existing.AgentId) ||
                 queueItem?.Status is QueueItemStatus.Reserved or QueueItemStatus.Assigned;
             result.Queued = queueItem?.Status == QueueItemStatus.Waiting;
-            result.Reason = "The provider call is already tracked by the Contact Center.";
+            result.Reason = AlreadyTrackedReason;
 
             if (existing.TechnicalMetadata.TryGetValue(RoutingTerminalReasonMetadataKey, out var reasonCode))
             {
@@ -543,6 +569,10 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
 
         if (queueItem.CanTransitionTo(QueueItemStatus.Removed))
         {
+            // The caller leaves the queue for voicemail; the maximum-wait action, which may be what sent them, says
+            // timeout instead.
+            using var queueExit = ContactCenterDiagnostics.BeginQueueExit(ContactCenterDiagnostics.QueueExitVoicemail);
+
             await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
         }
 

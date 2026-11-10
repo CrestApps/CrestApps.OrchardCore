@@ -223,7 +223,7 @@ public sealed partial class VoiceIngressLayeringArchitectureTests
         // Assert
         Assert.DoesNotContain("GetLifecycleRank", declared);
         Assert.Contains("GetLifecyclePhase", declared);
-        Assert.Contains("ShouldIgnoreEvent", declared);
+        Assert.Contains("GetDiscardReason", declared);
     }
 
     [Theory]

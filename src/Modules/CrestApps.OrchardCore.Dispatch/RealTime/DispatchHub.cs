@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Dispatch.Core.Telemetry;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.SignalR.Core;
@@ -5,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Dispatch.RealTime;
 
@@ -44,6 +45,22 @@ public sealed class DispatchHub : Hub
         return true;
     }
 
+    /// <inheritdoc/>
+    public override Task OnConnectedAsync()
+    {
+        DispatchTelemetry.HubConnected();
+
+        return base.OnConnectedAsync();
+    }
+
+    /// <inheritdoc/>
+    public override Task OnDisconnectedAsync(Exception exception)
+    {
+        DispatchTelemetry.HubDisconnected();
+
+        return base.OnDisconnectedAsync(exception);
+    }
+
     /// <summary>
     /// Gives the tenant's board group.
     /// </summary>
@@ -80,7 +97,7 @@ public sealed class DispatchBoardNotifier : IVisitObserver
         var tenantName = _tenantName;
         var message = new { visitId = visit.ItemId, number = visit.Number, eventName, status = visit.Status.ToString() };
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<IHubContext<DispatchHub>>().Clients.Group(DispatchHub.Group(tenantName)).SendAsync(ClientMethod, message));
+        DeferredWork.Add(DispatchTelemetry.BoardNotificationWork, scope => scope.ServiceProvider.GetRequiredService<IHubContext<DispatchHub>>().Clients.Group(DispatchHub.Group(tenantName)).SendAsync(ClientMethod, message));
 
         return Task.CompletedTask;
     }

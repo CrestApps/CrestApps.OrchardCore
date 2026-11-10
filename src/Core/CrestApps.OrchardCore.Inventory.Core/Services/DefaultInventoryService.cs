@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
 using CrestApps.OrchardCore.Inventory.Core.Models;
+using CrestApps.OrchardCore.Inventory.Core.Telemetry;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Services;
@@ -139,11 +140,11 @@ public sealed class DefaultInventoryService : IInventoryService
         item.SumLevels();
         item.ModifiedUtc = now;
 
-        await _movements.CreateAsync(Movement(item, from.LocationId, StockMovementKind.Transferred, -quantity, reason, actor, now), cancellationToken);
+        await CreateMovementAsync(Movement(item, from.LocationId, StockMovementKind.Transferred, -quantity, reason, actor, now), cancellationToken);
 
         var movement = Movement(item, to.LocationId, StockMovementKind.Transferred, quantity, reason, actor, now);
 
-        await _movements.CreateAsync(movement, cancellationToken);
+        await CreateMovementAsync(movement, cancellationToken);
         await UpdateAsync(item, previous, cancellationToken);
 
         return StockChangeResult.Success(item, movement);
@@ -216,11 +217,14 @@ public sealed class DefaultInventoryService : IInventoryService
         // All or nothing: a short line refuses the whole order, so nothing is held.
         if (shortages.Count > 0)
         {
+            InventoryTelemetry.RecordHoldRefusal();
+
             return new StockReservationResult { Shortages = shortages };
         }
 
         var now = _clock.UtcNow;
         var order = await GetLocationOrderAsync();
+        var placed = 0;
 
         foreach (var need in changes)
         {
@@ -243,12 +247,16 @@ public sealed class DefaultInventoryService : IInventoryService
                     CreatedUtc = now,
                     ModifiedUtc = now,
                 }, cancellationToken);
+
+                placed++;
             }
 
             item.SumLevels();
             item.ModifiedUtc = now;
             await UpdateAsync(item, previous, cancellationToken);
         }
+
+        InventoryTelemetry.RecordHolds(InventoryTelemetry.HoldPlaced, placed);
 
         return new StockReservationResult();
     }
@@ -272,6 +280,8 @@ public sealed class DefaultInventoryService : IInventoryService
 
         var now = _clock.UtcNow;
         var order = await GetLocationOrderAsync();
+        var converted = 0;
+        var unheld = 0;
 
         foreach (var need in requested)
         {
@@ -306,6 +316,7 @@ public sealed class DefaultInventoryService : IInventoryService
                     await SaveReservationAsync(hold, cancellationToken);
 
                     sold.Add((level.LocationId, hold.Quantity));
+                    converted++;
                 }
             }
             else
@@ -328,6 +339,7 @@ public sealed class DefaultInventoryService : IInventoryService
                     }, cancellationToken);
 
                     sold.Add((locationId, quantity));
+                    unheld++;
                 }
             }
 
@@ -339,12 +351,15 @@ public sealed class DefaultInventoryService : IInventoryService
                 var movement = Movement(item, locationId, StockMovementKind.Sold, -quantity, reason: null, actor: null, now);
                 movement.OrderId = orderId;
 
-                await _movements.CreateAsync(movement, cancellationToken);
+                await CreateMovementAsync(movement, cancellationToken);
             }
 
             item.ModifiedUtc = now;
             await UpdateAsync(item, previous, cancellationToken);
         }
+
+        InventoryTelemetry.RecordHolds(InventoryTelemetry.HoldConverted, converted);
+        InventoryTelemetry.RecordHolds(InventoryTelemetry.HoldCommittedWithoutHold, unheld);
 
         return new StockReservationResult();
     }
@@ -353,7 +368,7 @@ public sealed class DefaultInventoryService : IInventoryService
     {
         ArgumentException.ThrowIfNullOrEmpty(orderId);
 
-        await ReleaseHeldAsync(await ListReservationsAsync(orderId, cancellationToken), reason, cancellationToken);
+        await ReleaseHeldAsync(await ListReservationsAsync(orderId, cancellationToken), reason, InventoryTelemetry.HoldReleased, cancellationToken);
 
         return new StockReservationResult();
     }
@@ -445,7 +460,7 @@ public sealed class DefaultInventoryService : IInventoryService
         var movement = Movement(item, level.LocationId, StockMovementKind.Returned, quantity, reason, actor, now);
         movement.OrderId = orderId;
 
-        await _movements.CreateAsync(movement, cancellationToken);
+        await CreateMovementAsync(movement, cancellationToken);
     }
 
     public async Task<int> ReleaseExpiredAsync(int take, CancellationToken cancellationToken = default)
@@ -456,7 +471,7 @@ public sealed class DefaultInventoryService : IInventoryService
             .Take(take)
             .ListAsync(cancellationToken);
 
-        return await ReleaseHeldAsync(expired.ToArray(), "The hold expired before the order was paid.", cancellationToken);
+        return await ReleaseHeldAsync(expired.ToArray(), "The hold expired before the order was paid.", InventoryTelemetry.HoldExpired, cancellationToken);
     }
 
     /// <summary>
@@ -543,7 +558,7 @@ public sealed class DefaultInventoryService : IInventoryService
             ? [InventoryConstants.DefaultLocationId]
             : (await _locations.GetLocationsAsync()).Select(location => location.LocationId).DefaultIfEmpty(InventoryConstants.DefaultLocationId).ToArray();
 
-    private async Task<int> ReleaseHeldAsync(IReadOnlyList<StockReservation> reservations, string reason, CancellationToken cancellationToken)
+    private async Task<int> ReleaseHeldAsync(IReadOnlyList<StockReservation> reservations, string reason, string outcome, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
         var released = 0;
@@ -567,6 +582,8 @@ public sealed class DefaultInventoryService : IInventoryService
             await SaveReservationAsync(reservation, cancellationToken);
             released++;
         }
+
+        InventoryTelemetry.RecordHolds(outcome, released);
 
         return released;
     }
@@ -597,7 +614,7 @@ public sealed class DefaultInventoryService : IInventoryService
         movement.ReferenceType = reference.Type;
         movement.ReferenceId = reference.Id;
 
-        await _movements.CreateAsync(movement, cancellationToken);
+        await CreateMovementAsync(movement, cancellationToken);
         await UpdateAsync(item, previous, cancellationToken);
 
         return StockChangeResult.Success(item, movement);
@@ -620,6 +637,14 @@ public sealed class DefaultInventoryService : IInventoryService
 
     private static string LocationOf(string locationId)
         => string.IsNullOrEmpty(locationId) ? InventoryConstants.DefaultLocationId : locationId;
+
+    // Every movement is written here, so each one is counted once, when it is made.
+    private async Task CreateMovementAsync(StockMovement movement, CancellationToken cancellationToken)
+    {
+        await _movements.CreateAsync(movement, cancellationToken);
+
+        InventoryTelemetry.RecordMovement(movement.Kind, movement.Quantity);
+    }
 
     private async Task UpdateAsync(StockItem item, int previousAvailable, CancellationToken cancellationToken)
     {

@@ -1,3 +1,7 @@
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using CrestApps.OrchardCore.Diagnostics;
+
 namespace CrestApps.OrchardCore.BackgroundWork;
 
 /// <summary>
@@ -26,6 +30,33 @@ public static class BackgroundWorkPacer
     public static readonly TimeSpan GateWaitLimit = TimeSpan.FromMinutes(5);
 
     private static readonly SemaphoreSlim _gate = new(1, 1);
+
+    /// <summary>
+    /// The time a batch waited for the gate, tagged with the <see cref="CrestAppsOrchardCoreTelemetry.ResultTag"/>:
+    /// <c>acquired</c>, or <c>timeout</c> when it gave up and ran without the gate. It is the best measure of how
+    /// busy the bulk work of all tenants keeps the database.
+    /// </summary>
+    public static Histogram<double> GateWaitDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
+        CrestAppsOrchardCoreTelemetry.PlatformMeter,
+        "crestapps.background.pacer.gate_wait",
+        "The time a background batch waited for the shared pacing gate.",
+        CrestAppsOrchardCoreTelemetry.LongDurationBucketBoundaries);
+
+    /// <summary>
+    /// The number of batches that gave up waiting for the gate after <see cref="GateWaitLimit"/> and ran without it.
+    /// </summary>
+    public static Counter<long> GateTimeouts { get; } = CrestAppsOrchardCoreTelemetry.PlatformMeter.CreateCounter<long>(
+        "crestapps.background.pacer.gate_timeouts",
+        "{batch}",
+        "The number of background batches that gave up waiting for the shared pacing gate and ran without it.");
+
+    /// <summary>
+    /// The pause a batch earned and held the gate through, so bulk work keeps to its share of the database.
+    /// </summary>
+    public static Histogram<double> PauseDuration { get; } = CrestAppsOrchardCoreTelemetry.CreateDurationHistogram(
+        CrestAppsOrchardCoreTelemetry.PlatformMeter,
+        "crestapps.background.pacer.pause",
+        "The pause a background batch held the shared pacing gate through after it ran.");
 
     /// <summary>
     /// Waits for the gate, runs one batch, then keeps the gate through the pause that batch earned, so no other
@@ -62,7 +93,10 @@ public static class BackgroundWorkPacer
         ArgumentNullException.ThrowIfNull(batch);
 
         // A batch that cannot get the gate in time runs without it rather than waiting forever behind one that hung.
+        var waitStarted = Stopwatch.GetTimestamp();
         var holdsGate = await _gate.WaitAsync(gateWaitLimit, cancellationToken);
+
+        RecordGateWait(holdsGate, Stopwatch.GetElapsedTime(waitStarted));
 
         try
         {
@@ -93,6 +127,11 @@ public static class BackgroundWorkPacer
 
             if (pause > TimeSpan.Zero)
             {
+                if (PauseDuration.Enabled)
+                {
+                    PauseDuration.Record(pause.TotalSeconds);
+                }
+
                 await Task.Delay(pause, cancellationToken);
             }
 
@@ -105,6 +144,26 @@ public static class BackgroundWorkPacer
             {
                 _gate.Release();
             }
+        }
+    }
+
+    private static void RecordGateWait(bool holdsGate, TimeSpan waited)
+    {
+        var tags = new TagList
+        {
+            { CrestAppsOrchardCoreTelemetry.ResultTag, holdsGate ? "acquired" : CrestAppsOrchardCoreTelemetry.OutcomeTimeout },
+        };
+
+        CrestAppsOrchardCoreTelemetry.AddTenantTag(ref tags);
+
+        if (GateWaitDuration.Enabled)
+        {
+            GateWaitDuration.Record(waited.TotalSeconds, tags);
+        }
+
+        if (!holdsGate && GateTimeouts.Enabled)
+        {
+            GateTimeouts.Add(1, tags);
         }
     }
 

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Customers.Core.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -62,7 +63,7 @@ public sealed class DefaultCustomerMergeService : ICustomerMergeService
         }
 
         // Signing in on two devices at once must not merge the same guest twice.
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync("CUSTOMER_MERGE_" + userId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync("CUSTOMER_MERGE_" + userId, _lockTimeout, _lockExpiration, "customers.merge");
 
         if (!locked)
         {

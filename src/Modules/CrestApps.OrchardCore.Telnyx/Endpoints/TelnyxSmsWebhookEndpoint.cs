@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Core.Http;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Telnyx.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -50,17 +53,69 @@ internal static class TelnyxSmsWebhookEndpoint
         IClock clock,
         ILogger<TelnyxSmsProvider> logger)
     {
+        var receipt = new WebhookReceipt();
+
+        using var telemetry = TelemetryScope.Start(
+            TelnyxTelemetry.ActivitySource,
+            "crestapps.telnyx.webhook.receive",
+            duration: null,
+            new TagList
+            {
+                { TelnyxTelemetry.WebhookKindTag, TelnyxTelemetry.WebhookKindSms },
+            });
+
+        try
+        {
+            var result = await HandleCoreAsync(httpContext, optionsMonitor, handlers, session, clock, logger, receipt);
+
+            telemetry.SetOutcome(receipt.Result switch
+            {
+                TelnyxTelemetry.WebhookAccepted or TelnyxTelemetry.WebhookDuplicate => CrestAppsOrchardCoreTelemetry.OutcomeOk,
+                TelnyxTelemetry.WebhookDisabled => CrestAppsOrchardCoreTelemetry.OutcomeSkipped,
+                TelnyxTelemetry.WebhookParseError => CrestAppsOrchardCoreTelemetry.OutcomeError,
+                _ => CrestAppsOrchardCoreTelemetry.OutcomeBlocked,
+            });
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            receipt.Result = CrestAppsOrchardCoreTelemetry.OutcomeError;
+            telemetry.Fail(ex);
+
+            throw;
+        }
+        finally
+        {
+            telemetry.SetSpanTag(TelnyxTelemetry.WebhookTypeTag, receipt.Type);
+            telemetry.SetSpanTag(CrestAppsOrchardCoreTelemetry.ResultTag, receipt.Result);
+            TelnyxTelemetry.RecordWebhook(TelnyxTelemetry.WebhookKindSms, receipt.Type, receipt.Result ?? CrestAppsOrchardCoreTelemetry.OutcomeError);
+        }
+    }
+
+    private static async Task<IResult> HandleCoreAsync(
+        HttpContext httpContext,
+        IOptionsMonitor<TelnyxSmsOptions> optionsMonitor,
+        IEnumerable<IOmnichannelEventHandler> handlers,
+        YesSqlSession session,
+        IClock clock,
+        ILogger<TelnyxSmsProvider> logger,
+        WebhookReceipt receipt)
+    {
         var options = optionsMonitor.CurrentValue;
 
         if (!options.IsEnabled)
         {
             logger.LogWarning("Rejected a Telnyx SMS webhook because the Telnyx SMS provider is disabled.");
+            receipt.Result = TelnyxTelemetry.WebhookDisabled;
 
             return TypedResults.NotFound();
         }
 
         if (httpContext.Request.ContentLength is > MaximumRequestBodySizeBytes)
         {
+            receipt.Result = TelnyxTelemetry.WebhookRejectedSize;
+
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
@@ -68,6 +123,8 @@ internal static class TelnyxSmsWebhookEndpoint
 
         if (read.IsTooLarge)
         {
+            receipt.Result = TelnyxTelemetry.WebhookRejectedSize;
+
             return TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
@@ -76,6 +133,7 @@ internal static class TelnyxSmsWebhookEndpoint
         if (string.IsNullOrEmpty(options.WebhookPublicKey))
         {
             logger.LogWarning("Rejected a Telnyx SMS webhook because no webhook public key is configured.");
+            receipt.Result = TelnyxTelemetry.WebhookRejectedSignature;
 
             return TypedResults.Unauthorized();
         }
@@ -87,6 +145,7 @@ internal static class TelnyxSmsWebhookEndpoint
         if (!TelnyxWebhookSignatureValidator.TryValidate(publicKey, signature, timestamp, body))
         {
             logger.LogWarning("Rejected a Telnyx SMS webhook because the signature could not be validated.");
+            receipt.Result = TelnyxTelemetry.WebhookRejectedSignature;
 
             return TypedResults.Unauthorized();
         }
@@ -97,6 +156,7 @@ internal static class TelnyxSmsWebhookEndpoint
         if (!IsFresh(timestamp, clock.UtcNow))
         {
             logger.LogWarning("Rejected a Telnyx SMS webhook because its signed timestamp was stale or too far in the future.");
+            receipt.Result = TelnyxTelemetry.WebhookRejectedStale;
 
             return TypedResults.BadRequest();
         }
@@ -104,13 +164,20 @@ internal static class TelnyxSmsWebhookEndpoint
         if (!TelnyxSmsWebhookParser.TryParse(body, out var messagingEvent))
         {
             logger.LogWarning("Ignored a Telnyx SMS webhook whose payload was not a recognized messaging event.");
+            receipt.Result = TelnyxTelemetry.WebhookParseError;
 
             return TypedResults.Ok();
         }
 
+        receipt.Type = TelnyxTelemetry.GetWebhookType(messagingEvent.EventType);
+        receipt.Result = TelnyxTelemetry.WebhookAccepted;
+
         if (messagingEvent.IsInbound)
         {
-            await HandleInboundAsync(httpContext, messagingEvent, handlers, session, clock, logger, httpContext.RequestAborted);
+            if (!await HandleInboundAsync(httpContext, messagingEvent, handlers, session, clock, logger, httpContext.RequestAborted))
+            {
+                receipt.Result = TelnyxTelemetry.WebhookDuplicate;
+            }
         }
         else
         {
@@ -147,7 +214,8 @@ internal static class TelnyxSmsWebhookEndpoint
         return TypedResults.Ok();
     }
 
-    private static async Task HandleInboundAsync(
+    // Returns false when the delivery was a redelivery of a message the inbox already holds.
+    private static async Task<bool> HandleInboundAsync(
         HttpContext httpContext,
         TelnyxSmsWebhookEvent messagingEvent,
         IEnumerable<IOmnichannelEventHandler> handlers,
@@ -188,7 +256,7 @@ internal static class TelnyxSmsWebhookEndpoint
 
             if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Duplicate)
             {
-                return;
+                return false;
             }
 
             if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Accepted)
@@ -203,7 +271,7 @@ internal static class TelnyxSmsWebhookEndpoint
                     // must not report a failure that would make the provider redeliver as well.
                 }
 
-                return;
+                return true;
             }
         }
 
@@ -219,6 +287,8 @@ internal static class TelnyxSmsWebhookEndpoint
         };
 
         await handlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, logger);
+
+        return true;
     }
 
     // The same window the voice webhook allows: 15 minutes old, or 2 minutes ahead for clock drift.
@@ -241,5 +311,15 @@ internal static class TelnyxSmsWebhookEndpoint
         }
 
         return signedUtc >= nowUtc.AddSeconds(-900) && signedUtc <= nowUtc.AddSeconds(120);
+    }
+
+    /// <summary>
+    /// What became of one delivery, filled in as it is handled and recorded once when it is answered.
+    /// </summary>
+    private sealed class WebhookReceipt
+    {
+        public string Type { get; set; }
+
+        public string Result { get; set; }
     }
 }

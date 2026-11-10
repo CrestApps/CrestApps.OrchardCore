@@ -6,6 +6,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.OrchardCore.DataConnectors.Http;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.DataSources;
 using OrchardCore.Localization;
 
@@ -41,10 +44,14 @@ internal sealed class ElasticsearchDataConnector : IDataConnector
     public const string IdField = "_id";
 
     private readonly DataConnectorHttpClient _httpClient;
+    private readonly ILogger _logger;
 
-    public ElasticsearchDataConnector(DataConnectorHttpClient httpClient)
+    public ElasticsearchDataConnector(
+        DataConnectorHttpClient httpClient,
+        ILogger<ElasticsearchDataConnector> logger = null)
     {
         _httpClient = httpClient;
+        _logger = logger ?? NullLogger<ElasticsearchDataConnector>.Instance;
     }
 
     public static string Name => DataConnectorConstants.Connectors.Elasticsearch;
@@ -155,6 +162,7 @@ internal sealed class ElasticsearchDataConnector : IDataConnector
             using var first = await PostJsonAsync(context, $"{index}/_search?scroll={scroll}", body, cancellationToken);
             var page = ReadHits(first.RootElement, names, ref remaining);
             scrollId = JsonRecords.SelectText(first.RootElement, "_scroll_id");
+            DataConnectorsTelemetry.Add(DataConnectorsTelemetry.ElasticsearchScrollPages);
 
             while (page.Count > 0)
             {
@@ -172,6 +180,7 @@ internal sealed class ElasticsearchDataConnector : IDataConnector
                 using var document = await PostJsonAsync(context, "_search/scroll", next, cancellationToken);
                 page = ReadHits(document.RootElement, names, ref remaining);
                 scrollId = JsonRecords.SelectText(document.RootElement, "_scroll_id") ?? scrollId;
+                DataConnectorsTelemetry.Add(DataConnectorsTelemetry.ElasticsearchScrollPages);
             }
         }
         finally
@@ -451,7 +460,9 @@ internal sealed class ElasticsearchDataConnector : IDataConnector
         }
         catch (Exception exception) when (exception is DataConnectorException or OperationCanceledException)
         {
-            // An open scroll expires by itself after its keep-alive.
+            // An open scroll expires by itself after its keep-alive, but it holds the cluster's resources until then.
+            DataConnectorsTelemetry.Add(DataConnectorsTelemetry.ElasticsearchScrollClearFailures);
+            _logger.ElasticsearchScrollNotCleared(exception);
         }
     }
 }

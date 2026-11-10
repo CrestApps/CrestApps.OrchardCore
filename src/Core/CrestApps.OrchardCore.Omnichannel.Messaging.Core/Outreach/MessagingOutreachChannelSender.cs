@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Outreach;
 using CrestApps.OrchardCore.Outreach.Models;
 
@@ -46,6 +47,11 @@ public sealed class MessagingOutreachChannelSender : IOutreachChannelSender
         ArgumentNullException.ThrowIfNull(content);
 
         var result = await _conversationService.SendDirectAsync(run.Channel, run.SenderAddress, recipient.Address, content.Body, run.ActorId, cancellationToken);
+
+        if (string.Equals(run.OwnerType, MessagingOutreachConstants.BroadcastOwnerType, StringComparison.Ordinal))
+        {
+            MessagingTelemetry.RecordBroadcastRecipient(_channelResolver.Get(run.Channel)?.Name, result.Succeeded);
+        }
 
         return result.Succeeded
             ? OutreachSendResult.Success()

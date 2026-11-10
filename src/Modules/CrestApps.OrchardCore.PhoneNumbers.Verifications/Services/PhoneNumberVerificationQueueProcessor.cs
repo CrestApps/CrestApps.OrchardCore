@@ -1,9 +1,12 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Telemetry;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -21,6 +24,7 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
     private readonly IContactMethodsAccessor _contactMethods;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly Redactor _addressRedactor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PhoneNumberVerificationQueueProcessor"/> class.
@@ -33,13 +37,16 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
     /// <param name="contactMethods">Reads a contact's phone numbers, to copy the result onto the number it is about.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="redactorProvider">The redactors that keep phone numbers out of the log; when there is none, the
+    /// numbers are left out of the log entirely.</param>
     public PhoneNumberVerificationQueueProcessor(
         IPhoneNumberVerificationManager verificationManager,
         IPhoneNumberVerificationRequestDelayer requestDelayer,
         IEnumerable<INotInServiceNumberService> notInServiceNumbers,
         IContactMethodsAccessor contactMethods,
         IClock clock,
-        ILogger<PhoneNumberVerificationQueueProcessor> logger)
+        ILogger<PhoneNumberVerificationQueueProcessor> logger,
+        IRedactorProvider redactorProvider = null)
     {
         _verificationManager = verificationManager;
         _requestDelayer = requestDelayer;
@@ -47,6 +54,7 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
         _contactMethods = contactMethods;
         _clock = clock;
         _logger = logger;
+        _addressRedactor = redactorProvider?.GetRedactor(LogDataClassifications.AddressSet);
     }
 
     /// <inheritdoc/>
@@ -152,9 +160,10 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation(
-                    "A new lookup verified '{PhoneNumber}', so the not-in-service mark an earlier lookup made was cleared.",
-                    number.SanitizeLogValue());
+                // The number goes through the address redactor: it is a customer's.
+                var loggedNumber = string.IsNullOrEmpty(number) ? number : _addressRedactor?.Redact(number) ?? string.Empty;
+
+                PhoneNumberVerificationLog.NotInServiceMarkCleared(_logger, loggedNumber);
             }
         }
     }
@@ -197,12 +206,35 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
         string phoneNumber,
         CancellationToken cancellationToken)
     {
+        // A record whose last lookup failed is being tried again: the retry the revalidation queue makes, counted on
+        // crestapps.retry.attempts and logged with its attempt number.
+        if (contentItem.TryGet<PhoneNumberVerificationPart>(out var part) && part.FailedAttemptCount > 0)
+        {
+            var attempt = part.FailedAttemptCount + 1;
+
+            RetryTelemetry.RecordRetry(PhoneNumberVerificationTelemetry.RetryArea, "previous_failure", attempt);
+            PhoneNumberVerificationLog.RetryingVerification(_logger, contentItem.ContentItemId, attempt);
+        }
+
+        using var telemetry = PhoneNumberVerificationTelemetry.StartVerification(contentItem.ContentItemId);
+
         try
         {
-            return await _verificationManager.VerifyAsync(phoneNumber, cancellationToken: cancellationToken);
+            var result = await _verificationManager.VerifyAsync(phoneNumber, cancellationToken: cancellationToken);
+
+            PhoneNumberVerificationTelemetry.CompleteVerification(telemetry, result);
+
+            return result;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
             _logger.LogError(ex, "Failed to verify the phone number for content item '{ContentItemId}'.", contentItem.ContentItemId);
 
             return new PhoneNumberVerificationResult

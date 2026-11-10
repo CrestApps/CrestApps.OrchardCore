@@ -23,9 +23,12 @@ public interface IDataSetRefreshService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Refreshes the imported data sets that are due or were asked for, one after the other.
+    /// Refreshes the imported data sets that are due or were asked for, one after the other. A refresh that fails is
+    /// recorded and the next one runs; a refresh that can't even record how it ended is logged and stops the run
+    /// without throwing, and the data sets still due are refreshed by the next run.
     /// </summary>
     /// <param name="cancellationToken">The token that cancels the refreshes.</param>
-    /// <returns>The number of refreshes run.</returns>
+    /// <returns>The number of refreshes run, succeeded or failed; a refresh skipped because another refresh of the data
+    /// set was running isn't counted.</returns>
     Task<int> RefreshDueAsync(CancellationToken cancellationToken = default);
 }

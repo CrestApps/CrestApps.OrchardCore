@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Geo.Core.Telemetry;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
 using Microsoft.Extensions.Caching.Distributed;
@@ -66,7 +67,7 @@ public sealed class DefaultGeoService : IGeoService
             return new GeocodeResponse();
         }
 
-        var candidates = await provider.GeocodeAsync(query, cancellationToken);
+        var candidates = await GeoTelemetry.MeasureProviderCallAsync(provider.Name, GeoTelemetry.OperationGeocode, () => provider.GeocodeAsync(query, cancellationToken));
 
         return new GeocodeResponse { Provider = provider.Name, Candidates = [.. candidates.Where(candidate => candidate.Point.IsValid).OrderByDescending(candidate => candidate.Confidence)] };
     }
@@ -81,7 +82,7 @@ public sealed class DefaultGeoService : IGeoService
             return new GeocodeResponse();
         }
 
-        return new GeocodeResponse { Provider = provider.Name, Candidates = await provider.ReverseGeocodeAsync(point, cancellationToken) };
+        return new GeocodeResponse { Provider = provider.Name, Candidates = await GeoTelemetry.MeasureProviderCallAsync(provider.Name, GeoTelemetry.OperationReverseGeocode, () => provider.ReverseGeocodeAsync(point, cancellationToken)) };
     }
 
     /// <inheritdoc/>
@@ -113,14 +114,21 @@ public sealed class DefaultGeoService : IGeoService
 
         var key = CacheKey(provider.Name, origins, destinations, departureUtc, options);
 
-        if (keep > TimeSpan.Zero && await _cache.GetStringAsync(key, cancellationToken) is { } cached)
+        if (keep > TimeSpan.Zero)
         {
-            return JsonSerializer.Deserialize<CachedMatrix>(cached, _jsonOptions).ToMatrix(provider.Name);
+            var cached = await _cache.GetStringAsync(key, cancellationToken);
+
+            GeoTelemetry.RecordMatrixCacheLookup(provider.Name, cached is not null);
+
+            if (cached is not null)
+            {
+                return JsonSerializer.Deserialize<CachedMatrix>(cached, _jsonOptions).ToMatrix(provider.Name);
+            }
         }
 
         try
         {
-            var matrix = await provider.GetMatrixAsync(origins, destinations, departureUtc, options, cancellationToken);
+            var matrix = await GeoTelemetry.MeasureProviderCallAsync(provider.Name, GeoTelemetry.OperationMatrix, () => provider.GetMatrixAsync(origins, destinations, departureUtc, options, cancellationToken));
 
             if (keep > TimeSpan.Zero)
             {
@@ -134,6 +142,7 @@ public sealed class DefaultGeoService : IGeoService
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            GeoTelemetry.RecordFallback(provider.Name, GeoTelemetry.OperationMatrix);
             _logger.LogWarning(ex, "The travel-time provider {Provider} failed; using the built-in estimate.", provider.Name.SanitizeLogValue());
 
             return await _haversine.GetMatrixAsync(origins, destinations, departureUtc, options, cancellationToken);
@@ -154,10 +163,11 @@ public sealed class DefaultGeoService : IGeoService
 
         try
         {
-            return await provider.GetRouteAsync(points, cancellationToken);
+            return await GeoTelemetry.MeasureProviderCallAsync(provider.Name, GeoTelemetry.OperationRoute, () => provider.GetRouteAsync(points, cancellationToken));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            GeoTelemetry.RecordFallback(provider.Name, GeoTelemetry.OperationRoute);
             _logger.LogWarning(ex, "The route provider {Provider} failed; drawing straight lines.", provider.Name.SanitizeLogValue());
 
             return await _haversine.GetRouteAsync(points, cancellationToken);

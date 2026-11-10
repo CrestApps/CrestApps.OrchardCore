@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 
@@ -137,6 +138,7 @@ public sealed class CallQualityAlertService : ICallQualityAlertService
         interactionEvent.SetData(notification);
 
         await _publisher.PublishAsync(interactionEvent, cancellationToken);
+        ContactCenterDiagnostics.RecordCallQualityAlert();
     }
 
     // The agent's own side of a call: what their soft phone measured, or the provider's measurement of their leg.

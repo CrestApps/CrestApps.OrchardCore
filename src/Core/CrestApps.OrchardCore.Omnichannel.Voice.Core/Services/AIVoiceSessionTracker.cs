@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
@@ -142,6 +144,7 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
         catch (Exception ex)
         {
             // A report that cannot be written must never cost the call anything.
+            VoiceTelemetry.RecordSummaryLost("scope");
             _logger.LogWarning(ex, "Could not open a scope to record the AI voice session of activity '{ActivityId}'.", draft.ActivityId.SanitizeLogValue());
         }
     }
@@ -156,10 +159,11 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
             // few hundred milliseconds later. The writer keeps one summary per call by looking for an existing one
             // first, but each write runs in its own scope, so neither saw the other's uncommitted summary and the
             // call was reported twice. Held until the scope has committed, so the second writer sees the first.
-            (locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            (locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
                 SummaryLockKeyPrefix + draft.ActivityId,
                 _summaryLockTimeout,
-                _summaryLockExpiration);
+                _summaryLockExpiration,
+                "voice.session_summary");
 
             if (!locked)
             {
@@ -180,6 +184,7 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
         catch (Exception ex)
         {
             // Around the scope rather than inside it, so a commit refused when the scope ends is reported too.
+            VoiceTelemetry.RecordSummaryLost("write");
             _logger.LogWarning(ex, "Could not record the AI voice session of activity '{ActivityId}'.", draft.ActivityId.SanitizeLogValue());
         }
         finally

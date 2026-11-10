@@ -1,6 +1,7 @@
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using CrestApps.OrchardCore.FileStorage.Telemetry;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -61,6 +62,7 @@ public sealed class TenantBlobContainerEvents<TStore> : ModularTenantEvents
         {
             var blobContainer = new BlobContainerClient(_options.ConnectionString, _options.ContainerName);
             await blobContainer.CreateIfNotExistsAsync(PublicAccessType.None);
+            FileStorageTelemetry.RecordContainerOperation(FileStorageTelemetry.OperationCreateContainer, _registration.Purpose, succeeded: true);
 
             if (_logger.IsEnabled(LogLevel.Debug))
             {
@@ -69,6 +71,7 @@ public sealed class TenantBlobContainerEvents<TStore> : ModularTenantEvents
         }
         catch (RequestFailedException ex)
         {
+            FileStorageTelemetry.RecordContainerOperation(FileStorageTelemetry.OperationCreateContainer, _registration.Purpose, succeeded: false);
             _logger.LogError(ex, "Unable to create the Azure Blob container {ContainerName} of the {Purpose} file store.", _options.ContainerName, _registration.Purpose);
         }
     }
@@ -89,14 +92,21 @@ public sealed class TenantBlobContainerEvents<TStore> : ModularTenantEvents
             {
                 var response = await blobContainer.DeleteIfExistsAsync();
 
+                FileStorageTelemetry.RecordContainerOperation(FileStorageTelemetry.OperationRemoveContainer, _registration.Purpose, response.Value);
+
                 if (!response.Value)
                 {
                     _logger.LogError("Unable to remove the Azure Blob container {ContainerName} of the {Purpose} file store.", _options.ContainerName, _registration.Purpose);
                     context.ErrorMessage = S["Unable to remove the Azure Blob container '{0}'.", _options.ContainerName];
                 }
+                else
+                {
+                    FileStorageLog.ContainerRemoved(_logger, _options.ContainerName, _registration.Purpose);
+                }
             }
             catch (RequestFailedException ex)
             {
+                FileStorageTelemetry.RecordContainerOperation(FileStorageTelemetry.OperationRemoveContainer, _registration.Purpose, succeeded: false);
                 _logger.LogError(ex, "Failed to remove the Azure Blob container {ContainerName} of the {Purpose} file store.", _options.ContainerName, _registration.Purpose);
                 context.ErrorMessage = S["Failed to remove the Azure Blob container '{0}'.", _options.ContainerName];
                 context.Error = ex;
@@ -104,6 +114,8 @@ public sealed class TenantBlobContainerEvents<TStore> : ModularTenantEvents
 
             return;
         }
+
+        var removed = 0;
 
         try
         {
@@ -113,15 +125,22 @@ public sealed class TenantBlobContainerEvents<TStore> : ModularTenantEvents
 
                 if (!response.Value)
                 {
+                    FileStorageTelemetry.RecordContainerOperation(FileStorageTelemetry.OperationRemoveBlobs, _registration.Purpose, succeeded: false);
                     _logger.LogError("Blob removal failed for file {ItemName} of the {Purpose} file store.", blobItem.Name, _registration.Purpose);
                     context.ErrorMessage = S["Blob removal failed for file {0}.", blobItem.Name];
 
-                    break;
+                    return;
                 }
+
+                removed++;
             }
+
+            FileStorageTelemetry.RecordContainerOperation(FileStorageTelemetry.OperationRemoveBlobs, _registration.Purpose, succeeded: true);
+            FileStorageLog.BlobsRemoved(_logger, removed, _registration.Purpose, _options.ContainerName);
         }
         catch (RequestFailedException ex)
         {
+            FileStorageTelemetry.RecordContainerOperation(FileStorageTelemetry.OperationRemoveBlobs, _registration.Purpose, succeeded: false);
             _logger.LogError(ex, "Error while removing the blobs of the {Purpose} file store.", _registration.Purpose);
             context.ErrorMessage = S["Error while removing the Azure Blob files of the tenant."];
             context.Error = ex;

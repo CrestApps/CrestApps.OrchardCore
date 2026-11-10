@@ -1,7 +1,12 @@
+using System.Diagnostics;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.BackgroundWork;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.DncRegistry.BackgroundTasks;
 using CrestApps.OrchardCore.DncRegistry.Indexes;
 using CrestApps.OrchardCore.DncRegistry.Models;
+using CrestApps.OrchardCore.DncRegistry.Telemetry;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Tabular;
 using Dapper;
@@ -149,6 +154,66 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(listId);
 
+        using var logScope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["DncListId"] = listId,
+        });
+
+        using var telemetry = DncRegistryTelemetry.StartImportRun(listId);
+        var rows = new DncImportRowTally();
+        string failureReason = null;
+
+        try
+        {
+            failureReason = await ProcessImportCoreAsync(listId, telemetry, rows, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+        finally
+        {
+            RecordImportRunEnded(listId, telemetry, rows, failureReason);
+        }
+    }
+
+    private void RecordImportRunEnded(string listId, TelemetryScope telemetry, DncImportRowTally rows, string failureReason)
+    {
+        var outcome = telemetry.Outcome;
+
+        DncRegistryTelemetry.RecordImportRun(outcome, failureReason);
+
+        if (outcome == CrestAppsOrchardCoreTelemetry.OutcomeSkipped || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        var safeListId = listId.SanitizeLogValue();
+        var elapsedSeconds = Math.Round(telemetry.Elapsed.TotalSeconds, 1);
+
+        DncRegistryLog.ImportRunEnded(_logger, safeListId, outcome, elapsedSeconds, rows.ImportedRows, rows.RejectedRows);
+    }
+
+    private static string SetImportFailed(TelemetryScope telemetry, string reason)
+    {
+        telemetry.SetOutcome(DncRegistryTelemetry.ImportOutcomeFailed);
+        telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ReasonTag, reason);
+
+        return reason;
+    }
+
+    /// <summary>
+    /// Runs one import of a list and records how it ended on <paramref name="telemetry"/>.
+    /// </summary>
+    /// <returns>Why the run failed, from a bounded set, or <see langword="null"/> when it did not fail.</returns>
+    private async Task<string> ProcessImportCoreAsync(
+        string listId,
+        TelemetryScope telemetry,
+        DncImportRowTally rows,
+        CancellationToken cancellationToken)
+    {
         var store = _session.Store;
 
         // Phase 1: Load list, validate, and set initial Processing state.
@@ -164,7 +229,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             if (list == null || list.Status == LocalDncListStatus.Completed || list.Status == LocalDncListStatus.Deleting)
             {
-                return;
+                telemetry.SetOutcome(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
+
+                return null;
             }
 
             var fileInfo = await _fileStore.GetFileInfoAsync(list.StoredFileName);
@@ -178,7 +245,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 await initSession.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
                 await initSession.SaveChangesAsync(cancellationToken);
 
-                return;
+                return SetImportFailed(telemetry, DncRegistryTelemetry.ReasonFileMissing);
             }
 
             // Entries and TotalProcessed are saved in the same transaction, so a list that already made
@@ -217,6 +284,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             await initSession.SaveAsync(list, false, DncRegistryConstants.CollectionName, cancellationToken);
             await initSession.SaveChangesAsync(cancellationToken);
+
+            telemetry.SetSpanTag("crestapps.dnc.import.resuming", isResuming);
+            telemetry.SetSpanTag("crestapps.dnc.import.rows.total", list.TotalRecords);
         }
         finally
         {
@@ -232,7 +302,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             await using (var stream = await _fileStore.GetFileStreamAsync(fileInfo2))
             {
-                await ProcessCsvAsync(list, stream, skipRows, cancellationToken);
+                await ProcessCsvAsync(list, stream, skipRows, rows, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -251,16 +321,30 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             await TrySaveImportFailureAsync(list, cancellationToken);
 
-            return;
+            CrestAppsOrchardCoreTelemetry.RecordException(telemetry.Activity, ex);
+
+            var outcome = CrestAppsOrchardCoreTelemetry.GetOutcome(ex);
+
+            if (outcome != CrestAppsOrchardCoreTelemetry.OutcomeError)
+            {
+                telemetry.SetOutcome(outcome);
+
+                return null;
+            }
+
+            return SetImportFailed(telemetry, DncRegistryTelemetry.ReasonException);
         }
 
         // Phase 3: Mark as completed only if processing was not interrupted.
         if (list.Status != LocalDncListStatus.Processing)
         {
             // Processing was interrupted (paused or deleted externally). Don't mark as completed.
-            return;
+            telemetry.SetOutcome(DncRegistryTelemetry.ImportOutcomeInterrupted);
+
+            return null;
         }
 
+        var completed = false;
         var completeSession = store.CreateSession();
 
         try
@@ -283,6 +367,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 trackedList.ErrorMessages = list.ErrorMessages;
 
                 await completeSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
+                completed = true;
             }
 
             await completeSession.SaveChangesAsync(cancellationToken);
@@ -291,6 +376,17 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         {
             await completeSession.DisposeAsync();
         }
+
+        if (!completed)
+        {
+            telemetry.SetOutcome(DncRegistryTelemetry.ImportOutcomeInterrupted);
+
+            return null;
+        }
+
+        // The rows read after the last batch, such as rejected rows at the end of the file, are saved with the list.
+        rows.Commit();
+        telemetry.SetOutcome(DncRegistryTelemetry.ImportOutcomeCompleted);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -301,6 +397,8 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 list.ImportedCount,
                 list.ErrorMessages?.Count ?? 0);
         }
+
+        return null;
     }
 
     /// <inheritdoc/>
@@ -454,13 +552,16 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         // for it to let go. This used to give up after one second and throw from the after-request job,
         // which left the list in Deleting with nothing to ever finish it. Now the list stays in Deleting
         // and the background task resumes the deletion.
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             LocalDncImportBackgroundTask.GetImportLockKey(listId),
             _deleteLockTimeout,
-            _deleteLockExpiration);
+            _deleteLockExpiration,
+            "dnc.delete");
 
         if (!locked)
         {
+            DncRegistryTelemetry.RecordLockContended(DncRegistryTelemetry.OperationDelete);
+
             if (_logger.IsEnabled(LogLevel.Warning))
             {
                 _logger.LogWarning(
@@ -877,6 +978,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
         LocalDncList list,
         Stream fileStream,
         int skipRows,
+        DncImportRowTally rows,
         CancellationToken cancellationToken)
     {
         using var reader = new StreamReader(fileStream);
@@ -905,6 +1007,7 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             if (string.IsNullOrWhiteSpace(line))
             {
                 AddRowError(list, rowIndex, S["Blank row ignored."]);
+                rows.Add(DncRegistryTelemetry.RowBlank);
                 continue;
             }
 
@@ -916,12 +1019,14 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
             if (nonEmptyFields.Length == 0)
             {
                 AddRowError(list, rowIndex, S["Blank row ignored."]);
+                rows.Add(DncRegistryTelemetry.RowBlank);
                 continue;
             }
 
             if (nonEmptyFields.Length > 1)
             {
                 AddRowError(list, rowIndex, S["Row ignored because the file must contain a single column with phone numbers only."]);
+                rows.Add(DncRegistryTelemetry.RowMultipleColumns);
                 continue;
             }
 
@@ -939,18 +1044,21 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                         list.ListId);
                 }
 
+                rows.Add(DncRegistryTelemetry.RowHeader);
                 continue;
             }
 
             if (!_phoneNumberService.TryParse(value, list.CountryCode, out var canonical))
             {
                 AddRowError(list, rowIndex, S["Row ignored because it does not contain a valid phone number."]);
+                rows.Add(DncRegistryTelemetry.RowInvalidNumber);
                 continue;
             }
 
             if (!seenNumbers.Add(canonical.Value))
             {
                 AddRowError(list, rowIndex, S["Duplicate phone number ignored."]);
+                rows.Add(DncRegistryTelemetry.RowDuplicate);
                 continue;
             }
 
@@ -964,11 +1072,12 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             list.ImportedCount++;
             list.PhoneNumberCount = list.ImportedCount;
+            rows.Add(DncRegistryTelemetry.RowImported);
 
             if (batchEntries.Count >= BatchSize)
             {
                 var shouldContinue = await BackgroundWorkPacer.RunBatchAsync(
-                    token => FlushBatchAndUpdateProgressAsync(list, batchEntries, token),
+                    token => FlushBatchAndUpdateProgressAsync(list, batchEntries, rows, token),
                     _pacingOptions,
                     cancellationToken);
 
@@ -981,21 +1090,24 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
         if (batchEntries.Count > 0)
         {
-            await FlushBatchAndUpdateProgressAsync(list, batchEntries, cancellationToken);
+            await FlushBatchAndUpdateProgressAsync(list, batchEntries, rows, cancellationToken);
         }
     }
 
     /// <summary>
     /// Flushes a batch of entries and updates the list progress.
     /// Returns <c>false</c> if processing should stop (e.g., the list was paused or is being deleted).
+    /// The rows of the batch are counted on <paramref name="rows"/> once the batch is saved.
     /// </summary>
     private async Task<bool> FlushBatchAndUpdateProgressAsync(
         LocalDncList list,
         List<LocalDncEntry> entries,
+        DncImportRowTally rows,
         CancellationToken cancellationToken)
     {
         list.ProcessSaveUtc = _clock.UtcNow;
 
+        var batchStarted = Stopwatch.GetTimestamp();
         var batchSession = _session.Store.CreateSession();
 
         try
@@ -1029,6 +1141,9 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
                 await batchSession.SaveAsync(trackedList, false, DncRegistryConstants.CollectionName, cancellationToken);
                 await batchSession.SaveChangesAsync(cancellationToken);
 
+                DncRegistryTelemetry.RecordImportBatch(batchStarted, saved: true);
+                rows.Commit();
+
                 // Sync the in-memory status so callers see the change.
                 list.Status = trackedList.Status;
 
@@ -1051,7 +1166,16 @@ internal sealed class DefaultLocalDncListManager : ILocalDncListManager
 
             await batchSession.SaveChangesAsync(cancellationToken);
 
+            DncRegistryTelemetry.RecordImportBatch(batchStarted, saved: true);
+            rows.Commit();
+
             return true;
+        }
+        catch
+        {
+            DncRegistryTelemetry.RecordImportBatch(batchStarted, saved: false);
+
+            throw;
         }
         finally
         {

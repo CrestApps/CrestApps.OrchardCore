@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -108,10 +109,11 @@ public sealed class QueuedWorkWithdrawalService : IQueuedWorkWithdrawalService
             return QueuedWorkWithdrawalOutcome.LeftWithAgent;
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             ActivityAssignmentService.GetQueueLockKey(queueItem.QueueId),
             _coordinationOptions.AssignmentLockTimeout,
-            _coordinationOptions.AssignmentLockExpiration);
+            _coordinationOptions.AssignmentLockExpiration,
+            "contactcenter.assignment.queue");
 
         if (!locked)
         {

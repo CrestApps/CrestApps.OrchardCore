@@ -9,6 +9,7 @@ using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Core.Migrations;
+using CrestApps.OrchardCore.Diagnostics;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,6 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 using YesSql;
@@ -55,7 +55,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
             return 4;
         }
 
-        ShellScope.AddDeferredTask(scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(DataSourceMetadataMigrations), scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
 
         return 4;
     }
@@ -70,7 +70,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
             return 4;
         }
 
-        ShellScope.AddDeferredTask(scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(DataSourceMetadataMigrations), scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
 
         return 4;
     }
@@ -85,7 +85,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
             return 4;
         }
 
-        ShellScope.AddDeferredTask(scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(DataSourceMetadataMigrations), scope => MigrateLegacyDataSourcesAsync(scope.ServiceProvider));
 
         return 4;
     }
@@ -100,7 +100,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
             return 4;
         }
 
-        ShellScope.AddDeferredTask(scope => BackfillSourceTypesAsync(scope.ServiceProvider));
+        MigrationTelemetry.Defer(nameof(DataSourceMetadataMigrations), scope => BackfillSourceTypesAsync(scope.ServiceProvider));
 
         return 4;
     }

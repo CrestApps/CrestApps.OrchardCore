@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -95,10 +96,27 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
             return;
         }
 
+        StampTraceParent(interactionEvent);
+
         await _eventStore.CreateAsync(interactionEvent, cancellationToken);
         await _outbox.EnqueueAsync(interactionEvent, cancellationToken);
 
         _scopeExecutor.ScheduleAfterCommit<ContactCenterEventDispatchContext>(
             context => context.DispatchAsync(interactionEvent.ItemId));
+    }
+
+    // The outbox runs the handlers after the commit, often on the retry pass long after the request ended, so the event
+    // carries the trace that published it and the dispatch links back to it rather than starting an unrelated trace.
+    private static void StampTraceParent(InteractionEvent interactionEvent)
+    {
+        var traceParent = TraceContextPropagation.Capture();
+
+        if (traceParent is null)
+        {
+            return;
+        }
+
+        interactionEvent.EntityProperties ??= [];
+        interactionEvent.EntityProperties.TryAdd(TraceContextPropagation.TraceParentKey, traceParent);
     }
 }

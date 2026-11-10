@@ -2,7 +2,9 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -24,6 +26,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// </summary>
 public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmnichannelHandoffAvailability
 {
+    private const string AlreadyHandedOffMessage = "The call was already handed off.";
+
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
@@ -122,10 +126,11 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
         // call cannot interleave either.
         var lockKey = $"ContactCenterInboundVoice:{request.ProviderName}:{request.ProviderCallId}";
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             lockKey,
             _coordinationOptions.InboundLockTimeout,
-            _coordinationOptions.InboundLockExpiration);
+            _coordinationOptions.InboundLockExpiration,
+            "contactcenter.ai_handoff");
 
         if (!locked)
         {
@@ -136,8 +141,35 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
 
         await using (locker)
         {
-            return await RequestHandoffLockedAsync(request, cancellationToken);
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
+            var result = await RequestHandoffLockedAsync(request, cancellationToken);
+
+            // What became of the caller the AI handed over: offered to an agent, waiting in the queue, called back later,
+            // or not taken. A redelivered escalation of a call already handed off is a duplicate, not a second offer.
+            ContactCenterDiagnostics.RecordHandoff(GetHandoffResult(result), System.Diagnostics.Stopwatch.GetElapsedTime(started));
+
+            return result;
         }
+    }
+
+    private static string GetHandoffResult(OmnichannelHandoffResult result)
+    {
+        if (!result.Succeeded)
+        {
+            return "refused";
+        }
+
+        if (string.Equals(result.Message, AlreadyHandedOffMessage, StringComparison.Ordinal))
+        {
+            return "duplicate";
+        }
+
+        return result.Disposition switch
+        {
+            HandoffDisposition.WaitingInQueue => "queued",
+            HandoffDisposition.CallbackScheduled => "callback",
+            _ => "offered",
+        };
     }
 
     private async Task<OmnichannelHandoffResult> RequestHandoffLockedAsync(OmnichannelHandoffRequest request, CancellationToken cancellationToken)
@@ -175,7 +207,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService, IOmni
         // enqueuing the call a second time or scheduling a duplicate callback.
         if (activity.InteractionType == ActivityInteractionType.Manual || activity.Status.IsTerminal())
         {
-            return OmnichannelHandoffResult.Success("The call was already handed off.");
+            return OmnichannelHandoffResult.Success(AlreadyHandedOffMessage);
         }
 
         // After-hours gate: if the destination queue is closed right now, do not seat the caller in a queue nobody

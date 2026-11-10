@@ -10,6 +10,21 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class TimeOffLocks
 {
+    /// <summary>
+    /// The lock area of a worker's time off balance and of an allotment's places.
+    /// </summary>
+    public const string TimeOffArea = "workforce.timeoff";
+
+    /// <summary>
+    /// The lock area of a worker's punches and timesheets.
+    /// </summary>
+    public const string TimeClockArea = "workforce.timeclock";
+
+    /// <summary>
+    /// The lock area of a pay period's payroll export.
+    /// </summary>
+    public const string PayrollExportArea = "workforce.payroll_export";
+
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
 
@@ -49,9 +64,11 @@ internal sealed class TimeOffLocks
     /// <summary>
     /// Takes the locks, or returns <see langword="null"/> when one is held too long by someone else.
     /// </summary>
-    public Task<ILocker> LockAsync(IEnumerable<string> keys)
+    /// <param name="keys">The lock keys.</param>
+    /// <param name="area">The lock area recorded on the lock metrics, such as <see cref="TimeClockArea"/>.</param>
+    public Task<ILocker> LockAsync(IEnumerable<string> keys, string area = TimeOffArea)
     {
-        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration);
+        return _distributedLock.LockAllAsync(keys, _lockTimeout, _lockExpiration, area);
     }
 
     public static async Task ReleaseAsync(ILocker locker)

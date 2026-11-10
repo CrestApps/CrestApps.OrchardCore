@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
@@ -109,17 +110,23 @@ public sealed class ReportDesignWidgetService
 
         if (minutes > 0 && _memoryCache.TryGetValue(key, out CachedDesignWidget cached))
         {
+            RecordWidgetRequest("hit", CrestAppsOrchardCoreTelemetry.OutcomeOk);
+
             return ReportDesignWidgetResult.Success(source.Design, source.IsView, cached.Document, cached.GeneratedUtc, cached.From, cached.To, cached.PeriodApplied, cached.Warnings);
         }
+
+        var cache = minutes > 0 ? "miss" : "off";
+        var outcome = CrestAppsOrchardCoreTelemetry.OutcomeError;
 
         try
         {
             var localNow = (await _localClock.ConvertToLocalAsync(_clock.UtcNow)).DateTime;
             var (from, to) = ReportWidgetPeriods.Resolve(period, localNow, part.From, part.To);
             var runPeriod = ReportRunPeriod.FromRange(from, to);
+            var options = new ReportRunOptions { Source = ReportRunSources.Widget };
             var run = source.IsView
-                ? await _runner.RunAsync(source.Design, user, filterValues: null, period: runPeriod, cancellationToken: cancellationToken)
-                : await _runner.RunAsync(source.Design, filterValues: null, period: runPeriod, cancellationToken: cancellationToken);
+                ? await _runner.RunAsync(source.Design, user, filterValues: null, period: runPeriod, options, cancellationToken)
+                : await _runner.RunAsync(source.Design, filterValues: null, period: runPeriod, options, cancellationToken);
 
             if (run.Document is null)
             {
@@ -144,6 +151,8 @@ public sealed class ReportDesignWidgetService
                 _memoryCache.Set(key, new CachedDesignWidget(run.Document, generated, from, to, periodApplied, warnings), TimeSpan.FromMinutes(minutes));
             }
 
+            outcome = CrestAppsOrchardCoreTelemetry.OutcomeOk;
+
             return ReportDesignWidgetResult.Success(source.Design, source.IsView, run.Document, generated, from, to, periodApplied, warnings);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -153,6 +162,25 @@ public sealed class ReportDesignWidgetService
 
             return ReportDesignWidgetResult.Failed(source.Design, source.IsView, []);
         }
+        catch (OperationCanceledException)
+        {
+            outcome = CrestAppsOrchardCoreTelemetry.OutcomeCancelled;
+
+            throw;
+        }
+        finally
+        {
+            RecordWidgetRequest(cache, outcome);
+        }
+    }
+
+    private static void RecordWidgetRequest(string cache, string outcome)
+    {
+        ReportTelemetry.Count(
+            ReportTelemetry.WidgetRequests,
+            (ReportTelemetry.KindTag, "design"),
+            (ReportTelemetry.CacheTag, cache),
+            (CrestAppsOrchardCoreTelemetry.OutcomeTag, outcome));
     }
 
     private async Task<WidgetSource> FindSourceAsync(ReportDesignWidgetPart part, CancellationToken cancellationToken)

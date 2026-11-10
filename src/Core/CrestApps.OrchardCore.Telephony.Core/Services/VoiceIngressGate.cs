@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Locking;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using YesSql;
@@ -10,6 +11,9 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services;
 /// </summary>
 public sealed class VoiceIngressGate : IVoiceIngressGate
 {
+    // The lock.area every ingestion lock is measured under on crestapps.lock.acquisitions; the key names the call.
+    private const string IngressLockArea = "telephony.voice_ingress";
+
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
 
@@ -89,7 +93,7 @@ public sealed class VoiceIngressGate : IVoiceIngressGate
 
         if (_session?.CurrentTransaction is null)
         {
-            (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
+            (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(key, _lockTimeout, _lockExpiration, IngressLockArea);
         }
         else
         {
@@ -99,7 +103,7 @@ public sealed class VoiceIngressGate : IVoiceIngressGate
             // at once did exactly that: the agent's leg had recorded its call quality and waited for the call, while the
             // caller's leg held the call and waited for the database, and the agent's wrap-up started half a minute
             // late. What the flow has done is committed before it waits, so the holder can finish and hand over.
-            (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _uncontendedAttemptTimeout, _lockExpiration);
+            (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(key, _uncontendedAttemptTimeout, _lockExpiration, IngressLockArea);
 
             if (!locked)
             {
@@ -114,7 +118,7 @@ public sealed class VoiceIngressGate : IVoiceIngressGate
                     throw;
                 }
 
-                (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
+                (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(key, _lockTimeout, _lockExpiration, IngressLockArea);
             }
         }
 

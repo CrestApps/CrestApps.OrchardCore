@@ -1,7 +1,9 @@
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -106,25 +108,33 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         ArgumentNullException.ThrowIfNull(queueItem);
         ArgumentNullException.ThrowIfNull(agent);
 
-        (var activityLocker, var activityLocked) = await _distributedLock.TryAcquireLockAsync(
+        using var activity = ContactCenterDiagnostics.StartOffer("reserve", queueItem.QueueId);
+
+        (var activityLocker, var activityLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetActivityReservationLockKey(queueItem.ActivityItemId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation.activity");
 
         if (!activityLocked)
         {
+            ContactCenterDiagnostics.RecordReserve(activity, ContactCenterDiagnostics.ReserveLockTimeout, queueItem.QueueId);
+
             return null;
         }
 
         await using var acquiredActivityLock = activityLocker;
 
-        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetAgentReservationLockKey(agent.ItemId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation.agent");
 
         if (!agentLocked)
         {
+            ContactCenterDiagnostics.RecordReserve(activity, ContactCenterDiagnostics.ReserveLockTimeout, queueItem.QueueId);
+
             return null;
         }
 
@@ -134,6 +144,8 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         if (current is null || current.Status != QueueItemStatus.Waiting)
         {
+            ContactCenterDiagnostics.RecordReserve(activity, ContactCenterDiagnostics.ReserveQueueItemGone, queueItem.QueueId);
+
             return null;
         }
 
@@ -162,6 +174,8 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         if (availability?.Agent is null)
         {
+            ContactCenterDiagnostics.RecordReserve(activity, ContactCenterDiagnostics.ReserveAgentUnavailable, queueItem.QueueId);
+
             return null;
         }
 
@@ -169,6 +183,8 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId))
         {
+            ContactCenterDiagnostics.RecordReserve(activity, ContactCenterDiagnostics.ReserveAgentUnavailable, queueItem.QueueId);
+
             return null;
         }
 
@@ -236,7 +252,11 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         await CommitTransitionAsync(
             queueItem.ActivityItemId,
             agent.ItemId,
+            "reservation.reserve",
             cancellationToken);
+
+        activity?.SetTag("crestapps.contactcenter.reservation.id", reservation.ItemId);
+        ContactCenterDiagnostics.RecordReserve(activity, ContactCenterDiagnostics.ReserveReserved, queueItem.QueueId);
 
         return reservation;
     }
@@ -258,6 +278,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         foreach (var orphan in orphans)
         {
+            ContactCenterDiagnostics.RecordOrphanRecovered("reservation");
             _logger.LogWarning(
                 "Cancelling orphaned {ReservationStatus} reservation '{ReservationId}' for waiting activity '{ActivityItemId}' so the queue can reserve it again.",
                 orphan.Status,
@@ -307,10 +328,13 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        using var activity = ContactCenterDiagnostics.StartOffer(holdForDial ? "accept_for_dial" : "accept");
+
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation");
 
         if (!locked)
         {
@@ -326,10 +350,11 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             return null;
         }
 
-        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetAgentReservationLockKey(reservation.AgentId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation.agent");
 
         if (!agentLocked)
         {
@@ -345,6 +370,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
 
         var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
+        Interaction interaction = null;
 
         if (queueItem is not null)
         {
@@ -357,10 +383,12 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             // away for a provider that cannot tell when that happens (IContactCenterCallCommandService).
 
             // Their queue wait ends here, when an agent takes the call, even though the connect is still to come.
+            interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+
             await _auditRecorder.RecordQueueChangeAsync(
                 ContactCenterConstants.Events.CallDequeued,
                 queueItem,
-                await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken),
+                interaction,
                 now,
                 CallLifecycleReasons.Assigned,
                 cancellationToken: cancellationToken);
@@ -408,7 +436,15 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         await CommitTransitionAsync(
             reservation.ActivityItemId,
             reservation.AgentId,
+            "reservation.accept",
             cancellationToken);
+
+        if (queueItem is not null)
+        {
+            ContactCenterDiagnostics.RecordQueueExit(queueItem, ContactCenterDiagnostics.QueueExitAssigned, interaction?.Channel, now);
+        }
+
+        ContactCenterDiagnostics.RecordOfferSettled(activity, ContactCenterDiagnostics.OfferAccepted, reservation, interaction?.Channel, now);
 
         return reservation;
     }
@@ -425,10 +461,13 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        using var activity = ContactCenterDiagnostics.StartOffer(sendToVoicemail ? "reject_to_voicemail" : "reject");
+
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation");
 
         if (!locked)
         {
@@ -448,12 +487,15 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             return null;
         }
 
-        await ReleaseAsync(reservation, ReservationStatus.Rejected, cancellationToken, sendToVoicemail);
+        var settlement = await ReleaseAsync(reservation, ReservationStatus.Rejected, cancellationToken, sendToVoicemail);
 
         await CommitTransitionAsync(
             reservation.ActivityItemId,
             reservation.AgentId,
+            "reservation.reject",
             cancellationToken);
+
+        RecordSettlement(activity, reservation, settlement);
 
         return reservation;
     }
@@ -463,10 +505,13 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        using var activity = ContactCenterDiagnostics.StartOffer("cancel");
+
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation");
 
         if (!locked)
         {
@@ -482,12 +527,15 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             return null;
         }
 
-        await ReleaseAsync(reservation, ReservationStatus.Canceled, cancellationToken);
+        var settlement = await ReleaseAsync(reservation, ReservationStatus.Canceled, cancellationToken);
 
         await CommitTransitionAsync(
             reservation.ActivityItemId,
             reservation.AgentId,
+            "reservation.cancel",
             cancellationToken);
+
+        RecordSettlement(activity, reservation, settlement);
 
         return reservation;
     }
@@ -500,10 +548,13 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     {
         ArgumentException.ThrowIfNullOrEmpty(reservationId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        using var activity = ContactCenterDiagnostics.StartOffer("compensate");
+
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetReservationLockKey(reservationId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation");
 
         if (!locked)
         {
@@ -520,10 +571,11 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             return null;
         }
 
-        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireLockAsync(
+        (var agentLocker, var agentLocked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             GetAgentReservationLockKey(reservation.AgentId),
             _coordinationOptions.ReservationLockTimeout,
-            _coordinationOptions.ReservationLockExpiration);
+            _coordinationOptions.ReservationLockExpiration,
+            "contactcenter.reservation.agent");
 
         if (!agentLocked)
         {
@@ -643,7 +695,14 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         await CommitTransitionAsync(
             reservation.ActivityItemId,
             reservation.AgentId,
+            "reservation.compensate",
             cancellationToken);
+
+        // An accepted offer was already counted when the agent took it; only one still ringing is withdrawn here.
+        if (!wasAccepted)
+        {
+            ContactCenterDiagnostics.RecordOfferSettled(activity, ContactCenterDiagnostics.OfferCancelled, reservation, channel: null, now);
+        }
 
         return reservation;
     }

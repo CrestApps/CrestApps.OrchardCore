@@ -1,10 +1,13 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -107,12 +110,14 @@ public sealed class DialerNotInServiceHandler : IContactCenterEventHandler
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation(
-                "Dialer call '{InteractionId}' for activity '{ActivityId}' found '{PhoneNumber}' not in service ({Reason}); completing the activity without an agent.",
-                data.InteractionId.SanitizeLogValue(),
-                activity.ItemId.SanitizeLogValue(),
-                dialedNumber.SanitizeLogValue(),
-                reason.SanitizeLogValue());
+            // The dialed number is personal data: it goes through the address redactor the telephony feature registers.
+            var addressRedactor = _serviceProvider.GetService<IRedactorProvider>()?.GetRedactor(LogDataClassifications.AddressSet);
+            var interactionId = data.InteractionId.SanitizeLogValue();
+            var activityId = activity.ItemId.SanitizeLogValue();
+            var redactedNumber = string.IsNullOrEmpty(dialedNumber) ? dialedNumber : addressRedactor?.Redact(dialedNumber);
+            var sanitizedReason = reason.SanitizeLogValue();
+
+            ContactCenterLog.DialerNumberNotInService(_logger, interactionId, activityId, redactedNumber, sanitizedReason);
         }
 
         await _serviceProvider.GetRequiredService<INotInServiceActivityCompleter>().CompleteAsync(new NotInServiceCompletionRequest

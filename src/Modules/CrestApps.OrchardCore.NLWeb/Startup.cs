@@ -28,7 +28,8 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<INLWebAskService, NLWebAskService>()
             .AddScoped<INLWebResultResolver, ContentItemNLWebResultResolver>()
-            .AddScoped<INLWebQueryProcessor, NLWebSettingsQueryProcessor>();
+            .AddScoped<INLWebQueryProcessor, NLWebSettingsQueryProcessor>()
+            .AddScoped<INLWebAskHandler, NLWebTelemetryAskHandler>();
 
         services
             .AddPermissionProvider<NLWebPermissionsProvider>()

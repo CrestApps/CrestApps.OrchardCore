@@ -2,6 +2,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.OrchardCore.Locking;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -70,11 +72,17 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
         ValidateRequest(request);
 
-        await using var locker = await AcquireLockAsync();
-        var credential = await IssueCoreAsync(request, cancellationToken);
-        await SignalTenantAsync();
+        return await TelephonyTelemetry.MeasureSoftPhoneCredentialAsync(
+            AsteriskConstants.ProviderTechnicalName,
+            TelephonyTelemetry.CredentialIssue,
+            async () =>
+            {
+                await using var locker = await AcquireLockAsync();
+                var credential = await IssueCoreAsync(request, cancellationToken);
+                await SignalTenantAsync();
 
-        return credential;
+                return credential;
+            });
     }
 
     public async Task<AsteriskPjsipCredential> RotateAsync(
@@ -159,7 +167,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
     public async Task<int> CleanupExpiredAsync(CancellationToken cancellationToken = default)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration);
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration, "asterisk.pjsip_credentials");
 
         if (!locked)
         {
@@ -355,7 +363,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
     private async Task<ILocker> AcquireLockAsync()
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration);
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration, "asterisk.pjsip_credentials");
 
         if (!locked)
         {

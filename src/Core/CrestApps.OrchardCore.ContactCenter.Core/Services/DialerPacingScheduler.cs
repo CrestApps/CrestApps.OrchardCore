@@ -1,8 +1,10 @@
-using CrestApps.OrchardCore.Locking;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -244,7 +246,8 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
         (var locker, var locked) = await services.GetRequiredService<IDistributedLock>().TryAcquireLockWithoutWaitingAsync(
             GetPacingLockKey(queueId),
-            _options.LockExpiration);
+            _options.LockExpiration,
+            area: "contactcenter.dialer.pacing");
 
         if (!locked)
         {
@@ -268,7 +271,7 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
             Request(queueId, backoff < cap ? backoff : (cap > _options.LockRetryDelay ? cap : _options.LockRetryDelay));
 
-            await RecordAsync(recorder, queueId, profile.ItemId, startedUtc, DialerPacingCycleOutcome.LockNotAcquired, "Another pacing cycle held the queue's pacing lock.");
+            await RecordAsync(recorder, queueId, profile.ItemId, startedUtc, DialerPacingCycleOutcome.LockNotAcquired, "Another pacing cycle held the queue's pacing lock.", profile.Mode);
 
             return null;
         }
@@ -299,6 +302,7 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
         var cycleToken = cycleCancellation.Token;
 
         observation?.Begin();
+        var cycleStarted = Stopwatch.GetTimestamp();
 
         // The cycle is bounded because the lock it holds never expires in-process: a cycle waiting on something that never
         // answers would otherwise stop the campaign dialing until the application restarts.
@@ -333,7 +337,9 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
                 profile.ItemId,
                 startedUtc,
                 DialerPacingCycleOutcome.TimeBudgetExceeded,
-                $"The cycle did not finish within {_options.CycleTimeout}; it was abandoned and none of its calls were placed.");
+                $"The cycle did not finish within {_options.CycleTimeout}; it was abandoned and none of its calls were placed.",
+                profile.Mode,
+                Stopwatch.GetElapsedTime(cycleStarted));
 
             return null;
         }
@@ -356,7 +362,9 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
                 profile.ItemId,
                 startedUtc,
                 DialerPacingCycleOutcome.WriteConflict,
-                "Another transition saved an agent or record the cycle reserved first; none of its calls were placed.");
+                "Another transition saved an agent or record the cycle reserved first; none of its calls were placed.",
+                profile.Mode,
+                Stopwatch.GetElapsedTime(cycleStarted));
 
             return null;
         }
@@ -367,7 +375,7 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             await session.CancelAsync();
             observation?.End();
 
-            await RecordAsync(recorder, queueId, profile.ItemId, startedUtc, DialerPacingCycleOutcome.Failed, DescribeFailure(ex));
+            await RecordAsync(recorder, queueId, profile.ItemId, startedUtc, DialerPacingCycleOutcome.Failed, DescribeFailure(ex), profile.Mode, Stopwatch.GetElapsedTime(cycleStarted));
 
             return null;
         }
@@ -379,9 +387,14 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             _logger.LogDebug("Paced queue '{QueueId}' on request: {Started} call(s) placed.", queueId.SanitizeLogValue(), started);
         }
 
+        var cycleElapsed = Stopwatch.GetElapsedTime(cycleStarted);
+
         if (recorder is not null)
         {
-            await recorder.RecordAsync(await DescribeCompletedCycleAsync(services, queueId, profile, startedUtc, started, observation, cancellationToken));
+            var completed = await DescribeCompletedCycleAsync(services, queueId, profile, startedUtc, started, observation, cancellationToken);
+
+            ContactCenterDiagnostics.RecordDialerPacingCycle(completed.Outcome, profile.Mode, cycleElapsed, started);
+            await recorder.RecordAsync(completed);
         }
 
         return started > 0 ? _clock.UtcNow.Add(_options.Debounce) : null;
@@ -562,6 +575,7 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
         }
 
         _lockMisses.TryUpdate(queueId, streak with { LastWarnedUtc = nowUtc }, streak);
+        ContactCenterDiagnostics.RecordDialerLockStarved();
 
         _logger.LogWarning(
             "Queue '{QueueId}' is not being paced: its pacing lock '{LockKey}' has not been acquired since {SinceUtc:o} ({Misses} pacing run(s) over {StarvedFor}). Check that the distributed lock is reachable and that no node holds the lock without releasing it.",
@@ -578,8 +592,13 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
         string dialerProfileId,
         DateTime startedUtc,
         DialerPacingCycleOutcome outcome,
-        string detail)
+        string detail,
+        DialerMode? mode = null,
+        TimeSpan? elapsed = null)
     {
+        // Counted whether or not the scope records cycles, so a dashboard sees every way a cycle ends.
+        ContactCenterDiagnostics.RecordDialerPacingCycle(outcome, mode, elapsed);
+
         if (recorder is null)
         {
             return Task.CompletedTask;

@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
@@ -37,7 +39,10 @@ public sealed class AgentAvailabilityRecoveryBackgroundTask : IBackgroundTask
     private const int MaxRunDurationMilliseconds = 90_000;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => this.RunAsync(run => DoWorkAsync(serviceProvider, run, cancellationToken));
+
+    private static async Task DoWorkAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var recoveryService = serviceProvider.GetRequiredService<IAgentAvailabilityRecoveryService>();
         var logger = serviceProvider.GetRequiredService<ILogger<AgentAvailabilityRecoveryBackgroundTask>>();
@@ -50,6 +55,11 @@ public sealed class AgentAvailabilityRecoveryBackgroundTask : IBackgroundTask
         {
             var recovered = await recoveryService.RecoverAsync(runToken);
 
+            run.AddItems(recovered, "recovered");
+
+            // Every agent this pass had to put right is a state the routing transitions left wrong.
+            ContactCenterDiagnostics.RecordRecoveryHealed("agent_availability", recovered);
+
             if (recovered > 0 && logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug("Recovered {Count} Contact Center agent availability state(s).", recovered);
@@ -61,6 +71,8 @@ public sealed class AgentAvailabilityRecoveryBackgroundTask : IBackgroundTask
         }
         catch (OperationCanceledException) when (runToken.IsCancellationRequested)
         {
+            run.BudgetExceeded();
+
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug(
@@ -70,6 +82,7 @@ public sealed class AgentAvailabilityRecoveryBackgroundTask : IBackgroundTask
         }
         catch (Exception ex)
         {
+            run.ReportError(ex);
             logger.LogError(
                 ex,
                 "An error occurred while recovering Contact Center agent availability.");

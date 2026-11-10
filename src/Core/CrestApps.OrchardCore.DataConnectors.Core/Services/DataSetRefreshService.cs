@@ -1,10 +1,15 @@
 using System.Globalization;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Storage;
+using CrestApps.OrchardCore.DataConnectors.Telemetry;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DataSources;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -23,6 +28,8 @@ namespace CrestApps.OrchardCore.DataConnectors.Services;
 /// </remarks>
 internal sealed class DataSetRefreshService : IDataSetRefreshService
 {
+    private const string _lockArea = "dataconnectors.refresh";
+
     private readonly ISession _session;
     private readonly IConnectedDataSetStore _dataSetStore;
     private readonly IDataSetRefreshRunStore _runStore;
@@ -79,7 +86,11 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             ? _options.RefreshTimeout + TimeSpan.FromMinutes(5)
             : TimeSpan.FromHours(2);
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync($"CrestApps.DataConnectors.Refresh:{dataSet.ItemId}", TimeSpan.Zero, lockExpiration);
+        using var measurement = DataSetRefreshMeasurement.Start(dataSet, run);
+        using var logScope = _logger.BeginRefreshScope(dataSet.ItemId.SanitizeLogValue(), run.ItemId);
+
+        // A zero timeout never acquires the Redis lock, so the lock is tried once without waiting instead.
+        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"CrestApps.DataConnectors.Refresh:{dataSet.ItemId}", lockExpiration, _lockArea);
 
         if (!locked)
         {
@@ -93,12 +104,18 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             run.Status = DataSetRefreshStatus.Skipped;
             run.CompletedUtc = run.StartedUtc;
             run.Error = "Another refresh of this data set was running.";
+            measurement.End(CrestAppsOrchardCoreTelemetry.OutcomeSkipped);
 
             return run;
         }
 
         await using (locker)
         {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.RefreshStarted(dataSet.Name.SanitizeLogValue(), DataConnectorsTelemetry.ToTag(trigger), DataConnectorsTelemetry.ToTag(run.Mode));
+            }
+
             await _runStore.CreateAsync(run, cancellationToken);
 
             dataSet.Import ??= new DataSetImportState();
@@ -115,13 +132,21 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
 
             try
             {
-                await ImportAsync(dataSet, run, timeout.Token);
+                await ImportAsync(dataSet, run, measurement, timeout.Token);
                 await PublishAsync(dataSet, run, cancellationToken);
+                measurement.End(CrestAppsOrchardCoreTelemetry.OutcomeOk);
+
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.RefreshSucceeded(dataSet.Name.SanitizeLogValue(), (long)measurement.Elapsed.TotalMilliseconds, DataConnectorsTelemetry.ToTag(run.Mode), run.RowsRead, run.RowCount);
+                }
             }
             catch (Exception exception)
             {
                 var canceled = exception is OperationCanceledException && cancellationToken.IsCancellationRequested;
                 var timedOut = exception is OperationCanceledException && !canceled;
+
+                measurement.Fail(exception, timedOut);
 
                 await FailAsync(dataSet, run, canceled ? DataSetRefreshStatus.Canceled : DataSetRefreshStatus.Failed, timedOut ? $"The refresh took longer than {_options.RefreshTimeout} and was stopped." : ToSafeMessage(exception));
 
@@ -145,24 +170,112 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
     public async Task<int> RefreshDueAsync(CancellationToken cancellationToken = default)
     {
         var due = await _dataSetStore.ListDueAsync(_clock.UtcNow, cancellationToken);
-        var count = 0;
+        var limit = Math.Max(1, _options.MaxRefreshesPerRun);
+        var attempted = 0;
+        var succeeded = 0;
+        var failed = 0;
+        var skipped = 0;
 
-        foreach (var dataSet in due.Take(Math.Max(1, _options.MaxRefreshesPerRun)))
+        foreach (var dataSet in due.Take(limit))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             var trigger = dataSet.Import?.RefreshRequestedUtc is null ? DataSetRefreshTrigger.Scheduled : DataSetRefreshTrigger.Manual;
 
-            await RefreshAsync(dataSet, trigger, cancellationToken: cancellationToken);
-            count++;
+            attempted++;
+
+            try
+            {
+                var run = await RefreshAsync(dataSet, trigger, cancellationToken: cancellationToken);
+
+                switch (run.Status)
+                {
+                    case DataSetRefreshStatus.Succeeded:
+                        succeeded++;
+                        break;
+
+                    case DataSetRefreshStatus.Skipped:
+                        skipped++;
+                        break;
+
+                    default:
+                        failed++;
+                        break;
+                }
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                // The refresh couldn't record how it ended, such as when the database refused to save it. The run's
+                // refreshes share one session, which YesSql cancels when a save fails, so the next refreshes couldn't
+                // record theirs either: the run stops here without failing the task, and the next run, with a new
+                // session, refreshes the data sets still due.
+                failed++;
+                _logger.RefreshAborted(exception, dataSet.ItemId.SanitizeLogValue());
+
+                break;
+            }
         }
 
-        return count;
+        if (due.Count > 0 && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.RefreshSweepCompleted(due.Count, succeeded, failed, skipped, due.Count - attempted);
+        }
+
+        await SnapshotLastSuccessAsync(cancellationToken);
+
+        // A refresh skipped because another refresh of the data set was running didn't run.
+        return succeeded + failed;
     }
 
-    private async Task ImportAsync(ConnectedDataSet dataSet, DataSetRefreshRun run, CancellationToken cancellationToken)
+    private async Task SnapshotLastSuccessAsync(CancellationToken cancellationToken)
+    {
+        // The age gauge reads the snapshot, never the database, so it is taken here, once per run of the refresh task.
+        if (!DataConnectorsTelemetry.LastSuccessAge.Enabled)
+        {
+            return;
+        }
+
+        try
+        {
+            DateTime? oldest = null;
+
+            foreach (var dataSet in await _dataSetStore.ListAsync(cancellationToken))
+            {
+                if (!dataSet.IsEnabled || dataSet.AccessMode != DataSetAccessMode.Imported || dataSet.Refresh?.IntervalMinutes is not > 0)
+                {
+                    continue;
+                }
+
+                // A scheduled data set that never refreshed counts from when it was created.
+                var lastSuccess = dataSet.Import?.LastSuccessUtc;
+
+                if (lastSuccess is null && dataSet.CreatedUtc != default)
+                {
+                    lastSuccess = dataSet.CreatedUtc;
+                }
+
+                if (lastSuccess is { } value && (oldest is null || value < oldest))
+                {
+                    oldest = value;
+                }
+            }
+
+            DataConnectorsTelemetry.SetOldestLastSuccess(ShellScope.Context?.Settings?.Name, oldest, _clock.UtcNow);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LastSuccessSnapshotFailed(exception);
+        }
+    }
+
+    private async Task ImportAsync(
+        ConnectedDataSet dataSet,
+        DataSetRefreshRun run,
+        DataSetRefreshMeasurement measurement,
+        CancellationToken cancellationToken)
     {
         var source = await _reader.ResolveAsync(dataSet, cancellationToken);
+        measurement.SetConnector(source.Descriptor.Name);
 
         // Finding the connection opened a transaction of the session. It is closed before any row is written, because
         // on SQLite an open read transaction keeps the row store's connection from committing.
@@ -174,7 +287,13 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         }
 
         // The source's fields are read first, so a change is known before any row is written.
-        var sourceFields = await _reader.DescribeAsync(source, dataSet, cancellationToken);
+        IReadOnlyList<DataField> sourceFields;
+
+        using (var describe = TelemetryScope.Start(DataConnectorsTelemetry.ActivitySource, "crestapps.dataconnector.refresh.describe", duration: null))
+        {
+            sourceFields = await _reader.DescribeAsync(source, dataSet, cancellationToken);
+            describe.Succeed();
+        }
 
         if (sourceFields.Count == 0)
         {
@@ -186,6 +305,12 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         if (changes.HasChanges)
         {
             run.SchemaChanges = changes.ToString();
+            measurement.Activity?.SetTag("crestapps.dataconnector.refresh.schema_changed", true);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.RefreshSchemaChanged(dataSet.Name.SanitizeLogValue(), run.SchemaChanges.SanitizeLogValue());
+            }
 
             if (dataSet.Refresh?.SchemaChangePolicy == DataSetSchemaChangePolicy.Fail)
             {
@@ -213,6 +338,17 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             incrementalIndex >= 0 &&
             !changes.HasChanges;
 
+        if (run.Mode == DataSetRefreshMode.Incremental && !incremental)
+        {
+            var reason = GetFullReadReason(source, dataSet, identifierIndexes.Length, incrementalIndex, changes.HasChanges);
+            measurement.Activity?.SetTag("crestapps.dataconnector.refresh.full_read_reason", reason);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.RefreshDowngradedToFull(dataSet.Name.SanitizeLogValue(), reason);
+            }
+        }
+
         run.Mode = incremental ? DataSetRefreshMode.Incremental : DataSetRefreshMode.Full;
 
         var context = new DataConnectorReadContext(source.Connection, source.Secrets, dataSet)
@@ -227,7 +363,12 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         {
             largest = DataValues.Coerce(dataSet.Import.Watermark, incrementalField.Type);
 
-            await _rowStore.CopyAsync(dataSet.ItemId, dataSet.Import.ActiveVersion, run.Version, cancellationToken);
+            using (var copy = TelemetryScope.Start(DataConnectorsTelemetry.ActivitySource, "crestapps.dataconnector.refresh.copy", duration: null))
+            {
+                var copied = await _rowStore.CopyAsync(dataSet.ItemId, dataSet.Import.ActiveVersion, run.Version, cancellationToken);
+                copy.SetSpanTag(DataConnectorsTelemetry.RowsSpanTag, copied);
+                copy.Succeed();
+            }
 
             if (largest is not null)
             {
@@ -236,40 +377,57 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
             }
         }
 
-        await foreach (var batch in mapper.MapAsync(source.Connector.ReadAsync(context, cancellationToken), context.BatchSize, maxRows: 0, cancellationToken))
+        // One span covers every batch, so a large import doesn't record thousands of them.
+        using (var load = TelemetryScope.Start(DataConnectorsTelemetry.ActivitySource, "crestapps.dataconnector.refresh.batches", duration: null))
         {
-            if (batch.Count == 0)
+            var batches = 0;
+
+            await foreach (var batch in mapper.MapAsync(source.Connector.ReadAsync(context, cancellationToken), context.BatchSize, maxRows: 0, cancellationToken))
             {
-                continue;
-            }
-
-            var rows = new List<DataSetRow>(batch.Count);
-
-            foreach (var row in batch.Rows)
-            {
-                var key = identifierIndexes.Length == 0
-                    ? null
-                    : DataSetRows.ToKey([.. identifierIndexes.Select(index => row[index])]);
-
-                rows.Add(new DataSetRow(key, DataSetRows.ToJson(mapper.DataSetFields, row)));
-
-                if (incrementalIndex >= 0 && row[incrementalIndex] is { } value && !DataValues.IsEmpty(value) &&
-                    (largest is null || DataValues.Compare(value, largest) > 0))
+                if (batch.Count == 0)
                 {
-                    largest = value;
+                    continue;
                 }
+
+                var rows = new List<DataSetRow>(batch.Count);
+
+                foreach (var row in batch.Rows)
+                {
+                    var key = identifierIndexes.Length == 0
+                        ? null
+                        : DataSetRows.ToKey([.. identifierIndexes.Select(index => row[index])]);
+
+                    rows.Add(new DataSetRow(key, DataSetRows.ToJson(mapper.DataSetFields, row)));
+
+                    if (incrementalIndex >= 0 && row[incrementalIndex] is { } value && !DataValues.IsEmpty(value) &&
+                        (largest is null || DataValues.Compare(value, largest) > 0))
+                    {
+                        largest = value;
+                    }
+                }
+
+                if (incremental)
+                {
+                    await _rowStore.DeleteKeysAsync(dataSet.ItemId, run.Version, [.. rows.Select(row => row.Key)], cancellationToken);
+                }
+
+                await _rowStore.WriteAsync(dataSet.ItemId, run.Version, rows, cancellationToken);
+                run.RowsRead += rows.Count;
+                batches++;
             }
 
-            if (incremental)
-            {
-                await _rowStore.DeleteKeysAsync(dataSet.ItemId, run.Version, [.. rows.Select(row => row.Key)], cancellationToken);
-            }
-
-            await _rowStore.WriteAsync(dataSet.ItemId, run.Version, rows, cancellationToken);
-            run.RowsRead += rows.Count;
+            load.SetSpanTag("crestapps.dataconnector.batches", batches);
+            load.SetSpanTag(DataConnectorsTelemetry.RowsSpanTag, run.RowsRead);
+            load.Succeed();
         }
 
-        run.RowCount = await _rowStore.CountAsync(dataSet.ItemId, run.Version, cancellationToken);
+        using (var count = TelemetryScope.Start(DataConnectorsTelemetry.ActivitySource, "crestapps.dataconnector.refresh.count", duration: null))
+        {
+            run.RowCount = await _rowStore.CountAsync(dataSet.ItemId, run.Version, cancellationToken);
+            count.SetSpanTag(DataConnectorsTelemetry.RowsSpanTag, run.RowCount);
+            count.Succeed();
+        }
+
         dataSet.Import.Watermark = largest switch
         {
             null => null,
@@ -353,6 +511,37 @@ internal sealed class DataSetRefreshService : IDataSetRefreshService
         => dataSet.Refresh?.IntervalMinutes is > 0 and var minutes
             ? utcNow.AddMinutes(minutes)
             : null;
+
+    // Why an incremental refresh reads every row: a bounded value for the span and the log.
+    private static string GetFullReadReason(
+        ConnectedSource source,
+        ConnectedDataSet dataSet,
+        int identifiers,
+        int incrementalIndex,
+        bool fieldsChanged)
+    {
+        if (!source.Descriptor.Supports(DataConnectorCapabilities.IncrementalImport))
+        {
+            return "unsupported";
+        }
+
+        if (string.IsNullOrEmpty(dataSet.Import?.ActiveVersion))
+        {
+            return "no_published_version";
+        }
+
+        if (identifiers == 0)
+        {
+            return "no_identifiers";
+        }
+
+        if (incrementalIndex < 0)
+        {
+            return "no_incremental_field";
+        }
+
+        return fieldsChanged ? "fields_changed" : CrestAppsOrchardCoreTelemetry.Other;
+    }
 
     private static ConnectedDataField FindIncrementalField(ConnectedDataSet dataSet)
     {

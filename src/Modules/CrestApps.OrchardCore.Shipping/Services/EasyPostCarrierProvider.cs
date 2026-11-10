@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Core.Security;
+using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Shipping.Core.Telemetry;
 using CrestApps.OrchardCore.Shipping.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
@@ -102,7 +104,9 @@ public sealed class EasyPostCarrierProvider : ICarrierProvider
             body["shipment"]["reference"] = request.Reference;
         }
 
-        var (response, error) = await SendAsync(HttpMethod.Post, "shipments", body, cancellationToken);
+        using var telemetry = ShippingTelemetry.StartCarrierCall(Name, ShippingTelemetry.OperationQuote);
+
+        var (response, error) = await SendAsync(HttpMethod.Post, "shipments", body, cancellationToken, telemetry: telemetry);
 
         if (response is null)
         {
@@ -126,6 +130,8 @@ public sealed class EasyPostCarrierProvider : ICarrierProvider
         // No rate at all: the carriers' messages say why, such as an address they can't deliver to.
         if (rates.Length == 0)
         {
+            telemetry.SetOutcome(ShippingTelemetry.OutcomeNoRates);
+
             var messages = (response["messages"] as JsonArray ?? []).OfType<JsonObject>().Select(message => message["message"]?.GetValue<string>()).Where(message => !string.IsNullOrEmpty(message));
 
             return new CarrierQuote { Error = string.Join(" ", messages).Trim() is { Length: > 0 } text ? text : S["No carrier quoted this parcel."].Value };
@@ -141,8 +147,10 @@ public sealed class EasyPostCarrierProvider : ICarrierProvider
             return new CarrierLabel { Error = S["Choose a rate to buy."].Value };
         }
 
+        using var telemetry = ShippingTelemetry.StartCarrierCall(Name, ShippingTelemetry.OperationBuyLabel);
+
         var body = new JsonObject { ["rate"] = new JsonObject { ["id"] = rateId } };
-        var (response, error) = await SendAsync(HttpMethod.Post, $"shipments/{Uri.EscapeDataString(quoteId)}/buy", body, cancellationToken);
+        var (response, error) = await SendAsync(HttpMethod.Post, $"shipments/{Uri.EscapeDataString(quoteId)}/buy", body, cancellationToken, telemetry: telemetry);
 
         if (response is null)
         {
@@ -163,12 +171,15 @@ public sealed class EasyPostCarrierProvider : ICarrierProvider
         };
     }
 
-    private async Task<(JsonObject Response, string Error)> SendAsync(HttpMethod method, string path, JsonObject body, CancellationToken cancellationToken, string apiKey = null)
+    // The telemetry, when given, is told the status of the response, or why there was none.
+    private async Task<(JsonObject Response, string Error)> SendAsync(HttpMethod method, string path, JsonObject body, CancellationToken cancellationToken, string apiKey = null, TelemetryScope telemetry = null)
     {
         apiKey ??= await GetApiKeyAsync();
 
         if (string.IsNullOrEmpty(apiKey))
         {
+            telemetry?.SetOutcome(ShippingTelemetry.OutcomeNotConfigured);
+
             return (null, S["EasyPost isn't set up. Enter its API key on the EasyPost tab of Settings › Commerce › Shipping."].Value);
         }
 
@@ -185,6 +196,9 @@ public sealed class EasyPostCarrierProvider : ICarrierProvider
         try
         {
             using var response = await client.SendAsync(message, cancellationToken);
+
+            telemetry?.SetStatusCode((int)response.StatusCode);
+
             var json = await response.Content.ReadAsStringAsync(cancellationToken);
             var node = string.IsNullOrWhiteSpace(json) ? null : JsonNode.Parse(json) as JsonObject;
 
@@ -204,6 +218,7 @@ public sealed class EasyPostCarrierProvider : ICarrierProvider
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
+            telemetry?.Fail(exception);
             _logger.LogWarning(exception, "EasyPost couldn't be reached for {Path}.", path);
 
             return (null, S["EasyPost couldn't be reached. Try again in a moment."].Value);

@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
@@ -24,6 +25,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Hubs;
 public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 {
     private const string WorkLeaseKey = "ContactCenterFeatureWorkLease";
+
+    // Set on a connection counted in crestapps.contactcenter.hub.connections, so only those are counted out again.
+    private const string CountedConnectionKey = "ContactCenterConnectionCounted";
 
     private readonly ILogger _logger;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
@@ -102,10 +106,12 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
     /// <inheritdoc/>
     public override async Task OnConnectedAsync()
     {
+        using var logScope = _logger.BeginScope(new Dictionary<string, object> { ["ConnectionId"] = Context.ConnectionId, ["UserId"] = Context.UserIdentifier });
         var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.RealTime);
 
         if (workLease is null)
         {
+            ContactCenterDiagnostics.RecordHubRejected("feature_unavailable");
             Context.Abort();
 
             return;
@@ -115,6 +121,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         if (!_connectionRegistry.Register(Context))
         {
+            ContactCenterDiagnostics.RecordHubRejected("registry_refused");
             ReleaseConnectionWork();
 
             return;
@@ -124,6 +131,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         if (string.IsNullOrEmpty(userId))
         {
+            ContactCenterDiagnostics.RecordHubRejected("unauthenticated");
             Context.Abort();
 
             return;
@@ -211,6 +219,7 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
 
         if (!authorized || registrationFailed)
         {
+            ContactCenterDiagnostics.RecordHubRejected(registrationFailed ? "registration_failed" : "unauthorized");
             Context.Abort();
 
             return;
@@ -222,6 +231,9 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
             HubConnectionWork.MustComplete);
 
         await base.OnConnectedAsync();
+
+        Context.Items[CountedConnectionKey] = true;
+        ContactCenterDiagnostics.RecordHubConnection(1);
     }
 
     /// <inheritdoc/>
@@ -253,6 +265,11 @@ public sealed partial class ContactCenterHub : Hub<IContactCenterHubClient>
         }
         finally
         {
+            if (Context.Items.Remove(CountedConnectionKey))
+            {
+                ContactCenterDiagnostics.RecordHubConnection(-1);
+            }
+
             _connectionRegistry.Unregister(Context.ConnectionId);
             ReleaseConnectionWork();
         }

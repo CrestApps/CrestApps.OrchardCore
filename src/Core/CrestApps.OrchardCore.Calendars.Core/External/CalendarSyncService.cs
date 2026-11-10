@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core.ICalendar;
 using CrestApps.OrchardCore.Calendars.Core.Services;
+using CrestApps.OrchardCore.Calendars.Core.Telemetry;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using Microsoft.Extensions.Logging;
@@ -186,6 +187,10 @@ public sealed class CalendarSyncService
         var subscription = calendar.GetOrCreate<CalendarSubscription>();
         var provider = FindProvider(subscription.Provider);
 
+        // The provider's registered name, never the subscription's own value, so the tag stays bounded.
+        using var telemetry = CalendarsTelemetry.StartSync(provider?.Name, subscription.TwoWay);
+
+        telemetry.SetSpanTag(CalendarsTelemetry.CalendarIdTag, calendar.ItemId);
         subscription.LastAttemptUtc = _clock.UtcNow;
 
         ICalendarImportResult result = null;
@@ -202,6 +207,7 @@ public sealed class CalendarSyncService
             var run = new SyncRun();
 
             result = run.Result = await PullAsync(calendar, subscription, provider, writer is not null, run, cancellationToken);
+            telemetry.AddMetricTag(CalendarsTelemetry.ModeTag, run.Incremental ? CalendarsTelemetry.ModeIncremental : CalendarsTelemetry.ModeFull);
 
             if (writer is not null)
             {
@@ -212,17 +218,27 @@ public sealed class CalendarSyncService
             subscription.LastError = result.Errors.Count > 0 ? string.Join(" ", result.Errors.Take(3)) : null;
             subscription.Failures = 0;
             subscription.LastResult = $"{result.Created} added, {result.Updated} changed, {result.Removed} removed, {result.Unchanged} unchanged, {result.Conflicts} conflicts, {result.Errors.Count} refused";
+            telemetry.Succeed();
+            CalendarsTelemetry.RecordSyncEvents(provider.Name, result);
         }
         catch (CalendarProviderAuthorizationException ex)
         {
+            telemetry.SetOutcome(CalendarsTelemetry.OutcomeUnauthorized);
             _logger.LogWarning(ex, "The external calendar of the calendar '{CalendarId}' refused access; synchronization is paused until it is reconnected.", calendar.ItemId);
             subscription.LastError = ex.Message;
             subscription.NeedsReconnect = true;
             subscription.Failures++;
             result = null;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
+            telemetry.Fail(ex);
+
+            throw;
+        }
+        catch (Exception ex)
+        {
+            telemetry.Fail(ex);
             _logger.LogWarning(ex, "Synchronizing the calendar '{CalendarId}' with its external calendar failed.", calendar.ItemId);
             subscription.LastError = ex.Message;
             subscription.Failures++;
@@ -252,6 +268,9 @@ public sealed class CalendarSyncService
         }
 
         var full = changes is null;
+
+        run.Incremental = !full;
+
         IEnumerable<ICalendarEventData> events = full ? await provider.PullAsync(calendar, subscription, cancellationToken) : changes.Events;
         var conflicts = 0;
 
@@ -554,6 +573,9 @@ public sealed class CalendarSyncService
     private sealed class SyncRun
     {
         public ICalendarImportResult Result { get; set; }
+
+        // Whether the read took only the changes since the last read.
+        public bool Incremental { get; set; }
 
         // Events whose local change won a conflict on the read, to write over the external copy.
         public HashSet<string> Overwrite { get; } = new(StringComparer.Ordinal);

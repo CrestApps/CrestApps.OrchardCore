@@ -74,7 +74,7 @@ internal sealed class ShiftReminderService
     public async Task<int> SendDueAsync(CancellationToken cancellationToken = default)
     {
         // Another node, or an earlier run that is still going, sends the reminders that are due.
-        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(LockKey, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(LockKey, _lockExpiration, "workforce.shift_reminder");
 
         if (!locked)
         {

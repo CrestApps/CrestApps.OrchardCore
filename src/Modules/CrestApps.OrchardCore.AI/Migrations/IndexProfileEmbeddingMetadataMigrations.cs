@@ -2,12 +2,12 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
 
@@ -118,7 +118,7 @@ internal sealed class IndexProfileEmbeddingMetadataMigrations : DataMigration
 
     private static void ScheduleMigration()
     {
-        ShellScope.AddDeferredTask(async scope =>
+        MigrationTelemetry.Defer(nameof(IndexProfileEmbeddingMetadataMigrations), async scope =>
         {
             var indexProfileStore = scope.ServiceProvider.GetRequiredService<IIndexProfileStore>();
             var deploymentManager = scope.ServiceProvider.GetRequiredService<IAIDeploymentManager>();

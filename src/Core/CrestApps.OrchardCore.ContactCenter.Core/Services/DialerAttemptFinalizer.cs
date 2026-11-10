@@ -1,6 +1,7 @@
 using System.Text;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Telemetry;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -186,6 +187,8 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
         await RemoveWaitingQueueItemAsync(activity.ItemId, cancellationToken);
 
         await RetryWhenTheFlowHasNoRuleAsync(request, activity, result, cancellationToken);
+
+        ContactCenterDiagnostics.RecordDialerAttemptCompleted(activity.TerminalReasonCode ?? request.Outcome.ToString());
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

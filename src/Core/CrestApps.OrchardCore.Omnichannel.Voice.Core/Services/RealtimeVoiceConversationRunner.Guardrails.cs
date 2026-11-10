@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -141,6 +142,8 @@ public sealed partial class RealtimeVoiceConversationRunner
             {
                 return;
             }
+
+            VoiceTelemetry.RecordGuardrailRefusal(VoiceTelemetry.EngineRealtime, "customer");
 
             // The model has already answered and nothing of it is still playing: what it said stands, and it is only
             // told not to act on the request from here on.

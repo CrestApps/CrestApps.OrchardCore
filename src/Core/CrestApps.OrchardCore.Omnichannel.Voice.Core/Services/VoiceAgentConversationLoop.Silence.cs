@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
@@ -148,6 +149,8 @@ public sealed partial class VoiceAgentConversationLoop
                     stillTherePrompts + 1);
             }
 
+            VoiceTelemetry.RecordIdlePrompt(VoiceTelemetry.EngineTurnBased, VoiceTelemetry.IdleActionAsk);
+
             await StorePromptAsync(session, ChatRole.Assistant, StillThereLine, cancellationToken);
             await SpeakAsync(media, silence.ProviderCallId, activity, StillThereLine, cancellationToken);
 
@@ -161,6 +164,8 @@ public sealed partial class VoiceAgentConversationLoop
                 activity.ItemId.SanitizeLogValue(),
                 stillTherePrompts);
         }
+
+        VoiceTelemetry.RecordIdlePrompt(VoiceTelemetry.EngineTurnBased, VoiceTelemetry.IdleActionGoodbye);
 
         // The marker is what the speak.ended handler hangs up on, once the goodbye has been heard in full.
         await StorePromptAsync(session, ChatRole.Assistant, SilentLineGoodbye + " " + HangupMarker, cancellationToken);

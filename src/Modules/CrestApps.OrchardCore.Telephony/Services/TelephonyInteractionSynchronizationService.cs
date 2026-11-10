@@ -1,7 +1,9 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Telemetry;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -151,10 +153,11 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
     private async Task<int> ReconcileAsync(string providerName, CancellationToken cancellationToken)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireMeasuredLockAsync(
             ReconciliationLockKey,
             _lockTimeout,
-            _lockExpiration);
+            _lockExpiration,
+            "telephony.interaction_reconciliation");
 
         if (!locked)
         {
@@ -179,6 +182,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
             if (interactionChanged)
             {
                 changed++;
+                TelephonyTelemetry.RecordReconcileCorrections(interaction.ProviderName, TelephonyTelemetry.ReconcileDriftCorrected);
             }
         }
 

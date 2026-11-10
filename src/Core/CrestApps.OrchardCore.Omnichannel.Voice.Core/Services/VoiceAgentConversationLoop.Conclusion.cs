@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -57,11 +58,12 @@ public sealed partial class VoiceAgentConversationLoop
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation(
-                "AI voice activity '{ActivityId}' found '{PhoneNumber}' not in service ({Detail}); completing it without the assistant.",
-                activityId.SanitizeLogValue(),
-                destination.SanitizeLogValue(),
-                detail.SanitizeLogValue());
+            // The number goes through the address redactor: it is the customer's.
+            var loggedActivityId = activityId.SanitizeLogValue();
+            var loggedDestination = RedactAddress(destination);
+            var loggedDetail = detail.SanitizeLogValue();
+
+            VoiceLog.NotInService(_logger, loggedActivityId, loggedDestination, loggedDetail);
         }
 
         ShellScope.AddDeferredTask(async scope =>

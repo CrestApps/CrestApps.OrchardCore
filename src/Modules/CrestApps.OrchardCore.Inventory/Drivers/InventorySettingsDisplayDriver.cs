@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
@@ -11,7 +12,6 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
@@ -119,7 +119,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
             settings.DefaultLowStockThreshold = model.DefaultLowStockThreshold;
 
             // Products without their own threshold take the new one once the settings are saved.
-            ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<InventorySyncService>().SyncAllAsync());
+            DeferredWork.Add("inventory_sync_all", scope => scope.ServiceProvider.GetRequiredService<InventorySyncService>().SyncAllAsync());
         }
 
         // Only roles that exist are kept. Anonymous and Authenticated would mean every visitor or every user.

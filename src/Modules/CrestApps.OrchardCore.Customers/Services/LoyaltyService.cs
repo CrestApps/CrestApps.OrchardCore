@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.Extensions.Localization;
@@ -147,7 +148,7 @@ public sealed class LoyaltyService
             }
 
             // A first change makes the account, under the customer's lock, so two at once make one account.
-            var (creating, created) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, "new-" + customerId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
+            var (creating, created) = await _distributedLock.TryAcquireMeasuredLockAsync(CheckoutTenderLocks.GetKey(TenderKey, "new-" + customerId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30), "customers.loyalty");
 
             if (!created)
             {
@@ -171,7 +172,7 @@ public sealed class LoyaltyService
             }
         }
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, account.ItemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
+        var (locker, locked) = await _distributedLock.TryAcquireMeasuredLockAsync(CheckoutTenderLocks.GetKey(TenderKey, account.ItemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30), "customers.loyalty");
 
         if (!locked)
         {

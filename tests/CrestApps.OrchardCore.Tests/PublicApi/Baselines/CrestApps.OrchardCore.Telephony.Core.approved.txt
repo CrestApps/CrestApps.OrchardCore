@@ -158,7 +158,13 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
     }
     public static class VoiceStreamOrdering
     {
+        public const string DiscardAfterTerminal = "after_terminal";
+        public const string DiscardOutOfOrder = "out_of_order";
+        public const string DiscardPhaseRegression = "phase_regression";
+        public const string DiscardSequenceRegression = "sequence_regression";
+        public const string DiscardUnsequenced = "unsequenced";
         public static void Advance(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
+        public static string GetDiscardReason(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
         public static bool ShouldDiscard(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
     }
 }
@@ -177,5 +183,45 @@ namespace CrestApps.OrchardCore.Telephony.Services
         public VoiceAgentMediaProviderResolver(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider> providers) { }
         public CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider Get(string technicalName) { }
         public CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider GetDefault() { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Telemetry
+{
+    public static class TelephonyTelemetry
+    {
+        public const string CommandTag = "command";
+        public const string CredentialIssue = "issue";
+        public const string CredentialRevoke = "revoke";
+        public const string IngestCancelled = "cancelled";
+        public const string IngestDeadLettered = "dead_lettered";
+        public const string IngestRetry = "retry";
+        public const string IngestStored = "stored";
+        public const string ReconcileActionTag = "action";
+        public const string ReconcileDriftCorrected = "drift_corrected";
+        public const string ReconcileOrphanEnded = "orphan_ended";
+        public const string ResultNotAdmitted = "not_admitted";
+        public const string ScreeningStageCompliance = "compliance";
+        public const string ScreeningStageDestinationPolicy = "destination_policy";
+        public const string ScreeningStageTag = "stage";
+        public const string SourceName = "CrestApps.OrchardCore.Telephony";
+        public static System.Diagnostics.ActivitySource ActivitySource { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> CommandDuration { get; }
+        public static System.Diagnostics.Metrics.Counter<long> DialScreenings { get; }
+        public static System.Diagnostics.Metrics.Meter Meter { get; }
+        public static System.Diagnostics.Metrics.Counter<long> ReconcileCorrections { get; }
+        public static System.Diagnostics.Metrics.ObservableGauge<double> RecordingIngestBacklogAge { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> RecordingIngestDuration { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> RecordingIngestLag { get; }
+        public static System.Diagnostics.Metrics.Counter<long> SoftPhoneCredentials { get; }
+        public static System.Diagnostics.Metrics.Counter<long> VoiceEventDiscards { get; }
+        public static System.Threading.Tasks.Task<TResult> MeasureSoftPhoneCredentialAsync<TResult>(string provider, string operation, System.Func<System.Threading.Tasks.Task<TResult>> work) { }
+        public static void RecordDialScreening(string stage, bool allowed, string reason = null) { }
+        public static void RecordReconcileCorrections(string provider, string action, long count = 1) { }
+        public static void RecordRecordingIngestBacklog(string provider, System.DateTime? oldestQueuedUtc, System.DateTime nowUtc) { }
+        public static void RecordRecordingIngestLag(string provider, System.DateTime queuedUtc, System.DateTime storedUtc) { }
+        public static void RecordSoftPhoneCredential(string provider, string operation, string outcome) { }
+        public static void RecordVoiceEventDiscard(string provider, string reason) { }
+        public static CrestApps.OrchardCore.Diagnostics.TelemetryScope StartRecordingIngest(string provider) { }
+        public static string ToBoundedName(string value) { }
     }
 }
