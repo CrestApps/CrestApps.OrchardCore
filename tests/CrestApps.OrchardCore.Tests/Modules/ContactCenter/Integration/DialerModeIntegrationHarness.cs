@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -649,6 +650,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             }
         }
 
+        services.AddSingleton(RedactorProviderFactory.Create());
         services.AddSingleton<IProviderVoiceEventService, ProviderVoiceEventService>();
         services.AddSingleton(Mock.Of<ITelephonyService>());
         services.AddSingleton<IContactCenterAgentLegFailureService, ContactCenterAgentLegFailureService>();

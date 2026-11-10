@@ -107,8 +107,6 @@ Orchard Core already starts a span (`Run background task {name}`) and records `o
 | `crestapps.deferred.<name>` | One deferred task, linked to the request that queued it. |
 | `crestapps.migration.run` | The data a migration moves after it runs, tagged with `migration`. Logs 20000 (started), 20001 (completed, with the elapsed time) and 20002 (failed). |
 
-<!-- AREA SECTIONS START -->
-
 ## AI modules
 
 Meter and activity source: `CrestApps.OrchardCore.AI` (`AIModuleTelemetry` in `src/Core/CrestApps.OrchardCore.AI.Core/Telemetry`).
@@ -156,7 +154,7 @@ Recorded on instruments owned elsewhere:
 | EventId | Level | Class | Message |
 |---|---|---|---|
 | 11001 | Warning | `AICoreLog.ToolTimedOut` | A tool did not answer within its time limit and was stopped (replaces the existing ad hoc warning). |
-| 11002 | Information | `AICoreLog.DataSourceSynced` | A full data source sync finished: chunks, source documents, failed documents and elapsed ms (replaces the old "Synced {DocumentCount} chunks" line). |
+| 11002 | Information | `AICoreLog.DataSourceSynced` | A full data source sync finished: chunks, source documents, failed documents and elapsed ms (replaces the old "Synced `{DocumentCount}` chunks" line). |
 | 11003 | Warning | `AICoreLog.DataSourceSyncRetrying` | A data source sync failed and is retried, with the attempt number (same text as before, now with an id). |
 | 11004 | Warning | `AICoreLog.DeferredRecipeImportFailed` | A recipe an AI tool imported failed when it ran after the request (it was silently ignored before). |
 | 11100 | Warning | `AIModuleLog.SignedWebhookRetrying` | A signed webhook failed with a retryable status and is tried again, with the attempt number. |
@@ -386,7 +384,7 @@ Failed spans carry `error.type` and an error status, but not the exception messa
 | 15002 | Information | `RefreshSchemaChanged` | The field changes (previously only stored on the run record). |
 | 15003 | Information | `RefreshDowngradedToFull` | Bounded reason an incremental refresh read every row (previously only stored on the run record). |
 | 15004 | Error | `RefreshAborted` | A refresh threw before it could record how it ended; the run stops without failing the task and the data sets still due wait for the next run. |
-| 15005 | Information | `RefreshSweepCompleted` | Sweep summary: due, refreshed, failed, skipped (lock), left for the next run. Only when something was due. Replaces the background task's old "Refreshed {Count} imported data set(s)." line. |
+| 15005 | Information | `RefreshSweepCompleted` | Sweep summary: due, refreshed, failed, skipped (lock), left for the next run. Only when something was due. Replaces the background task's old "Refreshed `{Count}` imported data set(s)." line. |
 | 15006 | Warning | `LastSuccessSnapshotFailed` | The data set list for the age gauge couldn't be read. |
 | 15010 | Warning | `HttpRetrying` | Reason, status, attempt N of 4, delay. Never the URL. |
 | 15011 | Debug | `HttpResponded` | Method, URL without query string, status, duration, request number. |
@@ -415,40 +413,40 @@ Meter and activity source: `CrestApps.OrchardCore.ContentTransfer` (class `Conte
 
 | Instrument | Type | Unit | Tags | What it measures |
 |---|---|---|---|---|
-| `crestapps.contenttransfer.import.runs` | Counter | {run} | `outcome` (completed, continued, stopped, retry, abandoned, failed), `content_type` | Import runs under their per-entry lock, by how they ended |
-| `crestapps.contenttransfer.import.active` | UpDownCounter | {run} | none | Import runs at work on this node |
-| `crestapps.contenttransfer.import.lock_contended` | Counter | {attempt} | none | Times an import was found locked by another run |
-| `crestapps.contenttransfer.import.retries` | Counter | {retry} | `reason` (failed_run) | Times a run tried an import again after a failed run (also on `crestapps.retry.attempts` with `area=contenttransfer`) |
+| `crestapps.contenttransfer.import.runs` | Counter | `{run}` | `outcome` (completed, continued, stopped, retry, abandoned, failed), `content_type` | Import runs under their per-entry lock, by how they ended |
+| `crestapps.contenttransfer.import.active` | UpDownCounter | `{run}` | none | Import runs at work on this node |
+| `crestapps.contenttransfer.import.lock_contended` | Counter | `{attempt}` | none | Times an import was found locked by another run |
+| `crestapps.contenttransfer.import.retries` | Counter | `{retry}` | `reason` (failed_run) | Times a run tried an import again after a failed run (also on `crestapps.retry.attempts` with `area=contenttransfer`) |
 | `crestapps.contenttransfer.import.duration` | Histogram (long buckets) | s | `outcome`, `content_type`, `format` | One import run |
 | `crestapps.contenttransfer.import.file.size` | Histogram | By | `format` | Size of an imported file, when its import starts from row 0 |
-| `crestapps.contenttransfer.import.rows.total` | Histogram | {row} | `format` | Rows of an imported file, when its import starts from row 0 |
-| `crestapps.contenttransfer.import.entries.failed` | Counter | {entry} | `reason` (content_type_removed, file_missing, repeated_failures) | Imports marked as failed |
-| `crestapps.contenttransfer.import.failures` | Counter | {run} | `reason` (transient, resumable, final, unrecorded) | Failed import runs, by how the failure was handled |
-| `crestapps.contenttransfer.import.stalled_rows` | Counter | {row} | `result` (recorded, unrecorded) | Rows an abandoned run was stuck on |
+| `crestapps.contenttransfer.import.rows.total` | Histogram | `{row}` | `format` | Rows of an imported file, when its import starts from row 0 |
+| `crestapps.contenttransfer.import.entries.failed` | Counter | `{entry}` | `reason` (content_type_removed, file_missing, repeated_failures) | Imports marked as failed |
+| `crestapps.contenttransfer.import.failures` | Counter | `{run}` | `reason` (transient, resumable, final, unrecorded) | Failed import runs, by how the failure was handled |
+| `crestapps.contenttransfer.import.stalled_rows` | Counter | `{row}` | `result` (recorded, unrecorded) | Rows an abandoned run was stuck on |
 | `crestapps.contenttransfer.import.batch.duration` | Histogram | s | `outcome` (ok, stopped, error, cancelled, timeout) | One import batch, from the status check to the saved progress |
-| `crestapps.contenttransfer.import.batch.size` | Histogram | {row} | none | Rows in one saved import batch |
-| `crestapps.contenttransfer.import.rows` | Counter | {row} | `result` (imported, error, skipped_by_filter, skipped_stalled, empty) | Rows read, counted once their progress is saved |
-| `crestapps.contenttransfer.import.rows.skipped` | Counter | {row} | `reason` (the filter's `SkipReasonCode`: duplicate, repeated_in_file, dnc_match, dnc_check_failed, unreadable_number; anything else other) | Rows row filters skipped, counted once saved |
-| `crestapps.contenttransfer.import.row.errors` | Counter | {row} | `reason` (validation, handler_exception) | Rows that failed to import, counted once saved |
-| `crestapps.contenttransfer.import.abandoned` | Counter | {run} | `reason` (row_timeout, run_timeout, host_stopping) | Runs the watchdog gave up on |
-| `crestapps.contenttransfer.import.slow_rows` | Counter | {row} | none | Rows that ran past the slow-row threshold (1 min) |
+| `crestapps.contenttransfer.import.batch.size` | Histogram | `{row}` | none | Rows in one saved import batch |
+| `crestapps.contenttransfer.import.rows` | Counter | `{row}` | `result` (imported, error, skipped_by_filter, skipped_stalled, empty) | Rows read, counted once their progress is saved |
+| `crestapps.contenttransfer.import.rows.skipped` | Counter | `{row}` | `reason` (the filter's `SkipReasonCode`: duplicate, repeated_in_file, dnc_match, dnc_check_failed, unreadable_number; anything else other) | Rows row filters skipped, counted once saved |
+| `crestapps.contenttransfer.import.row.errors` | Counter | `{row}` | `reason` (validation, handler_exception) | Rows that failed to import, counted once saved |
+| `crestapps.contenttransfer.import.abandoned` | Counter | `{run}` | `reason` (row_timeout, run_timeout, host_stopping) | Runs the watchdog gave up on |
+| `crestapps.contenttransfer.import.slow_rows` | Counter | `{row}` | none | Rows that ran past the slow-row threshold (1 min) |
 | `crestapps.contenttransfer.import.stalled_row.elapsed` | Histogram (long buckets) | s | `reason` | How long the row an abandoned run was on had been running |
 | `crestapps.contenttransfer.import.row_in_flight.age` | ObservableGauge | s | none | Age of the oldest import row in flight on this node (no value when none) |
 | `crestapps.contenttransfer.import.filter.duration` | Histogram | s | `phase` (prepare, evaluate) | Row filters on one batch of rows (DNC lookups happen here) |
-| `crestapps.contenttransfer.import.uploads` | Counter | {upload} | `outcome` (accepted, rejected), `reason` when rejected (not_found, unauthorized, disabled, missing_file, too_large, chunk_too_large, bad_format, invalid_model, invalid_request) | Import file uploads |
+| `crestapps.contenttransfer.import.uploads` | Counter | `{upload}` | `outcome` (accepted, rejected), `reason` when rejected (not_found, unauthorized, disabled, missing_file, too_large, chunk_too_large, bad_format, invalid_model, invalid_request) | Import file uploads |
 | `crestapps.contenttransfer.upload.size` | Histogram | By | `format` | Size of accepted import files |
-| `crestapps.contenttransfer.upload.chunks` | Counter | {chunk} | `result` (stored, completed, rejected) | Chunks of chunked uploads |
+| `crestapps.contenttransfer.upload.chunks` | Counter | `{chunk}` | `result` (stored, completed, rejected) | Chunks of chunked uploads |
 | `crestapps.contenttransfer.upload.chunk.size` | Histogram | By | none | Size of upload chunks |
 | `crestapps.contenttransfer.export.duration` | Histogram (long buckets) | s | `format`, `outcome`, `content_type` | One queued export |
 | `crestapps.contenttransfer.export.inline.duration` | Histogram (long buckets) | s | `format`, `outcome`, `content_type` | One export run in the request that asked for it (request latency) |
-| `crestapps.contenttransfer.export.rows` | Counter | {row} | `mode` (inline, queued), `result` (written, excluded) | Content items exports read |
+| `crestapps.contenttransfer.export.rows` | Counter | `{row}` | `mode` (inline, queued), `result` (written, excluded) | Content items exports read |
 | `crestapps.contenttransfer.export.page.duration` | Histogram | s | `mode` | One export page, query to last written row (exposes the O(n^2) `Skip/Take` paging) |
-| `crestapps.contenttransfer.export.pages` | Counter | {page} | `mode` | Export pages read |
+| `crestapps.contenttransfer.export.pages` | Counter | `{page}` | `mode` | Export pages read |
 | `crestapps.contenttransfer.export.file.size` | Histogram | By | `format`, `mode` | Size of exported files |
-| `crestapps.contenttransfer.export.failures` | Counter | {export} | `reason` (content_type_removed, no_format, exception, notification_failed), `mode` | Failed exports |
-| `crestapps.contenttransfer.export.requests` | Counter | {request} | `mode` (inline, queued), `format` | Export requests and the queue decision |
-| `crestapps.contenttransfer.export.lookup_fallbacks` | Counter | {lookup} | `lookup` (completed_by, last_activity) | Values an export handler looked up row by row because the page was not prepared |
-| `crestapps.contenttransfer.jobs.triggered` | Counter | {job} | `job` (import, export, delete) | Jobs queued to run after the request |
+| `crestapps.contenttransfer.export.failures` | Counter | `{export}` | `reason` (content_type_removed, no_format, exception, notification_failed), `mode` | Failed exports |
+| `crestapps.contenttransfer.export.requests` | Counter | `{request}` | `mode` (inline, queued), `format` | Export requests and the queue decision |
+| `crestapps.contenttransfer.export.lookup_fallbacks` | Counter | `{lookup}` | `lookup` (completed_by, last_activity) | Values an export handler looked up row by row because the page was not prepared |
+| `crestapps.contenttransfer.jobs.triggered` | Counter | `{job}` | `job` (import, export, delete) | Jobs queued to run after the request |
 | `crestapps.contenttransfer.store.duration` | Histogram | s | `operation` (get_info, open_read, create, delete, move, copy), `backend` (file_system, azure_blob, aws_s3, other), `outcome` | Content Transfer file store operations |
 | `crestapps.contenttransfer.handler.duration` | Histogram | s | `handler` (type name), `phase` (import, export, prepare_export), `outcome` | One content import handler on one row or page |
 | `crestapps.contenttransfer.file.operation.duration` | Histogram (long buckets) | s | `format`, `operation` (csv: count_rows, flush; xlsx: open, flush, close) | Work a file reader or writer does at once |
@@ -499,15 +497,15 @@ Meter and activity source: `CrestApps.OrchardCore.DncRegistry` (class `DncRegist
 | Instrument | Type | Unit | Tags | What it measures |
 |---|---|---|---|---|
 | `crestapps.dnc.screening.duration` | Histogram | s | `registry` (usa_ftc, canada_dncl, local), `outcome` (ok, error, skipped, cancelled, timeout), `reason` (not_configured, only when skipped) | One screening of numbers against one registry |
-| `crestapps.dnc.screening.size` | Histogram | {number} | `registry` | Numbers one screening asked about |
-| `crestapps.dnc.screening.listed` | Counter | {number} | `registry` | Screened numbers reported as listed |
-| `crestapps.dnc.registry.requests` | Counter | {request} | `registry`, `outcome`, `status_class` | Requests to the FTC or DNCL API (one per number) |
+| `crestapps.dnc.screening.size` | Histogram | `{number}` | `registry` | Numbers one screening asked about |
+| `crestapps.dnc.screening.listed` | Counter | `{number}` | `registry` | Screened numbers reported as listed |
+| `crestapps.dnc.registry.requests` | Counter | `{request}` | `registry`, `outcome`, `status_class` | Requests to the FTC or DNCL API (one per number) |
 | `crestapps.dnc.registry.request.duration` | Histogram | s | `registry`, `outcome`, `status_class` | One registry API request |
-| `crestapps.dnc.import.runs` | Counter | {run} | `outcome` (completed, interrupted, failed, skipped, cancelled, error), `reason` (file_missing, exception; only when failed) | Local list import runs |
+| `crestapps.dnc.import.runs` | Counter | `{run}` | `outcome` (completed, interrupted, failed, skipped, cancelled, error), `reason` (file_missing, exception; only when failed) | Local list import runs |
 | `crestapps.dnc.import.duration` | Histogram (long buckets) | s | `outcome`, `reason` | One local list import run |
-| `crestapps.dnc.import.rows` | Counter | {row} | `result` (imported, duplicate, invalid_number, blank, multiple_columns, header) | File rows, counted once their batch is saved |
+| `crestapps.dnc.import.rows` | Counter | `{row}` | `result` (imported, duplicate, invalid_number, blank, multiple_columns, header) | File rows, counted once their batch is saved |
 | `crestapps.dnc.import.batch.duration` | Histogram | s | `outcome` (ok, error) | Saving one batch of numbers, without the pacer wait |
-| `crestapps.dnc.import.lock_contended` | Counter | {attempt} | `operation` (import, delete) | The list lock was held by another worker |
+| `crestapps.dnc.import.lock_contended` | Counter | `{attempt}` | `operation` (import, delete) | The list lock was held by another worker |
 
 Spans: `crestapps.dnc.screening` (numbers checked/listed as span tags), `crestapps.dnc.import.run` (list id, resuming, total rows as span tags), `crestapps.deferred.dnc_local_import`, `crestapps.deferred.dnc_local_delete`.
 
@@ -523,19 +521,19 @@ Meter and activity source: `CrestApps.OrchardCore.Omnichannel` (class `Omnichann
 
 | Instrument | Type | Unit | Tags | What it measures |
 |---|---|---|---|---|
-| `crestapps.omnichannel.batch.loads` | Counter | {load} | `outcome` (completed, stopped, error, cancelled, skipped), `trigger` (start, resume) | Activity batch load runs (`skipped` = a `TryBegin` refusal) |
+| `crestapps.omnichannel.batch.loads` | Counter | `{load}` | `outcome` (completed, stopped, error, cancelled, skipped), `trigger` (start, resume) | Activity batch load runs (`skipped` = a `TryBegin` refusal) |
 | `crestapps.omnichannel.batch.load.duration` | Histogram (long buckets) | s | `outcome`, `trigger` | One load run |
 | `crestapps.omnichannel.batch.load.page.duration` | Histogram | s | none | One committed page of a load |
-| `crestapps.omnichannel.batch.load.records` | Counter | {record} | `result` (loaded, duplicate, opted_out, no_destination, not_in_service, lead_or_contact, over_limit) | Records a load went through, counted after commit; never in preview |
-| `crestapps.omnichannel.batch.load.watchdog` | Counter | {load} | `action` (resumed, gave_up, reset) | Stalled loads the watchdog acted on |
-| `crestapps.omnichannel.batch.load.stalled` | Gauge | {load} | none | Stalled loads found on the watchdog's last sweep (recorded synchronously, no query in a callback) |
+| `crestapps.omnichannel.batch.load.records` | Counter | `{record}` | `result` (loaded, duplicate, opted_out, no_destination, not_in_service, lead_or_contact, over_limit) | Records a load went through, counted after commit; never in preview |
+| `crestapps.omnichannel.batch.load.watchdog` | Counter | `{load}` | `action` (resumed, gave_up, reset) | Stalled loads the watchdog acted on |
+| `crestapps.omnichannel.batch.load.stalled` | Gauge | `{load}` | none | Stalled loads found on the watchdog's last sweep (recorded synchronously, no query in a callback) |
 | `crestapps.omnichannel.batch.load.preview.duration` | Histogram | s | `outcome` (ok, stopped, error, cancelled) | Counting a load ahead of loading (CountMatches), in the request |
-| `crestapps.omnichannel.batch.load.preview.matched` | Histogram | {record} | none | Records a preview matched |
-| `crestapps.omnichannel.bulk_action.activities` | Counter | {activity} | `action`, `result` (processed, unchanged, in_flight) | Activities bulk actions went through |
+| `crestapps.omnichannel.batch.load.preview.matched` | Histogram | `{record}` | none | Records a preview matched |
+| `crestapps.omnichannel.bulk_action.activities` | Counter | `{activity}` | `action`, `result` (processed, unchanged, in_flight) | Activities bulk actions went through |
 | `crestapps.omnichannel.bulk_action.duration` | Histogram (long buckets) | s | `action`, `outcome` | One in-request bulk action |
-| `crestapps.omnichannel.bulk_action.size` | Histogram | {activity} | `action` | Activities one bulk action applied to |
-| `crestapps.omnichannel.automated.activities` | Counter | {activity} | `result` (started, not_in_service, refused, declined, retry_scheduled, failed, deferred, expired) | Due automated activities the processor went through |
-| `crestapps.backfill.records` | Counter | {record} | `backfill` (lead_imports, contact_phone_numbers, activity_dialer_profile), `result` (recorded, reindexed) | Records one-time backfills wrote |
+| `crestapps.omnichannel.bulk_action.size` | Histogram | `{activity}` | `action` | Activities one bulk action applied to |
+| `crestapps.omnichannel.automated.activities` | Counter | `{activity}` | `result` (started, not_in_service, refused, declined, retry_scheduled, failed, deferred, expired) | Due automated activities the processor went through |
+| `crestapps.backfill.records` | Counter | `{record}` | `backfill` (lead_imports, contact_phone_numbers, activity_dialer_profile), `result` (recorded, reindexed) | Records one-time backfills wrote |
 | `crestapps.omnichannel.lead_imports.query.duration` | Histogram | s | `outcome` | Counting the leads of every file import, on a cache miss |
 
 `action` values: assign, reschedule, purge, set_instructions, set_urgency_level, change_subject, clear_assignment, change_source, change_dialer_profile, change_campaign, other.
@@ -555,9 +553,9 @@ Meter and activity source: `CrestApps.OrchardCore.Recipes`. It is created twice,
 | Instrument | Type | Unit | Tags | What it measures |
 |---|---|---|---|---|
 | `crestapps.recipes.execution.duration` | Histogram (long buckets) | s | `outcome` | Recipe executions through `RecipeExecutionService` |
-| `crestapps.recipes.executions` | Counter | {execution} | `outcome` | Recipe executions |
-| `crestapps.recipes.step.entries` | Counter | {entry} | `step` (step name set in code), `result` (created, updated, invalid, skipped) | Entries a named-catalog recipe step read |
-| `crestapps.recipes.deployment.entries` | Histogram | {entry} | `step` | Entries a named-catalog deployment step exported |
+| `crestapps.recipes.executions` | Counter | `{execution}` | `outcome` | Recipe executions |
+| `crestapps.recipes.step.entries` | Counter | `{entry}` | `step` (step name set in code), `result` (created, updated, invalid, skipped) | Entries a named-catalog recipe step read |
+| `crestapps.recipes.deployment.entries` | Histogram | `{entry}` | `step` | Entries a named-catalog deployment step exported |
 
 Spans: `crestapps.recipes.execute` (span tag `crestapps.recipes.steps`), child `crestapps.recipes.deployment_target` per `IDeploymentTargetHandler` (span tag `crestapps.recipes.handler`), `crestapps.recipes.step`, `crestapps.recipes.deployment.export`.
 
@@ -572,11 +570,11 @@ Meter and activity source: `CrestApps.OrchardCore.Inventory` (class `InventoryTe
 | Instrument | Type | Unit | Tags | What it measures |
 |---|---|---|---|---|
 | `crestapps.inventory.stock_count.duration` | Histogram | s | `outcome` (ok, truncated, error, cancelled) | A stock count import, from a file or a recipe (in-request, 10k-row cap) |
-| `crestapps.inventory.stock_count.rows` | Counter | {row} | `result` (counted, unchanged, not_found, invalid_count, duplicate, rejected) | Stock count rows |
-| `crestapps.inventory.movements` | Counter | {movement} | `type` (received, adjusted, counted, sold, returned, transferred, consumed, other), `direction` (in, out, none) | Stock movements written |
-| `crestapps.inventory.movement.units` | Counter | {unit} | `type`, `direction` | Absolute units those movements moved |
-| `crestapps.inventory.holds` | Counter | {hold} | `outcome` (placed, converted, committed_without_hold, released, expired) | Stock hold state changes |
-| `crestapps.inventory.hold.refusals` | Counter | {order} | `reason` (shortage) | Orders refused a hold because a line was short |
+| `crestapps.inventory.stock_count.rows` | Counter | `{row}` | `result` (counted, unchanged, not_found, invalid_count, duplicate, rejected) | Stock count rows |
+| `crestapps.inventory.movements` | Counter | `{movement}` | `type` (received, adjusted, counted, sold, returned, transferred, consumed, other), `direction` (in, out, none) | Stock movements written |
+| `crestapps.inventory.movement.units` | Counter | `{unit}` | `type`, `direction` | Absolute units those movements moved |
+| `crestapps.inventory.holds` | Counter | `{hold}` | `outcome` (placed, converted, committed_without_hold, released, expired) | Stock hold state changes |
+| `crestapps.inventory.hold.refusals` | Counter | `{order}` | `reason` (shortage) | Orders refused a hold because a line was short |
 
 Spans: `crestapps.inventory.stock_count.import` (row totals as span tags), `crestapps.deferred.inventory_stock_level_dispatch`, `crestapps.deferred.inventory_product_sync`, `crestapps.deferred.inventory_sync_all`, `crestapps.deferred.inventory_import_counts`.
 
@@ -1168,8 +1166,8 @@ Commerce owns EventIds 12000-12999, split by area: checkout 12000-12099, Stripe 
 
 | EventId | Class | Level | Message |
 |---|---|---|---|
-| 12000 | `CheckoutLog.ReconciliationSwept` (Checkout module) | Information | The checkout reconciliation sweep checked {Sessions} waiting checkouts: {Completed} completed, {Failed} failed to reconcile, {Expired} abandoned ones expired; the oldest had waited {OldestPendingSeconds} seconds. (only when there was something to do) |
-| 12200 | `SubscriptionsLog.TenantProvisioned` (Subscriptions.Core) | Information | Provisioning job '{JobId}' created its site on attempt {Attempt} in {ElapsedSeconds} seconds. |
+| 12000 | `CheckoutLog.ReconciliationSwept` (Checkout module) | Information | The checkout reconciliation sweep checked `{Sessions}` waiting checkouts: `{Completed}` completed, `{Failed}` failed to reconcile, `{Expired}` abandoned ones expired; the oldest had waited `{OldestPendingSeconds}` seconds. (only when there was something to do) |
+| 12200 | `SubscriptionsLog.TenantProvisioned` (Subscriptions.Core) | Information | Provisioning job '`{JobId}`' created its site on attempt `{Attempt}` in `{ElapsedSeconds}` seconds. |
 
 New log scopes: `CheckoutSessionId` (reconciliation sweep, per session), `StripeEventId`/`StripeEventType` (webhook), `ProvisioningJobId` (tenant provisioning), `InstallmentPlanId` (installment sweep).
 
@@ -1266,8 +1264,6 @@ The Scheduling range 13000-13999 is split per area so ids never collide: Schedul
 - `TimeOffLocks.LockAsync` takes an optional lock `area` (default `workforce.timeoff`); time clock and timesheet changes pass `workforce.timeclock`, the payroll export `workforce.payroll_export`.
 - `CrestApps.OrchardCore.FileStorage.Core` now references `CrestApps.OrchardCore.Abstractions` (for the shared telemetry helpers).
 - `TenantBlobContainerEvents` behaves as before; a blob that cannot be deleted still stops the removal and sets `context.ErrorMessage`.
-
-<!-- AREA SECTIONS END -->
 
 ## Logs
 
