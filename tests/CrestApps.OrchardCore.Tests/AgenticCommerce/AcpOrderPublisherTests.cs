@@ -123,7 +123,7 @@ public sealed class AcpOrderPublisherTests
         Assert.Equal("usd", adjustment["currency"].GetValue<string>());
         Assert.Equal("Damaged", adjustment["reason"].GetValue<string>());
         Assert.Equal(
-            [("subtotal", 7000L), ("fulfillment", 500L), ("total", 8100L), ("amount_refunded", 1250L)],
+            [("subtotal", 7000L), ("fulfillment", 500L), ("tax", 600L), ("total", 8100L), ("amount_refunded", 1250L)],
             json["totals"].AsArray().Select(total => (total["type"].GetValue<string>(), total["amount"].GetValue<long>())));
     }
 }

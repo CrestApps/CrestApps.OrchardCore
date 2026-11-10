@@ -1216,30 +1216,8 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         var lines = invoice.LineItems ?? [];
         var subtotal = lines.Where(line => line.TaxableKind != TaxableItemKind.Shipping).Sum(line => line.UnitPrice * line.Quantity);
         var shipping = lines.Where(line => line.TaxableKind == TaxableItemKind.Shipping).Sum(line => line.UnitPrice * line.Quantity);
-        var discount = invoice.DiscountTotal;
-        var tax = invoice.TaxAmount;
-        var total = invoice.GrandTotal;
-        var difference = total - (subtotal - discount + shipping + tax);
-        var fee = 0m;
 
-        if (difference > 0)
-        {
-            fee = difference;
-        }
-        else if (difference < 0)
-        {
-            tax = Math.Max(0, tax + difference);
-        }
-
-        return new AgentCheckoutTotals
-        {
-            Subtotal = subtotal,
-            Discount = discount,
-            Fulfillment = shipping,
-            Tax = tax,
-            Fee = fee,
-            Total = total,
-        };
+        return AgentCheckoutTotals.Balance(subtotal, invoice.DiscountTotal, shipping, invoice.TaxAmount, invoice.GrandTotal);
     }
 
     private static AgentFulfillmentView FulfillmentFromSession(AgentCheckout checkout, CheckoutSession session)

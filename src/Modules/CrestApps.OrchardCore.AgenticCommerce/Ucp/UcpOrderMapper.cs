@@ -138,14 +138,9 @@ public static class UcpOrderMapper
                 ["expectations"] = new JsonArray(expectation),
                 ["events"] = events,
             },
-            ["totals"] = UcpCheckoutMapper.WriteTotals(new CrestApps.OrchardCore.AgenticCommerce.Models.AgentCheckoutTotals
-            {
-                Subtotal = order.Subtotal,
-                Discount = order.Discount,
-                Fulfillment = order.Shipping,
-                Tax = Math.Max(0, order.Total - (order.Subtotal - order.Discount + order.Shipping)),
-                Total = order.Total,
-            }, currency),
+            ["totals"] = UcpCheckoutMapper.WriteTotals(
+                CrestApps.OrchardCore.AgenticCommerce.Models.AgentCheckoutTotals.Balance(order.Subtotal, order.Discount, order.Shipping, order.Tax, order.Total),
+                currency),
         };
 
         if (adjustments.Count > 0)

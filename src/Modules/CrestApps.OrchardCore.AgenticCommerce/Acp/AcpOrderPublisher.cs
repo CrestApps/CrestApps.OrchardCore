@@ -159,6 +159,18 @@ public sealed class AcpOrderPublisher : IAgentOrderPublisher
             totals.Add(AcpCheckoutMapper.Total("fulfillment", "Shipping", order.Shipping, currency));
         }
 
+        var balanced = CrestApps.OrchardCore.AgenticCommerce.Models.AgentCheckoutTotals.Balance(order.Subtotal, order.Discount, order.Shipping, order.Tax, order.Total);
+
+        if (balanced.Tax != 0)
+        {
+            totals.Add(AcpCheckoutMapper.Total("tax", "Tax", balanced.Tax, currency));
+        }
+
+        if (balanced.Fee != 0)
+        {
+            totals.Add(AcpCheckoutMapper.Total("fee", "Fees", balanced.Fee, currency));
+        }
+
         totals.Add(AcpCheckoutMapper.Total("total", "Total", order.Total, currency));
 
         if (order.Refunded != 0)

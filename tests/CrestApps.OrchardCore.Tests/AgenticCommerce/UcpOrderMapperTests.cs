@@ -52,6 +52,25 @@ public sealed class UcpOrderMapperTests
     }
 
     [Fact]
+    public void Write_AnAmountTheOrderDoesNotExplain_IsAFeeNotTax()
+    {
+        // Arrange
+        var order = AgentOrderTestData.OrderWithEveryLineStatus();
+
+        order.Total += 2.5m;
+
+        // Act
+        var json = UcpOrderMapper.Write(order, Version);
+
+        // Assert
+        var amounts = json["totals"].AsArray().ToDictionary(total => total["type"].GetValue<string>(), total => total["amount"].GetValue<long>());
+
+        Assert.Equal(600, amounts["tax"]);
+        Assert.Equal(250, amounts["fee"]);
+        Assert.Equal(amounts["total"], amounts.Where(entry => entry.Key != "total").Sum(entry => entry.Value));
+    }
+
+    [Fact]
     public void Write_WritesRefundsAsAdjustmentsWithNegativeTotals()
     {
         // Arrange

@@ -1,6 +1,7 @@
 using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AgenticCommerce.AI;
 using CrestApps.OrchardCore.AgenticCommerce.Ucp;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Products.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -14,7 +15,7 @@ namespace CrestApps.OrchardCore.AgenticCommerce;
 /// the AI feature and the product listing and feeds are on.
 /// </summary>
 [Feature(AgenticCommerceConstants.Features.AgenticCommerce)]
-[RequireFeatures("CrestApps.OrchardCore.AI", ProductConstants.Feature.Listing, ProductConstants.Feature.Feeds)]
+[RequireFeatures(AIConstants.Feature.Area, ProductConstants.Feature.Listing, ProductConstants.Feature.Feeds)]
 public sealed class AIToolsStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
