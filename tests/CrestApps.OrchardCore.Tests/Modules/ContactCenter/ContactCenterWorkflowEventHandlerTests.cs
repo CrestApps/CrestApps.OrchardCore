@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
+using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
 using Moq;
 using OrchardCore.Workflows.Services;
 
@@ -17,7 +18,8 @@ public sealed class ContactCenterWorkflowEventHandlerTests
         // Arrange
         var handler = new ContactCenterWorkflowEventHandler(
             new Mock<IWorkflowManager>().Object,
-            new Mock<IContactCenterEventDeduplicationService>().Object);
+            new Mock<IContactCenterEventDeduplicationService>().Object,
+            ListensForEverything());
 
         // Act
         var replaySafety = handler.ReplaySafety;
@@ -35,7 +37,7 @@ public sealed class ContactCenterWorkflowEventHandlerTests
         deduplication
             .Setup(service => service.TryBeginAsync("ContactCenter/WorkflowBridge/v1", "event-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object);
+        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything());
         var interactionEvent = new InteractionEvent
         {
             ItemId = "event-1",
@@ -67,7 +69,7 @@ public sealed class ContactCenterWorkflowEventHandlerTests
             .SetupSequence(service => service.TryBeginAsync("ContactCenter/WorkflowBridge/v1", "event-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true)
             .ReturnsAsync(false);
-        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object);
+        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything());
         var interactionEvent = new InteractionEvent
         {
             ItemId = "event-1",
@@ -157,12 +159,20 @@ public sealed class ContactCenterWorkflowEventHandlerTests
         deduplication
             .Setup(service => service.TryBeginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object);
+        var handler = new ContactCenterWorkflowEventHandler(workflowManager.Object, deduplication.Object, ListensForEverything());
 
         await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
 
         Assert.NotNull(input);
 
         return input;
+    }
+
+    private static IContactCenterWorkflowSubscriptions ListensForEverything()
+    {
+        var subscriptions = new Mock<IContactCenterWorkflowSubscriptions>();
+        subscriptions.Setup(s => s.IsSubscribedAsync(It.IsAny<string>())).ReturnsAsync(true);
+
+        return subscriptions.Object;
     }
 }

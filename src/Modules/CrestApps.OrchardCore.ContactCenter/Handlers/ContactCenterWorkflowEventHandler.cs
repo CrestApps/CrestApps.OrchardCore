@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
+using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
 using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -22,18 +23,22 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
 {
     private readonly IWorkflowManager _workflowManager;
     private readonly IContactCenterEventDeduplicationService _deduplicationService;
+    private readonly IContactCenterWorkflowSubscriptions _subscriptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterWorkflowEventHandler"/> class.
     /// </summary>
     /// <param name="workflowManager">The workflow manager used to trigger the workflow event.</param>
     /// <param name="deduplicationService">The durable per-handler event deduplication service.</param>
+    /// <param name="subscriptions">Tells whether any workflow listens for an event type.</param>
     public ContactCenterWorkflowEventHandler(
         IWorkflowManager workflowManager,
-        IContactCenterEventDeduplicationService deduplicationService)
+        IContactCenterEventDeduplicationService deduplicationService,
+        IContactCenterWorkflowSubscriptions subscriptions)
     {
         _workflowManager = workflowManager;
         _deduplicationService = deduplicationService;
+        _subscriptions = subscriptions;
     }
 
     /// <inheritdoc/>
@@ -48,6 +53,14 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
         if (string.IsNullOrEmpty(interactionEvent.ItemId))
+        {
+            return;
+        }
+
+        // Most events -- agent heartbeats, presence changes -- have no workflow listening. Each one used to write a
+        // deduplication row and query the workflow engine for nothing, several times a second on a busy tenant, so an
+        // event no enabled workflow listens for stops here, before anything is read or written.
+        if (!await _subscriptions.IsSubscribedAsync(interactionEvent.EventType))
         {
             return;
         }

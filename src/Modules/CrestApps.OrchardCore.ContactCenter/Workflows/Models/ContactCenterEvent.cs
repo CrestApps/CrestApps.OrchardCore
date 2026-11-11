@@ -53,6 +53,24 @@ public sealed class ContactCenterEvent : EventActivity
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Every Contact Center event, agent heartbeats included, is offered to every workflow that starts on this activity.
+    /// A workflow started for an event of another type only took the Ignored outcome, yet it was saved as a finished
+    /// instance: one production workflow kept several hundred thousand of them, several written every few seconds. An
+    /// event of another type now starts no instance at all, so nothing is written. A workflow already waiting on this
+    /// activity still resumes and takes Ignored, as before.
+    /// </remarks>
+    public override bool CanExecute(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
+    {
+        if (workflowContext.Status != WorkflowStatus.Starting || activityContext?.ActivityRecord?.IsStart != true)
+        {
+            return true;
+        }
+
+        return Matches(workflowContext);
+    }
+
+    /// <inheritdoc/>
     public override ActivityExecutionResult Resume(
         WorkflowExecutionContext workflowContext,
         ActivityContext activityContext)
@@ -69,18 +87,10 @@ public sealed class ContactCenterEvent : EventActivity
     }
 
     private ActivityExecutionResult Evaluate(WorkflowExecutionContext workflowContext)
-    {
-        if (string.IsNullOrEmpty(EventType))
-        {
-            return WorkflowOutcomeResults.From("Matched");
-        }
+        => WorkflowOutcomeResults.From(Matches(workflowContext) ? "Matched" : "Ignored");
 
-        if (workflowContext.Input.TryGetValue("EventType", out var value) &&
-            string.Equals(value?.ToString(), EventType, StringComparison.OrdinalIgnoreCase))
-        {
-            return WorkflowOutcomeResults.From("Matched");
-        }
-
-        return WorkflowOutcomeResults.From("Ignored");
-    }
+    private bool Matches(WorkflowExecutionContext workflowContext)
+        => string.IsNullOrEmpty(EventType) ||
+            (workflowContext.Input.TryGetValue("EventType", out var value) &&
+            string.Equals(value?.ToString(), EventType, StringComparison.OrdinalIgnoreCase));
 }
