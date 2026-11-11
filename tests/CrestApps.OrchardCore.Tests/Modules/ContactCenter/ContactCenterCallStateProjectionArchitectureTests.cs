@@ -46,8 +46,7 @@ public sealed partial class ContactCenterCallStateProjectionArchitectureTests
     public void TheProjection_IsPresentAndIsTheOnlyDeclaredTranslation()
     {
         // Arrange
-        var projectionFiles = Directory
-            .EnumerateFiles(Path.Combine(FindRepositoryRoot(), "src"), ProjectionFileName, SearchOption.AllDirectories)
+        var projectionFiles = SourceTreeFiles.Enumerate(Path.Combine(FindRepositoryRoot(), "src"), ProjectionFileName, SourceTreeFiles.IsBuildOutputDirectory)
             .ToList();
 
         // Act
@@ -61,7 +60,7 @@ public sealed partial class ContactCenterCallStateProjectionArchitectureTests
     {
         var sourceRoot = Path.Combine(FindRepositoryRoot(), "src");
 
-        foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(sourceRoot, "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
         {
             var directory = Path.GetDirectoryName(file) ?? string.Empty;
 

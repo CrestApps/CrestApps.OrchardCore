@@ -1,5 +1,5 @@
 name: Cache NuGet packages
-description: Restores the NuGet global packages folder from the Actions cache, and saves it when the job ends.
+description: Restores the NuGet global packages folder from the Actions cache, and saves it when the job ends if asked to.
 
 # Every CI job restores the same pinned OrchardCore and CrestApps.Core previews from Cloudsmith. Without a cache each
 # job on each OS downloads all of them again, and that traffic counts against the bandwidth of the feeds we pull from.
@@ -10,8 +10,22 @@ description: Restores the NuGet global packages folder from the Actions cache, a
 # download everything again. The second changes when a project's references change. Starting from an empty folder
 # whenever a version changes keeps old preview versions from piling up in the cache.
 #
+# Only pushes save the cache, and only from the one job per OS that passes `save: true`:
+# - The repository has 10 GB of cache and each NuGet folder is about 2.4 GB. Caches saved by a pull request are scoped
+#   to that pull request, so when every pull request saved its own copy they pushed main's copy out, and the next
+#   pull request found nothing, downloaded everything and spent minutes uploading yet another copy. Pull requests can
+#   read main's cache, so they restore it and never save.
+# - Jobs that run side by side on one OS all want the same key. Only one can reserve it; the others spent three
+#   minutes compressing 2.4 GB just to be told "another job may be creating this cache".
+#
 # setup-dotnet's own `cache` input is not used because it requires packages.lock.json files, which this repository
 # does not have.
+
+inputs:
+  save:
+    description: Save the cache when the job ends, on push and scheduled runs only. Pass true from one job per OS.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -22,9 +36,18 @@ runs:
       shell: pwsh
       run: |
         "NUGET_PACKAGES=$(Join-Path $HOME '.nuget' 'packages')" >> $Env:GITHUB_ENV
-    - name: Restore the NuGet cache
+    - name: Restore and save the NuGet cache
       id: cache
+      if: inputs.save == 'true' && github.event_name != 'pull_request'
       uses: actions/cache@v6
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', 'NuGet.config', 'global.json', 'dotnet-tools.json') }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props', '**/Directory.Build.targets') }}
+        restore-keys: |
+          nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', 'NuGet.config', 'global.json', 'dotnet-tools.json') }}-
+    - name: Restore the NuGet cache
+      if: steps.cache.outcome == 'skipped'
+      uses: actions/cache/restore@v6
       with:
         path: ~/.nuget/packages
         key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', 'NuGet.config', 'global.json', 'dotnet-tools.json') }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props', '**/Directory.Build.targets') }}
@@ -33,9 +56,9 @@ runs:
     # The cache is saved when the job ends, under the key above, and a later exact hit is never saved again. Some jobs
     # restore only one project, so without this step the first job to miss could save a partial folder and every later
     # job would download the rest on every run. Restoring the whole solution and the local tools on a miss makes every
-    # saved cache complete.
+    # saved cache complete. Jobs that do not save skip it: their own build restores what they need.
     - name: Fill the NuGet cache
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: steps.cache.outcome == 'success' && steps.cache.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
         dotnet restore CrestApps.OrchardCore.slnx

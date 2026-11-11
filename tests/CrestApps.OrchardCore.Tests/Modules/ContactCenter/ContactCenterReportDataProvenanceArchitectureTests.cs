@@ -120,7 +120,7 @@ public sealed class ContactCenterReportDataProvenanceArchitectureTests
             yield break;
         }
 
-        foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(root, "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
         {
             var directory = Path.GetDirectoryName(file) ?? string.Empty;
 
