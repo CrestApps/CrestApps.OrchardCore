@@ -2367,8 +2367,55 @@
 			legs.browser = leg;
 		}
 	}
+	function boundCallOf(legs, leg) {
+		var bindings = legs && legs.bindings || [];
+		for (var i = 0; i < bindings.length; i++) if (bindings[i].leg === leg) return bindings[i].callId;
+		return "";
+	}
+	function legBoundTo(legs, callId) {
+		var bindings = legs && legs.bindings || [];
+		for (var i = 0; i < bindings.length; i++) if (bindings[i].callId === callId) return bindings[i].leg;
+		return null;
+	}
+	function unbind(legs, leg) {
+		if (legs && legs.bindings) legs.bindings = legs.bindings.filter(function(binding) {
+			return binding.leg !== leg;
+		});
+	}
+	function bindPlatformLeg(legs, leg, callId) {
+		if (!legs || !leg || !callId) return;
+		var id = String(callId);
+		legs.bindings = (legs.bindings || []).filter(function(binding) {
+			return binding.leg !== leg && binding.callId !== id;
+		});
+		legs.bindings.push({
+			leg,
+			callId: id
+		});
+	}
+	function unreportedLiveLegs(legs, isLive) {
+		var live = typeof isLive === "function" ? isLive : function() {
+			return true;
+		};
+		return (legs && legs.platformLegs || []).filter(function(leg) {
+			return !!leg && !boundCallOf(legs, leg) && live(leg);
+		});
+	}
+	function replaceLeg(legs, oldLeg, newLeg) {
+		if (!legs || !oldLeg || !newLeg || oldLeg === newLeg) return;
+		["platformLegs", "browserLegs"].forEach(function(key) {
+			var index = legs[key] ? legs[key].indexOf(oldLeg) : -1;
+			if (index >= 0) legs[key][index] = newLeg;
+		});
+		if (legs.platform === oldLeg) legs.platform = newLeg;
+		if (legs.browser === oldLeg) legs.browser = newLeg;
+		(legs.bindings || []).forEach(function(binding) {
+			if (binding.leg === oldLeg) binding.leg = newLeg;
+		});
+	}
 	function forgetLeg(legs, leg) {
 		if (!legs || !leg) return;
+		unbind(legs, leg);
 		var platformIndex = legs.platformLegs ? legs.platformLegs.indexOf(leg) : -1;
 		if (platformIndex >= 0) legs.platformLegs.splice(platformIndex, 1);
 		if (legs.platform === leg) legs.platform = legs.platformLegs && legs.platformLegs.length ? legs.platformLegs[legs.platformLegs.length - 1] : null;
@@ -2381,6 +2428,8 @@
 		var id = callId ? String(callId) : "";
 		if (id) {
 			for (var i = 0; i < candidates.length; i++) if (legCallId(candidates[i]) === id) return candidates[i];
+			var bound = legBoundTo(legs, id);
+			if (bound && candidates.indexOf(bound) >= 0) return bound;
 		}
 		var latest = legs && legs.platform || null;
 		if (latest && id && legs.reportedCallIds && legs.reportedCallIds.indexOf(legCallId(latest)) >= 0) return null;
@@ -2392,14 +2441,43 @@
 			if (legs.reportedCallIds.indexOf(String(callId)) < 0) legs.reportedCallIds.push(String(callId));
 		}
 	}
-	function planPlatformReport(legs, stateName, callId) {
+	function planPlatformReport(legs, stateName, callId, view) {
 		noteReportedCall(legs, callId);
+		var id = callId ? String(callId) : "";
+		var terminal = !stateName || stateName === "Disconnected" || stateName === "Failed";
+		var live = stateName === "Connected" || stateName === "OnHold";
+		var wasShown = function(shownId) {
+			return !!(view && typeof view.wasShown === "function" && view.wasShown(shownId));
+		};
+		var isShown = function(shownId) {
+			return !(view && typeof view.isShown === "function") || !!view.isShown(shownId);
+		};
 		var leg = platformLegFor(legs, callId);
 		if (!leg) return {
 			action: "none",
 			leg: null
 		};
-		if (!stateName || stateName === "Disconnected" || stateName === "Failed") return {
+		if (!(!!id && (legCallId(leg) === id || boundCallOf(legs, leg) === id))) {
+			var bound = boundCallOf(legs, leg);
+			if (!id) {
+				if (terminal && !(bound && wasShown(bound) && !isShown(bound))) return {
+					action: "none",
+					leg: null
+				};
+			} else if (bound) {
+				if (!live || isShown(bound)) return {
+					action: "none",
+					leg: null
+				};
+				bindPlatformLeg(legs, leg, id);
+			} else if (terminal) {
+				if (!wasShown(id)) return {
+					action: "none",
+					leg: null
+				};
+			} else if (live) bindPlatformLeg(legs, leg, id);
+		}
+		if (terminal) return {
 			action: "hangup",
 			leg
 		};
@@ -5729,12 +5807,16 @@
 					}
 					return;
 				}
-				if (currentCall && call !== currentCall && call.id && call.id === currentCall.id) currentCall = call;
+				if (currentCall && call !== currentCall && call.id && call.id === currentCall.id) {
+					replaceLeg(legs, currentCall, call);
+					currentCall = call;
+				}
 				if (call === currentCall && call.state === "active") {
 					ensureRemotePlayback(call);
 					reportNegotiation(call);
 					applyPlayoutDelayToCall(call);
 					startQualitySampler(call);
+					if (legs.platformLegs.indexOf(call) >= 0 && typeof context.onPlatformLegAnswered === "function") context.onPlatformLegAnswered();
 				}
 				var mapped = mapTelnyxOutboundState(call.state);
 				if (mapped) deliverCallState(callNotifiers, call.id, mapped);
@@ -5840,6 +5922,11 @@
 					hasLiveCalls: function() {
 						return !disposed && holdsLiveProviderCall([currentCall, inboundRingingCall].concat(allLegs(legs), heldOfferCalls, monitorCalls), isTelnyxTerminalState);
 					},
+					holdsUnreportedLiveLeg: function() {
+						return !disposed && unreportedLiveLegs(legs, function(leg) {
+							return leg.state === "active";
+						}).length > 0;
+					},
 					refreshPlayoutDelay: function() {
 						if (currentCall) applyPlayoutDelayToCall(currentCall);
 					},
@@ -5905,10 +5992,11 @@
 							}
 						};
 					},
-					handleCallState: function(serverCall) {
-						var plan = planPlatformReport(legs, serverCall ? normalizeState(serverCall.state) : null, serverCall ? serverCall.callId : null);
+					handleCallState: function(serverCall, view) {
+						var plan = planPlatformReport(legs, serverCall ? normalizeState(serverCall.state) : null, serverCall ? serverCall.callId : null, view);
 						var leg = plan.leg;
 						if (plan.action === "hangup") {
+							if (typeof context.reportDiagnostic === "function") context.reportDiagnostic("info", "platform-leg-hangup", "The phone hung up the leg of a call the server reported ended (" + (serverCall ? normalizeState(serverCall.state) : "no call listed") + ").", serverCall && serverCall.callId || leg.options && leg.options.telnyxCallControlId || "");
 							if (leg === currentCall) stopQualitySampler(true);
 							endHoldAudio(leg);
 							try {
@@ -7471,6 +7559,9 @@
 							},
 							onCaptureSilent: handleSilentCapture,
 							onProviderCallEnded: renewBrowserAudioIfNeeded,
+							onPlatformLegAnswered: function() {
+								if (localAudioStream) localAudioStream.getAudioTracks().forEach(matchMicrophoneToCalls);
+							},
 							reviveCapture: reviveSendCapture,
 							isOutboundSuppressed: isOutboundAudioSuppressed,
 							onOutboundAudioStalled: handleOutboundAudioStalled,
@@ -7597,16 +7688,31 @@
 				})) return;
 				registerBrowserAudioForInbound();
 			}
-			function notifyBrowserAudio(call) {
+			function notifyBrowserAudio(call, shownBefore) {
 				if (call && call.browserOriginated) return;
 				if (!browserAudioSession || !localAudioStream) return;
+				var before = shownBefore || activeCalls;
+				if (typeof browserAudioSession.handleCallState === "function") Promise.resolve(browserAudioSession.handleCallState(call || null, {
+					wasShown: function(callId) {
+						return !!(callId && before[callId]);
+					},
+					isShown: function(callId) {
+						return !!(callId && activeCalls[callId]);
+					}
+				})).catch(function(error) {
+					showError(error && error.message ? error.message : String(error));
+				});
 				var microphoneEnabled = microphoneEnabledAfter(call);
 				localAudioStream.getAudioTracks().forEach(function(track) {
 					track.enabled = microphoneEnabled;
 				});
-				if (typeof browserAudioSession.handleCallState === "function") Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function(error) {
-					showError(error && error.message ? error.message : String(error));
+			}
+			function shownCallsSnapshot() {
+				var snapshot = {};
+				Object.keys(activeCalls).forEach(function(callId) {
+					snapshot[callId] = activeCalls[callId];
 				});
+				return snapshot;
 			}
 			function microphoneEnabledAfter(call) {
 				if (anyMonitorLegTalks(monitorLegs)) return true;
@@ -7621,14 +7727,17 @@
 						browserOriginated: !!active.browserOriginated
 					};
 				});
-				return sharedMicrophoneEnabled(call ? {
+				var reported = call ? {
 					callId: call.callId,
 					state: normalizeState(call.state),
 					isMuted: !!call.isMuted,
 					isOnHold: !!call.isOnHold
-				} : null, others, function(entry) {
+				} : null;
+				var enabled = sharedMicrophoneEnabled(reported, others, function(entry) {
 					return isAgentHeld(agentHolds, entry.callId);
 				});
+				if (!enabled && !(reported && reported.state === "Connected") && !!browserAudioSession && typeof browserAudioSession.holdsUnreportedLiveLeg === "function" && browserAudioSession.holdsUnreportedLiveLeg()) return true;
+				return enabled;
 			}
 			function matchMicrophoneToCalls(track) {
 				if (track && hasLiveMedia()) track.enabled = microphoneEnabledAfter(currentCall);
@@ -9305,9 +9414,10 @@
 				if (result.call) {
 					var resultState = normalizeState(result.call.state);
 					var ended = resultState === "Disconnected" || resultState === "Failed";
+					var shownBeforeCommand = shownCallsSnapshot();
 					upsertActiveCall(result.call, true);
 					render();
-					notifyBrowserAudio(ended ? result.call : currentCall);
+					notifyBrowserAudio(ended ? result.call : currentCall, shownBeforeCommand);
 					scheduleActiveCallsRefresh();
 				}
 				return true;
@@ -9324,6 +9434,7 @@
 				}).filter(function(call) {
 					return call && call.browserOriginated;
 				});
+				var shownBeforeLookup = activeCalls;
 				callsBeforeLookup = activeCalls;
 				activeCalls = {};
 				try {
@@ -9352,7 +9463,7 @@
 				currentCall = previousCallId && activeCalls[previousCallId] ? activeCalls[previousCallId] : getActiveCalls()[0] || null;
 				if (!currentCall) incomingHandled = false;
 				render();
-				notifyBrowserAudio(currentCall);
+				notifyBrowserAudio(currentCall, shownBeforeLookup);
 				scheduleActiveCallsRefresh();
 				return currentCall;
 			}
@@ -10632,6 +10743,7 @@
 							reportDiagnostic("info", "browser-call-server-terminal-ignored", "The server reported a terminal state for a browser-originated call that is still live; ignored.", call.callId);
 							return;
 						}
+						var shownBeforeTerminal = shownCallsSnapshot();
 						if (!call || !call.callId) {
 							var keptBrowserCalls = Object.keys(activeCalls).map(function(id) {
 								return activeCalls[id];
@@ -10660,7 +10772,7 @@
 							});
 						}
 						render();
-						notifyBrowserAudio(call);
+						notifyBrowserAudio(call, shownBeforeTerminal);
 						if (call && call.metadata && call.metadata.hangupCause === "NotInService") showError(strings.numberNotInService || "The number you dialed is not in service.");
 						refreshVoicemailBadge();
 						reloadActiveListTab();

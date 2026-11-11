@@ -58,10 +58,101 @@ export function noteBrowserLeg(legs, leg) {
     }
 }
 
+// The call the server reported live on a platform leg, or '' while it has reported none. A Contact Center call is
+// reported by the caller's leg, never the agent's, so this is what ties the agent's leg to the call it carries.
+export function boundCallOf(legs, leg) {
+    var bindings = (legs && legs.bindings) || [];
+
+    for (var i = 0; i < bindings.length; i++) {
+        if (bindings[i].leg === leg) {
+            return bindings[i].callId;
+        }
+    }
+
+    return '';
+}
+
+function legBoundTo(legs, callId) {
+    var bindings = (legs && legs.bindings) || [];
+
+    for (var i = 0; i < bindings.length; i++) {
+        if (bindings[i].callId === callId) {
+            return bindings[i].leg;
+        }
+    }
+
+    return null;
+}
+
+function unbind(legs, leg) {
+    if (legs && legs.bindings) {
+        legs.bindings = legs.bindings.filter(function (binding) {
+            return binding.leg !== leg;
+        });
+    }
+}
+
+// Ties a platform leg to the call it carries; a leg carries one call, and a call is carried by one leg.
+export function bindPlatformLeg(legs, leg, callId) {
+    if (!legs || !leg || !callId) {
+        return;
+    }
+
+    var id = String(callId);
+
+    legs.bindings = ((legs.bindings) || []).filter(function (binding) {
+        return binding.leg !== leg && binding.callId !== id;
+    });
+    legs.bindings.push({ leg: leg, callId: id });
+}
+
+// The platform legs that are up but carry no call the server has reported yet: a leg parked for a dialer call while the
+// customer rings, or one just joined to its caller whose report is still on its way. isLive(leg) says whether a leg is
+// up and answered.
+export function unreportedLiveLegs(legs, isLive) {
+    var live = typeof isLive === 'function' ? isLive : function () { return true; };
+
+    return ((legs && legs.platformLegs) || []).filter(function (leg) {
+        return !!leg && !boundCallOf(legs, leg) && live(leg);
+    });
+}
+
+// The provider recovered a call across a reconnect as a new object under the same id: the new object takes the old
+// one's place, and the call it carried, so the server's reports reach the leg that is up rather than the dead one.
+export function replaceLeg(legs, oldLeg, newLeg) {
+    if (!legs || !oldLeg || !newLeg || oldLeg === newLeg) {
+        return;
+    }
+
+    ['platformLegs', 'browserLegs'].forEach(function (key) {
+        var index = legs[key] ? legs[key].indexOf(oldLeg) : -1;
+
+        if (index >= 0) {
+            legs[key][index] = newLeg;
+        }
+    });
+
+    if (legs.platform === oldLeg) {
+        legs.platform = newLeg;
+    }
+
+    if (legs.browser === oldLeg) {
+        legs.browser = newLeg;
+    }
+
+    (legs.bindings || []).forEach(function (binding) {
+        if (binding.leg === oldLeg) {
+            binding.leg = newLeg;
+        }
+    });
+}
+
 export function forgetLeg(legs, leg) {
     if (!legs || !leg) {
         return;
     }
+
+    unbind(legs, leg);
 
     var platformIndex = legs.platformLegs ? legs.platformLegs.indexOf(leg) : -1;
 
@@ -104,6 +195,12 @@ export function platformLegFor(legs, callId) {
                 return candidates[i];
             }
         }
+
+        var bound = legBoundTo(legs, id);
+
+        if (bound && candidates.indexOf(bound) >= 0) {
+            return bound;
+        }
     }
 
     var latest = (legs && legs.platform) || null;
@@ -130,18 +227,63 @@ function noteReportedCall(legs, callId) {
 //   stateName - the reported state ('Connected', 'OnHold', 'Disconnected', ...), or null when the server reports
 //               no call at all.
 //   callId    - the call the report is about, when it names one.
+//   view      - optional: { wasShown(callId), isShown(callId) }, whether the phone showed a call before this report
+//               and whether it shows it now. Without it, no call counts as shown.
 // Returns { action: 'none' | 'hold' | 'resume' | 'hangup', leg }. A keypad call is never the leg: the server
 // cannot know when it ends and has no hold of it to report.
-export function planPlatformReport(legs, stateName, callId) {
+//
+// Regression: agents on Power campaigns answered, said hello, and the call dropped. The agent's leg carries a call the
+// server reports by the customer's leg, so every report that named no leg here fell through to the latest platform leg,
+// and a report that a call had ended hung that leg up -- whichever call it was about. A late "ended" for the previous
+// dial, an orphaned history entry the server swept, or an active-calls refresh that did not list the dialer call yet
+// (the server lists it only once the agent is joined) each hung up the live leg of the call the agent had just
+// answered. The leg is now tied to the first call reported live on it, and an end hangs up only the leg carrying that
+// call, or a leg tied to nothing when the call that ended is the one the phone was showing. The server releases the
+// agent's leg itself when a Contact Center call ends, so a leg left alone here is not left up.
+export function planPlatformReport(legs, stateName, callId, view) {
     noteReportedCall(legs, callId);
 
+    var id = callId ? String(callId) : '';
+    var terminal = !stateName || stateName === 'Disconnected' || stateName === 'Failed';
+    var live = stateName === 'Connected' || stateName === 'OnHold';
+    var wasShown = function (shownId) { return !!(view && typeof view.wasShown === 'function' && view.wasShown(shownId)); };
+    var isShown = function (shownId) { return !(view && typeof view.isShown === 'function') || !!view.isShown(shownId); };
     var leg = platformLegFor(legs, callId);
 
     if (!leg) {
         return { action: 'none', leg: null };
     }
 
-    if (!stateName || stateName === 'Disconnected' || stateName === 'Failed') {
+    var ownCall = !!id && (legCallId(leg) === id || boundCallOf(legs, leg) === id);
+
+    if (!ownCall) {
+        var bound = boundCallOf(legs, leg);
+
+        if (!id) {
+            // The server lists no call: a leg ends only once the call it was carrying, which the phone showed, has gone.
+            // One that carries nothing reported yet -- parked for a dialer call, or joined a moment ago -- stays up.
+            if (terminal && !(bound && wasShown(bound) && !isShown(bound))) {
+                return { action: 'none', leg: null };
+            }
+        } else if (bound) {
+            // The leg carries another call. A live report of a new call takes it over only once the phone no longer
+            // shows the call it carried; anything else about some other call is not about this leg.
+            if (!live || isShown(bound)) {
+                return { action: 'none', leg: null };
+            }
+
+            bindPlatformLeg(legs, leg, id);
+        } else if (terminal) {
+            // The leg carries no reported call: an end names it only when the call that ended is the one on screen.
+            if (!wasShown(id)) {
+                return { action: 'none', leg: null };
+            }
+        } else if (live) {
+            bindPlatformLeg(legs, leg, id);
+        }
+    }
+
+    if (terminal) {
         return { action: 'hangup', leg: leg };
     }
 

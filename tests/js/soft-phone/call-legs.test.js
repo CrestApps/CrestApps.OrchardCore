@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     allLegs,
+    boundCallOf,
     canConferenceCall,
     createCallLegs,
     forgetLeg,
@@ -10,10 +11,17 @@ import {
     notePlatformLeg,
     planPlatformReport,
     platformLegFor,
+    replaceLeg,
+    unreportedLiveLegs,
 } from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js';
 
 const predialedLeg = { name: 'pre-dialed agent leg' };
 const browserCall = { name: 'call placed from the keypad' };
+
+// The phone showed these calls before the report and shows none of them now.
+const gone = (...callIds) => ({ wasShown: id => callIds.includes(id), isShown: () => false });
+// The phone shows these calls, before the report and after it.
+const showing = (...callIds) => ({ wasShown: id => callIds.includes(id), isShown: id => callIds.includes(id) });
 
 // The browser holds the media of a call the server tracks -- the leg the platform rang (pre-dialed for an offer, or
 // rung at the accept) -- and may also place calls of its own. The media adapter used to keep one "current" provider
@@ -38,19 +46,21 @@ describe('planPlatformReport', () => {
         const legs = createCallLegs();
         notePlatformLeg(legs, predialedLeg);
         noteBrowserLeg(legs, browserCall);
+        planPlatformReport(legs, 'Connected', 'caller-1');
         forgetLeg(legs, browserCall);
 
-        expect(planPlatformReport(legs, 'Disconnected')).toEqual({ action: 'hangup', leg: predialedLeg });
-        expect(planPlatformReport(legs, null)).toEqual({ action: 'hangup', leg: predialedLeg });
-        expect(planPlatformReport(legs, 'Failed')).toEqual({ action: 'hangup', leg: predialedLeg });
+        expect(planPlatformReport(legs, 'Disconnected', 'caller-1')).toEqual({ action: 'hangup', leg: predialedLeg });
+        expect(planPlatformReport(legs, 'Failed', 'caller-1')).toEqual({ action: 'hangup', leg: predialedLeg });
+        expect(planPlatformReport(legs, null, null, gone('caller-1'))).toEqual({ action: 'hangup', leg: predialedLeg });
     });
 
     it('hangs the platform leg up while a keypad call is still live, and leaves the keypad call alone', () => {
         const legs = createCallLegs();
         notePlatformLeg(legs, predialedLeg);
         noteBrowserLeg(legs, browserCall);
+        planPlatformReport(legs, 'Connected', 'caller-1');
 
-        expect(planPlatformReport(legs, null)).toEqual({ action: 'hangup', leg: predialedLeg });
+        expect(planPlatformReport(legs, null, null, gone('caller-1'))).toEqual({ action: 'hangup', leg: predialedLeg });
     });
 
     // A call the browser placed has no platform interaction behind it; the server reporting nothing about it is
@@ -202,5 +212,130 @@ describe('several platform calls at once', () => {
         planPlatformReport(legs, 'Connected', 'agent-leg-1');
 
         expect(planPlatformReport(legs, 'Disconnected', 'agent-leg-2')).toEqual({ action: 'none', leg: null });
+    });
+});
+
+// Regression: agents on Power campaigns answered, said hello, and the call dropped. The agent's leg carries a call the
+// server reports by the customer's leg, so any report naming no leg here fell through to the latest platform leg, and a
+// report that some call had ended -- the previous dial, an orphaned history entry the server swept, or an active-calls
+// refresh that did not list the dialer call yet -- hung up the leg the agent had just answered.
+describe('a dialer call the agent just answered', () => {
+    const dialerLeg = { name: 'leg parked for a dialer call', options: { telnyxCallControlId: 'agent-leg-b' } };
+
+    it('is not hung up by an end reported for another call', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, dialerLeg);
+        planPlatformReport(legs, 'Connected', 'customer-b', showing('customer-b'));
+
+        expect(planPlatformReport(legs, 'Disconnected', 'customer-a', gone('customer-a'))).toEqual({ action: 'none', leg: null });
+        expect(planPlatformReport(legs, 'Failed', 'stale-entry', gone('stale-entry'))).toEqual({ action: 'none', leg: null });
+        expect(planPlatformReport(legs, 'Disconnected', 'customer-b', gone('customer-b'))).toEqual({ action: 'hangup', leg: dialerLeg });
+    });
+
+    it('is not hung up by an end reported for a call the phone never showed, before its own report arrives', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, dialerLeg);
+
+        expect(planPlatformReport(legs, 'Disconnected', 'customer-a', gone())).toEqual({ action: 'none', leg: null });
+        expect(planPlatformReport(legs, 'Disconnected', 'customer-a')).toEqual({ action: 'none', leg: null });
+    });
+
+    it('is not hung up by an active-calls refresh that does not list it yet', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, dialerLeg);
+
+        expect(planPlatformReport(legs, null, null, gone())).toEqual({ action: 'none', leg: null });
+        expect(planPlatformReport(legs, null)).toEqual({ action: 'none', leg: null });
+    });
+
+    it('is not hung up by a refresh that still lists the call it carries', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, dialerLeg);
+        planPlatformReport(legs, 'Connected', 'customer-b', showing('customer-b'));
+
+        expect(planPlatformReport(legs, null, null, showing('customer-b'))).toEqual({ action: 'none', leg: null });
+    });
+
+    it('is hung up when the call on screen ends before the server reported it live on the leg', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, dialerLeg);
+
+        expect(planPlatformReport(legs, 'Disconnected', 'customer-b', gone('customer-b'))).toEqual({ action: 'hangup', leg: dialerLeg });
+    });
+
+    it('ties the leg to the first call reported live on it, and holds and resumes it by that call', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, dialerLeg);
+
+        expect(planPlatformReport(legs, 'Connected', 'customer-b', showing('customer-b'))).toEqual({ action: 'resume', leg: dialerLeg });
+        expect(boundCallOf(legs, dialerLeg)).toBe('customer-b');
+        expect(planPlatformReport(legs, 'OnHold', 'customer-b', showing('customer-b'))).toEqual({ action: 'hold', leg: dialerLeg });
+        expect(planPlatformReport(legs, 'Connected', 'stale-entry', showing('customer-b', 'stale-entry'))).toEqual({ action: 'none', leg: null });
+        expect(boundCallOf(legs, dialerLeg)).toBe('customer-b');
+    });
+
+    it('lets a live report of a new call take the leg over once the call it carried is off the screen', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, dialerLeg);
+        planPlatformReport(legs, 'Connected', 'customer-a', showing('customer-a'));
+
+        expect(planPlatformReport(legs, 'Connected', 'customer-b', showing('customer-b'))).toEqual({ action: 'resume', leg: dialerLeg });
+        expect(boundCallOf(legs, dialerLeg)).toBe('customer-b');
+    });
+
+    it('keeps each of two platform calls on its own leg', () => {
+        const legs = createCallLegs();
+        const heldLeg = { name: 'leg of the call on hold', options: { telnyxCallControlId: 'agent-leg-a' } };
+        notePlatformLeg(legs, heldLeg);
+        planPlatformReport(legs, 'OnHold', 'customer-a', showing('customer-a'));
+        notePlatformLeg(legs, dialerLeg);
+        planPlatformReport(legs, 'Connected', 'customer-b', showing('customer-a', 'customer-b'));
+
+        expect(planPlatformReport(legs, 'Disconnected', 'customer-a', showing('customer-b'))).toEqual({ action: 'hangup', leg: heldLeg });
+        forgetLeg(legs, heldLeg);
+        expect(boundCallOf(legs, heldLeg)).toBe('');
+        expect(planPlatformReport(legs, 'Connected', 'customer-b', showing('customer-b'))).toEqual({ action: 'resume', leg: dialerLeg });
+    });
+});
+
+describe('unreportedLiveLegs', () => {
+    // The microphone stayed off from the last call until the server reported the join, so the agent's "hello" on a
+    // dialer leg never reached the customer.
+    it('lists an answered platform leg until the server reports a call on it', () => {
+        const legs = createCallLegs();
+        const leg = { name: 'dialer leg', state: 'active' };
+        const isActive = candidate => candidate.state === 'active';
+        notePlatformLeg(legs, leg);
+
+        expect(unreportedLiveLegs(legs, isActive)).toEqual([leg]);
+        planPlatformReport(legs, 'Connected', 'customer-b', showing('customer-b'));
+        expect(unreportedLiveLegs(legs, isActive)).toEqual([]);
+    });
+
+    it('leaves out a leg that is not up and never lists a keypad call', () => {
+        const legs = createCallLegs();
+        notePlatformLeg(legs, { name: 'ringing leg', state: 'ringing' });
+        noteBrowserLeg(legs, { name: 'keypad call', state: 'active' });
+
+        expect(unreportedLiveLegs(legs, candidate => candidate.state === 'active')).toEqual([]);
+    });
+});
+
+describe('replaceLeg', () => {
+    // A call the provider recovers across a reconnect arrives as a new object; left out of the legs, the dead object kept
+    // answering for the call and the live one was never ended.
+    it('puts a recovered call in the place of the one it replaces, with the call it carried', () => {
+        const legs = createCallLegs();
+        const before = { name: 'call before the reconnect' };
+        const after = { name: 'recovered call' };
+        notePlatformLeg(legs, before);
+        planPlatformReport(legs, 'Connected', 'customer-b', showing('customer-b'));
+
+        replaceLeg(legs, before, after);
+
+        expect(legs.platform).toBe(after);
+        expect(allLegs(legs)).toEqual([after]);
+        expect(boundCallOf(legs, after)).toBe('customer-b');
+        expect(planPlatformReport(legs, 'Disconnected', 'customer-b', gone('customer-b'))).toEqual({ action: 'hangup', leg: after });
     });
 });
