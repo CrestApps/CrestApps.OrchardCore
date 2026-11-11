@@ -189,6 +189,8 @@ import {
     noteBrowserLeg,
     notePlatformLeg,
     planPlatformReport,
+    replaceLeg,
+    unreportedLiveLegs,
 } from './soft-phone/call-legs.js';
 import {
     applyConferenceMemory,
@@ -2305,8 +2307,11 @@ import {
                 return;
             }
 
-            // A call the SDK recovered across a reconnect arrives as a new object under the same id.
+            // A call the SDK recovered across a reconnect arrives as a new object under the same id. It takes the old
+            // object's place among the legs too, with the call it carried: left there, the dead object kept answering
+            // for the call, so the server's reports went to it and the live call never ended on screen.
             if (currentCall && call !== currentCall && call.id && call.id === currentCall.id) {
+                replaceLeg(legs, currentCall, call);
                 currentCall = call;
             }
 
@@ -2317,6 +2322,12 @@ import {
                 reportNegotiation(call);
                 applyPlayoutDelayToCall(call);
                 startQualitySampler(call);
+
+                // A platform leg the phone answered: the agent is on it from now (a parked dialer leg is joined to the
+                // customer without another word to the phone), so the shared microphone follows the calls again.
+                if (legs.platformLegs.indexOf(call) >= 0 && typeof context.onPlatformLegAnswered === 'function') {
+                    context.onPlatformLegAnswered();
+                }
             }
 
             // Every call this browser placed, or answered for itself, reports to its own callback -- a held call under
@@ -2506,6 +2517,14 @@ import {
                         [currentCall, inboundRingingCall].concat(allLegs(legs), heldOfferCalls, monitorCalls),
                         isTelnyxTerminalState);
                 },
+                // Whether a leg of a platform call is answered and up while the server has reported no call on it yet:
+                // a leg parked for a dialer call, or one just joined to its customer. The agent is on it, so the
+                // shared microphone must be live -- the report that would turn it on comes only after the join.
+                holdsUnreportedLiveLeg: function () {
+                    return !disposed && unreportedLiveLegs(legs, function (leg) {
+                        return leg.state === 'active';
+                    }).length > 0;
+                },
                 // Re-applies the playout hint to the live call after the agent changes it.
                 refreshPlayoutDelay: function () {
                     if (currentCall) {
@@ -2612,14 +2631,26 @@ import {
                 // reporting no active call is silence, not an instruction to hang up (manual dials were once dropped
                 // the moment the customer answered, when a refresh came back empty), and a terminal report about a
                 // platform call is not about it either.
-                handleCallState: function (serverCall) {
+                // view: { wasShown(callId), isShown(callId) } -- which calls the phone showed before the report and
+                // shows now; it is what lets a report about one call leave the leg of another alone (see
+                // soft-phone/call-legs.js).
+                handleCallState: function (serverCall, view) {
                     var plan = planPlatformReport(
                         legs,
                         serverCall ? normalizeState(serverCall.state) : null,
-                        serverCall ? serverCall.callId : null);
+                        serverCall ? serverCall.callId : null,
+                        view);
                     var leg = plan.leg;
 
                     if (plan.action === 'hangup') {
+                        // Named, so a call that drops can be told from one the far end hung up.
+                        if (typeof context.reportDiagnostic === 'function') {
+                            context.reportDiagnostic('info', 'platform-leg-hangup',
+                                'The phone hung up the leg of a call the server reported ended (' +
+                                (serverCall ? normalizeState(serverCall.state) : 'no call listed') + ').',
+                                (serverCall && serverCall.callId) || (leg.options && leg.options.telnyxCallControlId) || '');
+                        }
+
                         if (leg === currentCall) {
                             stopQualitySampler(true);
                         }
@@ -5494,6 +5525,13 @@ import {
                         // A provider call ended: a credential renewal held off while it was up runs now, if nothing
                         // else is up, rather than on the next heartbeat, by when the next leg has usually arrived.
                         onProviderCallEnded: renewBrowserAudioIfNeeded,
+                        // A leg of a platform call was answered: the microphone follows the calls again, so the agent
+                        // is heard from their first word rather than from the server's report of the join.
+                        onPlatformLegAnswered: function () {
+                            if (localAudioStream) {
+                                localAudioStream.getAudioTracks().forEach(matchMicrophoneToCalls);
+                            }
+                        },
                         // Nothing is leaving a connected call: the caller cannot hear the agent. See send-audio.js.
                         reviveCapture: reviveSendCapture,
                         isOutboundSuppressed: isOutboundAudioSuppressed,
@@ -5759,7 +5797,9 @@ import {
             registerBrowserAudioForInbound();
         }
 
-        function notifyBrowserAudio(call) {
+        // shownBefore: the calls the phone showed before the report was applied, by call id. Omitted, the calls it
+        // shows now stand in for them, which is right for any report that did not just take a call off the screen.
+        function notifyBrowserAudio(call, shownBefore) {
             // Browser-originated calls drive their own SIP session directly; the passive-answer bridging here
             // must not touch them (it would toggle the mic or terminate the live session).
             if (call && call.browserOriginated) {
@@ -5770,17 +5810,34 @@ import {
                 return;
             }
 
+            var before = shownBefore || activeCalls;
+
+            // The media first: the report ties a leg to its call there, and the microphone then reads that.
+            if (typeof browserAudioSession.handleCallState === 'function') {
+                Promise.resolve(browserAudioSession.handleCallState(call || null, {
+                    wasShown: function (callId) { return !!(callId && before[callId]); },
+                    isShown: function (callId) { return !!(callId && activeCalls[callId]); }
+                })).catch(function (error) {
+                    showError(error && error.message ? error.message : String(error));
+                });
+            }
+
             var microphoneEnabled = microphoneEnabledAfter(call);
 
             localAudioStream.getAudioTracks().forEach(function (track) {
                 track.enabled = microphoneEnabled;
             });
+        }
 
-            if (typeof browserAudioSession.handleCallState === 'function') {
-                Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function (error) {
-                    showError(error && error.message ? error.message : String(error));
-                });
-            }
+        // A snapshot of the calls the phone shows, to hand notifyBrowserAudio once a report has changed them.
+        function shownCallsSnapshot() {
+            var snapshot = {};
+
+            Object.keys(activeCalls).forEach(function (callId) {
+                snapshot[callId] = activeCalls[callId];
+            });
+
+            return snapshot;
         }
 
         // Whether the shared microphone should be live after a report about `call`. The microphone is shared by every
@@ -5805,10 +5862,23 @@ import {
                     browserOriginated: !!active.browserOriginated
                 };
             });
-            return sharedMicrophoneEnabled(
-                call ? { callId: call.callId, state: normalizeState(call.state), isMuted: !!call.isMuted, isOnHold: !!call.isOnHold } : null,
+            var reported = call ? { callId: call.callId, state: normalizeState(call.state), isMuted: !!call.isMuted, isOnHold: !!call.isOnHold } : null;
+            var enabled = sharedMicrophoneEnabled(
+                reported,
                 others,
                 function (entry) { return isAgentHeld(agentHolds, entry.callId); });
+
+            // A leg the phone answered whose call the server has not reported yet is a call the agent is on -- a dialer
+            // leg joined to its customer, whose report comes a moment after the join -- so it is heard. Regression: the
+            // microphone stayed off from the last call until that report arrived, and the agent's "hello" never
+            // reached the customer, who heard silence and hung up. A connected call reported muted still mutes it.
+            if (!enabled && !(reported && reported.state === 'Connected') &&
+                !!browserAudioSession && typeof browserAudioSession.holdsUnreportedLiveLeg === 'function' &&
+                browserAudioSession.holdsUnreportedLiveLeg()) {
+                return true;
+            }
+
+            return enabled;
         }
 
         // A capture that replaces the send track mid-call starts enabled; left so, a new or revived microphone turned
@@ -8783,12 +8853,13 @@ import {
             if (result.call) {
                 var resultState = normalizeState(result.call.state);
                 var ended = resultState === 'Disconnected' || resultState === 'Failed';
+                var shownBeforeCommand = shownCallsSnapshot();
 
                 upsertActiveCall(result.call, true);
                 render();
                 // A call the command ended is handed to the media as ended, so the leg carrying it is hung up even when
                 // the call now current is another one -- a call placed from the keypad, which the media must not touch.
-                notifyBrowserAudio(ended ? result.call : currentCall);
+                notifyBrowserAudio(ended ? result.call : currentCall, shownBeforeCommand);
                 scheduleActiveCallsRefresh();
             }
 
@@ -8820,6 +8891,7 @@ import {
 
             // The list replaces the calls wholesale, but what the phone already knew about each call still decides how
             // a stale report about it is read.
+            var shownBeforeLookup = activeCalls;
             callsBeforeLookup = activeCalls;
             activeCalls = {};
 
@@ -8871,7 +8943,9 @@ import {
             }
 
             render();
-            notifyBrowserAudio(currentCall);
+            // An empty list ends only a leg whose call the phone was showing and no longer is: a dialer leg the server
+            // does not list yet is the call the agent just answered (see soft-phone/call-legs.js).
+            notifyBrowserAudio(currentCall, shownBeforeLookup);
 
             // Do NOT tear down the browser registration when the last call ends: the soft phone stays registered
             // with the provider so it can receive the next inbound extension/queue call while idle. The
@@ -11118,6 +11192,10 @@ import {
                         return;
                     }
 
+                    // What the phone showed before this report took the call off: an end hangs up a leg that carries no
+                    // reported call only when the call that ended was on screen (see soft-phone/call-legs.js).
+                    var shownBeforeTerminal = shownCallsSnapshot();
+
                     if (!call || !call.callId) {
                         // Keep browser-originated calls; this server signal is about server-tracked calls only.
                         var keptBrowserCalls = Object.keys(activeCalls)
@@ -11160,7 +11238,7 @@ import {
                     }
 
                     render();
-                    notifyBrowserAudio(call);
+                    notifyBrowserAudio(call, shownBeforeTerminal);
 
                     // A dead number otherwise ends with the call simply disappearing, which the agent cannot tell
                     // from a dropped line. Campaign calls in particular never reach the agent's ear at all.
