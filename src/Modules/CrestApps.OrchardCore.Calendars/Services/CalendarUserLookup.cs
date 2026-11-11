@@ -21,20 +21,22 @@ public sealed class CalendarUserLookup
     }
 
     /// <summary>
-    /// Finds enabled users whose user name or email contains the text.
+    /// Finds enabled users whose user name contains the text, or whose email does when emails are included.
     /// </summary>
     /// <param name="query">The text to look for.</param>
+    /// <param name="includeEmails">Whether to match and show emails. Pass <see langword="true"/> only for someone who
+    /// may view users, so the search can't tell anyone else which email has an account.</param>
     /// <returns>The users.</returns>
-    public async Task<IReadOnlyList<CalendarUserItem>> SearchAsync(string query)
+    public async Task<IReadOnlyList<CalendarUserItem>> SearchAsync(string query, bool includeEmails)
     {
         var users = await _userSearchService.SearchAsync(new UserSearchQuery
         {
             Text = query,
-            MatchEmail = true,
+            MatchEmail = includeEmails,
             MaxResults = MaxResults,
         });
 
-        return users.Select(ToItem).ToList();
+        return users.Select(user => includeEmails ? ToItem(user) : new CalendarUserItem(user.UserId, user.UserName)).ToList();
     }
 
     /// <summary>
