@@ -118,7 +118,7 @@ public sealed class ContactCenterWorkflowSubscriptionsTests
         Assert.Equal(3, store.Invocations.Count);
     }
 
-    private static IContactCenterWorkflowSubscriptions Subscriptions(params WorkflowType[] workflowTypes)
+    private static ContactCenterWorkflowSubscriptions Subscriptions(params WorkflowType[] workflowTypes)
     {
         var store = new Mock<IWorkflowTypeStore>();
         store.Setup(s => s.ListAsync()).ReturnsAsync(workflowTypes);
