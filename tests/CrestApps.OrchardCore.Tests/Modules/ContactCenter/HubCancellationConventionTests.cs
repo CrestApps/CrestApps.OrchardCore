@@ -85,7 +85,10 @@ public sealed partial class HubCancellationConventionTests
         var callSites = new List<GroupMembershipCallSite>();
 
         var sourceFiles = new[] { "src", "tests" }
-            .SelectMany(area => Directory.GetFiles(Path.Combine(repositoryRoot, area), "*.cs", SearchOption.AllDirectories))
+            .SelectMany(area => SourceTreeFiles.Enumerate(
+                Path.Combine(repositoryRoot, area),
+                "*.cs",
+                SourceTreeFiles.IsBuildOutputDirectory))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
 

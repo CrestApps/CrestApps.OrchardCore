@@ -1,0 +1,141 @@
+name: Build & Test
+
+# The build and test jobs shared by PR - CI and Main - CI, so both validate exactly the same things.
+#
+# The suites run side by side instead of one after another: each OS gets one job for the unit tests, one for the
+# integration suites and one for the JavaScript tests. Every .NET job builds the whole solution with the same flags, so
+# a warning fails the run whichever job reports it. The repository is public, so the extra runner minutes cost nothing,
+# and a run takes as long as its slowest job instead of the sum of all of them.
+
+on:
+  workflow_call:
+    inputs:
+      save-nuget-cache:
+        description: Save the NuGet cache from the unit test job of each OS. Only Main - CI passes true.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  dotnet:
+    name: ${{ matrix.suite == 'unit' && 'Unit tests' || 'Integration tests' }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        suite: [unit, integration]
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        # The migration additive-only gate checks never-released justifications against stable release tags.
+        fetch-depth: 0
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: ".node-version"
+    - uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: |
+          10.0.x
+    - name: Cache NuGet packages
+      uses: ./.github/actions/cache-nuget-packages
+      with:
+        save: ${{ inputs.save-nuget-cache && matrix.suite == 'unit' }}
+    - name: Build
+      # We disable NuGet audit warnings, see https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1901-nu1904.
+      # Security issues being discovered in NuGet packages we use can happen at any time, and thus all our CI builds that
+      # treat warnings as errors could break anytime, without us changing the code. This prevents that. Treating them as
+      # warnings and other better approaches don't work, see https://github.com/OrchardCMS/OrchardCore/pull/16317.
+      run: |
+        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
+    - name: Unit Tests
+      if: matrix.suite == 'unit'
+      shell: bash
+      run: |
+        set -o pipefail
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 2>&1 | tee test-output.txt
+    - name: TEMP report failed tests as annotations
+      if: failure() && matrix.suite == 'unit'
+      shell: python
+      run: |
+        import glob, re, xml.etree.ElementTree as ET
+        lines = open('test-output.txt', encoding='utf-8', errors='replace').read().splitlines()
+        keys = re.compile(r'\[FAIL\]|Failed |crash|abort|Test Run Aborted|Total tests|Passed!|Failed!|error', re.I)
+        hits = [l.strip() for l in lines if keys.search(l)][:60]
+        print('::error title=test output::' + '%0A'.join(h.replace('%', '%25')[:400] for h in hits)[:8000])
+        tail = [l.strip() for l in lines if l.strip()][-120:]
+        for i in range(0, len(tail), 30):
+            print('::error title=tail ' + str(i) + '::' + '%0A'.join(h.replace('%', '%25')[:300] for h in tail[i:i+30]))
+        print('::error title=trx files::' + ' '.join(glob.glob('TestResults/**/*.trx', recursive=True)))
+        ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+        for path in glob.glob('TestResults/**/*.trx', recursive=True):
+            root = ET.parse(path).getroot()
+            for r in root.iterfind('.//t:UnitTestResult', ns):
+                if r.get('outcome') != 'Failed':
+                    continue
+                msg = r.find('.//t:Message', ns)
+                text = (msg.text if msg is not None and msg.text else '').replace('%', '%25').replace('\r', '').replace('\n', '%0A')[:3000]
+                print('::error title=' + r.get('testName', '')[:200].replace(',', ' ').replace(':', ' ') + '::' + text)
+    # The activation suite stands each feature up on its own tenant, so it catches the failures a unit test
+    # cannot see: a service registered by one feature and injected by another, a dependency closure that no
+    # longer constructs, a migration that does not run. Those break a tenant on enable, and finding them at
+    # release time means finding them after the pull request that caused them has been forgotten.
+    - name: Contact Center feature activation tests
+      if: matrix.suite == 'integration'
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj
+    # The tenant hierarchy suite runs real tenants in one host: a parent, its children and an ordinary tenant. It
+    # proves that a tenant cannot reach another one outside the broker, that delegated access works end to end
+    # over HTTP, and that the guards hold. The SQL Server and PostgreSQL provisioning tests skip unless their
+    # connection-string variables are set.
+    # It runs under dotnet-coverage (pinned in dotnet-tools.json), limited to the tenant hierarchy assemblies by
+    # tests/tenant-hierarchy.coverage.xml, and the Cobertura report is kept as an artifact of the run.
+    - name: Tenant hierarchy integration tests
+      if: matrix.suite == 'integration'
+      run: |
+        dotnet tool restore
+        dotnet dotnet-coverage collect --settings tests/tenant-hierarchy.coverage.xml -f cobertura -o tenant-hierarchy.cobertura.xml "dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj"
+    - name: Upload the tenant hierarchy coverage report
+      if: matrix.suite == 'integration' && matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v7
+      with:
+        name: tenant-hierarchy-coverage
+        path: tenant-hierarchy.cobertura.xml
+    # The commerce API suite runs one real tenant set up from the online store sample and drives the commerce JSON API
+    # over HTTP the way a headless storefront or app does: the catalog, guest carts and checkouts kept apart by their
+    # tokens, a checkout paid with the test provider, and the buyer's own endpoints refusing callers without a token.
+    - name: Commerce API integration tests
+      if: matrix.suite == 'integration'
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj
+
+  # The soft phone's arithmetic and state mapping - number formatting, the call-quality score, the Telnyx
+  # call-state mapping, the reconnect schedule - now live in their own files with unit tests. A mistake in any
+  # of them reaches an agent as a wrong number on screen, a quality indicator that never warns, or a call that
+  # looks connected while it is still ringing, and none of it is visible to the .NET suites. They need no .NET
+  # build, so they run in their own job.
+  javascript:
+    name: JavaScript unit tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
+      with:
+        # The JavaScript unit tests run on Vitest, which needs a currently supported Node.
+        # The Node major decides the npm major, and npm 10 and npm 11 disagree about which optional peers the
+        # lockfile must satisfy. .node-version pins the Node developers run, so a lockfile written locally installs here.
+        node-version-file: ".node-version"
+    - name: JavaScript unit tests
+      run: |
+        npm ci --ignore-scripts
+        npm test

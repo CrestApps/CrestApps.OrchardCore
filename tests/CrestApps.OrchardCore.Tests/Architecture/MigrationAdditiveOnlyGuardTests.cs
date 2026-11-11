@@ -1060,7 +1060,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
         var repositoryRoot = FindRepositoryRoot();
         var impersonations = new List<string>();
 
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
         {
             if (IsGeneratedPath(file))
             {
@@ -1204,7 +1204,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
 
         var registeredTypeNames = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
         {
             if (IsGeneratedPath(file))
             {
@@ -1853,8 +1853,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
 
     private static IEnumerable<string> EnumerateMigrationFiles(string repositoryRoot)
     {
-        return Directory
-            .EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories)
+        return SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", SourceTreeFiles.IsBuildOutputDirectory)
             .Where(file => !IsGeneratedPath(file))
             .Where(file => file.Replace('\\', '/').Contains("/Migrations/", StringComparison.Ordinal))
             .OrderBy(file => file, StringComparer.Ordinal);

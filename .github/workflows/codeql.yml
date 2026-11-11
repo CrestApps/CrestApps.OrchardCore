@@ -13,6 +13,12 @@ permissions:
   security-events: write
   contents: read
 
+# When several pull requests merge at once, only the newest commit on main is analyzed: it contains all of them.
+# Pull request runs are grouped by their branch, so a new push replaces the analysis of the previous one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 jobs:
   analyze-csharp:
     name: Analyze C#
@@ -31,14 +37,14 @@ jobs:
       - name: Cache NuGet packages
         uses: ./.github/actions/cache-nuget-packages
 
+      # build-mode none extracts the C# sources directly instead of tracing a full Release build of the solution,
+      # which took longer than the analysis itself. The build is still validated by the CI workflows.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: csharp
+          build-mode: none
           config-file: ./.github/codeql/codeql-config.yml
-
-      - name: Build solution
-        run: dotnet build CrestApps.OrchardCore.slnx -c Release
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

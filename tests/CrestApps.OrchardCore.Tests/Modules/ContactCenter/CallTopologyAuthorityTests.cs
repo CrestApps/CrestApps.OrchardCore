@@ -1173,8 +1173,7 @@ public sealed class CallTopologyAuthorityTests
 
     private static string FindProjectorFile()
     {
-        return Directory
-            .EnumerateFiles(Path.Combine(FindRepositoryRoot(), "src"), ProjectorFileName, SearchOption.AllDirectories)
+        return SourceTreeFiles.Enumerate(Path.Combine(FindRepositoryRoot(), "src"), ProjectorFileName, SourceTreeFiles.IsBuildOutputDirectory)
             .Single(file => !IsGeneratedPath(file));
     }
 
@@ -1191,7 +1190,7 @@ public sealed class CallTopologyAuthorityTests
                 continue;
             }
 
-            foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+            foreach (var file in SourceTreeFiles.Enumerate(root, "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
             {
                 if (IsGeneratedPath(file))
                 {

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -20,6 +21,12 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     private const string TelephonyStartupPath = "src/Modules/CrestApps.OrchardCore.Telephony/Startup.cs";
     private const string OmnichannelManagementsManifestPath = "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Manifest.cs";
     private const string OmnichannelManagementsStartupPath = "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Startup.cs";
+
+    // Every [Feature(...)] and [RequireFeatures(...)] token is resolved by finding its constants type under src, and
+    // finding a type means walking the whole tree. The tokens repeat across hundreds of startup classes and every test,
+    // so without this cache each test walked the tree hundreds of times and the class took most of the suite's time.
+    // The sources cannot change during a run, so the cached text is exactly what a fresh walk would read.
+    private static readonly ConcurrentDictionary<(string RepositoryRoot, string TypeName), string> _typeSources = new();
 
     private static readonly string[] ContactCenterConcreteTypeSearchDirectories =
     [
@@ -967,6 +974,11 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     }
 
     private static string ReadTypeSource(string repositoryRoot, string typeName)
+    {
+        return _typeSources.GetOrAdd((repositoryRoot, typeName), static key => ReadTypeSourceFromDisk(key.RepositoryRoot, key.TypeName));
+    }
+
+    private static string ReadTypeSourceFromDisk(string repositoryRoot, string typeName)
     {
         var files = EnumerateSourceFiles(Path.Combine(repositoryRoot, "src"), typeName + "*.cs")
             .Where(path => IsPartialSourceOf(path, typeName))

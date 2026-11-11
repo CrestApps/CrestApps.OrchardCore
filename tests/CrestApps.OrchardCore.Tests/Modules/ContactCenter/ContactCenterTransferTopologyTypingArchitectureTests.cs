@@ -65,8 +65,7 @@ public sealed class ContactCenterTransferTopologyTypingArchitectureTests
         var sourceRoot = Path.Combine(FindRepositoryRoot(), "src");
 
         // Act
-        var offendingFiles = Directory
-            .EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+        var offendingFiles = SourceTreeFiles.Enumerate(sourceRoot, "*.cs", SourceTreeFiles.IsBuildOutputDirectory)
             .Where(file =>
             {
                 var directory = Path.GetDirectoryName(file) ?? string.Empty;
