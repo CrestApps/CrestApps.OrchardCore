@@ -37,6 +37,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
+using OrchardCore.Workflows.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -348,6 +349,9 @@ public sealed class ContactCenterWorkflowsStartup : StartupBase
         services.AddScoped<IContactCenterWorkflowEventTypeProvider, ContactCenterWorkflowEventTypeProvider>();
         services.AddActivity<ContactCenterEvent, ContactCenterEventDisplayDriver>();
         services.AddScoped<IContactCenterEventHandler, ContactCenterWorkflowEventHandler>();
+        services.AddSingleton<ContactCenterWorkflowSubscriptionCache>();
+        services.AddScoped<IContactCenterWorkflowSubscriptions, ContactCenterWorkflowSubscriptions>();
+        services.AddScoped<IWorkflowTypeEventHandler, ContactCenterWorkflowSubscriptionInvalidator>();
 
         // Reaching a customer needs only the activity and its channel's processor, both of which come with the
         // Omnichannel Activities feature this one already depends on. Registering it here rather than under the
