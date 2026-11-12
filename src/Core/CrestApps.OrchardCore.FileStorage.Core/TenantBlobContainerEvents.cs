@@ -1,4 +1,4 @@
-using Azure;
+﻿using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Localization;
@@ -105,9 +105,20 @@ public sealed class TenantBlobContainerEvents<TStore> : ModularTenantEvents
             return;
         }
 
+        // The prefix ends with a delimiter, so removing "TenantA" never deletes "TenantAB/..." of another tenant, and a
+        // store with no base path deletes nothing rather than the whole container.
+        var prefix = TenantBlobPaths.GetRemovalPrefix(_options.BasePath);
+
+        if (prefix is null)
+        {
+            _logger.LogWarning("The {Purpose} file store has no base path, so the files of the removed tenant were left in the Azure Blob container {ContainerName}.", _registration.Purpose, _options.ContainerName);
+
+            return;
+        }
+
         try
         {
-            await foreach (var blobItem in blobContainer.GetBlobsAsync(BlobTraits.None, BlobStates.None, _options.BasePath, CancellationToken.None))
+            await foreach (var blobItem in blobContainer.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, CancellationToken.None))
             {
                 var response = await blobContainer.DeleteBlobIfExistsAsync(blobItem.Name);
 
