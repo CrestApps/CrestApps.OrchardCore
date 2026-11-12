@@ -1,0 +1,24 @@
+@model ShapeViewModel<AccessGrantListItem>
+
+@{
+    var item = Model.Value;
+    var labels = item.Labels;
+}
+
+@if (string.IsNullOrEmpty(item.Grant.ChildEntryId))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Can open"]"><i class="fa-solid fa-sitemap text-info" aria-hidden="true"></i> @T["Every {0}", labels.ChildLower]</span>
+}
+else if (!string.IsNullOrEmpty(item.ChildDisplayName))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Can open"]"><i class="fa-solid fa-building text-info" aria-hidden="true"></i> @item.ChildDisplayName</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" title="@T["Can open"]"><i class="fa-solid fa-building text-info" aria-hidden="true"></i> @T["This {0}", labels.ChildLower]</span>
+}
+
+@if (item.Inherited)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Set in the rules for every {0}", labels.ChildLower]"><i class="fa-solid fa-arrow-turn-down text-muted" aria-hidden="true"></i> @T["Inherited"]</span>
+}

@@ -105,6 +105,11 @@ public class StockItemViewModel
     public int MovementCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the list of the changes on this page of the stock history, with its pager.
+    /// </summary>
+    public AdminListContext MovementList { get; set; }
+
+    /// <summary>
     /// Gets or sets how many shoppers asked to hear when it's back, or <see langword="null"/> without Back-in-Stock
     /// Alerts.
     /// </summary>

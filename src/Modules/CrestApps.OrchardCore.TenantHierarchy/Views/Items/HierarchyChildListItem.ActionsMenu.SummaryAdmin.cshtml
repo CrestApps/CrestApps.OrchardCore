@@ -1,0 +1,28 @@
+@model ShapeViewModel<HierarchyChildListItem>
+
+@{
+    var item = Model.Value;
+    var child = item.Child;
+}
+
+@* Bare menu items: the admin list renders them in its own menu, in both actions layouts. Each one posts with the
+   antiforgery token of the page (data-url-af="UnsafeUrl"); moving a child tenant of a parent asks first. *@
+@foreach (var target in item.MoveTargets)
+{
+    if (item.IsOrphan)
+    {
+        <a class="dropdown-item" asp-controller="Platform" asp-action="Adopt" asp-route-child="@child.Settings.Name" asp-route-newParent="@target.Settings.Name" data-url-af="UnsafeUrl"><i class="fa-solid fa-right-left fa-fw me-2" aria-hidden="true"></i>@T["Move to {0}", target.DisplayName]</a>
+    }
+    else
+    {
+        <a class="dropdown-item" asp-controller="Platform" asp-action="Move" asp-route-id="@item.ParentTenantName" asp-route-child="@child.Settings.Name" asp-route-newParent="@target.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Move"]" data-message="@T["Move this child tenant? Its address changes and every open session of the old parent ends."]" data-ok="@T["Move"]" data-ok-class="btn-warning"><i class="fa-solid fa-right-left fa-fw me-2" aria-hidden="true"></i>@T["Move to {0}", target.DisplayName]</a>
+    }
+}
+@if (item.IsOrphan)
+{
+    if (item.MoveTargets.Count > 0)
+    {
+        <hr class="dropdown-divider">
+    }
+    <a class="dropdown-item text-danger" asp-controller="Platform" asp-action="Detach" asp-route-child="@child.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-message="@T["Make {0} an ordinary tenant? It keeps its data and address.", child.DisplayName]"><i class="fa-solid fa-link-slash fa-fw me-2" aria-hidden="true"></i>@T["Make ordinary"]</a>
+}

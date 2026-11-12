@@ -47,6 +47,8 @@ public sealed class PlatformStartup : StartupBase
         services.AddScoped<TenantHierarchyPlatformService>();
         services.AddPermissionProvider<PlatformPermissionProvider>();
         services.AddNavigationProvider<PlatformAdminMenu>();
+        services.AddDisplayDriver<HierarchyParentListItem, HierarchyParentListItemDisplayDriver>();
+        services.AddDisplayDriver<HierarchyChildListItem, HierarchyChildListItemDisplayDriver>();
     }
 }
 
@@ -94,6 +96,8 @@ public sealed class ParentStartup : StartupBase
         services.AddDisplayDriver<Navbar, ParentSwitcherNavbarDisplayDriver>();
         services.AddDisplayDriver<AuditTrailEvent, HierarchyAuditTrailEventDisplayDriver>();
         services.AddDisplayDriver<ChildTenantListItem, ChildTenantListItemDisplayDriver>();
+        services.AddDisplayDriver<ChildFeatureListItem, ChildFeatureListItemDisplayDriver>();
+        services.AddDisplayDriver<AccessGrantListItem, AccessGrantListItemDisplayDriver>();
         services.AddTransient<IConfigureOptions<AuditTrailOptions>, TenantHierarchyAuditTrailEventConfiguration>();
 
         services.AddRecipeExecutionStep<AccessGrantsStep>();

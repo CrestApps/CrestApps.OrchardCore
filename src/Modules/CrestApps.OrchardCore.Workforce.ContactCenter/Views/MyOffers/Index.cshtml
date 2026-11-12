@@ -1,7 +1,4 @@
 @model MyOffersViewModel
-@{
-    string Clock(DateTime utc) => CalendarTime.ToLocal(utc, Model.TimeZoneId).ToString("t", CultureInfo.CurrentCulture);
-}
 <zone Name="Title">
     <breadcrumb name="MyWorkOffers" title="@T["Offers"]">
         <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
@@ -16,37 +13,15 @@
     <div class="@(Model.IsError ? "message-error" : "message-success") mb-3" role="status">@Model.Message</div>
 }
 
-@if (Model.Offers.Count == 0)
-{
-    <div class="alert alert-info">@T["There are no offers for you right now."]</div>
-}
-else
-{
-    <div class="list-group mb-3">
-        @foreach (var offer in Model.Offers)
-        {
-            var local = CalendarTime.ToLocal(offer.StartUtc, Model.TimeZoneId);
-            var left = offer.Places - offer.Claims.Count;
-            <div class="list-group-item d-flex flex-wrap align-items-center gap-2">
-                <div class="me-auto">
-                    <div class="fw-semibold">
-                        @(offer.Kind == IntradayOfferKind.VoluntaryOvertime ? T["Extra hours"] : T["Time off"])
-                        <span class="text-muted fw-normal">@local.ToString("ddd d MMM", CultureInfo.CurrentCulture), @Clock(offer.StartUtc)–@Clock(offer.EndUtc)</span>
-                    </div>
-                    <div class="small text-muted">
-                        @(left == 1 ? T["1 place left"] : T["{0} places left", left])
-                        @if (!string.IsNullOrEmpty(offer.Note))
-                        {
-                            <span>· @offer.Note</span>
-                        }
-                    </div>
-                </div>
-                <form method="post" action="@Url.Content("~/Admin/my-work/offers/" + offer.ItemId + "/take")">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-primary btn-sm">@T["Take it"]</button>
-                </form>
-            </div>
-        }
-    </div>
-}
-
+@* The offers, their count and the layout selector are rendered by the AdminList shape, in the layout (List or Grid)
+   the site or the user picked. Each row's "Take it" button posts its own form. *@
+<admin-list name="WorkforceMyOffers" context="Model.List" show-select-all="false"
+            empty-message="@T["There are no offers for you right now."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Offer"]" />
+        <admin-list-column name="When" position="30" title="@T["When"]" width="auto" no-wrap="true" />
+        <admin-list-column name="Places" position="40" title="@T["Places"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

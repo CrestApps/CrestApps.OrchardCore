@@ -153,6 +153,7 @@ public sealed class IntradayStartup : StartupBase
 
         services.TryAddScoped<IntradayService>();
         services.AddScoped<IMyWorkLinkProvider, IntradayOffersLinkProvider>();
+        services.AddDisplayDriver<MyOfferRow, MyOfferRowDisplayDriver>();
         services.AddNavigationProvider<IntradayAdminMenu>();
     }
 }
@@ -414,5 +415,6 @@ public sealed class MyAdherenceStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IMyWorkLinkProvider, Controllers.MyAdherenceLinkProvider>();
+        services.AddDisplayDriver<MyAdherenceDayRow, MyAdherenceDayRowDisplayDriver>();
     }
 }

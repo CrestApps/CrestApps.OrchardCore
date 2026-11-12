@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.ViewModels;
 
@@ -14,9 +15,9 @@ public class ChildTenantFeaturesViewModel
     public ChildTenantInfo Info { get; set; }
 
     /// <summary>
-    /// Gets or sets the features, grouped by category.
+    /// Gets or sets the list of the features, category by category.
     /// </summary>
-    public List<IGrouping<string, ChildFeatureInfo>> Categories { get; set; } = [];
+    public AdminListContext List { get; set; }
 
     /// <summary>
     /// Gets or sets the number of enabled features.
