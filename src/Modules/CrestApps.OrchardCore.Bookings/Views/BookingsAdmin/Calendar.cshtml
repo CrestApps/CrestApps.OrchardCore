@@ -52,7 +52,7 @@
             <tr>
                 @for (var i = 0; i < 7; i++)
                 {
-                    <th class="text-center">@culture.DateTimeFormat.GetAbbreviatedDayName((DayOfWeek)((firstDay + i) % 7))</th>
+                    <th scope="col" class="text-center">@culture.DateTimeFormat.GetAbbreviatedDayName((DayOfWeek)((firstDay + i) % 7))</th>
                 }
             </tr>
         </thead>

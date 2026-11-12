@@ -103,7 +103,7 @@
                     <div class="row g-2 mt-1 fill-model">
                         <div class="col-12 col-xl-8">
                             <label class="form-label small mb-1">@T["Description"] <span class="text-danger">*</span></label>
-                            <input name="@(namePrefix)Parameters[@i].Description" value="@parameter.Description" class="form-control form-control-sm" placeholder="The order to look up." />
+                            <input name="@(namePrefix)Parameters[@i].Description" value="@parameter.Description" class="form-control form-control-sm" placeholder="@T["The order to look up."]" />
                             <div class="form-text">@T["The model reads this to decide what to pass."]</div>
                         </div>
                         <div class="col-6 col-xl-2">
@@ -241,7 +241,7 @@
             <div class="row g-2 mt-1 fill-model">
                 <div class="col-12 col-xl-8">
                     <label class="form-label small mb-1">@T["Description"] <span class="text-danger">*</span></label>
-                    <input name="@(namePrefix)Parameters[__index__].Description" class="form-control form-control-sm" placeholder="The order to look up." />
+                    <input name="@(namePrefix)Parameters[__index__].Description" class="form-control form-control-sm" placeholder="@T["The order to look up."]" />
                     <div class="form-text">@T["The model reads this to decide what to pass."]</div>
                 </div>
                 <div class="col-6 col-xl-2">

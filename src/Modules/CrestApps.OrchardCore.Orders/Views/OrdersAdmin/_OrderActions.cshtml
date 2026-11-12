@@ -21,7 +21,7 @@
 
             @if (canRefund)
             {
-                <form asp-action="Refund" asp-route-orderId="@order.ItemId" method="post" class="mb-4">
+                <form asp-action="Refund" asp-route-orderId="@order.ItemId" method="post" class="mb-4 no-multisubmit">
                     <h6>@T["Refund"]</h6>
                     <div class="mb-2">
                         <label class="form-label" for="refund-amount">@T["Amount"]</label>
@@ -46,13 +46,13 @@
                             <span class="hint dashed">@T["Added to the buyer's store credit to spend later, instead of going back to how they paid."]</span>
                         </div>
                     }
-                    <button type="submit" class="btn btn-outline-primary">@T["Refund"]</button>
+                    <button type="submit" class="btn btn-outline-primary" data-url-af="RemoveUrl" data-title="@T["Refund"]" data-message="@T["Refund this amount now? The money goes back the way the buyer paid, or to their store credit."]" data-ok-text="@T["Refund"]" data-cancel-text="@T["Cancel"]">@T["Refund"]</button>
                 </form>
             }
 
             @if (canCancel)
             {
-                <form asp-action="Cancel" asp-route-orderId="@order.ItemId" method="post" class="mb-4" onsubmit="return confirm('@T["Cancel this order? This can't be undone."]');">
+                <form asp-action="Cancel" asp-route-orderId="@order.ItemId" method="post" class="mb-4 no-multisubmit">
                     <h6>@T["Cancel the order"]</h6>
                     <div class="mb-2">
                         <label class="form-label" for="cancel-note">@T["Why"]</label>
@@ -72,7 +72,7 @@
                             <label class="form-check-label" for="cancel-restock">@T["Put the items back in stock"]</label>
                         </div>
                     }
-                    <button type="submit" class="btn btn-outline-danger">@T["Cancel order"]</button>
+                    <button type="submit" class="btn btn-outline-danger" data-url-af="RemoveUrl" data-title="@T["Cancel the order"]" data-message="@T["Cancel this order? This can't be undone."]" data-ok-text="@T["Cancel order"]" data-cancel-text="@T["Keep it"]">@T["Cancel order"]</button>
                 </form>
             }
 

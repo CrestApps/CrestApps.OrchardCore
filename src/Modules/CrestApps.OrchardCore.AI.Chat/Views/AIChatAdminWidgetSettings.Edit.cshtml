@@ -32,7 +32,7 @@
         <div class="input-group">
             <input type="color" class="form-control form-control-color" asp-for="PrimaryColor" />
             <input type="text" class="form-control" value="@Model.PrimaryColor"
-                   oninput="document.getElementById('@Html.IdFor(m => m.PrimaryColor)').value = this.value"
+                   data-color-input="@Html.IdFor(m => m.PrimaryColor)" oninput="document.getElementById(this.dataset.colorInput).value = this.value"
                    placeholder="@AIChatAdminWidgetSettings.DefaultPrimaryColor" />
         </div>
         <span asp-validation-for="PrimaryColor" class="text-danger"></span>

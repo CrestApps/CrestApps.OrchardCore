@@ -58,4 +58,9 @@
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/CrestApps.OrchardCore.Omnichannel.Voice.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Carries the Resources feature dependency so the package comes along. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
 </Project>

@@ -51,7 +51,7 @@
                 <button class="btn btn-success" type="submit" formaction="@Url.Action("Confirm", new { id = Model.Id, modal = modalRoute })">@T["Confirm"]</button>
             }
             <button class="btn btn-warning action-bar-secondary" type="submit" formaction="@Url.Action("Cancel", new { id = Model.Id, occurrence = Model.Occurrence, modal = modalRoute })">@(Model.IsOccurrence ? T["Cancel"] : T["Cancel event"])</button>
-            <button class="btn btn-danger action-bar-secondary" type="submit" formaction="@Url.Action("Delete", new { id = Model.Id, modal = modalRoute })" data-confirm-message="@T["Delete this event, with every occurrence if it repeats?"]">@T["Delete"]</button>
+            <button class="btn btn-danger action-bar-secondary" type="submit" formaction="@Url.Action("Delete", new { id = Model.Id, modal = modalRoute })" data-confirm="@T["Delete this event, with every occurrence if it repeats?"]">@T["Delete"]</button>
         }
     }
 
@@ -75,12 +75,5 @@
     }
 </form>
 
-<script at="Foot">
-    document.querySelectorAll('[data-confirm-message]').forEach(function (button) {
-        button.addEventListener('click', function (event) {
-            if (!window.confirm(button.getAttribute('data-confirm-message'))) {
-                event.preventDefault();
-            }
-        });
-    });
-</script>
+@* Delete asks first (data-confirm on the button), through the crestapps-browser helpers. *@
+<script asp-name="crestapps-browser" at="Foot"></script>

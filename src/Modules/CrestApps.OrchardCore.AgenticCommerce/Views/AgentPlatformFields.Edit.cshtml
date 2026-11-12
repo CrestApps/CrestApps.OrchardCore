@@ -1,5 +1,8 @@
 @model AgentPlatformViewModel
 
+@* "New API key" has its own formaction, so the crestapps-browser helpers ask its question (data-confirm). *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 <div class="card mb-3">
     <div class="card-header">@T["The platform"]</div>
     <div class="card-body">
@@ -67,7 +70,7 @@
                     {
                         <code>agk_…@Model.ApiKeyHint</code>
                     }
-                    <button type="submit" class="btn btn-sm btn-secondary ms-2" formaction="@Url.Action("ApiKey", "AgentPlatforms", new { area = "CrestApps.OrchardCore.AgenticCommerce", id = Model.ItemId })" data-title="@T["New API key"]" data-message="@T["The old key stops working at once. Continue?"]" data-url-af="UnsafeUrl">@T["New API key"]</button>
+                    <button type="submit" class="btn btn-sm btn-secondary ms-2" formaction="@Url.Action("ApiKey", "AgentPlatforms", new { area = "CrestApps.OrchardCore.AgenticCommerce", id = Model.ItemId })" data-confirm-title="@T["New API key"]" data-confirm="@T["The old key stops working at once. Continue?"]">@T["New API key"]</button>
                     <span class="hint">@T["The platform sends it as a bearer token. ACP platforms sign in this way."]</span>
                 </div>
             </div>

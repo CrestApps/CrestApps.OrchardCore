@@ -87,7 +87,7 @@
                         }
                         @if (Model.OtherParents.Count > 0)
                         {
-                            <form asp-action="Move" asp-route-id="@settings.Name" method="post" class="d-flex gap-1" data-th-move-form>
+                            <form asp-action="Move" asp-route-id="@settings.Name" method="post" class="d-flex gap-1" data-confirm="@T["Move this child tenant? Its address changes and every open session of the old parent ends."]">
                                 <input type="hidden" name="child" value="@child.Settings.Name" />
                                 <select name="newParent" class="form-select form-select-sm" asp-items="Model.OtherParents" aria-label="@T["Move to"]"></select>
                                 <button type="submit" class="btn btn-sm btn-secondary text-nowrap">@T["Move"]</button>
@@ -115,17 +115,8 @@
 
 @if (Model.OtherParents.Count > 0)
 {
-    <script at="Foot">
-        (function () {
-            const message = @Json.Serialize(T["Move this child tenant? Its address changes and every open session of the old parent ends."].Value);
-
-            document.querySelectorAll('[data-th-move-form]').forEach((form) => form.addEventListener('submit', (event) => {
-                if (!window.confirm(message)) {
-                    event.preventDefault();
-                }
-            }));
-        })();
-    </script>
+    @* The Move forms ask first (data-confirm), through the crestapps-browser helpers. *@
+    <script asp-name="crestapps-browser" at="Foot"></script>
 }
 
 <div class="card border-danger">
@@ -145,13 +136,3 @@
         }
     </div>
 </div>
-
-<script at="Foot">
-    document.querySelectorAll('[data-th-confirm]').forEach((button) => {
-        button.addEventListener('click', (event) => {
-            if (!window.confirm(button.dataset.thConfirm)) {
-                event.preventDefault();
-            }
-        });
-    });
-</script>

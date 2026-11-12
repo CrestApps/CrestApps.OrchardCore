@@ -101,7 +101,7 @@
                         @if (shipment.Status is ShipmentStatus.Shipped or ShipmentStatus.Delivered)
                         {
                             <form asp-controller="ShipmentsAdmin" asp-action="Return" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="no-multisubmit">
-                                <button type="submit" class="btn btn-sm btn-secondary" data-title="@T["Returned"]" data-message="@T["Mark this shipment as returned? Its items can then be shipped again."]">@T["Returned"]</button>
+                                <button type="submit" class="btn btn-sm btn-secondary" data-url-af="RemoveUrl" data-title="@T["Returned"]" data-message="@T["Mark this shipment as returned? Its items can then be shipped again."]">@T["Returned"]</button>
                             </form>
                         }
                         @if (shipment.Status == ShipmentStatus.Pending)

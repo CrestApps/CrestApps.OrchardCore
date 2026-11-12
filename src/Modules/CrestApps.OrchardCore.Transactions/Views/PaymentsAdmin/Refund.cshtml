@@ -34,7 +34,7 @@
     </div>
 </div>
 
-<form asp-action="Refund" asp-route-itemId="@attempt.ItemId" method="post">
+<form asp-action="Refund" asp-route-itemId="@attempt.ItemId" method="post" class="no-multisubmit">
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
     <div class="ocat-limited-wrapper" asp-validation-class-for="Amount">

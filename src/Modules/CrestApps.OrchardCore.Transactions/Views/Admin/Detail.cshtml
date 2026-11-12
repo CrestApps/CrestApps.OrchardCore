@@ -197,7 +197,7 @@
             <div class="card mb-3">
                 <div class="card-header">@T["Record an offline payment"]</div>
                 <div class="card-body">
-                    <form asp-action="RecordPayment" method="post">
+                    <form asp-action="RecordPayment" method="post" class="no-multisubmit">
                         <input type="hidden" name="TransactionId" value="@transaction.ItemId" />
                         <div class="mb-2">
                             <label class="form-label ocat-label-required" for="Amount">@T["Amount"]</label>
@@ -223,7 +223,7 @@
                 <div class="card-header">@T["Adjust or waive"]</div>
                 <div class="card-body">
                     <p class="text-muted">@T["Lower what is owed without money being received, for example financial aid or a discount given after the fact."]</p>
-                    <form asp-action="Adjust" method="post">
+                    <form asp-action="Adjust" method="post" class="no-multisubmit">
                         <input type="hidden" name="TransactionId" value="@transaction.ItemId" />
                         <div class="mb-2">
                             <label class="form-label" for="AdjustmentKind">@T["Type"]</label>
@@ -253,14 +253,14 @@
 
             <div class="card mb-3">
                 <div class="card-body d-grid gap-2">
-                    <form asp-action="MarkPaid" method="post">
+                    <form asp-action="MarkPaid" method="post" class="no-multisubmit">
                         <input type="hidden" name="itemId" value="@transaction.ItemId" />
                         <button type="submit" class="btn btn-outline-success w-100" disabled="@(!canMarkPaid)"
                                 data-url-af="RemoveUrl" data-title="@T["Mark as paid"]" data-message="@T["Are you sure you want to mark this transaction as fully paid?"]" data-ok-text="@T["Mark as paid"]" data-cancel-text="@T["Cancel"]">
                             @T["Mark as paid"]
                         </button>
                     </form>
-                    <form asp-action="Cancel" method="post">
+                    <form asp-action="Cancel" method="post" class="no-multisubmit">
                         <input type="hidden" name="itemId" value="@transaction.ItemId" />
                         <input type="text" class="form-control mb-2" name="note" placeholder="@T["Cancellation reason (optional)"]" disabled="@(!canCancel)" />
                         <button type="submit" class="btn btn-outline-danger w-100" disabled="@(!canCancel)"

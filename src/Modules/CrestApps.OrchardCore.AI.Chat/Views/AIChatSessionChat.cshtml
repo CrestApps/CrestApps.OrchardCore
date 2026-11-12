@@ -205,7 +205,7 @@
                 @if (promptGeneratedProfiles.Any())
                 {
                     <div class="dropdown">
-                        <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@T["Tools"]" title="@T["Tools"]">
                             <i class="fa-solid fa-screwdriver-wrench"></i>
                         </button>
                         <ul class="dropdown-menu">
@@ -226,7 +226,7 @@
                     </button>
 
                     @* Send sits with the message box it belongs to. *@
-                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" aria-label="@T["Send"]" title="@T["Send"]" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>

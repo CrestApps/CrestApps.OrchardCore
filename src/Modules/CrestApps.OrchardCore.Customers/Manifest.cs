@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Resources;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -22,6 +23,9 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Area,
         OrchardCoreFeatureIds.Users,
         AddressConstants.Feature.ModuleId,
+
+        // The account pages ask before removing an address with the shared browser helpers.
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

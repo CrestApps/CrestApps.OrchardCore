@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -11,6 +11,10 @@ const modulesDirectory = join('src', 'Modules');
 // A button row: an ocat-wrapper holding only an ocat-end-offset whose content has no other div, followed by the
 // end of the form, optionally after the end of the Razor block around the row.
 const trailingButtonRow = /<div class="ocat-wrapper[^"]*">\s*<div class="ocat-end-offset[^"]*">((?:(?!<div)[\s\S])*?)<\/div>\s*<\/div>\s*\}?\s*<\/form>/g;
+
+// The other hand-written row: a <div class="mb-3"> or <div class="d-flex ... gap-2"> holding the buttons, then the end of
+// the form. Storefront pages keep their buttons inline, so this one is checked only in views of an [Admin] controller.
+const trailingPlainRow = /<div class="(?:mb-3|d-flex[^"]*\bgap-2\b[^"]*)">((?:(?!<div)[\s\S])*?)<\/div>\s*\}?\s*<\/form>/g;
 
 // A small form inside a card, an accordion or a modal, such as "Generate codes" under a coupon, acts on that part of
 // the page only, so it keeps its button next to its fields.
@@ -29,6 +33,21 @@ function isNested(text, index) {
     }
 
     return classes.some(value => nestedContainer.test(value));
+}
+
+// Views/{Controller}/{Action}.cshtml of a controller marked [Admin], or of a controller whose actions are.
+function isAdminView(path) {
+    const parts = path.split(sep);
+    const viewsIndex = parts.lastIndexOf('Views');
+
+    // A partial (_Compose, _Thread) is a piece of a workspace page, not an edit page of its own.
+    if (viewsIndex < 0 || parts.length - viewsIndex !== 3 || parts[parts.length - 1].startsWith('_')) {
+        return false;
+    }
+
+    const controller = join(...parts.slice(0, viewsIndex), 'Controllers', `${parts[viewsIndex + 1]}Controller.cs`);
+
+    return existsSync(controller) && /\[Admin\b/.test(readFileSync(controller, 'utf8'));
 }
 
 function views() {
@@ -53,5 +72,19 @@ describe('admin forms', () => {
             .map(({ path }) => path);
 
         expect(inline).toEqual([]);
+    });
+
+    it('do not end with a mb-3 or d-flex gap-2 row of buttons in an admin view', () => {
+        const inline = all
+            .filter(({ path }) => isAdminView(path))
+            .filter(({ text }) => [...text.matchAll(trailingPlainRow)]
+                .some(match => /class="btn\b|<button\b/.test(match[1]) && !isNested(text, match.index)))
+            .map(({ path }) => path.split(sep).join('/'));
+
+        expect(inline).toEqual([]);
+    });
+
+    it('find the admin views through their controllers, so the check above is not passing on nothing', () => {
+        expect(all.filter(({ path }) => isAdminView(path)).length).toBeGreaterThan(300);
     });
 });

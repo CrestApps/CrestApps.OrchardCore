@@ -16,8 +16,8 @@
     <a asp-action="Edit" asp-route-itemId="@vendor.ItemId" class="btn btn-secondary btn-sm">@T["Edit"]</a>
     @if (Model.CanPayOut)
     {
-        <form asp-action="PayOut" asp-route-itemId="@vendor.ItemId" method="post">
-            <button type="submit" class="btn btn-primary btn-sm">@T["Pay out what's ready"]</button>
+        <form asp-action="PayOut" asp-route-itemId="@vendor.ItemId" method="post" class="no-multisubmit">
+            <button type="submit" class="btn btn-primary btn-sm" data-url-af="RemoveUrl" data-title="@T["Pay out"]" data-message="@T["Pay out what is ready to the vendor's Stripe account now?"]" data-ok-text="@T["Pay out"]" data-cancel-text="@T["Cancel"]">@T["Pay out what's ready"]</button>
         </form>
     }
 </div>
@@ -46,8 +46,8 @@
     <div class="d-flex flex-wrap gap-2">
         @foreach (var (orderId, orderNumber) in heldOrders)
         {
-            <form asp-action="Release" asp-route-itemId="@vendor.ItemId" asp-route-orderId="@orderId" method="post">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Release order {0}", orderNumber]</button>
+            <form asp-action="Release" asp-route-itemId="@vendor.ItemId" asp-route-orderId="@orderId" method="post" class="no-multisubmit">
+                <button type="submit" class="btn btn-outline-secondary btn-sm" data-url-af="RemoveUrl" data-title="@T["Release now"]" data-message="@T["Release this order's sales before their hold ends? They are paid out with the next payout."]" data-ok-text="@T["Release"]" data-cancel-text="@T["Cancel"]">@T["Release order {0}", orderNumber]</button>
             </form>
         }
     </div>

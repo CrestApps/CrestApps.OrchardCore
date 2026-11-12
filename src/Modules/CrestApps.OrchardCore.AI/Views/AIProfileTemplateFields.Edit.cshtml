@@ -68,26 +68,29 @@
 
 @if (Model.IsNew)
 {
-    <script asp-name="jQuery" at="Foot"></script>
-    <script at="Foot" depends-on="jQuery">
-        $(function () {
-            var $title = $('#@Html.IdFor(m => m.DisplayText)');
-            var $name = $('#@Html.IdFor(m => m.Name)');
+    <script at="Foot">
+        document.addEventListener('DOMContentLoaded', function () {
+            var title = document.getElementById('@Html.IdFor(m => m.DisplayText)');
+            var name = document.getElementById('@Html.IdFor(m => m.Name)');
+            var manuallyEdited = false;
 
-            $title.on('input', function () {
-                if (!$name.data('manually-edited')) {
-                    var val = $title.val()
+            if (!title || !name) {
+                return;
+            }
+
+            title.addEventListener('input', function () {
+                if (!manuallyEdited) {
+                    name.value = title.value
                         .toLowerCase()
                         .replace(/[^a-z0-9\s-]/g, '')
                         .replace(/[\s]+/g, '-')
                         .replace(/-{2,}/g, '-')
                         .replace(/^-|-$/g, '');
-                    $name.val(val);
                 }
             });
 
-            $name.on('input', function () {
-                $name.data('manually-edited', true);
+            name.addEventListener('input', function () {
+                manuallyEdited = true;
             });
         });
     </script>

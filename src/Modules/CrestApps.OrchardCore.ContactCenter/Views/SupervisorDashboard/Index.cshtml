@@ -166,6 +166,7 @@
 
 <style asp-name="contact-center-workspace"></style>
 <script asp-name="contact-center-supervisor-dashboard" at="Foot"></script>
+<script asp-name="crestapps-browser" at="Foot"></script>
 
 <zone Name="Title">
     <breadcrumb name="ContactCenterSupervisorDashboard" title="@T["Live dashboard"]" />
@@ -411,8 +412,8 @@
             });
         }
 
-        function act(call, action, confirmText) {
-            if (confirmText && !window.confirm(confirmText)) {
+        async function act(call, action, confirmText) {
+            if (confirmText && !(await crestapps.confirm('', confirmText))) {
                 return;
             }
 

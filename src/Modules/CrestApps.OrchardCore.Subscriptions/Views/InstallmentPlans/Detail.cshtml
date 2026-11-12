@@ -209,7 +209,7 @@ else if (plan.Status == InstallmentPlanStatus.Draft)
 
                                     @if (canCharge && payment.Number > 0 && isOutstanding)
                                     {
-                                        <form asp-action="Charge" method="post" class="d-inline">
+                                        <form asp-action="Charge" method="post" class="d-inline no-multisubmit">
                                             <input type="hidden" name="itemId" value="@plan.ItemId" />
                                             <input type="hidden" name="paymentNumber" value="@payment.Number" />
                                             <button type="submit" class="btn btn-primary btn-sm"

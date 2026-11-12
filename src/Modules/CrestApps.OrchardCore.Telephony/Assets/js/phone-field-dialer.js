@@ -35,12 +35,15 @@
         return '';
     }
 
-    function createButton() {
+    // The tooltip and the name a screen reader reads come from the page (data-dial-title on the placeholder, rendered
+    // with T[...]), so they are localized.
+    function createButton(placeholder) {
         var button = document.createElement('button');
         button.type = 'button';
         button.className = 'btn btn-sm btn-outline-success telephony-phone-dial-btn ms-1';
-        button.title = 'Call with the soft phone';
-        button.innerHTML = '<i class="fa-solid fa-phone"></i>';
+        button.title = placeholder.getAttribute('data-dial-title') || '';
+        button.setAttribute('aria-label', button.title);
+        button.innerHTML = '<i class="fa-solid fa-phone" aria-hidden="true"></i>';
 
         return button;
     }
@@ -99,7 +102,7 @@
 
         placeholder.__telephonyEnhanced = true;
 
-        var button = createButton();
+        var button = createButton(placeholder);
 
         button.addEventListener('click', function () {
             var number = getNumber(placeholder);

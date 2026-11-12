@@ -107,8 +107,8 @@
                     </p>
                     @if (balance.Status is BookingBalanceStatus.Scheduled or BookingBalanceStatus.Failed)
                     {
-                        <form asp-action="ChargeBalance" asp-route-itemId="@booking.ItemId" method="post">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Charge the card now"]</button>
+                        <form asp-action="ChargeBalance" asp-route-itemId="@booking.ItemId" method="post" class="no-multisubmit">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm" data-url-af="RemoveUrl" data-title="@T["Charge the card now"]" data-message="@T["Charge the balance to the buyer's saved card now?"]" data-ok-text="@T["Charge"]" data-cancel-text="@T["Cancel"]">@T["Charge the card now"]</button>
                         </form>
                     }
                 </div>

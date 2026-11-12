@@ -28,7 +28,7 @@
         {
             <div class="table-responsive">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>@T["Policy"]</th><th class="text-end">@T["Balance"]</th><th class="text-end">@T["Approved, to come"]</th><th class="text-end">@T["Waiting"]</th><th class="text-end">@T["Available"]</th></tr></thead>
+                    <thead><tr><th scope="col">@T["Policy"]</th><th scope="col" class="text-end">@T["Balance"]</th><th scope="col" class="text-end">@T["Approved, to come"]</th><th scope="col" class="text-end">@T["Waiting"]</th><th scope="col" class="text-end">@T["Available"]</th></tr></thead>
                     <tbody>
                         @foreach (var balance in Model.Balances)
                         {

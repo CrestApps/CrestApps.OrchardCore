@@ -259,6 +259,7 @@
                realtime module inserts its settings popover after the voice button, which puts the gear on the
                far right of the row. *@
             <button id="@buttonHtmlId"
+                    aria-label="@T["Send"]" title="@T["Send"]"
                     disabled
                     data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
                     data-stop-icon="<i class='fa-solid fa-stop'></i>">
@@ -306,7 +307,7 @@
             <div class="ai-chat-widget-history-panel" id="@historyPanelId">
                 <div class="history-header">
                     <h5>@T["Chat History"]</h5>
-                    <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId">
+                    <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId" aria-label="@T["Close history"]" title="@T["Close history"]">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
