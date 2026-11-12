@@ -2,7 +2,9 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Realtime;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
+using CrestApps.Core.AI.Security;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.AI.Chat.Core;
@@ -31,6 +33,25 @@ public static class ServiceCollectionExtensions
         // The core registration binds the host configuration, which under Orchard Core no tenant can reach.
         // Post-configure instead, which applies after every Configure regardless of module load order.
         services.AddTransient<IPostConfigureOptions<CloudflareTurnOptions>, CloudflareTurnOptionsConfiguration>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the visitor resolver that takes the visitor's address from the connection, in place of CrestApps.Core's,
+    /// which trusts the first <c>X-Forwarded-For</c> value a client sends. Each chat feature that registers the package's
+    /// chat services calls it after them, so whichever feature starts last, this resolver is the one handed out.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <remarks>
+    /// Remove it, and its calls, once CrestApps.Core #322 is referenced: its resolver no longer trusts the header.
+    /// </remarks>
+    public static IServiceCollection AddConnectionAddressAIVisitorIdentityResolver(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.RemoveAll<IAIVisitorIdentityResolver>();
+        services.AddSingleton<IAIVisitorIdentityResolver, ConnectionAddressAIVisitorIdentityResolver>();
 
         return services;
     }

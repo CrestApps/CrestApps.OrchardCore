@@ -38,26 +38,23 @@ internal sealed class AICompletionQuotaFilter : IEndpointFilter
     public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var httpContext = context.HttpContext;
-        var key = GetQuotaKey(httpContext.User);
+        // A caller with neither an API key nor a user id is still held to a quota, counted by its network.
+        var key = GetQuotaKey(httpContext.User) ?? "net:" + ClientNetworkKey.NetworkOnly(httpContext);
+        var limiter = httpContext.RequestServices.GetRequiredService<IAttemptLimiter>();
+        var result = await limiter.AcquireAsync(PolicyName, key, httpContext.RequestAborted);
 
-        if (key is not null)
+        if (!result.Allowed)
         {
-            var limiter = httpContext.RequestServices.GetRequiredService<IAttemptLimiter>();
-            var result = await limiter.AcquireAsync(PolicyName, key, httpContext.RequestAborted);
+            await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(httpContext, result.RetryAfter, httpContext.RequestAborted);
 
-            if (!result.Allowed)
-            {
-                await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(httpContext, result.RetryAfter, httpContext.RequestAborted);
-
-                return Results.Empty;
-            }
+            return Results.Empty;
         }
 
         return await next(context);
     }
 
     /// <summary>
-    /// The key a caller's quota is counted under: the API key, otherwise the user.
+    /// The key a caller's quota is counted under: the API key, otherwise the user; <see langword="null"/> for neither.
     /// </summary>
     /// <param name="user">The caller.</param>
     internal static string GetQuotaKey(ClaimsPrincipal user)

@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Security;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -34,6 +35,28 @@ public sealed class ConnectionAddressAIVisitorIdentityResolverTests
 
         Assert.NotNull(first.RemoteAddressHash);
         Assert.Equal(first.RemoteAddressHash, second.RemoteAddressHash);
+    }
+
+    /// <summary>
+    /// The two chat features do not depend on each other, so either startup may run last. AI Chat Interactions calls the
+    /// package's <c>AddCoreAIChatInteractions</c>, which registers the package resolver again; whichever runs last, the
+    /// container must hand out the connection-address resolver.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheContainer_ResolvesTheConnectionAddressResolver_WithBothChatFeaturesOn(bool chatFirst)
+    {
+        var services = new ServiceCollection();
+        Action<IServiceCollection> chat = s => new CrestApps.OrchardCore.AI.Chat.Startup().ConfigureServices(s);
+        Action<IServiceCollection> interactions = s => new CrestApps.OrchardCore.AI.Chat.Interactions.Startup().ConfigureServices(s);
+
+        (chatFirst ? chat : interactions)(services);
+        (chatFirst ? interactions : chat)(services);
+
+        var registered = services.Last(descriptor => descriptor.ServiceType == typeof(IAIVisitorIdentityResolver));
+
+        Assert.Equal(typeof(ConnectionAddressAIVisitorIdentityResolver), registered.ImplementationType);
     }
 
     private static ConnectionAddressAIVisitorIdentityResolver CreateResolver(AIVisitorRemoteAddressMode mode, string remoteAddress, string forwardedFor)
