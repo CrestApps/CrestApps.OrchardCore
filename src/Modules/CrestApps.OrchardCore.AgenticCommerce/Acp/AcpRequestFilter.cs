@@ -143,7 +143,11 @@ public sealed class AcpRequestFilter : IEndpointFilter
                 ProtocolVersion = version,
                 TestMode = platform.TestMode,
                 AllowedPaymentHandlers = platform.AllowedPaymentHandlers ?? [],
-                UserId = authentication.UserId,
+
+                // A linked buyer is acted for only with the checkout scope their consent gave the token, as in UCP.
+                UserId = authentication.UserId is not null && (authentication.Scopes ?? []).Contains(Ucp.UcpIdentityScopes.CheckoutManage)
+                    ? authentication.UserId
+                    : null,
                 ClientAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
             },
         };
