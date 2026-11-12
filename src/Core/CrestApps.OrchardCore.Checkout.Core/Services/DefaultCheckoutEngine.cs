@@ -953,7 +953,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
 
-                if (_declineRecorder is not null && PaymentDeclineRecorder.IsNewDecline(previousState, attempt.State))
+                if (_declineRecorder is not null && PaymentDeclineRecorder.IsNewDecline(previousState, attempt.State) && !CheckoutPaymentDataKeys.IsSet(options.ProviderData, CheckoutPaymentDataKeys.OffSession))
                 {
                     await _declineRecorder.RecordAsync(session, attempt, cancellationToken);
                 }

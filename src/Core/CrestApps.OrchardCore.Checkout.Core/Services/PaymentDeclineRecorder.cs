@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Services;
@@ -14,8 +15,11 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 public interface IPaymentDeclineRecorder
 {
     /// <summary>
-    /// Counts a payment attempt that has just become <see cref="PaymentAttemptState.Failed"/>. Call it once per
-    /// attempt, on the transition (<see cref="PaymentDeclineRecorder.IsNewDecline"/>), never for a replay.
+    /// Counts one declined card of a payment attempt. Call it once per decline: on the attempt's transition to
+    /// <see cref="PaymentAttemptState.Failed"/> (<see cref="PaymentDeclineRecorder.IsNewDecline"/>), or once per failure
+    /// event a provider sends while the attempt stays open, never for a replay. A saved card charged without the payer (a
+    /// renewal, a staff charge) is not someone trying cards and is never passed here: a batch of renewals that decline must
+    /// not block the customer or raise a store-wide decline spike.
     /// </summary>
     /// <param name="session">The checkout the attempt belongs to.</param>
     /// <param name="attempt">The declined attempt.</param>
@@ -38,6 +42,7 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
     private readonly IAttemptLimiter _limiter;
     private readonly ICheckoutPaymentProviderResolver _providerResolver;
     private readonly IPaymentIssueRecorder _issues;
+    private readonly AttemptLimitOptions _options;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -47,11 +52,13 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
         IAttemptLimiter limiter,
         ICheckoutPaymentProviderResolver providerResolver,
         IPaymentIssueRecorder issues,
+        IOptions<AttemptLimitOptions> options,
         ILogger<PaymentDeclineRecorder> logger)
     {
         _limiter = limiter;
         _providerResolver = providerResolver;
         _issues = issues;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -118,19 +125,27 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
 
     private async Task CountAsync(string policy, string key, CheckoutSession session, PaymentAttempt attempt, string kind, string message, CancellationToken cancellationToken)
     {
-        var before = await _limiter.PeekAsync(policy, key, cancellationToken);
-        var after = await _limiter.RecordFailureAsync(policy, key, cancellationToken);
+        // Only the decline that blocks the key records an issue, even when declines arrive in parallel: the limiter says
+        // which one used up the window, under its lock. A refusal because the counter couldn't be reached is not a block.
+        var result = await _limiter.RecordFailureAsync(policy, key, cancellationToken);
 
-        // Only the decline that blocks the key records an issue; the ones after it, while it is blocked, don't.
-        if (!before.Allowed || after.Allowed)
+        if (!result.ReachedLimit)
         {
             return;
         }
+
+        var limit = _options.Policies.TryGetValue(policy, out var registered) ? registered : null;
+        var who = Describe(policy, key);
+
+        _logger.LogWarning("Card payments from {Who} were blocked by the attempt policy '{Policy}' after {Count} declines.", who, policy, limit?.PermitLimit);
 
         await _issues.RecordAsync(new PaymentIssue
         {
             Kind = kind,
             Message = message,
+            Error = limit is null
+                ? who
+                : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{who}: {limit.PermitLimit} declines within {limit.Window}, blocked for {limit.BlockDuration}."),
             ReferenceType = CheckoutReferenceType,
             ReferenceId = session.SessionId,
             ProviderKey = attempt.ProviderKey,
@@ -140,5 +155,31 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
         }, cancellationToken);
     }
 
+    // Who was blocked, as staff may read it: a network masked to /24 (an IPv6 key is a /64 already), a customer, or the
+    // store.
+    internal static string Describe(string policy, string key)
+    {
+        if (string.Equals(policy, CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, StringComparison.Ordinal))
+        {
+            return "network " + MaskNetwork(key);
+        }
+
+        return string.Equals(policy, CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer, StringComparison.Ordinal)
+            ? "customer " + key
+            : "the store";
+    }
+
+    internal static string MaskNetwork(string networkKey)
+    {
+        if (System.Net.IPAddress.TryParse(networkKey, out var ip) && ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            var bytes = ip.GetAddressBytes();
+            bytes[3] = 0;
+
+            return new System.Net.IPAddress(bytes) + "/24";
+        }
+
+        return networkKey;
+    }
     private const string CheckoutReferenceType = "CheckoutSession";
 }

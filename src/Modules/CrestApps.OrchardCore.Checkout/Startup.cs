@@ -135,6 +135,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutRefundService, DefaultCheckoutRefundService>();
         services.AddScoped<ICheckoutRefundReconciliationService, DefaultCheckoutRefundReconciliationService>();
         services.AddScoped<IPaymentEvent, RefundReconciliationPaymentEventHandler>();
+        // A provider that confirms the card in the browser (Stripe) reports a decline only by webhook; it counts there.
+        services.AddScoped<IPaymentEvent, CardDeclinePaymentEventHandler>();
         // The attempt policies are always on and need no middleware: card testing and code guessing are stopped whether
         // or not Orchard Core's Rate Limits feature is enabled. Each can be overridden by name in configuration.
         services
@@ -143,6 +145,7 @@ public sealed class Startup : StartupBase
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, 5, TimeSpan.FromMinutes(30), blockDuration: TimeSpan.FromMinutes(30))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer, 5, TimeSpan.FromHours(1), blockDuration: TimeSpan.FromHours(1))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineStore, 30, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(30))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineAttempt, 3, TimeSpan.FromHours(24), blockDuration: TimeSpan.FromHours(24))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentStatus, 120, TimeSpan.FromMinutes(5))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, 60, TimeSpan.FromHours(1))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CouponCode, 10, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(10))

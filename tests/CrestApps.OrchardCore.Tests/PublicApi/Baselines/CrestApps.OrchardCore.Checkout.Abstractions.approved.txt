@@ -44,6 +44,7 @@ namespace CrestApps.OrchardCore.Checkout
             public const string CouponCode = "coupon-code";
             public const string PaymentBeginCheckout = "payment-begin-checkout";
             public const string PaymentBeginNetwork = "payment-begin-network";
+            public const string PaymentDeclineAttempt = "payment-decline-attempt";
             public const string PaymentDeclineCustomer = "payment-decline-customer";
             public const string PaymentDeclineNetwork = "payment-decline-network";
             public const string PaymentDeclineStore = "payment-decline-store";

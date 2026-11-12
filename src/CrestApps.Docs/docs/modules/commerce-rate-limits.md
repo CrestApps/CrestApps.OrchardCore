@@ -36,14 +36,18 @@ The first decline that stops a network or a customer records a **Suspected card 
 limit records **Card declines across the store**. Both are listed under **Commerce › Payment issues**. Check the payment
 provider's dashboard for the declines, and consider turning on the stronger store-wide action while it lasts.
 
-Each decline is counted once, when its payment attempt becomes failed, whether the provider said so at once, through a
-webhook, or when the reconciliation sweep asked.
+Each decline is counted once: when its payment attempt becomes failed, whether the provider said so at once or when the
+reconciliation sweep asked, and, for a provider that confirms the card in the browser (Stripe), each time its webhook
+reports a failed confirmation. A buyer can try several cards against one Stripe payment, so after three failed
+confirmations the payment is canceled at Stripe and the buyer must begin a new one, which the card-testing gate can refuse.
+A saved card charged without the buyer (a renewal, a staff charge) is never counted.
 
 ## Attempt policies
 
 Each policy has a name, and can be changed without a deployment in the tenant's configuration under
-`CrestApps_Throttling:AttemptPolicies:{name}` (`PermitLimit`, `Window`, `BlockDuration`, `ResetOnSuccess`). A
-`PermitLimit` of 0 turns a policy off.
+`CrestApps_Throttling:AttemptPolicies:{name}` (`PermitLimit`, `Window`, `BlockDuration`, `ResetOnSuccess`), whichever module
+registered it. Times are read as `hh:mm:ss` in any culture, and a `Window` of zero is ignored. A `PermitLimit` of 0 turns a
+policy off.
 
 | Policy | Default | Counts |
 | --- | --- | --- |
@@ -52,8 +56,9 @@ Each policy has a name, and can be changed without a deployment in the tenant's 
 | `payment-decline-network` | 5 per 30 minutes, then blocked 30 minutes | Declined card payments from one network |
 | `payment-decline-customer` | 5 per hour, then blocked an hour | Declined card payments of one signed-in customer |
 | `payment-decline-store` | 30 per 10 minutes, then 30 minutes | Declined card payments across the store |
+| `payment-decline-attempt` | 3 per payment, then the payment is canceled | Failed card confirmations of one payment (Stripe) |
 | `payment-status` | 120 per 5 minutes | Status polls per network and checkout |
-| `checkout-start-network` | 60 per hour | Checkouts started from one network |
+| `checkout-start-network` | 60 per hour | Checkouts started from one network by an order's pay link |
 | `coupon-code` | 10 wrong codes per 10 minutes, then blocked 10 minutes | Wrong discount codes from one network |
 
 The Orders and Customers modules add their own for gift card codes, order lookups, guest accounts and referral links.
@@ -100,10 +105,12 @@ The setup guide's **Protect payments** step is done once the feature is on.
 
 ## Behind a proxy, a load balancer or a CDN
 
-Every limit counts by the client's address. Behind a proxy, every request comes from the proxy's address unless the
-**Reverse Proxy** feature is on and trusts the proxy, and then the whole store shares one limit. Turn on Reverse Proxy and
-list only your own proxies; the **Protect payments** step warns when a request carries `X-Forwarded-For` and the feature
-is off.
+Every limit counts by the client's address, the always-on attempt policies included. Behind a proxy, every request comes
+from the proxy's address unless the **Reverse Proxy** feature is on, forwards `X-Forwarded-For` (it forwards nothing by
+default) and trusts the proxy; otherwise the whole store shares one limit: 30 payments begun per 10 minutes, and 5
+declines block card payments for every buyer. The same goes for a headless storefront whose server calls the commerce API
+for its buyers. Turn on Reverse Proxy, forward `X-Forwarded-For` and list only your own proxies before upgrading; the
+**Protect payments** step warns whenever a request still carries `X-Forwarded-For`, which means no one applied it.
 
 ## More than one server
 

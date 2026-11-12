@@ -93,10 +93,11 @@ public sealed class DistributedAttemptLimiter : IAttemptLimiter
 
         if (!locked)
         {
-            // Not being able to account for an attempt most likely coincides with contention or abuse, so it is refused.
+            // Not being able to account for an attempt most likely coincides with contention or abuse, so it is refused. The
+            // caller may try again as soon as the lock could be free, not after the policy's window, which can be a day.
             Refused(policy);
 
-            return new AttemptLimitResult(false, 0, policy.Window);
+            return new AttemptLimitResult(false, 0, _lockTimeout);
         }
 
         await using (locker)
@@ -141,7 +142,8 @@ public sealed class DistributedAttemptLimiter : IAttemptLimiter
                 return new AttemptLimitResult(true, Math.Max(0, policy.PermitLimit - state.Count), TimeSpan.Zero);
             }
 
-            var result = Evaluate(policy, state, now);
+            // Only the failure that used up the window says so, whatever happens in parallel: it is counted under the lock.
+            var result = Evaluate(policy, state, now) with { ReachedLimit = state.Count == policy.PermitLimit };
 
             if (!result.Allowed)
             {
