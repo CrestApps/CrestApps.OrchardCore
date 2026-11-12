@@ -26,8 +26,9 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = McpPermissions.Feature.Stdio,
     Name = "Model Context Protocol (MCP) Local Client",
-    Description = "Extends the Model Context Protocol Client with standard input/output (STDIO) transport for connecting to local MCP servers.",
+    Description = "Extends the Model Context Protocol Client with standard input/output (STDIO) transport for connecting to local MCP servers. It starts processes on the server, so it is available on the default tenant only.",
     Category = "Artificial Intelligence - MCP",
+    DefaultTenantOnly = true,
     Dependencies =
     [
         McpPermissions.Feature.Area,

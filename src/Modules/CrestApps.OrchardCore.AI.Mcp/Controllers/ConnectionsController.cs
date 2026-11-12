@@ -1,6 +1,8 @@
 ﻿using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Services;
+using CrestApps.Core.AI.Mcp;
 using CrestApps.OrchardCore.AI.Mcp.Core;
+using CrestApps.OrchardCore.AI.Mcp.Services;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +15,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using QueryContext = CrestApps.Core.Models.QueryContext;
@@ -32,6 +35,7 @@ public sealed class ConnectionsController : Controller
     private readonly IDisplayManager<McpConnection> _displayDriver;
     private readonly McpClientAIOptions _mcpClientOptions;
     private readonly INotifier _notifier;
+    private readonly ShellSettings _shellSettings;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -54,6 +58,7 @@ public sealed class ConnectionsController : Controller
         IDisplayManager<McpConnection> instanceDisplayManager,
         IOptions<McpClientAIOptions> mcpClientOptions,
         INotifier notifier,
+        ShellSettings shellSettings,
         IHtmlLocalizer<ConnectionsController> htmlLocalizer,
         IStringLocalizer<ConnectionsController> stringLocalizer)
     {
@@ -63,6 +68,7 @@ public sealed class ConnectionsController : Controller
         _displayDriver = instanceDisplayManager;
         _mcpClientOptions = mcpClientOptions.Value;
         _notifier = notifier;
+        _shellSettings = shellSettings;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -167,6 +173,11 @@ public sealed class ConnectionsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        if (!await CanManageSourceAsync(source))
+        {
+            return Forbid();
+        }
+
         var model = await _manager.NewAsync(entry.Type);
 
         var viewModel = new EditCatalogEntryViewModel
@@ -197,6 +208,11 @@ public sealed class ConnectionsController : Controller
             await _notifier.ErrorAsync(H["Unable to find a source with the name '{0}'.", source]);
 
             return RedirectToAction(nameof(Index));
+        }
+
+        if (!await CanManageSourceAsync(source))
+        {
+            return Forbid();
         }
 
         var model = await _manager.NewAsync(entry.Type);
@@ -237,6 +253,11 @@ public sealed class ConnectionsController : Controller
             return NotFound();
         }
 
+        if (!await CanManageSourceAsync(model.Source))
+        {
+            return Forbid();
+        }
+
         var viewModel = new EditCatalogEntryViewModel
         {
             DisplayName = model.DisplayText,
@@ -265,6 +286,11 @@ public sealed class ConnectionsController : Controller
         if (model == null)
         {
             return NotFound();
+        }
+
+        if (!await CanManageSourceAsync(model.Source))
+        {
+            return Forbid();
         }
 
         var viewModel = new EditCatalogEntryViewModel
@@ -371,4 +397,10 @@ public sealed class ConnectionsController : Controller
 
         return RedirectToAction(nameof(Index));
     }
+
+    // A local (stdio) connection chooses a process the server starts, so it needs its own permission, on the default
+    // tenant only, on top of the permission to manage connections.
+    private async Task<bool> CanManageSourceAsync(string source)
+        => !string.Equals(source, McpConstants.TransportTypes.StdIo, StringComparison.Ordinal) ||
+            await McpStdioAccess.CanManageAsync(_shellSettings, _authorizationService, User);
 }

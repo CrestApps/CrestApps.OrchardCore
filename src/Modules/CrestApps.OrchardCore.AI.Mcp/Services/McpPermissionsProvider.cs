@@ -9,6 +9,7 @@ internal sealed class McpPermissionsProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _allPermissions =
     [
         McpPermissions.ManageMcpConnections,
+        McpPermissions.ManageMcpStdioConnections,
         McpPermissions.ManageMcpPrompts,
         McpPermissions.ManageMcpResources,
     ];
