@@ -1,5 +1,6 @@
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +35,7 @@ internal sealed class AgentProfileStaffHandler : CatalogEntryHandlerBase<AgentPr
             }
             catch (Exception ex)
             {
-                scope.ServiceProvider.GetRequiredService<ILogger<AgentProfileStaffHandler>>().LogError(ex, "The new agent {UserId} could not be made a staff member.", userId);
+                scope.ServiceProvider.GetRequiredService<ILogger<AgentProfileStaffHandler>>().LogError(ex, "The new agent {UserId} could not be made a staff member.", userId.SanitizeLogValue());
             }
         });
 

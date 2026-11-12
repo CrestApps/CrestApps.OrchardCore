@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Staff.Services;
 using Microsoft.Extensions.Logging;
@@ -31,7 +32,7 @@ internal sealed class ContactCenterStaffLifecycleObserver : IStaffLifecycleObser
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Staff member {StaffMemberId} left and was signed out of the Contact Center.", context.StaffMember.ItemId);
+            _logger.LogInformation("Staff member {StaffMemberId} left and was signed out of the Contact Center.", context.StaffMember.ItemId.SanitizeLogValue());
         }
     }
 }

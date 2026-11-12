@@ -68,6 +68,10 @@
 
 @if (sections.Count > 0)
 {
+    @* The admin theme frames a tab pane for its own tab strips; here each section's cards are the frame. *@
+    <style at="Head">
+        [data-page-sections] .page-sections-content > .tab-pane { border: 0; padding: 0; border-radius: 0; }
+    </style>
     <div class="row g-3" id="@pageId" data-page-sections>
         <div class="col-12 col-md-4 col-lg-3">
             <select class="form-select d-md-none mb-2" aria-label="@T["Section"]" data-page-sections-select>
@@ -91,7 +95,7 @@
             </div>
         </div>
         <div class="col-12 col-md-8 col-lg-9">
-            <div class="tab-content">
+            <div class="tab-content page-sections-content">
                 @for (var i = 0; i < sections.Count; i++)
                 {
                     var pane = sections[i];
