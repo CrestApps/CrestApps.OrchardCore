@@ -34,6 +34,9 @@ public static class CreateWebhookEndpoint
     /// <summary>
     /// The Stripe event types accepted by the webhook dispatcher.
     /// </summary>
+    // Stripe's events are a few kilobytes; nothing it sends comes near this.
+    private const int MaxBodyBytes = 512 * 1024;
+
     public static readonly string[] SupportedEvents =
     [
         EventTypes.InvoicePaymentSucceeded,
@@ -54,6 +57,26 @@ public static class CreateWebhookEndpoint
         EventTypes.ChargeDisputeClosed,
     ];
 
+    // Reads the body as UTF-8 text, or returns null as soon as it is longer than MaxBodyBytes.
+    private static async Task<string> ReadBoundedAsync(Stream body, CancellationToken cancellationToken)
+    {
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int read;
+
+        while ((read = await body.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > MaxBodyBytes)
+            {
+                return null;
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
+    }
+
     /// <summary>
     /// Adds the Stripe webhook endpoint to the endpoint route builder.
     /// </summary>
@@ -65,7 +88,8 @@ public static class CreateWebhookEndpoint
         builder.MapPost("stripe/webhook", HandleAsync<T>)
             .AllowAnonymous()
             .WithName(StripeConstants.RouteName.CreateWebhookEndpoint)
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .WithMetadata(new Microsoft.AspNetCore.Mvc.RequestSizeLimitAttribute(MaxBodyBytes));
 
         return builder;
     }
@@ -81,12 +105,19 @@ public static class CreateWebhookEndpoint
         CancellationToken cancellationToken)
     {
         var request = httpContextAccessor.HttpContext.Request;
-        var json = await new StreamReader(request.Body).ReadToEndAsync(cancellationToken);
 
+        // Nothing is read for a request that isn't signed, and at most MaxBodyBytes of one that is.
         if (!request.Headers.TryGetValue("Stripe-Signature", out var signature) ||
             string.IsNullOrEmpty(signature))
         {
             return Respond(TypedResults.BadRequest(), eventType: null, StripeTelemetry.WebhookInvalidSignature);
+        }
+
+        var json = await ReadBoundedAsync(request.Body, cancellationToken);
+
+        if (json is null)
+        {
+            return Respond(TypedResults.StatusCode(StatusCodes.Status413PayloadTooLarge), eventType: null, StripeTelemetry.WebhookInvalidSignature);
         }
 
         var webhookSecret = stripeOptions.CurrentValue.WebhookSecret;
