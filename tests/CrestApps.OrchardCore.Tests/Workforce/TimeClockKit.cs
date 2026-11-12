@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce.Core;
@@ -99,7 +100,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
         return await PlanningKit.UpdateTeamAsync(Harness, team, stored => stored.GetWorkforceSettings().TimeClockPolicyId = Policy.ItemId);
     }
 
-    public Task<PlanningResult<TimePunch>> PunchAsync(WorkerProfile worker, TimePunchKind kind, Action<TimePunchRequest> configure = null)
+    public Task<PlanningResult<TimePunch>> PunchAsync(StaffMember worker, TimePunchKind kind, Action<TimePunchRequest> configure = null)
     {
         return Harness.RunAsync(services =>
         {
@@ -114,7 +115,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
     /// <summary>
     /// Records a punch at a local time, as a manager, and asserts it was recorded.
     /// </summary>
-    public async Task<TimePunch> PunchAtAsync(WorkerProfile worker, TimePunchKind kind, DateOnly date, int hour, int minute = 0)
+    public async Task<TimePunch> PunchAtAsync(StaffMember worker, TimePunchKind kind, DateOnly date, int hour, int minute = 0)
     {
         var utc = PlanningKit.Utc(date, new TimeOnly(hour, minute));
 
@@ -138,13 +139,13 @@ internal sealed class TimeClockKit : IAsyncDisposable
     /// <summary>
     /// Records a day of work from one local time to another.
     /// </summary>
-    public async Task WorkAsync(WorkerProfile worker, DateOnly date, int fromHour, int toHour)
+    public async Task WorkAsync(StaffMember worker, DateOnly date, int fromHour, int toHour)
     {
         await PunchAtAsync(worker, TimePunchKind.In, date, fromHour);
         await PunchAtAsync(worker, TimePunchKind.Out, toHour >= 24 ? date.AddDays(1) : date, toHour % 24);
     }
 
-    public async Task<Timesheet> TimesheetAsync(WorkerProfile worker, DateOnly? date = null)
+    public async Task<Timesheet> TimesheetAsync(StaffMember worker, DateOnly? date = null)
     {
         var result = await Harness.RunAsync(services => services.GetRequiredService<ITimesheetService>().GetForDateAsync(worker, date ?? Monday));
 
@@ -153,7 +154,7 @@ internal sealed class TimeClockKit : IAsyncDisposable
         return result.Value;
     }
 
-    public Task<IReadOnlyList<AttendanceException>> ExceptionsAsync(WorkerProfile worker)
+    public Task<IReadOnlyList<AttendanceException>> ExceptionsAsync(StaffMember worker)
     {
         return Harness.RunAsync(async services => (await services.GetRequiredService<IAttendanceService>().PageAsync(new AttendanceQuery { WorkerId = worker.ItemId }, 0, 100)).Items, commit: false);
     }

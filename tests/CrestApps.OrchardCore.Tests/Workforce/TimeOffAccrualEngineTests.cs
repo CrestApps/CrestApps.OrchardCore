@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 
@@ -192,7 +193,7 @@ public sealed class TimeOffAccrualEngineTests
         return new TimeOffAccrualInput
         {
             Policy = policy,
-            Worker = new WorkerProfile { ItemId = "worker1", DisplayName = "Ana", HireDate = hired },
+            Worker = new StaffMember { ItemId = "worker1", DisplayName = "Ana", HireDate = hired },
             EligibleFrom = eligibleFrom ?? hired,
             Date = date,
         };

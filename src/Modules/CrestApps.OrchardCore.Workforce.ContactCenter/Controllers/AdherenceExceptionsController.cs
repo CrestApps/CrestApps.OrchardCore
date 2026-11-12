@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
@@ -28,7 +30,7 @@ public sealed class AdherenceExceptionsController : Controller
     private readonly AdherenceService _adherenceService;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
@@ -52,7 +54,7 @@ public sealed class AdherenceExceptionsController : Controller
         AdherenceService adherenceService,
         IWorkforceScopeService scopeService,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ISession session,
         IClock clock,
         INotifier notifier,
@@ -257,7 +259,7 @@ public sealed class AdherenceExceptionsController : Controller
     private async Task PopulateAsync(AdherenceExceptionEditViewModel model)
     {
         var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
-        var (_, workers) = await _workerManager.SearchAsync(new WorkerQuery { HasUser = true }, 0, 1000, HttpContext.RequestAborted);
+        var (_, workers) = await _workerManager.SearchAsync(new StaffQuery { HasUser = true }, 0, 1000, HttpContext.RequestAborted);
 
         model.WorkerOptions = workers
             .Where(worker => scope.All || worker.TeamMemberships.Any(membership => scope.TeamIds.Contains(membership.TeamId)))
@@ -266,6 +268,6 @@ public sealed class AdherenceExceptionsController : Controller
             .ToList();
     }
 
-    private async Task<string> ZoneOfAsync(WorkerProfile worker)
+    private async Task<string> ZoneOfAsync(StaffMember worker)
         => worker is null ? "UTC" : await _adherenceService.TimeZoneOfAsync(worker, HttpContext.RequestAborted);
 }

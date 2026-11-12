@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -26,15 +28,15 @@ namespace CrestApps.OrchardCore.Workforce.Controllers;
 
 /// <summary>
 /// The workers of the teams the user manages: the list and the editor, with the worker's certificates. The editor is
-/// built by the display drivers of <see cref="WorkerProfile"/>, so other modules add sections to it, as Skills does.
+/// built by the display drivers of <see cref="StaffMember"/>, so other modules add sections to it, as Skills does.
 /// </summary>
 public sealed class WorkersController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IWorkforceScopeService _scopeService;
-    private readonly IDisplayManager<WorkerProfile> _displayManager;
+    private readonly IDisplayManager<StaffMember> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ISession _session;
     private readonly ICertificationManager _certificationManager;
@@ -63,10 +65,10 @@ public sealed class WorkersController : Controller
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkersController(
         IAuthorizationService authorizationService,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IWorkforceScopeService scopeService,
-        IDisplayManager<WorkerProfile> displayManager,
+        IDisplayManager<StaffMember> displayManager,
         IUpdateModelAccessor updateModelAccessor,
         ISession session,
         ICertificationManager certificationManager,
@@ -109,17 +111,17 @@ public sealed class WorkersController : Controller
 
         var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
         var pager = new Pager(pagerParameters, pagerOptions.Value);
-        var query = new WorkerQuery
+        var query = new StaffQuery
         {
             Search = model.Search,
             TeamId = string.IsNullOrEmpty(model.TeamId) ? null : model.TeamId,
-            Status = Enum.TryParse<WorkerStatus>(model.Status, out var status) ? status : null,
+            Status = Enum.TryParse<StaffStatus>(model.Status, out var status) ? status : null,
             TeamIds = scope.All ? null : scope.TeamIds.ToArray(),
         };
 
         var (count, workers) = await _workerManager.SearchAsync(query, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
-        model.List = new AdminListContext<WorkerProfile>
+        model.List = new AdminListContext<StaffMember>
         {
             Source = workers.ToList(),
             Pager = await shapeFactory.PagerAsync(pager, count, new RouteValueDictionary
@@ -214,7 +216,7 @@ public sealed class WorkersController : Controller
 
         var displayName = worker.DisplayName;
         var editor = await _displayManager.UpdateEditorAsync(worker, _updateModelAccessor.ModelUpdater, isNew);
-        var isValid = await CatalogEntryValidation.ValidateAsync(_workerManager, worker, _updateModelAccessor.ModelUpdater, nameof(WorkerProfile), HttpContext.RequestAborted);
+        var isValid = await CatalogEntryValidation.ValidateAsync(_workerManager, worker, _updateModelAccessor.ModelUpdater, nameof(StaffMember), HttpContext.RequestAborted);
 
         if (!isValid || !ModelState.IsValid)
         {
@@ -276,7 +278,7 @@ public sealed class WorkersController : Controller
 
         var result = await _recordService.SaveAsync(new CertificationRecord
         {
-            SubjectKind = SkillSubjectKind.Worker,
+            SubjectKind = SkillSubjectKind.Staff,
             SubjectId = worker.ItemId,
             SubjectName = worker.DisplayName,
             CertificationId = model.CertificationId,
@@ -346,7 +348,7 @@ public sealed class WorkersController : Controller
 
         var certifications = (await _certificationManager.GetAllAsync(HttpContext.RequestAborted)).ToDictionary(certification => certification.ItemId, certification => certification.Name, StringComparer.Ordinal);
 
-        model.Certificates = (await _recordService.GetForSubjectAsync(SkillSubject.Worker(model.Id), HttpContext.RequestAborted))
+        model.Certificates = (await _recordService.GetForSubjectAsync(SkillSubject.Staff(model.Id), HttpContext.RequestAborted))
             .Select(record => new WorkerCertificateViewModel
             {
                 Id = record.ItemId,
@@ -370,10 +372,10 @@ public sealed class WorkersController : Controller
     {
         return
         [
-            new SelectListItem(S["Active"], nameof(WorkerStatus.Active), selected == nameof(WorkerStatus.Active)),
-            new SelectListItem(S["On leave"], nameof(WorkerStatus.OnLeave), selected == nameof(WorkerStatus.OnLeave)),
-            new SelectListItem(S["Suspended"], nameof(WorkerStatus.Suspended), selected == nameof(WorkerStatus.Suspended)),
-            new SelectListItem(S["Terminated"], nameof(WorkerStatus.Terminated), selected == nameof(WorkerStatus.Terminated)),
+            new SelectListItem(S["Active"], nameof(StaffStatus.Active), selected == nameof(StaffStatus.Active)),
+            new SelectListItem(S["On leave"], nameof(StaffStatus.OnLeave), selected == nameof(StaffStatus.OnLeave)),
+            new SelectListItem(S["Suspended"], nameof(StaffStatus.Suspended), selected == nameof(StaffStatus.Suspended)),
+            new SelectListItem(S["Terminated"], nameof(StaffStatus.Terminated), selected == nameof(StaffStatus.Terminated)),
         ];
     }
 }

@@ -2,6 +2,10 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Core;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Teams.Core;
 using CrestApps.OrchardCore.Teams.Models;
@@ -34,21 +38,19 @@ public static class WorkforceCoreServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddTeamsCore();
-        services.TryAddScoped<WorkerStore>();
+        services.AddStaffCore();
+
+        // Workforce always runs with Skills: a worker and their user hold skills together.
+        services.AddStaffSkillLinks();
         services.TryAddScoped<ActivityCodeStore>();
-        services.TryAddScoped<IWorkerManager, WorkerManager>();
         services.TryAddScoped<IActivityCodeManager, ActivityCodeManager>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkerProfile>, WorkerCatalogHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillSubjectLinkProvider, WorkerSkillSubjectLinkProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<StaffMember>, WorkforceStaffCatalogHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, WorkforceTeamCatalogHandler>());
         services.AddTeamDeletionGuard<WorkforceTeamDeletionGuard>();
-        services.AddTeamMemberProvider<WorkerTeamMemberProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ActivityCode>, ActivityCodeCatalogHandler>());
         services.TryAddScoped<IWorkforceScopeService, DefaultWorkforceScopeService>();
         services.TryAddScoped<WorkforceCalendarService>();
         services.TryAddScoped<ActivityCodeSeeder>();
-        services.TryAddScoped<WorkerAccounts>();
         services.AddCalendarAccessContributor<WorkforceCalendarAccessContributor>();
         services.AddCalendarBusyTimeSource<ShiftSegmentBusyTimeSource>();
 

@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -12,14 +14,14 @@ namespace CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 public sealed class AgentWorkerService
 {
     private readonly IAgentProfileManager _agentManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentWorkerService"/> class.
     /// </summary>
     /// <param name="agentManager">The agent manager.</param>
     /// <param name="workerManager">The worker manager.</param>
-    public AgentWorkerService(IAgentProfileManager agentManager, IWorkerManager workerManager)
+    public AgentWorkerService(IAgentProfileManager agentManager, IStaffMemberManager workerManager)
     {
         _agentManager = agentManager;
         _workerManager = workerManager;
@@ -30,13 +32,13 @@ public sealed class AgentWorkerService
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>Every agent with a user, with its worker or <see langword="null"/>.</returns>
-    public async Task<IReadOnlyList<(AgentProfile Agent, WorkerProfile Worker)>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<(AgentProfile Agent, StaffMember Worker)>> ListAsync(CancellationToken cancellationToken = default)
     {
         var agents = (await _agentManager.GetAllAsync(cancellationToken))
             .Where(agent => !string.IsNullOrEmpty(agent.UserId))
             .OrderBy(agent => NameOf(agent), StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
-        var result = new List<(AgentProfile, WorkerProfile)>(agents.Length);
+        var result = new List<(AgentProfile, StaffMember)>(agents.Length);
 
         foreach (var agent in agents)
         {
@@ -52,7 +54,7 @@ public sealed class AgentWorkerService
     /// <param name="worker">The worker.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The agent, or <see langword="null"/> when the worker has no user or the user is not an agent.</returns>
-    public async Task<AgentProfile> FindAgentAsync(WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<AgentProfile> FindAgentAsync(StaffMember worker, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -66,7 +68,7 @@ public sealed class AgentWorkerService
     /// <param name="teamId">The team a new worker joins, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The worker and whether it was created; no worker when the agent has no user or one can't be created.</returns>
-    public async Task<(WorkerProfile Worker, bool Created)> EnsureWorkerAsync(AgentProfile agent, string teamId = null, CancellationToken cancellationToken = default)
+    public async Task<(StaffMember Worker, bool Created)> EnsureWorkerAsync(AgentProfile agent, string teamId = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(agent);
 

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -20,7 +21,7 @@ public sealed class WorkforceSetupController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IShellFeaturesManager _featuresManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
 
     internal readonly IStringLocalizer S;
 
@@ -36,7 +37,7 @@ public sealed class WorkforceSetupController : Controller
         IAuthorizationService authorizationService,
         IShellFeaturesManager featuresManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IStringLocalizer<WorkforceSetupController> stringLocalizer)
     {
         _authorizationService = authorizationService;
@@ -61,8 +62,8 @@ public sealed class WorkforceSetupController : Controller
         var features = (await _featuresManager.GetEnabledFeaturesAsync()).Select(feature => feature.Id).ToHashSet(StringComparer.Ordinal);
         var services = HttpContext.RequestServices;
         var teams = await _teamManager.GetAllAsync(HttpContext.RequestAborted);
-        var (workerCount, _) = await _workerManager.SearchAsync(new WorkerQuery(), 0, 1, HttpContext.RequestAborted);
-        var (linked, _) = await _workerManager.SearchAsync(new WorkerQuery { HasUser = true }, 0, 1, HttpContext.RequestAborted);
+        var (workerCount, _) = await _workerManager.SearchAsync(new StaffQuery(), 0, 1, HttpContext.RequestAborted);
+        var (linked, _) = await _workerManager.SearchAsync(new StaffQuery { HasUser = true }, 0, 1, HttpContext.RequestAborted);
         var model = new WorkforceSetupViewModel { HasRecipes = features.Contains("OrchardCore.Recipes") };
 
         model.Steps.Add(new WorkforceSetupStep

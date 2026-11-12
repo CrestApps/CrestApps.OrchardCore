@@ -1,0 +1,37 @@
+@model UserStaffViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Staff"]</div>
+    <div class="card-body">
+        @if (string.IsNullOrEmpty(Model.StaffMemberId))
+        {
+            <div class="form-check mb-3">
+                <input asp-for="MakeStaff" class="form-check-input" onchange="document.getElementById('user-staff-fields').hidden = !this.checked" />
+                <label asp-for="MakeStaff" class="form-check-label">@T["They work for us"]</label>
+                <span class="hint dashed">@T["Makes them a staff member, so other modules can schedule them, assign them work and pay them. Their name and email come from this account."]</span>
+            </div>
+        }
+        else
+        {
+            <p class="hint">@T["Their name and email come from this account. Teams, capabilities and the cards other modules add are on their staff page."] <a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-id="@Model.StaffMemberId">@T["Open their staff page"]</a></p>
+        }
+        <div id="user-staff-fields" hidden="@(string.IsNullOrEmpty(Model.StaffMemberId) && !Model.MakeStaff)">
+            <div class="ocat-wrapper"><label asp-for="EmployeeNumber" class="ocat-label">@T["Employee number"]</label><div class="ocat-end"><input asp-for="EmployeeNumber" class="form-control" style="max-width: 14rem" /><span class="hint">@T["Also their badge number at a kiosk or register."]</span></div></div>
+            <div class="ocat-wrapper"><label asp-for="JobTitle" class="ocat-label">@T["Job title"]</label><div class="ocat-end"><input asp-for="JobTitle" class="form-control" /></div></div>
+            <div class="ocat-wrapper"><label asp-for="ManagerId" class="ocat-label">@T["Manager"]</label><div class="ocat-end">@await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.ManagerId).ToString(), selectedValues = new[] { Model.ManagerId }, excludeId = Model.StaffMemberId, buttonText = T["Choose a manager"].Value })</div></div>
+            <div class="ocat-wrapper"><label asp-for="EmploymentType" class="ocat-label">@T["Employment"]</label><div class="ocat-end"><select asp-for="EmploymentType" asp-items="Model.EmploymentTypeOptions" class="form-select" style="max-width: 18rem"></select></div></div>
+            <div class="ocat-wrapper"><label asp-for="Status" class="ocat-label">@T["Status"]</label><div class="ocat-end"><select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" style="max-width: 18rem"></select></div></div>
+            <div class="ocat-wrapper"><label asp-for="HireDate" class="ocat-label">@T["Hire date"]</label><div class="ocat-end"><input asp-for="HireDate" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+            <div class="ocat-wrapper">
+                <label asp-for="PrimaryTeamId" class="ocat-label">@T["Main team"]</label>
+                <div class="ocat-end">
+                    <select asp-for="PrimaryTeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem">
+                        <option value="">@T["No team yet"]</option>
+                    </select>
+                    <span class="hint">@T["They join it from today when they aren't in it yet; the teams they are in stay."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper"><label asp-for="ContractedHoursPerWeek" class="ocat-label">@T["Contracted hours a week"]</label><div class="ocat-end"><input asp-for="ContractedHoursPerWeek" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+        </div>
+    </div>
+</div>

@@ -111,6 +111,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Calendars/CrestApps.OrchardCore.Calendars.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Scheduling/CrestApps.OrchardCore.Scheduling.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Skills/CrestApps.OrchardCore.Skills.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Staff/CrestApps.OrchardCore.Staff.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Teams/CrestApps.OrchardCore.Teams.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Workforce/CrestApps.OrchardCore.Workforce.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Assets/CrestApps.OrchardCore.Assets.csproj" PrivateAssets="none" />

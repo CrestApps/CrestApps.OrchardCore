@@ -14,15 +14,18 @@ internal sealed class DefaultUserSearchService : IUserSearchService
     private readonly ISession _session;
     private readonly ILookupNormalizer _normalizer;
     private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IEnumerable<IUserAudienceProvider> _audienceProviders;
 
     public DefaultUserSearchService(
         ISession session,
         ILookupNormalizer normalizer,
-        IDisplayNameProvider displayNameProvider)
+        IDisplayNameProvider displayNameProvider,
+        IEnumerable<IUserAudienceProvider> audienceProviders)
     {
         _session = session;
         _normalizer = normalizer;
         _displayNameProvider = displayNameProvider;
+        _audienceProviders = audienceProviders;
     }
 
     public async Task<IReadOnlyList<UserSearchResult>> SearchAsync(UserSearchQuery query, CancellationToken cancellationToken = default)
@@ -31,7 +34,23 @@ internal sealed class DefaultUserSearchService : IUserSearchService
 
         var search = _session.Query<User>();
 
-        var roles = (query.Roles ?? [])
+        IEnumerable<string> requestedRoles = query.Roles ?? [];
+
+        if (!string.IsNullOrWhiteSpace(query.Audience)
+            && _audienceProviders.FirstOrDefault(provider => string.Equals(provider.Name, query.Audience.Trim(), StringComparison.OrdinalIgnoreCase)) is { } audience)
+        {
+            var audienceRoles = (await audience.GetRoleNamesAsync(cancellationToken) ?? []).Where(static role => !string.IsNullOrWhiteSpace(role)).ToArray();
+
+            // An audience without roles has no members.
+            if (audienceRoles.Length == 0)
+            {
+                return [];
+            }
+
+            requestedRoles = requestedRoles.Concat(audienceRoles);
+        }
+
+        var roles = requestedRoles
             .Where(static role => !string.IsNullOrWhiteSpace(role))
             .Select(role => _normalizer.NormalizeName(role.Trim()))
             .Distinct(StringComparer.OrdinalIgnoreCase)

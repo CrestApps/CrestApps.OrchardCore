@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services.Forecasting;
@@ -23,7 +25,7 @@ public sealed class IntradayService
     private readonly ForecastService _forecastService;
     private readonly IIntervalStatisticsReader _statistics;
     private readonly ICoverageService _coverageService;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IShiftService _shiftService;
     private readonly IWorkerTimeZoneService _timeZones;
     private readonly IClock _clock;
@@ -46,7 +48,7 @@ public sealed class IntradayService
         ForecastService forecastService,
         IIntervalStatisticsReader statistics,
         ICoverageService coverageService,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IShiftService shiftService,
         IWorkerTimeZoneService timeZones,
         IClock clock)
@@ -253,7 +255,7 @@ public sealed class IntradayService
     /// <param name="worker">The worker.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The offers, in order.</returns>
-    public async Task<IReadOnlyList<IntradayOffer>> OpenForAsync(WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<IntradayOffer>> OpenForAsync(StaffMember worker, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

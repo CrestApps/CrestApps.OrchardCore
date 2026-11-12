@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -24,7 +26,7 @@ internal sealed class ScheduleAutoScheduler
     private readonly SchedulePeriodStore _periodStore;
     private readonly DraftShiftStore _draftStore;
     private readonly TeamStore _teamStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly CoverageRequirementStore _requirementStore;
     private readonly ActivityCodeStore _activityCodeStore;
     private readonly IShiftTemplateManager _templateManager;
@@ -43,7 +45,7 @@ internal sealed class ScheduleAutoScheduler
         SchedulePeriodStore periodStore,
         DraftShiftStore draftStore,
         TeamStore teamStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         CoverageRequirementStore requirementStore,
         ActivityCodeStore activityCodeStore,
         IShiftTemplateManager templateManager,
@@ -114,7 +116,7 @@ internal sealed class ScheduleAutoScheduler
             .ToDictionary(template => template.ItemId, StringComparer.Ordinal);
         var drafts = await _draftStore.ListForScenarioAsync(scenario.ItemId, cancellationToken);
         var members = (await _workerStore.ListByTeamInRangeAsync(team.ItemId, WorkforceDates.ToKey(period.StartDate), WorkforceDates.ToKey(period.EndDate), cancellationToken))
-            .Where(worker => worker.Status == WorkerStatus.Active)
+            .Where(worker => worker.Status == StaffStatus.Active)
             .ToDictionary(worker => worker.ItemId, StringComparer.Ordinal);
         var interval = options.IntervalMinutes is >= 5 and <= 240 && 1440 % options.IntervalMinutes == 0 ? options.IntervalMinutes : 30;
         var problem = new ShiftScheduleProblem
@@ -208,9 +210,9 @@ internal sealed class ScheduleAutoScheduler
         return result;
     }
 
-    private async Task<ShiftScheduleWorker> ToWorkerAsync(WorkerProfile worker, Team team, SchedulePeriod period, int days, CancellationToken cancellationToken)
+    private async Task<ShiftScheduleWorker> ToWorkerAsync(StaffMember worker, Team team, SchedulePeriod period, int days, CancellationToken cancellationToken)
     {
-        var subject = SkillSubject.Worker(worker.ItemId);
+        var subject = SkillSubject.Staff(worker.ItemId);
         var first = (await _skillAssignments.GetEffectiveAsync(subject, period.StartDate, cancellationToken)).Select(assignment => assignment.SkillId);
         var last = (await _skillAssignments.GetEffectiveAsync(subject, period.EndDate, cancellationToken)).Select(assignment => assignment.SkillId);
         var limits = await _limits.GetAsync(worker, team.ItemId, cancellationToken);
@@ -264,7 +266,7 @@ internal sealed class ScheduleAutoScheduler
     /// Returns the members' published shifts that aren't this schedule's: on this team from another schedule, which
     /// count, and on other teams, which only take the worker's time.
     /// </summary>
-    private async Task<IReadOnlyList<ShiftScheduleFixedShift>> ListOtherShiftsAsync(Team team, SchedulePeriod period, IReadOnlyDictionary<string, WorkerProfile> members, string timeZoneId, DateTime origin, Dictionary<string, ActivityCode> codes, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<ShiftScheduleFixedShift>> ListOtherShiftsAsync(Team team, SchedulePeriod period, IReadOnlyDictionary<string, StaffMember> members, string timeZoneId, DateTime origin, Dictionary<string, ActivityCode> codes, CancellationToken cancellationToken)
     {
         var teamIds = members.Values.SelectMany(worker => worker.TeamMemberships.Select(membership => membership.TeamId)).Append(team.ItemId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal);
         var calendarIds = (await _teamStore.GetAsync(teamIds, cancellationToken)).Select(item => item.GetWorkforceSettings().CalendarId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();

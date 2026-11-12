@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 
@@ -20,7 +21,7 @@ internal sealed class WorkerShiftReader
         _queryService = queryService;
     }
 
-    public Task<IReadOnlyList<CalendarEvent>> ListAsync(WorkerProfile worker, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<CalendarEvent>> ListAsync(StaffMember worker, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
     {
         return ListAsync(worker, fromUtc, toUtc, WorkforceConstants.EventTypes.Shift, calendarEvent => ShiftEvents.TryRead(calendarEvent, out var data) && data.WorkerId == worker.ItemId, cancellationToken);
     }
@@ -28,14 +29,14 @@ internal sealed class WorkerShiftReader
     /// <summary>
     /// Lists a worker's approved time off on the calendars of every team they belong to.
     /// </summary>
-    public Task<IReadOnlyList<CalendarEvent>> ListTimeOffAsync(WorkerProfile worker, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<CalendarEvent>> ListTimeOffAsync(StaffMember worker, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
     {
         return ListAsync(worker, fromUtc, toUtc, WorkforceConstants.EventTypes.TimeOff, calendarEvent => calendarEvent.Status != CalendarEventStatus.Cancelled
             && calendarEvent.TryGet<TimeOffEventData>(out var data)
             && data.WorkerId == worker.ItemId, cancellationToken);
     }
 
-    private async Task<IReadOnlyList<CalendarEvent>> ListAsync(WorkerProfile worker, DateTime fromUtc, DateTime toUtc, string eventType, Func<CalendarEvent, bool> belongs, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<CalendarEvent>> ListAsync(StaffMember worker, DateTime fromUtc, DateTime toUtc, string eventType, Func<CalendarEvent, bool> belongs, CancellationToken cancellationToken)
     {
         var teamIds = worker.TeamMemberships.Select(membership => membership.TeamId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
 

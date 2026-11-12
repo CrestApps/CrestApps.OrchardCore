@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
@@ -51,7 +52,7 @@ internal static class ShiftEvents
     /// <summary>
     /// Writes a shift onto an event: its worker, times, notes and data.
     /// </summary>
-    public static void Apply(CalendarEvent calendarEvent, WorkerProfile worker, DateTime start, DateTime end, string notes, ShiftData data, string timeZoneId)
+    public static void Apply(CalendarEvent calendarEvent, StaffMember worker, DateTime start, DateTime end, string notes, ShiftData data, string timeZoneId)
     {
         calendarEvent.AllDay = false;
         calendarEvent.TimeZoneId = timeZoneId;
@@ -65,7 +66,7 @@ internal static class ShiftEvents
     /// <summary>
     /// Names a worker on an event, as its title and, when they have a user account or an email, its attendee.
     /// </summary>
-    public static void Assign(CalendarEvent calendarEvent, WorkerProfile worker)
+    public static void Assign(CalendarEvent calendarEvent, StaffMember worker)
     {
         calendarEvent.Title = worker.DisplayName;
 

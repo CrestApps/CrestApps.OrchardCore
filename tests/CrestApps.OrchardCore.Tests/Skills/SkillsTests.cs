@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Tests.Skills;
 public sealed class SkillsTests
 {
     private static readonly SkillSubject _ana = SkillSubject.User("ana");
-    private static readonly SkillSubject _ben = SkillSubject.Worker("ben");
+    private static readonly SkillSubject _ben = SkillSubject.Staff("ben");
 
     [Fact]
     public async Task ValidateAsync_WhenTheNameIsTakenOrBlank_Fails()
@@ -188,7 +188,7 @@ public sealed class SkillsTests
 
         await AssignAsync(harness, SkillSubject.User("expert"), spanish.ItemId, 5);
         await AssignAsync(harness, SkillSubject.User("novice"), spanish.ItemId, 1);
-        await AssignAsync(harness, SkillSubject.Worker("worker-expert"), spanish.ItemId, 5);
+        await AssignAsync(harness, SkillSubject.Staff("worker-expert"), spanish.ItemId, 5);
         await harness.RunAsync(services => services.GetRequiredService<ISkillAssignmentService>().AssignAsync(SkillSubject.User("later"), new SkillAssignmentInput
         {
             SkillId = spanish.ItemId,

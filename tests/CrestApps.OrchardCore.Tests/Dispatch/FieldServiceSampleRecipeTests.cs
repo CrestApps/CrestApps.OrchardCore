@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Recipes;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Recipes;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -74,7 +75,7 @@ public sealed class FieldServiceSampleRecipeTests
             var types = (await services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync()).ToList();
             var checklists = (await services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>().GetAllAsync()).ToList();
             var policies = (await services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>().GetAllAsync()).ToList();
-            var (_, workers) = await services.GetRequiredService<IWorkerManager>().SearchAsync(new WorkerQuery(), 0, 50);
+            var (_, workers) = await services.GetRequiredService<IStaffMemberManager>().SearchAsync(new StaffQuery(), 0, 50);
             var teams = (await services.GetRequiredService<ITeamManager>().GetAllAsync()).Where(team => team.Name == "Field Operations").ToList();
             var templates = (await services.GetRequiredService<IShiftTemplateManager>().GetAllAsync()).Where(template => template.Name == "Field day").ToList();
 

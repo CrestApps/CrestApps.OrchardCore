@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -34,7 +36,7 @@ public sealed class ShiftTradesController : Controller
     private readonly IShiftTradeService _tradeService;
     private readonly IShiftService _shiftService;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
@@ -64,7 +66,7 @@ public sealed class ShiftTradesController : Controller
         IShiftTradeService tradeService,
         IShiftService shiftService,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IWorkforceScopeService scopeService,
         ISiteService siteService,
         IClock clock,
@@ -239,7 +241,7 @@ public sealed class ShiftTradesController : Controller
         {
             var date = DateOnly.FromDateTime(CalendarTime.ToLocal(trade.ShiftStartUtc, model.Row.TimeZoneId));
             var candidates = string.IsNullOrEmpty(trade.TargetWorkerId)
-                ? (await _workerManager.ListByTeamAsync(team.ItemId, date, HttpContext.RequestAborted)).Where(worker => worker.ItemId != trade.OfferedByWorkerId && worker.Status == WorkerStatus.Active).ToList()
+                ? (await _workerManager.ListByTeamAsync(team.ItemId, date, HttpContext.RequestAborted)).Where(worker => worker.ItemId != trade.OfferedByWorkerId && worker.Status == StaffStatus.Active).ToList()
                 : [await _workerManager.FindByIdAsync(trade.TargetWorkerId)];
 
             foreach (var candidate in candidates.Where(candidate => candidate is not null))
@@ -430,7 +432,7 @@ public sealed class ShiftTradesController : Controller
     {
         var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
         var today = await PlanningOptions.TodayAsync(_localClock);
-        var workers = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+        var workers = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
 
         foreach (var item in (await _teamManager.ListTreeAsync(HttpContext.RequestAborted)).Where(item => scope.Covers(item.Team.ItemId)))
         {
@@ -440,7 +442,7 @@ public sealed class ShiftTradesController : Controller
             }
         }
 
-        var ordered = workers.Values.Where(worker => worker.Status == WorkerStatus.Active).OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
+        var ordered = workers.Values.Where(worker => worker.Status == StaffStatus.Active).OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase).ToList();
 
         model.WorkerOptions = ordered.Select(worker => new SelectListItem(worker.DisplayName, worker.ItemId, worker.ItemId == model.WorkerId)).ToList();
         model.ShiftOptions = await ShiftOptionsAsync(model.WorkerId, model.ShiftEventId);

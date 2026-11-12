@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 namespace CrestApps.OrchardCore.Workforce.Models;
 
 /// <summary>

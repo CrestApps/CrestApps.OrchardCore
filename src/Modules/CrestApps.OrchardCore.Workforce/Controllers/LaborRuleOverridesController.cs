@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -21,7 +22,7 @@ public sealed class LaborRuleOverridesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ILaborRuleOverrideService _overrideService;
     private readonly ILaborRuleSetManager _setManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ISiteService _siteService;
@@ -40,7 +41,7 @@ public sealed class LaborRuleOverridesController : Controller
         IAuthorizationService authorizationService,
         ILaborRuleOverrideService overrideService,
         ILaborRuleSetManager setManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IWorkforceScopeService scopeService,
         ISiteService siteService)

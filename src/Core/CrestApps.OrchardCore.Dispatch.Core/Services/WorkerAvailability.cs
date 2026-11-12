@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
@@ -6,6 +7,8 @@ using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
@@ -13,7 +16,6 @@ using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using YesSql;
-using CrestApps.OrchardCore.Calendars;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
 
@@ -25,7 +27,7 @@ public sealed class WorkerAvailability
     /// <summary>
     /// Gets or sets the worker.
     /// </summary>
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     /// <summary>
     /// Gets or sets the worker's time zone.
@@ -68,7 +70,7 @@ public sealed class WorkerAvailability
 /// </summary>
 public sealed class DispatchResources
 {
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IShiftService _shiftService;
     private readonly ICalendarQueryService _queryService;
@@ -83,7 +85,7 @@ public sealed class DispatchResources
     /// Initializes a new instance of the <see cref="DispatchResources"/> class.
     /// </summary>
     public DispatchResources(
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IShiftService shiftService,
         ICalendarQueryService queryService,
@@ -112,9 +114,9 @@ public sealed class DispatchResources
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The workers.</returns>
-    public async Task<IReadOnlyList<WorkerProfile>> ListWorkersAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<StaffMember>> ListWorkersAsync(CancellationToken cancellationToken = default)
     {
-        var (_, workers) = await _workerManager.SearchAsync(new WorkerQuery { Status = WorkerStatus.Active }, 0, 1000, cancellationToken);
+        var (_, workers) = await _workerManager.SearchAsync(new StaffQuery { Status = StaffStatus.Active }, 0, 1000, cancellationToken);
 
         return workers;
     }
@@ -125,7 +127,7 @@ public sealed class DispatchResources
     /// <param name="workerId">The worker.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The worker, or <see langword="null"/>.</returns>
-    public async Task<WorkerProfile> FindWorkerAsync(string workerId, CancellationToken cancellationToken = default)
+    public async Task<StaffMember> FindWorkerAsync(string workerId, CancellationToken cancellationToken = default)
         => string.IsNullOrEmpty(workerId) ? null : await _workerManager.FindByIdAsync(workerId, cancellationToken);
 
     /// <summary>
@@ -137,7 +139,7 @@ public sealed class DispatchResources
     /// <param name="ignoreVisitId">A visit to leave out, such as the one being moved.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The availability.</returns>
-    public async Task<WorkerAvailability> GetAvailabilityAsync(WorkerProfile worker, DateTime fromUtc, DateTime toUtc, string ignoreVisitId = null, CancellationToken cancellationToken = default)
+    public async Task<WorkerAvailability> GetAvailabilityAsync(StaffMember worker, DateTime fromUtc, DateTime toUtc, string ignoreVisitId = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -218,7 +220,7 @@ public sealed class DispatchResources
     /// <summary>
     /// Gives a worker's time zone: their own, their team's or a parent team's, or the one dispatch shows.
     /// </summary>
-    private async Task<string> TimeZoneOfAsync(WorkerProfile worker, List<Team> teams, CancellationToken cancellationToken)
+    private async Task<string> TimeZoneOfAsync(StaffMember worker, List<Team> teams, CancellationToken cancellationToken)
     {
         if (Valid(worker.TimeZoneId))
         {

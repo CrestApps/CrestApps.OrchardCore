@@ -1,0 +1,39 @@
+@model StaffOrgChartViewModel
+
+@{
+    var teams = (IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["TeamOptions"];
+}
+
+<zone Name="Title"><breadcrumb name="StaffOrgChart" title="@T["Organization Chart"]" /></zone>
+
+<form asp-action="OrgChart" method="get">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 align-items-center">
+                <div class="col-auto">
+                    <select name="teamId" class="form-select" aria-label="@T["Team"]" onchange="this.form.submit()">
+                        <option value="">@T["Everyone"]</option>
+                        @foreach (var option in teams)
+                        {
+                            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col text-secondary small">@T["{0} working staff members", Model.Count]</div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Roots.Count == 0)
+{
+    <div class="alert alert-info">@T["<strong>Nothing here!</strong> No working staff members."]</div>
+}
+else
+{
+    <div class="card text-bg-theme">
+        <div class="card-body">
+            <partial name="_OrgChartNodes" model="Model.Roots" />
+        </div>
+    </div>
+}

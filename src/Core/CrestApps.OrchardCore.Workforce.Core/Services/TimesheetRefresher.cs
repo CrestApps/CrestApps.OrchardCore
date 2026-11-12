@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -18,7 +19,7 @@ internal sealed class TimesheetRefresher
 
     private readonly TimePunchStore _punchStore;
     private readonly TeamStore _teamStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly ICalendarQueryService _queryService;
     private readonly ITimesheetService _timesheets;
     private readonly WorkerTimeZones _timeZones;
@@ -28,7 +29,7 @@ internal sealed class TimesheetRefresher
     public TimesheetRefresher(
         TimePunchStore punchStore,
         TeamStore teamStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         ICalendarQueryService queryService,
         ITimesheetService timesheets,
         WorkerTimeZones timeZones,

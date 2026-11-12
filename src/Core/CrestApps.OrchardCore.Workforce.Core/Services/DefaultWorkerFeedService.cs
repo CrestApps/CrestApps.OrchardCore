@@ -1,6 +1,9 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Core.ICalendar;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -18,14 +21,14 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 internal sealed class DefaultWorkerFeedService : IWorkerFeedService
 {
     private readonly ISession _session;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly TeamStore _teamStore;
     private readonly WorkerShiftReader _shiftReader;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
-    public DefaultWorkerFeedService(ISession session, WorkerStore workerStore, TeamStore teamStore, WorkerShiftReader shiftReader, IClock clock, IStringLocalizer<DefaultWorkerFeedService> stringLocalizer)
+    public DefaultWorkerFeedService(ISession session, StaffMemberStore workerStore, TeamStore teamStore, WorkerShiftReader shiftReader, IClock clock, IStringLocalizer<DefaultWorkerFeedService> stringLocalizer)
     {
         _session = session;
         _workerStore = workerStore;
@@ -35,7 +38,7 @@ internal sealed class DefaultWorkerFeedService : IWorkerFeedService
         S = stringLocalizer;
     }
 
-    public async Task<string> GetTokenAsync(WorkerProfile worker, bool renew, CancellationToken cancellationToken = default)
+    public async Task<string> GetTokenAsync(StaffMember worker, bool renew, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -61,7 +64,7 @@ internal sealed class DefaultWorkerFeedService : IWorkerFeedService
         }
 
         var hash = PortalSecrets.Hash(token);
-        var worker = await _session.Query<WorkerProfile, WorkerFeedIndex>(index => index.TokenHash == hash, collection: WorkforceConstants.CollectionName)
+        var worker = await _session.Query<StaffMember, WorkerFeedIndex>(index => index.TokenHash == hash, collection: StaffConstants.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
 
         // The hash finds the worker; the secret itself must still match, so an old index row can't open the feed.

@@ -39,8 +39,8 @@ public sealed class OpenSkillSubjectKindTests
 
     [Theory]
     [InlineData("0", SkillSubjectKind.User)]
-    [InlineData("1", SkillSubjectKind.Worker)]
-    [InlineData("\"Worker\"", SkillSubjectKind.Worker)]
+    [InlineData("1", SkillSubjectKind.Staff)]
+    [InlineData("\"Worker\"", SkillSubjectKind.Staff)]
     [InlineData("\"ExternalAgent\"", "ExternalAgent")]
     public void ADocumentSavedWithANumberOrAName_IsRead(string storedKind, string expected)
     {
@@ -62,7 +62,7 @@ public sealed class OpenSkillSubjectKindTests
         var spanish = await harness.AddSkillAsync("Spanish");
 
         await SkillsTests.AssignAsync(harness, SkillSubject.User("u1"), spanish.ItemId, 3);
-        await SkillsTests.AssignAsync(harness, SkillSubject.Worker("w1"), spanish.ItemId, 3);
+        await SkillsTests.AssignAsync(harness, SkillSubject.Staff("w1"), spanish.ItemId, 3);
 
         var store = harness.Store;
         var table = store.Configuration.TableNameConvention.GetIndexTable(typeof(SkillAssignmentIndex), SkillsConstants.CollectionName);
@@ -90,6 +90,6 @@ public sealed class OpenSkillSubjectKindTests
         var rows = await reading.QueryIndex<SkillAssignmentIndex>(collection: SkillsConstants.CollectionName).ListAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains(rows, row => row.SubjectId == "u1" && row.SubjectKindName == SkillSubjectKind.User);
-        Assert.Contains(rows, row => row.SubjectId == "w1" && row.SubjectKindName == SkillSubjectKind.Worker);
+        Assert.Contains(rows, row => row.SubjectId == "w1" && row.SubjectKindName == SkillSubjectKind.Staff);
     }
 }

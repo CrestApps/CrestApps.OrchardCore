@@ -26,6 +26,12 @@ public sealed class UserSearchQuery
     public IList<string> Roles { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets a named group of users another module defines through an <see cref="IUserAudienceProvider"/>, such as
+    /// <c>Staff</c>. When no module defines the audience, it is ignored and every user can be found.
+    /// </summary>
+    public string Audience { get; set; }
+
+    /// <summary>
     /// Gets or sets the largest number of users to return.
     /// </summary>
     public int MaxResults { get; set; } = DefaultMaxResults;

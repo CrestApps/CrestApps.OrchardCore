@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,7 @@ internal sealed class TimeOffPolicyManager : CatalogManager<TimeOffPolicy>, ITim
         _resolvers = resolvers;
     }
 
-    public async Task<IReadOnlyList<TimeOffPolicy>> ListForWorkerAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TimeOffPolicy>> ListForWorkerAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -33,7 +34,7 @@ internal sealed class TimeOffPolicyManager : CatalogManager<TimeOffPolicy>, ITim
         return resolver.ListOn(date);
     }
 
-    public async Task<TimeOffPolicy> FindForWorkerAsync(WorkerProfile worker, string typeId, DateOnly date, CancellationToken cancellationToken = default)
+    public async Task<TimeOffPolicy> FindForWorkerAsync(StaffMember worker, string typeId, DateOnly date, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

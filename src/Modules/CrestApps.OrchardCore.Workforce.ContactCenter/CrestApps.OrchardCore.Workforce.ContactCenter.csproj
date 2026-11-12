@@ -36,6 +36,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Staff.Core\CrestApps.OrchardCore.Staff.Core.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Staff.Abstractions\CrestApps.OrchardCore.Staff.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Workforce.Abstractions\CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.ContactCenter.Core\CrestApps.OrchardCore.ContactCenter.Core.csproj" />

@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Logging;
@@ -15,7 +17,7 @@ namespace CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 /// </summary>
 public sealed class SignInPunchHandler : IContactCenterEventHandler
 {
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITimeClockService _timeClockService;
     private readonly ILogger _logger;
 
@@ -26,7 +28,7 @@ public sealed class SignInPunchHandler : IContactCenterEventHandler
     /// <param name="timeClockService">The time clock service.</param>
     /// <param name="logger">The logger.</param>
     public SignInPunchHandler(
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITimeClockService timeClockService,
         ILogger<SignInPunchHandler> logger)
     {
@@ -70,7 +72,7 @@ public sealed class SignInPunchHandler : IContactCenterEventHandler
 
         var worker = await _workerManager.FindByUserIdAsync(data.UserId, cancellationToken);
 
-        if (worker is null || worker.Status != WorkerStatus.Active)
+        if (worker is null || worker.Status != StaffStatus.Active)
         {
             return;
         }
@@ -117,7 +119,7 @@ public sealed class SignInPunchHandler : IContactCenterEventHandler
         }
     }
 
-    private async Task<bool> ClockedInByContactCenterAsync(WorkerProfile worker, TimeClockStatus status, CancellationToken cancellationToken)
+    private async Task<bool> ClockedInByContactCenterAsync(StaffMember worker, TimeClockStatus status, CancellationToken cancellationToken)
     {
         if (status.SinceUtc is not { } since)
         {

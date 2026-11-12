@@ -1,0 +1,35 @@
+@{
+    var filters = (StaffListViewModel)Model.ViewModel;
+}
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<div class="btn-group filter">
+    <select name="teamId" form="staff-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Team"]" data-dropdown-align-right="auto" aria-label="@T["Team"]" onchange="this.form.submit()">
+        <option value="">@T["All teams"]</option>
+        @foreach (var option in filters.TeamOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="status" form="staff-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
+        <option value="">@T["All statuses"]</option>
+        @foreach (var option in filters.StatusOptions)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+@if (filters.CapabilityOptions.Count > 0)
+{
+    <div class="btn-group filter">
+        <select name="capability" form="staff-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Capability"]" data-dropdown-align-right="auto" aria-label="@T["Capability"]" onchange="this.form.submit()">
+            <option value="">@T["All capabilities"]</option>
+            @foreach (var option in filters.CapabilityOptions)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    </div>
+}

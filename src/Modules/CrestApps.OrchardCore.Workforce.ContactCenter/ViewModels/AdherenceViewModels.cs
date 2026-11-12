@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -72,7 +73,7 @@ public class AdherenceDayViewModel
     /// Gets or sets the worker.
     /// </summary>
     [BindNever]
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     /// <summary>
     /// Gets or sets the day.
@@ -291,7 +292,7 @@ public sealed class AgentWorkerRow
     /// <summary>
     /// Gets or sets the worker, or <see langword="null"/>.
     /// </summary>
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 }
 
 /// <summary>

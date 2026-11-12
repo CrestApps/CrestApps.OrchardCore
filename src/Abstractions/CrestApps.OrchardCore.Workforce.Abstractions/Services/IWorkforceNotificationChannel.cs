@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -30,5 +31,5 @@ public interface IWorkforceNotificationChannel
     /// <param name="notification">The notification.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
-    Task SendAsync(WorkerProfile worker, WorkforceNotification notification, CancellationToken cancellationToken = default);
+    Task SendAsync(StaffMember worker, WorkforceNotification notification, CancellationToken cancellationToken = default);
 }

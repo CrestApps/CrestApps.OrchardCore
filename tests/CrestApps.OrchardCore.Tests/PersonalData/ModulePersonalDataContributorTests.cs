@@ -6,11 +6,15 @@ using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Marketing.Models;
 using CrestApps.OrchardCore.Marketing.Services;
 using CrestApps.OrchardCore.PersonalData;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Tests.Commerce.B2B;
-using CrestApps.OrchardCore.Workforce.Models;
-using CrestApps.OrchardCore.Workforce.PersonalData;
-using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.OrchardCore.Workforce.Models;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Workforce.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.PersonalData;
@@ -24,49 +28,48 @@ public sealed class ModulePersonalDataContributorTests
     private const string UserId = "user-1";
 
     [Fact]
-    public async Task AWorkersProfile_IsExported_AndAnonymizedKeepingTheEmployeeNumber()
+    public async Task AStaffRecord_IsExported_AndAnonymizedKeepingTheEmployeeNumber()
     {
         // Arrange
-        var worker = new WorkerProfile
+        await using var harness = await Workforce.WorkforceTests.CreateAsync();
+        var staff = await Workforce.WorkforceTests.AddWorkerAsync(harness, "Ann Lee", member =>
         {
-            ItemId = "w1",
-            UserId = UserId,
-            DisplayName = "Ann Lee",
-            Email = "ann@example.com",
-            Phone = "+17025550100",
-            EmployeeNumber = "E-7",
-            DateOfBirth = new DateOnly(1990, 1, 2),
-        };
-
-        var workers = new Mock<IWorkerManager>();
-        workers.Setup(manager => manager.FindByUserIdAsync(UserId, It.IsAny<CancellationToken>())).ReturnsAsync(worker);
-
-        var contributor = new WorkerProfilePersonalDataContributor(workers.Object, new PassThroughStringLocalizer<WorkerProfilePersonalDataContributor>());
+            member.UserId = UserId;
+            member.Email = "ann@example.com";
+            member.Phone = "+17025550100";
+            member.EmployeeNumber = "E-7";
+            member.DateOfBirth = new DateOnly(1990, 1, 2);
+        });
         var subject = new PersonalDataSubject(userId: UserId);
+        var export = new PersonalDataExport();
+        var result = new PersonalDataAnonymizeResult();
 
         // Act
-        await contributor.IdentifyAsync(subject, TestContext.Current.CancellationToken);
-        var export = new PersonalDataExport();
-        await contributor.ExportAsync(new PersonalDataExportContext(subject, export), TestContext.Current.CancellationToken);
-        var result = new PersonalDataAnonymizeResult();
-        await contributor.AnonymizeAsync(new PersonalDataAnonymizeContext(subject, null, result), TestContext.Current.CancellationToken);
+        await harness.RunAsync(async services =>
+        {
+            var contributor = new StaffPersonalDataContributor(services.GetRequiredService<StaffMemberStore>(), new PassThroughStringLocalizer<StaffPersonalDataContributor>());
+
+            await contributor.IdentifyAsync(subject, TestContext.Current.CancellationToken);
+            await contributor.ExportAsync(new PersonalDataExportContext(subject, export), TestContext.Current.CancellationToken);
+            await contributor.AnonymizeAsync(new PersonalDataAnonymizeContext(subject, null, result), TestContext.Current.CancellationToken);
+        });
+        var stored = await harness.RunAsync(services => services.GetRequiredService<StaffMemberStore>().FindByIdAsync(staff.ItemId).AsTask(), commit: false);
 
         // Assert
-        // The profile adds nothing to the person: a work email or phone may be shared with others.
+        // The record adds nothing to the person: a work email or phone may be shared with others.
         Assert.Empty(subject.Emails);
         Assert.Empty(subject.PhoneNumbers);
 
         var record = Assert.Single(export.Records);
-        Assert.Equal(WorkerProfilePersonalDataContributor.WorkerProfileKind, record.Kind);
-        Assert.Equal("ann@example.com", record.Fields[nameof(WorkerProfile.Email)]);
+        Assert.Equal(StaffPersonalDataContributor.Kind, record.Kind);
+        Assert.Equal("ann@example.com", record.Fields[nameof(StaffMember.Email)]);
 
         Assert.Equal(1, result.Total);
-        Assert.Equal("Former worker", worker.DisplayName);
-        Assert.Null(worker.Email);
-        Assert.Null(worker.Phone);
-        Assert.Null(worker.DateOfBirth);
-        Assert.Equal("E-7", worker.EmployeeNumber);
-        workers.Verify(manager => manager.UpdateAsync(worker, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal("Former staff member", stored.DisplayName);
+        Assert.Null(stored.Email);
+        Assert.Null(stored.Phone);
+        Assert.Null(stored.DateOfBirth);
+        Assert.Equal("E-7", stored.EmployeeNumber);
     }
 
     [Fact]

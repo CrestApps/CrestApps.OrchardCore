@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -15,13 +16,13 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 internal sealed class WorkforceCalendarAccessContributor : ICalendarAccessContributor
 {
     private readonly IWorkforceScopeService _scopeService;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly TeamStore _teamStore;
     private readonly IClock _clock;
 
     public WorkforceCalendarAccessContributor(
         IWorkforceScopeService scopeService,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         TeamStore teamStore,
         IClock clock)
     {

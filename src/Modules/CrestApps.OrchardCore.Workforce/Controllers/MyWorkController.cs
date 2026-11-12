@@ -2,6 +2,8 @@ using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -34,7 +36,7 @@ public sealed class MyWorkController : Controller
 
     private readonly IAuthorizationService _authorizationService;
     private readonly MyWorkPortal _portal;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IActivityCodeManager _activityCodeManager;
     private readonly IShiftService _shiftService;
@@ -76,7 +78,7 @@ public sealed class MyWorkController : Controller
     public MyWorkController(
         IAuthorizationService authorizationService,
         MyWorkPortal portal,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IActivityCodeManager activityCodeManager,
         IShiftService shiftService,
@@ -400,13 +402,13 @@ public sealed class MyWorkController : Controller
                 }
             }
 
-            var colleagues = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+            var colleagues = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
 
             foreach (var teamId in teamIds)
             {
                 foreach (var colleague in await _workerManager.ListByTeamAsync(teamId, today, HttpContext.RequestAborted))
                 {
-                    if (colleague.ItemId != worker.ItemId && colleague.Status == WorkerStatus.Active)
+                    if (colleague.ItemId != worker.ItemId && colleague.Status == StaffStatus.Active)
                     {
                         colleagues.TryAdd(colleague.ItemId, colleague);
                     }
@@ -907,7 +909,7 @@ public sealed class MyWorkController : Controller
         return Content(script, "text/javascript; charset=utf-8");
     }
 
-    private async Task<(WorkerProfile Worker, IActionResult Denied)> AuthorizeAsync()
+    private async Task<(StaffMember Worker, IActionResult Denied)> AuthorizeAsync()
     {
         if (User.Identity?.IsAuthenticated != true)
         {
@@ -922,7 +924,7 @@ public sealed class MyWorkController : Controller
         return (await _portal.GetWorkerAsync(User), null);
     }
 
-    private async Task<(WorkerProfile Worker, IActionResult Denied)> AuthorizeWorkerAsync()
+    private async Task<(StaffMember Worker, IActionResult Denied)> AuthorizeWorkerAsync()
     {
         var (worker, denied) = await AuthorizeAsync();
 
@@ -934,7 +936,7 @@ public sealed class MyWorkController : Controller
         return worker is null ? (null, RedirectToAction(nameof(Index))) : (worker, null);
     }
 
-    private async Task<(WorkerProfile Worker, IActionResult Denied)> AuthorizeTimeOffAsync()
+    private async Task<(StaffMember Worker, IActionResult Denied)> AuthorizeTimeOffAsync()
     {
         var (worker, denied) = await AuthorizeWorkerAsync();
 
@@ -951,7 +953,7 @@ public sealed class MyWorkController : Controller
         return (worker, null);
     }
 
-    private async Task PopulateTimeOffAsync(MyTimeOffViewModel model, WorkerProfile worker)
+    private async Task PopulateTimeOffAsync(MyTimeOffViewModel model, StaffMember worker)
     {
         var services = HttpContext.RequestServices;
         var today = await PlanningOptions.TodayAsync(_localClock);
@@ -971,7 +973,7 @@ public sealed class MyWorkController : Controller
         model.TypeOptions = types.Select(type => new SelectListItem(type.Name, type.ItemId, type.ItemId == model.TypeId)).ToList();
     }
 
-    private async Task<List<MyShiftViewModel>> MyShiftsAsync(WorkerProfile worker, DateTime fromUtc, DateTime toUtc)
+    private async Task<List<MyShiftViewModel>> MyShiftsAsync(StaffMember worker, DateTime fromUtc, DateTime toUtc)
     {
         var codes = (await _activityCodeManager.GetAllAsync(HttpContext.RequestAborted)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
         var teams = new Dictionary<string, Team>(StringComparer.Ordinal);

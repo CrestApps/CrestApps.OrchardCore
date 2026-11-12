@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
@@ -8,9 +9,9 @@ namespace CrestApps.OrchardCore.Workforce.Drivers;
 /// <summary>
 /// Adds a link to a worker's time off to the rows of the worker list.
 /// </summary>
-internal sealed class WorkerTimeOffRowDisplayDriver : DisplayDriver<WorkerProfile>
+internal sealed class WorkerTimeOffRowDisplayDriver : DisplayDriver<StaffMember>
 {
-    public override IDisplayResult Display(WorkerProfile item, BuildDisplayContext context)
+    public override IDisplayResult Display(StaffMember item, BuildDisplayContext context)
     {
         if (context.DisplayType is not (OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid))
         {

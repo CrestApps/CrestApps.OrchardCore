@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -170,7 +172,7 @@ internal static class FieldEndpoints
         return await next(context);
     }
 
-    private static async Task<(WorkerProfile Worker, IResult Denied)> WorkerAsync(HttpContext httpContext)
+    private static async Task<(StaffMember Worker, IResult Denied)> WorkerAsync(HttpContext httpContext)
     {
         var services = httpContext.RequestServices;
 
@@ -180,7 +182,7 @@ internal static class FieldEndpoints
         }
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var worker = string.IsNullOrEmpty(userId) ? null : await services.GetRequiredService<IWorkerManager>().FindByUserIdAsync(userId, httpContext.RequestAborted);
+        var worker = string.IsNullOrEmpty(userId) ? null : await services.GetRequiredService<IStaffMemberManager>().FindByUserIdAsync(userId, httpContext.RequestAborted);
 
         return worker is null ? (null, Results.NotFound()) : (worker, null);
     }

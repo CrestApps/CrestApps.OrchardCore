@@ -2,12 +2,13 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.SharedSkills;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Dispatch;
+using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
-using CrestApps.OrchardCore.WorkOrders.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Tests.Workforce;
@@ -37,8 +38,8 @@ public sealed class ContactCenterAgentSkillsTests
             var assignments = services.GetRequiredService<ISkillAssignmentService>();
 
             return (
-                await assignments.HoldsAsync(SkillSubject.Worker(ana.ItemId), spanish.ItemId, 4, _monday),
-                await assignments.GetEffectiveAsync(SkillSubject.Worker(ana.ItemId), _monday));
+                await assignments.HoldsAsync(SkillSubject.Staff(ana.ItemId), spanish.ItemId, 4, _monday),
+                await assignments.GetEffectiveAsync(SkillSubject.Staff(ana.ItemId), _monday));
         }, commit: false);
 
         // Assert
@@ -81,7 +82,7 @@ public sealed class ContactCenterAgentSkillsTests
         // Arrange (a Spanish speaker is needed every weekday; only Cy's agent speaks Spanish)
         await using var harness = await WorkforceTests.CreateAsync();
         var team = await WorkforceTests.AddTeamAsync(harness, "Support", TeamKind.Team);
-        var members = new List<WorkerProfile>();
+        var members = new List<StaffMember>();
 
         foreach (var name in new[] { "Ana", "Ben", "Cy" })
         {

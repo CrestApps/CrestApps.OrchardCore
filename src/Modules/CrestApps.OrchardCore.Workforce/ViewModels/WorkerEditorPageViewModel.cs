@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Workforce.ViewModels;
@@ -18,7 +19,7 @@ public class WorkerEditorPageViewModel
     public string DisplayName { get; set; }
 
     /// <summary>
-    /// Gets or sets the editor shape, with a section from each display driver of <c>WorkerProfile</c>.
+    /// Gets or sets the editor shape, with a section from each display driver of <c>StaffMember</c>.
     /// </summary>
     public object Editor { get; set; }
 

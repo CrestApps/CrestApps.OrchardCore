@@ -1,4 +1,7 @@
+using CrestApps.OrchardCore.Staff.Core.Indexes;
+using CrestApps.OrchardCore.Staff;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -16,7 +19,7 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
 {
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly TeamStore _teamStore;
     private readonly TimeOffPolicyStore _policyStore;
     private readonly TimeOffLedgerStore _ledgerStore;
@@ -28,7 +31,7 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
     private readonly ILogger _logger;
 
     public DefaultTimeOffAccrualService(
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         TeamStore teamStore,
         TimeOffPolicyStore policyStore,
         TimeOffLedgerStore ledgerStore,
@@ -73,10 +76,10 @@ internal sealed class DefaultTimeOffAccrualService : ITimeOffAccrualService
         if (teamIds.Count > 0)
         {
             var ids = teamIds.ToArray();
-            var memberships = await _session.QueryIndex<WorkerTeamMembershipIndex>(index => index.TeamId.IsIn(ids), collection: WorkforceConstants.CollectionName)
+            var memberships = await _session.QueryIndex<StaffTeamMembershipIndex>(index => index.TeamId.IsIn(ids), collection: StaffConstants.CollectionName)
                 .ListAsync(cancellationToken);
 
-            workerIds.UnionWith(memberships.Select(membership => membership.WorkerId));
+            workerIds.UnionWith(memberships.Select(membership => membership.StaffMemberId));
         }
 
         var entries = 0;

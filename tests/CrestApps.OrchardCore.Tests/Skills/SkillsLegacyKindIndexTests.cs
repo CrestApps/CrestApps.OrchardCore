@@ -21,12 +21,12 @@ public sealed class SkillsLegacyKindIndexTests
         var spanish = await harness.AddSkillAsync("Spanish");
 
         await SkillsTests.AssignAsync(harness, SkillSubject.User("u1"), spanish.ItemId, 3);
-        await SkillsTests.AssignAsync(harness, SkillSubject.Worker("w1"), spanish.ItemId, 4);
+        await SkillsTests.AssignAsync(harness, SkillSubject.Staff("w1"), spanish.ItemId, 4);
         await ClearKindNamesAsync(harness, typeof(SkillAssignmentIndex));
 
         // Act
         var userAssignments = await harness.RunAsync(services => services.GetRequiredService<ISkillAssignmentService>().GetAssignmentsAsync(SkillSubject.User("u1")), commit: false);
-        var workerHolders = await harness.RunAsync(services => services.GetRequiredService<ISkillAssignmentService>().FindHoldersAsync(spanish.ItemId, 1, SkillsTestHarness.Today, SkillSubjectKind.Worker), commit: false);
+        var workerHolders = await harness.RunAsync(services => services.GetRequiredService<ISkillAssignmentService>().FindHoldersAsync(spanish.ItemId, 1, SkillsTestHarness.Today, SkillSubjectKind.Staff), commit: false);
         var userHolders = await harness.RunAsync(services => services.GetRequiredService<ISkillAssignmentService>().FindHoldersAsync(spanish.ItemId, 1, SkillsTestHarness.Today, SkillSubjectKind.User), commit: false);
 
         await SkillsTests.AssignAsync(harness, SkillSubject.User("u1"), spanish.ItemId, 5);
@@ -45,7 +45,7 @@ public sealed class SkillsLegacyKindIndexTests
         // Arrange
         await using var harness = await SkillsTestHarness.CreateAsync();
         var forklift = await harness.AddCertificationAsync("Forklift");
-        var worker = SkillSubject.Worker("w1");
+        var worker = SkillSubject.Staff("w1");
 
         await SkillsTests.SaveRecordAsync(harness, worker, forklift.ItemId, SkillsTestHarness.Today.AddDays(-10), CertificationStatus.Valid, SkillsTestHarness.Today.AddDays(300));
         await ClearKindNamesAsync(harness, typeof(CertificationRecordIndex));

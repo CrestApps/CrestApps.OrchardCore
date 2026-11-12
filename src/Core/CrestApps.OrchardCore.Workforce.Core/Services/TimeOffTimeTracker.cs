@@ -1,6 +1,7 @@
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.TimeTracker;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
@@ -43,12 +44,12 @@ internal sealed class TimeOffTimeTrackerSync
     // A full day off starts at this time in the request's zone; a part day keeps its own hours.
     private static readonly TimeOnly _dayStart = new(9, 0);
 
-    private readonly WorkerStore _workers;
+    private readonly StaffMemberStore _workers;
     private readonly TimeOffRequestStore _requests;
     private readonly TimeOffTypeStore _types;
     private readonly ITimeTrackerService _tracker;
 
-    public TimeOffTimeTrackerSync(WorkerStore workers, TimeOffRequestStore requests, TimeOffTypeStore types, ITimeTrackerService tracker)
+    public TimeOffTimeTrackerSync(StaffMemberStore workers, TimeOffRequestStore requests, TimeOffTypeStore types, ITimeTrackerService tracker)
     {
         _workers = workers;
         _requests = requests;

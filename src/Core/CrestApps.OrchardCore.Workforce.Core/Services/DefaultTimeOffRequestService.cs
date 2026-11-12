@@ -1,5 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -19,7 +21,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
 {
     private const int MaxDays = 366;
 
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly TeamStore _teamStore;
     private readonly TimeOffTypeStore _typeStore;
     private readonly TimeOffRequestStore _requestStore;
@@ -41,7 +43,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
     internal readonly IStringLocalizer S;
 
     public DefaultTimeOffRequestService(
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         TeamStore teamStore,
         TimeOffTypeStore typeStore,
         TimeOffRequestStore requestStore,
@@ -332,7 +334,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         return _requestStore.PageAsync(query, skip, take, cancellationToken);
     }
 
-    private async Task<PlanningResult<TimeOffRequest>> DecideAsync(string id, string actor, Func<TimeOffRequest, WorkerProfile, TimeOffType, PlanningResult<TimeOffRequest>, Task> decide, CancellationToken cancellationToken)
+    private async Task<PlanningResult<TimeOffRequest>> DecideAsync(string id, string actor, Func<TimeOffRequest, StaffMember, TimeOffType, PlanningResult<TimeOffRequest>, Task> decide, CancellationToken cancellationToken)
     {
         var result = new PlanningResult<TimeOffRequest>();
         var request = string.IsNullOrEmpty(id) ? null : await _requestStore.FindByIdAsync(id, cancellationToken);
@@ -508,7 +510,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
         {
             problems.Add(S["The worker doesn't exist."]);
         }
-        else if (worker.Status == WorkerStatus.Terminated)
+        else if (worker.Status == StaffStatus.Terminated)
         {
             problems.Add(S["{0} no longer works here.", worker.DisplayName]);
         }
@@ -670,7 +672,7 @@ internal sealed class DefaultTimeOffRequestService : ITimeOffRequestService
     {
         public TimeOffPreview Preview { get; set; }
 
-        public WorkerProfile Worker { get; set; }
+        public StaffMember Worker { get; set; }
 
         public IReadOnlyList<TimeOffAllotment> Allotments { get; set; } = [];
     }
