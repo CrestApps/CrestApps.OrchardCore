@@ -39,7 +39,6 @@ public sealed class OutboundHttpArchitectureTests
         ["src/Modules/CrestApps.OrchardCore.Geo.AzureMaps/Startup.cs|AzureMapsProvider.HttpClientName"] = "Fixed host: atlas.microsoft.com.",
         ["src/Modules/CrestApps.OrchardCore.Geo.GoogleMaps/Startup.cs|GoogleMapsProvider.HttpClientName"] = "Fixed host: maps.googleapis.com.",
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Sms/Startup.cs|TwilioSmsMediaSender.HttpClientName"] = "Fixed host: api.twilio.com.",
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Startup.cs|MessagingInboundMediaIngestor.HttpClientName"] = "Pending SEC-P10f.",
         ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Startup.cs|nameof(AbstractApiPhoneNumberVerificationProvider)"] = "Fixed host: the AbstractAPI phone validation service.",
         ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Startup.cs|nameof(VeriphonePhoneNumberVerificationProvider)"] = "Fixed host: api.veriphone.io.",
         ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Startup.cs|nameof(TwilioPhoneNumberVerificationProvider)"] = "Fixed host: lookups.twilio.com.",
