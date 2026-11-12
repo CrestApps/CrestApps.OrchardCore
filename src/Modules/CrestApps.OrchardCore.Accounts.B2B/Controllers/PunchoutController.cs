@@ -67,7 +67,7 @@ public sealed class PunchoutController : Controller
 
         // A key in the address lands in access logs and referrers, and a link lets any page sign its visitor in as the
         // punchout buyer; only an account that needs OCI link mode turns it on.
-        if (!isPost && account?.Punchout.AllowLinkSignIn != true)
+        if (!isPost && account?.Punchout?.AllowLinkSignIn != true)
         {
             return StatusCode(StatusCodes.Status405MethodNotAllowed);
         }
