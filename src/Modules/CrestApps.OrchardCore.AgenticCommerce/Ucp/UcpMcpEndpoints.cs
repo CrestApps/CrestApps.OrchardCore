@@ -137,7 +137,7 @@ public static class UcpMcpEndpoints
             return ToolResult(id, UcpCheckoutMapper.WriteError(request, result.Error), isError: true);
         }
 
-        return ToolResult(id, await mapper.WriteAsync(request, result, cancellationToken), isError: false);
+        return ToolResult(id, await mapper.WriteAsync(request, result, cancellationToken), isError: result.Failure == AgentCheckoutFailure.Refused);
     }
 
     private static JsonArray ListTools()

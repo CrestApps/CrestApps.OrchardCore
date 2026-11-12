@@ -182,6 +182,14 @@ public sealed class UcpRequestFilter : IEndpointFilter
             },
         };
 
+        agentRequest.Context.PlatformProfile = platformProfile;
+
+        // A checkout made while AP2 is agreed keeps needing a mandate, whatever later requests negotiate.
+        if (agentRequest.Has(Ap2.Ap2ProfileContributor.GetName(negotiation.Version)))
+        {
+            agentRequest.Context.Properties[Ap2.Ap2CompletionGate.RequiredProperty] = "true";
+        }
+
         agentRequest.Context.Properties[UcpProfileClient.ProfileUrlProperty] = profileUrl;
         agentRequest.Context.Properties[UcpProfileClient.WebhookUrlProperty] = UcpProfileClient.GetOrderWebhookUrl(platformProfile) ?? signedIn.WebhookUrl;
         agentRequest.Set(httpContext);
