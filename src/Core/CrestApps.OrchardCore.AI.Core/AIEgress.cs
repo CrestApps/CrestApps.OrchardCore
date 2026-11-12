@@ -32,12 +32,14 @@ public sealed class AIEgressOptions
 public static class AIEgress
 {
     /// <summary>
-    /// The named HTTP clients the AI building blocks use, guarded by <see cref="AddAIEgressGuards"/>.
+    /// The named HTTP clients the AI building blocks use, guarded by <see cref="AddAIEgressGuards"/>: the MCP, A2A and
+    /// web crawler clients, and the one the package's OAuth2 token service fetches a connection's token endpoint with.
     /// </summary>
-    public static readonly string[] GuardedClientNames = ["CrestApps.Mcp", "CrestApps.A2A", "CrestApps.WebCrawler"];
+    public static readonly string[] GuardedClientNames = ["CrestApps.Mcp", "CrestApps.A2A", "CrestApps.WebCrawler", "DefaultOAuth2TokenService"];
 
     /// <summary>
-    /// Whether an endpoint an administrator typed may be saved.
+    /// Whether an endpoint an administrator typed may be saved: http or https, never on the site's own network unless the
+    /// host allows a private network. Plain http to a public host is allowed, as it is when the endpoint is called.
     /// </summary>
     /// <param name="url">The endpoint.</param>
     /// <param name="isDevelopment">Whether the site runs in development, where loopback over HTTP is allowed.</param>
@@ -46,7 +48,7 @@ public static class AIEgress
     {
         if (options?.AllowPrivateNetwork != true)
         {
-            return EgressNetwork.IsAllowedUrl(url, isDevelopment);
+            return EgressNetwork.IsExternalUrl(url, isDevelopment);
         }
 
         if (!Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) ||

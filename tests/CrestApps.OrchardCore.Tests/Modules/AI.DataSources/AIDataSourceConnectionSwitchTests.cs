@@ -51,7 +51,7 @@ public sealed class AIDataSourceConnectionSwitchTests
             Authentication = new HttpAuthenticationSettings { Type = HttpAuthenticationType.ApiKey, ApiKeyName = "api-key" },
         });
 
-        var driver = new AzureAISearchAIDataSourceDisplayDriver(_protection, CreatePicker(connection), new PassThroughStringLocalizer<AzureAISearchAIDataSourceDisplayDriver>());
+        var driver = new AzureAISearchAIDataSourceDisplayDriver(_protection, CreatePicker(connection), new CrestApps.OrchardCore.AI.Core.AIEndpointPolicy(Moq.Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions())), new PassThroughStringLocalizer<AzureAISearchAIDataSourceDisplayDriver>());
         var protectedKey = _protection.ProtectSetting(AIDataSourceProtectionConstants.SourceSecretPurpose, "own-key");
         var dataSource = new AIDataSource { ItemId = "ds-1", Source = AIDataSourceSourceTypes.AzureAISearch };
         dataSource.Put(new AzureAISearchSourceMetadata

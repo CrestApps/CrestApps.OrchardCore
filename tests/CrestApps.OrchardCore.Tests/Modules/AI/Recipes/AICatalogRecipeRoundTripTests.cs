@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.DataSources;
@@ -118,7 +119,7 @@ public sealed class AICatalogRecipeRoundTripTests
 
         var options = new AIOptions();
         options.AddConnectionSource("OpenAI", _ => { });
-        var handler = new AIProviderConnectionsStep(manager.Object, Options.Create(options), new PassThroughLocalizer<AIProfileStep>());
+        var handler = new AIProviderConnectionsStep(manager.Object, Options.Create(options), Policy(), new PassThroughLocalizer<AIProfileStep>());
         var context = CreateContext(step);
 
         // Act
@@ -136,7 +137,7 @@ public sealed class AICatalogRecipeRoundTripTests
         // Arrange
         var step = GetStep(OpenAIProviderRecipe, AIDeploymentStep.StepKey);
         var manager = CreateDeploymentManager();
-        var handler = new AIDeploymentStep(manager.Object, Options.Create(CreateDeploymentOptions("OpenAI")), new PassThroughLocalizer<AIDeploymentStep>());
+        var handler = new AIDeploymentStep(manager.Object, Options.Create(CreateDeploymentOptions("OpenAI")), Policy(), new PassThroughLocalizer<AIDeploymentStep>());
         var context = CreateContext(step);
 
         // Act
@@ -153,7 +154,7 @@ public sealed class AICatalogRecipeRoundTripTests
     {
         // Arrange
         var manager = CreateDeploymentManager();
-        var handler = new AIDeploymentStep(manager.Object, Options.Create(CreateDeploymentOptions("OpenAI")), new PassThroughLocalizer<AIDeploymentStep>());
+        var handler = new AIDeploymentStep(manager.Object, Options.Create(CreateDeploymentOptions("OpenAI")), Policy(), new PassThroughLocalizer<AIDeploymentStep>());
         var context = CreateContext(new JsonObject
         {
             ["name"] = AIDeploymentStep.StepKey,
@@ -224,7 +225,7 @@ public sealed class AICatalogRecipeRoundTripTests
         var result = new DeploymentPlanResult(Mock.Of<IFileBuilder>(), new RecipeDescriptor());
 
         var manager = CreateDeploymentManager();
-        var handler = new AIDeploymentStep(manager.Object, Options.Create(CreateDeploymentOptions("OpenAI")), new PassThroughLocalizer<AIDeploymentStep>());
+        var handler = new AIDeploymentStep(manager.Object, Options.Create(CreateDeploymentOptions("OpenAI")), Policy(), new PassThroughLocalizer<AIDeploymentStep>());
 
         // Act
         await source.ProcessDeploymentStepAsync(new AIDeploymentDeploymentStep { DeploymentNames = ["gpt-4o"] }, result);
@@ -318,6 +319,75 @@ public sealed class AICatalogRecipeRoundTripTests
         => JsonNode.Parse(recipe)!["steps"]!.AsArray()
             .Select(step => step!.AsObject())
             .Single(step => step["name"]!.GetValue<string>() == name);
+
+    [Fact]
+    public async Task AIProviderConnectionsStep_RefusesAConnectionWhoseEndpointIsOnTheSitesOwnNetwork()
+    {
+        // Arrange: the editor refuses this endpoint; a recipe could still save it and have the server call it.
+        var step = GetStep(OpenAIProviderRecipe, AIProviderConnectionsStep.StepKey);
+        var manager = new Mock<INamedSourceCatalogManager<AIProviderConnection>>();
+        manager
+            .Setup(x => x.NewAsync("OpenAI", It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns((string source, JsonNode data, CancellationToken _) =>
+            {
+                var connection = new AIProviderConnection { Source = source, Name = data[nameof(AIProviderConnection.Name)]!.GetValue<string>() };
+
+                connection.Put(new RecipeEndpointMetadata { Endpoint = "http://169.254.169.254/latest/meta-data/" });
+
+                return ValueTask.FromResult(connection);
+            });
+        manager
+            .Setup(x => x.ValidateAsync(It.IsAny<AIProviderConnection>(), It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+
+        var options = new AIOptions();
+        options.AddConnectionSource("OpenAI", _ => { });
+        var handler = new AIProviderConnectionsStep(manager.Object, Options.Create(options), Policy(), new PassThroughLocalizer<AIProfileStep>());
+        var context = CreateContext(step);
+
+        // Act
+        await handler.ExecuteAsync(context);
+
+        // Assert
+        Assert.NotEmpty(context.Errors);
+        manager.Verify(x => x.CreateAsync(It.IsAny<AIProviderConnection>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AIDeploymentStep_RefusesADeploymentWhoseEndpointIsOnTheSitesOwnNetwork()
+    {
+        // Arrange
+        var step = GetStep(OpenAIProviderRecipe, AIDeploymentStep.StepKey);
+        var manager = CreateDeploymentManager();
+        manager
+            .Setup(x => x.NewAsync(It.IsAny<string>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns((string source, JsonNode data, CancellationToken _) =>
+            {
+                var deployment = new AIDeployment { Source = source, Name = data[nameof(AIDeployment.Name)]!.GetValue<string>() };
+
+                deployment.Properties = new Dictionary<string, object> { ["Endpoint"] = "http://10.0.0.5/speech" };
+
+                return ValueTask.FromResult(deployment);
+            });
+        var handler = new AIDeploymentStep(manager.Object, Options.Create(CreateDeploymentOptions("OpenAI")), Policy(), new PassThroughLocalizer<AIDeploymentStep>());
+        var context = CreateContext(step);
+
+        // Act
+        await handler.ExecuteAsync(context);
+
+        // Assert
+        Assert.NotEmpty(context.Errors);
+        manager.Verify(x => x.CreateAsync(It.IsAny<AIDeployment>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // The policy the AI feature registers, on a production host that allows no private network.
+    private static CrestApps.OrchardCore.AI.Core.AIEndpointPolicy Policy()
+        => new(Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(), Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions()));
+
+    private sealed class RecipeEndpointMetadata
+    {
+        public string Endpoint { get; set; }
+    }
 
     private static RecipeExecutionContext CreateContext(JsonObject step)
         => new()
