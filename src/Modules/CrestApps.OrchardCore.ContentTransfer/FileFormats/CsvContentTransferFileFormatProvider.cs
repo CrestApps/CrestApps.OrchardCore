@@ -1,7 +1,8 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Tabular;
 
 namespace CrestApps.OrchardCore.ContentTransfer.FileFormats;
 
@@ -30,9 +31,10 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
     }
 
     /// <summary>
-    /// Reads the rows of a CSV file as they are needed. The rows used to be read into memory when the reader was
-    /// created, and every run of a long import read the whole file again, so a large file held hundreds of megabytes
-    /// for the length of the run. A seekable stream is read twice instead: once to count the rows, once to return them.
+    /// Reads the rows of a CSV file as they are needed, through the shared <see cref="CsvReader"/>. The rows used to be
+    /// read into memory when the reader was created, and every run of a long import read the whole file again, so a
+    /// large file held hundreds of megabytes for the length of the run. A seekable stream is read twice instead: once
+    /// to count the rows, once to return them.
     /// </summary>
     private sealed class CsvFileReader : IContentTransferFileReader
     {
@@ -41,6 +43,7 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
         private readonly List<string> _columnNames;
 
         private StreamReader _reader;
+        private IEnumerator<string[]> _records;
         private List<string[]> _bufferedRows;
         private int? _rowCount;
 
@@ -51,11 +54,14 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
             _stream = stream;
             _startPosition = stream.CanSeek ? stream.Position : 0;
             _reader = CreateStreamReader(stream);
+            _records = CsvReader.ReadRecords(_reader).GetEnumerator();
 
-            var headerLine = ReadLogicalLine(_reader)
-                ?? throw new InvalidOperationException("The CSV file is empty.");
+            if (!_records.MoveNext())
+            {
+                throw new InvalidOperationException("The CSV file is empty.");
+            }
 
-            _columnNames = ParseLine(headerLine);
+            _columnNames = [.. _records.Current];
         }
 
         public IReadOnlyList<string> GetColumnNames() => _columnNames;
@@ -81,12 +87,9 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
 
             var count = 0;
 
-            using (var reader = OpenAfterHeader())
+            foreach (var _ in ReadRecordsAfterHeader())
             {
-                while (ReadLogicalLine(reader) != null)
-                {
-                    count++;
-                }
+                count++;
             }
 
             _rowCount = count;
@@ -107,17 +110,16 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
                 yield break;
             }
 
-            using var reader = OpenAfterHeader();
-            string line;
-
-            while ((line = ReadLogicalLine(reader)) != null)
+            foreach (var record in ReadRecordsAfterHeader())
             {
-                yield return ToRow(line);
+                yield return ToRow(record);
             }
         }
 
         public void Dispose()
         {
+            _records?.Dispose();
+            _records = null;
             _reader?.Dispose();
             _reader = null;
         }
@@ -125,14 +127,16 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
         private static StreamReader CreateStreamReader(Stream stream)
             => new(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 64 * 1024, leaveOpen: true);
 
-        private StreamReader OpenAfterHeader()
+        private IEnumerable<string[]> ReadRecordsAfterHeader()
         {
             _stream.Position = _startPosition;
 
-            var reader = CreateStreamReader(_stream);
-            ReadLogicalLine(reader);
+            using var reader = CreateStreamReader(_stream);
 
-            return reader;
+            foreach (var record in CsvReader.ReadRecords(reader).Skip(1))
+            {
+                yield return record;
+            }
         }
 
         // A stream that cannot seek can be read only once, so its rows are kept in memory, as they always were.
@@ -141,169 +145,39 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
             if (_bufferedRows is null)
             {
                 _bufferedRows = [];
-                string line;
 
-                while ((line = ReadLogicalLine(_reader)) != null)
+                while (_records.MoveNext())
                 {
-                    _bufferedRows.Add(ToRow(line));
+                    _bufferedRows.Add(ToRow(_records.Current));
                 }
             }
 
             return _bufferedRows;
         }
 
-        private string[] ToRow(string line)
+        private string[] ToRow(string[] values)
         {
-            var values = ParseLine(line);
             var row = new string[_columnNames.Count];
 
-            for (var i = 0; i < Math.Min(values.Count, row.Length); i++)
+            // A blank line is a row with no values, not one empty first value.
+            if (values.Length == 1 && values[0].Length == 0)
+            {
+                return row;
+            }
+
+            for (var i = 0; i < Math.Min(values.Length, row.Length); i++)
             {
                 row[i] = values[i];
             }
 
             return row;
         }
-
-        /// <summary>
-        /// Reads a logical CSV line that may span multiple physical lines due to quoted fields.
-        /// </summary>
-        private static string ReadLogicalLine(StreamReader reader)
-        {
-            var firstLine = reader.ReadLine();
-            if (firstLine == null)
-            {
-                return null;
-            }
-
-            // Fast path: if the line has an even number of quotes, it's a complete logical line.
-            if (CountQuotes(firstLine) % 2 == 0)
-            {
-                return firstLine;
-            }
-
-            // Slow path: the line has an unclosed quote, so we need to read more lines.
-            var buffer = new StringBuilder();
-            buffer.Append(firstLine);
-
-            // The quotes are counted line by line; counting the whole buffer again after each line was quadratic.
-            var quotes = CountQuotes(firstLine);
-
-            while (true)
-            {
-                var nextLine = reader.ReadLine();
-                if (nextLine == null)
-                {
-                    break;
-                }
-
-                buffer.Append('\n');
-                buffer.Append(nextLine);
-                quotes += CountQuotes(nextLine);
-
-                if (quotes % 2 == 0)
-                {
-                    break;
-                }
-            }
-
-            return buffer.ToString();
-        }
-
-        private static int CountQuotes(string line)
-        {
-            var count = 0;
-            foreach (var ch in line)
-            {
-                if (ch == '"')
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-
-        /// <summary>
-        /// Parses a logical CSV line into fields per RFC 4180.
-        /// </summary>
-        private static List<string> ParseLine(string line)
-        {
-            var fields = new List<string>();
-            var i = 0;
-
-            while (i <= line.Length)
-            {
-                if (i == line.Length)
-                {
-                    // Trailing comma means an empty field at end.
-                    if (line.Length > 0 && line[^1] == ',')
-                    {
-                        fields.Add(string.Empty);
-                    }
-
-                    break;
-                }
-
-                if (line[i] == '"')
-                {
-                    // Quoted field.
-                    var sb = new StringBuilder();
-                    i++; // Skip opening quote.
-
-                    while (i < line.Length)
-                    {
-                        if (line[i] == '"')
-                        {
-                            if (i + 1 < line.Length && line[i + 1] == '"')
-                            {
-                                // Escaped quote.
-                                sb.Append('"');
-                                i += 2;
-                            }
-                            else
-                            {
-                                // End of quoted field.
-                                i++; // Skip closing quote.
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            sb.Append(line[i]);
-                            i++;
-                        }
-                    }
-
-                    fields.Add(sb.ToString());
-
-                    // Skip comma after quoted field.
-                    if (i < line.Length && line[i] == ',')
-                    {
-                        i++;
-                    }
-                }
-                else
-                {
-                    // Unquoted field.
-                    var commaIndex = line.IndexOf(',', i);
-                    if (commaIndex == -1)
-                    {
-                        fields.Add(line[i..]);
-                        break;
-                    }
-                    else
-                    {
-                        fields.Add(line[i..commaIndex]);
-                        i = commaIndex + 1;
-                    }
-                }
-            }
-
-            return fields;
-        }
     }
 
+    /// <summary>
+    /// Writes CSV through the shared <see cref="CsvWriter"/>, which quotes values as RFC 4180 asks and guards a value
+    /// that starts like a spreadsheet formula, so an exported file never runs one when it is opened.
+    /// </summary>
     private sealed class CsvFileWriter : IContentTransferFileWriter
     {
         private readonly StreamWriter _writer;
@@ -315,12 +189,12 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
 
         public void WriteHeader(IReadOnlyList<string> columnNames)
         {
-            WriteLine(columnNames);
+            CsvWriter.WriteRow(_writer, columnNames);
         }
 
         public void WriteRow(IReadOnlyList<string> values)
         {
-            WriteLine(values);
+            CsvWriter.WriteRow(_writer, values);
         }
 
         public void Flush()
@@ -335,34 +209,5 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
         {
             _writer.Dispose();
         }
-
-        private void WriteLine(IReadOnlyList<string> values)
-        {
-            for (var i = 0; i < values.Count; i++)
-            {
-                if (i > 0)
-                {
-                    _writer.Write(',');
-                }
-
-                var value = values[i] ?? string.Empty;
-
-                if (NeedsQuoting(value))
-                {
-                    _writer.Write('"');
-                    _writer.Write(value.Replace("\"", "\"\""));
-                    _writer.Write('"');
-                }
-                else
-                {
-                    _writer.Write(value);
-                }
-            }
-
-            _writer.WriteLine();
-        }
-
-        private static bool NeedsQuoting(string value)
-            => value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r');
     }
 }

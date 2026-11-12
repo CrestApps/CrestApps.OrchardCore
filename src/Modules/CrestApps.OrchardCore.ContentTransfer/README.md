@@ -1,4 +1,4 @@
-# Content Transfer
+﻿# Content Transfer
 
 Provides bulk content import and export with pluggable file format support.
 
@@ -25,6 +25,13 @@ Enabling a feature of this module enables the features it depends on:
 - `IContentImportHandlerResolver` (CrestApps.OrchardCore.ContentTransfer.Abstractions): Resolves import/export handlers for content parts and fields by their type name.
 - `IContentImportManager` (CrestApps.OrchardCore.ContentTransfer.Abstractions): The main service that orchestrates the import and export of content items.
 - and 13 more contracts in the same projects.
+
+## Import safety
+
+- Imported HTML body text is sanitized as the HTML body editor sanitizes it, unless the type's HTML body settings turn sanitizing off.
+- CSV is written through the shared guarded `CsvWriter`: a value that starts like a formula is prefixed with `'`.
+- Spreadsheet imports are bounded by `ContentImportOptions`: `MaxColumns` (1,000), `MaxRows` (1,048,576), `MaxCellLength` (32,767) and `MaxSharedStrings` (2,000,000).
+- Chunked uploads must arrive in order; the temporary file grows with the chunks and is never sized up front.
 
 ## Documentation
 

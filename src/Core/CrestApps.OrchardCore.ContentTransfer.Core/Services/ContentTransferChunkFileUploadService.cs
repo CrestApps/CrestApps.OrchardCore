@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.ContentTransfer.Models;
@@ -90,8 +90,17 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
 
         var formFile = request.Form.Files[0];
 
-        await using (var fileStream = GetOrCreateTemporaryFile(uploadId, formFile, range.Length.Value))
+        await using (var fileStream = GetOrCreateTemporaryFile(uploadId, formFile))
         {
+            // Chunks arrive in order (a chunk may be sent again). A chunk that starts past what was received would make the
+            // file system allocate the gap, which is how a declared size used to take disk space before any byte came.
+            if (range.From.Value > fileStream.Length)
+            {
+                RecordChunk(ChunkResultRejected);
+
+                return await invalidAsync(ContentTransferUploadError.InvalidRequest);
+            }
+
             fileStream.Seek(range.From.Value, SeekOrigin.Begin);
             await formFile.CopyToAsync(fileStream, request.HttpContext.RequestAborted);
         }
@@ -167,7 +176,7 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
         return false;
     }
 
-    private FileStream GetOrCreateTemporaryFile(Guid uploadId, IFormFile formFile, long size)
+    private FileStream GetOrCreateTemporaryFile(Guid uploadId, IFormFile formFile)
     {
         var tempFolderPath = GetTempFolderPath();
 
@@ -183,7 +192,7 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
             return File.Open(tempFilePath, FileMode.Open, FileAccess.ReadWrite);
         }
 
-        return CreateTemporaryFile(tempFilePath, size);
+        return CreateTemporaryFile(tempFilePath);
     }
 
     private ChunkedFormFile GetTemporaryFileForRead(Guid uploadId, IFormFile formFile)
@@ -202,10 +211,10 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
     private string GetTempFilePath(Guid uploadId, IFormFile formFile)
         => Path.Combine(GetTempFolderPath(), _tempFileNamePrefix + CalculateHash(uploadId.ToString("N"), formFile.FileName, formFile.Name));
 
-    private static FileStream CreateTemporaryFile(string tempPath, long size)
+    private static FileStream CreateTemporaryFile(string tempPath)
     {
+        // The file grows as chunks arrive; it is never sized up front from the length the client declares.
         var fileStream = File.Create(tempPath);
-        fileStream.SetLength(size);
         new FileInfo(tempPath).Attributes |= FileAttributes.Temporary;
 
         return fileStream;

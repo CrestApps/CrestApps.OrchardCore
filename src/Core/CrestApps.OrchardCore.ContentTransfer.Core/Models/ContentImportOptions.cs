@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContentTransfer.Models;
+﻿namespace CrestApps.OrchardCore.ContentTransfer.Models;
 
 public sealed class ContentImportOptions
 {
@@ -52,4 +52,26 @@ public sealed class ContentImportOptions
     /// uploads older than this value are purged by a background task. Defaults to 1 hour.
     /// </summary>
     public TimeSpan TemporaryFileLifetime { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// The most columns an imported spreadsheet may have. A header cell beyond it fails the file before its rows are
+    /// read. Defaults to 1,000.
+    /// </summary>
+    public int MaxColumns { get; set; } = 1_000;
+
+    /// <summary>
+    /// The most data rows an imported spreadsheet may have. Defaults to 1,048,576, Excel's own limit.
+    /// </summary>
+    public int MaxRows { get; set; } = 1_048_576;
+
+    /// <summary>
+    /// The most characters a cell of an imported spreadsheet may hold. Defaults to 32,767, Excel's own limit.
+    /// </summary>
+    public int MaxCellLength { get; set; } = 32_767;
+
+    /// <summary>
+    /// The most shared strings an imported workbook may hold. They are read into memory when the file opens. Defaults
+    /// to 2,000,000.
+    /// </summary>
+    public int MaxSharedStrings { get; set; } = 2_000_000;
 }

@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.Handlers;
@@ -935,7 +935,35 @@ public class HtmlBodyPartContentImportHandlerTests
 
     public HtmlBodyPartContentImportHandlerTests()
     {
-        _handler = new HtmlBodyPartContentImportHandler(Mock.Of<IStringLocalizer<HtmlBodyPartContentImportHandler>>());
+        _handler = new HtmlBodyPartContentImportHandler(
+            Mock.Of<IStringLocalizer<HtmlBodyPartContentImportHandler>>(),
+            new global::OrchardCore.Infrastructure.Html.HtmlSanitizerService(Microsoft.Extensions.Options.Options.Create(new global::OrchardCore.Infrastructure.Html.HtmlSanitizerOptions())));
+    }
+
+    // SEC-A17: imported HTML was stored as it came, so a file could put script into every page it created, unlike the
+    // HTML body editor, which sanitizes. The import now sanitizes as the editor does.
+    [Fact]
+    public async Task ImportAsync_StripsScriptFromTheHtml()
+    {
+        var contentItem = new ContentItem { ContentType = "Article" };
+        var dataTable = new DataTable();
+        dataTable.Columns.Add("HtmlBodyPart_Html");
+        var row = dataTable.NewRow();
+        row["HtmlBodyPart_Html"] = "<p>Hello</p><script>alert(document.cookie)</script><img src=x onerror=alert(1)>";
+        dataTable.Rows.Add(row);
+
+        await _handler.ImportAsync(new ContentPartImportMapContext
+        {
+            ContentTypePartDefinition = CreateTypePartDefinition("HtmlBodyPart"),
+            ContentItem = contentItem,
+            Columns = dataTable.Columns,
+            Row = row,
+        });
+
+        Assert.True(contentItem.TryGet<HtmlBodyPart>(out var part));
+        Assert.Contains("<p>Hello</p>", part.Html);
+        Assert.DoesNotContain("script", part.Html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("onerror", part.Html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

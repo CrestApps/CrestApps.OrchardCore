@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContentTransfer.OpenXml.Services;
+﻿using CrestApps.OrchardCore.ContentTransfer.OpenXml.Services;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -156,6 +156,47 @@ public sealed class ExcelContentTransferFileFormatProviderTests
         Assert.Equal(["Title"], reader.GetColumnNames());
         Assert.Equal(0, reader.GetRowCount());
         Assert.Empty(reader.ReadRows());
+    }
+
+    // SEC-A17: a header cell whose reference names a far column made the reader add a name for every column before it,
+    // and the shared strings and cells had no bound. The limits come from ContentImportOptions.
+    [Fact]
+    public void CreateReader_RefusesAHeaderBeyondTheColumnLimit()
+    {
+        using var stream = CreateWorkbook([], [Row(1, InlineCell("A1", "First"), InlineCell("ZZZ1", "Far"))]);
+        var provider = new ExcelContentTransferFileFormatProvider(Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.ContentTransfer.Models.ContentImportOptions { MaxColumns = 100 }));
+
+        var exception = Assert.Throws<InvalidOperationException>(() => provider.CreateReader(stream));
+
+        Assert.Contains("100", exception.Message);
+    }
+
+    [Fact]
+    public void CreateReader_RefusesMoreSharedStringsThanTheLimit()
+    {
+        using var stream = CreateWorkbook(["Name", "Notes"], [Row(1, SharedCell("A1", 0), SharedCell("B1", 1))]);
+        var provider = new ExcelContentTransferFileFormatProvider(Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.ContentTransfer.Models.ContentImportOptions { MaxSharedStrings = 2 }));
+
+        Assert.Throws<InvalidOperationException>(() => provider.CreateReader(stream));
+    }
+
+    [Fact]
+    public void ReadRows_RefusesACellLongerThanTheLimit()
+    {
+        using var stream = CreateWorkbook([], [Row(1, InlineCell("A1", "Name")), Row(2, InlineCell("A2", new string('x', 50)))]);
+        var provider = new ExcelContentTransferFileFormatProvider(Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.ContentTransfer.Models.ContentImportOptions { MaxCellLength = 10 }));
+        using var reader = provider.CreateReader(stream);
+
+        Assert.Throws<InvalidOperationException>(() => reader.ReadRows().ToList());
+    }
+
+    [Fact]
+    public void CreateReader_RefusesMoreRowsThanTheLimit()
+    {
+        using var stream = CreateWorkbook([], [Row(1, InlineCell("A1", "Name")), Row(2, InlineCell("A2", "a")), Row(3, InlineCell("A3", "b")), Row(4, InlineCell("A4", "c"))]);
+        var provider = new ExcelContentTransferFileFormatProvider(Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.ContentTransfer.Models.ContentImportOptions { MaxRows = 2 }));
+
+        Assert.Throws<InvalidOperationException>(() => provider.CreateReader(stream));
     }
 
     [Fact]
