@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -171,7 +172,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         // guest's key never answers another guest with the first one's response.
         if (string.IsNullOrEmpty(caller))
         {
-            caller = "anonymous:" + httpContext.Connection.RemoteIpAddress;
+            caller = "anonymous:" + ClientNetworkKey.NetworkOnly(httpContext);
         }
 
         var scope = $"{httpContext.Request.PathBase}|{httpContext.Request.Method}|{httpContext.Request.Path}|{caller}|{key}";

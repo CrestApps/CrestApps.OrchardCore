@@ -6,8 +6,10 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 
 /// <summary>
 /// Kept for one release so code outside this repository that calls <see cref="IPaymentAttemptLimiter"/> keeps working. It
-/// counts each scope and discriminator against one attempt policy with the old limit (20 per 5 minutes, or what
-/// <see cref="PaymentRateLimitOptions"/> configures). New code uses <see cref="IAttemptLimiter"/> with a named policy.
+/// counts each scope and discriminator against the <c>payment-legacy</c> attempt policy (20 per 5 minutes), which is
+/// changed by name under <c>CrestApps_Throttling:AttemptPolicies</c> like any other. Of <see cref="PaymentRateLimitOptions"/>
+/// only a <c>PermitLimit</c> of zero or less is still read, and turns it off. New code uses <see cref="IAttemptLimiter"/>
+/// with a named policy.
 /// </summary>
 [Obsolete("Use IAttemptLimiter with a registered attempt policy. This adapter is removed in the next release.")]
 public sealed class PaymentAttemptLimiter : IPaymentAttemptLimiter
