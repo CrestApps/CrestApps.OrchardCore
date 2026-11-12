@@ -1,6 +1,5 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Webhooks.Core.Signatures;
-using CrestApps.OrchardCore.Webhooks.Models;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 
@@ -11,6 +10,9 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 public static class TimestampedHmacSignature
 {
     private const int SignatureHexLength = 64;
+
+    // A sender rotating its secret sends two or three signatures; a header with more isn't from a real sender.
+    private const int MaxSignatures = 8;
 
     /// <summary>
     /// Signs a body.
@@ -29,7 +31,8 @@ public static class TimestampedHmacSignature
     }
 
     /// <summary>
-    /// Verifies a header value against a body. Any <c>v1</c> member may match; the comparison runs in fixed time.
+    /// Verifies a header value against a body. Any <c>v1</c> member may match; the comparison runs in fixed time. The
+    /// HMAC is computed once, and a header with more than a few <c>v1</c> members is refused.
     /// </summary>
     /// <param name="header">The header value.</param>
     /// <param name="secret">The shared secret.</param>
@@ -76,6 +79,11 @@ public static class TimestampedHmacSignature
                 }
 
                 signatures.Add(value);
+
+                if (signatures.Count > MaxSignatures)
+                {
+                    return false;
+                }
             }
         }
 
@@ -90,18 +98,13 @@ public static class TimestampedHmacSignature
             return false;
         }
 
-        var signedContent = SignedContent(timestamp, body);
+        var expected = HmacWebhookSignatureValidator.Sha256Hex.Compute(secret, SignedContent(timestamp, body));
         var matched = false;
 
-        // Every member is checked, so the time taken doesn't tell which one matched.
+        // Every member is compared, so the time taken doesn't tell which one matched.
         foreach (var signature in signatures)
         {
-            matched |= HmacWebhookSignatureValidator.Sha256Hex.IsValid(new WebhookSignatureValidationContext
-            {
-                Secret = secret,
-                Signature = signature,
-                SignedContent = signedContent,
-            });
+            matched |= WebhookSignatures.FixedTimeEquals(expected, signature.ToLowerInvariant());
         }
 
         return matched;
