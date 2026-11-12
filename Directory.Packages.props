@@ -3,8 +3,8 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>4.0.0-preview-19219</OrchardCoreVersion>
-    <CrestAppsCoreVersion>2.0.0-preview.367</CrestAppsCoreVersion>
-    <ModelContextProtocolVersion>2.3.1</ModelContextProtocolVersion>
+    <CrestAppsCoreVersion>2.0.0-preview.371</CrestAppsCoreVersion>
+    <ModelContextProtocolVersion>2.4.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Miscellaneous Packages -->
@@ -29,11 +29,11 @@
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="Stripe.net" Version="53.1.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
-    <PackageVersion Include="YesSql.Abstractions" Version="6.1.0" />
-    <PackageVersion Include="YesSql.Core" Version="6.1.0" />
-    <PackageVersion Include="YesSql.Provider.PostgreSql" Version="6.1.0" />
-    <PackageVersion Include="YesSql.Provider.Sqlite" Version="6.1.0" />
-    <PackageVersion Include="YesSql.Provider.SqlServer" Version="6.1.0" />
+    <PackageVersion Include="YesSql.Abstractions" Version="6.3.0" />
+    <PackageVersion Include="YesSql.Core" Version="6.3.0" />
+    <PackageVersion Include="YesSql.Provider.PostgreSql" Version="6.3.0" />
+    <PackageVersion Include="YesSql.Provider.Sqlite" Version="6.3.0" />
+    <PackageVersion Include="YesSql.Provider.SqlServer" Version="6.3.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- OrchardCore Packages -->
