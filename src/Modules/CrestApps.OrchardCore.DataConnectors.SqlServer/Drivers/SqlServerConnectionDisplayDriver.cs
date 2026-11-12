@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.SqlServer.ViewModels;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.DataConnectors.SqlServer.Drivers;
@@ -16,14 +18,18 @@ namespace CrestApps.OrchardCore.DataConnectors.SqlServer.Drivers;
 internal sealed class SqlServerConnectionDisplayDriver : DisplayDriver<DataConnection>
 {
     private readonly IDataConnectionSecretManager _secretManager;
+    private readonly bool _allowHostIdentity;
 
     internal readonly IStringLocalizer S;
 
     public SqlServerConnectionDisplayDriver(
         IDataConnectionSecretManager secretManager,
+        ShellSettings shellSettings,
+        IOptions<SqlServerHostIdentityOptions> hostIdentityOptions,
         IStringLocalizer<SqlServerConnectionDisplayDriver> stringLocalizer)
     {
         _secretManager = secretManager;
+        _allowHostIdentity = SqlServerHostIdentity.IsAllowed(shellSettings, hostIdentityOptions.Value);
         S = stringLocalizer;
     }
 
@@ -47,6 +53,7 @@ internal sealed class SqlServerConnectionDisplayDriver : DisplayDriver<DataConne
             model.ReadOnlyIntent = settings.ReadOnlyIntent;
             model.ConnectTimeoutSeconds = settings.ConnectTimeoutSeconds;
             model.HasPassword = _secretManager.Has(connection, SqlServerDataConnector.PasswordSecret);
+            model.AllowHostIdentity = _allowHostIdentity;
         }).Location("Content:5");
     }
 
@@ -78,6 +85,11 @@ internal sealed class SqlServerConnectionDisplayDriver : DisplayDriver<DataConne
         if (model.Authentication is SqlServerAuthenticationType.SqlLogin or SqlServerAuthenticationType.EntraServicePrincipal && string.IsNullOrWhiteSpace(model.UserName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserName), S["The login or client ID is required."]);
+        }
+
+        if (!_allowHostIdentity && SqlServerHostIdentity.IsHostIdentity(model.Authentication))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Authentication), S["Signing in as the site's host is only available on the default tenant."]);
         }
 
         if (model.ConnectTimeoutSeconds is < 1 or > 300)

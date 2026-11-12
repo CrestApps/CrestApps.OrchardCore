@@ -57,4 +57,6 @@ public class SqlServerConnectionViewModel
     /// </summary>
     [BindNever]
     public bool HasPassword { get; set; }
+
+    public bool AllowHostIdentity { get; set; }
 }

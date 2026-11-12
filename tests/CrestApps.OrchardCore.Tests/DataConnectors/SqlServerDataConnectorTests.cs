@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.DataConnectors.SqlServer;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using OrchardCore.DataSources;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.DataConnectors;
 
@@ -23,7 +24,7 @@ public sealed class SqlServerDataConnectorTests
         };
 
         // Act
-        var builder = SqlServerDataConnector.BuildConnectionString(settings, "p@ss;word");
+        var builder = SqlServerDataConnector.BuildConnectionString(settings, "p@ss;word", allowHostIdentity: false);
 
         // Assert
         Assert.Equal("sql.example.com,1433", builder.DataSource);
@@ -39,7 +40,7 @@ public sealed class SqlServerDataConnectorTests
     public void BuildConnectionString_ForTheSiteWindowsAccount_SendsNoPassword()
     {
         // Act
-        var builder = SqlServerDataConnector.BuildConnectionString(new SqlServerConnectionSettings { Server = "db", Database = "x", Authentication = SqlServerAuthenticationType.Integrated }, "ignored");
+        var builder = SqlServerDataConnector.BuildConnectionString(new SqlServerConnectionSettings { Server = "db", Database = "x", Authentication = SqlServerAuthenticationType.Integrated }, "ignored", allowHostIdentity: true);
 
         // Assert
         Assert.True(builder.IntegratedSecurity);
@@ -50,7 +51,7 @@ public sealed class SqlServerDataConnectorTests
     public void BuildConnectionString_ForAManagedIdentity_UsesEntra()
     {
         // Act
-        var builder = SqlServerDataConnector.BuildConnectionString(new SqlServerConnectionSettings { Server = "db", Database = "x", Authentication = SqlServerAuthenticationType.EntraManagedIdentity }, null);
+        var builder = SqlServerDataConnector.BuildConnectionString(new SqlServerConnectionSettings { Server = "db", Database = "x", Authentication = SqlServerAuthenticationType.EntraManagedIdentity }, null, allowHostIdentity: true);
 
         // Assert
         Assert.Equal(SqlAuthenticationMethod.ActiveDirectoryManagedIdentity, builder.Authentication);
@@ -59,7 +60,7 @@ public sealed class SqlServerDataConnectorTests
     [Fact]
     public void BuildConnectionString_WithoutAServer_Fails()
     {
-        Assert.Throws<DataConnectorException>(() => SqlServerDataConnector.BuildConnectionString(new SqlServerConnectionSettings(), null));
+        Assert.Throws<DataConnectorException>(() => SqlServerDataConnector.BuildConnectionString(new SqlServerConnectionSettings(), null, allowHostIdentity: true));
     }
 
     [Theory]
@@ -77,7 +78,7 @@ public sealed class SqlServerDataConnectorTests
     public async Task OpenConnection_ToLocalDb_IsRefusedUnlessTheConfigurationAllowsTheSiteNetwork()
     {
         // Arrange
-        var connector = new SqlServerDataConnector(Options.Create(new DataConnectorNetworkOptions()));
+        var connector = new SqlServerDataConnector(Options.Create(new DataConnectorNetworkOptions()), new ShellSettings { Name = ShellSettings.DefaultShellName }, Options.Create(new SqlServerHostIdentityOptions()));
         var connection = DataConnectorTestData.Connection(SqlServerDataConnector.Name);
         connection.Put(new SqlServerConnectionSettings { Server = "(localdb)\\MSSQLLocalDB", Database = "master", Authentication = SqlServerAuthenticationType.Integrated });
 
@@ -93,7 +94,7 @@ public sealed class SqlServerDataConnectorTests
     public void BuildRead_QuotesIdentifiers_BindsValues_AndLimitsWithTop()
     {
         // Arrange
-        var connector = new SqlServerDataConnector(Options.Create(new DataConnectorNetworkOptions()));
+        var connector = new SqlServerDataConnector(Options.Create(new DataConnectorNetworkOptions()), new ShellSettings { Name = ShellSettings.DefaultShellName }, Options.Create(new SqlServerHostIdentityOptions()));
         var dataSet = DataConnectorTestData.DataSet();
         dataSet.Resource = "sales.Order]Lines";
 
@@ -120,7 +121,7 @@ public sealed class SqlServerDataConnectorTests
     public void BuildRead_WithACustomQuery_WrapsItAsADerivedTable()
     {
         // Arrange
-        var connector = new SqlServerDataConnector(Options.Create(new DataConnectorNetworkOptions()));
+        var connector = new SqlServerDataConnector(Options.Create(new DataConnectorNetworkOptions()), new ShellSettings { Name = ShellSettings.DefaultShellName }, Options.Create(new SqlServerHostIdentityOptions()));
         var context = new DataConnectorReadContext(DataConnectorTestData.Connection(), new FakeSecrets(), DataConnectorTestData.DataSet());
 
         using var command = new SqlCommand();
@@ -130,5 +131,40 @@ public sealed class SqlServerDataConnectorTests
 
         // Assert
         Assert.Equal("SELECT * FROM (SELECT a FROM b) [q]", sql);
+    }
+
+    /// <summary>
+    /// SEC-A8: the host-identity modes sign in to SQL Server as the host process (its Windows account, its managed
+    /// identity, its default Entra credential). A tenant's administrator could name the host's own database server and
+    /// read other tenants' tables, so those modes work only on the default tenant unless the host allows them.
+    /// </summary>
+    [Theory]
+    [InlineData(SqlServerAuthenticationType.Integrated)]
+    [InlineData(SqlServerAuthenticationType.EntraManagedIdentity)]
+    [InlineData(SqlServerAuthenticationType.EntraDefault)]
+    public void BuildConnectionString_AHostIdentityModeWhenNotAllowed_Fails(SqlServerAuthenticationType authentication)
+    {
+        var settings = new SqlServerConnectionSettings { Server = "db", Database = "x", Authentication = authentication };
+
+        Assert.Throws<DataConnectorException>(() => SqlServerDataConnector.BuildConnectionString(settings, null, allowHostIdentity: false));
+    }
+
+    [Theory]
+    [InlineData("Customer1", false, false)]
+    [InlineData("Customer1", true, true)]
+    [InlineData("Default", false, true)]
+    public void IsHostIdentityAllowed_DependsOnTheTenantAndTheHostOption(string tenant, bool optionSet, bool expected)
+    {
+        var allowed = SqlServerHostIdentity.IsAllowed(new ShellSettings { Name = tenant }, new SqlServerHostIdentityOptions { AllowHostIdentity = optionSet });
+
+        Assert.Equal(expected, allowed);
+    }
+
+    [Fact]
+    public void BuildConnectionString_ASqlLoginOnAnyTenant_Works()
+    {
+        var builder = SqlServerDataConnector.BuildConnectionString(new SqlServerConnectionSettings { Server = "db", Database = "x", UserName = "reader" }, "pw", allowHostIdentity: false);
+
+        Assert.Equal("reader", builder.UserID);
     }
 }
