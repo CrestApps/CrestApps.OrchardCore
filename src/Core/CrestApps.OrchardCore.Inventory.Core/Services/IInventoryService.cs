@@ -71,7 +71,8 @@ public interface IInventoryService
 
     /// <summary>
     /// Holds the units an order needs, all of them or none: a counted product short of units, and not allowing
-    /// backorders, refuses the whole order. Products that aren't counted are skipped.
+    /// backorders, refuses the whole order. Products that aren't counted are skipped. A hold the order already has is
+    /// kept, and runs at least until <paramref name="expiresUtc"/>.
     /// </summary>
     Task<StockReservationResult> ReserveAsync(string orderId, IEnumerable<StockRequest> lines, DateTime expiresUtc, CancellationToken cancellationToken = default);
 

@@ -439,6 +439,29 @@ public sealed class InventoryStockTests : IAsyncLifetime
         Assert.Equal(2, (await FindAsync(itemId)).Reserved);
     }
 
+    /// <summary>
+    /// SEC-C14: the gate placed holds only for lines that had none, so a hold with seconds left, or one past its end but
+    /// not swept yet, passed the gate and was let go during 3-D Secure; the unit could then be sold to someone else and
+    /// the paid order sold again without a hold. The gate now extends the order's holds for the payment.
+    /// </summary>
+    [Fact]
+    public async Task PaymentGate_AHoldAboutToEnd_IsExtendedForThePayment()
+    {
+        // Arrange: order-a's hold ended a minute ago, and the sweep has not run yet.
+        var itemId = await AddItemAsync();
+        await StockedServiceAsync(itemId, 5);
+        await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("mug", null, 2)], _now.AddMinutes(-1), TestContext.Current.CancellationToken));
+
+        // Act
+        var context = await InSessionAsync(service => BeginPaymentAsync(service, "order-a", 2));
+        var released = await InSessionAsync(service => service.ReleaseExpiredAsync(100, TestContext.Current.CancellationToken));
+
+        // Assert: the sweep that runs during the payment leaves the hold alone.
+        Assert.False(context.IsRefused);
+        Assert.Equal(0, released);
+        Assert.Equal(2, (await FindAsync(itemId)).Reserved);
+    }
+
     // Asks the Inventory payment gate whether order-a's checkout may be paid, as the checkout does before payment.
     private static async Task<global::CrestApps.OrchardCore.Checkout.Services.CheckoutPaymentBeginningContext> BeginPaymentAsync(DefaultInventoryService service, string orderId, int quantity)
     {
