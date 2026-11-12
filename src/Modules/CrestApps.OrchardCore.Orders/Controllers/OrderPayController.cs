@@ -77,6 +77,13 @@ public sealed class OrderPayController : Controller
             return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = open.SessionId });
         }
 
+        // A link opened again (a second click, a mail client's preview, a link scanner) goes back to the checkout it
+        // opened, so following it never piles up checkouts.
+        if (await _sessions.GetByReferenceAsync(CheckoutReferenceTypes.Order, order.ItemId, cancellationToken: HttpContext.RequestAborted) is { Status: CheckoutSessionStatus.Pending } pending)
+        {
+            return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = pending.SessionId, step = pending.CurrentStep });
+        }
+
         var session = await _engine.StartAsync(new StartCheckoutRequest
         {
             ReferenceType = CheckoutReferenceTypes.Order,
