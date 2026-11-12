@@ -26,7 +26,7 @@ The feature's migration defines `B2BAccountPart` and adds it to the `Account` ty
 | `Terms` | `AccountTerms`: `NetDays`, `DepositPercent`, `CreditLimit`, `RequirePurchaseOrder`. `OffersTerms` is true when `NetDays` is set. |
 | `PriceListId` | The `PriceList` its buyers pay, or none. |
 | `MonthlyBudget` | What its buyers may order in a calendar month, in the store's currency, or none. |
-| `Punchout` | `AccountPunchout`: `Enabled`, `UserId` (the buyer the procurement system shops as), `KeyHash` (SHA-256 of the key, hex), `KeyCreatedUtc`. |
+| `Punchout` | `AccountPunchout`: `Enabled`, `UserId` (the buyer the procurement system shops as), `KeyHash` (SHA-256 of the key, hex), `KeyCreatedUtc`, `AllowLinkSignIn` (OCI link mode, off by default). |
 
 The account's name is its title. `B2BAccount` reads an account content item together with its part: `AccountId` (the content item id), `Name`, `IsEnabled` (the part is on and the version is published) and the part's values, plus:
 
@@ -107,7 +107,7 @@ public sealed record BuyerPriceContext(ContentItem ContentItem, string VariantId
 
 | Route | |
 | --- | --- |
-| `GET` or `POST punchout/oci/{accountId}` | Takes the key as `PASSWORD` or `key`, `HOOK_URL` and `~TARGET`. Refuses (401) an unknown account, one that doesn't buy as a business, a wrong key (compared by hash in fixed time), a `HOOK_URL` that isn't absolute `https` (or `http` on loopback) or carries user info, a punchout user who isn't one of its members, or one in the `Administrator` role. A refusal is logged without the account's id. Otherwise signs the punchout buyer in, keeps `{ AccountId, HookUrl, Target }` in a data-protected `punchout` cookie, and opens the home page. |
+| `POST punchout/oci/{accountId}` (and `GET` only for an account with **Allow link sign-in**) | Takes the key as `PASSWORD` or `key`, `HOOK_URL` and `~TARGET` from the posted form (from the query string in link mode). A `GET` for an account without link mode answers `405`, so the key never lands in access logs and another site can't sign a visitor in with a link. Refuses (401) an unknown account, one that doesn't buy as a business, a wrong key (compared by hash in fixed time), a `HOOK_URL` that isn't absolute `https` (or `http` on loopback) or carries user info, a punchout user who isn't one of its members, is disabled or locked out, can't sign in (`SignInManager.CanSignInAsync`), or has **Access admin panel**. A refusal is logged without the account's id. Otherwise signs the punchout buyer in with a `punchout` claim (the account id), keeps `{ AccountId, HookUrl, Target }` in a data-protected `punchout` cookie, and opens the home page. |
 | `GET punchout/oci/transfer` (`PunchoutTransfer`) | Renders the `PunchoutTransfer` shape: a form of OCI fields that posts itself to the `HOOK_URL` in the target frame (`_top`, `_parent`, `_self` or `_blank`). |
 
 `PunchoutCartActionProvider` adds **Transfer to your procurement system** to the cart while the cookie is there. `PunchoutService.ToOciFields(pricing)` writes, for each line that can be bought, numbered from 1: `NEW_ITEM-DESCRIPTION[n]` (40 characters, the full title in `NEW_ITEM-LONGTEXT_n:132[]` when longer), `QUANTITY`, `UNIT` (`EA`), `PRICE` (one unit with its add-ons, invariant), `PRICEUNIT` (`1`), `CURRENCY`, `VENDORMAT` (SKU) and `EXT_PRODUCT_ID` (content item id). The cart stays; the order is placed in the procurement system.
