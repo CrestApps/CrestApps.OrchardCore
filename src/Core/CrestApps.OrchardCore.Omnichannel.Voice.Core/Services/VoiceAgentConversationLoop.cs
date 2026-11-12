@@ -558,6 +558,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _silenceWatchdog.Forget(voiceEvent.ActivityId);
         _callerKeys.Forget(voiceEvent.ActivityId);
 
+        // A secure entry the caller never finished ends with the call.
+        if (ShellScope.Services?.GetService<ISecureKeypadCaptureStore>() is { } captures)
+        {
+            await captures.ForgetAsync(voiceEvent.ActivityId, cancellationToken);
+        }
+
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
         await RecordTurnBasedSessionAsync(voiceEvent, activity, outcome: null, _clock.UtcNow);

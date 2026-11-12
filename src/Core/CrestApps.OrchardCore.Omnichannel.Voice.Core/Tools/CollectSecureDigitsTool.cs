@@ -94,7 +94,7 @@ public sealed class CollectSecureDigitsTool : AIFunction
             return "Secure keypad entry works only on a phone call.";
         }
 
-        SecureKeypadCaptures.Start(activityId, field, services.GetRequiredService<IClock>().UtcNow);
+        await services.GetRequiredService<ISecureKeypadCaptureStore>().StartAsync(activityId, field, cancellationToken);
 
         var logger = services.GetService<ILogger<CollectSecureDigitsTool>>();
 

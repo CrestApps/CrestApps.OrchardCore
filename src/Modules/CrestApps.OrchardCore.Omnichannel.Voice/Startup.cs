@@ -36,6 +36,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IRealtimeCallCompletionRunner, RealtimeCallCompletionRunner>();
         services.AddSingleton<ITurnBasedSilenceWatchdog, TurnBasedSilenceWatchdog>();
         services.AddSingleton<ITurnBasedCallerKeys, TurnBasedCallerKeys>();
+        services.AddSingleton<ISecureKeypadCaptureStore, DistributedSecureKeypadCaptureStore>();
 
         // A live conversation runs in this process, so when the node begins to stop each one is ended and its
         // caller handed on, rather than left on a line that falls silent. A singleton, so the registration on the
