@@ -16,6 +16,10 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
 
     public override string Name => TheName;
 
+    // A recipe runs every step it carries, so the narrower permission is held to the workflow step: without the list,
+    // ManageWorkflows would import a Roles, Users or settings step too.
+    private static readonly string[] _allowedSteps = ["WorkflowType"];
+
     protected override Permission RequiredPermission => OrchardCorePermissions.ManageWorkflows;
 
     public override string Description => "Creates or updates a workflow types.";
@@ -49,6 +53,6 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 
-        return await ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
+        return await ProcessRecipeAsync(arguments.Services, recipe, logger, _allowedSteps, cancellationToken);
     }
 }
