@@ -77,6 +77,7 @@ public sealed class SubscriptionDisplayText
             TenantProvisioningStatus.Succeeded => S["Created"],
             TenantProvisioningStatus.Failed => S["Retrying"],
             TenantProvisioningStatus.Abandoned => S["Abandoned"],
+            TenantProvisioningStatus.AwaitingPayment => S["Waiting for payment"],
             _ => status.ToString(),
         };
 

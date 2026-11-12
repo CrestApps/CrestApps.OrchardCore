@@ -1,3 +1,5 @@
+using OrchardCore.Entities;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
@@ -70,8 +72,40 @@ public sealed class PayLaterCheckoutPaymentProvider : OfflineCheckoutPaymentProv
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// The engine checks this again when a payment begins, so a request that names Pay Later directly is held to the same
+    /// rules as the payment step.
+    /// </remarks>
     public override async Task<bool> IsAvailableAsync(ICheckoutFlowSession session, CancellationToken cancellationToken = default)
-        => (await _siteService.GetSettingsAsync<PayLaterSettings>()).Enabled;
+        => IsAllowed(await _siteService.GetSettingsAsync<PayLaterSettings>(), session);
+
+    /// <summary>
+    /// Whether a checkout may be paid later: Pay Later is on, the buyer is signed in (unless the store allows guests), and
+    /// the total is within the store's limit.
+    /// </summary>
+    /// <param name="settings">The Pay Later settings.</param>
+    /// <param name="session">The checkout.</param>
+    internal static bool IsAllowed(PayLaterSettings settings, ICheckoutFlowSession session)
+    {
+        if (settings is not { Enabled: true } || session is null)
+        {
+            return false;
+        }
+
+        if (settings.RequireSignedIn && string.IsNullOrEmpty(session.OwnerId))
+        {
+            return false;
+        }
+
+        if (settings.MaxOrderAmount is { } max &&
+            session.TryGet<CheckoutInvoice>(out var invoice) &&
+            invoice.GrandTotal > max)
+        {
+            return false;
+        }
+
+        return true;
+    }
 
     /// <inheritdoc/>
     /// <remarks>

@@ -168,6 +168,9 @@ public sealed class CheckoutStartup : StartupBase
         services.AddScoped<ICheckoutHandler, ContentCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();
 
+        // A subscription whose payment is overdue becomes past due.
+        services.AddScoped<ITransactionEventHandler, SubscriptionOverdueTransactionHandler>();
+
         services.AddDisplayDriver<CheckoutFlow, UserRegistrationCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<CheckoutFlow, ContentStepCheckoutFlowDisplayDriver>();
     }
@@ -247,6 +250,9 @@ public sealed class TenantProvisioningStartup : StartupBase
 
         // A purchase saved before a rule existed, or edited around the step, is checked again before it is paid for.
         services.AddScoped<ICheckoutPaymentGate, TenantProvisioningPaymentGate>();
+
+        // A site bought with a promise to pay is created once its transaction is paid.
+        services.AddScoped<ITransactionEventHandler, TenantProvisioningPaymentReceivedHandler>();
         services.AddDisplayDriver<CheckoutFlow, TenantProvisioningStepDisplayDriver>();
 
         // A site that keeps serving after the customer stops paying costs the owner money indefinitely, so

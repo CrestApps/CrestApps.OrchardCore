@@ -68,7 +68,7 @@ public sealed class OfflinePaymentMethodsTests
     public async Task PayLaterIsOffByDefault_AndCanBeTurnedOn()
     {
         var provider = PayLater();
-        var session = new CheckoutSession { SessionId = "session-1" };
+        var session = new CheckoutSession { SessionId = "session-1", OwnerId = "user-1" };
 
         _payLater = new PayLaterSettings();
         Assert.False(await provider.IsAvailableAsync(session, TestContext.Current.CancellationToken));
@@ -81,7 +81,7 @@ public sealed class OfflinePaymentMethodsTests
     public async Task TheSelectorKeepsOnlyAvailableProviders()
     {
         var gateway = new FakeCheckoutPaymentProvider("gateway", _ => new PaymentVerificationResult { Status = PaymentStatus.Succeeded });
-        var session = new CheckoutSession { SessionId = "session-1" };
+        var session = new CheckoutSession { SessionId = "session-1", OwnerId = "user-1" };
 
         var available = await CheckoutPaymentMethodSelector.GetAvailableAsync([gateway, BankTransfer(), CashOnDelivery(), PayLater()], session, TestContext.Current.CancellationToken);
 

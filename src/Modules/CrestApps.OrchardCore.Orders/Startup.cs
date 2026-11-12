@@ -70,6 +70,11 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, AbandonedOrdersBackgroundTask>();
 
         services.AddScoped<ICheckoutHandler, OrderCheckoutHandler>();
+
+
+        // An order paid later delivers what it held back once its transaction is paid.
+
+        services.AddScoped<ITransactionEventHandler, OrderPaymentSettledTransactionHandler>();
         services.AddScoped<ICheckoutHandler, OrderConfirmationCheckoutHandler>();
         services.AddScoped<OrderConfirmationEmailBuilder>();
         services.AddScoped<OrderLinksEmailBuilder>();

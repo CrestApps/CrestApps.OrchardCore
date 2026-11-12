@@ -68,6 +68,40 @@ public sealed class OrderLineGrantHandlerBaseTests
         Assert.Equal(["l1:Refunded"], handler.Revoked);
     }
 
+    /// <summary>
+    /// SEC-C5: an order placed with a payment method that defers payment (Pay Later, bank transfer) used to be granted at
+    /// once, so a buyer could take a download or a membership and never pay. Its grants are held until the payment
+    /// settles, unless the product is set to be delivered before payment.
+    /// </summary>
+    [Fact]
+    public async Task ADeferredPayment_GrantsNothingUntilItSettles()
+    {
+        var handler = new RecordingHandler(ContentManager());
+        var order = Order(new OrderLine { LineId = "l1", ContentItemId = "p1", ContentItemVersionId = "v1", Quantity = 1 });
+        order.PaymentDeferred = true;
+
+        await handler.PaidAsync(new OrderPaidContext(order), TestContext.Current.CancellationToken);
+
+        Assert.Empty(handler.Granted);
+
+        order.PaymentSettledUtc = new DateTime(2026, 11, 11, 0, 0, 0, DateTimeKind.Utc);
+        await handler.PaymentSettledAsync(new OrderPaidContext(order), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["l1:bought"], handler.Granted);
+    }
+
+    [Fact]
+    public async Task ADeferredPayment_StillGrantsAProductDeliveredBeforePayment()
+    {
+        var handler = new RecordingHandler(ContentManager(deliverBeforePayment: true));
+        var order = Order(new OrderLine { LineId = "l1", ContentItemId = "p1", ContentItemVersionId = "v1", Quantity = 1 });
+        order.PaymentDeferred = true;
+
+        await handler.PaidAsync(new OrderPaidContext(order), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["l1:bought"], handler.Granted);
+    }
+
     private static Order Order(params OrderLine[] lines)
         => new()
         {
@@ -78,9 +112,15 @@ public sealed class OrderLineGrantHandlerBaseTests
             Lines = [.. lines],
         };
 
-    private static IContentManager ContentManager()
+    private static IContentManager ContentManager(bool deliverBeforePayment = false)
     {
         var bought = Item("p1", "v1", "bought");
+
+        if (deliverBeforePayment)
+        {
+            bought.Weld(new CrestApps.OrchardCore.Products.Core.Models.ProductPart { DeliverBeforePayment = true });
+        }
+
         var edited = Item("p1", "v2", "edited");
         var published = Item("p1", "v2", "published");
 
