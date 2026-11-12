@@ -50,6 +50,85 @@ public sealed class ContentAccessSurfacesTests
         Assert.True(context.HasFailed);
     }
 
+    [Theory]
+    [InlineData("PreviewContent")]
+    [InlineData("PreviewOwnContent")]
+    [InlineData("CloneContent")]
+    [InlineData("CloneOwnContent")]
+    public async Task PreviewAndClone_OfARestrictedItem_AreNotGrantedToAMemberWithoutThePermission(string permissionName)
+    {
+        // Arrange: a member of the item's role who was not given the permission by any role.
+        var requirement = new PermissionRequirement(new Permission(permissionName));
+        var context = new AuthorizationHandlerContext([requirement], Member(), Restricted());
+
+        // Act
+        await new RoleBasedContentItemAuthorizationHandler(Services()).HandleAsync(context);
+
+        // Assert
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Fact]
+    public async Task Viewing_ARestrictedItem_IsGrantedToAMember()
+    {
+        // Arrange
+        var requirement = new PermissionRequirement(CommonPermissions.ViewContent);
+        var context = new AuthorizationHandlerContext([requirement], Member(), Restricted());
+
+        // Act
+        await new RoleBasedContentItemAuthorizationHandler(Services()).HandleAsync(context);
+
+        // Assert
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Fact]
+    public async Task ASearchPage_WithARestrictedHit_IsStillFull_SoTheNextPageIsOffered()
+    {
+        // Arrange: Orchard's search page shows two hits a page and asks for three, to know whether there is a next page.
+        var search = Search(["r1", "o1", "r2", "o2", "o3", "o4", "o5"]);
+
+        // Act
+        var first = await search.SearchAsync(new global::OrchardCore.Indexing.Models.IndexProfile(), "members", 0, 3);
+        var second = await search.SearchAsync(new global::OrchardCore.Indexing.Models.IndexProfile(), "members", 2, 3);
+
+        // Assert
+        Assert.Equal(["o1", "o2", "o3"], first.ContentItemIds);
+        Assert.Equal(["o3", "o4", "o5"], second.ContentItemIds);
+    }
+
+    [Fact]
+    public async Task ASearchWindow_OfOnlyRestrictedHits_StillShowsThePublicHitsAfterIt()
+    {
+        // Arrange
+        var search = Search(["r1", "r2", "r3", "o1", "o2"]);
+
+        // Act
+        var result = await search.SearchAsync(new global::OrchardCore.Indexing.Models.IndexProfile(), "members", 0, 3);
+
+        // Assert
+        Assert.Equal(["o1", "o2"], result.ContentItemIds);
+    }
+
+    [Fact]
+    public async Task TheFeedOfARestrictedList_IsEmptied_ForANonMember()
+    {
+        // Arrange: Orchard's list feed wrote the restricted container's title into the channel before any item.
+        var channel = new XElement("channel", new XElement("title", "Members only"), new XElement("description", "Members' news"));
+        var updater = new Mock<IUpdateModel>();
+        updater.Setup(model => model.TryUpdateModelAsync(It.IsAny<It.IsAnyType>()))
+            .Callback(new InvocationAction(invocation => invocation.Arguments[0].GetType().GetProperty("ContentItemId").SetValue(invocation.Arguments[0], "restricted")))
+            .Returns(Task.FromResult(true));
+        var context = new FeedContext(updater.Object, "rss") { Response = new FeedResponse { Element = channel } };
+        var builder = new RestrictedContentFeedItemBuilder(new PassThroughFeedItemBuilder(), Contents(), Authorization(), Accessor(_anonymous));
+
+        // Act
+        await builder.PopulateAsync(context);
+
+        // Assert
+        Assert.DoesNotContain("Members", channel.ToString(), StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task TheSitemap_LeavesOutARestrictedItem_ForEveryone()
     {
@@ -77,7 +156,7 @@ public sealed class ContentAccessSurfacesTests
             context.Response.Items.Add(new FeedItem<ContentItem> { Item = item, Element = element });
         }
 
-        var builder = new RestrictedContentFeedItemBuilder(new PassThroughFeedItemBuilder(), Authorization(), Accessor(_anonymous));
+        var builder = new RestrictedContentFeedItemBuilder(new PassThroughFeedItemBuilder(), Contents(), Authorization(), Accessor(_anonymous));
 
         // Act
         await builder.PopulateAsync(context);
@@ -121,17 +200,46 @@ public sealed class ContentAccessSurfacesTests
         Assert.DoesNotContain(open.Entries, entry => entry.Name == ContentAccessIndexHandler.RoleNamesField);
     }
 
-    private static ContentItem Restricted()
+    private static ClaimsPrincipal Member()
+        => new(new ClaimsIdentity([new Claim(ClaimTypes.Role, "Member")], "Test"));
+
+    // A search over the hits, in order, where an id that starts with "r" is a restricted item.
+    private static RestrictedContentSearchService Search(string[] hits)
     {
-        var item = new ContentItem { ContentItemId = "restricted", ContentType = "MembersArticle", DisplayText = "Members only" };
+        var inner = new Mock<ISearchService>();
+        inner.Setup(service => service.SearchAsync(It.IsAny<global::OrchardCore.Indexing.Models.IndexProfile>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync((global::OrchardCore.Indexing.Models.IndexProfile _, string _, int start, int size) => new SearchResult
+            {
+                Success = true,
+                ContentItemIds = [.. hits.Skip(start).Take(size)],
+                TotalCount = hits.Length,
+            });
+        var contents = new Mock<IContentManager>();
+        contents.Setup(manager => manager.GetAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<VersionOptions>()))
+            .ReturnsAsync((IEnumerable<string> ids, VersionOptions _) => [.. ids.Select(id => id.StartsWith('r') ? Restricted(id) : Open(id))]);
+
+        return new RestrictedContentSearchService(inner.Object, contents.Object, Authorization(), Accessor(_anonymous));
+    }
+
+    private static IContentManager Contents()
+    {
+        var contents = new Mock<IContentManager>();
+        contents.Setup(manager => manager.GetAsync("restricted", It.IsAny<VersionOptions>())).ReturnsAsync(Restricted());
+
+        return contents.Object;
+    }
+
+    private static ContentItem Restricted(string id = "restricted")
+    {
+        var item = new ContentItem { ContentItemId = id, ContentType = "MembersArticle", DisplayText = "Members only" };
 
         item.Weld(new RolePickerPart { RoleNames = ["Member"] });
 
         return item;
     }
 
-    private static ContentItem Open()
-        => new() { ContentItemId = "open", ContentType = "Article", DisplayText = "For everyone" };
+    private static ContentItem Open(string id = "open")
+        => new() { ContentItemId = id, ContentType = "Article", DisplayText = "For everyone" };
 
     private static IContentDefinitionManager Definitions()
     {

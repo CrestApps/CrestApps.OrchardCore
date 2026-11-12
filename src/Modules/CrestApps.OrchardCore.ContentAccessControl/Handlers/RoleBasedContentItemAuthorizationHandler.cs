@@ -26,6 +26,13 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
         CommonPermissions.CloneOwnContent.Name,
     };
 
+    // The permissions a member of the item's roles is granted by this handler.
+    private static readonly HashSet<string> _viewPermissions = new(StringComparer.Ordinal)
+    {
+        CommonPermissions.ViewContent.Name,
+        CommonPermissions.ViewOwnContent.Name,
+    };
+
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
@@ -62,7 +69,12 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
 
         if (roleNames.Any(user.IsInRole))
         {
-            context.Succeed(requirement);
+            // Being in one of the item's roles is what viewing it takes. Previewing (the latest draft) and cloning still
+            // need their own permission, which this handler never grants.
+            if (_viewPermissions.Contains(requirement.Permission.Name))
+            {
+                context.Succeed(requirement);
+            }
 
             return;
         }

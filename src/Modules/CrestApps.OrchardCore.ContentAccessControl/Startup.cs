@@ -70,6 +70,7 @@ public sealed class FeedsStartup : StartupBase
     {
         ContentAccessDecorators.Decorate<IFeedItemBuilder>(services, (serviceProvider, inner) => new RestrictedContentFeedItemBuilder(
             inner,
+            serviceProvider.GetRequiredService<IContentManager>(),
             serviceProvider.GetRequiredService<IAuthorizationService>(),
             serviceProvider.GetRequiredService<IHttpContextAccessor>()));
     }

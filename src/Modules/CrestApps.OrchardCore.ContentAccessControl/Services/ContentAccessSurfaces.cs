@@ -44,11 +44,13 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Feeds
 {
     /// <summary>
     /// Wraps the feed item builder and takes out of the feed every item the reader may not view, so a restricted item's
-    /// title and summary don't reach an RSS reader outside its roles.
+    /// title and summary don't reach an RSS reader outside its roles. A feed of a container the reader may not view (a
+    /// members-only list or blog) is emptied, channel title and description included.
     /// </summary>
     public sealed class RestrictedContentFeedItemBuilder : IFeedItemBuilder
     {
         private readonly IFeedItemBuilder _inner;
+        private readonly IContentManager _contentManager;
         private readonly IAuthorizationService _authorizationService;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -56,11 +58,13 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Feeds
         /// Initializes a new instance of the <see cref="RestrictedContentFeedItemBuilder"/> class.
         /// </summary>
         /// <param name="inner">The feed item builder it wraps.</param>
+        /// <param name="contentManager">The content manager, for the feed's container.</param>
         /// <param name="authorizationService">The authorization service.</param>
         /// <param name="httpContextAccessor">The HTTP context accessor, for the reader.</param>
-        public RestrictedContentFeedItemBuilder(IFeedItemBuilder inner, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+        public RestrictedContentFeedItemBuilder(IFeedItemBuilder inner, IContentManager contentManager, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
         {
             _inner = inner;
+            _contentManager = contentManager;
             _authorizationService = authorizationService;
             _httpContextAccessor = httpContextAccessor;
         }
@@ -70,12 +74,27 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Feeds
         {
             await _inner.PopulateAsync(context);
 
-            if (context?.Response?.Items is not { Count: > 0 } items)
+            if (context?.Response is null)
             {
                 return;
             }
 
             var user = _httpContextAccessor.HttpContext?.User ?? new System.Security.Claims.ClaimsPrincipal();
+
+            // Orchard's list feed writes its container's title and description into the channel with no check of its own.
+            if (await GetContainerAsync(context) is { } container &&
+                !await _authorizationService.AuthorizeAsync(user, CommonPermissions.ViewContent, container))
+            {
+                context.Response.Element?.RemoveNodes();
+                context.Response.Items?.Clear();
+
+                return;
+            }
+
+            if (context.Response.Items is not { Count: > 0 } items)
+            {
+                return;
+            }
 
             foreach (var item in items.OfType<FeedItem<ContentItem>>().ToList())
             {
@@ -89,6 +108,24 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Feeds
                 items.Remove(item);
             }
         }
+
+        // The container the list feed was asked for, bound the way Orchard's list feed binds it.
+        private async Task<ContentItem> GetContainerAsync(FeedContext context)
+        {
+            var model = new FeedContainer();
+
+            if (context.Updater is null || !await context.Updater.TryUpdateModelAsync(model) || string.IsNullOrEmpty(model.ContentItemId))
+            {
+                return null;
+            }
+
+            return await _contentManager.GetAsync(model.ContentItemId);
+        }
+
+        private sealed class FeedContainer
+        {
+            public string ContentItemId { get; set; }
+        }
     }
 }
 
@@ -96,11 +133,22 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Search
 {
     /// <summary>
     /// Wraps a search service and takes out of its results every content item the searcher may not view, so the search
-    /// page never shows a restricted item's title or summary outside its roles. The total count is lowered by the items
-    /// taken out of the page; it can still count restricted items on other pages.
+    /// page never shows a restricted item's title or summary outside its roles.
     /// </summary>
+    /// <remarks>
+    /// A page is the allowed hits at its position, so the hits are read from the top, in batches, until the page is full
+    /// or the index has no more (at most <see cref="MaxRounds"/> reads). Orchard's search page asks for one hit more than
+    /// it shows to decide whether there is a next page, and a page with restricted hits in it still gets that hit, so the
+    /// public hits after a restricted one stay reachable. The total count is lowered by the hits taken out of what was
+    /// read; it can still count restricted hits further down.
+    /// </remarks>
     public sealed class RestrictedContentSearchService : ISearchService
     {
+        /// <summary>
+        /// The most reads one search makes to fill a page.
+        /// </summary>
+        public const int MaxRounds = 5;
+
         private readonly ISearchService _inner;
         private readonly IContentManager _contentManager;
         private readonly IAuthorizationService _authorizationService;
@@ -127,15 +175,53 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Search
         /// <inheritdoc/>
         public async Task<SearchResult> SearchAsync(IndexProfile index, string term, int start, int size)
         {
-            var result = await _inner.SearchAsync(index, term, start, size);
+            start = Math.Max(0, start);
 
-            if (result?.ContentItemIds is not { Count: > 0 } ids)
+            var wanted = start + size;
+            var user = _httpContextAccessor.HttpContext?.User ?? new System.Security.Claims.ClaimsPrincipal();
+            var allowed = new List<string>(Math.Max(0, wanted));
+            SearchResult first = null;
+            var removed = 0;
+            var offset = 0;
+
+            for (var round = 0; round < MaxRounds && allowed.Count < wanted; round++)
             {
-                return result;
+                var result = await _inner.SearchAsync(index, term, offset, wanted);
+
+                first ??= result;
+
+                if (result?.ContentItemIds is not { Count: > 0 } ids)
+                {
+                    break;
+                }
+
+                var kept = await AllowedAsync(ids, result.Latest, user);
+
+                removed += ids.Count - kept.Count;
+                allowed.AddRange(kept);
+                offset += ids.Count;
+
+                // Fewer hits than asked for: the index has no more.
+                if (ids.Count < wanted)
+                {
+                    break;
+                }
             }
 
-            var user = _httpContextAccessor.HttpContext?.User ?? new System.Security.Claims.ClaimsPrincipal();
-            var items = (await _contentManager.GetAsync(ids, result.Latest ? VersionOptions.Latest : VersionOptions.Published))
+            if (first?.ContentItemIds is null)
+            {
+                return first;
+            }
+
+            first.TotalCount = Math.Max(0, first.TotalCount - removed);
+            first.ContentItemIds = [.. allowed.Skip(start).Take(size)];
+
+            return first;
+        }
+
+        private async Task<List<string>> AllowedAsync(IList<string> ids, bool latest, System.Security.Claims.ClaimsPrincipal user)
+        {
+            var items = (await _contentManager.GetAsync(ids, latest ? VersionOptions.Latest : VersionOptions.Published))
                 .Where(item => item is not null)
                 .ToDictionary(item => item.ContentItemId, StringComparer.Ordinal);
             var allowed = new List<string>(ids.Count);
@@ -149,10 +235,7 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Search
                 }
             }
 
-            result.TotalCount = Math.Max(0, result.TotalCount - (ids.Count - allowed.Count));
-            result.ContentItemIds = allowed;
-
-            return result;
+            return allowed;
         }
     }
 }
