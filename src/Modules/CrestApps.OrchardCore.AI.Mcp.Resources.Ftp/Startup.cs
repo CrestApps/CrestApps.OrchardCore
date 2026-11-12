@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Ftp;
+﻿using CrestApps.OrchardCore.AI.FileTransfer.Core;
+using CrestApps.Core.AI.Ftp;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Resources.Ftp.Drivers;
@@ -28,6 +29,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddFileTransferHostOptions();
         services.AddCoreAIFtpMcpResources(entry =>
         {
             entry.DisplayName = S["FTP/FTPS"];

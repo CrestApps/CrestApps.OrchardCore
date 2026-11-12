@@ -16,6 +16,10 @@ Enabling a feature of this module enables the features it depends on:
 
 - [`CrestApps.OrchardCore.AI.FileSources`](../CrestApps.OrchardCore.AI.FileSources/README.md)
 
+## Server certificates
+
+Accepting any server certificate lets anyone on the network path read the credentials and the files, so the editor refuses it unless the host's operator allows it with `CrestApps_AI:FileTransfer:AllowAnyFtpCertificate: true` in the tenant's configuration. Connections saved with it before keep it until they are edited; the check at connection time is in CrestApps.Core.
+
 ## Documentation
 
 See [AI File Sources](../../CrestApps.Docs/docs/ai/file-sources.md) in the technical manual.
