@@ -83,6 +83,24 @@ describe('crestapps.http.request', () => {
         expect(init.body).toBe('{"a":1}');
     });
 
+    // UX-8: the token belongs to this site; a post to another origin must not carry it.
+    it('sends the antiforgery token only to the page\'s own origin', async () => {
+        globalThis.document = pageWithToken({ input: 'token-from-form' });
+        globalThis.window = { location: { href: 'https://shop.test/admin/orders', origin: 'https://shop.test' } };
+
+        try {
+            await request('https://elsewhere.test/collect', { method: 'POST' });
+            await request('/admin/orders/refund', { method: 'POST' });
+            await request('https://shop.test/admin/orders/cancel', { method: 'POST' });
+        } finally {
+            delete globalThis.window;
+        }
+
+        const tokens = globalThis.fetch.mock.calls.map(([, init]) => init.headers.RequestVerificationToken);
+
+        expect(tokens).toEqual([undefined, 'token-from-form', 'token-from-form']);
+    });
+
     it('falls back to the meta tag when the page has no form token', async () => {
         globalThis.document = pageWithToken({ meta: 'token-from-meta' });
 

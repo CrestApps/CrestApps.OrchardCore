@@ -118,6 +118,15 @@
 		});
 		return body;
 	}
+	function isSameOrigin(url) {
+		const here = typeof window !== "undefined" && window.location ? window.location : null;
+		if (!here) return true;
+		try {
+			return new URL(String(url), here.href).origin === here.origin;
+		} catch {
+			return false;
+		}
+	}
 	async function request(url, options = {}) {
 		const method = (options.method || "GET").toUpperCase();
 		const headers = Object.assign({}, options.headers);
@@ -126,7 +135,7 @@
 			headers["Content-Type"] = "application/json";
 			body = JSON.stringify(options.json);
 		} else if (options.form !== void 0 && options.form !== null) body = formBody(options.form);
-		if (!safeMethods.includes(method) && !headers.RequestVerificationToken) {
+		if (!safeMethods.includes(method) && !headers.RequestVerificationToken && isSameOrigin(url)) {
 			const token = antiforgeryToken();
 			if (token) headers.RequestVerificationToken = token;
 		}
