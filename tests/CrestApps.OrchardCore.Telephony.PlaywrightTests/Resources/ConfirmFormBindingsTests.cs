@@ -208,7 +208,7 @@ public sealed class ConfirmFormBindingsTests : IAsyncLifetime
             if (route.Request.Method == "POST")
             {
                 // The forms post into a frame, so the page stays and its buttons can be looked at.
-                site.Posts.Enqueue(url.AbsolutePath);
+                site.RecordPost(url.AbsolutePath);
                 await route.FulfillAsync(new RouteFulfillOptions { Status = 200, ContentType = "text/html", Body = "<p>Done</p>" });
 
                 return;
@@ -250,7 +250,10 @@ public sealed class ConfirmFormBindingsTests : IAsyncLifetime
 
     private sealed class Storefront
     {
+        private readonly Lock _gate = new();
         private bool _accept = true;
+        private TaskCompletionSource _postsArrived;
+        private int _postsWanted;
 
         public Storefront(IPage page)
         {
@@ -279,15 +282,47 @@ public sealed class ConfirmFormBindingsTests : IAsyncLifetime
         public void AnswerDialogs(bool accept)
             => _accept = accept;
 
+        public void RecordPost(string path)
+        {
+            Posts.Enqueue(path);
+
+            lock (_gate)
+            {
+                if (_postsArrived is not null && Posts.Count >= _postsWanted)
+                {
+                    _postsArrived.TrySetResult();
+                }
+            }
+        }
+
         public async Task WaitForPostsAsync(int count)
         {
-            for (var waited = 0; waited < 3000 && Posts.Count < count; waited += 50)
+            Task arrived;
+
+            lock (_gate)
             {
-                await Task.Delay(50, TestContext.Current.CancellationToken);
+                _postsWanted = count;
+                _postsArrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                if (Posts.Count >= count)
+                {
+                    _postsArrived.TrySetResult();
+                }
+
+                arrived = _postsArrived.Task;
             }
 
-            // Anything more would arrive soon after.
-            await Task.Delay(200, TestContext.Current.CancellationToken);
+            try
+            {
+                await arrived.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                // Reported below, with what was sent.
+            }
+
+            // A second submit would follow the first at once: give it the moment it would take, then count.
+            await Page.WaitForTimeoutAsync(200);
             Assert.Equal(count, Posts.Count);
         }
     }
