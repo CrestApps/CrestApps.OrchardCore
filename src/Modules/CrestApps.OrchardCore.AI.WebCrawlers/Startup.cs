@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.WebCrawlers;
 using CrestApps.Core.Data.YesSql;
@@ -32,7 +33,8 @@ public sealed class Startup : StartupBase
         // Registers the Web AI data source source handler, the crawl strategies (sitemap), the re-index
         // planner and service, the crawler catalog handler, and the shared crawling primitives.
         services.AddCoreWebCrawlers()
-            .AddCoreWebCrawlerStoresYesSql();
+            .AddCoreWebCrawlerStoresYesSql()
+            .AddAIEgressGuards();
 
         services.AddDataMigration<WebCrawlerIndexMigrations>();
 

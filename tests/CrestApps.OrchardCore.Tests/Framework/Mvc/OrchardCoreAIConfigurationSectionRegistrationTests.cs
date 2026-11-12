@@ -38,7 +38,7 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
         var services = new ServiceCollection();
         services.AddOptions();
 
-        new Startup().ConfigureServices(services);
+        new Startup(new global::OrchardCore.Environment.Shell.Configuration.ShellConfiguration()).ConfigureServices(services);
 
         using var serviceProvider = services.BuildServiceProvider();
 
@@ -75,7 +75,7 @@ public sealed class OrchardCoreAIConfigurationSectionRegistrationTests
         services.AddSingleton(Mock.Of<ISession>());
         services.AddSingleton(Mock.Of<IClock>());
 
-        new Startup().ConfigureServices(services);
+        new Startup(new global::OrchardCore.Environment.Shell.Configuration.ShellConfiguration()).ConfigureServices(services);
 
         using var serviceProvider = services.BuildServiceProvider();
         using var scope = serviceProvider.CreateScope();

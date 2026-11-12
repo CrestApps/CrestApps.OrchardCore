@@ -112,11 +112,70 @@ public static class EgressNetwork
     /// </summary>
     /// <param name="allowLoopback">Whether connections to this machine are allowed.</param>
     public static SocketsHttpHandler CreateHandler(bool allowLoopback)
+        => CreateHandler(allowLoopback, allowPrivateNetwork: false, allowRedirects: false);
+
+    /// <summary>
+    /// Creates a handler that checks every address it connects to, redirects included, so a redirect or a DNS answer that
+    /// leads to an internal address is refused at connect.
+    /// </summary>
+    /// <param name="allowLoopback">Whether loopback addresses are allowed (development only).</param>
+    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed, for hosts that run local
+    /// services on purpose (a local model host). Link-local addresses, the cloud metadata service among them, are refused
+    /// even then.</param>
+    /// <param name="allowRedirects">Whether redirects are followed. Each hop is checked at connect.</param>
+    public static SocketsHttpHandler CreateHandler(bool allowLoopback, bool allowPrivateNetwork, bool allowRedirects)
         => new()
         {
-            AllowAutoRedirect = false,
-            ConnectCallback = (context, cancellationToken) => ConnectAsync(context, allowLoopback, cancellationToken),
+            AllowAutoRedirect = allowRedirects,
+            AutomaticDecompression = DecompressionMethods.All,
+            ConnectCallback = (context, cancellationToken) => ConnectAsync(context, allowLoopback, allowPrivateNetwork, cancellationToken),
         };
+
+    /// <summary>
+    /// Whether a connection to the address is refused.
+    /// </summary>
+    /// <param name="address">The address.</param>
+    /// <param name="allowLoopback">Whether loopback addresses are allowed.</param>
+    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed (never link-local).</param>
+    public static bool IsRefused(IPAddress address, bool allowLoopback, bool allowPrivateNetwork)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+
+        if (!IsInternal(address))
+        {
+            return false;
+        }
+
+        if (IsLinkLocal(address))
+        {
+            return true;
+        }
+
+        return !allowPrivateNetwork && !(allowLoopback && IPAddress.IsLoopback(address));
+    }
+
+    /// <summary>
+    /// Whether the address is link-local (169.254.0.0/16 or fe80::/10), where the cloud metadata service answers.
+    /// </summary>
+    /// <param name="address">The address.</param>
+    public static bool IsLinkLocal(IPAddress address)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
+        if (address.IsIPv6LinkLocal)
+        {
+            return true;
+        }
+
+        var bytes = address.GetAddressBytes();
+
+        return bytes.Length == 4 && bytes[0] == 169 && bytes[1] == 254;
+    }
 
     /// <summary>
     /// Registers a named HTTP client whose connections go through the egress guard. Connections to this machine are
@@ -139,12 +198,15 @@ public static class EgressNetwork
     }
 
     private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, bool allowLoopback, CancellationToken cancellationToken)
+        => await ConnectAsync(context, allowLoopback, allowPrivateNetwork: false, cancellationToken);
+
+    private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, bool allowLoopback, bool allowPrivateNetwork, CancellationToken cancellationToken)
     {
         var host = context.DnsEndPoint.Host.Trim('[', ']');
         var addresses = IPAddress.TryParse(host, out var literal)
             ? [literal]
             : await Dns.GetHostAddressesAsync(host, cancellationToken);
-        var allowed = addresses.Where(candidate => !IsInternal(candidate) || (allowLoopback && IPAddress.IsLoopback(candidate))).ToList();
+        var allowed = addresses.Where(candidate => !IsRefused(candidate, allowLoopback, allowPrivateNetwork)).ToList();
 
         if (allowed.Count == 0)
         {

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using A2A;
 using A2A.AspNetCore;
 using CrestApps.Core.AI.A2A;
@@ -35,6 +36,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCoreAIA2AClient()
+            .AddAIEgressGuards()
             .AddCoreAIA2AClientStoresYesSql()
             .AddDataMigration<A2AConnectionMigrations>();
 

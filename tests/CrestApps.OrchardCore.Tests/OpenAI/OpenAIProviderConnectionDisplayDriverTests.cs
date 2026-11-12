@@ -53,5 +53,6 @@ public sealed class OpenAIProviderConnectionDisplayDriverTests
     private static OpenAIProviderConnectionDisplayDriver CreateDriver()
         => new(
             new EphemeralDataProtectionProvider(),
+            new CrestApps.OrchardCore.AI.Core.AIEndpointPolicy(null, Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.Core.AIEgressOptions { AllowPrivateNetwork = true })),
             DataSourceRetrievalTestServices.Localizer<OpenAIProviderConnectionDisplayDriver>());
 }

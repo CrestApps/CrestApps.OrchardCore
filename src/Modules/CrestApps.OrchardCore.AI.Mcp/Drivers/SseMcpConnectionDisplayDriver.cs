@@ -1,4 +1,5 @@
-﻿using CrestApps.Core;
+﻿using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Core.Drivers;
@@ -13,16 +14,21 @@ namespace CrestApps.OrchardCore.AI.Mcp.Drivers;
 
 internal sealed class SseMcpConnectionDisplayDriver : ConnectionAuthDisplayDriverBase<McpConnection>
 {
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SseMcpConnectionDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="endpointPolicy">Decides whether an endpoint may be saved.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SseMcpConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<SseMcpConnectionDisplayDriver> stringLocalizer)
         : base(dataProtectionProvider, McpConstants.DataProtectionPurpose, stringLocalizer)
     {
+        _endpointPolicy = endpointPolicy;
     }
 
     public override IDisplayResult Edit(McpConnection connection, BuildEditorContext context)
@@ -61,6 +67,10 @@ internal sealed class SseMcpConnectionDisplayDriver : ConnectionAuthDisplayDrive
         else if (!Uri.TryCreate(model.Endpoint, UriKind.Absolute, out endpoint))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Invalid Endpoint value."]);
+        }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         var metadata = connection.GetOrCreate<SseMcpConnectionMetadata>();

@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Mcp;
+﻿using CrestApps.Core.AI.Mcp.Services;
+using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -60,6 +61,7 @@ public sealed class Startup : StartupBase
             .AddCoreAIMcpClientStoresYesSql()
             .AddDataMigration<McpConnectionClientsMigrations>()
             .AddCoreAISseMcpClientTransport()
+            .AddAIEgressGuards()
             .AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>()
@@ -68,6 +70,15 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>()
             .AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>()
             .AddDisplayDriver<McpConnection, SseMcpConnectionDisplayDriver>();
+
+        // The package's HTTP transport makes its own HttpClient, which reaches any address; this one uses the guarded
+        // client, so an MCP endpoint (or a redirect from it) on the site's own network is refused at connect.
+        foreach (var descriptor in services.Where(d => d.ServiceType == typeof(IMcpClientTransportProvider) && d.ImplementationType == typeof(SseClientTransportProvider)).ToList())
+        {
+            services.Remove(descriptor);
+        }
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IMcpClientTransportProvider, GuardedSseClientTransportProvider>());
     }
 }
 

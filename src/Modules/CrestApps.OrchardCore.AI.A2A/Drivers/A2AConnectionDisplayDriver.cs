@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Core;
 using CrestApps.Core.AI.A2A.Models;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
@@ -14,16 +15,21 @@ namespace CrestApps.OrchardCore.AI.A2A.Drivers;
 
 internal sealed class A2AConnectionDisplayDriver : ConnectionAuthDisplayDriverBase<A2AConnection>
 {
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="A2AConnectionDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="endpointPolicy">Decides whether an endpoint may be saved.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public A2AConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<A2AConnectionDisplayDriver> stringLocalizer)
         : base(dataProtectionProvider, A2AConstants.DataProtectionPurpose, stringLocalizer)
     {
+        _endpointPolicy = endpointPolicy;
     }
 
     public override Task<IDisplayResult> DisplayAsync(A2AConnection connection, BuildDisplayContext context)
@@ -83,6 +89,10 @@ internal sealed class A2AConnectionDisplayDriver : ConnectionAuthDisplayDriverBa
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["The Endpoint must be a valid HTTP or HTTPS URL."]);
+        }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         connection.DisplayText = model.DisplayText;

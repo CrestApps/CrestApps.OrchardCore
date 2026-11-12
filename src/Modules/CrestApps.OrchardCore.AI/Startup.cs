@@ -1,3 +1,4 @@
+using OrchardCore.Environment.Shell.Configuration;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -78,8 +79,23 @@ namespace CrestApps.OrchardCore.AI;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration, which the host's operator controls.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Which addresses AI connections, crawlers and providers may reach is the host operator's choice.
+        services.Configure<AIEgressOptions>(_shellConfiguration.GetSection(AIEgressOptions.SectionName));
+        services.AddScoped<IAIEndpointPolicy, AIEndpointPolicy>();
+
         // Data migrations that skip records show the people who manage AI profiles a warning on admin pages until it is dismissed.
         services.AddMigrationSkipLog();
         services.Configure<MvcOptions>(options => options.Filters.Add<MigrationSkipNoticeFilter>(order: -1000));
