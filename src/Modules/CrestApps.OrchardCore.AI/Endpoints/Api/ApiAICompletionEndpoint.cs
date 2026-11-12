@@ -131,6 +131,12 @@ internal static class ApiAICompletionEndpoint
                 return TypedResults.NotFound();
             }
 
+            // The session is the parent profile's, so the caller must be allowed to use it as well as the template.
+            if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, parentProfile))
+            {
+                return TypedResults.Forbid();
+            }
+
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name, completionContextBuilder, aiTemplateService, deploymentManager);
 
             userPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
