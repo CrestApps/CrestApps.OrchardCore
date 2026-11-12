@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.RateLimiting;
 using CrestApps.OrchardCore.Throttling;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Core.Throttling;
@@ -24,6 +26,9 @@ public static class ThrottlingServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddOptions<AttemptLimitOptions>();
+
+        // Every tenant reads its overrides, whichever modules registered the policies.
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IPostConfigureOptions<AttemptLimitOptions>, AttemptPolicyConfiguration>());
         services.TryAddScoped<IAttemptLimiter, DistributedAttemptLimiter>();
 
         return services;
@@ -47,8 +52,9 @@ public static class ThrottlingServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Applies the overrides in a configuration section (by policy name) after the code registrations, so an operator can
-    /// change any policy without a deployment.
+    /// Applies the overrides in a configuration section (by policy name) after the code registrations. A tenant's own
+    /// <c>CrestApps_Throttling:AttemptPolicies</c> section is applied by <see cref="AddAttemptLimiter"/> already; this is for
+    /// another section.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="section">The <c>CrestApps_Throttling:AttemptPolicies</c> section.</param>
@@ -56,35 +62,7 @@ public static class ThrottlingServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(section);
 
-        services.PostConfigure<AttemptLimitOptions>(options =>
-        {
-            foreach (var child in section.GetChildren())
-            {
-                var policy = options.Policies.TryGetValue(child.Key, out var existing)
-                    ? existing
-                    : options.AddPolicy(child.Key, 0, TimeSpan.FromMinutes(1)).Policies[child.Key];
-
-                if (int.TryParse(child[nameof(AttemptLimitPolicy.PermitLimit)], out var permitLimit))
-                {
-                    policy.PermitLimit = permitLimit;
-                }
-
-                if (TimeSpan.TryParse(child[nameof(AttemptLimitPolicy.Window)], out var window))
-                {
-                    policy.Window = window;
-                }
-
-                if (TimeSpan.TryParse(child[nameof(AttemptLimitPolicy.BlockDuration)], out var blockDuration))
-                {
-                    policy.BlockDuration = blockDuration;
-                }
-
-                if (bool.TryParse(child[nameof(AttemptLimitPolicy.ResetOnSuccess)], out var resetOnSuccess))
-                {
-                    policy.ResetOnSuccess = resetOnSuccess;
-                }
-            }
-        });
+        services.PostConfigure<AttemptLimitOptions>(options => AttemptPolicyConfiguration.Apply(section, options));
 
         return services;
     }
@@ -157,6 +135,9 @@ public static class ThrottlingServiceCollectionExtensions
             title = "Too many requests.",
             status = StatusCodes.Status429TooManyRequests,
             detail = "Too many attempts. Wait a moment, then try again.",
+
+            // The storefront scripts (checkout-payment.js) show errorMessage; without it a buyer sees a generic failure.
+            errorMessage = "Too many attempts. Wait a moment, then try again.",
             retryAfter = seconds,
         }), cancellationToken);
     }

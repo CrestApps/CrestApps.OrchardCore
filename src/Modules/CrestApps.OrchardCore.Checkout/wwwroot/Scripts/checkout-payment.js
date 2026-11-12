@@ -76,12 +76,19 @@
 			return {
 				ok: response.ok,
 				status: response.status,
+				retryAfter: Number(response.headers.get("Retry-After")) || 0,
 				payload
 			};
 		}
 		async function pollUntilSettled() {
 			for (var attempt = 0; attempt < config.maxStatusAttempts; attempt++) {
 				var result = await postJson(config.statusEndpoint, {});
+				if (result.status === 429) {
+					await new Promise(function(resolve) {
+						setTimeout(resolve, Math.max(result.retryAfter * 1e3, config.statusIntervalMs));
+					});
+					continue;
+				}
 				if (!result.ok) {
 					showError(result.payload && result.payload.errorMessage);
 					return false;
