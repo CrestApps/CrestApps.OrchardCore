@@ -192,7 +192,7 @@ internal static class CheckoutApiEndpoints
             return ApiProblems.Validation("paymentMethod", "Choose how to pay.");
         }
 
-        if (!await limiter.AcquireAsync("api-checkout-begin", GetDiscriminator(httpContext, id)))
+        if (!await limiter.AcquireAsync("api-checkout-begin", GetBeginPaymentKey(httpContext)))
         {
             return ApiProblems.TooManyRequests("Too many payment attempts. Wait a moment and try again.");
         }
@@ -232,7 +232,7 @@ internal static class CheckoutApiEndpoints
         IPaymentAttemptLimiter limiter)
     {
         // Polled while a provider settles, so it's throttled: a stuck client mustn't hammer the provider through it.
-        if (!await limiter.AcquireAsync("api-checkout-complete", GetDiscriminator(httpContext, id)))
+        if (!await limiter.AcquireAsync("api-checkout-complete", GetStatusKey(httpContext, id)))
         {
             return ApiProblems.TooManyRequests("Too many status checks. Wait a moment and try again.");
         }
@@ -268,7 +268,12 @@ internal static class CheckoutApiEndpoints
     private static string GetClientAddress(HttpContext httpContext)
         => httpContext.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
 
-    private static string GetDiscriminator(HttpContext httpContext, string id)
+    // Beginning a payment is counted per caller across every checkout, so starting a new checkout gives no new budget.
+    internal static string GetBeginPaymentKey(HttpContext httpContext)
+        => GetClientAddress(httpContext);
+
+    // Completion polling is counted per caller per checkout.
+    internal static string GetStatusKey(HttpContext httpContext, string id)
         => $"{GetClientAddress(httpContext)}:{id}";
 }
 

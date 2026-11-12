@@ -65,7 +65,7 @@ public static class PaymentEndpoints
             return Error("The payment request was incomplete.", StatusCodes.Status400BadRequest);
         }
 
-        if (!await limiter.AcquireAsync("checkout-begin", BuildDiscriminator(httpContext, sessionId)))
+        if (!await limiter.AcquireAsync("checkout-begin", GetBeginPaymentKey(httpContext)))
         {
             return Error("Too many payment attempts. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
         }
@@ -134,7 +134,7 @@ public static class PaymentEndpoints
 
         // Polling is throttled too. Without a limit a stuck page could hammer the provider's API through the
         // verification path for as long as the tab stayed open.
-        if (!await limiter.AcquireAsync("checkout-status", BuildDiscriminator(httpContext, sessionId)))
+        if (!await limiter.AcquireAsync("checkout-status", GetStatusKey(httpContext, sessionId)))
         {
             return Error("Too many status checks. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
         }
@@ -209,10 +209,14 @@ public static class PaymentEndpoints
         return sanitized.Count == 0 ? null : sanitized;
     }
 
-    // Combines the caller and the checkout so abuse is throttled per visitor per checkout, rather than one
-    // busy customer throttling everyone.
-    private static string BuildDiscriminator(HttpContext httpContext, string sessionId)
-        => $"{httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown"}:{sessionId}";
+    // Beginning a payment is counted per caller across every checkout. Counting it per checkout gave a card tester a
+    // fresh budget with each checkout they started, so they were never throttled.
+    internal static string GetBeginPaymentKey(HttpContext httpContext)
+        => httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+
+    // Status polling is counted per caller per checkout, so a buyer polling one checkout is never throttled by another.
+    internal static string GetStatusKey(HttpContext httpContext, string sessionId)
+        => $"{GetBeginPaymentKey(httpContext)}:{sessionId}";
 
     // A cross-site page can send a JSON POST without a preflight only in narrow cases, so this is defense in
     // depth rather than the only guard: the ownership check on the session is the primary one.
