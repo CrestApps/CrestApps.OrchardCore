@@ -124,10 +124,10 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="SftpHostKeyFingerprint" class="ocat-label">@T["Host key fingerprint"]</label>
+            <label asp-for="SftpHostKeyFingerprint" class="ocat-label ocat-label-required">@T["Host key fingerprint"]</label>
             <div class="ocat-end">
                 <input asp-for="SftpHostKeyFingerprint" class="form-control font-monospace" placeholder="SHA256:..." />
-                <span class="hint">@T["Optional. The server's SHA-256 fingerprint: the push stops when the server shows another key."]</span>
+                <span class="hint">@T["Required to push. The server's SHA-256 fingerprint, such as from ssh-keyscan: the push stops when the server shows another key, and doesn't run without one."]</span>
             </div>
         </div>
 

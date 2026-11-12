@@ -702,7 +702,7 @@ A field without a value is left out of a JSON line and empty in a CSV cell. In C
 
 ### The SFTP push
 
-When **Push the full feed over SFTP every day** is on, `AgentFeedPushBackgroundTask` (daily at 02:30) has `AgentFeedSftpPusher` write the whole catalog to the SFTP folder in shards of at most 500,000 items, ordered by item id, with stable names (`products-00001.jsonl.gz`, `products-00002.jsonl.gz`, …) that each push overwrites. Shards a smaller catalog no longer needs, and files of the other format, are deleted. The push signs in with the password, the private key (OpenSSH or PEM, with its passphrase), or both, all stored protected with the tenant's data protection keys, and checks the server's SHA-256 host key fingerprint when one is entered. The result is kept in the `AgentFeedStatusDocument`.
+When **Push the full feed over SFTP every day** is on, `AgentFeedPushBackgroundTask` (daily at 02:30) has `AgentFeedSftpPusher` write the whole catalog to the SFTP folder in shards of at most 500,000 items, ordered by item id, with stable names (`products-00001.jsonl.gz`, `products-00002.jsonl.gz`, …) that each push overwrites. Shards a smaller catalog no longer needs, and files of the other format, are deleted. The push signs in with the password, the private key (OpenSSH or PEM, with its passphrase), or both, all stored protected with the tenant's data protection keys, and only connects to a server whose SHA-256 host key fingerprint matches the one entered: without a fingerprint the push doesn't run. The result is kept in the `AgentFeedStatusDocument`.
 
 ### ACP feed APIs
 
