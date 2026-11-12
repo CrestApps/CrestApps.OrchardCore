@@ -1,6 +1,6 @@
 # Security, reuse and code-quality review plan (November 2026)
 
-Status: findings and plan recorded 2026-11-11 against `main` at `a12102c7a`, then challenged item by item by two independent reviewers and revised (see [`06-review-log.md`](06-review-log.md)). Nothing in this plan is implemented yet. It is written so that an engineer or a coding agent can carry it out item by item without having been part of the review.
+Status: findings and plan recorded 2026-11-11 against `main` at `a12102c7a`, then challenged item by item by two independent reviewers and revised (see [`06-review-log.md`](06-review-log.md)). The fixes and guards were implemented in one pull request on 2026-11-11 (see the tracking table); the large refactors are left open. It is written so that an engineer or a coding agent can carry it out item by item without having been part of the review.
 
 This plan continues [`reusability-audit-2026-11.md`](../reusability-audit-2026-11.md) (2026-11-03), which covered duplication and layering. It adds a security review of the whole solution, a design for payment rate limits, a C# structure and reliability review, and a review of views, scripts and admin experience. The binding rules stay in `AGENTS.md`; the catalog of building blocks stays in [`building-blocks.md`](../building-blocks.md).
 
@@ -84,7 +84,45 @@ Add a row per merged item (id, pull request, date, what was left). Keep this tab
 
 | Item | Pull request | Date | Left open |
 | --- | --- | --- | --- |
-| | | | |
+| SEC-C1 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| SEC-C2, SEC-C16, SEC-C18 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| SEC-C3, SEC-C17h | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| SEC-C4 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Verification of a tax number by a VIES/HMRC lookup (an admin marks it verified) |
+| SEC-C5 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — (deliver-before-payment off by default) |
+| SEC-C7, RL-0 to RL-7 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | RL-5's removal of the obsolete `IPaymentAttemptLimiter` waits one release; agent checkouts are limited per network, not per agent key |
+| RL-8 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Kiosk PIN lockout stays on the worker record (works across nodes; a move to `IAttemptLimiter` is DRY only) |
+| SEC-P1 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| SEC-P2, CQ-1 steps 1-2 + guard | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | CQ-1 step 3 (voicemail claim, turn-based fillers) |
+| SEC-A1, SEC-A2 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| SEC-A3 step 1 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Step 2 (per-caller tool authorization everywhere) |
+| SEC-A6, SEC-A7, SEC-A8, SEC-A9 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| SEC-FE1, SEC-FE2, SEC-FE4 b/c/g, UX-8 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| UX-1, UX-2, UX-5 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| UX-6 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Status-badge shape, empty-state wording, Wizard sortable, report designer and Stripe confirms |
+| UX-4 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | The `<local-time>` tag helper, culture formats and browser-zone scripts (refactor); the three "UTC shown" cases are pure dates or machine formats |
+| DRY-11 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Guard only; `IStoreCurrency`/`IMoneyFormatter` and the 7 people-facing fixed formats |
+| DRY-12a, DRY-12h | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | 12a: the other private Unprotect helpers (they return null already) |
+| LAY-1 to LAY-7, DRY-3 rest, DRY-4, DRY-5, DRY-6, DRY-8, DRY-9, DRY-10, DRY-12 b-g, i, CQ-3 change, CQ-7 change, CQ-10 splits | — | — | Refactors left open (scope: fixes and guards) |
+| SEC-C6, SEC-C8 to SEC-C15 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | C9: UCP `created` checked only when present (the protocol relies on the signed idempotency key) |
+| SEC-C17 b-g, i-o, r | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | d: EasyPost onto the shared webhook inbox (DRY-7); f: order links can't be revoked; g: subscription sign-up link still a GET (UX-1) |
+| SEC-C17 p, q, s | — | — | p: whether a mismatched market refuses or re-prices is a product decision; q: needs a controller harness for a failing-first test; s: counting unpaid orders against a budget needs a rule |
+| SEC-A4, A5, A10 to A18, SEC-FE3, SEC-FE4 d/e/f/h | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | A16 and FE4 f server side, A5 upload hardening, A19 connection-time checks: upstream in CrestApps.Core (listed in the PR) |
+| SEC-A19 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Partial: SFTP host keys and FTP certificate option here; bounded reads upstream |
+| SEC-A20 a, c, d, n, o | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| SEC-A20 e, f, l, m | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Partial: e custom headers and stdio env; f exposed-profile allowlist; l bounded reads, HTTPS-only webhooks, show-once secrets; m ViewContent filter on exports |
+| SEC-A20 b, g, h, i, j, k | — | — | b, i upstream; j is DRY-7; g, h, k medium-to-large refactors |
+| UX-3 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | `Workforce/Views/WorkerTimeClock/Index.cshtml` is a line-item table inside a detail page (out of scope) |
+| UX-7 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Guard only; moving inline scripts out is incremental |
+| SEC-P3, P4, P5, P6, P7, P9 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | P7: the `api/ai/v1/live-calls` API is not scoped yet; P9: the hold applies to public-page bookings, not the AI tools |
+| SEC-P8 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | GraphQL lists filtered after paging; nested picker, list and taxonomy fields; the editor's live preview |
+| SEC-P10 a-d, f-i | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | — |
+| SEC-P10e | — | — | Skipped: the Api scheme would break the Asterisk sample simulator; JSON-only binding and SameSite cookies already stop cross-site posts |
+| DRY-2 steps 1-3, DRY-7 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | DRY-2: `Appointment.ManageToken`, `CalendarAttendee.ResponseToken`, `ProductFeedSettings.Key` stay plain (links built from them need a design); DRY-7: Asterisk ARI client stays on the allowlist |
+| Twilio JSON body hash | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Found in review: `bodySHA256` was checked as an HMAC instead of a plain SHA-256 |
+| CQ-8 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Step 2: IDE0060 stays a suggestion (59 hits); step 3 widening CA2016/CA1001/CA1305 to `src/Modules` is for later |
+| CQ-2, CQ-3, CQ-4, CQ-5, CQ-6, CQ-7, CQ-9, CQ-10, CQ-12 guards | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | The changes behind each guard (tracker, tokens, query fixes, task merges, money-path error handling, null-object defaults, schemas, splits, concurrency tests); CQ-7's `= null` and `.FirstOrDefault()` ratchets |
+| CQ-11 | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | One API error contract (DRY-8), thick handlers, route-shape rule |
+| Supervisor dashboard without AI | [#1319](https://github.com/CrestApps/CrestApps.OrchardCore/pull/1319) | 2026-11-11 | Found in the browser pass: enabling Supervision without the AI feature failed every request of the tenant; the AI-calls endpoints are mapped only with AI now |
 
 ## Decisions the owner needs to make
 
