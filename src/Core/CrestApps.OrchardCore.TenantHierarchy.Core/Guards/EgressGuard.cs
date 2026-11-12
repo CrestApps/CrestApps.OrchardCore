@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
@@ -141,7 +142,7 @@ public sealed class EgressGuard
             return;
         }
 
-        if (_options.BlockPrivateNetworks && addresses.Any(EgressAddressClassifier.IsInternal))
+        if (_options.BlockPrivateNetworks && addresses.Any(EgressNetwork.IsInternal))
         {
             Refuse(host, "it resolves to an internal network address");
         }

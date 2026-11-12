@@ -49,6 +49,12 @@ public sealed class DuplicatePatternRatchetTests
             "private FixedTimeEquals",
             @"private\s+(?:static\s+)?bool\s+FixedTimeEquals\s*\(",
             "Call CryptographicOperations.FixedTimeEquals."),
+        new(
+            "HMAC signature verified by hand",
+            @"\bHMACSHA(?:1|256|384|512)\b",
+            "Check a provider's signature with HmacWebhookSignatureValidator (an IWebhookSignatureValidator in CrestApps.OrchardCore.Webhooks.Core), which computes and compares in constant time (DRY-7).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Webhooks.Core/",
+            RequiredFileText: "FixedTimeEquals"),
     ];
 
     /// <summary>
