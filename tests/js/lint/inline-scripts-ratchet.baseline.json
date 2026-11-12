@@ -25,7 +25,7 @@
         "src/Modules/CrestApps.OrchardCore.AI.Documents/Views/AIProfileDocumentParameters.Edit.cshtml": 14,
         "src/Modules/CrestApps.OrchardCore.AI.Documents/Views/AIProfileDocuments.Edit.cshtml": 172,
         "src/Modules/CrestApps.OrchardCore.AI.Documents/Views/AIProfileSessionDocuments.Edit.cshtml": 10,
-        "src/Modules/CrestApps.OrchardCore.AI.Documents/Views/ChatInteractionDocuments.Edit.cshtml": 296,
+        "src/Modules/CrestApps.OrchardCore.AI.Documents/Views/ChatInteractionDocuments.Edit.cshtml": 293,
         "src/Modules/CrestApps.OrchardCore.AI.Mcp/Views/McpPromptFields.Edit.cshtml": 102,
         "src/Modules/CrestApps.OrchardCore.AI.Mcp/Views/McpResourceFields.Edit.cshtml": 1,
         "src/Modules/CrestApps.OrchardCore.AI.Mcp/Views/McpServerSettings.Edit.cshtml": 25,
