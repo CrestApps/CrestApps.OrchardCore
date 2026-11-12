@@ -45,7 +45,8 @@
                         <div class="small text-body-secondary mt-2">
                             Last updated:
                             <span data-dashboard-updated>
-                                @(Model.Diagnostics.LastUpdatedUtc == default ? "Not yet refreshed" : Model.Diagnostics.LastUpdatedUtc.ToLocalTime().ToString("T"))
+                                @* dashboard.js writes the time in the browser's zone from the initial snapshot. *@
+                                @(Model.Diagnostics.LastUpdatedUtc == default ? "Not yet refreshed" : string.Empty)
                             </span>
                         </div>
                         <div class="small text-body-secondary">ARI base URL: <code>@Model.Diagnostics.BaseUrl</code></div>

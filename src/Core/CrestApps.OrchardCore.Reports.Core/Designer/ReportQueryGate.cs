@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -6,6 +7,7 @@ namespace CrestApps.OrchardCore.Reports.Designer;
 /// Bounds how many report runs a tenant runs at once, to <see cref="ReportQueryLimits.MaxConcurrentRuns"/>: the others
 /// wait for one to end. A run that reads a view runs the view within its own run, so it doesn't wait for itself.
 /// </summary>
+[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "The semaphore is only awaited, never asked for its wait handle, so disposing it would free nothing; the gate lives as long as the tenant.")]
 public sealed class ReportQueryGate
 {
     // Marks the data source context of a run, which the views it reads share.

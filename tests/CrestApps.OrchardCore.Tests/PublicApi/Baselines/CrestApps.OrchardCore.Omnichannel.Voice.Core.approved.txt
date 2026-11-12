@@ -496,7 +496,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public static System.Collections.Generic.IReadOnlyList<string> ResolveSubjectDispositionIds(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
         public static bool ShouldConclude(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
     }
-    public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn
+    public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn, System.IDisposable
     {
         public VoiceCallEndTurn() { }
         public bool ClosingLineOwed { get; }
@@ -508,6 +508,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public int RequestCount { get; }
         public void AssistantSaid(string line) { }
         public void CustomerAnswered() { }
+        public void Dispose() { }
         public void RequestEndCall(string reason) { }
         public void RequestEndCall(string reason, bool reachedVoicemail) { }
         public void Reset() { }

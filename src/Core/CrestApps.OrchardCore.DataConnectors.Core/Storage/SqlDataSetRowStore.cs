@@ -1,5 +1,6 @@
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
 using OrchardCore.Data;
@@ -88,7 +89,7 @@ internal sealed class SqlDataSetRowStore : IDataSetRowStore
                     sql.Append(", ");
                 }
 
-                sql.Append($"(@d, @v, @k{index}, @j{index})");
+                sql.Append(CultureInfo.InvariantCulture, $"(@d, @v, @k{index}, @j{index})");
                 AddParameter(command, "k" + index, row.Key);
                 AddParameter(command, "j" + index, (row.Data ?? []).ToJsonString());
             }
@@ -192,7 +193,7 @@ internal sealed class SqlDataSetRowStore : IDataSetRowStore
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            var id = Convert.ToInt64(reader.GetValue(0));
+            var id = Convert.ToInt64(reader.GetValue(0), CultureInfo.InvariantCulture);
             var key = await reader.IsDBNullAsync(1, cancellationToken) ? null : reader.GetString(1);
             var json = await reader.IsDBNullAsync(2, cancellationToken) ? null : reader.GetString(2);
 
@@ -215,7 +216,7 @@ internal sealed class SqlDataSetRowStore : IDataSetRowStore
         AddParameter(command, "d", dataSetId);
         AddParameter(command, "v", version);
 
-        return Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken));
+        return Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken), CultureInfo.InvariantCulture);
     }
 
     public async Task DeleteVersionAsync(string dataSetId, string version, CancellationToken cancellationToken = default)

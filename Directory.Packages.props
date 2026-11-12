@@ -205,6 +205,10 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Analyzer Packages: 5.0.0 matches the Roslyn of the .NET 10 SDK, so every 10.0 feature band can load it. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
     <!-- Benchmark Packages -->
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>

@@ -1,0 +1,1401 @@
+namespace CrestApps.OrchardCore.Checkout
+{
+    [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.Checkout.Json.BillingDurationKeyJsonConverter))]
+    public sealed class BillingDurationKey : System.IEquatable<CrestApps.OrchardCore.Checkout.BillingDurationKey>
+    {
+        public BillingDurationKey(CrestApps.OrchardCore.Payments.Models.DurationType type, int duration) { }
+        public int Duration { get; }
+        public CrestApps.OrchardCore.Payments.Models.DurationType Type { get; }
+        public bool Equals(CrestApps.OrchardCore.Checkout.BillingDurationKey other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+    }
+    public sealed class BillingItem
+    {
+        public BillingItem() { }
+        public decimal Amount { get; set; }
+        public string[] CategoryIds { get; set; }
+        public string Description { get; set; }
+        public bool ExcludeFromDiscounts { get; set; }
+        public bool ExcludeFromTax { get; set; }
+        public string ItemId { get; set; }
+        public CrestApps.OrchardCore.Checkout.RecurringPlan Plan { get; set; }
+        public string PriceId { get; set; }
+        public string ProductId { get; set; }
+        public int Quantity { get; set; }
+        public string Sku { get; set; }
+        public string TaxCategoryCode { get; set; }
+        public string TaxClassificationCode { get; set; }
+        public CrestApps.OrchardCore.Taxation.Models.TaxableItemKind? TaxableKind { get; set; }
+    }
+    public static class CheckoutConstants
+    {
+        public const string CouponCollectionName = "Coupon";
+        public const string CouponsRecipeStep = "Coupons";
+        public const string DiscountLinkCookieName = "orchard-discount-code";
+        public const string GuestTokenCookieName = "checkout_owner";
+        public const string GuestTokenProtectorPurpose = "CrestApps.OrchardCore.Checkout.GuestOwnership.v1";
+        public const int MaxGeneratedCodes = 5000;
+        public const string PaymentStepKey = "Payment";
+        public const string SettingsGroupId = "checkout";
+        public static class AttemptPolicies
+        {
+            public const string CheckoutStartNetwork = "checkout-start-network";
+            public const string CouponCode = "coupon-code";
+            public const string PaymentBeginCheckout = "payment-begin-checkout";
+            public const string PaymentBeginNetwork = "payment-begin-network";
+            public const string PaymentDeclineCustomer = "payment-decline-customer";
+            public const string PaymentDeclineNetwork = "payment-decline-network";
+            public const string PaymentDeclineStore = "payment-decline-store";
+            public const string PaymentStatus = "payment-status";
+        }
+        public static class Features
+        {
+            public const string Api = "CrestApps.OrchardCore.Checkout.Api";
+            public const string Area = "CrestApps.OrchardCore.Checkout";
+            public const string RateLimits = "CrestApps.OrchardCore.Checkout.RateLimits";
+            public const string TestProvider = "CrestApps.OrchardCore.Checkout.TestProvider";
+        }
+        public static class FormActions
+        {
+            public const string ApplyCoupon = "apply-coupon";
+            public const string ApplyTender = "apply-tender";
+            public const string FieldName = "checkout-action";
+            public const string RemoveCouponPrefix = "remove-coupon:";
+            public const string RemoveTenderPrefix = "remove-tender:";
+            public const string Update = "update";
+        }
+        public static class RateLimitGroups
+        {
+            public const string Checkout = "checkout";
+            public const string Code = "checkout-code";
+            public const string Payment = "checkout-payment";
+            public const string PaymentStatus = "checkout-payment-status";
+            public const string Start = "checkout-start";
+        }
+        public static class RouteNames
+        {
+            public const string BeginPayment = "CheckoutBeginPayment";
+            public const string Confirmation = "CheckoutConfirmation";
+            public const string DiscountLink = "CheckoutDiscountLink";
+            public const string PaymentStatus = "CheckoutPaymentStatus";
+            public const string Step = "CheckoutStep";
+        }
+    }
+    public sealed class CheckoutContactInfo
+    {
+        public CheckoutContactInfo() { }
+        public CrestApps.OrchardCore.Addresses.Models.Address BillingAddress { get; set; }
+        public string DisplayName { get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
+        public CrestApps.OrchardCore.Addresses.Models.ContactInfo ToContactInfo() { }
+    }
+    public sealed class CheckoutFlow
+    {
+        public CheckoutFlow(CrestApps.OrchardCore.Checkout.ICheckoutFlowSession session) { }
+        public CrestApps.OrchardCore.Checkout.ICheckoutFlowSession Session { get; }
+        public bool CurrentStepEquals(string key) { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlowStep GetCurrentStep() { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlowStep GetFirstStep() { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlowStep GetLastStep() { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlowStep GetNextStep() { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlowStep GetPreviousStep() { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlowStep[] GetSortedSteps() { }
+        public void SetCurrentStep(string key) { }
+    }
+    public sealed class CheckoutFlowActivatedContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowActivatedContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public sealed class CheckoutFlowActivatingContext
+    {
+        public CheckoutFlowActivatingContext(CrestApps.OrchardCore.Checkout.CheckoutSession session) { }
+        public System.Collections.Generic.IReadOnlyList<string> Errors { get; }
+        public CrestApps.OrchardCore.Checkout.CheckoutSession Session { get; }
+        public void Reject(string error) { }
+    }
+    public sealed class CheckoutFlowCanceledContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowCanceledContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, string reason) { }
+        public string Reason { get; }
+    }
+    public sealed class CheckoutFlowCompletedContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowCompletedContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public sealed class CheckoutFlowCompletingContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowCompletingContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public abstract class CheckoutFlowContextBase
+    {
+        protected CheckoutFlowContextBase(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlow Flow { get; }
+    }
+    public sealed class CheckoutFlowExpiredContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowExpiredContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public sealed class CheckoutFlowFailedContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowFailedContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public sealed class CheckoutFlowInitializedContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowInitializedContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public sealed class CheckoutFlowInitializingContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowInitializingContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public sealed class CheckoutFlowLoadedContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowLoadedContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public sealed class CheckoutFlowLoadingContext : CrestApps.OrchardCore.Checkout.CheckoutFlowContextBase
+    {
+        public CheckoutFlowLoadingContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+    }
+    public sealed class CheckoutFlowPaymentMethod
+    {
+        public CheckoutFlowPaymentMethod() { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlow Flow { get; set; }
+        public bool SavePaymentMethod { get; set; }
+    }
+    public sealed class CheckoutFlowStep
+    {
+        public CheckoutFlowStep() { }
+        public CrestApps.OrchardCore.Checkout.BillingItem[] BillingItems { get; set; }
+        public bool CollectData { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool Conceal { get; set; }
+        public System.Collections.Generic.Dictionary<string, object> Data { get; init; }
+        public string Description { get; set; }
+        public string Key { get; set; }
+        public int Order { get; set; }
+        public string Title { get; set; }
+    }
+    public sealed class CheckoutInvoice
+    {
+        public CheckoutInvoice() { }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public decimal AmountDue { get; }
+        public string Currency { get; set; }
+        public decimal DiscountTotal { get; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.Models.DiscountLine> Discounts { get; set; }
+        public decimal DueNow { get; set; }
+        public decimal? FirstRecurringPaymentAmount { get; set; }
+        public decimal GrandTotal { get; set; }
+        public decimal? InitialPaymentAmount { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutLineItem[] LineItems { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.Models.DiscountLine> SkippedDiscounts { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.Checkout.Json.BillingDurationKeyDictionaryJsonConverter))]
+        public System.Collections.Generic.Dictionary<CrestApps.OrchardCore.Checkout.BillingDurationKey, decimal> Subtotals { get; set; }
+        public decimal TaxAmount { get; set; }
+        public string TaxCategoryCode { get; set; }
+        public string TaxClassificationCode { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Taxation.Models.TaxLine> TaxLines { get; set; }
+        public CrestApps.OrchardCore.Taxation.Models.TaxSnapshot TaxSnapshot { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public decimal TenderTaxAmount { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public decimal TenderTotal { get; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.Models.TenderLine> Tenders { get; set; }
+        public System.Collections.Generic.Dictionary<CrestApps.OrchardCore.Checkout.BillingDurationKey, System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.CheckoutLineItem>> GetRecurringGroups() { }
+    }
+    public sealed class CheckoutLineItem
+    {
+        public CheckoutLineItem() { }
+        public string[] CategoryIds { get; set; }
+        public string Description { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public bool ExcludeFromDiscounts { get; set; }
+        public bool ExcludeFromTax { get; set; }
+        public string ItemId { get; set; }
+        public CrestApps.OrchardCore.Checkout.RecurringPlan Plan { get; set; }
+        public string PriceId { get; set; }
+        public string ProductId { get; set; }
+        public int Quantity { get; set; }
+        public string Sku { get; set; }
+        public string TaxCategoryCode { get; set; }
+        public string TaxClassificationCode { get; set; }
+        public CrestApps.OrchardCore.Taxation.Models.TaxableItemKind? TaxableKind { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal GetLineTotal(string currency = null) { }
+    }
+    public sealed class CheckoutPaymentException : System.Exception
+    {
+        public CheckoutPaymentException() { }
+        public CheckoutPaymentException(string message) { }
+        public CheckoutPaymentException(string message, System.Exception innerException) { }
+    }
+    public sealed class CheckoutPriceSelection
+    {
+        public CheckoutPriceSelection() { }
+        public decimal? CustomAmount { get; set; }
+        public string PriceId { get; set; }
+        public int Quantity { get; set; }
+    }
+    public sealed class CheckoutReference
+    {
+        public CheckoutReference() { }
+        public string ReferenceId { get; set; }
+        public string ReferenceType { get; set; }
+    }
+    public static class CheckoutReferenceTypes
+    {
+        public const string Order = "Order";
+    }
+    public static class CheckoutRefundFailureCodes
+    {
+        public const string RemoteRefundWithoutLocalRequest = "remote_refund_without_local_request";
+    }
+    public static class CheckoutRefundMetadataKeys
+    {
+        public const string IdempotencyKey = "checkout_refund_idempotency_key";
+    }
+    public sealed class CheckoutRejectedException : System.InvalidOperationException
+    {
+        public CheckoutRejectedException() { }
+        public CheckoutRejectedException(System.Collections.Generic.IReadOnlyList<string> errors) { }
+        public CheckoutRejectedException(string message) { }
+        public CheckoutRejectedException(string message, System.Exception innerException) { }
+        public System.Collections.Generic.IReadOnlyList<string> Errors { get; }
+    }
+    public sealed class CheckoutReturnInfo
+    {
+        public CheckoutReturnInfo() { }
+        public string ReturnText { get; set; }
+        public string ReturnUrl { get; set; }
+        public string Title { get; set; }
+        public static CrestApps.OrchardCore.Checkout.CheckoutReturnInfo GetFrom(CrestApps.OrchardCore.Checkout.ICheckoutFlowSession session) { }
+        public static bool IsLocalUrl(string url) { }
+    }
+    public sealed class CheckoutSession : OrchardCore.Entities.Entity, CrestApps.OrchardCore.Checkout.ICheckoutFlowSession, OrchardCore.Entities.IEntity
+    {
+        public CheckoutSession() { }
+        public bool AcceptsDiscountsOnBalance { get; set; }
+        public string AgentInfo { get; set; }
+        public System.DateTime? AnonymizedUtc { get; set; }
+        public System.DateTime? CompletedUtc { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public string CurrentStep { get; set; }
+        public string GuestTokenHash { get; set; }
+        public string IPAddress { get; set; }
+        public long Id { get; set; }
+        public System.DateTime ModifiedUtc { get; set; }
+        public string OwnerId { get; set; }
+        public string ReferenceId { get; set; }
+        public string ReferenceType { get; set; }
+        public string ReferenceVersionId { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.CheckoutReference> References { get; init; }
+        public bool SavePaymentMethod { get; set; }
+        public System.Text.Json.Nodes.JsonObject SavedSteps { get; init; }
+        public string SessionId { get; set; }
+        public bool SettlesExistingBalance { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutSessionStatus Status { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.CheckoutFlowStep> Steps { get; init; }
+        public void Anonymize(System.DateTime now, string replacementName = null) { }
+    }
+    public enum CheckoutSessionStatus
+    {
+        Pending = 0,
+        AwaitingProvider = 1,
+        PaymentPending = 2,
+        Completed = 3,
+        Failed = 4,
+        Canceled = 5,
+        Expired = 6,
+    }
+    public sealed class CheckoutShippingInfo
+    {
+        public CheckoutShippingInfo() { }
+        public CrestApps.OrchardCore.Addresses.Models.Address Address { get; set; }
+        public decimal Amount { get; set; }
+        public string Description { get; set; }
+        public string LocationId { get; set; }
+        public string MethodId { get; set; }
+        public string Name { get; set; }
+        public string ProviderName { get; set; }
+        public string RateId { get; set; }
+        public string ZoneId { get; set; }
+    }
+    public interface ICheckoutFlowSession : OrchardCore.Entities.IEntity
+    {
+        string Currency { get; set; }
+        string CurrentStep { get; set; }
+        string OwnerId { get; set; }
+        System.Text.Json.Nodes.JsonObject SavedSteps { get; }
+        string SessionId { get; set; }
+        CrestApps.OrchardCore.Checkout.CheckoutSessionStatus Status { get; set; }
+        System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.CheckoutFlowStep> Steps { get; }
+    }
+    public interface ICheckoutSessionAnonymizer
+    {
+        System.Threading.Tasks.Task<bool> AnonymizeAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> AnonymizeByReferenceAsync(string referenceType, string referenceId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutSessionStore
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.CheckoutSession> GetAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.CheckoutSession> GetAsync(string sessionId, CrestApps.OrchardCore.Checkout.CheckoutSessionStatus status, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.CheckoutSession>> GetByCustomerAsync(string ownerId, string email, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.CheckoutSession> GetByReferenceAsync(string referenceType, string referenceId, string referenceVersionId = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.CheckoutSession>> GetManyAsync(System.Collections.Generic.IEnumerable<string> sessionIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.CheckoutSession>> GetStaleAsync(CrestApps.OrchardCore.Checkout.CheckoutSessionStatus status, System.DateTime modifiedBeforeUtc, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.CheckoutSession>> ListByReferenceAsync(string referenceType, string referenceId, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, System.Action<CrestApps.OrchardCore.Checkout.CheckoutSession> configure = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SaveAsync(CrestApps.OrchardCore.Checkout.CheckoutSession session, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class PaymentRecord
+    {
+        public PaymentRecord() { }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
+        public string GatewayId { get; set; }
+        public CrestApps.OrchardCore.Payments.GatewayMode GatewayMode { get; set; }
+        public string ObligationId { get; set; }
+        public CrestApps.OrchardCore.Checkout.PaymentStatus Status { get; set; }
+        public decimal TaxAmount { get; set; }
+        public CrestApps.OrchardCore.Taxation.Models.TaxSnapshot TaxSnapshot { get; set; }
+        public string TransactionId { get; set; }
+    }
+    public enum PaymentStatus
+    {
+        Unknown = 0,
+        Succeeded = 1,
+        Failed = 2,
+    }
+    public sealed class PaymentsMetadata
+    {
+        public PaymentsMetadata() { }
+        public System.Collections.Generic.Dictionary<string, CrestApps.OrchardCore.Checkout.PaymentRecord> Payments { get; set; }
+    }
+    public sealed class RecurringPlan
+    {
+        public RecurringPlan() { }
+        public int? BillingCycleLimit { get; set; }
+        public int BillingDuration { get; set; }
+        public CrestApps.OrchardCore.Payments.Models.DurationType DurationType { get; set; }
+        public int? StartDayDelay { get; set; }
+        public int? TrialDays { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Checkout.Handlers
+{
+    public abstract class CheckoutHandlerBase : CrestApps.OrchardCore.Checkout.Handlers.ICheckoutHandler
+    {
+        protected CheckoutHandlerBase() { }
+        public virtual System.Threading.Tasks.Task ActivatedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowActivatedContext context) { }
+        public virtual System.Threading.Tasks.Task ActivatingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowActivatingContext context) { }
+        public virtual System.Threading.Tasks.Task CanceledAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowCanceledContext context) { }
+        public virtual System.Threading.Tasks.Task CompletedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowCompletedContext context) { }
+        public virtual System.Threading.Tasks.Task CompletingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowCompletingContext context) { }
+        public virtual System.Threading.Tasks.Task ExpiredAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowExpiredContext context) { }
+        public virtual System.Threading.Tasks.Task FailedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowFailedContext context) { }
+        public virtual System.Threading.Tasks.Task InitializedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowInitializedContext context) { }
+        public virtual System.Threading.Tasks.Task InitializingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowInitializingContext context) { }
+        public virtual System.Threading.Tasks.Task LoadedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowLoadedContext context) { }
+        public virtual System.Threading.Tasks.Task LoadingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowLoadingContext context) { }
+    }
+    public interface ICheckoutHandler
+    {
+        System.Threading.Tasks.Task ActivatedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowActivatedContext context);
+        System.Threading.Tasks.Task ActivatingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowActivatingContext context);
+        System.Threading.Tasks.Task CanceledAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowCanceledContext context);
+        System.Threading.Tasks.Task CompletedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowCompletedContext context);
+        System.Threading.Tasks.Task CompletingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowCompletingContext context);
+        System.Threading.Tasks.Task ExpiredAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowExpiredContext context);
+        System.Threading.Tasks.Task FailedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowFailedContext context);
+        System.Threading.Tasks.Task InitializedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowInitializedContext context);
+        System.Threading.Tasks.Task InitializingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowInitializingContext context);
+        System.Threading.Tasks.Task LoadedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowLoadedContext context);
+        System.Threading.Tasks.Task LoadingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowLoadingContext context);
+    }
+}
+namespace CrestApps.OrchardCore.Checkout.Json
+{
+    public sealed class BillingDurationKeyDictionaryJsonConverter : System.Text.Json.Serialization.JsonConverter<System.Collections.Generic.Dictionary<CrestApps.OrchardCore.Checkout.BillingDurationKey, decimal>>
+    {
+        public static readonly CrestApps.OrchardCore.Checkout.Json.BillingDurationKeyDictionaryJsonConverter Instance;
+        public BillingDurationKeyDictionaryJsonConverter() { }
+        public override System.Collections.Generic.Dictionary<CrestApps.OrchardCore.Checkout.BillingDurationKey, decimal> Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) { }
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, System.Collections.Generic.Dictionary<CrestApps.OrchardCore.Checkout.BillingDurationKey, decimal> dictionary, System.Text.Json.JsonSerializerOptions options) { }
+    }
+    public sealed class BillingDurationKeyJsonConverter : System.Text.Json.Serialization.JsonConverter<CrestApps.OrchardCore.Checkout.BillingDurationKey>
+    {
+        public static readonly CrestApps.OrchardCore.Checkout.Json.BillingDurationKeyJsonConverter Instance;
+        public BillingDurationKeyJsonConverter() { }
+        public override CrestApps.OrchardCore.Checkout.BillingDurationKey Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) { }
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, CrestApps.OrchardCore.Checkout.BillingDurationKey value, System.Text.Json.JsonSerializerOptions options) { }
+    }
+}
+namespace CrestApps.OrchardCore.Checkout.Models
+{
+    public sealed class CheckoutClientInfo
+    {
+        public CheckoutClientInfo() { }
+        public string NetworkKey { get; set; }
+    }
+    public sealed class CheckoutContactDetails
+    {
+        public CheckoutContactDetails() { }
+        public CrestApps.OrchardCore.Addresses.Models.Address BillingAddress { get; set; }
+        public string Email { get; set; }
+        public string Name { get; set; }
+        public string Phone { get; set; }
+    }
+    public sealed class CheckoutCounterSale
+    {
+        public CheckoutCounterSale() { }
+        public string LocationId { get; set; }
+        public string RegisterId { get; set; }
+        public string ShiftId { get; set; }
+    }
+    public sealed class CheckoutDiscountScope
+    {
+        public CheckoutDiscountScope() { }
+        public string CustomerEmail { get; set; }
+        public string CustomerId { get; set; }
+        public string ReferenceType { get; set; }
+        public string Source { get; set; }
+    }
+    public sealed class CheckoutFulfillmentChoice
+    {
+        public CheckoutFulfillmentChoice() { }
+        public CrestApps.OrchardCore.Addresses.Models.Address Address { get; set; }
+        public string OptionId { get; set; }
+        public string PickupLocationId { get; set; }
+    }
+    public sealed class CheckoutFulfillmentOption
+    {
+        public CheckoutFulfillmentOption() { }
+        public decimal Amount { get; set; }
+        public string Carrier { get; set; }
+        public string Currency { get; set; }
+        public string Description { get; set; }
+        public string Id { get; set; }
+        public string Title { get; set; }
+    }
+    public sealed class CheckoutFulfillmentQuote
+    {
+        public CheckoutFulfillmentQuote() { }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.CheckoutFulfillmentOption> Options { get; set; }
+        public string Problem { get; set; }
+        public bool RequiresShipping { get; set; }
+    }
+    public enum CheckoutLayout
+    {
+        Steps = 0,
+        OnePage = 1,
+    }
+    public sealed class CheckoutPickupOption
+    {
+        public CheckoutPickupOption() { }
+        public CrestApps.OrchardCore.Addresses.Models.Address Address { get; set; }
+        public string Currency { get; set; }
+        public decimal Fee { get; set; }
+        public string Id { get; set; }
+        public string Instructions { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class CheckoutReferenceNumber
+    {
+        public CheckoutReferenceNumber() { }
+        public string Number { get; set; }
+    }
+    public sealed class CheckoutSettings
+    {
+        public CheckoutSettings() { }
+        [System.ComponentModel.DefaultValue("USD")]
+        public string Currency { get; set; }
+        public string DefaultPaymentMethod { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.CheckoutLayout Layout { get; set; }
+        public int SessionLifetimeHours { get; set; }
+    }
+    public sealed class CheckoutStepError : System.IEquatable<CrestApps.OrchardCore.Checkout.Models.CheckoutStepError>
+    {
+        public CheckoutStepError(string Field, string Message) { }
+        public string Field { get; init; }
+        public string Message { get; init; }
+    }
+    public sealed class CheckoutStepSaveResult
+    {
+        public CheckoutStepSaveResult() { }
+        public bool Choosing { get; init; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.CheckoutStepError> Errors { get; init; }
+        public bool Saved { get; init; }
+        public static CrestApps.OrchardCore.Checkout.Models.CheckoutStepSaveResult Success() { }
+    }
+    public sealed class CheckoutTenderHold
+    {
+        public CheckoutTenderHold() { }
+        public decimal Amount { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public string Description { get; set; }
+        public long Id { get; set; }
+        public string ItemId { get; set; }
+        public string ProviderKey { get; set; }
+        public System.DateTime? RedeemedUtc { get; set; }
+        public string Reference { get; set; }
+        public decimal ReturnedAmount { get; set; }
+        public string SessionId { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.CheckoutTenderHoldStatus Status { get; set; }
+    }
+    public enum CheckoutTenderHoldStatus
+    {
+        Held = 0,
+        Redeemed = 1,
+        Released = 2,
+    }
+    public sealed class Coupon : CrestApps.Core.Models.CatalogItem, CrestApps.OrchardCore.Models.ITimestampedModel
+    {
+        public Coupon() { }
+        public decimal Amount { get; set; }
+        public System.Collections.Generic.IList<string> BuyCategoryIds { get; set; }
+        public System.Collections.Generic.IList<string> BuyProductIds { get; set; }
+        public int BuyQuantity { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool CanBeTyped { get; }
+        public System.Collections.Generic.IList<string> CategoryIds { get; set; }
+        public string Code { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public CrestApps.OrchardCore.Checkout.Models.DiscountCombination CombinesWith { get; }
+        public bool CombinesWithOrderDiscounts { get; set; }
+        public bool CombinesWithProductDiscounts { get; set; }
+        public bool CombinesWithShippingDiscounts { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public string CustomerEmail { get; set; }
+        public string CustomerId { get; set; }
+        public string Description { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public CrestApps.OrchardCore.Checkout.Models.DiscountClass DiscountClass { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public CrestApps.OrchardCore.Checkout.Models.DiscountTarget EffectiveTarget { get; }
+        public System.DateTime? EndsUtc { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string GeneratedCodeId { get; set; }
+        public int GetQuantity { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasItemLimits { get; }
+        public long Id { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsAutomatic { get; }
+        public bool IsEnabled { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsScoped { get; }
+        public CrestApps.OrchardCore.Checkout.Models.CouponKind Kind { get; set; }
+        public int? MaxApplicationsPerOrder { get; set; }
+        public int? MaxRedemptions { get; set; }
+        public int? MaxRedemptionsPerCustomer { get; set; }
+        public decimal? MaximumAmount { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.CouponMethod Method { get; set; }
+        public decimal? MinimumAmount { get; set; }
+        public int? MinimumQuantity { get; set; }
+        public bool OnlyGeneratedCodes { get; set; }
+        public decimal Percentage { get; set; }
+        public System.Collections.Generic.IList<string> ProductIds { get; set; }
+        public int RedemptionCount { get; set; }
+        public System.Collections.Generic.IList<string> ReferenceTypes { get; set; }
+        public System.Collections.Generic.IList<string> Sources { get; set; }
+        public System.DateTime? StartsUtc { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.DiscountTarget Target { get; set; }
+        public System.DateTime UpdatedUtc { get; set; }
+        public bool AppliesTo(CrestApps.OrchardCore.Checkout.CheckoutLineItem line) { }
+        public bool CountsTowardBuy(CrestApps.OrchardCore.Checkout.CheckoutLineItem line) { }
+        public decimal GetBuyXGetYDiscount(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.CheckoutLineItem> lines, out System.Collections.Generic.Dictionary<string, decimal> shares) { }
+        public decimal GetDiscount(decimal baseAmount, string currency) { }
+        public bool IsRedeemable(System.DateTime utcNow) { }
+        public bool IsWithinSpend(decimal baseAmount) { }
+    }
+    public enum CouponAvailability
+    {
+        Available = 0,
+        UsedUp = 1,
+        CustomerLimitReached = 2,
+        Unavailable = 3,
+        Busy = 4,
+    }
+    public sealed class CouponCode
+    {
+        public CouponCode() { }
+        public string Code { get; set; }
+        public string CouponId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public long Id { get; set; }
+        public bool IsEnabled { get; set; }
+        public string ItemId { get; set; }
+        public int? MaxRedemptions { get; set; }
+        public int RedemptionCount { get; set; }
+    }
+    public enum CouponKind
+    {
+        Percentage = 0,
+        FixedAmount = 1,
+        FreeShipping = 2,
+        BuyXGetY = 3,
+    }
+    public enum CouponMethod
+    {
+        Code = 0,
+        Automatic = 1,
+    }
+    public sealed class CouponRedemption
+    {
+        public CouponRedemption() { }
+        public decimal Amount { get; set; }
+        public string Code { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public string CustomerEmail { get; set; }
+        public string CustomerId { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public System.DateTime? ExpiresUtc { get; set; }
+        public long Id { get; set; }
+        public bool IsCounted { get; set; }
+        public string ItemId { get; set; }
+        public System.DateTime? RedeemedUtc { get; set; }
+        public string ReferenceId { get; set; }
+        public string ReferenceType { get; set; }
+        public string SessionId { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.CouponRedemptionStatus Status { get; set; }
+    }
+    public enum CouponRedemptionStatus
+    {
+        Held = 0,
+        Redeemed = 1,
+        Released = 2,
+        Returned = 3,
+    }
+    public sealed class CustomerPaymentMethod
+    {
+        public CustomerPaymentMethod() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public long Id { get; set; }
+        public bool IsDefault { get; set; }
+        public string ItemId { get; set; }
+        public System.DateTime? LastChargedUtc { get; set; }
+        public string OwnerId { get; set; }
+        public CrestApps.OrchardCore.Checkout.Services.SavedPaymentMethod PaymentMethod { get; set; }
+        public string SourceSessionId { get; set; }
+        public System.DateTime UpdatedUtc { get; set; }
+    }
+    public enum DeclineSpikeAction
+    {
+        Notify = 0,
+        RequireSignIn = 1,
+        PauseGuestCards = 2,
+    }
+    public enum DiscountClass
+    {
+        Product = 0,
+        Order = 1,
+        Shipping = 2,
+    }
+    public static class DiscountClassExtensions
+    {
+        public static CrestApps.OrchardCore.Checkout.Models.DiscountCombination ToCombination(this CrestApps.OrchardCore.Checkout.Models.DiscountClass discountClass) { }
+    }
+    [System.Flags]
+    public enum DiscountCombination
+    {
+        None = 0,
+        Product = 1,
+        Order = 2,
+        Shipping = 4,
+        All = 7,
+    }
+    public sealed class DiscountLine
+    {
+        public DiscountLine() { }
+        public decimal Amount { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.DiscountClass? Class { get; set; }
+        public string Code { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.DiscountCombination CombinesWith { get; set; }
+        public string Description { get; set; }
+        public string GaveWayTo { get; set; }
+        public bool IsAutomatic { get; set; }
+        public System.Collections.Generic.IList<string> LineItemIds { get; set; }
+        public System.Collections.Generic.IDictionary<string, decimal> LineShares { get; set; }
+        public string ProviderKey { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.DiscountTarget Target { get; set; }
+        public bool CanCombineWith(CrestApps.OrchardCore.Checkout.Models.DiscountLine other) { }
+        public CrestApps.OrchardCore.Checkout.Models.DiscountClass GetClass() { }
+        public bool IsLimitedTo(CrestApps.OrchardCore.Checkout.CheckoutLineItem line) { }
+    }
+    public enum DiscountTarget
+    {
+        OneTime = 0,
+        FirstCycle = 1,
+        Shipping = 2,
+    }
+    public sealed class PaymentProtectionSettings
+    {
+        public PaymentProtectionSettings() { }
+        public CrestApps.OrchardCore.Checkout.Models.DeclineSpikeAction OnDeclineSpike { get; set; }
+    }
+    public sealed class TenderLine
+    {
+        public TenderLine() { }
+        public decimal Amount { get; set; }
+        public string Description { get; set; }
+        public string ProviderKey { get; set; }
+        public string Reference { get; set; }
+        public decimal TaxAmount { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Checkout.Services
+{
+    public sealed class BeginPaymentContext
+    {
+        public BeginPaymentContext() { }
+        public CrestApps.OrchardCore.Transactions.Models.PaymentAttempt Attempt { get; set; }
+        public string CancelUrl { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutInvoice Invoice { get; set; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string> ProviderData { get; set; }
+        public string ReturnUrl { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutSession Session { get; set; }
+    }
+    public sealed class BeginPaymentOptions
+    {
+        public BeginPaymentOptions() { }
+        public string CancelUrl { get; set; }
+        public string ClientNetworkKey { get; set; }
+        public string IdempotencyKey { get; set; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string> ProviderData { get; set; }
+        public string ProviderKey { get; set; }
+        public string ReturnUrl { get; set; }
+    }
+    public sealed class BeginRecurringPaymentContext
+    {
+        public BeginRecurringPaymentContext() { }
+        public CrestApps.OrchardCore.Transactions.Models.PaymentAttempt Attempt { get; set; }
+        public string CancelUrl { get; set; }
+        public decimal CycleAmount { get; set; }
+        public decimal FirstCycleAmount { get; set; }
+        public CrestApps.OrchardCore.Checkout.BillingDurationKey Interval { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutInvoice Invoice { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.CheckoutLineItem> LineItems { get; set; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string> ProviderData { get; set; }
+        public string ReturnUrl { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutSession Session { get; set; }
+        public int? TrialDays { get; set; }
+    }
+    public sealed class CancelPaymentContext
+    {
+        public CancelPaymentContext() { }
+        public CrestApps.OrchardCore.Transactions.Models.PaymentAttempt Attempt { get; set; }
+        public string Reason { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutSession Session { get; set; }
+    }
+    public sealed class CancelRecurringPaymentContext
+    {
+        public CancelRecurringPaymentContext() { }
+        public bool AtPeriodEnd { get; set; }
+        public string ProviderSubscriptionId { get; set; }
+        public string Reason { get; set; }
+    }
+    public sealed class CheckoutCompletionResult
+    {
+        public CheckoutCompletionResult() { }
+        public string BlockingStepKey { get; set; }
+        public string ErrorMessage { get; set; }
+        public bool IsCompleted { get; }
+        public System.Collections.Generic.IList<string> OutstandingObligationIds { get; init; }
+        public CrestApps.OrchardCore.Checkout.Services.CheckoutCompletionStatus Status { get; set; }
+    }
+    public enum CheckoutCompletionStatus
+    {
+        Completed = 0,
+        AlreadyCompleted = 1,
+        Pending = 2,
+        Blocked = 3,
+        Failed = 4,
+        Canceled = 5,
+        NotFound = 6,
+    }
+    public sealed class CheckoutCoupon
+    {
+        public const int MaxCodes = 5;
+        public CheckoutCoupon() { }
+        public string Code { get; set; }
+        public System.Collections.Generic.List<string> Codes { get; set; }
+        public System.Collections.Generic.List<string> Declined { get; set; }
+        public bool Add(string code) { }
+        public void Decline(string code) { }
+        public System.Collections.Generic.IReadOnlyList<string> GetCodes() { }
+        public bool IsDeclined(string code) { }
+        public bool IsEmpty() { }
+        public bool Remove(string code) { }
+    }
+    public static class CheckoutDiscountBase
+    {
+        public static decimal GetAmount(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice, CrestApps.OrchardCore.Checkout.Models.DiscountTarget target) { }
+        public static decimal GetAmount(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice, CrestApps.OrchardCore.Checkout.Models.DiscountTarget target, System.Func<CrestApps.OrchardCore.Checkout.CheckoutLineItem, bool> predicate) { }
+        public static bool IsDiscountable(CrestApps.OrchardCore.Checkout.CheckoutLineItem line, CrestApps.OrchardCore.Checkout.Models.DiscountTarget target) { }
+    }
+    public sealed class CheckoutDiscountContext
+    {
+        public CheckoutDiscountContext(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice, CrestApps.OrchardCore.Checkout.CheckoutFlow flow) { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlow Flow { get; }
+        public CrestApps.OrchardCore.Checkout.CheckoutInvoice Invoice { get; }
+    }
+    public sealed class CheckoutDiscountRedemptionContext
+    {
+        public CheckoutDiscountRedemptionContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.DiscountLine> discounts) { }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.DiscountLine> Discounts { get; }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlow Flow { get; }
+    }
+    public static class CheckoutObligations
+    {
+        public const string OneTime = "onetime";
+        public static decimal GetCycleAmount(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.CheckoutLineItem> lineItems, string currency) { }
+        public static int? GetCycleLimit(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.CheckoutLineItem> lineItems) { }
+        public static int GetDeferralDays(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.CheckoutLineItem> lineItems) { }
+        public static System.Collections.Generic.IReadOnlyList<string> GetExpectedObligationIds(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice) { }
+        public static string Recurring(CrestApps.OrchardCore.Checkout.BillingDurationKey key) { }
+        public static bool TryGetRecurringGroup(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice, string obligationId, out CrestApps.OrchardCore.Checkout.BillingDurationKey interval, out System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.CheckoutLineItem> lineItems) { }
+    }
+    public sealed class CheckoutPaymentBeginningContext
+    {
+        public CheckoutPaymentBeginningContext(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, string providerKey) { }
+        public string ErrorMessage { get; }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlow Flow { get; }
+        public bool InvoiceChanged { get; set; }
+        public bool IsRefused { get; }
+        public string ProviderKey { get; }
+        public void Refuse(string message) { }
+    }
+    public static class CheckoutPaymentDataKeys
+    {
+        public const string DelegatedCredential = "delegatedCredential";
+        public const string DelegatedCredentialType = "delegatedCredentialType";
+        public const string OffSession = "offSession";
+        public const string ProviderCustomerReference = "customerId";
+        public const string SavePaymentMethod = "savePaymentMethod";
+        public const string SavedCustomerReference = "savedCustomerReference";
+        public const string SavedPaymentMethodReference = "savedPaymentMethodReference";
+        public const string ThreeDSecureCryptogram = "threeDSecureCryptogram";
+        public const string ThreeDSecureElectronicCommerceIndicator = "threeDSecureEci";
+        public const string ThreeDSecureOutcome = "threeDSecureOutcome";
+        public const string ThreeDSecureTransactionId = "threeDSecureTransactionId";
+        public const string ThreeDSecureTransactionStatus = "threeDSecureTransStatus";
+        public const string ThreeDSecureVersion = "threeDSecureVersion";
+        public static System.Collections.Generic.Dictionary<string, string> ForOffSessionCharge(CrestApps.OrchardCore.Checkout.Services.SavedPaymentMethod paymentMethod) { }
+        public static string GetValue(System.Collections.Generic.IReadOnlyDictionary<string, string> providerData, string key) { }
+        public static bool IsServerOnly(string key) { }
+        public static bool IsSet(System.Collections.Generic.IReadOnlyDictionary<string, string> providerData, string key) { }
+    }
+    public static class CheckoutPaymentDeferral
+    {
+        public static bool IsDeferred(CrestApps.OrchardCore.Checkout.ICheckoutFlowSession session, CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProviderResolver providerResolver) { }
+    }
+    public static class CheckoutPaymentProviderExtensions
+    {
+        public static CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProvider FindByKey(this System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProvider> providers, string providerKey) { }
+        public static string GetPaymentMethodName(this System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProvider> providers, string providerKey) { }
+    }
+    public sealed class CheckoutReconciliationResult
+    {
+        public CheckoutReconciliationResult() { }
+        public System.Collections.Generic.IList<string> FailedObligationIds { get; }
+        public bool HasAttempts { get; set; }
+        public bool IsFullySettled { get; set; }
+        public System.Collections.Generic.IList<string> OutstandingObligationIds { get; }
+        public System.Collections.Generic.IList<string> SettledObligationIds { get; }
+    }
+    public sealed class CheckoutReferenceDescription
+    {
+        public CheckoutReferenceDescription() { }
+        public string Text { get; init; }
+        public string Url { get; init; }
+    }
+    public sealed class CheckoutTaxProfile
+    {
+        public CheckoutTaxProfile() { }
+        public CrestApps.OrchardCore.Taxation.Models.CustomerTaxProfile Customer { get; set; }
+        public string DefaultTaxCategoryCode { get; set; }
+        public string DefaultTaxClassificationCode { get; set; }
+        public CrestApps.OrchardCore.Addresses.Models.Address Destination { get; set; }
+        public CrestApps.OrchardCore.Addresses.Models.Address Origin { get; set; }
+        public CrestApps.OrchardCore.Taxation.Models.TaxPriceType PriceType { get; set; }
+    }
+    public sealed class CheckoutTenderChoice
+    {
+        public CheckoutTenderChoice() { }
+        public string ProviderKey { get; set; }
+        public string Reference { get; set; }
+        public bool Is(string providerKey, string reference) { }
+    }
+    public sealed class CheckoutTenderContext
+    {
+        public CheckoutTenderContext(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice, CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Collections.Generic.IReadOnlyList<string> references) { }
+        public CrestApps.OrchardCore.Checkout.CheckoutFlow Flow { get; }
+        public CrestApps.OrchardCore.Checkout.CheckoutInvoice Invoice { get; }
+        public System.Collections.Generic.IReadOnlyList<string> References { get; }
+    }
+    public static class CheckoutTenderLocks
+    {
+        public static string GetKey(string providerKey, string reference) { }
+    }
+    public sealed class CheckoutTenderSelection
+    {
+        public CheckoutTenderSelection() { }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Checkout.Services.CheckoutTenderChoice> Choices { get; set; }
+        public void Add(string providerKey, string reference) { }
+        public System.Collections.Generic.IReadOnlyList<string> For(string providerKey) { }
+        public bool Remove(string providerKey, string reference) { }
+    }
+    public static class DelegatedCredentialTypes
+    {
+        public const string GooglePayToken = "google_pay_token";
+        public const string StripeSharedPaymentToken = "stripe_shared_payment_token";
+        public const string Test = "test";
+    }
+    public interface ICheckoutContactStep
+    {
+        string StepKey { get; }
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CheckoutStepSaveResult> SaveAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, CrestApps.OrchardCore.Checkout.Models.CheckoutContactDetails details, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutDiscountProvider
+    {
+        string Key { get; }
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.DiscountLine>> GetDiscountsAsync(CrestApps.OrchardCore.Checkout.Services.CheckoutDiscountContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RedeemAsync(CrestApps.OrchardCore.Checkout.Services.CheckoutDiscountRedemptionContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutDiscountService
+    {
+        System.Threading.Tasks.Task ApplyDiscountsAsync(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice, CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutEngine
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.PaymentBeginOutcome> BeginPaymentAsync(string sessionId, CrestApps.OrchardCore.Checkout.Services.BeginPaymentOptions options, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.CheckoutCompletionResult> CancelAsync(string sessionId, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.CheckoutCompletionResult> ExpireAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.CheckoutSession> StartAsync(CrestApps.OrchardCore.Checkout.Services.StartCheckoutRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.CheckoutCompletionResult> TryCompleteAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutFulfillmentStep
+    {
+        string StepKey { get; }
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.CheckoutPickupOption>> GetPickupOptionsAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CheckoutFulfillmentQuote> QuoteAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, CrestApps.OrchardCore.Addresses.Models.Address address, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CheckoutStepSaveResult> SaveAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, CrestApps.OrchardCore.Checkout.Models.CheckoutFulfillmentChoice choice, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutPaymentClientConfigurationProvider
+    {
+        string ProviderKey { get; }
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> GetAsync(CrestApps.OrchardCore.Checkout.ICheckoutFlowSession session, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutPaymentGate
+    {
+        System.Threading.Tasks.Task BeginningAsync(CrestApps.OrchardCore.Checkout.Services.CheckoutPaymentBeginningContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutPaymentProvider
+    {
+        CrestApps.OrchardCore.Checkout.Services.PaymentProviderCapabilities Capabilities { get; }
+        string DisplayName { get; }
+        string Key { get; }
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.PaymentBeginResult> BeginAsync(CrestApps.OrchardCore.Checkout.Services.BeginPaymentContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.PaymentCancelResult> CancelAsync(CrestApps.OrchardCore.Checkout.Services.CancelPaymentContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.PaymentVerificationResult> VerifyAsync(CrestApps.OrchardCore.Checkout.Services.VerifyPaymentContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutPaymentProviderAvailability
+    {
+        System.Threading.Tasks.Task<bool> IsAvailableAsync(CrestApps.OrchardCore.Checkout.ICheckoutFlowSession session, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutPaymentProviderDescription
+    {
+        string Description { get; }
+    }
+    public interface ICheckoutPaymentProviderResolver
+    {
+        CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProvider GetProvider(string key);
+        System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProvider> GetProviders();
+    }
+    public interface ICheckoutPaymentRefundProvider
+    {
+        string Key { get; }
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.PaymentRefundResult> RefundAsync(CrestApps.OrchardCore.Checkout.Services.RefundPaymentContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutPaymentRefundProviderResolver
+    {
+        CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentRefundProvider GetProvider(string key);
+        System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentRefundProvider> GetProviders();
+    }
+    public interface ICheckoutReconciliationService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.CheckoutReconciliationResult> ReconcileAsync(CrestApps.OrchardCore.Checkout.CheckoutSession session, System.Collections.Generic.IEnumerable<string> expectedObligationIds, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutRecurringPaymentProvider
+    {
+        string Key { get; }
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.PaymentBeginResult> BeginRecurringAsync(CrestApps.OrchardCore.Checkout.Services.BeginRecurringPaymentContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.RecurringCancelResult> CancelRecurringAsync(CrestApps.OrchardCore.Checkout.Services.CancelRecurringPaymentContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.RecurringPauseResult> PauseRecurringAsync(CrestApps.OrchardCore.Checkout.Services.PauseRecurringPaymentContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.RecurringUpdateResult> UpdateRecurringAsync(CrestApps.OrchardCore.Checkout.Services.UpdateRecurringPaymentContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutRecurringPaymentProviderResolver
+    {
+        CrestApps.OrchardCore.Checkout.Services.ICheckoutRecurringPaymentProvider GetProvider(string providerKey);
+    }
+    public interface ICheckoutReferenceDescriber
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.CheckoutReferenceDescription> DescribeAsync(string referenceType, string referenceId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutRefundReconciliationService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Models.PaymentRefund> ReconcileRemoteRefundAsync(CrestApps.OrchardCore.Checkout.Services.ReconcileRemoteRefundContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutRefundService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Models.PaymentRefund> RequestRefundAsync(CrestApps.OrchardCore.Checkout.Services.RequestPaymentRefundContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutSavedPaymentMethodProvider
+    {
+        string Key { get; }
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.SavedPaymentMethod> GetSavedPaymentMethodAsync(CrestApps.OrchardCore.Transactions.Models.PaymentAttempt attempt, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutTaxProfileHandler
+    {
+        System.Threading.Tasks.Task BuildingAsync(CrestApps.OrchardCore.Checkout.Services.CheckoutTaxProfile profile, CrestApps.OrchardCore.Checkout.ICheckoutFlowSession session, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutTaxProfileProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.CheckoutTaxProfile> GetProfileAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.CheckoutTaxProfile> GetProfileAsync(CrestApps.OrchardCore.Checkout.ICheckoutFlowSession session, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutTaxService
+    {
+        System.Threading.Tasks.Task ApplyRecurringTaxAsync(CrestApps.OrchardCore.Checkout.PaymentRecord payment, CrestApps.OrchardCore.Checkout.ICheckoutFlowSession session, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ApplyTaxAsync(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice, CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutTenderLedger
+    {
+        System.Threading.Tasks.Task<decimal> GetHeldByOthersAsync(string providerKey, string reference, string sessionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.CheckoutTenderHold>> GetRedeemedAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.TenderAvailability> HoldAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, CrestApps.OrchardCore.Checkout.Models.TenderLine tender, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RedeemAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ReleaseAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ReleaseOthersAsync(string sessionId, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.Models.TenderLine> keep, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<decimal> ReturnAsync(string sessionId, decimal amount, string reason, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutTenderProvider
+    {
+        string Key { get; }
+        bool PaysWithSavedPaymentMethod { get; }
+        System.Threading.Tasks.Task CreditAsync(string reference, decimal amount, string currency, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DebitAsync(string reference, decimal amount, string currency, CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<decimal?> GetBalanceAsync(string reference, string currency, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.TenderLine>> GetTendersAsync(CrestApps.OrchardCore.Checkout.Services.CheckoutTenderContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutTenderService
+    {
+        System.Threading.Tasks.Task ApplyTendersAsync(CrestApps.OrchardCore.Checkout.CheckoutInvoice invoice, CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICouponRedemptionService
+    {
+        System.Threading.Tasks.Task<int> CountHeldAsync(string code, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> ForgetCustomersAsync(System.Collections.Generic.IEnumerable<string> sessionIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CouponAvailability> GetAvailabilityAsync(CrestApps.OrchardCore.Checkout.Models.Coupon coupon, CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CouponAvailability> HoldAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, CrestApps.OrchardCore.Checkout.Models.DiscountLine discount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.CouponRedemption>> ListAsync(string code, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RedeemAsync(CrestApps.OrchardCore.Checkout.CheckoutFlow flow, CrestApps.OrchardCore.Checkout.Models.DiscountLine discount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ReleaseAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> ReturnAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICouponStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Checkout.Models.Coupon>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Checkout.Models.Coupon>
+    {
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Total",
+                "Used"})]
+        System.Threading.Tasks.Task<System.ValueTuple<int, int>> CountGeneratedCodesAsync(string couponId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DeleteGeneratedCodesAsync(string couponId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.CouponCode>> GenerateCodesAsync(CrestApps.OrchardCore.Checkout.Models.Coupon coupon, int count, string prefix, int? usesPerCode, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.Coupon> GetByCodeAsync(string code, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.Coupon>> ListAutomaticAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.CouponCode>> ListGeneratedCodesAsync(string couponId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    [System.Obsolete("Use CrestApps.OrchardCore.Throttling.IAttemptLimiter with a registered attempt po" +
+        "licy. This contract is removed in the next release.")]
+    public interface IPaymentAttemptLimiter
+    {
+        System.Threading.Tasks.Task<bool> AcquireAsync(string scope, string discriminator);
+    }
+    public interface ISavedPaymentMethodStore
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CustomerPaymentMethod> FindAsync(string ownerId, string id, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CustomerPaymentMethod> FindByIdAsync(string id, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CustomerPaymentMethod> GetDefaultAsync(string ownerId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.CustomerPaymentMethod>> ListAsync(string ownerId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task MarkChargedAsync(string id, System.DateTime chargedUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> RemoveAllAsync(string ownerId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RemoveAsync(string ownerId, string id, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Models.CustomerPaymentMethod> SaveAsync(string ownerId, CrestApps.OrchardCore.Checkout.Services.SavedPaymentMethod paymentMethod, string sourceSessionId = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> SetDefaultAsync(string ownerId, string id, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class PauseRecurringPaymentContext
+    {
+        public PauseRecurringPaymentContext() { }
+        public bool Paused { get; set; }
+        public string ProviderSubscriptionId { get; set; }
+        public string Reason { get; set; }
+    }
+    public sealed class PaymentBeginOutcome
+    {
+        public PaymentBeginOutcome() { }
+        public string CardBrand { get; set; }
+        public bool Declined { get; set; }
+        public string ErrorMessage { get; set; }
+        public bool InvoiceChanged { get; set; }
+        public string ProviderErrorMessage { get; set; }
+        public bool RequiresAction { get; }
+        public bool RequiresAuthentication { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.Services.PaymentBeginStep> Steps { get; init; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentBeginOutcome Failure(string errorMessage) { }
+    }
+    public sealed class PaymentBeginResult
+    {
+        public PaymentBeginResult() { }
+        public string CardBrand { get; set; }
+        public string ClientSecret { get; set; }
+        public bool Declined { get; set; }
+        public string ErrorMessage { get; set; }
+        public string ProviderReference { get; set; }
+        public string RedirectUrl { get; set; }
+        public bool RequiresAction { get; set; }
+        public bool RequiresAuthentication { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentBeginResult AuthenticationRequired(string errorMessage, string providerReference = null) { }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentBeginResult Decline(string errorMessage, string providerReference = null) { }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentBeginResult Failure(string errorMessage) { }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentBeginResult Success(string providerReference) { }
+    }
+    public sealed class PaymentBeginStep
+    {
+        public PaymentBeginStep() { }
+        public string AttemptId { get; set; }
+        public string ClientSecret { get; set; }
+        public string ObligationId { get; set; }
+        public string RedirectUrl { get; set; }
+        public bool RequiresAction { get; set; }
+    }
+    public sealed class PaymentCancelResult
+    {
+        public PaymentCancelResult() { }
+        public string ErrorMessage { get; set; }
+        public bool IsPending { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentCancelResult Failure(string errorMessage) { }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentCancelResult Pending() { }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentCancelResult Success() { }
+    }
+    public sealed class PaymentProviderCapabilities
+    {
+        public PaymentProviderCapabilities() { }
+        public bool AcceptsDelegatedCredentials { get; set; }
+        public bool AcceptsExternalAuthentication { get; set; }
+        public bool CollectsTaxDynamically { get; set; }
+        public bool DefersPayment { get; set; }
+        public bool IsCardNotPresent { get; set; }
+        public bool SupportsCombinedOneTimeAndRecurring { get; set; }
+        public bool SupportsEmbeddedElements { get; set; }
+        public bool SupportsHostedCheckout { get; set; }
+        public bool SupportsOneTimePayments { get; set; }
+        public bool SupportsRecurringPayments { get; set; }
+        public bool SupportsRefunds { get; set; }
+        public bool SupportsSavedPaymentMethods { get; set; }
+    }
+    [System.Obsolete("Configure attempt policies by name under CrestApps_Throttling:AttemptPolicies. Th" +
+        "is type is removed in the next release.")]
+    public sealed class PaymentRateLimitOptions
+    {
+        public PaymentRateLimitOptions() { }
+        public int PermitLimit { get; set; }
+        public System.TimeSpan Window { get; set; }
+    }
+    public sealed class PaymentRefundResult
+    {
+        public PaymentRefundResult() { }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
+        public string FailureCode { get; set; }
+        public string FailureReason { get; set; }
+        public CrestApps.OrchardCore.Payments.GatewayMode GatewayMode { get; set; }
+        public string ProviderRefundReference { get; set; }
+        public CrestApps.OrchardCore.Transactions.Models.RefundStatus Status { get; set; }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentRefundResult Failed(string failureCode, string failureReason) { }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentRefundResult Pending(string providerRefundReference, CrestApps.OrchardCore.Payments.GatewayMode gatewayMode) { }
+        public static CrestApps.OrchardCore.Checkout.Services.PaymentRefundResult Success(string providerRefundReference, decimal amount, string currency, CrestApps.OrchardCore.Payments.GatewayMode gatewayMode) { }
+    }
+    public sealed class PaymentVerificationResult
+    {
+        public PaymentVerificationResult() { }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
+        public CrestApps.OrchardCore.Payments.GatewayMode GatewayMode { get; set; }
+        public bool ReportsAuthoritativeAmount { get; set; }
+        public string RiskLevel { get; set; }
+        public int? RiskScore { get; set; }
+        public CrestApps.OrchardCore.Checkout.PaymentStatus Status { get; set; }
+        public decimal TaxAmount { get; set; }
+        public CrestApps.OrchardCore.Taxation.Models.TaxSnapshot TaxSnapshot { get; set; }
+        public string TransactionId { get; set; }
+    }
+    public sealed class ReconcileRemoteRefundContext
+    {
+        public ReconcileRemoteRefundContext() { }
+        public string Currency { get; set; }
+        public CrestApps.OrchardCore.Payments.GatewayMode GatewayMode { get; set; }
+        public string IdempotencyKey { get; set; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string> Metadata { get; set; }
+        public string OriginalTransactionId { get; set; }
+        public string ProviderKey { get; set; }
+        public string ProviderRefundReference { get; set; }
+        public string Reason { get; set; }
+        public decimal RefundedAmount { get; set; }
+        public CrestApps.OrchardCore.Transactions.Models.RefundStatus Status { get; set; }
+    }
+    public sealed class RecurringCancelResult
+    {
+        public RecurringCancelResult() { }
+        public System.DateTime? EndsUtc { get; set; }
+        public string ErrorMessage { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.OrchardCore.Checkout.Services.RecurringCancelResult Failure(string errorMessage) { }
+        public static CrestApps.OrchardCore.Checkout.Services.RecurringCancelResult Success(System.DateTime? endsUtc = default) { }
+    }
+    public sealed class RecurringPauseResult
+    {
+        public RecurringPauseResult() { }
+        public string ErrorMessage { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.OrchardCore.Checkout.Services.RecurringPauseResult Failure(string errorMessage) { }
+        public static CrestApps.OrchardCore.Checkout.Services.RecurringPauseResult Success() { }
+    }
+    public enum RecurringProrationBehavior
+    {
+        CreateProrations = 0,
+        None = 1,
+        AlwaysInvoice = 2,
+    }
+    public sealed class RecurringUpdateResult
+    {
+        public RecurringUpdateResult() { }
+        public System.DateTime? CurrentPeriodEndUtc { get; set; }
+        public string ErrorMessage { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.OrchardCore.Checkout.Services.RecurringUpdateResult Failure(string errorMessage) { }
+        public static CrestApps.OrchardCore.Checkout.Services.RecurringUpdateResult Success(System.DateTime? currentPeriodEndUtc = default) { }
+    }
+    public sealed class RefundPaymentContext
+    {
+        public RefundPaymentContext() { }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
+        public CrestApps.OrchardCore.Payments.GatewayMode GatewayMode { get; set; }
+        public string IdempotencyKey { get; set; }
+        public string OriginalProviderReference { get; set; }
+        public string OriginalTransactionId { get; set; }
+        public string Reason { get; set; }
+    }
+    public sealed class RequestPaymentRefundContext
+    {
+        public RequestPaymentRefundContext() { }
+        public decimal? Amount { get; set; }
+        public string OriginalTransactionId { get; set; }
+        public string Reason { get; set; }
+        public string ReferenceId { get; set; }
+        public string ReferenceType { get; set; }
+        public string SessionId { get; set; }
+    }
+    public sealed class SavedPaymentMethod
+    {
+        public SavedPaymentMethod() { }
+        public string Brand { get; set; }
+        public string CustomerReference { get; set; }
+        public int? ExpirationMonth { get; set; }
+        public int? ExpirationYear { get; set; }
+        public string Last4 { get; set; }
+        public string PaymentMethodReference { get; set; }
+        public string ProviderKey { get; set; }
+        public string Describe() { }
+        public bool IsExpired(System.DateTime utcNow) { }
+    }
+    public sealed class StartCheckoutRequest
+    {
+        public StartCheckoutRequest() { }
+        public CrestApps.OrchardCore.Checkout.CheckoutContactInfo Contact { get; set; }
+        public string OwnerId { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutPriceSelection PriceSelection { get; set; }
+        public string ReferenceId { get; set; }
+        public string ReferenceType { get; set; }
+        public string ReferenceVersionId { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Checkout.CheckoutReference> References { get; set; }
+        public string ReturnText { get; set; }
+        public string ReturnUrl { get; set; }
+        public string Title { get; set; }
+    }
+    public enum TenderAvailability
+    {
+        Available = 0,
+        Insufficient = 1,
+        Unavailable = 2,
+        Busy = 3,
+    }
+    public static class ThreeDSecureOutcomes
+    {
+        public const string Abandoned = "abandoned";
+        public const string AttemptAcknowledged = "attempt_acknowledged";
+        public const string Authenticated = "authenticated";
+        public const string Canceled = "canceled";
+        public const string Denied = "denied";
+        public const string Informational = "informational";
+        public const string InternalError = "internal_error";
+        public const string NotSupported = "not_supported";
+        public const string ProcessingError = "processing_error";
+        public const string Rejected = "rejected";
+        public static bool AllowsPayment(string outcome) { }
+        public static bool IsKnown(string outcome) { }
+    }
+    public sealed class ThreeDSecureResult
+    {
+        public const int CryptogramLength = 28;
+        public const int MaxTransactionIdLength = 64;
+        public ThreeDSecureResult() { }
+        public bool AllowsPayment { get; }
+        public string Cryptogram { get; set; }
+        public string ElectronicCommerceIndicator { get; set; }
+        public string Outcome { get; set; }
+        public string TransactionId { get; set; }
+        public string TransactionStatus { get; set; }
+        public string Version { get; set; }
+        public void CopyTo(System.Collections.Generic.IDictionary<string, string> providerData) { }
+        public string GetInvalidMember() { }
+        public static CrestApps.OrchardCore.Checkout.Services.ThreeDSecureResult From(System.Collections.Generic.IReadOnlyDictionary<string, string> providerData) { }
+        public static bool IsValidCryptogram(string value) { }
+    }
+    public sealed class UpdateRecurringPaymentContext
+    {
+        public UpdateRecurringPaymentContext() { }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
+        public string Description { get; set; }
+        public string IdempotencyKey { get; set; }
+        public CrestApps.OrchardCore.Checkout.BillingDurationKey Interval { get; set; }
+        public CrestApps.OrchardCore.Checkout.Services.RecurringProrationBehavior Proration { get; set; }
+        public string ProviderSubscriptionId { get; set; }
+        public int Quantity { get; set; }
+    }
+    public sealed class VerifyPaymentContext
+    {
+        public VerifyPaymentContext() { }
+        public CrestApps.OrchardCore.Transactions.Models.PaymentAttempt Attempt { get; set; }
+        public CrestApps.OrchardCore.Checkout.CheckoutSession Session { get; set; }
+    }
+}

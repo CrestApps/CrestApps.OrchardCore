@@ -1,3 +1,4 @@
+using System.Globalization;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -150,8 +151,8 @@ public static class AIPermissions
         // The description is the template's text with a name filled in at run time, so it cannot be extracted.
 #pragma warning disable OCLOC103 // The value of the localization source is not a compile-time constant
         return new Permission(
-            string.Format(_queryAIProfileTemplate.Name, profileName),
-            LocalizationSource.Create(string.Format(_queryAIProfileTemplate.Description?.Value, profileName), typeof(AIPermissions)),
+            string.Format(CultureInfo.InvariantCulture, _queryAIProfileTemplate.Name, profileName),
+            LocalizationSource.Create(string.Format(CultureInfo.CurrentCulture, _queryAIProfileTemplate.Description?.Value, profileName), typeof(AIPermissions)),
             _queryAIProfileTemplate.ImpliedBy ?? []);
 #pragma warning restore OCLOC103
     }
@@ -166,8 +167,8 @@ public static class AIPermissions
         // The description is the template's text with a name filled in at run time, so it cannot be extracted.
 #pragma warning disable OCLOC103 // The value of the localization source is not a compile-time constant
         return new Permission(
-            string.Format(_accessAIToolTemplate.Name, toolName),
-            LocalizationSource.Create(string.Format(_accessAIToolTemplate.Description?.Value, toolName), typeof(AIPermissions)),
+            string.Format(CultureInfo.InvariantCulture, _accessAIToolTemplate.Name, toolName),
+            LocalizationSource.Create(string.Format(CultureInfo.CurrentCulture, _accessAIToolTemplate.Description?.Value, toolName), typeof(AIPermissions)),
             _accessAIToolTemplate.ImpliedBy ?? []);
 #pragma warning restore OCLOC103
     }

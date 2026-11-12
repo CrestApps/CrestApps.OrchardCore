@@ -1,0 +1,208 @@
+namespace CrestApps.OrchardCore.Payments
+{
+    public static class BalanceLedger
+    {
+        public static decimal ChangeBalance<TEntry>(decimal balance, decimal amount, string currency, System.Collections.Generic.IList<TEntry> activity, string reason, System.DateTime utcNow, string sessionId = null, string actor = null)
+            where TEntry : CrestApps.OrchardCore.Payments.BalanceLedgerEntry, new () { }
+    }
+    public class BalanceLedgerEntry
+    {
+        public BalanceLedgerEntry() { }
+        public string Actor { get; set; }
+        public decimal Amount { get; set; }
+        public decimal Balance { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Reason { get; set; }
+        public string SessionId { get; set; }
+    }
+    public sealed class CustomerSubscriptionCreatedContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public CustomerSubscriptionCreatedContext() { }
+        public decimal? PlanAmount { get; set; }
+        public string PlanCurrency { get; set; }
+        public string PlanId { get; set; }
+        public string PlanInterval { get; set; }
+        public string SubscriptionId { get; set; }
+    }
+    public enum GatewayMode
+    {
+        Live = 0,
+        Testing = 1,
+    }
+    public interface IPaymentEvent
+    {
+        System.Threading.Tasks.Task CustomerSubscriptionCreatedAsync(CrestApps.OrchardCore.Payments.CustomerSubscriptionCreatedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaymentCanceledAsync(CrestApps.OrchardCore.Payments.PaymentCanceledContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaymentDisputeCreatedAsync(CrestApps.OrchardCore.Payments.PaymentDisputeCreatedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaymentDisputeUpdatedAsync(CrestApps.OrchardCore.Payments.PaymentDisputeUpdatedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaymentFailedAsync(CrestApps.OrchardCore.Payments.PaymentFailedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaymentIntentSucceededAsync(CrestApps.OrchardCore.Payments.PaymentIntentSucceededContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaymentRefundedAsync(CrestApps.OrchardCore.Payments.PaymentRefundedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaymentSucceededAsync(CrestApps.OrchardCore.Payments.PaymentSucceededContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SubscriptionPaymentFailedAsync(CrestApps.OrchardCore.Payments.SubscriptionPaymentFailedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SubscriptionStatusChangedAsync(CrestApps.OrchardCore.Payments.SubscriptionStatusChangedContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public static class Money
+    {
+        public static bool AreEqual(decimal left, decimal right, string currency = null) { }
+        public static bool AreEqual(decimal? left, decimal? right, string currency = null) { }
+        public static bool IsGreaterThan(decimal amount, decimal threshold, string currency = null) { }
+        public static decimal Round(decimal amount, string currency = null) { }
+        public static long ToMinorUnits(decimal amount, string currency = null) { }
+    }
+    public sealed class PaymentCanceledContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public PaymentCanceledContext() { }
+        public string Currency { get; set; }
+        public string Reason { get; set; }
+        public string TransactionId { get; set; }
+    }
+    public static class PaymentConstants
+    {
+        public static class RateLimitGroups
+        {
+            public const string Webhook = "payment-webhook";
+            public const int WebhookRequestsPerMinute = 600;
+        }
+    }
+    public sealed class PaymentDisputeCreatedContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public PaymentDisputeCreatedContext() { }
+        public decimal? Amount { get; set; }
+        public string Currency { get; set; }
+        public string DisputeReference { get; set; }
+        public string OriginalTransactionId { get; set; }
+        public string Reason { get; set; }
+        public string Status { get; set; }
+    }
+    public sealed class PaymentDisputeUpdatedContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public PaymentDisputeUpdatedContext() { }
+        public decimal? Amount { get; set; }
+        public string Currency { get; set; }
+        public string DisputeReference { get; set; }
+        public bool IsClosed { get; set; }
+        public string OriginalTransactionId { get; set; }
+        public string Reason { get; set; }
+        public string Status { get; set; }
+    }
+    public abstract class PaymentEventBase : CrestApps.OrchardCore.Payments.IPaymentEvent
+    {
+        protected PaymentEventBase() { }
+        public virtual System.Threading.Tasks.Task CustomerSubscriptionCreatedAsync(CrestApps.OrchardCore.Payments.CustomerSubscriptionCreatedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaymentCanceledAsync(CrestApps.OrchardCore.Payments.PaymentCanceledContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaymentDisputeCreatedAsync(CrestApps.OrchardCore.Payments.PaymentDisputeCreatedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaymentDisputeUpdatedAsync(CrestApps.OrchardCore.Payments.PaymentDisputeUpdatedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaymentFailedAsync(CrestApps.OrchardCore.Payments.PaymentFailedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaymentIntentSucceededAsync(CrestApps.OrchardCore.Payments.PaymentIntentSucceededContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaymentRefundedAsync(CrestApps.OrchardCore.Payments.PaymentRefundedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaymentSucceededAsync(CrestApps.OrchardCore.Payments.PaymentSucceededContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task SubscriptionPaymentFailedAsync(CrestApps.OrchardCore.Payments.SubscriptionPaymentFailedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task SubscriptionStatusChangedAsync(CrestApps.OrchardCore.Payments.SubscriptionStatusChangedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public abstract class PaymentEventContextBase
+    {
+        protected PaymentEventContextBase() { }
+        public System.Collections.Generic.Dictionary<string, object> Data { get; }
+        public string GatewayId { get; set; }
+        public CrestApps.OrchardCore.Payments.GatewayMode GatewayMode { get; set; }
+    }
+    public sealed class PaymentFailedContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public PaymentFailedContext() { }
+        public decimal? Amount { get; set; }
+        public string Currency { get; set; }
+        public string FailureCode { get; set; }
+        public string FailureReason { get; set; }
+        public string TransactionId { get; set; }
+    }
+    public sealed class PaymentIntentSucceededContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public PaymentIntentSucceededContext() { }
+        public decimal? Amount { get; set; }
+        public string Currency { get; set; }
+        public string TransactionId { get; set; }
+    }
+    public enum PaymentReason
+    {
+        Manual = 0,
+        SubscriptionCreate = 1,
+        SubscriptionCycle = 2,
+        SubscriptionUpdate = 3,
+        Other = 4,
+    }
+    public sealed class PaymentRefundedContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public PaymentRefundedContext() { }
+        public string Currency { get; set; }
+        public string IdempotencyKey { get; set; }
+        public string OriginalTransactionId { get; set; }
+        public string ProviderRefundReference { get; set; }
+        public string Reason { get; set; }
+        public string RefundStatus { get; set; }
+        public decimal RefundedAmount { get; set; }
+    }
+    public sealed class PaymentSucceededContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public PaymentSucceededContext() { }
+        public decimal AmountPaid { get; set; }
+        public string Currency { get; set; }
+        public CrestApps.OrchardCore.Payments.PaymentReason Reason { get; set; }
+        public CrestApps.OrchardCore.Payments.SubscriptionPaymentInfo Subscription { get; set; }
+        public string TransactionId { get; set; }
+    }
+    public enum RemoteSubscriptionStatus
+    {
+        Unknown = 0,
+        Trialing = 1,
+        Active = 2,
+        PastDue = 3,
+        Unpaid = 4,
+        Canceled = 5,
+        Incomplete = 6,
+        IncompleteExpired = 7,
+        Paused = 8,
+    }
+    public sealed class SubscriptionPaymentFailedContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public SubscriptionPaymentFailedContext() { }
+        public decimal? Amount { get; set; }
+        public int? AttemptCount { get; set; }
+        public string Currency { get; set; }
+        public string FailureCode { get; set; }
+        public string FailureReason { get; set; }
+        public System.DateTime? NextAttemptUtc { get; set; }
+        public string SubscriptionId { get; set; }
+        public string TransactionId { get; set; }
+    }
+    public sealed class SubscriptionPaymentInfo : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public SubscriptionPaymentInfo() { }
+        public System.DateTime? PeriodEndUtc { get; set; }
+        public System.DateTime? PeriodStartUtc { get; set; }
+        public string SubscriptionId { get; set; }
+    }
+    public sealed class SubscriptionStatusChangedContext : CrestApps.OrchardCore.Payments.PaymentEventContextBase
+    {
+        public SubscriptionStatusChangedContext() { }
+        public bool CancelAtPeriodEnd { get; set; }
+        public System.DateTime? CanceledUtc { get; set; }
+        public System.DateTime? CurrentPeriodEndUtc { get; set; }
+        public CrestApps.OrchardCore.Payments.RemoteSubscriptionStatus Status { get; set; }
+        public string SubscriptionId { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Payments.Models
+{
+    public enum DurationType
+    {
+        Year = 0,
+        Month = 1,
+        Week = 2,
+        Day = 3,
+    }
+    public static class DurationTypeExtensions
+    {
+        public static System.DateTime AddTo(this CrestApps.OrchardCore.Payments.Models.DurationType durationType, System.DateTime from, int count) { }
+    }
+}

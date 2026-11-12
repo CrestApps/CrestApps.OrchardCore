@@ -1,0 +1,625 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Inventory.Core.Indexes
+{
+    public sealed class PurchaseOrderIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public PurchaseOrderIndex() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime? ExpectedUtc { get; set; }
+        public string LocationId { get; set; }
+        public string NormalizedSupplier { get; set; }
+        public string Number { get; set; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrderStatus Status { get; set; }
+    }
+    public sealed class PurchaseOrderIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder>
+    {
+        public PurchaseOrderIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder> context) { }
+    }
+    public sealed class StockItemIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public StockItemIndex() { }
+        public bool AllowBackorder { get; set; }
+        public bool Archived { get; set; }
+        public int Available { get; set; }
+        public string ContentItemId { get; set; }
+        public bool IsLow { get; set; }
+        public string LocationId { get; set; }
+        public System.DateTime ModifiedUtc { get; set; }
+        public string NormalizedSku { get; set; }
+        public string NormalizedTitle { get; set; }
+        public int OnHand { get; set; }
+        public string VariantId { get; set; }
+    }
+    public sealed class StockItemIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Inventory.Core.Models.StockItem>
+    {
+        public StockItemIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Inventory.Core.Models.StockItem> context) { }
+    }
+    public sealed class StockLocationIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public StockLocationIndex() { }
+        public string Name { get; set; }
+        public string OwnerId { get; set; }
+        public string OwnerKind { get; set; }
+    }
+    public sealed class StockLocationIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Inventory.Core.Models.StockLocation>
+    {
+        public StockLocationIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Inventory.Core.Models.StockLocation> context) { }
+    }
+    public sealed class StockMovementIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public StockMovementIndex() { }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockMovementKind Kind { get; set; }
+        public string OrderId { get; set; }
+        public string ReferenceId { get; set; }
+        public string ReferenceType { get; set; }
+        public string StockItemId { get; set; }
+        public System.DateTime Utc { get; set; }
+    }
+    public sealed class StockMovementIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Inventory.Core.Models.StockMovement>
+    {
+        public StockMovementIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Inventory.Core.Models.StockMovement> context) { }
+    }
+    public sealed class StockReservationIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public StockReservationIndex() { }
+        public System.DateTime ExpiresUtc { get; set; }
+        public string OrderId { get; set; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockReservationStatus Status { get; set; }
+        public string StockItemId { get; set; }
+    }
+    public sealed class StockReservationIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Inventory.Core.Models.StockReservation>
+    {
+        public StockReservationIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Inventory.Core.Models.StockReservation> context) { }
+    }
+}
+namespace CrestApps.OrchardCore.Inventory.Core
+{
+    public static class InventoryConstants
+    {
+        public const string CollectionName = "Inventory";
+        public const string DefaultLocationId = "default";
+        public const string SettingsGroupId = "inventory";
+        public const string StockLocationsRecipeStep = "StockLocations";
+        public const string StockRecipeStep = "Stock";
+        public static class Features
+        {
+            public const string Api = "CrestApps.OrchardCore.Inventory.Api";
+            public const string Inventory = "CrestApps.OrchardCore.Inventory";
+            public const string PurchaseOrders = "CrestApps.OrchardCore.Inventory.PurchaseOrders";
+            public const string StockAlerts = "CrestApps.OrchardCore.Inventory.StockAlerts";
+        }
+        public static class Parts
+        {
+            public const string InventoryPart = "InventoryPart";
+        }
+    }
+}
+namespace CrestApps.OrchardCore.Inventory.Core.Models
+{
+    public sealed class InventoryLocation
+    {
+        public InventoryLocation() { }
+        public string Address { get; set; }
+        public string LocationId { get; set; }
+        public string Name { get; set; }
+        public string OwnerId { get; set; }
+        public string OwnerKind { get; set; }
+    }
+    public sealed class InventoryPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public InventoryPart() { }
+        public bool AllowBackorder { get; set; }
+        public int? LowStockThreshold { get; set; }
+        public System.DateTime? ReleaseDateUtc { get; set; }
+        public bool TrackInventory { get; set; }
+    }
+    public sealed class InventorySettings
+    {
+        public InventorySettings() { }
+        public int DefaultLowStockThreshold { get; set; }
+        public int HoldMinutes { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Inventory.Core.Models.InventoryLocation> Locations { get; set; }
+        public string[] LowStockNotificationRoles { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.InventoryLocation> GetLocations() { }
+    }
+    public sealed class PurchaseOrder : CrestApps.Core.Models.CatalogItem
+    {
+        public PurchaseOrder() { }
+        public string Author { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool CanReceive { get; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public System.DateTime? ExpectedUtc { get; set; }
+        public long Id { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsDraft { get; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrderLine> Lines { get; set; }
+        public string LocationId { get; set; }
+        public System.DateTime ModifiedUtc { get; set; }
+        public string Note { get; set; }
+        public string Number { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int Ordered { get; }
+        public System.DateTime? OrderedUtc { get; set; }
+        public string OwnerId { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int Received { get; }
+        public System.DateTime? ReceivedUtc { get; set; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrderStatus Status { get; set; }
+        public string Supplier { get; set; }
+        public string SupplierEmail { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public decimal Total { get; }
+    }
+    public sealed class PurchaseOrderLine
+    {
+        public PurchaseOrderLine() { }
+        public string LineId { get; set; }
+        public int Ordered { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int Outstanding { get; }
+        public int Received { get; set; }
+        public string Sku { get; set; }
+        public string StockItemId { get; set; }
+        public string Title { get; set; }
+        public decimal UnitCost { get; set; }
+    }
+    public enum PurchaseOrderStatus
+    {
+        Draft = 0,
+        Ordered = 1,
+        PartiallyReceived = 2,
+        Received = 3,
+        Canceled = 4,
+    }
+    public sealed class StockAlert
+    {
+        public StockAlert() { }
+        public string ContentItemId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Email { get; set; }
+        public long Id { get; set; }
+        public System.DateTime? SentUtc { get; set; }
+        public string StockItemId { get; set; }
+        public string UserId { get; set; }
+        public string VariantId { get; set; }
+    }
+    public sealed class StockAlertIndex : YesSql.Indexes.MapIndex
+    {
+        public StockAlertIndex() { }
+        public string ContentItemId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string NormalizedEmail { get; set; }
+        public string StockItemId { get; set; }
+        public string UserId { get; set; }
+        public string VariantId { get; set; }
+        public bool Waiting { get; set; }
+    }
+    public sealed class StockAlertIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Inventory.Core.Models.StockAlert>
+    {
+        public StockAlertIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Inventory.Core.Models.StockAlert> context) { }
+    }
+    public sealed class StockItem : CrestApps.Core.Models.CatalogItem
+    {
+        public StockItem() { }
+        public bool AllowBackorder { get; set; }
+        public bool Archived { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int Available { get; }
+        public string ContentItemId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public long Id { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsLow { get; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Inventory.Core.Models.StockLocationLevel> Levels { get; set; }
+        public string LocationId { get; set; }
+        public int LowStockThreshold { get; set; }
+        public System.DateTime ModifiedUtc { get; set; }
+        public int OnHand { get; set; }
+        public System.DateTime? ReleaseDateUtc { get; set; }
+        public int Reserved { get; set; }
+        public string Sku { get; set; }
+        public string Title { get; set; }
+        public string VariantId { get; set; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockLocationLevel FindLevel(string locationId) { }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockLocationLevel GetLevel(string locationId) { }
+        public void NormalizeLevels() { }
+        public void SumLevels() { }
+    }
+    public enum StockLevel
+    {
+        InStock = 0,
+        Low = 1,
+        Out = 2,
+    }
+    public static class StockLevels
+    {
+        public static CrestApps.OrchardCore.Inventory.Core.Models.StockLevel Of(int available, int lowStockThreshold) { }
+    }
+    public sealed class StockLocation : CrestApps.Core.Models.CatalogItem
+    {
+        public StockLocation() { }
+        public string Address { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Name { get; set; }
+        public string OwnerId { get; set; }
+        public string OwnerKind { get; set; }
+        public int Position { get; set; }
+    }
+    public sealed class StockLocationLevel
+    {
+        public StockLocationLevel() { }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int Available { get; }
+        public string LocationId { get; set; }
+        public int OnHand { get; set; }
+        public int Reserved { get; set; }
+    }
+    public sealed class StockMovement : CrestApps.Core.Models.CatalogItem
+    {
+        public StockMovement() { }
+        public string ActorId { get; set; }
+        public string ActorName { get; set; }
+        public long Id { get; set; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockMovementKind Kind { get; set; }
+        public string LocationId { get; set; }
+        public int OnHandAfter { get; set; }
+        public string OrderId { get; set; }
+        public string PurchaseOrderId { get; set; }
+        public int Quantity { get; set; }
+        public string Reason { get; set; }
+        public string ReferenceId { get; set; }
+        public string ReferenceType { get; set; }
+        public string StockItemId { get; set; }
+        public System.DateTime Utc { get; set; }
+    }
+    public enum StockMovementKind
+    {
+        Received = 0,
+        Adjusted = 1,
+        Counted = 2,
+        Sold = 3,
+        Returned = 4,
+        Transferred = 5,
+        Consumed = 6,
+    }
+    public sealed class StockReservation : CrestApps.Core.Models.CatalogItem
+    {
+        public StockReservation() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public long Id { get; set; }
+        public string LocationId { get; set; }
+        public System.DateTime ModifiedUtc { get; set; }
+        public string OrderId { get; set; }
+        public int Quantity { get; set; }
+        public string ReleaseReason { get; set; }
+        public int ReturnedQuantity { get; set; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockReservationStatus Status { get; set; }
+        public string StockItemId { get; set; }
+    }
+    public enum StockReservationStatus
+    {
+        Held = 0,
+        Committed = 1,
+        Released = 2,
+        Returned = 3,
+    }
+}
+namespace CrestApps.OrchardCore.Inventory.Core.Services
+{
+    public sealed class DefaultInventoryService : CrestApps.OrchardCore.Inventory.Core.Services.IInventoryService
+    {
+        public DefaultInventoryService(YesSql.ISession session, CrestApps.OrchardCore.Inventory.Core.Services.IStockItemStore items, CrestApps.OrchardCore.Inventory.Core.Services.IStockMovementStore movements, OrchardCore.Modules.IClock clock, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Services.IStockLevelObserver> observers = null, CrestApps.OrchardCore.Inventory.Core.Services.IInventoryLocationService locations = null) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> AdjustAsync(string stockItemId, CrestApps.OrchardCore.Inventory.Core.Models.StockMovementKind kind, int quantity, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> AdjustAsync(string stockItemId, string locationId, CrestApps.OrchardCore.Inventory.Core.Models.StockMovementKind kind, int quantity, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockReservationResult> CommitAsync(string orderId, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Services.StockRequest> lines, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> ConsumeAsync(string stockItemId, string locationId, int quantity, string referenceType, string referenceId, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> RebuildAsync(string stockItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> ReceiveAsync(string stockItemId, string locationId, int quantity, string purchaseOrderId, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockReservationResult> ReleaseAsync(string orderId, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> ReleaseExpiredAsync(int take, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockReservationResult> ReserveAsync(string orderId, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Services.StockRequest> lines, System.DateTime expiresUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> RestockAsync(string orderId, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> RestockAsync(string orderId, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Services.StockRequest> lines, string locationId, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> SetCountAsync(string stockItemId, int count, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> SetCountAsync(string stockItemId, string locationId, int count, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> TransferAsync(string stockItemId, string fromLocationId, string toLocationId, int quantity, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public interface IInventoryLocationService
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.InventoryLocation>> GetLocationsAsync();
+    }
+    public interface IInventoryService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> AdjustAsync(string stockItemId, CrestApps.OrchardCore.Inventory.Core.Models.StockMovementKind kind, int quantity, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> AdjustAsync(string stockItemId, string locationId, CrestApps.OrchardCore.Inventory.Core.Models.StockMovementKind kind, int quantity, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockReservationResult> CommitAsync(string orderId, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Services.StockRequest> lines, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> ConsumeAsync(string stockItemId, string locationId, int quantity, string referenceType, string referenceId, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> RebuildAsync(string stockItemId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> ReceiveAsync(string stockItemId, string locationId, int quantity, string purchaseOrderId, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockReservationResult> ReleaseAsync(string orderId, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> ReleaseExpiredAsync(int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockReservationResult> ReserveAsync(string orderId, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Services.StockRequest> lines, System.DateTime expiresUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> RestockAsync(string orderId, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> RestockAsync(string orderId, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Services.StockRequest> lines, string locationId, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> SetCountAsync(string stockItemId, int count, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> SetCountAsync(string stockItemId, string locationId, int count, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult> TransferAsync(string stockItemId, string fromLocationId, string toLocationId, int quantity, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IPurchaseOrderStore
+    {
+        System.Threading.Tasks.ValueTask CreateAsync(CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder order, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<bool> DeleteAsync(CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder order, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder> FindByIdAsync(string id, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ListSuppliersAsync(System.Threading.CancellationToken cancellationToken = default);
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Orders"})]
+        System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder>>> PageAsync(CrestApps.OrchardCore.Inventory.Core.Services.PurchaseOrderQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask UpdateAsync(CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder order, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IStockItemStore
+    {
+        System.Threading.Tasks.ValueTask CreateAsync(CrestApps.OrchardCore.Inventory.Core.Models.StockItem item, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Models.StockItem> FindAsync(string contentItemId, string variantId, string locationId = "default", System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.Inventory.Core.Models.StockItem> FindByIdAsync(string stockItemId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Models.StockItem> FindBySkuAsync(string sku, string locationId = "default", System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.StockItem>> ListByProductAsync(string contentItemId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.StockItem>> ListForExportAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Items"})]
+        System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.StockItem>>> PageAsync(CrestApps.OrchardCore.Inventory.Core.Services.StockItemQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask UpdateAsync(CrestApps.OrchardCore.Inventory.Core.Models.StockItem item, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IStockLevelHandler
+    {
+        System.Threading.Tasks.Task AvailableChangedAsync(CrestApps.OrchardCore.Inventory.Core.Services.StockLevelChangedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ChangedAsync(CrestApps.OrchardCore.Inventory.Core.Services.StockLevelChangedContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IStockLevelObserver
+    {
+        void Changed(CrestApps.OrchardCore.Inventory.Core.Models.StockItem item, int previousAvailable);
+    }
+    public interface IStockMovementStore
+    {
+        System.Threading.Tasks.ValueTask CreateAsync(CrestApps.OrchardCore.Inventory.Core.Models.StockMovement movement, System.Threading.CancellationToken cancellationToken = default);
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Movements"})]
+        System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.StockMovement>>> PageAsync(string stockItemId, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> SumAsync(string stockItemId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> SumByLocationAsync(string stockItemId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public static class InventoryLocationServiceExtensions
+    {
+        public static System.Threading.Tasks.Task<string> GetKnownLocationIdAsync(this CrestApps.OrchardCore.Inventory.Core.Services.IInventoryLocationService locations, string locationId) { }
+        public static System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlySet<string>> GetLocationIdsAsync(this CrestApps.OrchardCore.Inventory.Core.Services.IInventoryLocationService locations) { }
+        public static string KnownOrDefault(System.Collections.Generic.IReadOnlySet<string> knownLocationIds, string locationId) { }
+    }
+    public sealed class InventoryProductSynchronizer
+    {
+        public InventoryProductSynchronizer(CrestApps.OrchardCore.Inventory.Core.Services.IStockItemStore items, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<bool> SyncAsync(string contentItemId, OrchardCore.ContentManagement.ContentItem product, bool typeHasInventory, CrestApps.OrchardCore.Inventory.Core.Models.InventorySettings settings, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class PurchaseOrderQuery
+    {
+        public PurchaseOrderQuery() { }
+        public bool All { get; set; }
+        public string Search { get; set; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrderStatus? Status { get; set; }
+    }
+    public sealed class PurchaseOrderReceiver
+    {
+        public PurchaseOrderReceiver(CrestApps.OrchardCore.Inventory.Core.Services.IInventoryService inventory, CrestApps.OrchardCore.Inventory.Core.Services.IPurchaseOrderStore orders, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<int> ReceiveAsync(CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder order, System.Collections.Generic.IReadOnlyDictionary<string, int> quantities, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class PurchaseOrderStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder, CrestApps.OrchardCore.Inventory.Core.Indexes.PurchaseOrderIndex>, CrestApps.OrchardCore.Inventory.Core.Services.IPurchaseOrderStore
+    {
+        public PurchaseOrderStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ListSuppliersAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Orders"})]
+        public System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.PurchaseOrder>>> PageAsync(CrestApps.OrchardCore.Inventory.Core.Services.PurchaseOrderQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class StockActor : System.IEquatable<CrestApps.OrchardCore.Inventory.Core.Services.StockActor>
+    {
+        public StockActor(string Id, string Name) { }
+        public string Id { get; init; }
+        public string Name { get; init; }
+        public static CrestApps.OrchardCore.Inventory.Core.Services.StockActor ForUser(System.Security.Claims.ClaimsPrincipal user, string fallbackName = null) { }
+    }
+    public enum StockChangeError
+    {
+        None = 0,
+        NotFound = 1,
+        InvalidQuantity = 2,
+        Busy = 3,
+        NotEnoughAtLocation = 4,
+    }
+    public sealed class StockChangeResult
+    {
+        public StockChangeResult() { }
+        public CrestApps.OrchardCore.Inventory.Core.Services.StockChangeError Error { get; init; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockItem Item { get; init; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockMovement Movement { get; init; }
+        public bool Succeeded { get; init; }
+        public static CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult Fail(CrestApps.OrchardCore.Inventory.Core.Services.StockChangeError error) { }
+        public static CrestApps.OrchardCore.Inventory.Core.Services.StockChangeResult Success(CrestApps.OrchardCore.Inventory.Core.Models.StockItem item, CrestApps.OrchardCore.Inventory.Core.Models.StockMovement movement = null) { }
+    }
+    public sealed class StockCountImportResult
+    {
+        public StockCountImportResult() { }
+        public int Counted { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Inventory.Core.Services.StockCountProblem> Problems { get; }
+        public int Unchanged { get; set; }
+    }
+    public sealed class StockCountImporter
+    {
+        public StockCountImporter(CrestApps.OrchardCore.Inventory.Core.Services.IStockItemStore items, CrestApps.OrchardCore.Inventory.Core.Services.IInventoryService inventory) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Models.StockItem> FindAsync(CrestApps.OrchardCore.Inventory.Core.Services.StockCountRow row, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Services.StockCountImportResult> ImportAsync(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Services.StockCountRow> rows, string reason, CrestApps.OrchardCore.Inventory.Core.Services.StockActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class StockCountProblem : System.IEquatable<CrestApps.OrchardCore.Inventory.Core.Services.StockCountProblem>
+    {
+        public StockCountProblem(int Line, CrestApps.OrchardCore.Inventory.Core.Services.StockCountProblemKind Kind, string Item) { }
+        public string Item { get; init; }
+        public CrestApps.OrchardCore.Inventory.Core.Services.StockCountProblemKind Kind { get; init; }
+        public int Line { get; init; }
+    }
+    public enum StockCountProblemKind
+    {
+        NotFound = 0,
+        InvalidCount = 1,
+        Duplicate = 2,
+        TooManyRows = 3,
+    }
+    public sealed class StockCountRow
+    {
+        public StockCountRow() { }
+        public string ContentItemId { get; init; }
+        public int Line { get; init; }
+        public int? OnHand { get; init; }
+        public string Sku { get; init; }
+        public bool TooMany { get; init; }
+        public string VariantId { get; init; }
+    }
+    public static class StockCsv
+    {
+        public const string Available = "Available";
+        public const string ContentItemId = "ContentItemId";
+        public const string LowStockThreshold = "LowStockThreshold";
+        public const string OnHand = "OnHand";
+        public const string Reserved = "Reserved";
+        public const string Sku = "Sku";
+        public const string Title = "Title";
+        public const string VariantId = "VariantId";
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Services.StockCountRow> Read(System.IO.TextReader reader, int maxRows) { }
+        public static void Write(System.IO.TextWriter writer, CrestApps.OrchardCore.Inventory.Core.Models.StockItem item) { }
+        public static void WriteHeader(System.IO.TextWriter writer) { }
+    }
+    public enum StockItemFilter
+    {
+        All = 0,
+        Low = 1,
+        Out = 2,
+        Backordered = 3,
+    }
+    public sealed class StockItemQuery
+    {
+        public StockItemQuery() { }
+        public CrestApps.OrchardCore.Inventory.Core.Services.StockItemFilter Filter { get; set; }
+        public bool IncludeArchived { get; set; }
+        public string Search { get; set; }
+    }
+    public sealed class StockItemStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Inventory.Core.Models.StockItem, CrestApps.OrchardCore.Inventory.Core.Indexes.StockItemIndex>, CrestApps.OrchardCore.Inventory.Core.Services.IStockItemStore
+    {
+        public StockItemStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Models.StockItem> FindAsync(string contentItemId, string variantId, string locationId = "default", System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Models.StockItem> FindBySkuAsync(string sku, string locationId = "default", System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.StockItem>> ListByProductAsync(string contentItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.StockItem>> ListForExportAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Items"})]
+        public System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.StockItem>>> PageAsync(CrestApps.OrchardCore.Inventory.Core.Services.StockItemQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class StockLevelChangedContext
+    {
+        public StockLevelChangedContext(CrestApps.OrchardCore.Inventory.Core.Models.StockItem item, int previousAvailable) { }
+        public bool AvailableChanged { get; }
+        public bool BackInStock { get; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockItem Item { get; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockLevel Level { get; }
+        public int PreviousAvailable { get; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockLevel PreviousLevel { get; }
+        public bool RanLow { get; }
+        public bool SoldOut { get; }
+    }
+    public static class StockLocationImporter
+    {
+        public static System.Threading.Tasks.Task<int> ImportAsync(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Inventory.Core.Models.InventoryLocation> legacy, CrestApps.OrchardCore.Inventory.Core.Services.StockLocationStore store, System.DateTime createdUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class StockLocationStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Inventory.Core.Models.StockLocation, CrestApps.OrchardCore.Inventory.Core.Indexes.StockLocationIndex>
+    {
+        public StockLocationStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Inventory.Core.Models.StockLocation> FindByOwnerAsync(string ownerKind, string ownerId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class StockMovementStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Inventory.Core.Models.StockMovement, CrestApps.OrchardCore.Inventory.Core.Indexes.StockMovementIndex>, CrestApps.OrchardCore.Inventory.Core.Services.IStockMovementStore
+    {
+        public StockMovementStore(YesSql.ISession session) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Movements"})]
+        public System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Models.StockMovement>>> PageAsync(string stockItemId, int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> SumAsync(string stockItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> SumByLocationAsync(string stockItemId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class StockRequest : System.IEquatable<CrestApps.OrchardCore.Inventory.Core.Services.StockRequest>
+    {
+        public StockRequest(string ContentItemId, string VariantId, int Quantity, string LocationId = null) { }
+        public string ContentItemId { get; init; }
+        public string LocationId { get; init; }
+        public int Quantity { get; init; }
+        public string VariantId { get; init; }
+    }
+    public sealed class StockReservationResult
+    {
+        public StockReservationResult() { }
+        public CrestApps.OrchardCore.Inventory.Core.Services.StockChangeError Error { get; init; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Inventory.Core.Services.StockShortage> Shortages { get; init; }
+        public bool Succeeded { get; }
+    }
+    public sealed class StockShortage : System.IEquatable<CrestApps.OrchardCore.Inventory.Core.Services.StockShortage>
+    {
+        public StockShortage(CrestApps.OrchardCore.Inventory.Core.Models.StockItem Item, int Requested, int Available) { }
+        public int Available { get; init; }
+        public CrestApps.OrchardCore.Inventory.Core.Models.StockItem Item { get; init; }
+        public int Requested { get; init; }
+    }
+}
+namespace CrestApps.OrchardCore.Inventory.Core.Telemetry
+{
+    public static class InventoryTelemetry
+    {
+        public const string Area = "Inventory";
+        public const string HoldCommittedWithoutHold = "committed_without_hold";
+        public const string HoldConverted = "converted";
+        public const string HoldExpired = "expired";
+        public const string HoldPlaced = "placed";
+        public const string HoldReleased = "released";
+        public const string OutcomeTruncated = "truncated";
+        public const string RowCounted = "counted";
+        public const string RowDuplicate = "duplicate";
+        public const string RowInvalidCount = "invalid_count";
+        public const string RowNotFound = "not_found";
+        public const string RowRejected = "rejected";
+        public const string RowUnchanged = "unchanged";
+        public const string StockCountSpanName = "crestapps.inventory.stock_count.import";
+        public const string TypeTag = "type";
+        public static System.Diagnostics.ActivitySource ActivitySource { get; }
+        public static System.Diagnostics.Metrics.Counter<long> HoldRefusals { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Holds { get; }
+        public static System.Diagnostics.Metrics.Meter Meter { get; }
+        public static System.Diagnostics.Metrics.Counter<long> MovementUnits { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Movements { get; }
+        public static System.Diagnostics.Metrics.Histogram<double> StockCountDuration { get; }
+        public static System.Diagnostics.Metrics.Counter<long> StockCountRows { get; }
+        public static string GetMovementType(CrestApps.OrchardCore.Inventory.Core.Models.StockMovementKind kind) { }
+        public static void RecordHoldRefusal() { }
+        public static void RecordHolds(string outcome, long count) { }
+        public static void RecordMovement(CrestApps.OrchardCore.Inventory.Core.Models.StockMovementKind kind, int quantity) { }
+        public static void RecordStockCountRows(string result, long count) { }
+    }
+}

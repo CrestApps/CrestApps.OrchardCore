@@ -131,7 +131,7 @@ public sealed class TelnyxConnectController : Controller
     /// </summary>
     [HttpGet]
     [Admin("telnyx/connect/inspect-number", "TelnyxConnectInspectNumber")]
-    public async Task<IActionResult> InspectNumber(string number, CancellationToken cancellationToken)
+    public async Task<IActionResult> InspectNumber(string number, [FromServices] IHttpClientFactory httpClientFactory, CancellationToken cancellationToken)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.ManageTelephonySettings))
         {
@@ -146,7 +146,8 @@ public sealed class TelnyxConnectController : Controller
             return BadRequest(new { message = "Missing api key." });
         }
 
-        var client = new System.Net.Http.HttpClient { BaseAddress = new Uri(ResolveApiBaseUrl(settings)) };
+        var client = httpClientFactory.CreateClient();
+        client.BaseAddress = new Uri(ResolveApiBaseUrl(settings));
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 
         var q = string.IsNullOrWhiteSpace(number) ? "phone_numbers?page[size]=250" : $"phone_numbers?filter[phone_number]={Uri.EscapeDataString(number)}";
