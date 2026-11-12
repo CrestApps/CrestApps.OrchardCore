@@ -5,8 +5,9 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
 /// <summary>
 /// What a UCP request signature must cover to be accepted (UCP signatures specification): the method, authority and
 /// path, so it can't be sent to another target or another store; the body's digest when there is a body; the
-/// idempotency key when the request has one, which is what UCP relies on against replays. A <c>created</c> time, when
-/// the signer sends one, is within five minutes of the store's clock, and an <c>expires</c> time hasn't passed.
+/// idempotency key when the request has one. A signature must age: it carries a <c>created</c> time within five
+/// minutes of the store's clock, or covers the idempotency key of an endpoint that answers a repeated key with its
+/// first answer, which is what UCP relies on against replays. An <c>expires</c> time hasn't passed.
 /// </summary>
 public static class UcpSignaturePolicy
 {
@@ -28,8 +29,9 @@ public static class UcpSignaturePolicy
     /// <param name="verification">The verified signature.</param>
     /// <param name="hasBody">Whether the request has a body.</param>
     /// <param name="idempotencyKey">The request's <c>Idempotency-Key</c>, or <see langword="null"/>.</param>
+    /// <param name="idempotent">Whether the endpoint answers a repeated idempotency key with its first answer.</param>
     /// <param name="now">The store's clock.</param>
-    public static string Check(HttpSignatureVerification verification, bool hasBody, string idempotencyKey, DateTimeOffset now)
+    public static string Check(HttpSignatureVerification verification, bool hasBody, string idempotencyKey, bool idempotent, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(verification);
 
@@ -56,6 +58,12 @@ public static class UcpSignaturePolicy
         if (verification.Created is { } created && (now - created).Duration() > MaxClockSkew)
         {
             return "The signature's created time is more than five minutes from the store's clock.";
+        }
+
+        // Without a time, only an idempotency key the endpoint honors keeps a captured signature from running again.
+        if (verification.Created is null && !(idempotent && !string.IsNullOrEmpty(idempotencyKey)))
+        {
+            return "The signature must have a created time, or cover the Idempotency-Key of a POST or PUT.";
         }
 
         if (verification.Expires is { } expires && expires <= now)

@@ -1,6 +1,13 @@
 using System.Runtime.CompilerServices;
+using System.Security.Claims;
 using CrestApps.OrchardCore.AgenticCommerce.Feeds;
+using CrestApps.OrchardCore.Products.Core.Feeds;
+using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Entities;
@@ -43,5 +50,51 @@ public sealed class AgentFeedSftpHostKeyTests
         // Assert
         Assert.False(result.Succeeded);
         Assert.Contains("fingerprint", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+    [Fact]
+    public async Task Settings_TurningThePushOnWithoutAHostKeyFingerprint_IsRefusedOnSave()
+    {
+        // Arrange: a push without the fingerprint never runs, so saving one would look fine and silently do nothing.
+        var authorization = new Mock<IAuthorizationService>();
+
+        authorization.Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(AuthorizationResult.Success());
+
+        var driver = new AgentFeedSettingsDisplayDriver(
+            new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity("Test")) } },
+            authorization.Object,
+            (OpenAIProductFeedService)RuntimeHelpers.GetUninitializedObject(typeof(OpenAIProductFeedService)),
+            Mock.Of<IProductFeedService>(),
+            new InMemoryDocumentManager<AgentFeedStatusDocument>(),
+            new EphemeralDataProtectionProvider(),
+            Mock.Of<IHostEnvironment>(),
+            new PassThroughLocalizer());
+        var settings = new AgentFeedSettings();
+        var context = PostedFormUpdateModel.CreateContext(new AgentFeedSettingsViewModel
+        {
+            SftpEnabled = true,
+            SftpHost = "sftp.example.test",
+            SftpUsername = "feeds",
+            SftpPassword = "secret",
+        });
+
+        // Act
+        await driver.UpdateAsync(new SiteSettings(), settings, context);
+
+        // Assert
+        Assert.False(context.Updater.ModelState.IsValid);
+        Assert.Contains(context.Updater.ModelState, entry => entry.Key.EndsWith(nameof(AgentFeedSettingsViewModel.SftpHostKeyFingerprint), StringComparison.Ordinal));
+    }
+
+    private sealed class PassThroughLocalizer : IStringLocalizer<AgentFeedSettingsDisplayDriver>
+    {
+        public LocalizedString this[string name]
+            => new(name, name);
+
+        public LocalizedString this[string name, params object[] arguments]
+            => new(name, string.Format(System.Globalization.CultureInfo.InvariantCulture, name, arguments));
+
+        public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
+            => [];
     }
 }

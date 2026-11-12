@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Ap2;
 /// Binds an AP2 checkout to the buyer's checkout mandate inside the agent checkout's completion, so REST, MCP and A2A
 /// all pass it. A checkout made while AP2 was agreed keeps needing a mandate (<see cref="RequiredProperty"/>), whatever
 /// a later request negotiates; a complete request may not change it; and the mandate must be for the checkout as it
-/// will be paid: the same id, items, total and currency, shipped to the same place the same way.
+/// will be paid: the same id, items, total and currency, for the same buyer, shipped to the same place the same way.
 /// </summary>
 public sealed class Ap2CompletionGate : IAgentCheckoutCompletionGate
 {
@@ -118,7 +118,8 @@ public sealed class Ap2CompletionGate : IAgentCheckoutCompletionGate
         return null;
     }
 
-    // The mandate is for this checkout as it stands: the same id, items, total and currency, and the same fulfillment.
+    // The mandate is for this checkout as it stands: the same id, items, total and currency, the same buyer's e-mail
+    // address, and the same fulfillment.
     internal static bool Matches(JsonObject approved, AgentCheckoutView view, string version)
     {
         if (approved is null || view is null || !string.Equals(AgentJson.String(approved, "id"), view.Id, StringComparison.Ordinal))
@@ -127,6 +128,12 @@ public sealed class Ap2CompletionGate : IAgentCheckoutCompletionGate
         }
 
         if (!string.Equals(AgentJson.String(approved, "currency"), view.Currency, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Who it's for: what has nothing to ship is delivered to the buyer's e-mail address.
+        if (!string.Equals(AgentJson.String(approved["buyer"], "email")?.Trim() ?? string.Empty, view.Buyer?.Email?.Trim() ?? string.Empty, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

@@ -6,7 +6,9 @@ using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 using CrestApps.OrchardCore.AgenticCommerce.Ucp;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using OrchardCore.Locking;
 
 namespace CrestApps.OrchardCore.Tests.AgenticCommerce;
 
@@ -79,8 +81,8 @@ public sealed class AgentSignatureReplayTests : IDisposable
         var guard = CreateGuard();
 
         // Act
-        var first = await guard.TryUseAsync("sig-1", idempotencyKey: null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
-        var replayed = await guard.TryUseAsync("sig-1", idempotencyKey: null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        var first = await guard.TryUseAsync("platform-1", "signed-input-1"u8.ToArray(), idempotencyKey: null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        var replayed = await guard.TryUseAsync("platform-1", "signed-input-1"u8.ToArray(), idempotencyKey: null, TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(first);
@@ -93,11 +95,11 @@ public sealed class AgentSignatureReplayTests : IDisposable
         // Arrange
         var guard = CreateGuard();
 
-        await guard.TryUseAsync("sig-1", "key-1", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        await guard.TryUseAsync("platform-1", "signed-input-1"u8.ToArray(), "key-1", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         // Act
-        var retried = await guard.TryUseAsync("sig-1", "key-1", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
-        var otherKey = await guard.TryUseAsync("sig-1", "key-2", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        var retried = await guard.TryUseAsync("platform-1", "signed-input-1"u8.ToArray(), "key-1", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
+        var otherKey = await guard.TryUseAsync("platform-1", "signed-input-1"u8.ToArray(), "key-2", TimeSpan.FromMinutes(5), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(retried);
@@ -116,7 +118,7 @@ public sealed class AgentSignatureReplayTests : IDisposable
         var verification = new HttpSignatureVerification { Succeeded = true, CoveredComponents = components };
 
         // Act
-        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: null, _now);
+        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: null, idempotent: true, _now);
 
         // Assert
         Assert.NotNull(error);
@@ -134,7 +136,7 @@ public sealed class AgentSignatureReplayTests : IDisposable
         };
 
         // Act
-        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: null, _now);
+        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: null, idempotent: true, _now);
 
         // Assert
         Assert.NotNull(error);
@@ -152,14 +154,14 @@ public sealed class AgentSignatureReplayTests : IDisposable
         };
 
         // Act
-        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: "key-1", _now);
+        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: "key-1", idempotent: true, _now);
 
         // Assert
         Assert.Null(error);
     }
 
     private static AgentSignatureReplayGuard CreateGuard()
-        => new(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())));
+        => new(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), new LocalLock(NullLogger<LocalLock>.Instance));
 
     private AgentPlatform Platform(int? version)
         => new()

@@ -38,7 +38,7 @@ public static class UcpMcpEndpoints
         return routes;
     }
 
-    private static async Task<IResult> HandleAsync(HttpContext httpContext, IAgentCheckoutService checkouts, UcpCheckoutMapper mapper)
+    internal static async Task<IResult> HandleAsync(HttpContext httpContext, IAgentCheckoutService checkouts, UcpCheckoutMapper mapper, UcpOperations operations)
     {
         var request = AgentRequest.Get(httpContext);
 
@@ -72,7 +72,7 @@ public static class UcpMcpEndpoints
                 return Result(id, new JsonObject { ["tools"] = ListTools() });
 
             case "tools/call":
-                return await CallAsync(id, message["params"] as JsonObject, request, checkouts, mapper, httpContext);
+                return await CallAsync(id, message["params"] as JsonObject, request, checkouts, mapper, operations, httpContext);
         }
 
         return Error(id, -32601, $"The method '{method}' isn't offered.");
@@ -84,6 +84,7 @@ public static class UcpMcpEndpoints
         AgentRequest request,
         IAgentCheckoutService checkouts,
         UcpCheckoutMapper mapper,
+        UcpOperations operations,
         HttpContext httpContext)
     {
         var name = AgentJson.String(parameters, "name");
@@ -114,10 +115,8 @@ public static class UcpMcpEndpoints
                     return ToolResult(id, UcpCheckoutMapper.WriteError(request, "Give the payment instrument to complete the checkout with.", AgentMessageCodes.PaymentFailed), isError: true);
                 }
 
-                var update = UcpCheckoutMapper.ReadUpdate(checkout);
-
-                update.Lines = null;
-                result = await checkouts.CompleteAsync(request.Context, checkoutId, payment, update, cancellationToken);
+                // Through the checkout extensions, as REST and A2A complete, so AP2 keeps its mandate and receipt.
+                result = await operations.CompleteAsync(request, checkoutId, payment, checkout, cancellationToken);
                 break;
 
             case "cancel_checkout":

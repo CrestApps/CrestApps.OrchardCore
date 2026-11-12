@@ -146,6 +146,8 @@ Then the platform must be enabled (**Its agents may buy**), use the protocol of 
 
 A signed request is checked even when an API key or a token also signed it in. A body that doesn't match its digest gets `400 digest_mismatch`, an algorithm the store doesn't verify `400 algorithm_unsupported`, and a signature that can't be verified `401`. When the signature alone signs the request in, the platform is found by its profile address. With **Let UCP platforms the store doesn't know buy** (`AgenticCommerceSettings.AllowUnregisteredUcpPlatforms`) on, a signed request from a profile no platform has is let in as an unregistered platform, whose checkouts are kept under `ucp-` and a hash of the profile address. Such a platform has no test mode, no allowed IP addresses and no payment handler limit.
 
+A UCP signature must cover `@method`, `@authority`, `@path`, `content-digest` when there is a body, and `idempotency-key` when the request has one. It must also age: it carries a `created` time within five minutes of the store's clock, or it covers the `Idempotency-Key` of a REST POST or PUT, whose first answer a replay gets back. A signature with neither, such as a GET or an MCP or A2A call without `created`, gets `401`. A verified signature is remembered for ten minutes by the platform, its key and the signature base it was verified over, so the same signature again, under any label, gets `401` unless it comes with the same `Idempotency-Key`.
+
 A request without credentials gets `401` with `WWW-Authenticate: Bearer`.
 
 ## ACP request signatures
@@ -162,8 +164,8 @@ ACP lets a platform sign each request with a `Signature` header (a base64url det
 
 How a request is verified (`AcpRequestSignature` in the Core project, applied by `AcpSignatureCheck`):
 
-- **Signed bytes:** the RFC 8785 (JCS) canonical JSON of the request body, or nothing for a request without a body. Key order, whitespace and number form don't change it; array order does. With signature version 2 (`AcpRequestSignature.GetBoundSigningInput`) the bytes are the UTF-8 of `{Timestamp}.{METHOD}.{path}.` followed by that canonical JSON, so a captured signature can't be sent with another timestamp or to another path; over MCP the method is `MCP` and the path is the tool's name. With version 1 the timestamp is only checked against the skew window.
-- **Replays:** a signature that verified is remembered (`AgentSignatureReplayGuard`, in the distributed cache) for twice the clock skew. The same signature again is refused, unless it comes with the same `Idempotency-Key`, which the idempotency layer answers with its first response.
+- **Signed bytes:** the RFC 8785 (JCS) canonical JSON of the request body, or nothing for a request without a body. Key order, whitespace and number form don't change it; array order does. With signature version 2 (`AcpRequestSignature.GetBoundSigningInput`) the bytes are the UTF-8 of `{Timestamp}.{METHOD}.{path}.` followed by that canonical JSON, so a captured signature can't be sent with another timestamp or to another path; over MCP the method is `MCP` and the path is the tool's name, then `/` and the checkout's id for a tool that acts on one (`cancel_checkout_session/cs_1`), so a signature can't be used on another checkout. With version 1 the timestamp is only checked against the skew window.
+- **Replays:** a version 2 signature that verified is remembered (`AgentSignatureReplayGuard`, in the distributed cache, under a lock) for twice the clock skew, by the platform and the bytes it signed, so another encoding of it (padding, DER) is the same signature. The same signature again is refused, unless it comes with the same `Idempotency-Key`, which the idempotency layer answers with its first response. A version 1 signature signs no time, so it can't be made single-use: move the platform to version 2. A signature the store doesn't verify (a platform with no key that doesn't require signing) isn't remembered. Without Redis, each node remembers its own.
 - **Signature:** the 64-byte `r || s` form JOSE uses, base64url (padding is allowed). A DER signature is accepted too.
 - **When:** after the platform signs in and before any checkout work, including the idempotency replay.
 
@@ -183,7 +185,7 @@ The checkout and cart endpoints that change something take an `Idempotency-Key` 
 
 | | UCP | ACP |
 | --- | --- | --- |
-| Key required | No; a request without a key isn't de-duplicated | On every POST (`400 idempotency_key_required`) |
+| Key required | On every POST and PUT (`400 invalid_request`) | On every POST (`400 idempotency_key_required`) |
 | Kept for | 48 hours | 24 hours |
 | Key length | At most 255 characters (`400`) | 1 to 255 characters (`400`) |
 | Same key, same body | The first answer again | The first answer again, with `Idempotent-Replayed: true` and the key echoed |
@@ -250,7 +252,7 @@ The flow, on both ACP versions:
 2. The agent runs 3-D Secure, then completes again, with a new idempotency key, the same payment handler, and `authentication_result` (`outcome` and, for `authenticated`, `attempt_acknowledged` or `informational`, `outcome_details` with `three_ds_cryptogram`, `electronic_commerce_indicator`, `transaction_id` and `version`).
 3. A complete without `authentication_result` gets `400` with `code: "requires_3ds"` and `param: "$.authentication_result"`. A malformed result gets `400 invalid` with the path of what is wrong (the cryptogram is 28 base64 characters that decode to 20 bytes; the ECI is `01`, `02`, `05`, `06` or `07`).
 4. Any other outcome, such as `denied` or `rejected`, cancels the store checkout, which voids what the provider began, and answers with a `payment_declined` message. The next request starts a new store checkout the agent may pay another way.
-5. An authenticated result finishes the payment: `CompleteAsync` resumes the same payment attempt with the result in the provider data, and the provider imports it. If the bank still wants to authenticate the buyer, the checkout goes to `requires_escalation` instead of asking again.
+5. An authenticated result finishes the payment: `CompleteAsync` resumes the same payment attempt with the result in the provider data, and the provider imports it. The completion gates run again first, so an AP2 checkout needs its `ap2.checkout_mandate` on this request too. An update while 3-D Secure is pending drops the pending request, and the next complete is a new one. If the bank still wants to authenticate the buyer, the checkout goes to `requires_escalation` instead of asking again.
 
 The result travels in provider-neutral, server-only provider data: `CheckoutPaymentDataKeys.ThreeDSecureOutcome`, `ThreeDSecureCryptogram`, `ThreeDSecureElectronicCommerceIndicator`, `ThreeDSecureTransactionId`, `ThreeDSecureVersion` and `ThreeDSecureTransactionStatus`. Write and read them with `ThreeDSecureResult.CopyTo` and `ThreeDSecureResult.From`; `PaymentEndpoints.SanitizeProviderData` drops them from browser and API requests.
 
@@ -327,7 +329,7 @@ The **Agent Payments Protocol (Preview)** feature adds AP2's mandates extension 
 - Every checkout answer carries `ap2.merchant_authorization`: a JWS with detached content (`b64url(header)..b64url(signature)`, header `alg` and `kid`), ES256 with the store's current key, over the RFC 8785 canonical form of the checkout without its `ap2` member.
 - Completing the checkout needs `ap2.checkout_mandate`, the buyer's checkout mandate. The checkout is locked to mandates: there is no completing without one (`mandate_required`).
 - `Ap2MandateVerifier` verifies the mandate as AP2 v0.2 does: an SD-JWT delegation chain joined by `~~`, whose root is signed with a key from the platform's profile `keys`, each later hop signed with the previous hop's `cnf.jwk`, and the last hop a key binding JWT with the closed checkout mandate. A single SD-JWT with a key binding JWT is accepted too. Clock skew of 60 seconds is allowed. A platform whose profile has no keys gets `agent_missing_key`.
-- The mandate must be for the checkout as it stands: the same checkout id, the same items and quantities, the same total in minor units and currency, and the same fulfillment (the selected destination's address and the selected shipping option). Otherwise the request gets `mandate_scope_mismatch`.
+- The mandate must be for the checkout as it stands: the same checkout id, the same items and quantities, the same total in minor units and currency, the same buyer e-mail address, and the same fulfillment (the selected destination's address and the selected shipping option). Otherwise the request gets `mandate_scope_mismatch`.
 - The check runs inside `AgentCheckoutService.CompleteAsync` (`Ap2CompletionGate`, an `IAgentCheckoutCompletionGate`), after the checkout's final sync, so REST, MCP (`complete_checkout`) and A2A all pass it. A checkout created while AP2 was negotiated keeps needing a mandate (its `ap2.required` property) whatever later requests negotiate, and a complete request may not change its buyer, fulfillment or discount codes.
 - When the checkout completes, the mandate and a receipt the store signs are kept on the agent checkout, as the evidence for a dispute, and later answers carry `ap2.checkout_receipt`.
 

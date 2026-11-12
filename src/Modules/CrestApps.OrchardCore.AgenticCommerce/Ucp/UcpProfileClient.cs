@@ -8,7 +8,8 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
 /// <summary>
 /// Fetches agent platforms' UCP profiles, through the egress guard (no hosts on the site's own network, no redirects),
 /// reads at most <c>MaxProfileLength</c> bytes of each, and keeps them in a bounded cache as long as their cache headers
-/// allow.
+/// allow. A profile that can't be read is remembered as such for half a minute, so a caller can't make the store
+/// repeat a slow outbound call on every request.
 /// </summary>
 public sealed class UcpProfileClient
 {
@@ -21,6 +22,7 @@ public sealed class UcpProfileClient
 
     private static readonly TimeSpan _minimumLifetime = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan _maximumLifetime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan _failureLifetime = TimeSpan.FromSeconds(30);
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly UcpProfileCache _cache;
@@ -55,9 +57,9 @@ public sealed class UcpProfileClient
             return (null, "invalid_profile_url");
         }
 
-        if (_cache.Get(uri.AbsoluteUri) is { } cached)
+        if (_cache.TryGet(uri.AbsoluteUri, out var cached, out var failure))
         {
-            return (cached, null);
+            return (cached, failure);
         }
 
         try
@@ -72,12 +74,12 @@ public sealed class UcpProfileClient
 
             if (!response.IsSuccessStatusCode)
             {
-                return (null, "profile_unreachable");
+                return Fail(uri, "profile_unreachable");
             }
 
             if (response.Content.Headers.ContentLength > MaxProfileLength)
             {
-                return (null, "profile_malformed");
+                return Fail(uri, "profile_malformed");
             }
 
             // A chunked body has no length to check first, so the read itself stops past the limit.
@@ -85,7 +87,7 @@ public sealed class UcpProfileClient
 
             if (body is null || JsonNode.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
             {
-                return (null, "profile_malformed");
+                return Fail(uri, "profile_malformed");
             }
 
             var lifetime = response.Headers.CacheControl?.MaxAge ?? _minimumLifetime;
@@ -96,14 +98,21 @@ public sealed class UcpProfileClient
         }
         catch (JsonException)
         {
-            return (null, "profile_malformed");
+            return Fail(uri, "profile_malformed");
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException && !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(exception, "The UCP profile at '{Host}' couldn't be read.", uri.Host);
 
-            return (null, "profile_unreachable");
+            return Fail(uri, "profile_unreachable");
         }
+    }
+
+    private (JsonObject Profile, string Error) Fail(Uri uri, string error)
+    {
+        _cache.SetFailure(uri.AbsoluteUri, error, _failureLifetime);
+
+        return (null, error);
     }
 
     // Reads at most MaxProfileLength bytes, or returns null for a longer body without reading the rest.

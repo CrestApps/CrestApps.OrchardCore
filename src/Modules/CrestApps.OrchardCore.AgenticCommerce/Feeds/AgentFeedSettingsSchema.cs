@@ -24,7 +24,7 @@ internal sealed class AgentFeedSettingsSchema : SiteSettingsSchemaBase
                         ("Host", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The SFTP server's host name.")),
                         ("Port", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Default(22).Description("The SFTP server's port.")),
                         ("Username", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The user name to sign in with.")),
-                        ("HostKeyFingerprint", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The server's SHA-256 host key fingerprint, or none to accept any.")),
+                        ("HostKeyFingerprint", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The server's SHA-256 host key fingerprint. Required to push: the push doesn't run without it, and stops when the server shows another key.")),
                         ("RemoteFolder", new JsonSchemaBuilder().Type(SchemaValueType.String).Default("/").Description("The folder on the server the files go in.")),
                         ("Format", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("jsonl.gz", "csv.gz").Default("jsonl.gz").Description("The file format.")),
                         ("Currency", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The ISO 4217 code of the currency the feed is priced in, or none for each product's own.")))

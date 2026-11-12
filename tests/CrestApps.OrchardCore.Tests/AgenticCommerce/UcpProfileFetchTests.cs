@@ -100,6 +100,30 @@ public sealed class UcpProfileFetchTests
         Assert.Equal(1002, handler.Requests);
     }
 
+    [Fact]
+    public async Task GetAsync_AProfileThatCantBeRead_IsNotFetchedAgainRightAway()
+    {
+        // Arrange: SEC-C6. Each failed read can cost a 10-second outbound call; a signed request from an unregistered
+        // platform must not be able to make the store repeat it on every request.
+        var handler = new ProfileHandler(() => new StringContent("{ \"not\": \"a profile\" }", Encoding.UTF8, "application/json"));
+
+        using var provider = CreateServices(handler);
+
+        // Act
+        var errors = new List<string>();
+
+        for (var i = 0; i < 3; i++)
+        {
+            using var scope = provider.CreateScope();
+
+            errors.Add((await scope.ServiceProvider.GetRequiredService<UcpProfileClient>().GetAsync(ProfileUrl, TestContext.Current.CancellationToken)).Error);
+        }
+
+        // Assert
+        Assert.Equal(1, handler.Requests);
+        Assert.All(errors, error => Assert.Equal("profile_malformed", error));
+    }
+
     private static ServiceProvider CreateServices(ProfileHandler handler, AgenticCommerceSettings settings = null)
     {
         var services = new ServiceCollection();
