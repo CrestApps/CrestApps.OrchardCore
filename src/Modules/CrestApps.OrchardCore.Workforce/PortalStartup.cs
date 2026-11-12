@@ -15,6 +15,7 @@ using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users.Events;
 
 namespace CrestApps.OrchardCore.Workforce;
 
@@ -56,6 +57,9 @@ public sealed class PortalStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, Portal.WorkerAdminAccessAuthorizationHandler>());
         services.TryAddScoped(provider => new Lazy<IAuthorizationService>(provider.GetRequiredService<IAuthorizationService>));
         services.AddNavigationProvider<PortalAdminMenu>();
+
+        // A device that kept My Work pages offline forgets them when its user signs out.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ILogoutFormEvent, MyWorkSignOut>());
     }
 }
 
