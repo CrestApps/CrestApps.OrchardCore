@@ -80,6 +80,11 @@ public sealed class DuplicatePatternRatchetTests
             "Sign a time-limited value with SignedTokenService (CrestApps.OrchardCore.Core.Services), with a purpose of its own (DRY-2).",
             ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Services/SignedTokenService.cs"),
         new(
+            "data protector outside Core",
+            @"\.CreateProtector\s*\(",
+            "Protect and read a stored secret with ProtectSetting and UnprotectSetting (ProtectedSettingExtensions in CrestApps.OrchardCore.Core.Security), and sign a value with SignedTokenService, each with a purpose of its own (DRY-12a, DRY-2).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/"),
+        new(
             "Untracked Task.Run",
             @"(?:\b_\s*=|=>)\s*Task\s*\.\s*Run\s*\(",
             "Nothing observes a discarded Task.Run: a fault is lost and a shutdown drops the work. Await it, hand it to a tracker that drains on shutdown (AIVoiceCallShutdown.TrackHandOn today), or queue it on ILeasedWorkQueue<T> when it must survive a restart."),
@@ -125,6 +130,62 @@ public sealed class DuplicatePatternRatchetTests
         },
         ["private FixedTimeEquals"] = new(StringComparer.OrdinalIgnoreCase)
         {
+        },
+        ["data protector outside Core"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/MerchantSigningKeyService.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.AI.Chat.Core/Services/ConnectionAddressAIVisitorIdentityResolver.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Calendars.Core/Services/CalendarFeedTokens.cs"] = 3,
+            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/IdempotencyEndpointFilter.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/Twilio/TwilioWebhookEndpoint.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/SecureKeypadCaptureStore.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Handlers/UserRegistrationCheckoutHandler.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxSmsOptionsConfiguration.cs"] = 2,
+            ["src/Core/CrestApps.OrchardCore.Webhooks.Core/Services/WebhookDispatcher.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultWebPushService.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultWorkerFeedService.cs"] = 2,
+            ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/WorkerFeedTokenBackfill.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Accounts.B2B/Services/PunchoutService.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Addresses/GooglePlaces/GooglePlacesAddressAutocompleteProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpOrderWebhookFormatter.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Controllers/AgentPlatformsController.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.A2A/Handlers/A2AConnectionSettingsHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.Chat.Claude/ClaudeOptionsConfiguration.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CopilotOptionsConfiguration.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/Services/AzureAISearchAIDataSourceSourceHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/Services/ElasticsearchAIDataSourceSourceHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.DataSources.PostgreSQL/Services/PostgreSQLAIDataSourceSourceHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI/Services/AIWebhookImporter.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI/Workflows/Models/SendSignedWebhookTask.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriClient.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskContactCenterVoiceMediaProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskPjsipDialogTerminator.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskRealtimeVoiceTenantEvents.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskSoftPhoneRegistrationConfigContributor.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskTelephonyProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AzureAIInference/Handlers/AzureAIInferenceConnectionHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AzureAIInference/Handlers/AzureAIInferenceConnectionSettingsHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.ContactCenter/Services/CallRecordingLinks.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/CanadaDnclRegistry.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/UsaFtcDncRegistry.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Downloads/Services/DownloadService.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Geo.AzureMaps/AzureMapsProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Geo.GoogleMaps/GoogleMapsProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Sms/Services/TwilioSmsMediaSender.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingAttachmentLinks.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.OpenAI.Azure/Handlers/AzureOpenAIConnectionHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.OpenAI.Azure/Handlers/AzureOpenAIConnectionSettingsHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.OpenAI/Handlers/OpenAIProviderConnectionHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.OpenAI/Handlers/OpenAIProviderConnectionSettingsHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Services/AbstractApiPhoneNumberVerificationProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Services/TwilioPhoneNumberVerificationProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Services/VeriphonePhoneNumberVerificationProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telephony/Controllers/TelephonyOAuthController.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telephony/Services/DefaultTelephonyUserTokenStore.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Controllers/TelnyxConnectController.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Endpoints/TelnyxWebhookEndpoint.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Services/TelnyxOptionsConfigurations.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Wizard/Services/WizardResumeCookieManager.cs"] = 1,
         },
         ["secret token made and hashed by hand"] = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -249,6 +310,9 @@ public sealed class DuplicatePatternRatchetTests
     [InlineData("Untracked Task.Run", "await Task.Run(() => Compute());", 0)]
     [InlineData("Untracked Task.Run", "var work = Task.Run(() => Compute());", 0)]
     [InlineData("Untracked Task.Run", "// _ = Task.Run(() => WriteAsync());", 0)]
+    [InlineData("data protector outside Core", "var protector = _dataProtectionProvider.CreateProtector(Purpose);", 1)]
+    [InlineData("data protector outside Core", "var protector = provider\n    .CreateProtector(\"A\")\n    .CreateProtector(\"B\");", 2)]
+    [InlineData("data protector outside Core", "settings.ApiKey = settings.ApiKey.ProtectSetting(_dataProtectionProvider, Purpose);", 0)]
     [InlineData("RemoteIpAddress?.ToString()", "var key = httpContext.Connection\n    .RemoteIpAddress?\n    .ToString();", 1)]
     public void Count_MatchesDeclarationsAndCallsButNotComments(string patternName, string code, int expected)
     {
