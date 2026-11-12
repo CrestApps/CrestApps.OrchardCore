@@ -237,7 +237,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
             TenantPurchaseErrorCode.ReservedHost => S["The domain '{0}' is reserved.", error.Value],
             TenantPurchaseErrorCode.HostTaken => S["The domain '{0}' belongs to another site.", error.Value],
             TenantPurchaseErrorCode.RecipeNotAllowed => S["This plan can't be bought yet: the store hasn't finished setting it up."],
-            TenantPurchaseErrorCode.FeatureProfileRequired => S["This plan can't be bought yet: the store hasn't finished setting it up."],
+            TenantPurchaseErrorCode.FeatureProfileRequired or TenantPurchaseErrorCode.FeatureProfileNotFound => S["This plan can't be bought yet: the store hasn't finished setting it up."],
             _ => S["The details of your new site are not accepted."],
         };
 }

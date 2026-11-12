@@ -28,6 +28,35 @@ public sealed class SubscriptionOverdueTransactionHandlerTests
         lifecycle.Verify(l => l.MarkPastDueAsync("sub-1", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// The Pay Later transaction of a plan sign-up copies its checkout's reference, which names the plan
+    /// (<c>Subscription</c>, the plan's content item id), not the subscription; the subscription is found by the checkout.
+    /// </summary>
+    [Fact]
+    public async Task BecameOverdueAsync_ForAPlanSignUpsPayLaterTransaction_MarksTheSubscriptionPastDue()
+    {
+        var lifecycle = new Mock<ISubscriptionLifecycleService>();
+        lifecycle.Setup(l => l.MarkPastDueAsync("plan-1", It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((Subscription)null);
+        var manager = new Mock<ISubscriptionManager>();
+        manager.Setup(m => m.GetByCheckoutSessionAsync("session-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Subscription { ItemId = "sub-1", Status = SubscriptionStatus.Active }]);
+
+        var handler = new SubscriptionOverdueTransactionHandler(lifecycle.Object, manager.Object);
+
+        // The shape PayLaterTransactionCheckoutHandler records for a checkout started by SubscriptionsController.
+        var transaction = new Transaction
+        {
+            ReferenceType = "Subscription",
+            ReferenceId = "plan-1",
+            CheckoutSessionId = "session-1",
+            Status = TransactionStatus.Outstanding,
+        };
+
+        await handler.BecameOverdueAsync(transaction, TestContext.Current.CancellationToken);
+
+        lifecycle.Verify(l => l.MarkPastDueAsync("sub-1", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task BecameOverdueAsync_ForARenewalTransaction_MarksThatSubscriptionPastDue()
     {

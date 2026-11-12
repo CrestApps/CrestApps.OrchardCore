@@ -100,6 +100,12 @@ public sealed class BookingBalanceCharger
                 balance = stored;
             }
 
+            // The same check when the caller's instance is the one the session tracks, and reading it again returned it.
+            if (balance.Status is BookingBalanceStatus.Paid or BookingBalanceStatus.Canceled)
+            {
+                return null;
+            }
+
             return await ChargeLockedAsync(balance, cancellationToken);
         }
     }
@@ -160,6 +166,7 @@ public sealed class BookingBalanceCharger
         }, cancellationToken);
 
         balance.Attempts++;
+        balance.ChargeCount++;
         balance.LastAttemptUtc = now;
 
         var outcome = await _checkoutEngine.BeginPaymentAsync(session.SessionId, new BeginPaymentOptions
@@ -167,8 +174,9 @@ public sealed class BookingBalanceCharger
             ProviderKey = paymentMethod.ProviderKey,
             ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(paymentMethod),
 
-            // The same balance and attempt is the same charge, whichever checkout asks for it.
-            IdempotencyKey = $"booking_balance_{balance.ItemId}_{balance.Attempts}",
+            // The same balance and charge is the same charge, whichever checkout asks for it. Counted by ChargeCount, which
+            // "Charge now" never resets: Attempts starts over then, and its keys were ones the gateway had already answered.
+            IdempotencyKey = $"booking_balance_{balance.ItemId}_c{balance.ChargeCount}",
         }, cancellationToken);
 
         if (outcome.Succeeded)
@@ -242,6 +250,7 @@ public sealed class BookingBalanceCharger
         }
 
         stored.Attempts = balance.Attempts;
+        stored.ChargeCount = balance.ChargeCount;
         stored.LastAttemptUtc = balance.LastAttemptUtc;
 
         return stored;

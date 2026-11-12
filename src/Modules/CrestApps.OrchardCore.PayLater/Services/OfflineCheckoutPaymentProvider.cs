@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Payments;
+using OrchardCore.Entities;
 using Microsoft.Extensions.Hosting;
 using OrchardCore;
 
@@ -60,6 +62,26 @@ public abstract class OfflineCheckoutPaymentProvider : ICheckoutPaymentProvider,
 
     /// <inheritdoc/>
     public abstract Task<bool> IsAvailableAsync(ICheckoutFlowSession session, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Whether the buyer and the order may use a method that takes no money at checkout: a signed-in buyer when the store
+    /// asks for one, and a total within the store's limit. The engine asks the provider again when a payment begins, so a
+    /// request that names the method directly is held to the same rules.
+    /// </summary>
+    /// <param name="requireSignedIn">Whether only a signed-in buyer may use the method.</param>
+    /// <param name="maxOrderAmount">The largest order total allowed, or <see langword="null"/> for no limit.</param>
+    /// <param name="session">The checkout.</param>
+    protected static bool MeetsBuyerRules(bool requireSignedIn, decimal? maxOrderAmount, ICheckoutFlowSession session)
+    {
+        if (session is null || (requireSignedIn && string.IsNullOrEmpty(session.OwnerId)))
+        {
+            return false;
+        }
+
+        return maxOrderAmount is not { } max ||
+            !session.TryGet<CheckoutInvoice>(out var invoice) ||
+            invoice.GrandTotal <= max;
+    }
 
     /// <inheritdoc/>
     public Task<PaymentBeginResult> BeginAsync(BeginPaymentContext context, CancellationToken cancellationToken = default)

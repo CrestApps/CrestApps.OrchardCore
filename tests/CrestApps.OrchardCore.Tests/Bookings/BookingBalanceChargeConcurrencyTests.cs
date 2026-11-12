@@ -36,6 +36,7 @@ public sealed class BookingBalanceChargeConcurrencyTests
     private readonly Mock<ICheckoutEngine> _engine = new();
     private readonly List<BeginPaymentOptions> _begun = [];
     private Func<Task> _gate = () => Task.CompletedTask;
+    private int _declineFirst;
 
     public BookingBalanceChargeConcurrencyTests()
     {
@@ -53,7 +54,9 @@ public sealed class BookingBalanceChargeConcurrencyTests
 
                 await _gate();
 
-                return new PaymentBeginOutcome { Succeeded = true };
+                var declined = _begun.Count <= _declineFirst;
+
+                return new PaymentBeginOutcome { Succeeded = !declined, Declined = declined, ErrorMessage = declined ? "Declined." : null };
             });
         _engine.Setup(engine => engine.TryCompleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Completed });
@@ -89,7 +92,7 @@ public sealed class BookingBalanceChargeConcurrencyTests
         var begun = Assert.Single(_begun);
 
         // The provider's key comes from the balance and its attempt, so a charge that got past the lock still collapses.
-        Assert.Equal("booking_balance_balance-1_1", begun.IdempotencyKey);
+        Assert.Equal("booking_balance_balance-1_c1", begun.IdempotencyKey);
     }
 
     [Fact]
@@ -107,6 +110,38 @@ public sealed class BookingBalanceChargeConcurrencyTests
         Assert.Empty(_begun);
     }
 
+    /// <summary>
+    /// SEC-C12 regression: "Charge now" starts a balance that failed for good over by resetting its attempts, and the key
+    /// was built from the attempt, so the retries sent the keys the gateway had already answered (and declined) again.
+    /// </summary>
+    [Fact]
+    public async Task ChargeNow_AfterTheAutomaticAttemptsFailed_SendsKeysTheGatewayHasNotSeen()
+    {
+        // Arrange: the three automatic attempts are declined. The balance is the instance the session tracks.
+        _declineFirst = 3;
+        var charger = CreateCharger();
+
+        for (var attempt = 0; attempt < BookingBalanceCharger.MaxAttempts; attempt++)
+        {
+            await charger.ChargeAsync(_stored, TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(BookingBalanceStatus.Failed, _stored.Status);
+
+        // Act: "Charge now", as BookingsAdminController.ChargeBalance does it on the balance it loaded.
+        _stored.Status = BookingBalanceStatus.Scheduled;
+        _stored.Attempts = 0;
+
+        await charger.ChargeAsync(_stored, TestContext.Current.CancellationToken);
+
+        // Assert
+        var keys = _begun.Select(options => options.IdempotencyKey).ToList();
+
+        Assert.Equal(4, keys.Count);
+        Assert.Equal(keys.Count, keys.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(BookingBalanceStatus.Paid, _stored.Status);
+    }
+
     private BookingBalance Copy()
         => new()
         {
@@ -119,6 +154,7 @@ public sealed class BookingBalanceChargeConcurrencyTests
             Currency = _stored.Currency,
             Status = _stored.Status,
             Attempts = _stored.Attempts,
+            ChargeCount = _stored.ChargeCount,
         };
 
     private BookingBalanceCharger CreateCharger()
@@ -131,6 +167,7 @@ public sealed class BookingBalanceChargeConcurrencyTests
             {
                 _stored.Status = balance.Status;
                 _stored.Attempts = balance.Attempts;
+                _stored.ChargeCount = balance.ChargeCount;
             })
             .Returns(ValueTask.CompletedTask);
 
@@ -158,7 +195,7 @@ public sealed class BookingBalanceChargeConcurrencyTests
 
         var services = new ServiceCollection()
             .AddSingleton(balances.Object)
-            .AddSingleton(Mock.Of<IBookingStore>())
+            .AddSingleton(Mock.Of<IBookingStore>(store => store.ListByOrderAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<Booking>>(Array.Empty<Booking>())))
             .AddSingleton(transactions.Object)
             .AddSingleton(_engine.Object)
             .AddSingleton(Mock.Of<ICheckoutSessionStore>())

@@ -24,7 +24,7 @@
                 <label asp-for="Prefix" class="form-label">@T["URL prefix"]</label>
                 <input asp-for="Prefix" class="form-control" autocomplete="off" />
                 <span asp-validation-for="Prefix"></span>
-                <span class="hint">@T["Leave blank to use the site name."]</span>
+                <span class="hint">@(Model.AllowCustomDomains ? T["Leave blank to use the site name, or to answer on your custom domain alone."] : T["Leave blank to use the site name."])</span>
             </div>
         }
         @if (Model.AllowCustomDomains)

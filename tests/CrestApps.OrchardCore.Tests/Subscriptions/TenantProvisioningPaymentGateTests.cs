@@ -6,9 +6,12 @@ using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Admin;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Json;
 using Xunit;
@@ -51,6 +54,30 @@ public sealed class TenantProvisioningPaymentGateTests
         Assert.True(context.IsRefused);
     }
 
+    /// <summary>
+    /// SEC-C18: a plan whose profile was renamed or deleted under Tenants, Feature Profiles, or that arrived by recipe,
+    /// import or API naming one that never existed, would sell a site Orchard treats as allowed every feature.
+    /// </summary>
+    [Fact]
+    public async Task BeginningAsync_APlanWhoseFeatureProfileDoesNotExist_IsRefused()
+    {
+        var context = CreateContext(new TenantProvisioningStep { TenantName = "Shop1", Prefix = "shop1", RecipeName = "Blog" }, planFeatureProfile: "deleted");
+
+        await CreateGate(knownProfiles: ["sold"]).BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.True(context.IsRefused);
+    }
+
+    [Fact]
+    public async Task BeginningAsync_WithoutTheFeatureProfilesFeature_IsRefused()
+    {
+        var context = CreateContext(new TenantProvisioningStep { TenantName = "Shop1", Prefix = "shop1", RecipeName = "Blog" }, planFeatureProfile: "sold");
+
+        await CreateGate(featureProfilesOn: false).BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.True(context.IsRefused);
+    }
+
     [Fact]
     public async Task BeginningAsync_AValidStep_IsAllowed()
     {
@@ -61,20 +88,28 @@ public sealed class TenantProvisioningPaymentGateTests
         Assert.False(context.IsRefused, context.ErrorMessage);
     }
 
-    private static TenantProvisioningPaymentGate CreateGate(bool allowCustomPrefix = false)
+    private static TenantProvisioningPaymentGate CreateGate(bool allowCustomPrefix = false, string[] knownProfiles = null, bool featureProfilesOn = true)
     {
-        var rules = new Mock<ITenantPurchaseRulesProvider>();
-        rules
-            .Setup(provider => provider.GetRulesAsync(It.IsAny<string>()))
-            .ReturnsAsync((string recipe) => new SubscriptionOnboardingSettings { AllowCustomPrefix = allowCustomPrefix }.ToRules(recipe, "Admin", []));
-
         var shellHost = new Mock<IShellHost>();
         shellHost.Setup(host => host.GetAllSettings()).Returns([new ShellSettings { Name = ShellSettings.DefaultShellName }]);
+
+        var catalog = new Mock<ITenantFeatureProfileCatalog>();
+        catalog.Setup(value => value.GetProfileIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(featureProfilesOn ? knownProfiles ?? ["sold"] : null);
+
+        // The real rules provider, so the gate is tested with the rules it is given in a running site.
+        var rules = new TenantPurchaseRulesProvider(
+            SiteServiceFactory.Create(new SubscriptionOnboardingSettings { AllowCustomPrefix = allowCustomPrefix }),
+            shellHost.Object,
+            new HttpContextAccessor(),
+            Options.Create(new AdminOptions()),
+            catalog.Object,
+            Mock.Of<ICheckoutSessionStore>());
 
         var localizer = new Mock<IStringLocalizer<TenantProvisioningPaymentGate>>();
         localizer.Setup(l => l[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));
 
-        return new TenantProvisioningPaymentGate(rules.Object, shellHost.Object, Options.Create(new DocumentJsonSerializerOptions()), localizer.Object);
+        return new TenantProvisioningPaymentGate(rules, shellHost.Object, Options.Create(new DocumentJsonSerializerOptions()), localizer.Object);
     }
 
     private static CheckoutPaymentBeginningContext CreateContext(TenantProvisioningStep saved, string planFeatureProfile)

@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
@@ -18,11 +20,20 @@ public interface ITenantPurchaseRulesProvider
     /// <param name="planRecipeName">The recipe the plan names.</param>
     /// <returns>The rules.</returns>
     Task<TenantPurchaseRules> GetRulesAsync(string planRecipeName);
+
+    /// <summary>
+    /// Returns the recipe the plan named when it was bought, read from the checkout's new-site step, which the server
+    /// wrote from the plan; <see langword="null"/> when the checkout or its step can't be found.
+    /// </summary>
+    /// <param name="checkoutSessionId">The checkout the site was bought with.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<string> GetPlanRecipeNameAsync(string checkoutSessionId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Builds the rules from <see cref="SubscriptionOnboardingSettings"/>, adding what is always reserved: the admin
-/// prefix, the default tenant's host names, and the host the request arrived on (the operator's own address).
+/// prefix, the default tenant's host names, the site's base URL host, and the host the request arrived on (the
+/// operator's own address); and the feature profiles that exist.
 /// </summary>
 public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
 {
@@ -30,6 +41,8 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
     private readonly IShellHost _shellHost;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AdminOptions _adminOptions;
+    private readonly ITenantFeatureProfileCatalog _featureProfiles;
+    private readonly ICheckoutSessionStore _sessionStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantPurchaseRulesProvider"/> class.
@@ -38,28 +51,42 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
     /// <param name="shellHost">The shell host, which knows the default tenant's host names.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, for the host the request arrived on.</param>
     /// <param name="adminOptions">The admin options, for the admin prefix.</param>
+    /// <param name="featureProfiles">The feature profiles a sold site may be given.</param>
+    /// <param name="sessionStore">The checkouts, which record the plan's recipe.</param>
     public TenantPurchaseRulesProvider(
         ISiteService siteService,
         IShellHost shellHost,
         IHttpContextAccessor httpContextAccessor,
-        IOptions<AdminOptions> adminOptions)
+        IOptions<AdminOptions> adminOptions,
+        ITenantFeatureProfileCatalog featureProfiles,
+        ICheckoutSessionStore sessionStore)
     {
         _siteService = siteService;
         _shellHost = shellHost;
         _httpContextAccessor = httpContextAccessor;
         _adminOptions = adminOptions.Value;
+        _featureProfiles = featureProfiles;
+        _sessionStore = sessionStore;
     }
 
     /// <inheritdoc/>
     public async Task<TenantPurchaseRules> GetRulesAsync(string planRecipeName)
     {
-        var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
+        var site = await _siteService.GetSiteSettingsAsync();
+        var onboarding = site.GetOrCreate<SubscriptionOnboardingSettings>();
 
         var hosts = new List<string>();
 
         if (_shellHost.TryGetSettings(ShellSettings.DefaultShellName, out var defaultSettings))
         {
             hosts.AddRange(defaultSettings.RequestUrlHosts ?? []);
+        }
+
+        // The address the site is configured to answer on is the operator's own, whichever alias the buyer came through,
+        // and background provisioning has no request to read a host from.
+        if (Uri.TryCreate(site.BaseUrl, UriKind.Absolute, out var baseUrl) && !string.IsNullOrEmpty(baseUrl.Host))
+        {
+            hosts.Add(baseUrl.Host);
         }
 
         var requestHost = _httpContextAccessor.HttpContext?.Request.Host.Host;
@@ -69,6 +96,31 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
             hosts.Add(requestHost);
         }
 
-        return onboarding.ToRules(planRecipeName, _adminOptions.AdminUrlPrefix, hosts);
+        var rules = onboarding.ToRules(planRecipeName, _adminOptions.AdminUrlPrefix, hosts);
+
+        rules.KnownFeatureProfiles = await _featureProfiles.GetProfileIdsAsync();
+
+        return rules;
+    }
+
+    /// <inheritdoc/>
+    public async Task<string> GetPlanRecipeNameAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(checkoutSessionId) ||
+            await _sessionStore.GetAsync(checkoutSessionId, cancellationToken) is not { } session)
+        {
+            return null;
+        }
+
+        var step = session.Steps?.FirstOrDefault(candidate => candidate.Key == SubscriptionConstants.StepKey.TenantProvisioning);
+
+        return step is not null && step.Data.TryGetValue("RecipeName", out var value)
+            ? value switch
+            {
+                string text => text,
+                JsonNode node => node.GetValue<string>(),
+                _ => value?.ToString(),
+            }
+            : null;
     }
 }

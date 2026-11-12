@@ -195,12 +195,20 @@ public sealed class DefaultInventoryService : IInventoryService
         var existing = await ListReservationsAsync(orderId, cancellationToken);
         var shortages = new List<StockShortage>();
         var changes = new List<StockNeed>();
+        var extended = new List<StockReservation>();
 
         foreach (var need in requested)
         {
-            // An order that already holds or bought this item (such as a checkout started twice) isn't held twice.
+            // An order that already holds or bought this item (such as a checkout started twice) isn't held twice, but a
+            // hold it still has runs at least until the new end: a hold with seconds left, or past its end and not swept
+            // yet, would otherwise be let go during the payment (3-D Secure) and its units sold to someone else.
             if (existing.Any(reservation => reservation.StockItemId == need.Item.ItemId && reservation.Status != StockReservationStatus.Released))
             {
+                extended.AddRange(existing.Where(reservation =>
+                    reservation.StockItemId == need.Item.ItemId &&
+                    reservation.Status == StockReservationStatus.Held &&
+                    reservation.ExpiresUtc < expiresUtc));
+
                 continue;
             }
 
@@ -223,6 +231,14 @@ public sealed class DefaultInventoryService : IInventoryService
         }
 
         var now = _clock.UtcNow;
+
+        foreach (var hold in extended)
+        {
+            hold.ExpiresUtc = expiresUtc;
+            hold.ModifiedUtc = now;
+            await SaveReservationAsync(hold, cancellationToken);
+        }
+
         var order = await GetLocationOrderAsync();
         var placed = 0;
 

@@ -157,6 +157,25 @@ public sealed class PunchoutSignInTests
         Assert.IsType<RedirectResult>(result);
     }
 
+    /// <summary>
+    /// SEC-C13 regression: an account whose punchout settings were never saved has no punchout part, and a GET for it
+    /// threw (a 500) where it used to be refused.
+    /// </summary>
+    [Fact]
+    public async Task Start_GetForAnAccountWithoutPunchoutSettings_IsRefusedWithoutThrowing()
+    {
+        // Arrange
+        _account.Part.Punchout = null;
+        var controller = CreateController(HttpMethods.Get);
+
+        // Act
+        var result = await controller.Start(_account.AccountId);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status405MethodNotAllowed, Assert.IsAssignableFrom<IStatusCodeActionResult>(result).StatusCode);
+        AssertNotSignedIn();
+    }
+
     private void AssertNotSignedIn()
     {
         _signInManager.Verify(manager => manager.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);

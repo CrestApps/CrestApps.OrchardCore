@@ -280,9 +280,18 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             return $"The setup recipe '{job.RecipeName}' is not available, so the site was not created.";
         }
 
-        // Checked again here, so a purchase recorded before a rule existed can't create a site on a reserved prefix
-        // or the operator's own host.
-        var rules = await _rulesProvider.GetRulesAsync(job.RecipeName);
+        // The recipe is compared with the one the plan named when it was bought, never with the job's own: a job
+        // recorded before the rule with a recipe the buyer chose, which exists on the host, must not be built with it.
+        var planRecipe = await _rulesProvider.GetPlanRecipeNameAsync(job.CheckoutSessionId);
+
+        if (string.IsNullOrEmpty(planRecipe))
+        {
+            return "The recipe the plan named can't be found on the checkout this site was bought with, so the site was not created.";
+        }
+
+        // Checked again here, so a purchase recorded before a rule existed can't create a site on a reserved prefix,
+        // the operator's own host, another recipe, or a feature profile that no longer exists.
+        var rules = await _rulesProvider.GetRulesAsync(planRecipe);
         var errors = TenantPurchaseValidator.Validate(
             new TenantPurchaseRequest
             {

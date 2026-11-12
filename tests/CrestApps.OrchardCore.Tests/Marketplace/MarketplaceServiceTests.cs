@@ -162,6 +162,90 @@ public sealed class MarketplaceServiceTests
         Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.PaidOut, earning.Status));
     }
 
+    /// <summary>
+    /// SEC-C11: a debt was taken off a later payout only when that payout covered it whole, so a refund larger than any
+    /// single later order was never recovered and the vendor kept both. Later payouts are now held back until it is.
+    /// </summary>
+    [Fact]
+    public async Task ARefundLargerThanTheNextPayout_HoldsPayoutsBackUntilItIsCovered()
+    {
+        // Arrange: the 48.60 the vendor earned on the first order is paid out, then the whole order is refunded.
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+        await service.RecordRefundAsync(_order, new OrderRefund { RefundId = "r1", Amount = 90m }, TestContext.Current.CancellationToken);
+
+        // Act: a smaller order (the vendor nets 27) does not cover the 48.60 owed.
+        await SellAsync("o2", lineTotal: 30m);
+        var (secondPaid, _) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Then another one does: 27 + 27 - 48.60.
+        await SellAsync("o3", lineTotal: 30m);
+        var (thirdPaid, failures) = await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0m, secondPaid);
+        Assert.Empty(failures);
+        Assert.Equal(5.4m, thirdPaid);
+        Assert.Equal(5.4m, _provider.Amount);
+        Assert.All(_earnings, earning => Assert.Equal(VendorEarningStatus.PaidOut, earning.Status));
+    }
+
+    /// <summary>
+    /// SEC-C11: a payout whose transfer went through but was never marked paid (the run stopped in between) was matched
+    /// again only when the next run planned exactly the same earnings, so a refund arriving meanwhile made it send a new
+    /// transfer under a new key. A pending payout is now sent again as it was, with its own key, before anything new.
+    /// </summary>
+    [Fact]
+    public async Task APendingPayout_IsSettledWithItsOwnKey_BeforeARefundThatArrivedMeanwhileIsPlanned()
+    {
+        // Arrange: the transfer of 48.60 goes through, then recording that it was paid fails.
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _failNextPayoutUpdate = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken));
+
+        var firstKey = _provider.IdempotencyKey;
+
+        // A refund of the same order arrives before the next run.
+        await service.RecordRefundAsync(_order, new OrderRefund { RefundId = "r1", Amount = 45m }, TestContext.Current.CancellationToken);
+
+        // Act
+        await service.PayOutAsync(_vendor, TestContext.Current.CancellationToken);
+
+        // Assert: the same transfer was asked for again, and nothing new was sent; the refund is owed back.
+        Assert.Equal(firstKey, _provider.IdempotencyKey);
+        Assert.Equal(48.6m, _provider.Amount);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+        Assert.Equal(VendorEarningStatus.Available, _earnings.Single(earning => earning.Kind == VendorEarningKind.Refund).Status);
+    }
+
+    // Records and releases a sale of the vendor's mug on a new order.
+    private async Task SellAsync(string orderId, decimal lineTotal)
+    {
+        var service = _service;
+
+        _order = new Order
+        {
+            ItemId = orderId,
+            OrderNumber = orderId.ToUpperInvariant(),
+            Currency = "EUR",
+            Subtotal = lineTotal,
+            Total = lineTotal,
+            PaidUtc = _now,
+            Lines = [new OrderLine { LineId = "l1", ContentItemId = "mug", Title = "Mug", Quantity = 1, UnitPrice = lineTotal, LineTotal = lineTotal, ProductType = ProductType.Good }],
+        };
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+    }
+
     [Fact]
     public async Task TwoPayoutsOfTheSameVendorAtOnce_PayOnce()
     {
@@ -386,10 +470,11 @@ public sealed class MarketplaceServiceTests
             .AddSingleton<IStringLocalizer<MarketplaceService>>(new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<MarketplaceService>())
             .BuildServiceProvider();
 
-        return ActivatorUtilities.CreateInstance<MarketplaceService>(services);
+        return _service = ActivatorUtilities.CreateInstance<MarketplaceService>(services);
     }
 
     private int _commits;
+    private MarketplaceService _service;
 
     private sealed class FakePayoutProvider : IVendorPayoutProvider
     {

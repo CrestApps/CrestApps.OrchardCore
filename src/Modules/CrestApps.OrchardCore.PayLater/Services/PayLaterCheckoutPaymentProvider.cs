@@ -1,5 +1,3 @@
-using OrchardCore.Entities;
-using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
@@ -87,24 +85,7 @@ public sealed class PayLaterCheckoutPaymentProvider : OfflineCheckoutPaymentProv
     /// <param name="session">The checkout.</param>
     internal static bool IsAllowed(PayLaterSettings settings, ICheckoutFlowSession session)
     {
-        if (settings is not { Enabled: true } || session is null)
-        {
-            return false;
-        }
-
-        if (settings.RequireSignedIn && string.IsNullOrEmpty(session.OwnerId))
-        {
-            return false;
-        }
-
-        if (settings.MaxOrderAmount is { } max &&
-            session.TryGet<CheckoutInvoice>(out var invoice) &&
-            invoice.GrandTotal > max)
-        {
-            return false;
-        }
-
-        return true;
+        return settings is { Enabled: true } && MeetsBuyerRules(settings.RequireSignedIn, settings.MaxOrderAmount, session);
     }
 
     /// <inheritdoc/>

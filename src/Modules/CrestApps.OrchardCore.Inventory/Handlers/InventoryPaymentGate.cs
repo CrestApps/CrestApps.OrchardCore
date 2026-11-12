@@ -63,7 +63,8 @@ public sealed class InventoryPaymentGate : ICheckoutPaymentGate
         var settings = await _siteService.GetSettingsAsync<InventorySettings>();
         var expires = _clock.UtcNow.AddMinutes(Math.Max(1, settings.HoldMinutes));
 
-        // What the order still holds is left as it is; only lines whose hold was let go are held again.
+        // What the order still holds is kept for the payment (its holds run at least until then); lines whose hold was let
+        // go are held again.
         var result = await _inventory.ReserveAsync(order.ItemId, InventoryOrderEventHandler.ToRequests(order), expires, cancellationToken);
 
         if (result.Shortages is { Count: > 0 } shortages && shortages[0] is { } shortage)

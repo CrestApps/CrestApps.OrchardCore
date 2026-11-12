@@ -44,8 +44,11 @@ public sealed class TenantProvisioningJobStore : DocumentCatalog<TenantProvision
     {
         ArgumentException.ThrowIfNullOrEmpty(tenantName);
 
+        // Only a job that succeeded created the tenant: a failed "name in use" job for the same name belongs to another
+        // buyer, and taking the first match, unordered, could resolve a legacy entitlement to the wrong subscription.
         return Session
-            .Query<TenantProvisioningJob, TenantProvisioningJobIndex>(x => x.TenantName == tenantName, collection: CollectionName)
+            .Query<TenantProvisioningJob, TenantProvisioningJobIndex>(x => x.TenantName == tenantName && x.Status == TenantProvisioningStatus.Succeeded, collection: CollectionName)
+            .OrderByDescending(x => x.CreatedUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
 

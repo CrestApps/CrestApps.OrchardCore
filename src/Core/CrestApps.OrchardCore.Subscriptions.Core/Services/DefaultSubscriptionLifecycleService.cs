@@ -186,12 +186,26 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
     public Task<Subscription> ResumeAsync(string subscriptionId, CancellationToken cancellationToken = default)
         => MutateAsync(SubscriptionsTelemetry.OperationResume, subscriptionId, subscription =>
         {
-            if (subscription.Status is not (SubscriptionStatus.PastDue or SubscriptionStatus.Paused))
+            if (subscription.Status is not (SubscriptionStatus.PastDue or SubscriptionStatus.Paused or SubscriptionStatus.Incomplete))
             {
                 return SubscriptionTransition.NoChange;
             }
 
             var now = _clock.UtcNow;
+
+            // One bought with a promise to pay starts when its first payment arrives; its schedule was set when it was made.
+            if (subscription.Status == SubscriptionStatus.Incomplete)
+            {
+                subscription.Status = SubscriptionStatus.Active;
+                subscription.Events.Add(new SubscriptionEvent
+                {
+                    CreatedUtc = now,
+                    Type = SubscriptionEventType.Resumed,
+                    Message = "The first payment was received, so the subscription is active.",
+                });
+
+                return SubscriptionTransition.Changed;
+            }
 
             subscription.Status = SubscriptionStatus.Active;
             subscription.PastDueSinceUtc = null;
