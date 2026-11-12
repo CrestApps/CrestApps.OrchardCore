@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
@@ -101,7 +102,7 @@ internal static class OrderCheckoutApiEndpoints
             return ApiProblems.Conflict(ApiProblems.Codes.Unsupported, "Gift cards can't pay for this checkout.");
         }
 
-        if (await giftCards.ApplyAsync(flow, request.Code.Trim(), httpContext.Connection?.RemoteIpAddress?.ToString() ?? "unknown") is { } error)
+        if (await giftCards.ApplyAsync(flow, request.Code.Trim(), ClientNetworkKey.NetworkOnly(httpContext)) is { } error)
         {
             return ApiProblems.Validation("code", error);
         }

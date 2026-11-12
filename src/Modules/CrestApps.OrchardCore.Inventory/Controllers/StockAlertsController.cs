@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Inventory.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -33,7 +34,7 @@ public sealed class StockAlertsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Subscribe(string contentItemId, string variantId, string email, string returnUrl)
     {
-        var address = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var address = ClientNetworkKey.NetworkOnly(HttpContext);
         var key = "stock-alerts:" + address;
         var tries = _cache.GetOrCreate(key, entry =>
         {

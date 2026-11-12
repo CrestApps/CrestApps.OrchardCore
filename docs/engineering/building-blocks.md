@@ -144,6 +144,7 @@ Rules that follow from the table:
 | Status transitions | `CrestApps.OrchardCore.Abstractions` | `TransitionTable<TEnum>` (`CanMove`, `IsTerminal`) | Add another hand-rolled transition dictionary |
 | Recipe and deployment steps for catalog records | `CrestApps.OrchardCore.Core` | `NamedCatalogRecipeStep`, `NamedCatalogDeploymentSource`, `CatalogDeploymentSerializer` | Copy the serializer or hand-write the same step again |
 | Secrets in settings | `CrestApps.OrchardCore.Core` | `ProtectedSettingExtensions` | Call `CreateProtector` in each driver |
+| Attempt limits and rate-limit groups | `CrestApps.OrchardCore.Abstractions` (`Throttling`) and `CrestApps.OrchardCore.Core` (`Throttling`) on Orchard Core's Rate Limits | `IAttemptLimiter` with `AddAttemptPolicy` (counts, failures, blocks, per tenant, overridable under `CrestApps_Throttling:AttemptPolicies`); `ClientNetworkKey`; `AddClientGroupRateLimit` and `AddJsonRejectionHandler` in a startup that requires the Rate Limits feature; `.agents/skills/crestapps-rate-limits` | Write another attempt counter, cache-backed limiter or 429 response, or key a limit by `RemoteIpAddress?.ToString()` |
 | Signed links and tokens | `CrestApps.OrchardCore.Core` | `SignedTokenService` | Write another signed-link class |
 | Absolute URLs | `CrestApps.OrchardCore.Core` | `SiteUrlGenerator` | Build URLs from the request by hand |
 | Safe log values | `CrestApps.OrchardCore.Core` | `SanitizeLogValue()` | Log raw user input |

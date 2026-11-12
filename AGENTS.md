@@ -57,6 +57,7 @@ Take the first step that works, and say in the pull request which step you took:
 * CSV output escapes quotes, commas, `\r` and `\n` and guards against formula injection.
 * Every endpoint checks a permission, not only that the caller is signed in.
 * Requests never authorize against a capped list (`Take(1000)`); query the record by ID.
+* Never write another attempt counter or 429 response; register an attempt policy (`IAttemptLimiter`) or a group limit (`AddClientGroupRateLimit`). A route a guest or another site can call, or one that moves money or checks a secret, carries a rate limit group and a route name; `ClientNetworkKey` is the only place an address becomes a key. See `.agents/skills/crestapps-rate-limits`.
 
 ## Contact Center module (active, multi-phase project)
 
@@ -436,6 +437,9 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   WebMCP: tools registered with the standard `document.modelContext.registerTool`, scripts and settings added through
   `IWebMcpClientConfigurationHandler`, the server-side checks every WebMCP list and call must keep, the chat bridge's
   limits and options, and the tests to add.
+- **Example**: `.agents/skills/crestapps-rate-limits` — how to limit a route with a request group of Orchard Core's Rate
+  Limits and its built-in limit, count payments, declines, codes or lookups with an `IAttemptLimiter` policy, key them
+  with `ClientNetworkKey`, and keep the architecture test that guards guest-reachable commerce endpoints green.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -110,7 +111,7 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
             return await EditStepAsync(flow, context);
         }
 
-        var address = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+        var address = ClientNetworkKey.NetworkOnly(_httpContextAccessor.HttpContext);
 
         if (await _coupons.ApplyAsync(flow, model.Code, address) is { } error)
         {

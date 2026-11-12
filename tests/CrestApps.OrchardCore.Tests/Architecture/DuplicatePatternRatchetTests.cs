@@ -49,6 +49,16 @@ public sealed class DuplicatePatternRatchetTests
             "private FixedTimeEquals",
             @"private\s+(?:static\s+)?bool\s+FixedTimeEquals\s*\(",
             "Call CryptographicOperations.FixedTimeEquals."),
+        new(
+            "Status429TooManyRequests",
+            @"\bStatus429TooManyRequests\b",
+            "Register an attempt policy (IAttemptLimiter) or a group limit (AddClientGroupRateLimit with AddJsonRejectionHandler), and answer with ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync or ApiProblems.TooManyRequests.",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Throttling/"),
+        new(
+            "RemoteIpAddress?.ToString()",
+            @"RemoteIpAddress\??\.ToString\s*\(\s*\)",
+            "Key a limit with ClientNetworkKey (NetworkOnly, From or FromAddress), which masks IPv6 to its /64 and honors the Reverse Proxy feature.",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Throttling/"),
     ];
 
     /// <summary>
@@ -78,6 +88,35 @@ public sealed class DuplicatePatternRatchetTests
         ["private FixedTimeEquals"] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/DelegatedEntryController.cs"] = 1,
+        },
+        ["Status429TooManyRequests"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // The API's problem helpers and the idempotency filter's "already in progress".
+            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/ApiProblems.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/IdempotencyEndpointFilter.cs"] = 1,
+
+            // The agent protocols' own error shapes.
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpCheckoutOperations.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpMcpIdempotency.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpOperationResult.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpOperations.cs"] = 1,
+
+            // The payment endpoints answer an attempt policy's refusal in their own JSON shape.
+            ["src/Modules/CrestApps.OrchardCore.Checkout/Api/CheckoutApiEndpoints.cs"] = 2,
+            ["src/Modules/CrestApps.OrchardCore.Checkout/Endpoints/PaymentEndpoints.cs"] = 2,
+
+            // The provider ingress limiters (a concurrency gate, not an attempt counter).
+            ["src/Modules/CrestApps.OrchardCore.ContactCenter/Endpoints/VoiceIngressEndpoint.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Endpoints/TelnyxWebhookEndpoint.cs"] = 2,
+        },
+        ["RemoteIpAddress?.ToString()"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // Recorded for an audit trail or a signed request's context, never as a limit's key.
+            ["src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Services/TenantHierarchyBroker.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpRequestFilter.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpRequestFilter.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/ChildTenantManager.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/DelegatedAccessIssuer.cs"] = 1,
         },
     };
 

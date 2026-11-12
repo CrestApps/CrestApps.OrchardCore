@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -78,7 +79,7 @@ public sealed class EmailSignInController : Controller
             return View(model);
         }
 
-        if (!await _codes.TryCountSendAsync(email, HttpContext.Connection.RemoteIpAddress?.ToString(), HttpContext.RequestAborted))
+        if (!await _codes.TryCountSendAsync(email, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted))
         {
             ModelState.AddModelError(nameof(model.Email), S["Too many codes were asked for. Wait a few minutes, or sign in with your password."]);
 
