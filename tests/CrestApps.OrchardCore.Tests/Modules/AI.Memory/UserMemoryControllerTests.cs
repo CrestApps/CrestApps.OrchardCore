@@ -8,11 +8,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Security;
+using OrchardCore.Security.AuthorizationHandlers;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Memory;
 
@@ -200,6 +203,50 @@ public sealed class UserMemoryControllerTests
         notifier.Verify(
             service => service.AddAsync(NotifyType.Success, It.IsAny<LocalizedHtmlString>(), It.IsAny<NotifyContext>()),
             Times.Once);
+    }
+
+    // SEC-A15: Orchard Core's permission handler grants a permission whatever the resource is, so asking for
+    // "Clear AI memory" with another user as the resource let anyone who may clear their own memory clear everyone's.
+    // These tests use the real authorization service and permission handler; a mocked service cannot catch that.
+    [Theory]
+    [InlineData("ClearAIMemory", "admin-1", "user-1", false)]
+    [InlineData("ClearAIMemory", "user-1", "user-1", true)]
+    [InlineData("ClearAIMemoryForOthers", "admin-1", "user-1", true)]
+    [InlineData("ClearAIMemoryForOthers", "user-1", "user-1", true)]
+    public async Task Clear_WithTheRealAuthorizationService_RequiresClearForOthersForAnotherUser(string grantedPermission, string currentUserId, string targetUserId, bool allowed)
+    {
+        var memoryStore = new Mock<IAIMemoryStore>();
+        memoryStore.Setup(store => store.CountByUserAsync(targetUserId)).ReturnsAsync(0);
+
+        var controller = CreateController(memoryStore.Object, Mock.Of<ICatalogManager<AIMemoryEntry>>(), CreateNotifier().Object, currentUserId, CreateRealAuthorizationService());
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(ClaimTypes.NameIdentifier, currentUserId),
+            new Claim(global::OrchardCore.Security.Permissions.Permission.ClaimType, grantedPermission),
+        ], "Test"));
+
+        var result = await controller.Clear(targetUserId, "/Admin");
+
+        if (allowed)
+        {
+            Assert.IsType<RedirectResult>(result);
+        }
+        else
+        {
+            Assert.IsType<ForbidResult>(result);
+            memoryStore.Verify(store => store.CountByUserAsync(It.IsAny<string>()), Times.Never);
+        }
+    }
+
+    private static IAuthorizationService CreateRealAuthorizationService()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAuthorization();
+        services.AddSingleton<IPermissionGrantingService, DefaultPermissionGrantingService>();
+        services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+
+        return services.BuildServiceProvider().CreateScope().ServiceProvider.GetRequiredService<IAuthorizationService>();
     }
 
     private static Mock<INotifier> CreateNotifier()
