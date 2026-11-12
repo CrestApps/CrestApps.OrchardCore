@@ -65,8 +65,10 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
     }
 
     /// <summary>
-    /// Whether a command may be started under the allowlist. An empty list allows any command; otherwise the command's
-    /// file name, with or without its extension, must be in the list.
+    /// Whether a command may be started under the allowlist. An empty list allows any command. A bare command name, such
+    /// as <c>npx</c> or <c>npx.cmd</c>, must be in the list with or without its extension. A command given as a path is
+    /// allowed only when that exact path is in the list: with <c>["npx"]</c>, <c>\\host\share\npx.exe</c> is refused.
+    /// The list limits the program only; its arguments are not checked.
     /// </summary>
     /// <param name="command">The command to start.</param>
     /// <param name="allowedCommands">The commands the host allows.</param>
@@ -83,12 +85,16 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
         }
 
         var trimmed = command.Trim();
-        var fileName = Path.GetFileName(trimmed);
+
+        if (trimmed.IndexOfAny(['/', '\\']) >= 0)
+        {
+            return allowedCommands.Any(allowed => string.Equals(allowed?.Trim(), trimmed, StringComparison.OrdinalIgnoreCase));
+        }
+
         var withoutExtension = Path.GetFileNameWithoutExtension(trimmed);
 
         return allowedCommands.Any(allowed =>
             string.Equals(allowed, trimmed, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(allowed, fileName, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(allowed, withoutExtension, StringComparison.OrdinalIgnoreCase));
     }
 }
