@@ -1,15 +1,17 @@
-using System.Net;
-using System.Net.Sockets;
+using System.Text;
 using CrestApps.OrchardCore.Calendars.Core.External;
 using CrestApps.OrchardCore.Calendars.Core.ICalendar;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Core.Http;
 using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Calendars.External;
 
 /// <summary>
 /// Subscribes to an iCalendar address (a <c>.ics</c> feed, such as the secret address Google Calendar or Outlook gives a
-/// calendar). Read only: the calendar shows the feed's events and can't change them. Addresses on the local network are refused.
+/// calendar). Read only: the calendar shows the feed's events and can't change them. The feed is fetched with the
+/// egress-guarded client, which refuses the site's own network at connect, after every DNS answer, and follows no
+/// redirect; the body is read up to 10 MB and no further.
 /// </summary>
 public sealed class ICalendarUrlProvider : ICalendarProvider
 {
@@ -55,27 +57,15 @@ public sealed class ICalendarUrlProvider : ICalendarProvider
             throw new InvalidOperationException("The address must start with https://, http:// or webcal://.");
         }
 
-        await EnsurePublicAsync(uri, cancellationToken);
-
         using var client = _httpClientFactory.CreateClient(nameof(ICalendarUrlProvider));
-
-        client.Timeout = TimeSpan.FromSeconds(30);
-
         using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         response.EnsureSuccessStatusCode();
 
-        if (response.Content.Headers.ContentLength > MaxBytes)
-        {
-            throw new InvalidOperationException("The calendar is larger than 10 MB.");
-        }
+        var bytes = await response.Content.ReadBoundedAsync(MaxBytes, cancellationToken)
+            ?? throw new InvalidOperationException("The calendar is larger than 10 MB.");
 
-        var text = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (text.Length > MaxBytes)
-        {
-            throw new InvalidOperationException("The calendar is larger than 10 MB.");
-        }
+        var text = Decode(bytes, response.Content.Headers.ContentType?.CharSet);
 
         if (!text.Contains("BEGIN:VCALENDAR", StringComparison.OrdinalIgnoreCase))
         {
@@ -85,43 +75,26 @@ public sealed class ICalendarUrlProvider : ICalendarProvider
         return ICalendarReader.Read(text, calendar.TimeZoneId ?? "UTC");
     }
 
-    private static async Task EnsurePublicAsync(Uri uri, CancellationToken cancellationToken)
+    // The declared character set when there is one and it is known, otherwise UTF-8 (iCalendar's default); a byte order
+    // mark wins over both.
+    private static string Decode(byte[] bytes, string charSet)
     {
-        var addresses = IPAddress.TryParse(uri.Host, out var literal) ? [literal] : await Dns.GetHostAddressesAsync(uri.Host, cancellationToken);
+        var encoding = Encoding.UTF8;
 
-        foreach (var address in addresses)
+        if (!string.IsNullOrWhiteSpace(charSet))
         {
-            if (IsPrivate(address))
+            try
             {
-                throw new InvalidOperationException("Addresses on the local network can't be subscribed to.");
+                encoding = Encoding.GetEncoding(charSet.Trim('"', ' '));
+            }
+            catch (ArgumentException)
+            {
+                // An unknown character set is read as UTF-8.
             }
         }
-    }
 
-    internal static bool IsPrivate(IPAddress address)
-    {
-        if (IPAddress.IsLoopback(address) || address.Equals(IPAddress.Any) || address.Equals(IPAddress.IPv6Any))
-        {
-            return true;
-        }
+        using var reader = new StreamReader(new MemoryStream(bytes), encoding, detectEncodingFromByteOrderMarks: true);
 
-        if (address.IsIPv4MappedToIPv6)
-        {
-            address = address.MapToIPv4();
-        }
-
-        if (address.AddressFamily == AddressFamily.InterNetworkV6)
-        {
-            return address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6UniqueLocal;
-        }
-
-        var bytes = address.GetAddressBytes();
-
-        return bytes[0] == 10 ||
-            (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-            (bytes[0] == 192 && bytes[1] == 168) ||
-            (bytes[0] == 169 && bytes[1] == 254) ||
-            (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127) ||
-            bytes[0] == 0;
+        return reader.ReadToEnd();
     }
 }

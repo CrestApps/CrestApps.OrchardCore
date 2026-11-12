@@ -4,7 +4,9 @@ using CrestApps.OrchardCore.Calendars.External;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Calendars.ViewModels;
+using CrestApps.OrchardCore.Core.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -21,6 +23,7 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
     private readonly CalendarSyncService _syncService;
     private readonly ICalendarTypeManager _typeManager;
     private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly IHostEnvironment _hostEnvironment;
 
     internal readonly IStringLocalizer S;
 
@@ -28,11 +31,13 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
         CalendarSyncService syncService,
         ICalendarTypeManager typeManager,
         IStringLocalizerFactory localizerFactory,
+        IHostEnvironment hostEnvironment,
         IStringLocalizer<CalendarSubscriptionDisplayDriver> stringLocalizer)
     {
         _syncService = syncService;
         _typeManager = typeManager;
         _localizerFactory = localizerFactory;
+        _hostEnvironment = hostEnvironment;
         S = stringLocalizer;
     }
 
@@ -92,9 +97,11 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionProvider), S["The provider is not available."]);
         }
 
-        if (model.SubscriptionEnabled && usesAddress && !string.IsNullOrEmpty(url) && !(url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("webcal://", StringComparison.OrdinalIgnoreCase)))
+        // The sync task fetches the address from the server, so one on the site's own network is refused here as well as
+        // at connect.
+        if (model.SubscriptionEnabled && usesAddress && !string.IsNullOrEmpty(url) && !IsAllowedAddress(url, _hostEnvironment.IsDevelopment()))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionUrl), S["The address must start with https://, http:// or webcal://."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionUrl), S["The address must start with https:// or webcal://, and can't be on the site's own network."]);
         }
 
         if (!string.Equals(subscription.Url, url, StringComparison.Ordinal) || !string.Equals(subscription.Provider, providerName, StringComparison.OrdinalIgnoreCase))
@@ -123,6 +130,24 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
         calendar.Put(subscription);
 
         return Edit(calendar, context);
+    }
+
+    /// <summary>
+    /// Gets whether a calendar may subscribe to an address: a public https:// or webcal:// address (webcal is fetched
+    /// over HTTPS), never one on the site's own network.
+    /// </summary>
+    /// <param name="url">The address.</param>
+    /// <param name="isDevelopment">Whether the site runs in the Development environment.</param>
+    internal static bool IsAllowedAddress(string url, bool isDevelopment)
+    {
+        var address = url?.Trim() ?? string.Empty;
+
+        if (address.StartsWith("webcal://", StringComparison.OrdinalIgnoreCase))
+        {
+            address = string.Concat("https://", address.AsSpan(9));
+        }
+
+        return EgressNetwork.IsAllowedUrl(address, isDevelopment);
     }
 
     private bool Supports(Calendar calendar)
