@@ -1,21 +1,47 @@
 import { escapeHtml } from './html.js';
 
+function hostWindow() {
+    return typeof window !== 'undefined' ? window : {};
+}
+
+function hasValue(value) {
+    return value !== undefined && value !== null && value !== '';
+}
+
+// The admin dialog merges what it is given over the theme's own defaults ({ ...defaults, ...options }), so an option
+// that is passed as undefined replaces the default and the dialog reads "undefined". Only what has a value is passed.
+function dialogOptions(title, message, options, callback) {
+    const dialog = { callback };
+
+    if (hasValue(title)) {
+        dialog.title = escapeHtml(title);
+    }
+
+    if (hasValue(message)) {
+        dialog.message = escapeHtml(message);
+    }
+
+    if (hasValue(options.okText)) {
+        dialog.okText = options.okText;
+    }
+
+    if (hasValue(options.cancelText)) {
+        dialog.cancelText = options.cancelText;
+    }
+
+    return dialog;
+}
+
 // Asks a question before something that cannot be taken back. In the admin the question is Orchard Core's own dialog
 // (the confirmDialog of TheAdmin); elsewhere it is the browser's confirm. Resolves with true when the person agrees.
 // The admin dialog writes its title and message into the page as markup, so they are escaped first: a question that
 // names a record (a subscription's title) shows that name as text.
 export function confirmAction(title, message, options = {}) {
-    const host = typeof window !== 'undefined' ? window : {};
+    const host = hostWindow();
 
     if (typeof host.confirmDialog === 'function') {
         return new Promise(resolve => {
-            host.confirmDialog({
-                title: escapeHtml(title),
-                message: escapeHtml(message),
-                okText: options.okText,
-                cancelText: options.cancelText,
-                callback: result => resolve(Boolean(result)),
-            });
+            host.confirmDialog(dialogOptions(title, message, options, result => resolve(Boolean(result))));
         });
     }
 
@@ -23,7 +49,11 @@ export function confirmAction(title, message, options = {}) {
 }
 
 const submitButtons = 'button[type="submit"], input[type="submit"], button:not([type])';
-const confirmed = new WeakSet();
+
+// The form whose next submit was already agreed to. Set just before the submit this script asks the browser for and
+// cleared as soon as that call returns, whether or not the submit happened (an invalid field stops it before the submit
+// event), so an agreement is never left behind for a later click.
+let agreedForm = null;
 
 // The element that carries the question: the submit button when it has its own (a button with a formaction, or one that
 // submits another form through form="..."), otherwise the form.
@@ -33,6 +63,20 @@ function questionOf(form, submitter) {
     }
 
     return form.matches('form[data-confirm]') ? form : null;
+}
+
+function submitAgreed(form, submitter) {
+    agreedForm = form;
+
+    try {
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit(submitter || undefined);
+        } else {
+            form.submit();
+        }
+    } finally {
+        agreedForm = null;
+    }
 }
 
 // One delegated listener for every form on the page:
@@ -50,10 +94,13 @@ export function bindForms(root) {
         const submitter = event.submitter;
         const asking = questionOf(form, submitter);
 
-        if (asking) {
-            if (!confirmed.has(form)) {
-                // Held back from the other submit listeners too: the admin theme's no-multisubmit would mark the form
-                // as submitting now and then drop the confirmed submit that follows.
+        if (asking && agreedForm !== form) {
+            const host = hostWindow();
+
+            if (typeof host.confirmDialog === 'function') {
+                // The admin dialog answers later, after this submit is over, so the submit is held back and asked for
+                // again once the person agrees. Held back from the other submit listeners too: the admin theme's
+                // no-multisubmit would mark the form as submitting now and then drop the agreed submit that follows.
                 event.preventDefault();
                 event.stopPropagation();
 
@@ -61,23 +108,25 @@ export function bindForms(root) {
                     okText: asking.dataset.confirmOk,
                     cancelText: asking.dataset.confirmCancel,
                 }).then(agreed => {
-                    if (!agreed) {
-                        return;
-                    }
-
-                    confirmed.add(form);
-
-                    if (typeof form.requestSubmit === 'function') {
-                        form.requestSubmit(submitter || undefined);
-                    } else {
-                        form.submit();
+                    if (agreed) {
+                        submitAgreed(form, submitter);
                     }
                 });
 
                 return;
             }
 
-            confirmed.delete(form);
+            // The browser's confirm answers now, so this submit is decided here and, once agreed, simply goes on. It
+            // cannot be held back and asked for again: a submit asked for while the browser is still sending this one
+            // is ignored, which left the form unsent after a "yes" and let the next click through without a question.
+            const question = asking.dataset.confirm || asking.dataset.confirmTitle || '';
+
+            if (typeof host.confirm === 'function' && !host.confirm(question)) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                return;
+            }
         }
 
         if (form.matches('form[data-once]')) {
