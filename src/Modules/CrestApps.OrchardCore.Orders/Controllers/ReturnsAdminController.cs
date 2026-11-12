@@ -279,7 +279,7 @@ public sealed class ReturnsAdminController : Controller
         {
             await _session.CancelAsync();
 
-            if (!_notifier.List().Any())
+            if (_notifier.List().Count == 0)
             {
                 await _notifier.WarningAsync(H["That can't be done to this return now."]);
             }

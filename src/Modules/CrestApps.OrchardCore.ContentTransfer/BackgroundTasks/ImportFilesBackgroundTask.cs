@@ -120,7 +120,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             .OrderBy(x => x.CreatedUtc)
             .ListAsync(cancellationToken);
 
-        if (!entries.Any())
+        if (entries.Count == 0)
         {
             taskRun?.Skip();
 
