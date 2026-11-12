@@ -50,6 +50,12 @@ public sealed class HttpSignatureVerification
     /// </summary>
     public string Nonce { get; init; }
 
+    /// <summary>
+    /// Gets the signature base (RFC 9421 section 2.5) a successful signature was verified over: what every spelling of
+    /// the same signature shares, whatever its label or encoding.
+    /// </summary>
+    public string SignatureBase { get; init; }
+
     internal static HttpSignatureVerification Fail(
         string errorCode,
         string errorMessage,

@@ -241,6 +241,7 @@ public static class HttpMessageSignatures
             Created = ReadTime(input.Parameters, "created"),
             Expires = ReadTime(input.Parameters, "expires"),
             Nonce = input.Parameters.TryGetValue("nonce", out var nonce) ? nonce as string : null,
+            SignatureBase = signatureBase,
         };
     }
 

@@ -45,8 +45,25 @@ public static class AcpSignatureCheck
     /// <param name="path">The request's path, or the MCP tool's name.</param>
     /// <param name="now">The current time.</param>
     public static string Check(AgentPlatform platform, byte[] input, string signature, string timestamp, string method, string path, DateTimeOffset now)
+        => Check(platform, input, signature, timestamp, method, path, now, out _);
+
+    /// <summary>
+    /// Returns why a request's signature isn't accepted, or <see langword="null"/> when it is (or isn't needed), with the
+    /// bytes a verified signature bound to its timestamp was made over, for the replay guard.
+    /// </summary>
+    /// <param name="platform">The signed-in platform.</param>
+    /// <param name="input">The signed bytes (the canonical JSON of the body), or <see langword="null"/> when the body isn't JSON.</param>
+    /// <param name="signature">The <c>Signature</c> header or <c>meta.signature</c>.</param>
+    /// <param name="timestamp">The <c>Timestamp</c> header or <c>meta.timestamp</c>.</param>
+    /// <param name="method">The request's method, such as <c>POST</c>, or <see cref="McpMethod"/> for an MCP tool call.</param>
+    /// <param name="path">The request's path, or the MCP tool's name and the checkout's id.</param>
+    /// <param name="now">The current time.</param>
+    /// <param name="verified">The bytes a version 2 signature was verified over; <see langword="null"/> when nothing was verified, or for a version 1 signature, which signs no time and so can't be made single-use.</param>
+    public static string Check(AgentPlatform platform, byte[] input, string signature, string timestamp, string method, string path, DateTimeOffset now, out byte[] verified)
     {
         ArgumentNullException.ThrowIfNull(platform);
+
+        verified = null;
 
         var signed = !string.IsNullOrWhiteSpace(signature) || !string.IsNullOrWhiteSpace(timestamp);
         var hasKey = !string.IsNullOrWhiteSpace(platform.AcpSignaturePublicKey);
@@ -66,7 +83,9 @@ public static class AcpSignatureCheck
             return "The store can't verify the platform's signatures: its public key isn't set up.";
         }
 
-        if (GetVersion(platform) >= AcpRequestSignature.BoundVersion && input is not null)
+        var bound = GetVersion(platform) >= AcpRequestSignature.BoundVersion && input is not null;
+
+        if (bound)
         {
             if (string.IsNullOrEmpty(method) || string.IsNullOrEmpty(path))
             {
@@ -76,7 +95,11 @@ public static class AcpSignatureCheck
             input = AcpRequestSignature.GetBoundSigningInput(timestamp, method, path, input);
         }
 
-        return AcpRequestSignature.Verify(input, signature, timestamp, key, GetClockSkew(platform), now) switch
+        var verification = AcpRequestSignature.Verify(input, signature, timestamp, key, GetClockSkew(platform), now);
+
+        verified = verification == AcpSignatureVerification.Valid && bound ? input : null;
+
+        return verification switch
         {
             AcpSignatureVerification.Valid => null,
             AcpSignatureVerification.MissingHeaders => "Send both the Signature and the Timestamp headers.",
@@ -87,24 +110,25 @@ public static class AcpSignatureCheck
     }
 
     /// <summary>
-    /// Remembers a signature the store accepted for the time its timestamp could be valid, and returns
-    /// <see langword="false"/> when it was used before by a request that isn't the same idempotent one.
+    /// Remembers a verified signature for the time its timestamp could be valid, by the bytes it was verified over, and
+    /// returns <see langword="false"/> when it was used before by a request that isn't the same idempotent one.
     /// </summary>
     /// <param name="httpContext">The HTTP context.</param>
     /// <param name="platform">The signed-in platform.</param>
-    /// <param name="signature">The signature, as sent.</param>
+    /// <param name="verified">The bytes <see cref="Check(AgentPlatform, byte[], string, string, string, string, DateTimeOffset, out byte[])"/> verified, or <see langword="null"/> for nothing to remember.</param>
     /// <param name="idempotencyKey">The request's idempotency key, or <see langword="null"/>.</param>
-    public static Task<bool> TryUseAsync(HttpContext httpContext, AgentPlatform platform, string signature, string idempotencyKey)
+    public static Task<bool> TryUseAsync(HttpContext httpContext, AgentPlatform platform, byte[] verified, string idempotencyKey)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(platform);
 
-        if (string.IsNullOrWhiteSpace(signature) || httpContext.RequestServices.GetService<AgentSignatureReplayGuard>() is not { } guard)
+        if (verified is null || httpContext.RequestServices.GetService<AgentSignatureReplayGuard>() is not { } guard)
         {
             return Task.FromResult(true);
         }
 
         // A timestamp is accepted for the skew either way, so a signature could be valid for twice that.
-        return guard.TryUseAsync(signature, idempotencyKey, GetClockSkew(platform) * 2, httpContext.RequestAborted);
+        return guard.TryUseAsync(platform.ItemId, verified, idempotencyKey, GetClockSkew(platform) * 2, httpContext.RequestAborted);
     }
 
     /// <summary>

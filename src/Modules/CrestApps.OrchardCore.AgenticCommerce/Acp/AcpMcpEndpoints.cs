@@ -86,7 +86,7 @@ public static class AcpMcpEndpoints
         return routes;
     }
 
-    private static async Task<IResult> HandleAsync(HttpContext httpContext, AcpCheckoutOperations operations, AcpMcpIdempotency idempotency)
+    internal static async Task<IResult> HandleAsync(HttpContext httpContext, AcpCheckoutOperations operations, AcpMcpIdempotency idempotency)
     {
         var body = await AgentRequestBody.ReadAsync(httpContext.Request);
 
@@ -172,14 +172,15 @@ public static class AcpMcpEndpoints
             call.Timestamp,
             AcpSignatureCheck.McpMethod,
             call.Tool,
-            AcpRequestFilter.GetNow(httpContext));
+            AcpRequestFilter.GetNow(httpContext),
+            out var verified);
 
         if (signatureError is not null)
         {
             return AcpError(id, AcpResults.ErrorBody(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, signatureError));
         }
 
-        if (!await AcpSignatureCheck.TryUseAsync(httpContext, request.Platform, call.Signature, call.IdempotencyKey))
+        if (!await AcpSignatureCheck.TryUseAsync(httpContext, request.Platform, verified, call.IdempotencyKey))
         {
             return AcpError(id, AcpResults.ErrorBody(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, "The signature was used before. Sign each request anew."));
         }

@@ -132,7 +132,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
         if (signed)
         {
-            var verified = await VerifyAsync(httpContext, body, platformProfile);
+            var verified = await VerifyAsync(httpContext, body, platformProfile, (authentication.Succeeded ? authentication : signatureAuthentication).Platform);
 
             if (verified is not null)
             {
@@ -200,8 +200,9 @@ public sealed class UcpRequestFilter : IEndpointFilter
     }
 
     // A signed request is checked against the key it names in the platform's profile, and its body against its digest;
-    // the signature must cover the request's target and body, be fresh, and not have been used before.
-    private static async Task<IResult> VerifyAsync(HttpContext httpContext, byte[] body, JsonObject platformProfile)
+    // the signature must cover the request's target and body, be fresh, and not have been used before. A signature is
+    // remembered by what it signed, so a relabeled copy is still the same signature.
+    private static async Task<IResult> VerifyAsync(HttpContext httpContext, byte[] body, JsonObject platformProfile, AgentPlatform platform)
     {
         var request = httpContext.Request;
 
@@ -228,7 +229,12 @@ public sealed class UcpRequestFilter : IEndpointFilter
                 return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", policyError);
             }
 
-            if (!await httpContext.RequestServices.GetRequiredService<AgentSignatureReplayGuard>().TryUseAsync(request.Headers["Signature"].ToString(), idempotencyKey, UcpSignaturePolicy.ReplayWindow, httpContext.RequestAborted))
+            if (!await httpContext.RequestServices.GetRequiredService<AgentSignatureReplayGuard>().TryUseAsync(
+                $"{platform?.ItemId}|{verification.KeyId}",
+                System.Text.Encoding.UTF8.GetBytes(verification.SignatureBase),
+                idempotencyKey,
+                UcpSignaturePolicy.ReplayWindow,
+                httpContext.RequestAborted))
             {
                 return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", "The signature was used before. Sign each request anew.");
             }
