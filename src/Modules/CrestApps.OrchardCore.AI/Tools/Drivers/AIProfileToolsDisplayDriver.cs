@@ -114,7 +114,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
         // Remove the legacy property key if it exists to complete migration.
         profile.Properties.Remove("AIProfileFunctionInvocationMetadata");
 
-        return Edit(profile, context);
+        return await EditAsync(profile, context);
     }
 
     /// <summary>

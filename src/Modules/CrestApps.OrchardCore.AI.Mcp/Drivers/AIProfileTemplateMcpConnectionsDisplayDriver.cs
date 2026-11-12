@@ -89,6 +89,6 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
 
         template.Put(metadata);
 
-        return Edit(template, context);
+        return await EditAsync(template, context);
     }
 }

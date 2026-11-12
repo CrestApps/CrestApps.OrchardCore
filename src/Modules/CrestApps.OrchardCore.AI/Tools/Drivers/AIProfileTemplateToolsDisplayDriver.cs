@@ -106,6 +106,6 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         template.Put(metadata);
 
-        return Edit(template, context);
+        return await EditAsync(template, context);
     }
 }

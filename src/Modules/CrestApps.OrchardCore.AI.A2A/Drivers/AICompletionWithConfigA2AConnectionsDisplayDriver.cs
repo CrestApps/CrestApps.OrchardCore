@@ -87,6 +87,6 @@ public sealed class AICompletionWithConfigA2AConnectionsDisplayDriver : DisplayD
 
         activity.Interaction = interaction;
 
-        return Edit(activity, context);
+        return await EditAsync(activity, context);
     }
 }
