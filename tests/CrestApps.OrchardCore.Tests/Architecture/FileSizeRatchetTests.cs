@@ -46,7 +46,7 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriClient.cs"] = 930,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskTelephonyProviderBase.cs"] = 1348,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1148,
-        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs"] = 1668,
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs"] = 1630,
         ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs"] = 1592,
         ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/DefaultLocalDncListManager.cs"] = 1259,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs"] = 2223,
