@@ -22,6 +22,7 @@ public sealed class AIChatAdminWidgetSettingsSchema : SiteSettingsSchemaBase
             .Properties(
                 ("ProfileId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The AI profile identifier used by the admin chat widget.")),
                 ("MaxSessions", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("The maximum number of concurrent chat sessions allowed.").Default(10)),
-                ("PrimaryColor", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The primary color for the chat widget UI.").Default("#41b670")))
+                ("PrimaryColor", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The primary color for the chat widget UI.").Default("#41b670")),
+                ("SendPageContext", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the widget tells the AI which page the user is on with each message: the page title and address, the selected text, the content item being edited and the site.").Default(true)))
             .AdditionalProperties(false);
 }
