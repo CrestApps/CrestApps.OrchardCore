@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Dispatch;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
@@ -113,13 +114,14 @@ public sealed class DispatchResources
     public bool MeasuresTravel => _geoServices.Any();
 
     /// <summary>
-    /// Lists the active workers.
+    /// Lists the active technicians: the staff members with the Technician capability. Other staff (agents, cashiers,
+    /// office staff) are never dispatched.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The workers.</returns>
+    /// <returns>The technicians.</returns>
     public async Task<IReadOnlyList<StaffMember>> ListWorkersAsync(CancellationToken cancellationToken = default)
     {
-        var (_, workers) = await _workerManager.SearchAsync(new StaffQuery { Status = StaffStatus.Active }, 0, 1000, cancellationToken);
+        var (_, workers) = await _workerManager.SearchAsync(new StaffQuery { Status = StaffStatus.Active, Capability = DispatchConstants.TechnicianCapability }, 0, 1000, cancellationToken);
 
         return workers;
     }

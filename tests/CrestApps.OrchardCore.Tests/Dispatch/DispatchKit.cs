@@ -196,7 +196,11 @@ internal sealed class DispatchKit : IAsyncDisposable
     };
 
     public Task<StaffMember> AddTechnicianAsync(string name, Action<StaffMember> configure = null)
-        => PlanningKit.AddMemberAsync(Harness, name, Team, configure);
+        => PlanningKit.AddMemberAsync(Harness, name, Team, staff =>
+        {
+            staff.Capabilities.Add(DispatchConstants.TechnicianCapability);
+            configure?.Invoke(staff);
+        });
 
     public async Task PublishShiftsAsync(params StaffMember[] workers)
     {
