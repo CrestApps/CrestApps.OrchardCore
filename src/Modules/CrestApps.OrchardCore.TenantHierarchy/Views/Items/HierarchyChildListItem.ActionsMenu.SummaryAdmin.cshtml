@@ -15,7 +15,7 @@
     }
     else
     {
-        <a class="dropdown-item" asp-controller="Platform" asp-action="Move" asp-route-id="@item.ParentTenantName" asp-route-child="@child.Settings.Name" asp-route-newParent="@target.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Move"]" data-message="@T["Move this child tenant? Its address changes and every open session of the old parent ends."]" data-ok="@T["Move"]" data-ok-class="btn-warning"><i class="fa-solid fa-right-left fa-fw me-2" aria-hidden="true"></i>@T["Move to {0}", target.DisplayName]</a>
+        <a class="dropdown-item" asp-controller="Platform" asp-action="Move" asp-route-id="@item.ParentTenantName" asp-route-child="@child.Settings.Name" asp-route-newParent="@target.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Move"]" data-message="@T["Move this child tenant? Its address changes and every open session of the old parent ends."]" data-ok-text="@T["Move"]" data-ok-class="btn-warning"><i class="fa-solid fa-right-left fa-fw me-2" aria-hidden="true"></i>@T["Move to {0}", target.DisplayName]</a>
     }
 }
 @if (item.IsOrphan)
