@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Models;
+﻿using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
@@ -27,4 +27,9 @@ public class SecureCaptureFormViewModel
     /// Gets or sets a customer-safe error message to display, when the submission failed.
     /// </summary>
     public string ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the nonce of this response's Content Security Policy, which the page's inline style carries.
+    /// </summary>
+    public string CspNonce { get; set; }
 }
