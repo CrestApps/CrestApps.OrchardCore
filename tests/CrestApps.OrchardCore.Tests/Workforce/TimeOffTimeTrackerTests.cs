@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.TimeTracker;
@@ -122,7 +123,7 @@ public sealed class TimeOffTimeTrackerTests
             return kit;
         }
 
-        public async Task<(WorkerProfile Ana, TimeOffType Vacation)> SetUpAsync()
+        public async Task<(StaffMember Ana, TimeOffType Vacation)> SetUpAsync()
         {
             var team = await WorkforceTests.AddTeamAsync(Harness, "Front desk", TeamKind.Team);
             var ana = await PlanningKit.AddMemberAsync(Harness, "Ana", team, worker => worker.UserId = "ana");

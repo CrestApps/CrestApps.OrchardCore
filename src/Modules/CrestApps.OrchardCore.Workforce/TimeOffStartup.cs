@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.Workforce.BackgroundTasks;
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Workforce.BackgroundTasks;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Drivers;
@@ -46,7 +47,7 @@ public sealed class TimeOffStartup : StartupBase
         services.AddDisplayDriver<TimeOffAllotment, TimeOffAllotmentRowDisplayDriver>();
         services.AddDisplayDriver<BlackoutPeriod, BlackoutPeriodRowDisplayDriver>();
         services.AddDisplayDriver<TimeOffLedgerRowViewModel, TimeOffLedgerRowDisplayDriver>();
-        services.AddDisplayDriver<WorkerProfile, WorkerTimeOffRowDisplayDriver>();
+        services.AddDisplayDriver<StaffMember, WorkerTimeOffRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, TimeOffAccrualBackgroundTask>();
         services.AddPermissionProvider<TimeOffPermissionsProvider>();
         services.AddNavigationProvider<TimeOffAdminMenu>();

@@ -1,5 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
@@ -53,7 +55,7 @@ public sealed class WorkforceRecipeTests
         await harness.RunAsync(async services =>
         {
             var tree = await services.GetRequiredService<ITeamManager>().ListTreeAsync();
-            var (count, workers) = await services.GetRequiredService<IWorkerManager>().SearchAsync(new WorkerQuery(), 0, 10);
+            var (count, workers) = await services.GetRequiredService<IStaffMemberManager>().SearchAsync(new StaffQuery(), 0, 10);
             var codes = await services.GetRequiredService<IActivityCodeManager>().GetEnabledAsync();
             var boston = tree.Single(item => item.Team.Name == "Boston").Team;
             var calendar = await services.GetRequiredService<ICalendarService>().FindBySourceAsync(WorkforceConstants.Source, boston.ItemId);

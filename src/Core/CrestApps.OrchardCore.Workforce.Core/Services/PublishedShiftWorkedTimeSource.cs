@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -21,7 +22,7 @@ internal sealed class PublishedShiftWorkedTimeSource : IWorkedTimeSource
         _timeZones = timeZones;
     }
 
-    public async Task<int> GetWorkedMinutesAsync(WorkerProfile worker, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
+    public async Task<int> GetWorkedMinutesAsync(StaffMember worker, DateOnly from, DateOnly to, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

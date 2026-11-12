@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
@@ -114,7 +115,7 @@ public sealed class IntradayTests
         return offer;
     }
 
-    private static Task<IReadOnlyList<string>> TakeAsync(Setup setup, IntradayOffer offer, WorkerProfile worker)
+    private static Task<IReadOnlyList<string>> TakeAsync(Setup setup, IntradayOffer offer, StaffMember worker)
         => setup.Harness.RunAsync(services => services.GetRequiredService<IntradayService>().TakeAsync(offer.ItemId, worker.ItemId, "ana"));
 
     private static Task<ScheduleChange> LastChangeAsync(Setup setup)
@@ -178,7 +179,7 @@ public sealed class IntradayTests
 
         public Team Team { get; set; }
 
-        public WorkerProfile Ana { get; set; }
+        public StaffMember Ana { get; set; }
 
         public PlanningGroup Group { get; set; }
 

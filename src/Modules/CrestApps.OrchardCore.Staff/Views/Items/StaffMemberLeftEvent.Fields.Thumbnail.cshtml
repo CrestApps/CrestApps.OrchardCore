@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Staff.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StaffMemberLeftEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-user-minus" aria-hidden="true"></i>
+    @T["Staff Member Left"]
+</h4>
+<p>@T["Starts when a person leaves the business, at once or after their last working day."]</p>

@@ -112,7 +112,7 @@ public sealed class AgentEntitlementsController : Controller
 
         var model = new AgentEntitlementViewModel
         {
-            UserSearchEndpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=userName"),
+            UserSearchEndpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=userName&audience=Staff"),
         };
 
         await _optionsProvider.PopulateAgentEntitlementEditorAsync(model);
@@ -175,7 +175,7 @@ public sealed class AgentEntitlementsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        model.UserSearchEndpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=userName");
+        model.UserSearchEndpoint = Url.Content("~/Admin/api/crestapps/users/search?valueType=userName&audience=Staff");
         await _optionsProvider.PopulateAgentEntitlementEditorAsync(model);
 
         return View(model);

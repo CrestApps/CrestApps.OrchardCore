@@ -3,6 +3,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -41,7 +43,7 @@ public sealed class SchedulesController : Controller
     private readonly IShiftTemplateManager _templateManager;
     private readonly IActivityCodeManager _activityCodeManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ISiteService _siteService;
     private readonly ILocalClock _localClock;
@@ -73,7 +75,7 @@ public sealed class SchedulesController : Controller
         IShiftTemplateManager templateManager,
         IActivityCodeManager activityCodeManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IWorkforceScopeService scopeService,
         ISiteService siteService,
         ILocalClock localClock,
@@ -244,7 +246,7 @@ public sealed class SchedulesController : Controller
             CanOverride = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.OverrideLaborRules),
         };
 
-        var members = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+        var members = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
 
         foreach (var day in days)
         {

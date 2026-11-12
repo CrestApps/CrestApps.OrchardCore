@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Staff Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for staff: the YesSql store and indexes, the staff manager and directory, the reporting line,
+      manager scoping, time zones, badges and PINs, the employment history and the Teams, Skills and Parties sources.
+    </Description>
+    <PackageTags>$(PackageTags) Staff Employees HR Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Staff" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Roles.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Parties.Abstractions\CrestApps.OrchardCore.Parties.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Skills.Abstractions\CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Staff.Abstractions\CrestApps.OrchardCore.Staff.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Teams.Core\CrestApps.OrchardCore.Teams.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

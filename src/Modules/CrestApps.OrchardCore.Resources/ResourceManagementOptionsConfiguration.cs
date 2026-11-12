@@ -197,6 +197,30 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("d3")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/d3/d3.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/d3/d3.js")
+            .SetVersion("7.9.0");
+
+        _manifest
+            .DefineScript("d3-flextree")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/d3-flextree/d3-flextree.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/d3-flextree/d3-flextree.js")
+            .SetDependencies("d3")
+            .SetVersion("2.1.2");
+
+        // Draws organization charts: boxes linked as a tree, with zoom, pan, expand and collapse.
+        _manifest
+            .DefineScript("d3-org-chart")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/d3-org-chart/d3-org-chart.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/d3-org-chart/d3-org-chart.js")
+            .SetDependencies("d3", "d3-flextree")
+            .SetVersion("3.1.1");
+
+        _manifest
             .DefineScript("chart.js")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/chartjs/chart.min.js",

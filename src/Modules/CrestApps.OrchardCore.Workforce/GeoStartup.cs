@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Geo;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -40,9 +41,7 @@ public static class WorkforceGeocodingServiceCollectionExtensions
         // lazily to break the cycle.
         services.TryAddScoped(sp => new Lazy<IGeocodeQueue>(sp.GetRequiredService<IGeocodeQueue>));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Team>, TeamLocationGeocodeHandler>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkerProfile>, WorkerHomeBaseGeocodeHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IGeocodeTarget, TeamLocationGeocodeTarget>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IGeocodeTarget, WorkerHomeBaseGeocodeTarget>());
 
         return services;
     }

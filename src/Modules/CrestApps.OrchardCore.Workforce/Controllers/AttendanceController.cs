@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
@@ -16,8 +17,8 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
-using OrchardCore.Routing;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -29,7 +30,7 @@ public sealed class AttendanceController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly IAttendanceService _attendance;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly INotifier _notifier;
@@ -51,7 +52,7 @@ public sealed class AttendanceController : Controller
     public AttendanceController(
         IAuthorizationService authorizationService,
         IAttendanceService attendance,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IWorkforceScopeService scopeService,
         INotifier notifier,

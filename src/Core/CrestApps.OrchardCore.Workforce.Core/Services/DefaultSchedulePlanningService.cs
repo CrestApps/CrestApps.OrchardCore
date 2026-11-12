@@ -2,6 +2,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -25,7 +27,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
     private readonly ScheduleChangeRecorder _changeRecorder;
     private readonly IEnumerable<ISchedulePublishValidator> _publishValidators;
     private readonly TeamStore _teamStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly ActivityCodeStore _activityCodeStore;
     private readonly IShiftPatternManager _patternManager;
     private readonly IShiftTemplateManager _templateManager;
@@ -49,7 +51,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
         ScheduleChangeRecorder changeRecorder,
         IEnumerable<ISchedulePublishValidator> publishValidators,
         TeamStore teamStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         ActivityCodeStore activityCodeStore,
         IShiftPatternManager patternManager,
         IShiftTemplateManager templateManager,
@@ -302,7 +304,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
             .Select(shift => (shift.WorkerId, shift.Date))
             .ToHashSet();
         var timeZoneId = await GetTimeZoneAsync(period.TeamId, cancellationToken);
-        var workers = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+        var workers = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
         var added = 0;
 
         foreach (var pattern in patterns)
@@ -315,7 +317,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
                     workers[follower.WorkerId] = worker;
                 }
 
-                if (worker is null || worker.Status != WorkerStatus.Active)
+                if (worker is null || worker.Status != StaffStatus.Active)
                 {
                     continue;
                 }
@@ -638,7 +640,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
     }
 
     // Lists the changes the publish would make, then lets the validators check the schedule.
-    private async Task<SchedulePublishValidationContext> ValidatePublishAsync(SchedulePeriod period, string timeZoneId, IReadOnlyList<DraftShift> drafts, Dictionary<string, WorkerProfile> workers, Dictionary<string, CalendarEvent> published, Dictionary<string, ActivityCode> codes, string overrideReason, string actor, bool checkOnly, CancellationToken cancellationToken)
+    private async Task<SchedulePublishValidationContext> ValidatePublishAsync(SchedulePeriod period, string timeZoneId, IReadOnlyList<DraftShift> drafts, Dictionary<string, StaffMember> workers, Dictionary<string, CalendarEvent> published, Dictionary<string, ActivityCode> codes, string overrideReason, string actor, bool checkOnly, CancellationToken cancellationToken)
     {
         var version = period.PublishedVersion + 1;
         var changes = new List<SchedulePublishChange>();
@@ -773,7 +775,7 @@ internal sealed class DefaultSchedulePlanningService : ISchedulePlanningService
     internal static ShiftData ToShiftData(DraftShift draft, SchedulePeriod period, int version, IReadOnlyDictionary<string, ActivityCode> codes, string timeZoneId)
         => ShiftEvents.ToShiftData(draft.WorkerId, draft.TeamId ?? period.TeamId, period.ItemId, draft.TemplateId, draft.ShiftKey, version, draft.Segments, codes, timeZoneId);
 
-    private static void Apply(CalendarEvent calendarEvent, DraftShift draft, WorkerProfile worker, ShiftData data, string timeZoneId)
+    private static void Apply(CalendarEvent calendarEvent, DraftShift draft, StaffMember worker, ShiftData data, string timeZoneId)
         => ShiftEvents.Apply(calendarEvent, worker, draft.Start, draft.End, draft.Notes, data, timeZoneId);
 
     private static bool SameSegments(ShiftData before, ShiftData after)

@@ -33,7 +33,7 @@ public sealed class WebhooksAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Configuration"], configuration => configuration
+            .Add(S["Settings"], settings => settings
                 .Add(S["Webhooks"], S["Webhooks"].PrefixPosition(), webhooks => webhooks
                     .AddClass("webhooks")
                     .Id("webhooks")

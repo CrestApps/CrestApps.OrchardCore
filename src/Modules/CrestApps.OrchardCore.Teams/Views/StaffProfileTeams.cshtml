@@ -1,0 +1,43 @@
+@model StaffTeamsProfileViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Teams"]</div>
+    <div class="card-body">
+        @if (Model.Memberships.Count == 0)
+        {
+            <p class="hint mb-0">@T["Not in a team yet. Add them on the Teams card of the editor."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>@T["Team"]</th><th>@T["Role"]</th><th>@T["From"]</th><th>@T["Until"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var membership in Model.Memberships)
+                        {
+                            var role = membership.Role switch
+                            {
+                                "Lead" => T["Lead"],
+                                "Scheduler" => T["Scheduler"],
+                                "Manager" => T["Manager"],
+                                _ => T["Member"],
+                            };
+                            <tr>
+                                <td>
+                                    @membership.TeamName
+                                    @if (membership.IsMain)
+                                    {
+                                        <span class="badge text-bg-light border ms-1">@T["Main team"]</span>
+                                    }
+                                </td>
+                                <td>@role</td>
+                                <td>@(membership.EffectiveFrom?.ToString("d") ?? "-")</td>
+                                <td>@(membership.EffectiveTo?.ToString("d") ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -27,6 +28,7 @@ public sealed class PortalStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkforcePortalCore();
+        services.AddStaffHomeLinkProvider<WorkforceStaffHomeLinks>();
         services.AddSingleton<IBackgroundTask, BackgroundTasks.ShiftReminderBackgroundTask>();
         services.AddDataMigration<PortalMigrations>()
             .AddIndexProvider<WorkforceInboxIndexProvider>()

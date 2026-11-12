@@ -2,18 +2,19 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce.Services;
+using IClock = OrchardCore.Modules.IClock;
+using ISession = YesSql.ISession;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using YesSql;
 using YesSql.Services;
-using IClock = OrchardCore.Modules.IClock;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
 
@@ -36,7 +37,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
     private readonly IDispatchService _dispatchService;
     private readonly WorkOrderService _workOrderService;
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IDispatchSettingsProvider _settingsProvider;
     private readonly IWorkerLocationService _locationService;
     private readonly FieldCommandReceiptStore _receipts;
@@ -71,7 +72,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
         IDispatchService dispatchService,
         WorkOrderService workOrderService,
         WorkOrderSettingManager<WorkOrderType> types,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IDispatchSettingsProvider settingsProvider,
         IWorkerLocationService locationService,
         FieldCommandReceiptStore receipts,

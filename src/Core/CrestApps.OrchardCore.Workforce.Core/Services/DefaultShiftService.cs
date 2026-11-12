@@ -2,6 +2,8 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -15,7 +17,7 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 internal sealed class DefaultShiftService : IShiftService
 {
     private readonly ICalendarEventManager _eventManager;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly SchedulePeriodStore _periodStore;
     private readonly DraftShiftStore _draftStore;
     private readonly ScheduleChangeRecorder _changeRecorder;
@@ -30,7 +32,7 @@ internal sealed class DefaultShiftService : IShiftService
 
     public DefaultShiftService(
         ICalendarEventManager eventManager,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         SchedulePeriodStore periodStore,
         DraftShiftStore draftStore,
         ScheduleChangeRecorder changeRecorder,
@@ -408,7 +410,7 @@ internal sealed class DefaultShiftService : IShiftService
         }
     }
 
-    private async Task<CalendarEvent> MoveAsync(CalendarEvent calendarEvent, ShiftData data, WorkerProfile worker, ScheduleChangeKind kind, ScheduleChangeInitiator initiatedBy, string reason, string actor, List<string> errors, CancellationToken cancellationToken)
+    private async Task<CalendarEvent> MoveAsync(CalendarEvent calendarEvent, ShiftData data, StaffMember worker, ScheduleChangeKind kind, ScheduleChangeInitiator initiatedBy, string reason, string actor, List<string> errors, CancellationToken cancellationToken)
     {
         var previousWorkerId = data.WorkerId;
         var options = new CalendarChangeOptions { Actor = actor ?? WorkforceConstants.Source, SendInvitations = false, SkipConflictCheck = true };

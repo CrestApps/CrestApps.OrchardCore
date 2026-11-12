@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -63,9 +65,9 @@ public sealed class FieldServiceSetupController : Controller
         var geo = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<GeoSettings>();
         var dispatch = await services.GetRequiredService<IDispatchSettingsProvider>().GetAsync();
         var territories = await services.GetRequiredService<ServiceTerritoryManager>().GetAllAsync(token);
-        var workerManager = services.GetRequiredService<IWorkerManager>();
-        var (workers, _) = await workerManager.SearchAsync(new WorkerQuery(), 0, 1, token);
-        var (linked, _) = await workerManager.SearchAsync(new WorkerQuery { HasUser = true }, 0, 1, token);
+        var workerManager = services.GetRequiredService<IStaffMemberManager>();
+        var (workers, _) = await workerManager.SearchAsync(new StaffQuery { Capability = DispatchConstants.TechnicianCapability }, 0, 1, token);
+        var (linked, _) = await workerManager.SearchAsync(new StaffQuery { Capability = DispatchConstants.TechnicianCapability, HasUser = true }, 0, 1, token);
         var types = await services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync(token);
         var checklists = await services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>().GetAllAsync(token);
         var levels = await services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>().GetAllAsync(token);
@@ -94,11 +96,11 @@ public sealed class FieldServiceSetupController : Controller
         model.Steps.Add(new WorkforceSetupStep
         {
             Title = S["Add the technicians"],
-            Description = S["Workers on a field team, with their skills, certifications and home base. Link each to a user account so they can use the Field page."],
-            Status = S["Workers: {0} · Linked to a user: {1}", workers, linked],
+            Description = S["Staff members with the Technician capability (tick it on the Capabilities card of their editor) are the ones dispatch sends, with their skills, certifications and home base. Link each to a user account so they can use the Field page."],
+            Status = S["Technicians: {0} · Linked to a user: {1}", workers, linked],
             Done = workers > 0,
-            Action = S["Workers"],
-            Url = Url.Action("Index", "Workers", new { area = WorkforceConstants.Features.Workforce }),
+            Action = S["Technicians"],
+            Url = Url.Action("Index", "Staff", new { area = StaffConstants.Features.Staff, capability = DispatchConstants.TechnicianCapability }),
         });
 
         await AddAsync(model, features, WorkforceConstants.Features.ShiftPlanning, S["Publish their shifts"], S["Technicians are offered visits only on a published shift, less their breaks and time off."], () =>

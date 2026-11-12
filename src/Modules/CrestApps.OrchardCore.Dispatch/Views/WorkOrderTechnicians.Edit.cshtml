@@ -1,0 +1,21 @@
+@model CrestApps.OrchardCore.Dispatch.ViewModels.WorkOrderTechniciansViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Technicians"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Preferred"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.PreferredWorkerIds).ToString(), selectedValues = Model.PreferredWorkerIds, capability = Model.Capabilities, multiple = true, buttonText = T["Choose technicians"].Value })
+                <span class="hint">@T["Dispatch suggests them first for this job, such as the technician the customer knows."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Never send"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.ExcludedWorkerIds).ToString(), selectedValues = Model.ExcludedWorkerIds, capability = Model.Capabilities, multiple = true, buttonText = T["Choose technicians"].Value })
+                <span class="hint">@T["Dispatch never offers them this job."]</span>
+            </div>
+        </div>
+    </div>
+</div>

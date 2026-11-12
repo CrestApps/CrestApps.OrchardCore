@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Tests.Workforce;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -61,7 +62,7 @@ public sealed class DispatchOptimizationTests
         // Arrange (Ana starts at the depot and Ben 20 km south; each has the other's jobs)
         await using var kit = await DispatchKit.CreateAsync();
         var ana = await kit.AddTechnicianAsync("Ana Field");
-        var ben = await kit.AddTechnicianAsync("Ben Field", worker => worker.HomeBase = new CrestApps.OrchardCore.Workforce.Models.WorkforceLocation { Latitude = DispatchKit.South.Latitude, Longitude = DispatchKit.South.Longitude });
+        var ben = await kit.AddTechnicianAsync("Ben Field", worker => worker.HomeBase = new CrestApps.OrchardCore.Staff.Models.StaffLocation { Latitude = DispatchKit.South.Latitude, Longitude = DispatchKit.South.Longitude });
 
         await kit.PublishShiftsAsync(ana, ben);
 

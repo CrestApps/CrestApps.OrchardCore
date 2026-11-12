@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
@@ -153,7 +154,7 @@ public sealed class AutoScheduleTests
         Assert.Equal(2, everyone.Single(interval => interval.StartUtc == at10).Scheduled);
     }
 
-    private static async Task<Setup> SetUpAsync(CalendarTestHarness harness, Action<WorkerProfile> configureBen = null)
+    private static async Task<Setup> SetUpAsync(CalendarTestHarness harness, Action<StaffMember> configureBen = null)
     {
         var team = await WorkforceTests.AddTeamAsync(harness, "Clinic", TeamKind.Team);
         var other = await WorkforceTests.AddTeamAsync(harness, "Lab", TeamKind.Team);
@@ -163,7 +164,7 @@ public sealed class AutoScheduleTests
 
         // Neither of these may be scheduled: one is on another team, one has left.
         await PlanningKit.AddMemberAsync(harness, "Lab Worker", other);
-        await PlanningKit.AddMemberAsync(harness, "Former", team, worker => worker.Status = WorkerStatus.Terminated);
+        await PlanningKit.AddMemberAsync(harness, "Former", team, worker => worker.Status = StaffStatus.Terminated);
 
         var day = await PlanningKit.AddTemplateAsync(harness, "Day", new TimeOnly(9, 0));
 
@@ -205,5 +206,5 @@ public sealed class AutoScheduleTests
         return harness.RunAsync(services => services.GetRequiredService<ScheduleScenarioStore>().FindByIdAsync(period.PrimaryScenarioId).AsTask(), commit: false);
     }
 
-    private sealed record Setup(Team Team, WorkerProfile[] Members, ShiftTemplate Day, SchedulePeriod Period);
+    private sealed record Setup(Team Team, StaffMember[] Members, ShiftTemplate Day, SchedulePeriod Period);
 }

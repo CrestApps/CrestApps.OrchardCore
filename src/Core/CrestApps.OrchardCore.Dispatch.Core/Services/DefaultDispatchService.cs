@@ -7,16 +7,17 @@ using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.WorkOrders.Core;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
+using IClock = OrchardCore.Modules.IClock;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using YesSql;
 using YesSql.Services;
-using IClock = OrchardCore.Modules.IClock;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
 
@@ -264,7 +265,7 @@ public sealed class DefaultDispatchService : IDispatchService
             {
                 var worker = await _resources.FindWorkerAsync(workerId, cancellationToken);
 
-                if (worker is null || worker.Status != Workforce.Models.WorkerStatus.Active)
+                if (worker is null || worker.Status != Staff.Models.StaffStatus.Active)
                 {
                     errors.Add(S["The worker doesn't exist or doesn't work here any more."]);
 

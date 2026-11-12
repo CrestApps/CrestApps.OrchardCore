@@ -1,3 +1,5 @@
+using OrchardCore.Localization;
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Assets;
 using CrestApps.OrchardCore.Dispatch.Controllers;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
@@ -8,6 +10,7 @@ using CrestApps.OrchardCore.Dispatch.RealTime;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Dispatch.ViewModels;
 using CrestApps.OrchardCore.Dispatch.Workflows;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Scheduling;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -36,6 +39,9 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddStaffLifecycleObserver<CrestApps.OrchardCore.Dispatch.Core.Services.DispatchStaffLifecycleObserver>();
+        services.AddStaffCapability(DispatchConstants.TechnicianCapability, LocalizationSource.Create<Startup>("Technician"), LocalizationSource.Create<Startup>("Goes out to jobs. Work orders and fleet vehicles offer technicians to pick."), 20);
+
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(DispatchConstants.CollectionName));
         services.AddDispatchCore();
         services.TryAddScoped<IDispatchSettingsProvider, SiteDispatchSettingsProvider>();
@@ -51,6 +57,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<VisitRow, VisitRowDisplayDriver>();
         services.AddDisplayDriver<WorkOrders.Models.WorkOrderPanels, WorkOrderVisitsDisplayDriver>();
         services.AddNavigationProvider<DispatchAdminMenu>();
+        services.AddDisplayDriver<WorkOrders.Models.WorkOrder, WorkOrderTechniciansDisplayDriver>();
         services.AddScoped<Geo.Services.ITerritoryMemberSource, WorkerTerritoryMemberSource>();
         services.AddScoped<Geo.Services.ITerritoryMemberSource, TeamTerritoryMemberSource>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, DispatchResourceConfiguration>();
@@ -178,5 +185,18 @@ public sealed class SchedulingStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<CrestApps.OrchardCore.Scheduling.Services.IAppointmentSlotFilter, Integrations.DispatchCapacitySlotFilter>();
+    }
+}
+
+/// <summary>
+/// Puts the field service KPIs in the Reports menu while the Reports module is on.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsMenuStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<FieldServiceReportsAdminMenu>();
     }
 }

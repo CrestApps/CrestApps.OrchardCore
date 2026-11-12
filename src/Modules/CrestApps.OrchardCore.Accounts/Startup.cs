@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Accounts.Navigation;
 using CrestApps.OrchardCore.Accounts.Recipes;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.AspNetCore.Builder;
@@ -22,6 +23,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -51,6 +53,25 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<AccountMigrations>();
         services.AddNavigationProvider<AccountsAdminMenu>();
         services.AddShapeTableProvider<AccountPageShapeTableProvider>();
+        AddAccountPageSections(services);
+    }
+
+    // The sections of the account page. The modules that fill a section use its name; the titles and icons live here
+    // so the page lists them the same whichever modules are on.
+    private static void AddAccountPageSections(IServiceCollection services)
+    {
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Overview, LocalizationSource.Create<Startup>("Overview"), "fa-solid fa-building", AccountPageTabs.GetPosition(AccountPageTabs.Overview));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Members, LocalizationSource.Create<Startup>("Members"), "fa-solid fa-users", AccountPageTabs.GetPosition(AccountPageTabs.Members));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Locations, LocalizationSource.Create<Startup>("Locations"), "fa-solid fa-location-dot", AccountPageTabs.GetPosition(AccountPageTabs.Locations));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Contacts, LocalizationSource.Create<Startup>("Contacts"), "fa-solid fa-address-book", AccountPageTabs.GetPosition(AccountPageTabs.Contacts));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Opportunities, LocalizationSource.Create<Startup>("Opportunities"), "fa-solid fa-handshake", AccountPageTabs.GetPosition(AccountPageTabs.Opportunities));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Leads, LocalizationSource.Create<Startup>("Leads"), "fa-solid fa-user-plus", AccountPageTabs.GetPosition(AccountPageTabs.Leads));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Activities, LocalizationSource.Create<Startup>("Activities"), "fa-solid fa-list-check", AccountPageTabs.GetPosition(AccountPageTabs.Activities));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Orders, LocalizationSource.Create<Startup>("Orders"), "fa-solid fa-bag-shopping", AccountPageTabs.GetPosition(AccountPageTabs.Orders));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Business, LocalizationSource.Create<Startup>("Business buying"), "fa-solid fa-briefcase", AccountPageTabs.GetPosition(AccountPageTabs.Business));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Invoices, LocalizationSource.Create<Startup>("Invoices"), "fa-solid fa-file-invoice-dollar", AccountPageTabs.GetPosition(AccountPageTabs.Invoices));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Service, LocalizationSource.Create<Startup>("Service"), "fa-solid fa-screwdriver-wrench", AccountPageTabs.GetPosition(AccountPageTabs.Service));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Records, LocalizationSource.Create<Startup>("All records"), "fa-solid fa-folder-open", AccountPageTabs.GetPosition(AccountPageTabs.Records));
     }
 
     /// <inheritdoc/>
@@ -77,6 +98,36 @@ public sealed class MembersStartup : StartupBase
         services.AddIndexProvider<AccountMemberIndexProvider>();
         services.AddDataMigration<AccountMembersMigrations>();
         services.AddPermissionProvider<AccountMembersPermissionProvider>();
+    }
+}
+
+/// <summary>
+/// Registers the account team part and its editor.
+/// </summary>
+[Feature(AccountsConstants.TeamFeature)]
+public sealed class TeamStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<AccountTeamPart>()
+            .UseDisplayDriver<AccountTeamPartDisplayDriver>();
+
+        services.AddDataMigration<AccountTeamMigrations>();
+    }
+}
+
+/// <summary>
+/// Describes the account team part to CrestApps Recipes.
+/// </summary>
+[Feature(AccountsConstants.TeamFeature)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class TeamRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentSchemaDefinition, AccountTeamPartSchemaDefinition>();
     }
 }
 

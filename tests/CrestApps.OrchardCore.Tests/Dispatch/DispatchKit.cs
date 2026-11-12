@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Dispatch;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Geo.Core.Indexes;
 using CrestApps.OrchardCore.Geo.Core.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
@@ -21,7 +23,6 @@ using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Models;
-using CrestApps.OrchardCore.Calendars;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -194,10 +195,14 @@ internal sealed class DispatchKit : IAsyncDisposable
         }).ToArray()).ToArray(),
     };
 
-    public Task<WorkerProfile> AddTechnicianAsync(string name, Action<WorkerProfile> configure = null)
-        => PlanningKit.AddMemberAsync(Harness, name, Team, configure);
+    public Task<StaffMember> AddTechnicianAsync(string name, Action<StaffMember> configure = null)
+        => PlanningKit.AddMemberAsync(Harness, name, Team, staff =>
+        {
+            staff.Capabilities.Add(DispatchConstants.TechnicianCapability);
+            configure?.Invoke(staff);
+        });
 
-    public async Task PublishShiftsAsync(params WorkerProfile[] workers)
+    public async Task PublishShiftsAsync(params StaffMember[] workers)
     {
         var period = await PlanningKit.CreatePeriodAsync(Harness, Team);
 
@@ -249,7 +254,7 @@ internal sealed class DispatchKit : IAsyncDisposable
     public Task<IReadOnlyList<ServiceVisit>> VisitsOfAsync(string workOrderId)
         => Harness.RunAsync(services => services.GetRequiredService<IDispatchService>().ListForWorkOrderAsync(workOrderId), commit: false);
 
-    public Task<DispatchResult> AssignAsync(ServiceVisit visit, DateTime startUtc, params WorkerProfile[] workers)
+    public Task<DispatchResult> AssignAsync(ServiceVisit visit, DateTime startUtc, params StaffMember[] workers)
         => Harness.RunAsync(services => services.GetRequiredService<IDispatchService>().AssignAsync(visit.ItemId, new VisitAssignment { WorkerIds = workers.Select(worker => worker.ItemId).ToList(), StartUtc = startUtc }, "dispatcher"));
 
     public Task<DispatchResult> MoveAsync(ServiceVisit visit, VisitStatus status, string note = null)

@@ -129,7 +129,10 @@ ordinary Orchard Core tab placement, so every module's sections come out in the 
 doesn't know goes after **Service**, under its own name.
 
 The `ContentZone__AccountPage` alternate of the page's `Content` zone, added by `AccountPageShapeTableProvider`, draws
-those tabs as the side list instead of Orchard Core's tab strip, so the page stays tidy however many modules add one.
+those tabs as the side list instead of Orchard Core's tab strip, so the page stays tidy however many modules add one. It
+uses the shared page sections of the Resources module (the `PageSections` shape), which the staff profile uses too: each
+section's title, icon and position are registered with `services.AddPageSection(AccountPageTabs.PageName, name, title,
+icon, position)`. Accounts registers the sections it knows; a module that adds a new section registers it the same way.
 The chosen section is kept in the address's hash (`#account-contacts`), so a link, or a record's editor returning to the
 account, opens that section.
 
@@ -315,3 +318,7 @@ An account's members and locations are parts of the account, so they travel with
 
 Accounts use Orchard Core's content permissions. The `Account` type is securable, so a role can be given rights to
 accounts alone. Choosing an account's members also needs `ManageAccountMembers`.
+
+## Account Team
+
+The **Account Team** feature (`CrestApps.OrchardCore.Accounts.Team`, needs [Staff](./staff.md)) adds the `AccountTeamPart` to the Account type: an **owner** (the account manager or sales rep who answers for the account) and the rest of the **account team**, both picked from staff with the `StaffPicker`. The account page shows them in its Overview tab, with links to their staff pages. The part's values are staff member ids (`OwnerStaffId`, `TeamStaffIds`).

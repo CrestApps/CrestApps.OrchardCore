@@ -34,4 +34,10 @@ public sealed class UserSearchResult
     /// Gets or sets a value indicating whether the user may sign in.
     /// </summary>
     public bool IsEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address of the user's picture, from an <see cref="IUserAvatarProvider"/>; <see langword="null"/>
+    /// when the user has none or no provider is registered.
+    /// </summary>
+    public string AvatarUrl { get; set; }
 }

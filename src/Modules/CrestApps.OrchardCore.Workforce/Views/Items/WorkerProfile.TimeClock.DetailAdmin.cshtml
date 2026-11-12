@@ -1,0 +1,15 @@
+@model ShapeViewModel<CrestApps.OrchardCore.Staff.Models.StaffMember>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Time"]</div>
+    <div class="list-group list-group-flush">
+        <a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="WorkerTimeClock" asp-action="Index" asp-route-workerId="@Model.Value.ItemId" class="list-group-item list-group-item-action">
+            <i class="fa-solid fa-clock me-2 text-secondary" aria-hidden="true"></i>@T["Time clock"]
+            <span class="d-block hint">@T["Clock status, attendance points, kiosk PIN and pay rates."]</span>
+        </a>
+        <a asp-area="CrestApps.OrchardCore.Workforce" asp-controller="Timesheets" asp-action="Worker" asp-route-workerId="@Model.Value.ItemId" class="list-group-item list-group-item-action">
+            <i class="fa-solid fa-table-list me-2 text-secondary" aria-hidden="true"></i>@T["Timesheets"]
+            <span class="d-block hint">@T["The hours they worked, by pay period."]</span>
+        </a>
+    </div>
+</div>

@@ -1,7 +1,8 @@
 @model WorkerTimeOffViewModel
 <zone Name="Title">
     <breadcrumb name="WorkforceTimeOffWorker" title="@T["{0}'s Time Off", Model.Worker.DisplayName]">
-        <breadcrumb-item id="Workers" action="Index" controller="Workers" area="CrestApps.OrchardCore.Workforce">@T["Workers"]</breadcrumb-item>
+        <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
+        <breadcrumb-item id="StaffProfile" action="Profile" controller="Staff" area="CrestApps.OrchardCore.Staff" route-id="@Model.Worker.ItemId">@Model.Worker.DisplayName</breadcrumb-item>
     </breadcrumb>
 </zone>
 

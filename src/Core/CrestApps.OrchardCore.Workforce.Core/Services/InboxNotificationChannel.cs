@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -29,7 +30,7 @@ internal sealed class InboxNotificationChannel : IWorkforceNotificationChannel, 
 
     public bool CanBeTurnedOff => false;
 
-    public Task SendAsync(WorkerProfile worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
+    public Task SendAsync(StaffMember worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
     {
         return _store.CreateAsync(new WorkforceInboxItem
         {

@@ -1,0 +1,59 @@
+@model StaffSkillsProfileViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Skills"]</div>
+    <div class="card-body">
+        @if (Model.Skills.Count == 0)
+        {
+            <p class="hint mb-0">@T["No skills yet. Add them on the Skills card of the editor."]</p>
+        }
+        else
+        {
+            <ul class="list-inline mb-0">
+                @foreach (var skill in Model.Skills)
+                {
+                    <li class="list-inline-item mb-1"><span class="badge text-bg-light border">@skill.Name <span class="text-secondary">@T["level {0}", skill.Proficiency]</span></span></li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Certificates"]</div>
+    <div class="card-body">
+        @if (Model.Certificates.Count == 0)
+        {
+            <p class="hint">@T["No certificates yet."]</p>
+        }
+        else
+        {
+            <ul class="list-unstyled mb-3">
+                @foreach (var certificate in Model.Certificates)
+                {
+                    <li>
+                        <a href="@Url.Content("~/Admin/certificates/edit/" + certificate.Id)">@(certificate.CertificationName ?? T["Unknown certification"].Value)</a>
+                        @certificate.Number
+                        <span class="badge ta-badge fw-normal">@certificate.Status</span>
+                        @if (certificate.ExpiresOn is { } expires)
+                        {
+                            <span class="hint">@T["valid until {0}", expires.ToString("d")]</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        @if (Model.CanAdd && Model.CertificationOptions.Count > 0)
+        {
+            <form method="post" asp-area="CrestApps.OrchardCore.Staff" asp-controller="StaffCertificates" asp-action="Add" class="row g-2 align-items-end">
+                <input type="hidden" name="StaffMemberId" value="@Model.StaffMemberId" />
+                <div class="col-md-3"><label class="form-label" for="NewCertificationId">@T["Certification"]</label><select id="NewCertificationId" name="CertificationId" class="form-select" asp-items="Model.CertificationOptions"></select></div>
+                <div class="col-md-2"><label class="form-label" for="NewNumber">@T["Number"]</label><input id="NewNumber" name="Number" class="form-control" /></div>
+                <div class="col-md-2"><label class="form-label" for="NewIssuedOn">@T["Issued on"]</label><input id="NewIssuedOn" name="IssuedOn" type="date" class="form-control" /></div>
+                <div class="col-md-2"><label class="form-label" for="NewExpiresOn">@T["Valid until"]</label><input id="NewExpiresOn" name="ExpiresOn" type="date" class="form-control" /></div>
+                <div class="col-md-2"><div class="form-check"><input id="NewChecked" name="Checked" type="checkbox" value="true" class="form-check-input" /><label class="form-check-label" for="NewChecked">@T["Checked"]</label></div></div>
+                <div class="col-md-1"><button type="submit" class="btn btn-secondary">@T["Add"]</button></div>
+            </form>
+        }
+    </div>
+</div>

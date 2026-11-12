@@ -168,7 +168,7 @@ internal sealed class DefaultCoverageService : ICoverageService
             foreach (var key in shifts.Select(shift => (shift.WorkerId, shift.Date)).Distinct())
             {
                 holders[key] = key.WorkerId is not null
-                    && await _skillAssignments.HoldsAsync(SkillSubject.Worker(key.WorkerId), query.SkillId, 0, key.Date, cancellationToken);
+                    && await _skillAssignments.HoldsAsync(SkillSubject.Staff(key.WorkerId), query.SkillId, 0, key.Date, cancellationToken);
             }
 
             shifts = shifts.Where(shift => holders[(shift.WorkerId, shift.Date)]).ToArray();

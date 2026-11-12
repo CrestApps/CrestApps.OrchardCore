@@ -39,6 +39,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = AccountsConstants.TeamFeature,
+    Name = "Account Team",
+    Description = "Keeps the staff who look after each account: the owner (the account manager or sales rep who answers for it) and the rest of the account team, picked from staff and shown on the account page.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        AccountsConstants.Feature,
+        CrestApps.OrchardCore.Staff.StaffConstants.Features.Staff,
+    ]
+)]
+
+[assembly: Feature(
     Id = AccountsConstants.LocationsFeature,
     Name = "Account Locations",
     Description = "Keeps the places an account has, such as its head office, its warehouses or the sites where it is serviced, with addresses checked against each country's rules.",

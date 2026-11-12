@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -25,7 +26,7 @@ public sealed class SchedulePublishValidationContext
     /// <summary>
     /// Gets or sets the workers of the drafts, by id.
     /// </summary>
-    public IReadOnlyDictionary<string, WorkerProfile> Workers { get; set; } = new Dictionary<string, WorkerProfile>();
+    public IReadOnlyDictionary<string, StaffMember> Workers { get; set; } = new Dictionary<string, StaffMember>();
 
     /// <summary>
     /// Gets or sets the keys of the schedule's shifts already published.

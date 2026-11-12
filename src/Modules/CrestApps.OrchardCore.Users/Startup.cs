@@ -170,6 +170,7 @@ public sealed class AvatarStartup : StartupBase
 
         services.AddContentPart<UserAvatarPart>();
         services.AddScoped<IDisplayDriver<User>, UserAvatarPartDisplayDriver>();
+        services.AddScoped<IUserAvatarProvider, UserAvatarProvider>();
         services.AddResourceConfiguration<AvatarResourceManagementOptionsConfiguration>();
         services.Configure<MvcOptions>(options =>
         {

@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -269,7 +270,7 @@ public sealed class TimeClockTests
         var ana = await PlanningKit.AddMemberAsync(kit.Harness, "=Ana", team, worker =>
         {
             worker.EmployeeNumber = "100";
-            worker.Put(new WorkerPayRates { Rates = [new WorkerPayRate { EffectiveFrom = new DateOnly(2026, 1, 1), HourlyRate = 20 }] });
+            worker.Put(new StaffPayRates { Rates = [new StaffPayRate { EffectiveFrom = new DateOnly(2026, 1, 1), HourlyRate = 20 }] });
         });
 
         await kit.WorkAsync(ana, _monday, 8, 18);
@@ -513,7 +514,7 @@ public sealed class TimeClockTests
     {
         public List<decimal> Points { get; } = [];
 
-        public Task ThresholdReachedAsync(WorkerProfile worker, AttendanceException exception, decimal points, TimeClockPolicy policy, CancellationToken cancellationToken = default)
+        public Task ThresholdReachedAsync(StaffMember worker, AttendanceException exception, decimal points, TimeClockPolicy policy, CancellationToken cancellationToken = default)
         {
             Points.Add(points);
 

@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.IntervalStatistics;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
@@ -32,7 +34,7 @@ public sealed class AdherenceService
     private readonly ISession _session;
     private readonly AdherenceRuleSetManager _ruleSetManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly AgentWorkerService _agentWorkerService;
     private readonly ICalendarQueryService _calendarQueryService;
     private readonly IAgentStateHistory _stateHistory;
@@ -59,7 +61,7 @@ public sealed class AdherenceService
         ISession session,
         AdherenceRuleSetManager ruleSetManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         AgentWorkerService agentWorkerService,
         ICalendarQueryService calendarQueryService,
         IAgentStateHistory stateHistory,
@@ -116,12 +118,12 @@ public sealed class AdherenceService
     /// <param name="workers">The workers.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>One row per worker whose user is an agent.</returns>
-    public async Task<IReadOnlyList<AdherenceBoardRow>> CurrentAsync(IEnumerable<WorkerProfile> workers, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AdherenceBoardRow>> CurrentAsync(IEnumerable<StaffMember> workers, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(workers);
 
         var now = _clock.UtcNow;
-        var linked = new List<(WorkerProfile Worker, AgentProfile Agent)>();
+        var linked = new List<(StaffMember Worker, AgentProfile Agent)>();
 
         foreach (var worker in workers.Where(worker => !string.IsNullOrEmpty(worker.UserId)))
         {
@@ -206,7 +208,7 @@ public sealed class AdherenceService
         }
 
         var today = DateOnly.FromDateTime(_clock.UtcNow);
-        var workers = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+        var workers = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
 
         foreach (var id in teamIds)
         {
@@ -231,11 +233,11 @@ public sealed class AdherenceService
     /// <returns>How many alerts were raised.</returns>
     public async Task<int> RaiseAlertsAsync(CancellationToken cancellationToken = default)
     {
-        var workers = new List<WorkerProfile>();
+        var workers = new List<StaffMember>();
 
         foreach (var (agent, worker) in await _agentWorkerService.ListAsync(cancellationToken))
         {
-            if (worker is not null && worker.Status == WorkerStatus.Active)
+            if (worker is not null && worker.Status == StaffStatus.Active)
             {
                 workers.Add(worker);
             }
@@ -291,7 +293,7 @@ public sealed class AdherenceService
     /// <param name="date">The day.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The day, not saved; <see langword="null"/> when the worker's user is not an agent.</returns>
-    public async Task<AdherenceDay> ComputeDayAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default)
+    public async Task<AdherenceDay> ComputeDayAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -343,7 +345,7 @@ public sealed class AdherenceService
     /// <param name="date">The day.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The saved day, or <see langword="null"/> when the worker's user is not an agent.</returns>
-    public async Task<AdherenceDay> SaveDayAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default)
+    public async Task<AdherenceDay> SaveDayAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default)
     {
         var day = await ComputeDayAsync(worker, date, cancellationToken);
 
@@ -392,7 +394,7 @@ public sealed class AdherenceService
 
         foreach (var (agent, worker) in await _agentWorkerService.ListAsync(cancellationToken))
         {
-            if (worker is null || worker.Status != WorkerStatus.Active)
+            if (worker is null || worker.Status != StaffStatus.Active)
             {
                 continue;
             }
@@ -545,7 +547,7 @@ public sealed class AdherenceService
     /// </summary>
     /// <param name="worker">The worker.</param>
     /// <returns>The team, or <see langword="null"/>.</returns>
-    public static string TeamOf(WorkerProfile worker)
+    public static string TeamOf(StaffMember worker)
         => !string.IsNullOrEmpty(worker.PrimaryTeamId) ? worker.PrimaryTeamId : worker.TeamMemberships.FirstOrDefault()?.TeamId;
 
     /// <summary>
@@ -554,7 +556,7 @@ public sealed class AdherenceService
     /// <param name="worker">The worker.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The time zone.</returns>
-    public async Task<string> TimeZoneOfAsync(WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<string> TimeZoneOfAsync(StaffMember worker, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

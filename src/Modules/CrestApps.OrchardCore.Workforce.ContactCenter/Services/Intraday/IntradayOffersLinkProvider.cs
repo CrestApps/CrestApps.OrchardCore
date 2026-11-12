@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -26,7 +27,7 @@ internal sealed class IntradayOffersLinkProvider : IMyWorkLinkProvider
     }
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<MyWorkLink>> GetLinksAsync(ClaimsPrincipal user, WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<MyWorkLink>> GetLinksAsync(ClaimsPrincipal user, StaffMember worker, CancellationToken cancellationToken = default)
     {
         if (worker is null)
         {

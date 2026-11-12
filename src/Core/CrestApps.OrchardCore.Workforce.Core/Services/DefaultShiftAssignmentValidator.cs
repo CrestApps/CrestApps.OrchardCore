@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -57,7 +58,7 @@ internal sealed class DefaultShiftAssignmentValidator : IShiftAssignmentValidato
         var name = worker.DisplayName;
         var day = context.Date.ToString("d", null);
 
-        if (worker.Status != WorkerStatus.Active || (worker.TerminationDate.HasValue && worker.TerminationDate < context.Date))
+        if (worker.Status != StaffStatus.Active || (worker.TerminationDate.HasValue && worker.TerminationDate < context.Date))
         {
             context.Problems.Add(S["{0} isn't an active worker.", name]);
         }
@@ -69,7 +70,7 @@ internal sealed class DefaultShiftAssignmentValidator : IShiftAssignmentValidato
 
         foreach (var skillId in context.RequiredSkillIds ?? [])
         {
-            if (!await _skillAssignments.HoldsAsync(SkillSubject.Worker(worker.ItemId), skillId, 0, context.Date, cancellationToken))
+            if (!await _skillAssignments.HoldsAsync(SkillSubject.Staff(worker.ItemId), skillId, 0, context.Date, cancellationToken))
             {
                 var skill = await _skillManager.FindByIdAsync(skillId, cancellationToken);
 

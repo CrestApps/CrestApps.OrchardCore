@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -15,7 +16,7 @@ public interface IWorkerFeedService
     /// <param name="renew">Whether to replace the secret, which stops the old address working.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The secret.</returns>
-    Task<string> GetTokenAsync(WorkerProfile worker, bool renew, CancellationToken cancellationToken = default);
+    Task<string> GetTokenAsync(StaffMember worker, bool renew, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Writes the feed for a secret: the worker's shifts and time off from four weeks ago to twelve weeks ahead.

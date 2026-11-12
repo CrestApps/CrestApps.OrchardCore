@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -324,15 +325,15 @@ public sealed class FieldSyncTests
     private static FieldCommand Answer(string key, ServiceVisit visit, string value, DateTime utc)
         => new() { Key = key, Kind = FieldCommandKind.Answer, VisitId = visit.ItemId, Utc = utc, ChecklistIndex = 0, QuestionId = "pressure", Value = value };
 
-    private static Task<IReadOnlyList<FieldCommandResult>> ApplyAsync(DispatchKit kit, WorkerProfile worker, params FieldCommand[] commands)
+    private static Task<IReadOnlyList<FieldCommandResult>> ApplyAsync(DispatchKit kit, StaffMember worker, params FieldCommand[] commands)
         => kit.Harness.RunAsync(services => services.GetRequiredService<IFieldSyncService>().ApplyAsync(worker.ItemId, commands, worker.DisplayName));
 
-    private static Task<WorkerLocationConsent> SetConsentAsync(DispatchKit kit, WorkerProfile worker, bool given)
+    private static Task<WorkerLocationConsent> SetConsentAsync(DispatchKit kit, StaffMember worker, bool given)
         => kit.Harness.RunAsync(services => services.GetRequiredService<IWorkerLocationService>().SetConsentAsync(worker.ItemId, given));
 
-    private static Task<LocationPingResult> PingAsync(DispatchKit kit, WorkerProfile worker, DateTime utc)
+    private static Task<LocationPingResult> PingAsync(DispatchKit kit, StaffMember worker, DateTime utc)
         => kit.Harness.RunAsync(services => services.GetRequiredService<IWorkerLocationService>().RecordAsync(worker.ItemId, [new LocationPingInput { Utc = utc, Latitude = DispatchKit.South.Latitude, Longitude = DispatchKit.South.Longitude, AccuracyMeters = 12 }]));
 
-    private static Task<IReadOnlyList<WorkerLocationPing>> LatestAsync(DispatchKit kit, WorkerProfile worker)
+    private static Task<IReadOnlyList<WorkerLocationPing>> LatestAsync(DispatchKit kit, StaffMember worker)
         => kit.Harness.RunAsync(services => services.GetRequiredService<IWorkerLocationService>().LatestAsync([worker.ItemId], DispatchKit.Monday(0)), commit: false);
 }

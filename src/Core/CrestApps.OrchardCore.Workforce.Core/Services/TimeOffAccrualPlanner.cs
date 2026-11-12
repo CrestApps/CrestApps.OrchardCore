@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -16,7 +17,7 @@ internal sealed class TimeOffAccrualPlanner
         _workedTime = workedTime;
     }
 
-    public async Task<TimeOffAccrualInput> BuildAsync(WorkerProfile worker, TimeOffPolicy policy, TimeOffPolicyResolver resolver, IReadOnlyList<TimeOffLedgerEntry> existing, DateOnly date, CancellationToken cancellationToken = default)
+    public async Task<TimeOffAccrualInput> BuildAsync(StaffMember worker, TimeOffPolicy policy, TimeOffPolicyResolver resolver, IReadOnlyList<TimeOffLedgerEntry> existing, DateOnly date, CancellationToken cancellationToken = default)
     {
         var input = new TimeOffAccrualInput
         {

@@ -1,4 +1,5 @@
 using System.Net;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -28,7 +29,7 @@ internal sealed class EmailNotificationChannel : IWorkforceNotificationChannel
 
     public string DisplayName => S["Email"];
 
-    public async Task SendAsync(WorkerProfile worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
+    public async Task SendAsync(StaffMember worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(worker.Email))
         {

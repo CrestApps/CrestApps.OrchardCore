@@ -19,6 +19,11 @@ public sealed class TeamMember
     public string UserId { get; set; }
 
     /// <summary>
+    /// Gets or sets the staff member, when the provider keeps staff; people without a user account have only this.
+    /// </summary>
+    public string StaffMemberId { get; set; }
+
+    /// <summary>
     /// Gets or sets what the member does in the team, an open value such as one of <see cref="TeamMemberRoles"/>.
     /// </summary>
     public string Role { get; set; } = TeamMemberRoles.Member;
