@@ -22,6 +22,11 @@ public sealed class ApplySystemSettingsTool : ImportRecipeBaseTool
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
+        if (!await IsCallerAuthorizedAsync(arguments.Services))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
+
         var logger = arguments.Services.GetRequiredService<ILogger<ApplySystemSettingsTool>>();
 
         if (logger.IsEnabled(LogLevel.Debug))

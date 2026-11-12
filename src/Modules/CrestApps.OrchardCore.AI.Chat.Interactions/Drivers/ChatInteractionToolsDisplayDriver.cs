@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Models;
+﻿using CrestApps.OrchardCore.AI.Core;
+using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using Microsoft.AspNetCore.Http;
@@ -88,13 +89,14 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId) ?? [];
 
-        interaction.ToolNames = selectedToolKeys is null || !selectedToolKeys.Any()
-        ? []
-        : _toolDefinitions.GetSelectableTools().Keys
-            .Intersect(selectedToolKeys)
-            .ToList();
+        // Filtered on save as on render; tools already on the interaction that the user can't see are kept.
+        interaction.ToolNames = [.. await AIToolSelectionFilter.FilterAsync(
+            selectedToolKeys,
+            interaction.ToolNames,
+            _toolDefinitions.GetSelectableTools().Keys,
+            tool => _toolAccessEvaluator.IsAuthorizedAsync(_httpContextAccessor.HttpContext?.User, tool))];
 
         return Edit(interaction, context);
     }

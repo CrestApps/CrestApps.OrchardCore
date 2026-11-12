@@ -4,6 +4,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using Microsoft.AspNetCore.Authorization;
@@ -112,7 +113,8 @@ internal static class AIProfilesApiEndpoints
         JsonObject body,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IAIProfileManager profileManager)
+        IAIProfileManager profileManager,
+        IAIToolAccessEvaluator toolAccessEvaluator)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Profiles, AIPermissions.ManageAIProfiles))
         {
@@ -135,6 +137,12 @@ internal static class AIProfilesApiEndpoints
         }
 
         var profile = await profileManager.NewAsync(body, httpContext.RequestAborted);
+
+        if (await RefuseUnauthorizedToolsAsync(profile, [], httpContext, toolAccessEvaluator) is { } toolsRefused)
+        {
+            return toolsRefused;
+        }
+
         var validation = await profileManager.ValidateAsync(profile, httpContext.RequestAborted);
 
         if (!validation.Succeeded)
@@ -152,7 +160,8 @@ internal static class AIProfilesApiEndpoints
         JsonObject body,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IAIProfileManager profileManager)
+        IAIProfileManager profileManager,
+        IAIToolAccessEvaluator toolAccessEvaluator)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Profiles, AIPermissions.ManageAIProfiles))
         {
@@ -179,6 +188,12 @@ internal static class AIProfilesApiEndpoints
         var copy = await profileManager.NewAsync(JsonSerializer.SerializeToNode(profile) is JsonObject current ? AISourceCatalogApi.Merge(current, body) : body, httpContext.RequestAborted);
         copy.ItemId = profile.ItemId;
         copy.Name = profile.Name;
+
+        if (await RefuseUnauthorizedToolsAsync(copy, profile.GetOrCreate<FunctionInvocationMetadata>().Names, httpContext, toolAccessEvaluator) is { } toolsRefused)
+        {
+            return toolsRefused;
+        }
+
         var validation = await profileManager.ValidateAsync(copy, httpContext.RequestAborted);
 
         if (!validation.Succeeded)
@@ -260,4 +275,26 @@ internal static class AIProfilesApiEndpoints
 
     private static ProblemHttpResult NotFound()
         => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found");
+
+    // The editor offers only the tools the caller may use; the API takes raw JSON, so the same rule is applied here and a
+    // tool the caller may not use (and the profile did not already have) is a validation error.
+    private static async Task<ValidationProblem> RefuseUnauthorizedToolsAsync(
+        AIProfile profile,
+        IEnumerable<string> existing,
+        HttpContext httpContext,
+        IAIToolAccessEvaluator toolAccessEvaluator)
+    {
+        var requested = profile.GetOrCreate<FunctionInvocationMetadata>().Names ?? [];
+        var refused = await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(
+            requested,
+            existing,
+            tool => toolAccessEvaluator.IsAuthorizedAsync(httpContext.User, tool));
+
+        return refused.Count == 0
+            ? null
+            : TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["tools"] = [$"You may not give a profile these tools: {string.Join(", ", refused)}."],
+            });
+    }
 }

@@ -61,6 +61,7 @@ public sealed class TenantToolsDefaultShellTests
             .AddSingleton(shellHost)
             .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
+            .AddAuthorizedCaller()
             .BuildServiceProvider();
 
         return new AIFunctionArguments(new Dictionary<string, object> { ["name"] = "tenant1" })

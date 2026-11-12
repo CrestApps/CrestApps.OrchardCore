@@ -10,6 +10,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
@@ -42,18 +43,41 @@ public abstract class ImportRecipeBaseTool : AIFunction
     }
     """);
 
+    /// <summary>
+    /// Orchard Core's permission to run recipes. A recipe can change anything on the site.
+    /// </summary>
+    protected static readonly Permission ManageRecipesPermission = new("ManageRecipes");
+
     public override JsonElement JsonSchema => _jsonSchema;
+
+    /// <summary>
+    /// Gets the permission the caller must hold for the tool to import its recipe. It runs for whoever drives the chat, a
+    /// public visitor included, so it never imports with the system's authority alone.
+    /// </summary>
+    protected virtual Permission RequiredPermission => ManageRecipesPermission;
+
+    /// <summary>
+    /// Whether the caller holds <see cref="RequiredPermission"/>.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    protected Task<bool> IsCallerAuthorizedAsync(IServiceProvider services)
+        => AIToolCallerAuthorization.IsAuthorizedAsync(services, RequiredPermission);
 
     public override IReadOnlyDictionary<string, object> AdditionalProperties { get; } = new Dictionary<string, object>()
     {
         ["Strict"] = false,
     };
 
-    protected override ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+    protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await IsCallerAuthorizedAsync(arguments.Services))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<ImportRecipeBaseTool>>();
 
@@ -67,10 +91,10 @@ public abstract class ImportRecipeBaseTool : AIFunction
             logger.LogWarning("AI tool '{ToolName}' missing required argument 'recipe'.", Name);
             RecordImport(AIModuleTelemetry.ModeInline, AIModuleTelemetry.OutcomeInvalid);
 
-            return ValueTask.FromResult<object>(MissingArgument());
+            return MissingArgument();
         }
 
-        return ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
+        return await ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
     }
 
     protected static string MissingArgument(string name = "recipe")

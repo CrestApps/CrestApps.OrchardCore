@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Extensions;
+﻿using OrchardCore.Security.Permissions;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,12 +16,19 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
 
     public override string Name => TheName;
 
+    protected override Permission RequiredPermission => OrchardCorePermissions.ManageWorkflows;
+
     public override string Description => "Creates or updates a workflow types.";
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await IsCallerAuthorizedAsync(arguments.Services))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateWorkflowTool>>();
 

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
@@ -92,20 +93,16 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId) ?? [];
 
         var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
 
-        if (selectedToolKeys is null || !selectedToolKeys.Any())
-        {
-            metadata.ToolNames = [];
-        }
-        else
-        {
-            metadata.ToolNames = _toolDefinitions.GetSelectableTools().Keys
-                .Intersect(selectedToolKeys)
-                .ToArray();
-        }
+        // Filtered on save as on render; tools already on the template that the user can't see are kept.
+        metadata.ToolNames = await AIToolSelectionFilter.FilterAsync(
+            selectedToolKeys,
+            metadata.ToolNames,
+            _toolDefinitions.GetSelectableTools().Keys,
+            tool => _toolAccessEvaluator.IsAuthorizedAsync(_httpContextAccessor.HttpContext?.User, tool));
 
         template.Put(metadata);
 
