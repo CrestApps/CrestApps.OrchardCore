@@ -82,6 +82,7 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
             PriceListId = part.PriceListId,
             PunchoutEnabled = part.Punchout?.Enabled == true,
             PunchoutUserId = part.Punchout?.UserId,
+            PunchoutAllowLinkSignIn = part.Punchout?.AllowLinkSignIn == true,
             PunchoutKeyCreatedUtc = part.Punchout?.KeyCreatedUtc,
         };
 
@@ -138,6 +139,7 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
             model.Members = source.Members;
             model.PunchoutEnabled = source.PunchoutEnabled;
             model.PunchoutUserId = source.PunchoutUserId;
+            model.PunchoutAllowLinkSignIn = source.PunchoutAllowLinkSignIn;
             model.PunchoutKeyCreatedUtc = source.PunchoutKeyCreatedUtc;
             model.PunchoutUrl = source.PunchoutUrl;
             model.Prefix = Prefix;
@@ -215,6 +217,7 @@ internal sealed class B2BAccountPartDisplayDriver : ContentPartDisplayDriver<B2B
         part.Punchout ??= new AccountPunchout();
         part.Punchout.Enabled = model.PunchoutEnabled;
         part.Punchout.UserId = punchoutUserId;
+        part.Punchout.AllowLinkSignIn = model.PunchoutEnabled && model.PunchoutAllowLinkSignIn;
 
         // A new key, asked for or the first; it's shown once.
         _newPunchoutKey = null;
