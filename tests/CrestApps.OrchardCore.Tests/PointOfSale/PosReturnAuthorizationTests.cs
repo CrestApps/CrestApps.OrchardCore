@@ -92,6 +92,26 @@ public sealed class PosReturnAuthorizationTests
         AssertRefunded();
     }
 
+    /// <summary>
+    /// An order with no location whose register can't be found said nothing about its store, and matched every register
+    /// with no location.
+    /// </summary>
+    [Fact]
+    public async Task Return_SaleWhoseStoreIsUnknown_AtARegisterWithNoLocation_IsRefused()
+    {
+        // Arrange
+        _granted.Add("RefundAtRegister");
+        _register.LocationId = null;
+        var order = CreateOrder(locationId: null);
+        order.RegisterId = "register-removed";
+
+        // Act
+        await ReturnAsync(order);
+
+        // Assert
+        AssertNotRefunded();
+    }
+
     private void AssertNotRefunded()
         => _operations.Verify(
             service => service.RefundAsync(It.IsAny<Order>(), It.IsAny<decimal?>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),

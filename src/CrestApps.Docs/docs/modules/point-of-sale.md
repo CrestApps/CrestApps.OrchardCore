@@ -338,10 +338,11 @@ The `Registers` recipe step (`RegistersStep`) creates or updates registers. A re
 
 | Permission | Allows |
 | --- | --- |
-| **Sell at a register** (`SellAtRegister`) | The point-of-sale API at the registers the user's roles may use: shifts, sales, payments, receipts and returns. |
-| **Manage registers and shifts** (`ManageRegisters`) | The registers and shifts admin pages, selling at every register, and pairing Stripe readers. |
+| **Sell at a register** (`SellAtRegister`) | The point-of-sale API at the registers the user's roles may use: shifts, sales, payments and receipts. It does not cover returns. |
+| **Refund at a register** (`RefundAtRegister`) | Returns at the till (`pos/returns`), which pay money back, cash out of the drawer included: a counter sale of the register's own store, at a register the user may sell at. A sale of another store, or an online order, also needs **Manage orders**. |
+| **Manage registers and shifts** (`ManageRegisters`) | The registers and shifts admin pages, selling at every register, pairing Stripe readers, and refunding at a register (it implies **Refund at a register**). |
 
-Administrators have both by default.
+Administrators have all three by default. Give **Refund at a register** only to the staff who may take returns; a cashier with **Sell at a register** alone can't refund.
 
 ## Report Builder data source
 

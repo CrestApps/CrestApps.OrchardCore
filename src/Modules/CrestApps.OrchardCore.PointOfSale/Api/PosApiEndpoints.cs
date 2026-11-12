@@ -409,11 +409,19 @@ internal static class PosApiEndpoints
     // A counter sale belongs to the store its register is in.
     private static async Task<bool> IsSameStoreAsync(Order order, Register register, IRegisterStore registers, CancellationToken cancellationToken)
     {
-        var locationId = !string.IsNullOrEmpty(order.LocationId)
-            ? order.LocationId
-            : (await registers.FindByIdAsync(order.RegisterId, cancellationToken))?.LocationId;
+        if (!string.IsNullOrEmpty(order.LocationId))
+        {
+            return string.Equals(order.LocationId, register.LocationId, StringComparison.Ordinal);
+        }
 
-        return string.Equals(locationId ?? string.Empty, register.LocationId ?? string.Empty, StringComparison.Ordinal);
+        // No location on the order: its register says which store it was sold at. One whose register can't be found says
+        // nothing, and matching it to every register without a location would let any till return it.
+        if (string.IsNullOrEmpty(order.RegisterId) || await registers.FindByIdAsync(order.RegisterId, cancellationToken) is not { } soldAt)
+        {
+            return false;
+        }
+
+        return string.Equals(soldAt.LocationId ?? string.Empty, register.LocationId ?? string.Empty, StringComparison.Ordinal);
     }
 
     private static async Task<decimal> GetCashHeldAsync(ICheckoutTenderLedger ledger, Order order, CancellationToken cancellationToken)
