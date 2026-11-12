@@ -3,6 +3,10 @@
 <zone Name="Title">
     <breadcrumb name="StaffEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Staff Member"] : T["Edit '{0}'", Model.DisplayName])">
         <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
+        @if (!string.IsNullOrEmpty(Model.Id))
+        {
+            <breadcrumb-item id="StaffProfile" action="Profile" controller="Staff" area="CrestApps.OrchardCore.Staff" route-id="@Model.Id">@Model.DisplayName</breadcrumb-item>
+        }
     </breadcrumb>
 </zone>
 
@@ -12,96 +16,13 @@
 
     <div class="action-bar-bottom">
         <button class="btn btn-primary" type="submit">@T["Save"]</button>
-        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+        @if (string.IsNullOrEmpty(Model.Id))
+        {
+            <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+        }
+        else
+        {
+            <a class="btn btn-secondary cancel" asp-action="Profile" asp-route-id="@Model.Id">@T["Cancel"]</a>
+        }
     </div>
 </form>
-
-@if (!string.IsNullOrEmpty(Model.Id))
-{
-    <div class="card text-bg-theme my-3">
-        <div class="card-header">@T["Reporting line"]</div>
-        <div class="card-body">
-            @if (Model.ManagerChain.Count == 0)
-            {
-                <p class="hint mb-2">@T["Reports to nobody."]</p>
-            }
-            else
-            {
-                <p class="mb-2">
-                    @T["Reports to"]
-                    @for (var i = 0; i < Model.ManagerChain.Count; i++)
-                    {
-                        var manager = Model.ManagerChain[i];
-                        if (i > 0)
-                        {
-                            <span class="text-secondary"> &rsaquo; </span>
-                        }
-                        <a asp-action="Edit" asp-route-id="@manager.ItemId">@manager.DisplayName</a>
-                    }
-                </p>
-            }
-            @if (Model.Reports.Count == 0)
-            {
-                <p class="hint mb-0">@T["Nobody reports to them."] <a asp-action="Edit" asp-route-managerId="@Model.Id">@T["Add someone reporting to them"]</a></p>
-            }
-            else
-            {
-                <p class="mb-1">@T["Direct reports"]</p>
-                <ul class="mb-0">
-                    @foreach (var report in Model.Reports)
-                    {
-                        <li>
-                            <a asp-action="Edit" asp-route-id="@report.ItemId">@report.DisplayName</a>
-                            @if (!string.IsNullOrEmpty(report.JobTitle))
-                            {
-                                <span class="hint">@report.JobTitle</span>
-                            }
-                        </li>
-                    }
-                </ul>
-            }
-        </div>
-    </div>
-
-    <div class="card text-bg-theme my-3">
-        <div class="card-header">@T["Employment history"]</div>
-        <div class="card-body">
-            @if (Model.History.Count == 0)
-            {
-                <p class="hint mb-0">@T["No changes recorded yet."]</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>@T["When"]</th><th>@T["What"]</th><th>@T["From"]</th><th>@T["To"]</th><th>@T["By"]</th></tr></thead>
-                        <tbody>
-                            @foreach (var entry in Model.History)
-                            {
-                                var field = entry.Field switch
-                                {
-                                    StaffHistoryFields.Created => T["Added"].Value,
-                                    StaffHistoryFields.JobTitle => T["Job title"].Value,
-                                    StaffHistoryFields.Status => T["Status"].Value,
-                                    StaffHistoryFields.EmploymentType => T["Employment"].Value,
-                                    StaffHistoryFields.Manager => T["Manager"].Value,
-                                    StaffHistoryFields.Teams => T["Teams"].Value,
-                                    StaffHistoryFields.WorkLocation => T["Work location"].Value,
-                                    StaffHistoryFields.TerminationDate => T["Last day worked"].Value,
-                                    _ => entry.Field,
-                                };
-                                <tr>
-                                    <td class="text-nowrap">@entry.ChangedLocal.ToString("g")</td>
-                                    <td>@field</td>
-                                    <td class="text-break">@entry.From</td>
-                                    <td class="text-break">@entry.To</td>
-                                    <td>@entry.ChangedBy</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </div>
-    </div>
-}

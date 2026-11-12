@@ -12,7 +12,7 @@ Every team gets a **Workforce calendar** that holds its published shifts and app
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Workers, Teams, Workforce > Activity Codes |
+| **Menu** | Staff > All Staff, Teams, Workforce > Activity Codes |
 | **Permission** | View workers, Manage workers, Manage workforce teams, Manage activity codes, View sensitive worker details, Manage the whole workforce |
 | **Feature** | Workforce (it needs Calendars, Skills and Teams) |
 
@@ -20,7 +20,7 @@ Every team gets a **Workforce calendar** that holds its published shifts and app
 
 ## Build the team tree
 
-Teams are kept by the **Teams** feature, so every feature uses the same tree. Open **Content > Teams** to add them; see [Teams](./teams.md) for the fields every team has. Workforce adds the **Workforce** card to the team editor, and **Workers**, **Add a worker** and **Calendar** to each team's **Actions** menu.
+Teams are kept by the **Teams** feature, so every feature uses the same tree. Open **Content > Teams** to add them; see [Teams](./teams.md) for the fields every team has. Workforce adds the **Workforce** card to the team editor, and **Staff**, **Add a staff member** and **Calendar** to each team's **Actions** menu.
 
 ### The Workforce card
 
@@ -43,7 +43,9 @@ A team that still has teams under it, or current workers, can't be deleted. Move
 
 ## Add a worker
 
-Open **Workforce > Workers** and choose **Add worker**, or choose **Add a worker** from a team's **Actions** menu.
+Workers are staff members: there is one list of the people who work, under **Staff > All Staff**, and Workforce schedules them. Managers who aren't allowed to see all staff see the staff of the teams they manage there. Choose **Add staff member**, or **Add a staff member** from a team's **Actions** menu.
+
+Each staff member has a profile (choose their name in the list). Its side menu shows **Overview**, **Teams**, **Skills** (with their certificates, which you add there), **Work** (their shift rules, **Time clock**, **Timesheets** and **Time off**), **Pay** and **Employment history**, each from the module that keeps it. **Edit Staff Member** opens the editor with the fields below.
 
 **Worker**
 

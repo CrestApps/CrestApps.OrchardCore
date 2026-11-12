@@ -1,0 +1,43 @@
+@model StaffHistoryViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Employment history"]</div>
+    <div class="card-body">
+        @if (Model.History.Count == 0)
+        {
+            <p class="hint mb-0">@T["No changes recorded yet."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>@T["When"]</th><th>@T["What"]</th><th>@T["From"]</th><th>@T["To"]</th><th>@T["By"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var entry in Model.History)
+                        {
+                            var field = entry.Field switch
+                            {
+                                StaffHistoryFields.Created => T["Added"].Value,
+                                StaffHistoryFields.JobTitle => T["Job title"].Value,
+                                StaffHistoryFields.Status => T["Status"].Value,
+                                StaffHistoryFields.EmploymentType => T["Employment"].Value,
+                                StaffHistoryFields.Manager => T["Manager"].Value,
+                                StaffHistoryFields.Teams => T["Teams"].Value,
+                                StaffHistoryFields.WorkLocation => T["Work location"].Value,
+                                StaffHistoryFields.TerminationDate => T["Last day worked"].Value,
+                                _ => entry.Field,
+                            };
+                            <tr>
+                                <td class="text-nowrap">@entry.ChangedLocal.ToString("g")</td>
+                                <td>@field</td>
+                                <td class="text-break">@entry.From</td>
+                                <td class="text-break">@entry.To</td>
+                                <td>@entry.ChangedBy</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

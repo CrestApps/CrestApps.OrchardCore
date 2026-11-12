@@ -20,6 +20,7 @@ using OrchardCore.Modules.Manifest;
     [
         UsersConstants.Feature.Area,
         OrchardCoreFeatureIds.Roles,
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

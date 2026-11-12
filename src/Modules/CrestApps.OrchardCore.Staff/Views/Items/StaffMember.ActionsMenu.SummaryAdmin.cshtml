@@ -1,4 +1,4 @@
 @model ShapeViewModel<StaffMember>
 
-<a asp-controller="Staff" asp-action="Edit" asp-route-managerId="@Model.Value.ItemId" class="dropdown-item">@T["Add someone reporting to them"]</a>
-<a asp-controller="Staff" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this staff member? Their employment history goes too; to keep it, set them to Terminated instead."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+<a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-managerId="@Model.Value.ItemId" class="dropdown-item">@T["Add someone reporting to them"]</a>
+<a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this staff member? Their employment history goes too; to keep it, set them to Terminated instead."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

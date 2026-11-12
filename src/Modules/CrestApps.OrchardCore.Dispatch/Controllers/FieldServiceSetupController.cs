@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -98,8 +99,8 @@ public sealed class FieldServiceSetupController : Controller
             Description = S["Workers on a field team, with their skills, certifications and home base. Link each to a user account so they can use the Field page."],
             Status = S["Workers: {0} · Linked to a user: {1}", workers, linked],
             Done = workers > 0,
-            Action = S["Workers"],
-            Url = Url.Action("Index", "Workers", new { area = WorkforceConstants.Features.Workforce }),
+            Action = S["Staff"],
+            Url = Url.Action("Index", "Staff", new { area = StaffConstants.Features.Staff }),
         });
 
         await AddAsync(model, features, WorkforceConstants.Features.ShiftPlanning, S["Publish their shifts"], S["Technicians are offered visits only on a published shift, less their breaks and time off."], () =>

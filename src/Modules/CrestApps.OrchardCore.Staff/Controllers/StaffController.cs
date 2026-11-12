@@ -36,7 +36,6 @@ public sealed class StaffController : Controller
     private readonly IStaffScopeService _scopeService;
     private readonly IStaffDirectory _directory;
     private readonly IStaffHierarchy _hierarchy;
-    private readonly IStaffHistoryService _historyService;
     private readonly StaffTeamReader _teamManager;
     private readonly IDisplayManager<StaffMember> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -54,7 +53,6 @@ public sealed class StaffController : Controller
         IStaffScopeService scopeService,
         IStaffDirectory directory,
         IStaffHierarchy hierarchy,
-        IStaffHistoryService historyService,
         StaffTeamReader teamManager,
         IDisplayManager<StaffMember> displayManager,
         IUpdateModelAccessor updateModelAccessor,
@@ -70,7 +68,6 @@ public sealed class StaffController : Controller
         _scopeService = scopeService;
         _directory = directory;
         _hierarchy = hierarchy;
-        _historyService = historyService;
         _teamManager = teamManager;
         _displayManager = displayManager;
         _updateModelAccessor = updateModelAccessor;
@@ -85,11 +82,6 @@ public sealed class StaffController : Controller
     [Admin("staff", "StaffIndex")]
     public async Task<IActionResult> Index(StaffListViewModel model, PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, StaffPermissions.ViewStaff))
-        {
-            return Forbid();
-        }
-
         var pager = new Pager(pagerParameters, pagerOptions.Value);
         var query = new StaffQuery
         {
@@ -98,6 +90,30 @@ public sealed class StaffController : Controller
             Status = Enum.TryParse<StaffStatus>(model.Status, out var status) ? status : null,
             Capability = string.IsNullOrEmpty(model.Capability) ? null : model.Capability,
         };
+
+        // Those who may see all staff see everyone; a manager (of a team, or through another module such as a
+        // Workforce team manager) sees the staff they manage: the members of their teams, else their reports.
+        if (!await _authorizationService.AuthorizeAsync(User, StaffPermissions.ViewStaff))
+        {
+            var scope = await _scopeService.GetScopeAsync(User, HttpContext.RequestAborted);
+
+            if (scope.IsEmpty)
+            {
+                return Forbid();
+            }
+
+            if (!scope.All)
+            {
+                if (scope.TeamIds.Count > 0)
+                {
+                    query.TeamIds = [.. scope.TeamIds];
+                }
+                else
+                {
+                    query.Ids = [.. scope.StaffMemberIds];
+                }
+            }
+        }
 
         var (count, people) = await _staffManager.SearchAsync(query, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
@@ -158,8 +174,6 @@ public sealed class StaffController : Controller
             Editor = await _displayManager.BuildEditorAsync(staff, _updateModelAccessor.ModelUpdater, isNew),
         };
 
-        await FillAsync(model, staff, isNew);
-
         return View(model);
     }
 
@@ -197,8 +211,6 @@ public sealed class StaffController : Controller
                 Editor = editor,
             };
 
-            await FillAsync(model, staff, isNew);
-
             return View(model);
         }
 
@@ -213,7 +225,35 @@ public sealed class StaffController : Controller
 
         await _notifier.SuccessAsync(H["{0} has been saved.", staff.DisplayName]);
 
-        return RedirectToAction(nameof(Edit), new { id = staff.ItemId });
+        return RedirectToAction(nameof(Profile), new { id = staff.ItemId });
+    }
+
+    [Admin("staff/profile/{id}", "StaffProfile")]
+    public async Task<IActionResult> Profile(string id)
+    {
+        var staff = await _staffManager.FindByIdAsync(id);
+
+        if (staff is null)
+        {
+            return NotFound();
+        }
+
+        // Anyone who may see staff, the people who manage this person, and the person themselves.
+        var isSelf = !string.IsNullOrEmpty(staff.UserId) && staff.UserId == User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!isSelf
+            && !await _authorizationService.AuthorizeAsync(User, StaffPermissions.ViewStaff)
+            && !await _scopeService.CanManageAsync(User, staff, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
+        return View(new StaffProfilePageViewModel
+        {
+            Id = staff.ItemId,
+            DisplayName = staff.DisplayName,
+            Profile = await _displayManager.BuildDisplayAsync(staff, _updateModelAccessor.ModelUpdater, StaffProfileSections.DisplayType),
+        });
     }
 
     [HttpPost]
@@ -309,7 +349,7 @@ public sealed class StaffController : Controller
                 TeamName = person.PrimaryTeamId is { } team ? teams.GetValueOrDefault(team) : null,
                 AvatarUrl = !string.IsNullOrEmpty(person.UserId) ? avatars.GetValueOrDefault(person.UserId) : null,
                 Initials = StaffOrgChartNode.InitialsOf(person.DisplayName),
-                Url = await _scopeService.CanManageAsync(User, person, HttpContext.RequestAborted) ? Url.Action(nameof(Edit), new { id = person.ItemId }) : null,
+                Url = Url.Action(nameof(Profile), new { id = person.ItemId }),
             });
         }
 
@@ -332,51 +372,5 @@ public sealed class StaffController : Controller
         }
 
         return await _scopeService.CanManageAsync(User, staff, HttpContext.RequestAborted);
-    }
-
-    private async Task FillAsync(StaffEditorPageViewModel model, StaffMember staff, bool isNew)
-    {
-        if (isNew)
-        {
-            return;
-        }
-
-        model.Reports = (await _hierarchy.GetReportsAsync(staff.ItemId, includeIndirect: false, HttpContext.RequestAborted)).ToList();
-        model.ManagerChain = (await _hierarchy.GetManagerChainAsync(staff.ItemId, HttpContext.RequestAborted)).ToList();
-
-        var history = await _historyService.ListAsync(staff.ItemId, 50, HttpContext.RequestAborted);
-        var userIds = history.Select(entry => entry.ChangedByUserId).Where(userId => !string.IsNullOrEmpty(userId)).Distinct(StringComparer.Ordinal).ToArray();
-        var users = (await _userSearchService.GetAsync(userIds, HttpContext.RequestAborted)).ToDictionary(user => user.UserId, user => string.IsNullOrEmpty(user.DisplayName) ? user.UserName : user.DisplayName, StringComparer.Ordinal);
-        var people = await _directory.GetNamesAsync(history.Where(entry => entry.Field == StaffHistoryFields.Manager).SelectMany(entry => new[] { entry.From, entry.To }), HttpContext.RequestAborted);
-        var teamNames = history.Any(entry => entry.Field == StaffHistoryFields.Teams)
-            ? (await _teamManager.ListTreeAsync(HttpContext.RequestAborted)).ToDictionary(item => item.Team.ItemId, item => item.Team.Name, StringComparer.Ordinal)
-            : [];
-
-        string Show(string field, string value) => field switch
-        {
-            StaffHistoryFields.Manager => people.GetValueOrDefault(value ?? string.Empty, value),
-
-            // Team memberships are kept as "teamId Role from..to" parts; the team is shown by its name.
-            StaffHistoryFields.Teams when !string.IsNullOrEmpty(value) => string.Join("; ", value.Split("; ", StringSplitOptions.RemoveEmptyEntries).Select(part =>
-            {
-                var space = part.IndexOf(' ');
-                var teamId = space < 0 ? part : part[..space];
-
-                return teamNames.GetValueOrDefault(teamId, teamId) + (space < 0 ? string.Empty : part[space..]);
-            })),
-            _ => value,
-        };
-
-        foreach (var entry in history)
-        {
-            model.History.Add(new StaffHistoryRowViewModel
-            {
-                Field = entry.Field,
-                From = Show(entry.Field, entry.From),
-                To = Show(entry.Field, entry.To),
-                ChangedBy = entry.ChangedByUserId is { } userId ? users.GetValueOrDefault(userId, userId) : null,
-                ChangedLocal = (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(entry.ChangedUtc, DateTimeKind.Utc))).DateTime,
-            });
-        }
     }
 }

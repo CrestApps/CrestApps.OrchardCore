@@ -16,6 +16,11 @@ namespace CrestApps.OrchardCore.Accounts;
 public static class AccountPageTabs
 {
     /// <summary>
+    /// The page name the account page's sections are registered for with <c>AddPageSection</c>.
+    /// </summary>
+    public const string PageName = "Account";
+
+    /// <summary>
     /// The account at a glance: its members, its locations and the cards other modules add.
     /// </summary>
     public const string Overview = "Overview";

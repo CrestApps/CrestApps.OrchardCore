@@ -38,12 +38,46 @@ public class StaffEditorPageViewModel
     public string DisplayName { get; set; }
 
     public object Editor { get; set; }
+}
 
-    public IList<StaffHistoryRowViewModel> History { get; set; } = [];
+public class StaffProfilePageViewModel
+{
+    public string Id { get; set; }
+
+    public string DisplayName { get; set; }
+
+    public object Profile { get; set; }
+}
+
+public class StaffProfileHeaderViewModel
+{
+    public StaffMember StaffMember { get; set; }
+
+    public string AvatarUrl { get; set; }
+
+    public string UserName { get; set; }
+
+    public string Initials { get; set; }
+
+    public string TeamName { get; set; }
+
+    public bool CanEdit { get; set; }
+}
+
+public class StaffReportingLineViewModel
+{
+    public string StaffMemberId { get; set; }
+
+    public IList<StaffMember> ManagerChain { get; set; } = [];
 
     public IList<StaffMember> Reports { get; set; } = [];
 
-    public IList<StaffMember> ManagerChain { get; set; } = [];
+    public bool CanAddReports { get; set; }
+}
+
+public class StaffHistoryViewModel
+{
+    public IList<StaffHistoryRowViewModel> History { get; set; } = [];
 }
 
 public class StaffHistoryRowViewModel
@@ -144,33 +178,14 @@ public class UserStaffViewModel
 {
     public bool MakeStaff { get; set; }
 
-    public string EmployeeNumber { get; set; }
-
-    public string JobTitle { get; set; }
-
-    public string EmploymentType { get; set; }
-
-    public string Status { get; set; }
-
-    public DateOnly? HireDate { get; set; }
-
-    public string PrimaryTeamId { get; set; }
-
-    public string ManagerId { get; set; }
-
-    public decimal? ContractedHoursPerWeek { get; set; }
-
     [BindNever]
     public string StaffMemberId { get; set; }
 
     [BindNever]
-    public IList<SelectListItem> TeamOptions { get; set; } = [];
+    public string JobTitle { get; set; }
 
     [BindNever]
-    public IList<SelectListItem> EmploymentTypeOptions { get; set; } = [];
-
-    [BindNever]
-    public IList<SelectListItem> StatusOptions { get; set; } = [];
+    public string Status { get; set; }
 }
 
 public class StaffHomeViewModel
@@ -255,4 +270,63 @@ public class StaffPickerViewModel
     public bool Required { get; set; }
 
     public string ExcludeId { get; set; }
+}
+
+public class StaffSkillsProfileViewModel
+{
+    public string StaffMemberId { get; set; }
+
+    public IList<StaffSkillRowViewModel> Skills { get; set; } = [];
+
+    public IList<StaffCertificateRowViewModel> Certificates { get; set; } = [];
+
+    public bool CanAdd { get; set; }
+
+    public IList<SelectListItem> CertificationOptions { get; set; } = [];
+}
+
+public class StaffSkillRowViewModel
+{
+    public string Name { get; set; }
+
+    public int Proficiency { get; set; }
+}
+
+public class StaffCertificateRowViewModel
+{
+    public string Id { get; set; }
+
+    public string CertificationName { get; set; }
+
+    public string Number { get; set; }
+
+    public DateOnly? ExpiresOn { get; set; }
+
+    public string Status { get; set; }
+}
+
+public class AddStaffCertificateViewModel
+{
+    public string StaffMemberId { get; set; }
+
+    public string CertificationId { get; set; }
+
+    public string Number { get; set; }
+
+    public DateOnly? IssuedOn { get; set; }
+
+    public DateOnly? ExpiresOn { get; set; }
+
+    public bool Checked { get; set; }
+}
+
+public class StaffPayProfileViewModel
+{
+    public decimal? CurrentRate { get; set; }
+
+    public decimal? AnnualSalary { get; set; }
+
+    public decimal? HourlyCost { get; set; }
+
+    public IList<CrestApps.OrchardCore.Staff.Drivers.StaffPayRateRowViewModel> Rates { get; set; } = [];
 }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -18,6 +19,16 @@ internal sealed class WorkforceStaffDisplayDriver : DisplayDriver<StaffMember>
     public WorkforceStaffDisplayDriver(IStringLocalizer<WorkforceStaffDisplayDriver> stringLocalizer)
     {
         S = stringLocalizer;
+    }
+
+    public override IDisplayResult Display(StaffMember staff, BuildDisplayContext context)
+    {
+        if (context.DisplayType != StaffProfileSections.DisplayType)
+        {
+            return null;
+        }
+
+        return View("WorkforceStaffProfile", staff).Location(StaffProfileSections.DisplayType, StaffProfileSections.Location(StaffProfileSections.Work, "1"));
     }
 
     public override IDisplayResult Edit(StaffMember staff, BuildEditorContext context)

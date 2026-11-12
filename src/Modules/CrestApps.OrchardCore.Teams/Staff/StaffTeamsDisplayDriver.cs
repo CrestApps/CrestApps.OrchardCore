@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
@@ -43,6 +44,31 @@ internal sealed class StaffTeamsDisplayDriver : DisplayDriver<StaffMember>
     protected override void BuildPrefix(StaffMember model, string htmlFieldPrefix)
     {
         Prefix = string.IsNullOrEmpty(htmlFieldPrefix) ? DriverPrefix : $"{htmlFieldPrefix}.{DriverPrefix}";
+    }
+
+    public override IDisplayResult Display(StaffMember staff, BuildDisplayContext context)
+    {
+        if (context.DisplayType != StaffProfileSections.DisplayType)
+        {
+            return null;
+        }
+
+        return Initialize<StaffTeamsProfileViewModel>("StaffProfileTeams", async model =>
+        {
+            var teams = (await _teamManager.ListTreeAsync()).ToDictionary(item => item.Team.ItemId, item => item.Team.Name, StringComparer.Ordinal);
+
+            model.Memberships = [.. staff.TeamMemberships
+                .OrderBy(membership => membership.TeamId == staff.PrimaryTeamId ? 0 : 1)
+                .ThenByDescending(membership => membership.EffectiveFrom)
+                .Select(membership => new StaffTeamProfileRowViewModel
+                {
+                    TeamName = teams.GetValueOrDefault(membership.TeamId ?? string.Empty, membership.TeamId),
+                    Role = membership.Role.ToString(),
+                    EffectiveFrom = membership.EffectiveFrom,
+                    EffectiveTo = membership.EffectiveTo,
+                    IsMain = membership.TeamId == staff.PrimaryTeamId,
+                })];
+        }).Location(StaffProfileSections.DisplayType, StaffProfileSections.Location(StaffProfileSections.Teams, "1"));
     }
 
     public override Task<IDisplayResult> EditAsync(StaffMember staff, BuildEditorContext context)

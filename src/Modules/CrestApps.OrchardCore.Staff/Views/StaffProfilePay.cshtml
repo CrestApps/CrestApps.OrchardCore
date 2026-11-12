@@ -1,0 +1,26 @@
+@model StaffPayProfileViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Pay"]</div>
+    <div class="card-body">
+        <dl class="row mb-3">
+            <dt class="col-sm-4">@T["Hourly rate today"]</dt><dd class="col-sm-8">@(Model.CurrentRate?.ToString("N2") ?? "-")</dd>
+            <dt class="col-sm-4">@T["Annual salary"]</dt><dd class="col-sm-8">@(Model.AnnualSalary?.ToString("N2") ?? "-")</dd>
+            <dt class="col-sm-4">@T["Cost of an hour"]</dt><dd class="col-sm-8">@(Model.HourlyCost?.ToString("N2") ?? "-")</dd>
+        </dl>
+        @if (Model.Rates.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>@T["From"]</th><th>@T["Hourly rate"]</th></tr></thead>
+                    <tbody>
+                        @foreach (var rate in Model.Rates)
+                        {
+                            <tr><td>@rate.EffectiveFrom?.ToString("d")</td><td>@rate.HourlyRate?.ToString("N2")</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

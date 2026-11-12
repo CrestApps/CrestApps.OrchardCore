@@ -27,11 +27,6 @@ public sealed class WorkforceAdminMenu : AdminNavigationProvider
             .AddClass("icon-class-fa-solid")
             .AddClass("icon-class-fa-users")
             .Id("workforce")
-            .Add(S["Workers"], S["Workers"].PrefixPosition("10"), workers => workers
-                .Id("workers")
-                .Action("Index", "Workers", WorkforceConstants.Features.Workforce)
-                .Permission(WorkforcePermissions.ViewWorkers)
-                .LocalNav())
             .Add(S["Activity Codes"], S["Activity Codes"].PrefixPosition("90"), codes => codes
                 .Id("activityCodes")
                 .Action("Index", "ActivityCodes", WorkforceConstants.Features.Workforce)

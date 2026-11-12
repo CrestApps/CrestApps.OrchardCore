@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Teams.Services;
@@ -81,8 +82,8 @@ public sealed class WorkforceSetupController : Controller
             Description = S["The people who work, with their teams and roles. Link a worker to a user account so they can use My Work."],
             Status = S["Workers: {0} · Linked to a user: {1}", workerCount, linked],
             Done = workerCount > 0,
-            Action = S["Workers"],
-            Url = Url.Action("Index", "Workers"),
+            Action = S["Staff"],
+            Url = Url.Action("Index", "Staff", new { area = StaffConstants.Features.Staff }),
         });
 
         await AddAsync(model, features, WorkforceConstants.Features.ShiftPlanning, S["Plan shifts"], S["Shift templates, then a schedule for a team: draft it, fill it automatically, check coverage and publish it."], async () =>

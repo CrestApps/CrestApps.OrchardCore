@@ -1,0 +1,26 @@
+@model ShapeViewModel<CrestApps.OrchardCore.Staff.Models.StaffMember>
+
+@{
+    var settings = Model.Value.GetWorkforceSettings();
+}
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Workforce shifts"]</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">@T["Fewest hours a week"]</dt><dd class="col-sm-8">@(settings.MinHoursPerWeek?.ToString("0.##") ?? "-")</dd>
+            <dt class="col-sm-4">@T["Most hours a week"]</dt><dd class="col-sm-8">@(settings.MaxHoursPerWeek?.ToString("0.##") ?? "-")</dd>
+            <dt class="col-sm-4">@T["Most hours a day"]</dt><dd class="col-sm-8">@(settings.MaxHoursPerDay?.ToString("0.##") ?? "-")</dd>
+            <dt class="col-sm-4">@T["Availability"]</dt><dd class="col-sm-8">
+                @if (settings.Availability.Count == 0)
+                {
+                    @T["Any time"]
+                }
+                else
+                {
+                    @T["{0} windows", settings.Availability.Count]
+                }
+            </dd>
+        </dl>
+    </div>
+</div>

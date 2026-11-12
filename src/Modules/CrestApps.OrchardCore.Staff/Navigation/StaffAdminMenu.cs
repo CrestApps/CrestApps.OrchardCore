@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Routing;
+using CrestApps.OrchardCore.Staff.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Staff.Navigation;
@@ -9,14 +11,18 @@ namespace CrestApps.OrchardCore.Staff.Navigation;
 /// </summary>
 public sealed class StaffAdminMenu : AdminNavigationProvider
 {
+    private readonly StaffOptions _options;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StaffAdminMenu"/> class.
     /// </summary>
+    /// <param name="options">The Staff options, with the permissions other modules give to manage staff.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public StaffAdminMenu(IStringLocalizer<StaffAdminMenu> stringLocalizer)
+    public StaffAdminMenu(IOptions<StaffOptions> options, IStringLocalizer<StaffAdminMenu> stringLocalizer)
     {
+        _options = options.Value;
         S = stringLocalizer;
     }
 
@@ -28,11 +34,20 @@ public sealed class StaffAdminMenu : AdminNavigationProvider
             .AddClass("icon-class-fa-solid")
             .AddClass("icon-class-fa-id-card-clip")
             .Id("staff")
-            .Add(S["All Staff"], S["All Staff"].PrefixPosition("10"), all => all
-                .Id("staffAll")
-                .Action("Index", "Staff", StaffConstants.Features.Staff)
-                .Permission(StaffPermissions.ViewStaff)
-                .LocalNav())
+            .Add(S["All Staff"], S["All Staff"].PrefixPosition("10"), all =>
+            {
+                all.Id("staffAll")
+                    .Action("Index", "Staff", StaffConstants.Features.Staff)
+                    .Permission(StaffPermissions.ViewStaff)
+                    .Permission(StaffPermissions.ManageOwnStaff)
+                    .LocalNav();
+
+                // People who manage staff through another module (a Workforce team manager) see the staff they manage.
+                foreach (var permission in _options.ManageEveryonePermissions.Concat(_options.ManageOwnPermissions))
+                {
+                    all.Permission(permission);
+                }
+            })
             .Add(S["My Profile"], S["My Profile"].PrefixPosition("05"), me => me
                 .Id("staffMe")
                 .Action("Me", "Staff", StaffConstants.Features.Staff)

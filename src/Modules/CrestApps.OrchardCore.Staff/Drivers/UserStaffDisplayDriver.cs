@@ -2,10 +2,8 @@ using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Staff.ViewModels;
-using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -16,14 +14,14 @@ using OrchardCore.Users.Models;
 namespace CrestApps.OrchardCore.Staff.Drivers;
 
 /// <summary>
-/// The Staff section of the user editor: makes the person a staff member, or edits their staff record in place.
+/// The Staff section of the user editor: makes the person a staff member, or links to their staff profile, where
+/// their employment is kept.
 /// </summary>
 internal sealed class UserStaffDisplayDriver : DisplayDriver<User>
 {
     private readonly StaffAccounts _accounts;
     private readonly IStaffMemberManager _staffManager;
     private readonly IStaffScopeService _scopeService;
-    private readonly StaffTeamReader _teams;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
@@ -32,14 +30,12 @@ internal sealed class UserStaffDisplayDriver : DisplayDriver<User>
         StaffAccounts accounts,
         IStaffMemberManager staffManager,
         IStaffScopeService scopeService,
-        StaffTeamReader teams,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<UserStaffDisplayDriver> stringLocalizer)
     {
         _accounts = accounts;
         _staffManager = staffManager;
         _scopeService = scopeService;
-        _teams = teams;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -67,25 +63,12 @@ internal sealed class UserStaffDisplayDriver : DisplayDriver<User>
             return null;
         }
 
-        var teamOptions = (await _teams.ListTreeAsync())
-            .Where(item => scope.CoversTeam(item.Team.ItemId))
-            .Select(item => new SelectListItem(new string(' ', item.Depth * 4) + item.Team.Name, item.Team.ItemId, item.Team.ItemId == staff?.PrimaryTeamId))
-            .ToList();
-
+        // The employment details live on the staff profile only; this card links the account to it.
         return Initialize<UserStaffViewModel>("UserStaff_Edit", model =>
         {
             model.StaffMemberId = staff?.ItemId;
-            model.EmployeeNumber = staff?.EmployeeNumber;
             model.JobTitle = staff?.JobTitle;
-            model.ManagerId = staff?.ManagerId;
-            model.EmploymentType = (staff?.EmploymentType ?? EmploymentType.FullTime).ToString();
-            model.Status = (staff?.Status ?? StaffStatus.Active).ToString();
-            model.HireDate = staff?.HireDate;
-            model.PrimaryTeamId = staff?.PrimaryTeamId;
-            model.ContractedHoursPerWeek = staff?.ContractedHoursPerWeek;
-            model.TeamOptions = teamOptions;
-            model.EmploymentTypeOptions = StaffSelectLists.EmploymentTypes(S, model.EmploymentType);
-            model.StatusOptions = StaffSelectLists.Statuses(S, model.Status);
+            model.Status = staff?.Status.ToString();
         }).Location("Content:13");
     }
 
@@ -109,40 +92,14 @@ internal sealed class UserStaffDisplayDriver : DisplayDriver<User>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var staff = await _staffManager.FindByUserIdAsync(user.UserId);
-
-        if (staff is null && !model.MakeStaff)
+        if (model.MakeStaff && await _staffManager.FindByUserIdAsync(user.UserId) is null)
         {
-            return await EditAsync(user, context);
-        }
+            var result = await _accounts.SaveAsync(user.UserId, user.UserName, new StaffAccountInput());
 
-        if (staff is not null && !await _scopeService.CanManageAsync(principal, staff))
-        {
-            return await EditAsync(user, context);
-        }
-
-        if (!string.IsNullOrEmpty(model.PrimaryTeamId) && !scope.CoversTeam(model.PrimaryTeamId) && staff?.PrimaryTeamId != model.PrimaryTeamId)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, S["You can only add people to the teams you manage."]);
-
-            return await EditAsync(user, context);
-        }
-
-        var result = await _accounts.SaveAsync(user.UserId, user.UserName, new StaffAccountInput
-        {
-            EmployeeNumber = model.EmployeeNumber,
-            JobTitle = model.JobTitle,
-            ManagerId = model.ManagerId,
-            EmploymentType = Enum.TryParse<EmploymentType>(model.EmploymentType, out var employment) ? employment : EmploymentType.FullTime,
-            Status = Enum.TryParse<StaffStatus>(model.Status, out var status) ? status : StaffStatus.Active,
-            HireDate = model.HireDate,
-            PrimaryTeamId = model.PrimaryTeamId,
-            ContractedHoursPerWeek = model.ContractedHoursPerWeek,
-        });
-
-        foreach (var error in result.Errors)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, error);
+            foreach (var error in result.Errors)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, error);
+            }
         }
 
         return await EditAsync(user, context);

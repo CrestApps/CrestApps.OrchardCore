@@ -43,7 +43,7 @@ Each staff member is a YesSql document in the `Staff` collection, with `StaffMem
 
 ## Admin screens
 
-**Staff > All Staff** lists staff members on Orchard Core's admin list, with a search and filters for team (while Teams is on), status and capability. The editor is built by display drivers, one shape per card, so modules and themes can add, move, replace or hide any of them:
+**Staff > All Staff** lists staff members on Orchard Core's admin list, with a search and filters for team (while Teams is on), status and capability. People who may see all staff see everyone; a manager, including one who manages staff through another module (a Workforce team manager with **Manage workers**), sees the staff of the teams they manage, else their reports. Workforce has no worker list of its own: workers are staff members. The editor is built by display drivers, one shape per card, so modules and themes can add, move, replace or hide any of them:
 
 | Card | Shape | Comes from |
 | --- | --- | --- |
@@ -58,6 +58,23 @@ Each staff member is a YesSql document in the `Staff` collection, with `StaffMem
 | Preferred technicians, fleet driver | `WorkOrderTechnicians_Edit`, `AssetFleetDriver_Edit` | Work Orders and Assets, on their own editors |
 
 **Staff > My Profile** shows a person their own record and a **My work** list that other modules fill through `IStaffHomeLinkProvider`. **Staff > Organization Chart** (Staff Organization Chart feature) draws the reporting line as a chart you can zoom, pan, expand and collapse, with each person's picture (from the User Avatars feature, else their initials), job title and main team, using [d3-org-chart](https://github.com/bumbeishvili/org-chart). **Settings > Staff** turns on **Offer only staff where people are assigned work**.
+
+### The staff profile
+
+Choosing a person in the list opens their profile (**Staff > All Staff > a name**, `staff/profile/{id}`), the hub of everything about them, like an account's page. A header shows their picture or initials, name, job title, main team, status and user account, with **Edit Staff Member** for those who manage them. Down the side are the sections modules add; the selected one is kept in the address's hash (`#staff-teams`).
+
+| Section | From |
+| --- | --- |
+| Overview (employment, reporting line) | Staff |
+| Teams | Teams |
+| Skills (skills and certificates, with **Add a certificate**) | Staff's Skills integration |
+| Work (shift rules, Time clock, Timesheets, Time off) | Workforce |
+| Pay | Staff Compensation (later Payroll) |
+| Employment history | Staff |
+
+A module adds to the profile with a display driver on `StaffMember` for the `StaffProfileSections.DisplayType` (`DetailAdmin`) display type, placed with `StaffProfileSections.Location(section, position)`, and registers a section of its own with `services.AddPageSection(StaffProfileSections.PageName, name, title, icon, position)`. The page uses the shared page sections of the Resources module (`PageSectionsOptions`, the `PageSections` shape), the same as the account page.
+
+The profile opens for people who may see all staff, for those who manage the person, and for the person themselves. The user editor's **Staff** card only makes a user a staff member, or links to their profile: the employment details live on the profile.
 
 ### Teams are optional
 

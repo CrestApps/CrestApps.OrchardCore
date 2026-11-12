@@ -4,11 +4,13 @@ using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Staff.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Staff.Drivers;
 
@@ -59,17 +61,43 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
 
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
     public StaffPayDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
+        ILocalClock localClock,
         IStringLocalizer<StaffPayDisplayDriver> stringLocalizer)
     {
+        _localClock = localClock;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
+    }
+
+    public override async Task<IDisplayResult> DisplayAsync(StaffMember staff, BuildDisplayContext context)
+    {
+        if (context.DisplayType != StaffProfileSections.DisplayType || !await CanManagePayAsync())
+        {
+            return null;
+        }
+
+        var pay = staff.TryGet<StaffPayRates>(out var rates) ? rates : new StaffPayRates();
+        var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+
+        return Initialize<StaffPayProfileViewModel>("StaffProfilePay", model =>
+        {
+            model.CurrentRate = pay.RateOn(today);
+            model.AnnualSalary = pay.AnnualSalary;
+            model.HourlyCost = pay.HourlyCost;
+            model.Rates = [.. pay.Rates.OrderByDescending(rate => rate.EffectiveFrom).Where(rate => rate.ActivityCodeId is null).Select(rate => new StaffPayRateRowViewModel
+            {
+                EffectiveFrom = rate.EffectiveFrom,
+                HourlyRate = rate.HourlyRate,
+            })];
+        }).Location(StaffProfileSections.DisplayType, StaffProfileSections.Location(StaffProfileSections.Pay, "1"));
     }
 
     public override async Task<IDisplayResult> EditAsync(StaffMember staff, BuildEditorContext context)

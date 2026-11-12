@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Geo.Services;
+using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
@@ -29,6 +30,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -57,6 +59,9 @@ public sealed class Startup : StartupBase
         services.AddStaffCore();
         services.AddRoleGrants();
         services.AddDisplayDriver<StaffMember, StaffMemberDisplayDriver>();
+        services.AddDisplayDriver<StaffMember, StaffProfileDisplayDriver>();
+        services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.Overview, LocalizationSource.Create<Startup>("Overview"), "fa-solid fa-id-card", 0);
+        services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.History, LocalizationSource.Create<Startup>("Employment history"), "fa-solid fa-clock-rotate-left", 1000);
         services.AddDisplayDriver<User, UserStaffDisplayDriver>();
         services.AddScoped<IUserEventHandler, StaffUserEventHandler>();
         services.AddPermissionProvider<StaffPermissionsProvider>();
@@ -84,6 +89,7 @@ public sealed class CompensationStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<StaffMember, StaffPayDisplayDriver>();
+        services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.Pay, LocalizationSource.Create<CompensationStartup>("Pay"), "fa-solid fa-money-check-dollar", 60);
     }
 }
 
@@ -124,6 +130,8 @@ public sealed class SkillsStartup : StartupBase
     {
         services.AddStaffSkillLinks();
         services.AddDisplayDriver<StaffMember, StaffSkillsDisplayDriver>();
+        services.AddDisplayDriver<StaffMember, StaffSkillsProfileDisplayDriver>();
+        services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.Skills, LocalizationSource.Create<SkillsStartup>("Skills"), "fa-solid fa-award", 30);
     }
 }
 

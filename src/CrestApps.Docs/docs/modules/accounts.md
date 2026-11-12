@@ -129,7 +129,10 @@ ordinary Orchard Core tab placement, so every module's sections come out in the 
 doesn't know goes after **Service**, under its own name.
 
 The `ContentZone__AccountPage` alternate of the page's `Content` zone, added by `AccountPageShapeTableProvider`, draws
-those tabs as the side list instead of Orchard Core's tab strip, so the page stays tidy however many modules add one.
+those tabs as the side list instead of Orchard Core's tab strip, so the page stays tidy however many modules add one. It
+uses the shared page sections of the Resources module (the `PageSections` shape), which the staff profile uses too: each
+section's title, icon and position are registered with `services.AddPageSection(AccountPageTabs.PageName, name, title,
+icon, position)`. Accounts registers the sections it knows; a module that adds a new section registers it the same way.
 The chosen section is kept in the address's hash (`#account-contacts`), so a link, or a record's editor returning to the
 account, opens that section.
 

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using OrchardCore;
@@ -13,6 +14,11 @@ internal sealed class WorkerTimeClockRowDisplayDriver : DisplayDriver<StaffMembe
 {
     public override IDisplayResult Display(StaffMember item, BuildDisplayContext context)
     {
+        if (context.DisplayType == StaffProfileSections.DisplayType)
+        {
+            return View("WorkerProfile_TimeClock_DetailAdmin", item).Location(StaffProfileSections.DisplayType, StaffProfileSections.Location(StaffProfileSections.Work, "5"));
+        }
+
         if (context.DisplayType is not (OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid))
         {
             return null;
