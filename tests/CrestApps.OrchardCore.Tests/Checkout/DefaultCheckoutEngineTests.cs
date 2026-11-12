@@ -799,7 +799,11 @@ public sealed class DefaultCheckoutEngineTests
 
         var session = await sessionStore.GetAsync("session-1", TestContext.Current.CancellationToken);
         var invoice = session.GetOrCreate<CheckoutInvoice>();
-        invoice.InitialPaymentAmount = 30m;
+
+        // A code came off after the payment was begun for 30: the invoice is 20 now.
+        invoice.InitialPaymentAmount = 20m;
+        invoice.DueNow = 20m;
+        invoice.GrandTotal = 20m;
         session.Put(invoice);
 
         var result = await engine.TryCompleteAsync("session-1", TestContext.Current.CancellationToken);
