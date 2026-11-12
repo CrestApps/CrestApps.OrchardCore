@@ -349,7 +349,7 @@ public sealed class McpContentResourceStartup : StartupBase
         services.AddCoreAIMcpResourceType<ContentByIdResourceTypeHandler>(ContentByIdResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["Content Item"];
-            entry.Description = S["Retrieves a specific content item by its ID or version ID."];
+            entry.Description = S["Retrieves a published content item the caller may view, by its ID or published version ID."];
             entry.SupportedVariables =
             [
                 new McpResourceVariable("contentItemId") { Description = S["The content item ID to retrieve."] },
@@ -360,10 +360,11 @@ public sealed class McpContentResourceStartup : StartupBase
         services.AddCoreAIMcpResourceType<ContentByTypeResourceTypeHandler>(ContentByTypeResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["Content Type"];
-            entry.Description = S["Lists all published content items of a given content type."];
+            entry.Description = S["Lists the published content items of a given content type that the caller may view, {0} at a time.", ContentByTypeResourceTypeHandler.PageSize];
             entry.SupportedVariables =
             [
                 new McpResourceVariable("contentType") { Description = S["The content type to query."] },
+                new McpResourceVariable("page") { Description = S["The page to list, starting at 1."] },
             ];
         });
     }
