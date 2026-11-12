@@ -1,6 +1,6 @@
 # AG-UI for the AI chat and the admin widget — plan
 
-Status: done (2026-11-12). The protocol, the hub, the HTTP endpoint and the chat UI landed in CrestApps.Core (#317, #318; package `2.0.0-preview.371`, `@crestapps/ai-chat-ui` preview after it). The Orchard Core side landed with the admin widget page context, the destructive AI Agent tools marked for approval, the AG-UI endpoint under the AI Chat API feature and localized AG-UI texts. See "Outcome" at the end for what was built, how it differs from this plan, and what is left.
+Status: done (2026-11-12). The protocol, the hub, the HTTP endpoint and the chat UI landed in CrestApps.Core (#317, #318, #320; package `2.0.0-preview.373`, `@crestapps/ai-chat-ui` and `@crestapps/webmcp` `2.0.0-preview.258`). The Orchard Core side landed with the admin widget page context, the destructive AI Agent tools marked for approval, the AG-UI endpoint under the AI Chat API feature and localized AG-UI texts. See "Outcome" at the end for what was built, how it differs from this plan, and what is left.
 
 ## 1. Short answers
 
