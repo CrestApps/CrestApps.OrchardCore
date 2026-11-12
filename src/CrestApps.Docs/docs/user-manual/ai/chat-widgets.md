@@ -33,8 +33,9 @@ Both widgets chat with an [AI profile](profiles.md) of type **Chat**. Create the
 | **Chat profile** | The chat profile the widget talks to. Choose **No profile (disabled)** to hide the widget completely. |
 | **Max history sessions** | How many past chats the widget's history list shows, from 1 to 50. Default 10. |
 | **Primary color** | The color of the widget's header and button. Default `#41b670`. |
+| **Tell the AI which page the user is on** | Sends the page's title and address, the text you selected, the content item you are editing and the site with each message, so you can ask "summarize this item" or "what can I do here?". On by default. |
 
-**Max history sessions** and **Primary color** appear once you pick a profile.
+**Max history sessions**, **Primary color** and **Tell the AI which page the user is on** appear once you pick a profile.
 
 The widget shows on every admin page for each signed-in user who is allowed to use that profile.
 
@@ -52,6 +53,12 @@ An admin assistant becomes much more useful when it can act on the site, for exa
 - Drag the header to move the window, and drag its edge to resize it. **Restore size** puts it back to its normal size. You can drag the round button too.
 
 The widget remembers its position, its size, whether it was open and your current chat in your browser, so it looks the same on the next page.
+
+### Watch and approve what the assistant does
+
+- Each step the assistant takes, such as reading a content item or opening a page, shows as a small card in its answer. Expand a card to see what it sent and what came back.
+- Before the assistant deletes, disables, imports or sends something, the card asks **Allow this action?** Click **Allow** to let it go ahead, or **Deny** to stop it. Nothing happens until you answer.
+- When the profile can use the page (**Allow page tools**), the assistant can read what the page shows, fill in form fields for you to review and save, and open other admin pages. When it opens a page, it carries on there by itself.
 
 ## Add a chat box to your website
 
