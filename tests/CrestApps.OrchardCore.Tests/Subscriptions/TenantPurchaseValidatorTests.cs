@@ -138,6 +138,78 @@ public sealed class TenantPurchaseValidatorTests
         Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.FeatureProfileNotFound);
     }
 
+    /// <summary>
+    /// SEC-C2 regression: an upgraded store that sells sites on the buyer's own domain kept custom prefixes off, so the
+    /// prefix was derived from the name and the buyer of <c>buyer.com</c> got <c>buyer.com/shop1</c>.
+    /// </summary>
+    [Fact]
+    public void Normalize_ACustomDomainWithoutAPrefix_DerivesNoPrefix()
+    {
+        var rules = Rules(allowCustomDomains: true);
+        var request = TenantPurchaseValidator.Normalize(Request(prefix: null, domains: ["buyer.com"]), rules);
+
+        Assert.True(string.IsNullOrEmpty(request.Prefix));
+        Assert.Empty(TenantPurchaseValidator.Validate(request, rules, _tenants));
+    }
+
+    /// <summary>
+    /// The step says "Leave blank to use the site name" where the buyer may choose a prefix, and a blank one was refused.
+    /// </summary>
+    [Fact]
+    public void Normalize_ABlankPrefixWhereTheBuyerMayChoose_IsTheSiteName()
+    {
+        var rules = Rules(allowCustomPrefix: true);
+        var request = TenantPurchaseValidator.Normalize(Request(prefix: null), rules);
+
+        Assert.Equal("shop1", request.Prefix);
+        Assert.Empty(TenantPurchaseValidator.Validate(request, rules, _tenants));
+    }
+
+    /// <summary>
+    /// SEC-C2: with a base domain the name becomes a host label, so a name such as <c>admin</c> or <c>www</c> would take
+    /// <c>admin.{base domain}</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("admin")]
+    [InlineData("login")]
+    [InlineData("www")]
+    public void Validate_AReservedNameAsAHostLabel_IsRefused(string tenantName)
+    {
+        var rules = Rules(baseDomain: "sites.operator.com");
+        var request = TenantPurchaseValidator.Normalize(Request(tenantName: tenantName, prefix: null), rules);
+
+        var errors = TenantPurchaseValidator.Validate(request, rules, _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.ReservedHost);
+    }
+
+    /// <summary>
+    /// SEC-C2: the operator's domains are reserved with every name under them, so a buyer who checks out through one alias
+    /// can't take another (<c>www.operator.com</c>, <c>shop.operator.com</c>).
+    /// </summary>
+    [Theory]
+    [InlineData("operator.com")]
+    [InlineData("www.operator.com")]
+    [InlineData("shop.operator.com")]
+    public void Validate_AHostUnderTheOperatorsDomain_IsRefused(string domain)
+    {
+        var errors = TenantPurchaseValidator.Validate(
+            Request(domains: [domain]),
+            Rules(allowCustomDomains: true, reservedHosts: ["operator.com"]),
+            _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.ReservedHost);
+    }
+
+    [Fact]
+    public void Validate_TheDerivedHostUnderAReservedBaseDomain_IsAllowed()
+    {
+        var rules = Rules(baseDomain: "operator.com", reservedHosts: ["operator.com"]);
+        var request = TenantPurchaseValidator.Normalize(Request(prefix: null), rules);
+
+        Assert.Empty(TenantPurchaseValidator.Validate(request, rules, _tenants));
+    }
+
     [Theory]
     [InlineData("Default")]
     [InlineData("Acme")]

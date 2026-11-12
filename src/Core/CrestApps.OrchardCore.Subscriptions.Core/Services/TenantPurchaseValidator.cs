@@ -81,6 +81,7 @@ public sealed class TenantPurchaseRules
     /// purchase may name only one of these.
     /// </summary>
     public IReadOnlyCollection<string> KnownFeatureProfiles { get; set; }
+}
 
 /// <summary>
 /// Why a tenant purchase was refused.
@@ -145,8 +146,11 @@ public static partial class TenantPurchaseValidator
             domains = [$"{name.ToLowerInvariant()}.{rules.BaseDomain.Trim().Trim('.').ToLowerInvariant()}"];
             prefix = string.Empty;
         }
-        else if (!rules.AllowCustomPrefix && string.IsNullOrEmpty(prefix) && !string.IsNullOrEmpty(name))
+        else if (string.IsNullOrEmpty(prefix) && !string.IsNullOrEmpty(name) && domains.Length == 0)
         {
+            // A blank prefix is the site's name, whether or not the buyer may choose one (the step says so). A site on the
+            // buyer's own domain answers on that host alone: deriving a prefix would put it on buyer.com/name, and with
+            // custom prefixes off the buyer couldn't clear it.
             prefix = name.ToLowerInvariant();
         }
 
@@ -299,7 +303,7 @@ public static partial class TenantPurchaseValidator
             return;
         }
 
-        var reserved = new HashSet<string>((rules.ReservedHosts ?? []).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => host.Trim()), StringComparer.OrdinalIgnoreCase)
+        var reserved = new HashSet<string>((rules.ReservedHosts ?? []).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => host.Trim().Trim('.')), StringComparer.OrdinalIgnoreCase)
         {
             "localhost",
         };
@@ -318,7 +322,14 @@ public static partial class TenantPurchaseValidator
                 continue;
             }
 
-            if (reserved.Contains(domain))
+            // The operator's domains are reserved with every name under them, so a buyer who checks out through one alias
+            // can't take another; the host derived from the base domain is the one name under it a buyer is given. With a
+            // base domain the name is a host label, so it is held to the reserved prefixes too (admin.{base domain}).
+            var isReserved = reserved.Contains(domain) || (derived
+                ? IsReservedPrefix(request.TenantName, rules) || string.Equals(request.TenantName, "www", StringComparison.OrdinalIgnoreCase)
+                : reserved.Any(host => domain.EndsWith("." + host, StringComparison.OrdinalIgnoreCase)));
+
+            if (isReserved)
             {
                 errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.ReservedHost, domain));
 
