@@ -295,23 +295,27 @@ public sealed class MarketplaceService
         var failures = new List<string>();
         var paid = 0m;
         var now = _clock.UtcNow;
+        var available = await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken);
+        var settled = new HashSet<string>(StringComparer.Ordinal);
 
-        // A payout recorded before its transfer and never marked paid (the run stopped in between) is sent again with
-        // the same key, so the provider answers with the transfer it already made instead of paying twice.
-        var pending = (await _payouts.ListByVendorAsync(vendor.ItemId, PendingPayoutLookback, cancellationToken))
-            .Where(payout => payout.Status == VendorPayoutStatus.Pending)
-            .ToList();
+        // A payout recorded before its transfer and never marked paid (the run stopped in between) is finished first, sent
+        // again as it was recorded (amount, earnings and key), so the provider answers with the transfer it already made.
+        // Planning around it instead would put its earnings in a new transfer with a new key whenever anything changed
+        // meanwhile, such as a refund of the same order, and pay them twice.
+        foreach (var payout in await ListPendingAsync(vendor, available, cancellationToken))
+        {
+            var order = await _orders.FindByIdAsync(payout.OrderId, cancellationToken);
 
-        foreach (var batch in PlanPayouts(await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken)))
+            paid += await SendAsync(vendor, provider, payout, order, failures, cancellationToken);
+            settled.UnionWith(payout.EarningIds ?? []);
+        }
+
+        foreach (var batch in PlanPayouts(available.Where(earning => !settled.Contains(earning.ItemId))))
         {
             var order = await _orders.FindByIdAsync(batch.OrderId, cancellationToken);
             var earningIds = batch.Earnings.Select(earning => earning.ItemId).ToList();
-            var existing = pending.FirstOrDefault(payout =>
-                payout.OrderId == batch.OrderId &&
-                payout.Amount == batch.Amount &&
-                payout.EarningIds.Order(StringComparer.Ordinal).SequenceEqual(earningIds.Order(StringComparer.Ordinal), StringComparer.Ordinal));
 
-            var payout = existing ?? new VendorPayout
+            var payout = new VendorPayout
             {
                 ItemId = global::OrchardCore.IdGenerator.GenerateId(),
                 VendorId = vendor.ItemId,
@@ -328,78 +332,119 @@ public sealed class MarketplaceService
                 IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, batch.OrderId, earningIds, batch.Earnings.Max(earning => earning.RefusedPayouts)),
             };
 
-            if (existing is null)
-            {
-                // Committed before the transfer is asked for, so the key is on record whatever happens next.
-                await _payouts.CreateAsync(payout, cancellationToken);
-                await _session.SaveChangesAsync(cancellationToken);
-            }
+            await _payouts.CreateAsync(payout, cancellationToken);
 
-            string transferId;
-            string failure;
-
-            try
-            {
-                (transferId, failure) = await provider.PayAsync(vendor, order, batch.Amount, batch.Currency, payout.IdempotencyKey, cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                MarketplaceTelemetry.RecordPayout(provider.Name, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
-
-                throw;
-            }
-
-            MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
-
-            // Read again: the commit above detached what was read before it, and saving a detached copy would add a row.
-            var stored = await _payouts.FindByIdAsync(payout.ItemId, cancellationToken) ?? payout;
-
-            stored.TransferId = transferId;
-            stored.Failure = failure;
-            stored.Status = failure is null ? VendorPayoutStatus.Paid : VendorPayoutStatus.Failed;
-
-            await _payouts.UpdateAsync(stored, cancellationToken);
-
-            if (failure is not null)
-            {
-                // The provider keeps its answer for a key, so the next try of these earnings needs a new key.
-                foreach (var earningId in earningIds)
-                {
-                    if (await _earnings.FindByIdAsync(earningId, cancellationToken) is { } earning)
-                    {
-                        earning.RefusedPayouts++;
-
-                        await _earnings.UpdateAsync(earning, cancellationToken);
-                    }
-                }
-
-                failures.Add(failure);
-                _logger.LogWarning("Order '{OrderNumber}' couldn't be paid out to vendor '{VendorId}': {Failure}", stored.OrderNumber, vendor.ItemId, failure);
-
-                continue;
-            }
-
+            // The earnings name the payout while it is pending, so the next run finds it however many payouts came after.
             foreach (var earningId in earningIds)
             {
                 if (await _earnings.FindByIdAsync(earningId, cancellationToken) is { } earning)
                 {
-                    earning.Status = VendorEarningStatus.PaidOut;
-                    earning.PayoutId = stored.ItemId;
+                    earning.PayoutId = payout.ItemId;
 
                     await _earnings.UpdateAsync(earning, cancellationToken);
                 }
             }
 
-            paid += batch.Amount;
+            // Committed before the transfer is asked for, so the key is on record whatever happens next.
+            await _session.SaveChangesAsync(cancellationToken);
+
+            paid += await SendAsync(vendor, provider, payout, order, failures, cancellationToken);
         }
 
         return (paid, failures);
     }
 
+    // The vendor's payouts still pending: those its ready earnings name, and, for one recorded before earnings named their
+    // payout, those among its latest payouts.
+    private async Task<List<VendorPayout>> ListPendingAsync(Vendor vendor, IEnumerable<VendorEarning> available, CancellationToken cancellationToken)
+    {
+        var pending = new List<VendorPayout>();
+
+        foreach (var payoutId in available.Select(earning => earning.PayoutId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
+        {
+            if (await _payouts.FindByIdAsync(payoutId, cancellationToken) is { Status: VendorPayoutStatus.Pending } payout)
+            {
+                pending.Add(payout);
+            }
+        }
+
+        foreach (var payout in await _payouts.ListByVendorAsync(vendor.ItemId, PendingPayoutLookback, cancellationToken))
+        {
+            if (payout.Status == VendorPayoutStatus.Pending && !pending.Any(known => known.ItemId == payout.ItemId))
+            {
+                pending.Add(payout);
+            }
+        }
+
+        return pending;
+    }
+
+    // Asks the provider for one payout's transfer and records the answer. Returns what was paid.
+    private async Task<decimal> SendAsync(Vendor vendor, IVendorPayoutProvider provider, VendorPayout payout, Order order, List<string> failures, CancellationToken cancellationToken)
+    {
+        string transferId;
+        string failure;
+
+        try
+        {
+            (transferId, failure) = await provider.PayAsync(vendor, order, payout.Amount, payout.Currency, payout.IdempotencyKey, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            MarketplaceTelemetry.RecordPayout(provider.Name, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
+
+            throw;
+        }
+
+        MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
+
+        // Read again: the commit above detached what was read before it, and saving a detached copy would add a row.
+        var stored = await _payouts.FindByIdAsync(payout.ItemId, cancellationToken) ?? payout;
+
+        stored.TransferId = transferId;
+        stored.Failure = failure;
+        stored.Status = failure is null ? VendorPayoutStatus.Paid : VendorPayoutStatus.Failed;
+
+        await _payouts.UpdateAsync(stored, cancellationToken);
+
+        foreach (var earningId in payout.EarningIds ?? [])
+        {
+            if (await _earnings.FindByIdAsync(earningId, cancellationToken) is not { } earning)
+            {
+                continue;
+            }
+
+            if (failure is null)
+            {
+                earning.Status = VendorEarningStatus.PaidOut;
+                earning.PayoutId = stored.ItemId;
+            }
+            else
+            {
+                // The provider keeps its answer for a key, so the next try of these earnings needs a new key.
+                earning.RefusedPayouts++;
+                earning.PayoutId = null;
+            }
+
+            await _earnings.UpdateAsync(earning, cancellationToken);
+        }
+
+        if (failure is not null)
+        {
+            failures.Add(failure);
+            _logger.LogWarning("Order '{OrderNumber}' couldn't be paid out to vendor '{VendorId}': {Failure}", stored.OrderNumber, vendor.ItemId, failure);
+
+            return 0m;
+        }
+
+        return payout.Amount;
+    }
+
     /// <summary>
-    /// Groups a vendor's released earnings into transfers, one per order and currency. An order whose earnings come to
-    /// nothing or less (a refund after that order was paid out) is owed back: it comes off the next order that has
-    /// more than enough to cover it, and is marked paid out with that transfer, so the vendor never keeps both.
+    /// Groups a vendor's released earnings into transfers, one per order and currency. What the vendor owes back (a refund
+    /// after an order was paid out) is a balance carried against its next orders: an order that doesn't cover what is still
+    /// owed is held back, its earnings left ready, until a later one does; that one is paid what's left and settles every
+    /// earning held against it, so the vendor never keeps both, however small the orders after the refund are.
     /// </summary>
     /// <param name="earnings">The vendor's released earnings.</param>
     internal static IReadOnlyList<PayoutBatch> PlanPayouts(IEnumerable<VendorEarning> earnings)
@@ -415,23 +460,31 @@ public sealed class MarketplaceService
                 .ThenBy(batch => batch.OrderId, StringComparer.Ordinal)
                 .ToList();
 
-            // What's owed back, smallest first, so as much of it as possible is settled.
-            var owed = new Queue<PayoutBatch>(orders.Where(batch => batch.Amount <= 0m).OrderByDescending(batch => batch.Amount));
+            var owed = orders.Where(batch => batch.Amount <= 0m).ToList();
+            var deficit = Money.Round(-owed.Sum(batch => batch.Amount), currency.Key);
+            var carried = owed.SelectMany(batch => batch.Earnings).ToList();
 
             foreach (var batch in orders.Where(batch => batch.Amount > 0m))
             {
-                var amount = batch.Amount;
-                var included = new List<VendorEarning>(batch.Earnings);
-
-                while (owed.Count > 0 && amount + owed.Peek().Amount > 0m)
+                if (carried.Count == 0)
                 {
-                    var debt = owed.Dequeue();
+                    batches.Add(batch);
 
-                    amount = Money.Round(amount + debt.Amount, currency.Key);
-                    included.AddRange(debt.Earnings);
+                    continue;
                 }
 
-                batches.Add(batch with { Amount = amount, Earnings = included });
+                if (batch.Amount <= deficit)
+                {
+                    // Not enough to cover what's owed: held back with the debt until an order that is.
+                    deficit = Money.Round(deficit - batch.Amount, currency.Key);
+                    carried.AddRange(batch.Earnings);
+
+                    continue;
+                }
+
+                batches.Add(batch with { Amount = Money.Round(batch.Amount - deficit, currency.Key), Earnings = [.. batch.Earnings, .. carried] });
+                deficit = 0m;
+                carried = [];
             }
         }
 

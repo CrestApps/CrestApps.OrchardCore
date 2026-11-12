@@ -29,8 +29,18 @@
         </div>
         <div class="col-12 col-md-4">
             <div class="card h-100"><div class="card-body">
-                <div class="small text-body-secondary">@T["Ready to pay out ({0})", currency]</div>
-                <div class="fs-4">@ProductPriceFormatter.Format(available, currency)</div>
+                @if (available < 0m)
+                {
+                    @* A refund after a payout is owed back and comes off the next payouts until it is covered. *@
+                    <div class="small text-body-secondary">@T["Owed back ({0})", currency]</div>
+                    <div class="fs-4 text-danger">@ProductPriceFormatter.Format(-available, currency)</div>
+                    <div class="small text-body-secondary">@T["Refunds after a payout. Your next payouts are held back until it is covered."]</div>
+                }
+                else
+                {
+                    <div class="small text-body-secondary">@T["Ready to pay out ({0})", currency]</div>
+                    <div class="fs-4">@ProductPriceFormatter.Format(available, currency)</div>
+                }
             </div></div>
         </div>
         <div class="col-12 col-md-4">
