@@ -63,6 +63,8 @@ public sealed partial class ConfigurationSchemaCoverageTests
     [InlineData("_shellConfiguration.GetSection(Names.Section).Bind(options);", "CrestApps:Sample")]
     [InlineData("services.Configure<C>(_shellConfiguration.GetSection($\"{Names.Section}:Chat\"));", "CrestApps:Sample:Chat")]
     [InlineData("if (section.GetSection(nameof(Options.Urls)).Exists()) { }", null)]
+    [InlineData("provider.GetService<IShellConfiguration>()?.GetSection(Names.Section).Bind(options);", "CrestApps:Sample")]
+    [InlineData("_shellConfiguration?.GetSection(\"CrestApps:Maybe\").Bind(options);", "CrestApps:Maybe")]
     public void ReadSections_ResolvesLiteralsAndConstants(string code, string expected)
     {
         // Arrange
@@ -265,7 +267,7 @@ public sealed partial class ConfigurationSchemaCoverageTests
         return constants;
     }
 
-    [GeneratedRegex(@"(?:\b_?\w*[cC]onfiguration\b|IConfiguration>\(\))\s*\.\s*GetSection\s*\(|\bBindConfiguration\s*\(")]
+    [GeneratedRegex(@"(?:\b_?\w*[cC]onfiguration\b|\w*Configuration>\(\))\s*\??\s*\.\s*GetSection\s*\(|\bBindConfiguration\s*\(")]
     private static partial Regex SectionCall();
 
     [GeneratedRegex(@"\{(?<name>[\w.]+)\}")]

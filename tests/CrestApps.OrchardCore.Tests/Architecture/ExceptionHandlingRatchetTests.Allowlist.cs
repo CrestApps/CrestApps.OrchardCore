@@ -46,6 +46,8 @@ public sealed partial class ExceptionHandlingRatchetTests
         ["src/Core/CrestApps.OrchardCore.DataConnectors.Core/Relational/RelationalDataConnector.cs"] = 1,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryPlanner.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.AI/Controllers/AIVoiceLibraryController.cs"] = 3,
+        // Found once the scan also read HTTP responses: the entitlement policy's own refusal, written for the agent.
+        ["src/Modules/CrestApps.OrchardCore.ContactCenter/Controllers/AgentSoftPhoneController.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/ModelBinders/IvrFlowJsonModelBinder.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.DataConnectors/Controllers/ConnectedDataSetsController.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.DataConnectors/Controllers/DataConnectionsController.cs"] = 1,
