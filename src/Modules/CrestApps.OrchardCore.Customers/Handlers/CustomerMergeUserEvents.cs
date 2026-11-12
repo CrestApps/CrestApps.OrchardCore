@@ -24,7 +24,7 @@ internal static class CustomerMerge
     public static async Task RunAsync(IServiceProvider serviceProvider, IUser user, ILogger logger)
     {
         // Only a user who proved they control their mailbox by a round trip gets the guests that bought with it.
-        if (user is not User { UserId: { Length: > 0 } userId, EmailConfirmed: true } account || !UserEmailOwnership.IsVerified(account.Properties))
+        if (user is not User { UserId: { Length: > 0 } userId, EmailConfirmed: true } account || !UserEmailOwnership.IsVerified(account.Properties, account.Email))
         {
             return;
         }
@@ -75,9 +75,9 @@ public sealed class CustomerMergeUserEventHandler : UserEventHandlerBase
     // before the guests that bought with the address are merged.
     public override async Task ConfirmedAsync(UserConfirmContext context)
     {
-        if (context.User is User user && !UserEmailOwnership.IsVerified(user.Properties))
+        if (context.User is User user && !UserEmailOwnership.IsVerified(user.Properties, user.Email))
         {
-            UserEmailOwnership.MarkVerified(user.Properties, _serviceProvider.GetRequiredService<IClock>().UtcNow);
+            UserEmailOwnership.MarkVerified(user.Properties, user.Email, _serviceProvider.GetRequiredService<IClock>().UtcNow);
             await _serviceProvider.GetRequiredService<UserManager<IUser>>().UpdateAsync(user);
         }
 

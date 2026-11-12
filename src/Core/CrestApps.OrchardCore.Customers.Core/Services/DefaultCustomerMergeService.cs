@@ -53,7 +53,7 @@ public sealed class DefaultCustomerMergeService : ICustomerMergeService
         // proved they control the mailbox by a round trip (a confirmation link, or a code emailed to them).
         if (string.IsNullOrEmpty(userId) ||
             await _userService.GetUserByUniqueIdAsync(userId) is not User { EmailConfirmed: true } user ||
-            !UserEmailOwnership.IsVerified(user.Properties) ||
+            !UserEmailOwnership.IsVerified(user.Properties, user.Email) ||
             string.IsNullOrWhiteSpace(user.Email))
         {
             return 0;
