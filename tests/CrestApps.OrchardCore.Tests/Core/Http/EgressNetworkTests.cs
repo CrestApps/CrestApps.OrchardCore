@@ -83,11 +83,42 @@ public sealed class EgressNetworkTests
     [InlineData("64:ff9b::a00:1", true)]
     [InlineData("64:ff9b::7f00:1", true)]
     [InlineData("64:ff9b::808:808", false)]
+    [InlineData("168.63.129.16", true)]
+    [InlineData("2002:a9fe:a9fe::1", true)]
+    [InlineData("2002:a00:1::1", true)]
+    [InlineData("2002:808:808::1", false)]
     [InlineData("198.20.0.1", false)]
     [InlineData("192.0.2.1", false)]
     [InlineData("2001:4860:4860::8888", false)]
     public void TheStricterRules_AreTheGuardsRules(string address, bool isInternal)
         => Assert.Equal(isInternal, EgressNetwork.IsInternal(IPAddress.Parse(address)));
+
+    [Fact]
+    public void TheGuardedHandler_NeverGoesThroughAProxy()
+    {
+        // Through a proxy, the connect check would see the proxy's address and never the destination's.
+        Assert.False(EgressNetwork.CreateHandler(allowLoopback: false).UseProxy);
+        Assert.False(EgressNetwork.CreateHandler(allowLoopback: false, allowPrivateNetwork: true, allowRedirects: true).UseProxy);
+    }
+
+    [Fact]
+    public void A6to4AddressOfTheMetadataService_IsLinkLocal_AndRefusedEvenOnAPrivateNetwork()
+    {
+        var address = IPAddress.Parse("2002:a9fe:a9fe::1");
+
+        Assert.True(EgressNetwork.IsLinkLocal(address));
+        Assert.True(EgressNetwork.IsRefused(address, allowLoopback: true, allowPrivateNetwork: true));
+    }
+
+    [Theory]
+    [InlineData("http://example.com/feed", true)]
+    [InlineData("https://example.com/feed", true)]
+    [InlineData("http://10.0.0.5/feed", false)]
+    [InlineData("http://localhost/feed", false)]
+    [InlineData("ftp://example.com/feed", false)]
+    [InlineData("https://user:secret@example.com/feed", false)]
+    public void IsExternalUrl_IsTheNetworkRule_WithoutTheHttpsRule(string url, bool external)
+        => Assert.Equal(external, EgressNetwork.IsExternalUrl(url, isDevelopment: false));
 
     [Fact]
     public async Task AResilientGuardedClient_HasTheStandardResilienceHandler_AndRefusesThisMachine()
