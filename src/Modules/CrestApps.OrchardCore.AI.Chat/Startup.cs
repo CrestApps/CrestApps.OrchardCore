@@ -164,7 +164,7 @@ public sealed class AdminWidgetStartup : StartupBase
 /// Tells the admin chat widget which content item the user is editing, when Orchard Core's Contents feature is on.
 /// </summary>
 [Feature(AIConstants.Feature.ChatAdminWidget)]
-[RequireFeatures("OrchardCore.Contents")]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
 public sealed class AdminWidgetContentsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
