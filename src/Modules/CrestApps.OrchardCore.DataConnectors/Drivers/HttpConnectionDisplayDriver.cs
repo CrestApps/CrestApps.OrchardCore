@@ -158,9 +158,10 @@ internal sealed class HttpConnectionDisplayDriver : DisplayDriver<DataConnection
             headers.Add(new HttpHeaderSetting { Name = name, Value = line[(separator + 1)..].Trim() });
         }
 
-        // A stored secret was given for one host. When the connection now sends its requests or its token requests to
-        // another host, the secrets are dropped and must be entered again, so an edit can't hand them to a new server.
-        if (SendsSecretsElsewhere(connection.GetOrCreate<HttpConnectionSettings>(), model.BaseUrl, model.TokenUrl, model.Authority))
+        // A stored secret was given for one host and one way of signing in. When the connection now sends its requests or
+        // its token requests to another host, or signs in another way, the secrets are dropped and must be entered again,
+        // so an edit can't hand them to a new server.
+        if (SendsSecretsElsewhere(connection.GetOrCreate<HttpConnectionSettings>(), model.BaseUrl, model.TokenUrl, model.Authority, model.AuthenticationType, model.GrantType))
         {
             foreach (var secret in new[] { HttpAuthenticationSecrets.ApiKey, HttpAuthenticationSecrets.Password, HttpAuthenticationSecrets.BearerToken, HttpAuthenticationSecrets.ClientSecret })
             {
@@ -238,25 +239,34 @@ internal sealed class HttpConnectionDisplayDriver : DisplayDriver<DataConnection
 
     /// <summary>
     /// Gets whether the posted connection sends its requests, or its token requests, to another origin than the stored
-    /// one, for a connection that was saved before.
+    /// one, or signs in another way, for a connection that was saved before. A token endpoint or issuer set where there
+    /// was none counts as another origin: a Basic password or an issuer's client secret would otherwise be posted to it.
     /// </summary>
     internal static bool SendsSecretsElsewhere(HttpConnectionSettings stored, string baseUrl, string tokenUrl, string authority)
+        => SendsSecretsElsewhere(stored, baseUrl, tokenUrl, authority, stored?.Authentication?.Type ?? default, stored?.Authentication?.GrantType ?? default);
+
+    /// <inheritdoc cref="SendsSecretsElsewhere(HttpConnectionSettings, string, string, string)"/>
+    internal static bool SendsSecretsElsewhere(HttpConnectionSettings stored, string baseUrl, string tokenUrl, string authority, HttpAuthenticationType type, OAuthGrantType grantType)
     {
         if (stored is null || string.IsNullOrWhiteSpace(stored.BaseUrl))
         {
             return false;
         }
 
-        return !SameOrigin(stored.BaseUrl, baseUrl) ||
-            !SameOrigin(stored.Authentication?.TokenUrl, tokenUrl) ||
-            !SameOrigin(stored.Authentication?.Authority, authority);
+        var authentication = stored.Authentication ?? new HttpAuthenticationSettings();
+
+        return authentication.Type != type ||
+            authentication.GrantType != grantType ||
+            !SameOrigin(stored.BaseUrl, baseUrl) ||
+            !SameOrigin(authentication.TokenUrl, tokenUrl) ||
+            !SameOrigin(authentication.Authority, authority);
     }
 
     private static bool SameOrigin(string stored, string posted)
     {
         if (string.IsNullOrWhiteSpace(stored))
         {
-            return true;
+            return string.IsNullOrWhiteSpace(posted);
         }
 
         return Uri.TryCreate(stored.Trim(), UriKind.Absolute, out var before) &&
