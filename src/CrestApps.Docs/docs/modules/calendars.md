@@ -286,7 +286,7 @@ With Calendar Invitations on, `CalendarInvitationObserver` emails each attendee 
 - **Updated:** when the title, time or place changes.
 - **Cancelled:** when the event is cancelled or deleted, with an `.ics` `CANCEL`.
 
-`CalendarInvitationTokenHandler` gives each email attendee a secret `ResponseToken`. The email's **Accept**, **Maybe** and **Decline** links go to `calendars/respond/{eventId}/{token}/{response}`, an anonymous endpoint that records the answer. Changes made with `SendInvitations = false` (recipes, imports) send nothing.
+`CalendarInvitationTokenHandler` gives each email attendee a secret `ResponseToken`. The email's **Accept**, **Maybe** and **Decline** links go to `calendars/respond/{eventId}/{token}/{response}`, an anonymous endpoint. Opening the link only shows the question with a button: mail scanners open every link in a message, so a `GET` never changes the answer. The button posts to the same address, which records it. Changes made with `SendInvitations = false` (recipes, imports) send nothing.
 
 ## iCalendar feeds, import and export
 
