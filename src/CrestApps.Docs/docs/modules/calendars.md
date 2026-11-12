@@ -384,6 +384,8 @@ An overlap refusal returns `409 Conflict` as Problem Details; other validation e
 
 The admin calendar view uses its own endpoints under `Admin/api/calendars` (`occurrences`, `occurrences/move` and `users/search`), which are not a public API.
 
+The user search behind the calendar user pickers (`users/search`, route name `CalendarsUserSearch`) answers only users who hold both **Use calendars** and **Access admin panel** (`AccessAdminPanel`); anyone else, such as a signed-in storefront customer, gets `403 Forbidden`. It returns up to 30 enabled users and matches the user name. It matches and shows emails only for a caller who holds Orchard Core's **View Users** permission (`UsersPermissions.ViewUsers`, which **Manage Users** implies); others see user names only.
+
 ## AI tools
 
 With `CrestApps.OrchardCore.AI` enabled, Calendars registers these tools in the **Calendar** category (an `AIToolsStartup` with `[RequireFeatures("CrestApps.OrchardCore.AI")]`). They act for the signed-in person using the AI, with that person's calendar access, and refuse anonymous callers and callers without **Use calendars** (`AccessCalendars`). Without that permission, `createCalendarEvent` doesn't create the person's personal calendar either.

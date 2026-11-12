@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.WebMcp.Services;
 /// </summary>
 internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<ResourceManagementOptions>
 {
-    private const string CdnBaseUrl = "https://cdn.jsdelivr.net/npm/@crestapps/webmcp@2.0.0-preview.246/dist/";
+    private const string CdnBaseUrl = "https://cdn.jsdelivr.net/npm/@crestapps/webmcp@2.0.0-preview.258/dist/";
 
     private static readonly ResourceManifest _manifest;
 
@@ -33,8 +33,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl("~/CrestApps.OrchardCore.AI.WebMcp/scripts/webmcp.min.js", "~/CrestApps.OrchardCore.AI.WebMcp/scripts/webmcp.js")
             .SetCdn(CdnBaseUrl + "webmcp.min.js", CdnBaseUrl + "webmcp.js")
             .SetCdnIntegrity(
-                "sha384-g1JnPIbVlyenlllnce9bOaMyciMsq6W9ZENimLTwi3ksT4TO+DMBH0PSGi20D5sC",
-                "sha384-4JCt1cqsB4ciVo2DRxLHVe7Z3J1nI1P/ELrXRhRFxXi+xbOOh7ETIu3qdileNJjw")
+                "sha384-0gQxTSXZrKj0ZofQlqa/FSewpyAQmn3/KHMa9BQKWmyveqXe/N74bfNEiipnFEA3",
+                "sha384-KPJXGfd8+H2wdrizimNhFKW+nAS82X4wqWw0D9Mifin+xowf/fRa/iZdnkVjGKnj")
             .SetDependencies(WebMcpConstants.ResourceNames.Polyfill)
             .SetVersion("2.0.0");
 
@@ -43,8 +43,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetUrl("~/CrestApps.OrchardCore.AI.WebMcp/scripts/webmcp-page-tools.min.js", "~/CrestApps.OrchardCore.AI.WebMcp/scripts/webmcp-page-tools.js")
             .SetCdn(CdnBaseUrl + "webmcp-page-tools.min.js", CdnBaseUrl + "webmcp-page-tools.js")
             .SetCdnIntegrity(
-                "sha384-+8X8CkGDFmJ4I2ICr4RYH5mbDZ7Ka3faIS802Ee7ZtTYrJQhW/JqG5Nl6yO1Ao2a",
-                "sha384-QbIgG9oLi7pNCak0vgzADh+0EFW29ghuAtw9FXMTtd58is0MQfuZlGSkNyyBc8E+")
+                "sha384-dBVWP+0r9gvrodyKykSDT0owsLuZwywekkpsUghES54LYH04gFfObrkGFS9/iAJO",
+                "sha384-wwlti3h/09H+Ywwxs8bhYs6kTs34pwp8QexQVGQ0kKkBo8VnoDiok4iC4FtmoiO0")
             .SetDependencies(WebMcpConstants.ResourceNames.Script)
             .SetVersion("2.0.0");
     }

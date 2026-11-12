@@ -206,8 +206,9 @@ When **Add page tools** is on (the default), the pages that get the WebMCP scrip
 | Tool | Read-only | What it does |
 | --- | --- | --- |
 | `page_get_info` | Yes | The page's title, address, description, first 20 `h1` and `h2` headings, and whether it is an admin page. |
+| `page_read_content` | Yes | What the page shows in `main` (or `[role="main"]`, else the body): its text, one line per block and cut to 8,000 characters, and up to 10 tables as caption, headers and the first 50 rows, such as the records an admin list shows. Menus, forms, scripts, hidden parts, the chat and anything marked `data-webmcp-ignore` are left out. |
 | `page_list_links` | Yes | Up to 200 same-origin links in `nav`, `header`, `aside` and `[role="navigation"]`, with their text. An optional `filter` keeps the links whose text contains it. |
-| `page_navigate` | No | Opens a same-origin address. Other origins and script addresses are refused. |
+| `page_navigate` | No | Opens a page of this site: a path that starts with `/`, or a full address on the site. It first asks the site with a `HEAD` request whether the page exists, and refuses a bare relative path (usually a guess), a page that answers 404 or 410, other origins and script addresses with a message that tells the agent to call `page_list_links`. It answers before it opens the page, so in the AI chat the agent continues on the page it opened; see [Runs that continue on the next page](../chat.md#runs-that-continue-on-the-next-page). |
 | `page_list_form_fields` | Yes | Up to 200 fields of the page's forms: name, id, label, type, value (cut to 2,000 characters), required and, for lists, the choices. Hidden, password, file, button and disabled fields and the antiforgery token are left out. |
 | `page_set_form_field` | No | Puts a value into one listed field, found by name, id or label, and raises `input` and `change`. For a list, the value is a choice's value or text. It never submits the form. |
 
@@ -229,7 +230,7 @@ The AI profile editor has two options, stored as CrestApps.Core's `WebMcpProfile
 | Option | What it does |
 | --- | --- |
 | **Allow page tools** (`AllowPageTools`) | Offers the page's WebMCP tools to the model. Off by default. |
-| **Allow consequential page tools** (`AllowConsequentialPageTools`) | Also offers the tools the page marks with `consequentialHint`, such as placing an order. Needs **Allow page tools**. Off by default. |
+| **Allow consequential page tools** (`AllowConsequentialPageTools`) | The tools the page marks with `consequentialHint`, such as placing an order, ask the user to **Allow** or **Deny** each call in the chat UI and the admin widget (see [Tool approvals](../chat.md#tool-approvals)). With this option on they run without asking. Needs **Allow page tools**. Off by default. |
 
 ### Tool names and annotations
 
@@ -352,5 +353,5 @@ Set the profile options in the **AIProfile** step, under the profile's `Settings
 - Calls need the antiforgery token, so another site cannot make the user's browser call a tool.
 - A browser agent acts as the signed-in user. Give agents only the tools you would let the user run, and prefer read-only tools.
 - Page tools never submit forms and never leave the site, so the user reviews and saves what an agent changes.
-- A profile with **Allow page tools** lets the model run any tool the page exposes, including a third-party script's. Allow it only on profiles used on pages whose scripts you trust. Tools marked `consequentialHint` need the second option, and results marked `untrustedContentHint` reach the model as data.
+- A profile with **Allow page tools** lets the model run any tool the page exposes, including a third-party script's. Allow it only on profiles used on pages whose scripts you trust. Tools marked `consequentialHint` ask the user before each call unless the second option is on, and results marked `untrustedContentHint` reach the model as data.
 - Page tools only reach the completions of messages sent from the same chat connection.

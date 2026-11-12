@@ -9,7 +9,7 @@
     "marked": "^18.1.1"
   },
   "dependencies": {
-    "@crestapps/ai-chat-ui": "2.0.0-preview.246",
+    "@crestapps/ai-chat-ui": "2.0.0-preview.258",
     "@crestapps/bootstrap-select": "^1.2.6",
     "@geoman-io/leaflet-geoman-free": "2.20.4",
     "@sapphi-red/web-noise-suppressor": "0.4.1",
