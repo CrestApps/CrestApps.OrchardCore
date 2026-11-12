@@ -331,6 +331,27 @@ public sealed class TwilioWebhookEndpointSignatureTests
         Assert.True(isValid);
     }
 
+    [Fact]
+    public void IsRequestValid_WhenTheBodyIsNotAForm_ReturnsFalse()
+    {
+        // Arrange: a JSON body, which Twilio signs through the bodySHA256 in the URL only. The endpoint checked the URL and
+        // never the body hash, so any body passed with a signed URL; the SMS webhook is always a form post.
+        var context = new DefaultHttpContext();
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Scheme = "https";
+        context.Request.Host = new HostString("contact.example.com");
+        context.Request.Path = WebhookPath;
+        context.Request.QueryString = new QueryString("?bodySHA256=0000");
+        context.Request.ContentType = "application/json";
+        context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com{WebhookPath}?bodySHA256=0000", []);
+
+        // Act
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
+
+        // Assert
+        Assert.False(isValid);
+    }
+
     private static DefaultHttpContext CreateContext(string queryString, Dictionary<string, string> form)
     {
         var context = new DefaultHttpContext();
