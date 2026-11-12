@@ -19,15 +19,23 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Marketplace.Drivers;
 
 /// <summary>
-/// The Vendor part's editor: which vendor a product is sold for.
+/// The Vendor part's editor: which vendor a product is sold for. Only someone who manages the marketplace changes it:
+/// the vendor is who a sale's earnings are paid to.
 /// </summary>
 internal sealed class VendorPartDisplayDriver : ContentPartDisplayDriver<VendorPart>
 {
     private readonly IVendorStore _vendors;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public VendorPartDisplayDriver(IVendorStore vendors)
+    public VendorPartDisplayDriver(
+        IVendorStore vendors,
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor)
     {
         _vendors = vendors;
+        _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public override IDisplayResult Edit(VendorPart part, BuildPartEditorContext context)
@@ -42,6 +50,11 @@ internal sealed class VendorPartDisplayDriver : ContentPartDisplayDriver<VendorP
         var model = new VendorPartViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (_httpContextAccessor.HttpContext?.User is not { } user || !await _authorizationService.AuthorizeAsync(user, MarketplacePermissions.ManageMarketplace))
+        {
+            return Edit(part, context);
+        }
 
         part.VendorId = string.IsNullOrEmpty(model.VendorId) || await _vendors.FindByIdAsync(model.VendorId) is null ? null : model.VendorId;
 
