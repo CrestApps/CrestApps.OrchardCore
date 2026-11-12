@@ -44,6 +44,13 @@ public sealed class Customer : CatalogItem
     public string TaxId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether an administrator verified <see cref="TaxId"/>. Only a verified number
+    /// lets a business customer's purchases be reverse charged; the customer can't set it, and changing the number on
+    /// their own profile clears it.
+    /// </summary>
+    public bool TaxIdVerified { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the customer pays no tax, such as a reseller or a charity the store
     /// holds a certificate for.
     /// </summary>
@@ -132,6 +139,7 @@ public sealed class Customer : CatalogItem
         LastName = null;
         CompanyName = null;
         TaxId = null;
+        TaxIdVerified = false;
         TaxExemptionReason = null;
         Email = null;
         Phone = null;

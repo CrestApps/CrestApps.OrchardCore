@@ -47,6 +47,9 @@ public sealed class B2BCheckoutTaxProfileHandler : ICheckoutTaxProfileHandler
 
             profile.Customer.TaxRegistrationNumber = taxId;
             profile.Customer.VatNumber = taxId;
+
+            // A B2B account and its tax number are set up by the store, not by the buyer, so the number counts as verified.
+            profile.Customer.TaxRegistrationVerified = true;
         }
     }
 }

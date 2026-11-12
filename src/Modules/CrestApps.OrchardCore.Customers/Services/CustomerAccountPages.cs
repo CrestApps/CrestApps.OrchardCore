@@ -107,7 +107,16 @@ public sealed class CustomerAccountPages
         customer.FirstName = Trim(model.FirstName);
         customer.LastName = Trim(model.LastName);
         customer.CompanyName = Trim(model.CompanyName);
-        customer.TaxId = Trim(model.TaxId);
+
+        // The customer types their own number, so a changed one has to be verified again before it counts for tax.
+        var taxId = Trim(model.TaxId);
+
+        if (!string.Equals(customer.TaxId, taxId, StringComparison.OrdinalIgnoreCase))
+        {
+            customer.TaxIdVerified = false;
+        }
+
+        customer.TaxId = taxId;
         customer.Phone = Trim(model.Phone);
         customer.AcceptsMarketing = model.AcceptsMarketing;
     }
