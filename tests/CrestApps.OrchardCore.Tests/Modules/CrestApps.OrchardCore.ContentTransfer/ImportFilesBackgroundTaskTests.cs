@@ -347,4 +347,34 @@ public sealed class ImportFilesBackgroundTaskTests
             return Task.FromResult(true);
         }
     }
+
+    /// <summary>
+    /// SEC-A7: an id in an import file can name any item on the site. A row that names an item of another content type
+    /// is refused, so a role that may import articles can't overwrite a page or an order.
+    /// </summary>
+    [Fact]
+    public void IsSameContentType_AnItemOfAnotherType_IsNotTheSame()
+    {
+        var entry = new ContentTransferEntry { ContentType = "Article" };
+
+        Assert.False(ImportFilesBackgroundTask.IsSameContentType(new ContentItem { ContentType = "Page" }, entry));
+        Assert.True(ImportFilesBackgroundTask.IsSameContentType(new ContentItem { ContentType = "Article" }, entry));
+    }
+
+    /// <summary>
+    /// SEC-A7: an update keeps the item's owner and author; only a new item belongs to the uploader.
+    /// </summary>
+    [Fact]
+    public void ApplyOwnership_KeepsTheOwnerOnAnUpdate_AndSetsItOnANewItem()
+    {
+        var entry = new ContentTransferEntry { Owner = "uploader", Author = "uploader" };
+        var existing = new ContentItem { Owner = "owner", Author = "owner" };
+        var created = new ContentItem();
+
+        ImportFilesBackgroundTask.ApplyOwnership(existing, entry, isNew: false);
+        ImportFilesBackgroundTask.ApplyOwnership(created, entry, isNew: true);
+
+        Assert.Equal(("owner", "owner"), (existing.Owner, existing.Author));
+        Assert.Equal(("uploader", "uploader"), (created.Owner, created.Author));
+    }
 }

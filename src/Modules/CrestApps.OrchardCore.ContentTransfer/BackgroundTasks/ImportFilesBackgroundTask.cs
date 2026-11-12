@@ -1055,6 +1055,16 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         contentItem = await contentManager.NewAsync(entry.ContentType);
                         isNew = true;
                     }
+                    else if (!IsSameContentType(contentItem, entry))
+                    {
+                        // An id in the file can name any item on the site. An import is for one content type, and the
+                        // uploader's permission is for that type only, so a row that names an item of another type (a
+                        // page, an order) is refused instead of overwriting it.
+                        AddRowError(progressPart, existingRow.Value.Key, localizer["The content item '{0}' is not a {1}.", existingRow.Key, entry.ContentType], localizer["Could not be imported"]);
+                        runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
+
+                        continue;
+                    }
 
                     await ProcessRowAsync(
                         entry,
@@ -1251,6 +1261,27 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             ? null
             : value;
 
+    /// <summary>
+    /// Whether an existing item an import row names is of the content type the import is for.
+    /// </summary>
+    internal static bool IsSameContentType(ContentItem contentItem, ContentTransferEntry entry)
+        => string.Equals(contentItem?.ContentType, entry?.ContentType, StringComparison.Ordinal);
+
+    /// <summary>
+    /// A new item belongs to the uploader. An item that already exists keeps its owner and author: an import that
+    /// updates it must not take it over.
+    /// </summary>
+    internal static void ApplyOwnership(ContentItem contentItem, ContentTransferEntry entry, bool isNew)
+    {
+        if (!isNew)
+        {
+            return;
+        }
+
+        contentItem.Owner = entry.Owner;
+        contentItem.Author = entry.Author;
+    }
+
     internal static string GetImportContentItemId(DataRow dataRow, int indexOfKeyColumn)
         => indexOfKeyColumn > -1
             ? dataRow[indexOfKeyColumn]?.ToString()?.Trim()
@@ -1294,8 +1325,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 return;
             }
 
-            mapContext.ContentItem.Owner = entry.Owner;
-            mapContext.ContentItem.Author = entry.Author;
+            ApplyOwnership(mapContext.ContentItem, entry, isNew);
 
             if (isNew)
             {
