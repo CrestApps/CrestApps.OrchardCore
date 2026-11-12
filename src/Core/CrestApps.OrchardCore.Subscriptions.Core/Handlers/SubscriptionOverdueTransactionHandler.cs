@@ -32,25 +32,31 @@ public sealed class SubscriptionOverdueTransactionHandler : TransactionEventHand
 
         const string reason = "A payment for this subscription is overdue.";
 
-        // A renewal bills the subscription itself; the first payment belongs to the checkout that created it.
+        // The checkout that created a subscription is what every transaction of it carries: the first payment, and a Pay
+        // Later renewal copied from it. Its reference is not enough: a plan sign-up names the plan there (Subscription,
+        // the plan's content item id), not the subscription.
+        if (!string.IsNullOrEmpty(transaction.CheckoutSessionId))
+        {
+            var subscriptions = await _subscriptionManager.GetByCheckoutSessionAsync(transaction.CheckoutSessionId, cancellationToken);
+
+            if (subscriptions.Count > 0)
+            {
+                foreach (var subscription in subscriptions)
+                {
+                    if (subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing)
+                    {
+                        await _lifecycleService.MarkPastDueAsync(subscription.ItemId, reason, cancellationToken);
+                    }
+                }
+
+                return;
+            }
+        }
+
+        // A renewal billed to the subscription itself names it.
         if (string.Equals(transaction.ReferenceType, SubscriptionReferenceType, StringComparison.Ordinal) && !string.IsNullOrEmpty(transaction.ReferenceId))
         {
             await _lifecycleService.MarkPastDueAsync(transaction.ReferenceId, reason, cancellationToken);
-
-            return;
-        }
-
-        if (string.IsNullOrEmpty(transaction.CheckoutSessionId))
-        {
-            return;
-        }
-
-        foreach (var subscription in await _subscriptionManager.GetByCheckoutSessionAsync(transaction.CheckoutSessionId, cancellationToken))
-        {
-            if (subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing)
-            {
-                await _lifecycleService.MarkPastDueAsync(subscription.ItemId, reason, cancellationToken);
-            }
         }
     }
 }
