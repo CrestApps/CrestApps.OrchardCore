@@ -1,3 +1,5 @@
+import { escapeHtml } from '../../../CrestApps.OrchardCore.Resources/Assets/js/browser/html.js';
+
 window.activityQueryBuilder = (function () {
     'use strict';
 
@@ -11,6 +13,13 @@ window.activityQueryBuilder = (function () {
     let config = {};
     let activeFilters = [];
     let filterCounter = 0;
+
+    // A localized text the page puts on the query builder's container as a data-* attribute.
+    function textOf(name) {
+        const container = document.getElementById(config.containerId);
+
+        return (container && container.dataset[name]) || '';
+    }
 
     function initialize(options) {
         config = Object.assign({}, defaultConfig, options);
@@ -139,8 +148,10 @@ window.activityQueryBuilder = (function () {
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'btn btn-sm btn-outline-danger';
-        removeBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
-        removeBtn.title = 'Remove filter';
+        removeBtn.innerHTML = '<i class="fa-solid fa-times" aria-hidden="true"></i>';
+        // The page's localized text, from data-remove-filter-title on the query builder's container.
+        removeBtn.title = textOf('removeFilterTitle');
+        removeBtn.setAttribute('aria-label', removeBtn.title);
         removeBtn.addEventListener('click', function () {
             removeFilter(filterId, field);
         });
@@ -286,13 +297,6 @@ window.activityQueryBuilder = (function () {
                 input.value = '';
             }
         });
-    }
-
-    function escapeHtml(text) {
-        var div = document.createElement('div');
-        div.appendChild(document.createTextNode(text));
-
-        return div.innerHTML;
     }
 
     return {

@@ -528,6 +528,21 @@
         });
     };
 
+    // A visit's popup: a link to the visit, its summary and its time. Built as elements, so a summary that carries markup
+    // (it can come from a contact's name or AI-written notes) shows as text.
+    const markerLabel = (visit) => {
+        const label = element('div');
+        const link = element('a', null, visit.number);
+
+        link.href = visit.url;
+        label.appendChild(link);
+        label.appendChild(document.createTextNode(` ${visit.summary || ''}`));
+        label.appendChild(document.createElement('br'));
+        label.appendChild(document.createTextNode(visit.start ? `${visit.start}–${visit.end}` : texts.unscheduled));
+
+        return label;
+    };
+
     const renderMap = () => {
         const crestappsMap = window.crestappsMap;
 
@@ -554,7 +569,7 @@
             .map((visit) => ({
                 latitude: visit.latitude,
                 longitude: visit.longitude,
-                label: `<a href="${visit.url}">${visit.number}</a> ${(visit.summary || '').replace(/[<>&]/g, '')}<br>${visit.start ? `${visit.start}–${visit.end}` : texts.unscheduled}`,
+                label: markerLabel(visit),
             }));
 
         markerLayer = crestappsMap.addMarkers(map, markers, { fit: first });
@@ -570,7 +585,7 @@
             weight: 2,
             fillColor: '#0c8599',
             fillOpacity: 0.95,
-        }).bindTooltip(format(texts.position || '{0} at {1}', position.name || '', position.time)))).addTo(map);
+        }).bindTooltip(element('span', null, format(texts.position || '{0} at {1}', position.name || '', position.time))))).addTo(map);
 
         // With no visit on the map, the first view shows the technicians instead.
         if (first && markers.length === 0 && positionLayer.getLayers().length > 0) {

@@ -3,6 +3,11 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	function escapeHtml(value) {
+		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Assets/js/activity-query-builder.js
 	window.activityQueryBuilder = (function() {
 		"use strict";
@@ -15,6 +20,10 @@
 		let config = {};
 		let activeFilters = [];
 		let filterCounter = 0;
+		function textOf(name) {
+			const container = document.getElementById(config.containerId);
+			return container && container.dataset[name] || "";
+		}
 		function initialize(options) {
 			config = Object.assign({}, defaultConfig, options);
 			activeFilters = [];
@@ -92,8 +101,9 @@
 			const removeBtn = document.createElement("button");
 			removeBtn.type = "button";
 			removeBtn.className = "btn btn-sm btn-outline-danger";
-			removeBtn.innerHTML = "<i class=\"fa-solid fa-times\"></i>";
-			removeBtn.title = "Remove filter";
+			removeBtn.innerHTML = "<i class=\"fa-solid fa-times\" aria-hidden=\"true\"></i>";
+			removeBtn.title = textOf("removeFilterTitle");
+			removeBtn.setAttribute("aria-label", removeBtn.title);
 			removeBtn.addEventListener("click", function() {
 				removeFilter(filterId, field);
 			});
@@ -191,11 +201,6 @@
 			document.querySelectorAll("[name=\"" + field.inputName + "\"]").forEach(function(input) {
 				if (input.closest("#" + config.containerId) === null) input.value = "";
 			});
-		}
-		function escapeHtml(text) {
-			var div = document.createElement("div");
-			div.appendChild(document.createTextNode(text));
-			return div.innerHTML;
 		}
 		return { initialize };
 	})();

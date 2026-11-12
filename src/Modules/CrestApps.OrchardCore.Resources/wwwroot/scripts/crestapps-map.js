@@ -30,6 +30,12 @@
 			map.on("mouseout", () => map.scrollWheelZoom.disable());
 			return map;
 		};
+		const content = (label) => {
+			if (label && typeof label === "object" && label.nodeType) return label;
+			const node = document.createElement("span");
+			node.textContent = String(label);
+			return node;
+		};
 		const parse = (text) => {
 			if (!text || !text.trim()) return null;
 			try {
@@ -50,7 +56,7 @@
 						fillOpacity: .15
 					}, style || {}, shape.style || {})
 				});
-				if (shape.label) layer.bindTooltip(shape.label, { sticky: true });
+				if (shape.label) layer.bindTooltip(content(shape.label), { sticky: true });
 				group.addLayer(layer);
 			});
 			if (group.getLayers().length) map.fitBounds(group.getBounds(), { padding: [16, 16] });
@@ -60,7 +66,7 @@
 			const group = typeof L.markerClusterGroup === "function" ? L.markerClusterGroup() : L.featureGroup();
 			(markers || []).forEach((marker) => {
 				const layer = L.marker([marker.latitude, marker.longitude]);
-				if (marker.label) layer.bindPopup(marker.label);
+				if (marker.label) layer.bindPopup(content(marker.label));
 				group.addLayer(layer);
 			});
 			group.addTo(map);

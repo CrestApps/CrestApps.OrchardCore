@@ -196,6 +196,15 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetDependencies("leaflet")
             .SetVersion("1.0.0");
 
+        // The shared browser helpers, exposed as window.crestapps: html.escape, text.format, http.request (with the
+        // antiforgery token) and confirm, which also binds <form data-confirm> and <form data-once>.
+        _manifest
+            .DefineScript("crestapps-browser")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/crestapps-browser.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/crestapps-browser.js")
+            .SetVersion("1.0.0");
+
         _manifest
             .DefineScript("chart.js")
             .SetUrl(

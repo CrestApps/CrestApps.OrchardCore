@@ -56,25 +56,38 @@
 
 @if (mapped.Count > 0)
 {
-    <div id="classifieds-map" class="mb-4 rounded border" style="height: 18rem;"></div>
-    <style asp-src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"></style>
-    <script asp-src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" at="Foot"></script>
+    <div id="classifieds-map" class="mb-4 rounded border" style="height: 18rem;" data-attribution="© OpenStreetMap contributors" role="region" aria-label="@T["Map of listings"]"></div>
+    @* The resources carry integrity hashes for their CDN copies, and the map helper shows a label as text. *@
+    <style asp-name="leaflet"></style>
+    <script asp-name="crestapps-map" at="Foot"></script>
     <script at="Foot">
         (() => {
-            if (!window.L) {
+            const map = window.crestappsMap ? window.crestappsMap.create('classifieds-map') : null;
+
+            if (!map) {
                 document.getElementById('classifieds-map')?.remove();
 
                 return;
             }
 
             const points = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mapped.Select(result => new { title = result.Item.DisplayText, url = result.Url, lat = result.Part.Latitude, lng = result.Part.Longitude })));
-            const map = L.map('classifieds-map');
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+            // A listing's title is what its poster typed, so the popup is built as elements and the title set as text.
+            const label = point => {
+                if (!point.url) {
+                    return point.title || '';
+                }
 
-            const markers = points.map(point => L.marker([point.lat, point.lng]).addTo(map).bindPopup(point.url ? `<a href="${point.url}">${point.title.replace(/</g, '&lt;')}</a>` : point.title.replace(/</g, '&lt;')));
+                const link = document.createElement('a');
+                link.href = point.url;
+                link.textContent = point.title || '';
 
-            map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2), { maxZoom: 13 });
+                return link;
+            };
+
+            const group = window.crestappsMap.addMarkers(map, points.map(point => ({ latitude: point.lat, longitude: point.lng, label: label(point) })), { fit: false });
+
+            map.fitBounds(group.getBounds().pad(0.2), { maxZoom: 13 });
         })();
     </script>
 }

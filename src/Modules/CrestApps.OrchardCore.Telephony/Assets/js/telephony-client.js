@@ -9,20 +9,14 @@
  */
 import { formatDuration } from './shared/call-timer.js';
 import { formatPhoneNumber } from './soft-phone/format.js';
+import { escapeHtml } from '../../../CrestApps.OrchardCore.Resources/Assets/js/browser/html.js';
 
-(function (window, document) {
+(function (window) {
     'use strict';
 
     // The ordinal order of this array must match CrestApps.OrchardCore.Telephony.Models.CallState.
     // A guard test (CallStateNamesJsSyncTests) fails the build when it drifts from the enum.
     var CALL_STATE_NAMES = ['Idle', 'Connecting', 'Ringing', 'Connected', 'OnHold', 'Disconnected', 'Failed'];
-
-    function escapeHtml(value) {
-        var node = document.createElement('div');
-        node.textContent = value == null ? '' : String(value);
-
-        return node.innerHTML;
-    }
 
     function normalizeCallState(state) {
         if (typeof state === 'number') {
@@ -38,6 +32,9 @@ import { formatPhoneNumber } from './soft-phone/format.js';
 
     window.telephonyClient = {
         callStateNames: CALL_STATE_NAMES.slice(),
+        // The shared helper of the crestapps-browser toolkit, bundled in and kept here as an alias because the soft phone
+        // and Contact Center read it off the telephony client. It escapes all five of & < > " ', so what it returns is
+        // safe inside a quoted attribute (a caller number in data-telephony-history-number) as well as in text.
         escapeHtml: escapeHtml,
         // The call timer (shared/call-timer.js) and the phone number formatter (soft-phone/format.js), one implementation
         // each, so every surface that shows a duration or a number agrees on what it says.
@@ -45,4 +42,4 @@ import { formatPhoneNumber } from './soft-phone/format.js';
         formatPhoneNumber: formatPhoneNumber,
         normalizeCallState: normalizeCallState
     };
-})(window, document);
+})(window);

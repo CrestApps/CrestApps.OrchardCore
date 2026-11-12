@@ -125,20 +125,20 @@
             <table class="table">
                 <thead class="table-dark">
                     <tr>
-                        <th colspan="3" class="text-center">@T["Columns Requirements"]</th>
+                        <th scope="col" colspan="3" class="text-center">@T["Columns Requirements"]</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="table-secondary">
-                        <th>@T["Column Name as it must appear on the first row on the file"]</th>
-                        <th>@T["Required?"]</th>
-                        <th>@T["Description"]</th>
+                        <th scope="row">@T["Column Name as it must appear on the first row on the file"]</th>
+                        <th scope="row">@T["Required?"]</th>
+                        <th scope="row">@T["Description"]</th>
                     </tr>
 
                     @foreach (var column in Model.Columns)
                     {
                         <tr>
-                            <th>@column.Name</th>
+                            <th scope="row">@column.Name</th>
                             <td>@(column.IsRequired ? T["Yes"] : T["No"])</td>
                             <td>
                                 <p>@column.Description</p>
@@ -149,7 +149,7 @@
 
                                         @foreach (var validValue in column.ValidValues)
                                         {
-                                            @Html.Raw("<code>\"" + validValue + "\"</code> ")
+                                            <code>&quot;@validValue&quot;</code>
                                         }
                                     </p>
                                 }

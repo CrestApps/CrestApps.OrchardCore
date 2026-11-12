@@ -361,5 +361,11 @@
     "name": "crestapps-map.js",
     "source": "Assets/js/crestapps-map.js",
     "dest": "wwwroot/scripts/crestapps-map.js"
+  },
+  {
+    "action": "vite",
+    "name": "crestapps-browser.js",
+    "source": "Assets/js/browser/index.js",
+    "dest": "wwwroot/scripts/crestapps-browser.js"
   }
 ]
