@@ -13,6 +13,9 @@
 }
 @inject TransactionDisplayText DisplayText
 
+@* The buttons below ask with data-confirm (the crestapps-browser helpers), which lets the browser check the fields first. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 @{
     var transaction = Model.Transaction;
 
@@ -212,7 +215,7 @@
                             <input type="text" class="form-control" id="Note" name="Note" placeholder="@T["How the payment was received"]" />
                         </div>
                         <button type="submit" class="btn btn-success" disabled="@(!canRecordPayment)"
-                                data-url-af="RemoveUrl" data-title="@T["Record payment"]" data-message="@T["Record this payment against the transaction? It counts as received."]" data-ok-text="@T["Record payment"]" data-cancel-text="@T["Cancel"]">
+                                data-confirm-title="@T["Record payment"]" data-confirm="@T["Record this payment against the transaction? It counts as received."]" data-confirm-ok="@T["Record payment"]" data-confirm-cancel="@T["Cancel"]">
                             @T["Record payment"]
                         </button>
                     </form>
@@ -244,7 +247,7 @@
                             <input type="text" class="form-control" id="AdjustmentReason" name="Reason" placeholder="@T["Shown on the invoice (optional)"]" disabled="@(!canAdjust)" />
                         </div>
                         <button type="submit" class="btn btn-outline-primary" disabled="@(!canAdjust)"
-                                data-url-af="RemoveUrl" data-title="@T["Adjust"]" data-message="@T["Take this amount off what is owed? It is not counted as money received."]" data-ok-text="@T["Adjust"]" data-cancel-text="@T["Cancel"]">
+                                data-confirm-title="@T["Adjust"]" data-confirm="@T["Take this amount off what is owed? It is not counted as money received."]" data-confirm-ok="@T["Adjust"]" data-confirm-cancel="@T["Cancel"]">
                             @T["Adjust"]
                         </button>
                     </form>

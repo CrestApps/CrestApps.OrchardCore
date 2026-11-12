@@ -15,6 +15,9 @@
     var canExchange = orderReturn.Resolution == OrderReturnResolution.Exchange && orderReturn.Status is OrderReturnStatus.Approved or OrderReturnStatus.Received;
 }
 
+@* The buttons below ask with data-confirm (the crestapps-browser helpers), which lets the browser check the fields first. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 <zone Name="Title">
     <breadcrumb name="ReturnsDetail" title="@T["Return {0}", orderReturn.Number]">
         <breadcrumb-item id="ReturnsIndex" action="Index" controller="ReturnsAdmin" area="CrestApps.OrchardCore.Orders" permission="@CrestApps.OrchardCore.Orders.OrderPermissions.ManageOrders.Name">@T["Returns"]</breadcrumb-item>
@@ -155,7 +158,7 @@
                         <label class="form-label small ocat-label-required" for="refund-amount">@T["Amount"]</label>
                         <input id="refund-amount" name="amount" type="number" min="0.01" step="0.01" max="@Model.Refundable.ToString(CultureInfo.InvariantCulture)" value="@Model.SuggestedRefund.ToString(CultureInfo.InvariantCulture)" class="form-control w-auto mb-1" />
                         <span class="hint d-block mb-2">@T["What the items were paid, before tax and shipping. Up to {0} can still be refunded on the order.", ProductPriceFormatter.Format(Model.Refundable, orderReturn.Currency)]</span>
-                        <button type="submit" class="btn btn-success btn-sm" data-url-af="RemoveUrl" data-title="@T["Refund"]" data-message="@T["Refund the buyer now? The money goes back the way they paid."]">@T["Refund and close"]</button>
+                        <button type="submit" class="btn btn-success btn-sm" data-confirm-title="@T["Refund"]" data-confirm="@T["Refund the buyer now? The money goes back the way they paid."]">@T["Refund and close"]</button>
                     </form>
                 </div>
             </div>
