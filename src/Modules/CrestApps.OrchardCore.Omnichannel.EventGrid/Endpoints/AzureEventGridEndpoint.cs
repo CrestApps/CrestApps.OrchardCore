@@ -108,7 +108,7 @@ internal static class AzureEventGridEndpoint
                 {
                     // One cached configuration manager per metadata address, HTTPS only, and nothing fetched for a token
                     // that isn't a JWT: an anonymous request must not cost an outbound request.
-                    isAuthorized = await EventGridAadTokens.ValidateAsync(token, eventGridOptions, context.RequestAborted);
+                    isAuthorized = await context.RequestServices.GetRequiredService<EventGridAadTokenValidator>().ValidateAsync(token, eventGridOptions, context.RequestAborted);
                 }
             }
             catch (Exception ex)
