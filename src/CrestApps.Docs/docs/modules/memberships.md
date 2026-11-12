@@ -46,6 +46,12 @@ Roles go through `IRoleGrantService` (`CrestApps.OrchardCore.Users.Abstractions`
 
 `MembershipCartLineHandler` refuses a membership line to a guest, since it's for an account.
 
+## Which roles a membership may grant
+
+A purchase never makes anyone an administrator. `RoleGrantRules` (`CrestApps.OrchardCore.Users.Abstractions`) names the roles no grant gives (Anonymous, Authenticated and Administrator), and `IRoleGrantService` refuses them for every source, memberships and subscriptions alike. `MembershipService.GrantLineAsync`, where every way of granting a membership ends, also drops any role outside **Settings > Commerce > Memberships > Roles a membership may grant** (`MembershipSettings.GrantableRoles`) when that list names any, so a product saved by a recipe or an API write can't grant more than the editor allows.
+
+The Membership part's roles are changed only by someone with both **Manage memberships** and Orchard Core's **Assign roles to users**; anyone else who edits the product keeps the roles it has. The settings page asks for the same two permissions.
+
 ## Gating content
 
 Content Access Control restricts a content type's items to the roles chosen on their **RolePickerPart**, when the part's settings restrict content. `RoleBasedContentItemAuthorizationHandler` refuses **View content** on such an item to whoever isn't in one of its roles, even when the permission was granted to everyone, anonymous visitors included. Administrators see every item.
