@@ -15,6 +15,12 @@ The **Staff** module keeps one record for every person who works for the busines
 
 Projects: `CrestApps.OrchardCore.Staff.Abstractions` (the `StaffMember` model and the contracts other modules use), `CrestApps.OrchardCore.Staff.Core` (the store, indexes and services), `CrestApps.OrchardCore.Staff` (the module).
 
+## Users and staff members
+
+A **user** is a sign-in account: a user name, a password and roles. Customers, partners and administrators are users too. A **staff member** is the employment record of someone who works for the business: job title, manager, teams, dates, pay and capabilities. A staff member can be linked to one user account, or to none at all, for people who are scheduled, sent to jobs or paid but never sign in.
+
+The name and email have a single owner. For a linked staff member the user account owns them. The staff editor shows them as text with a **Change them on the user account** link instead of boxes, and the staff record keeps only a copy that stays in step with the account. Linking a user on a new staff record swaps the boxes for the account's name at once. Unlinking brings the boxes back with the last name and email filled in, and from then on the staff record owns them. A *team member* is something else: a staff member's dated row in a team.
+
 ## The staff member
 
 | Field | Notes |

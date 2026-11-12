@@ -6,7 +6,7 @@
         <div class="ocat-wrapper">
             <label asp-for="Pin" class="ocat-label">@T["PIN"]</label>
             <div class="ocat-end">
-                <input asp-for="Pin" type="password" inputmode="numeric" autocomplete="new-password" class="form-control" style="max-width: 10rem" />
+                <input asp-for="Pin" type="password" inputmode="numeric" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore class="form-control" style="max-width: 10rem" />
                 <span class="hint">@(Model.HasPin ? T["A PIN is set. Type a new one to replace it."] : T["No PIN yet. With their employee number as the badge, they sign in at kiosks and registers."])</span>
             </div>
         </div>

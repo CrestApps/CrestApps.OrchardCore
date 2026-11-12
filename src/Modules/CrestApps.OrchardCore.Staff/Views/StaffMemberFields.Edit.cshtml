@@ -10,17 +10,31 @@
                 <span class="hint">@T["Optional. Someone with no account can still be scheduled, assigned and paid, but can't sign in."]</span>
             </div>
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Name"]</label>
+        @* A linked user account owns the name and email: show them, with the way to change them, instead of boxes that look editable. *@
+        <div class="ocat-wrapper" id="staff-linked-person" hidden="@(!Model.NameFromUser)">
+            <label class="ocat-label">@T["Name"]</label>
             <div class="ocat-end">
-                <input asp-for="DisplayName" class="form-control" readonly="@Model.NameFromUser" />
-                @if (Model.NameFromUser)
-                {
-                    <span class="hint">@T["From their user account, as is their email; change them there."]</span>
-                }
+                <div class="form-control-plaintext">
+                    <strong id="staff-linked-name">@Model.DisplayName</strong>
+                    <span id="staff-linked-email" class="text-muted ms-2">@Model.Email</span>
+                </div>
+                <span class="hint">
+                    <span id="staff-linked-hint-saved" hidden="@(!Model.NameFromUser)">@T["Their name and email come from their user account, so they match everywhere on the site."]</span>
+                    <span id="staff-linked-hint-new" hidden>@T["Their name and email will be taken from this user account when you save."]</span>
+                    <a id="staff-linked-edit" href="@(Model.NameFromUser ? Url.Action("Edit", "Admin", new { area = "OrchardCore.Users", id = Model.UserId }) : "#")" hidden="@(!Model.NameFromUser)">@T["Change them on the user account"]</a>
+                </span>
             </div>
         </div>
-        <div class="ocat-wrapper"><label asp-for="Email" class="ocat-label">@T["Work email"]</label><div class="ocat-end"><input asp-for="Email" type="email" class="form-control" readonly="@Model.NameFromUser" /></div></div>
+        <div id="staff-own-person" hidden="@Model.NameFromUser">
+            <div class="ocat-wrapper">
+                <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="DisplayName" class="form-control" />
+                    <span class="hint">@T["For someone with no user account. Link one above and the name comes from it instead."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper"><label asp-for="Email" class="ocat-label">@T["Work email"]</label><div class="ocat-end"><input asp-for="Email" type="email" class="form-control" /></div></div>
+        </div>
         <div class="ocat-wrapper"><label asp-for="Phone" class="ocat-label">@T["Work phone"]</label><div class="ocat-end"><input asp-for="Phone" type="tel" class="form-control" style="max-width: 18rem" /></div></div>
         <div class="ocat-wrapper"><label asp-for="EmployeeNumber" class="ocat-label">@T["Employee number"]</label><div class="ocat-end"><input asp-for="EmployeeNumber" class="form-control" style="max-width: 14rem" /><span class="hint">@T["Also their badge number at a kiosk or register."]</span></div></div>
         <div class="ocat-wrapper"><label asp-for="ExternalId" class="ocat-label">@T["HR or payroll id"]</label><div class="ocat-end"><input asp-for="ExternalId" class="form-control" style="max-width: 14rem" /></div></div>
@@ -114,3 +128,62 @@
         </div>
     </div>
 }
+
+<script at="Foot">
+    (() => {
+        // Linking a user account hands the name and email to it; unlinking gives them back to this record, keeping the last name.
+        const picker = document.querySelector('select[name="@Html.NameFor(m => m.UserId)"]');
+        const linked = document.getElementById('staff-linked-person');
+        const own = document.getElementById('staff-own-person');
+
+        if (!picker || !linked || !own) {
+            return;
+        }
+
+        const savedUserId = '@Model.UserId';
+        const editUrl = '@Url.Action("Edit", "Admin", new { area = "OrchardCore.Users", id = "__id__" })';
+        const nameInput = document.getElementById('@Html.IdFor(m => m.DisplayName)');
+        const emailInput = document.getElementById('@Html.IdFor(m => m.Email)');
+        const shownName = document.getElementById('staff-linked-name');
+        const shownEmail = document.getElementById('staff-linked-email');
+        const savedHint = document.getElementById('staff-linked-hint-saved');
+        const newHint = document.getElementById('staff-linked-hint-new');
+        const editLink = document.getElementById('staff-linked-edit');
+
+        picker.addEventListener('change', () => {
+            const userId = picker.value;
+
+            if (!userId) {
+                if (nameInput && !nameInput.value.trim()) {
+                    nameInput.value = shownName.textContent.trim();
+                }
+
+                if (emailInput && !emailInput.value.trim()) {
+                    emailInput.value = shownEmail.textContent.trim();
+                }
+
+                linked.hidden = true;
+                own.hidden = false;
+                nameInput?.setAttribute('required', 'required');
+
+                return;
+            }
+
+            const option = picker.options[picker.selectedIndex];
+            const isSaved = userId === savedUserId;
+
+            if (!isSaved) {
+                shownName.textContent = option ? option.text.trim() : '';
+                shownEmail.textContent = '';
+            }
+
+            savedHint.hidden = !isSaved;
+            newHint.hidden = isSaved;
+            editLink.hidden = false;
+            editLink.href = editUrl.replace('__id__', encodeURIComponent(userId));
+            nameInput?.removeAttribute('required');
+            linked.hidden = false;
+            own.hidden = true;
+        });
+    })();
+</script>
