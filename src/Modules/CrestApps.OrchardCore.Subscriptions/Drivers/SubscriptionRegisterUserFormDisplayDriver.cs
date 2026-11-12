@@ -72,24 +72,22 @@ public sealed class SubscriptionRegisterUserFormDisplayDriver : DisplayDriver<Su
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (await _userManager.FindByNameAsync(model.UserName) != null)
+        // One answer for a taken user name and a taken e-mail address, so the form doesn't tell which accounts exist.
+        if (await _userManager.FindByNameAsync(model.UserName) != null ||
+            (_identityOptions.User.RequireUniqueEmail && await _userManager.FindByEmailAsync(model.Email) != null))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.UserName), S["A user with the same username already exists."]);
-        }
-        else if (_identityOptions.User.RequireUniqueEmail && await _userManager.FindByEmailAsync(model.Email) != null)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Email), S["A user with the same email address already exists."]);
+            context.Updater.ModelState.AddModelError(Prefix, string.Empty, S["This user name or email address can't be used. Choose others, or sign in if you already have an account."]);
         }
 
         form.UserName = model.UserName;
         form.Email = model.Email;
 
-        ValidateAndProtectPassword(context.Updater, model, form);
+        await ValidateAndProtectPasswordAsync(context.Updater, model, form);
 
         return Edit(form, context);
     }
 
-    private void ValidateAndProtectPassword(IUpdateModel updater, CreateUserViewModel model, SubscriptionRegisterUserForm form)
+    private async Task ValidateAndProtectPasswordAsync(IUpdateModel updater, CreateUserViewModel model, SubscriptionRegisterUserForm form)
     {
         var validatePassword =
             !form.HasSavedPassword ||
@@ -119,6 +117,22 @@ public sealed class SubscriptionRegisterUserFormDisplayDriver : DisplayDriver<Su
         {
             hasValidPassword = false;
             updater.ModelState.AddModelError(Prefix, nameof(model.ConfirmPassword), S["Password and Password Confirmation values must be the same."]);
+        }
+
+        // The site's password policy is checked here, when the password is entered, not when the account is made after
+        // the payment.
+        if (hasValidPassword)
+        {
+            foreach (var validator in _userManager.PasswordValidators)
+            {
+                var result = await validator.ValidateAsync(_userManager, null, model.Password);
+
+                foreach (var error in result.Errors)
+                {
+                    hasValidPassword = false;
+                    updater.ModelState.AddModelError(Prefix, nameof(model.Password), error.Description);
+                }
+            }
         }
 
         if (hasValidPassword)
