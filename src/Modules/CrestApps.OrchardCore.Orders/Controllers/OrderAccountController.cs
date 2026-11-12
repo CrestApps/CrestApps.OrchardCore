@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Emails;
@@ -27,7 +30,7 @@ public sealed class OrderAccountController : Controller
     private readonly IOrderStore _orderStore;
     private readonly OrderAccountClaims _claims;
     private readonly UserManager<IUser> _userManager;
-    private readonly IPaymentAttemptLimiter _limiter;
+    private readonly IAttemptLimiter _limiter;
     private readonly INotifier _notifier;
     private readonly ICommerceEmailSender _emailSender;
     private readonly ILogger _logger;
@@ -39,7 +42,7 @@ public sealed class OrderAccountController : Controller
         IOrderStore orderStore,
         OrderAccountClaims claims,
         UserManager<IUser> userManager,
-        IPaymentAttemptLimiter limiter,
+        IAttemptLimiter limiter,
         INotifier notifier,
         ICommerceEmailSender emailSender,
         ILogger<OrderAccountController> logger,
@@ -72,7 +75,7 @@ public sealed class OrderAccountController : Controller
             return LocalRedirect(back);
         }
 
-        if (!await _limiter.AcquireAsync("order-create-account", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"))
+        if (!(await _limiter.AcquireAsync(OrderConstants.AttemptPolicies.OrderCreateAccount, ClientNetworkKey.NetworkOnly(HttpContext))).Allowed)
         {
             await _notifier.ErrorAsync(H["Too many attempts. Wait a few minutes, then try again."]);
 

@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Endpoints;
@@ -33,7 +35,7 @@ internal static class CheckoutApiEndpoints
 
         group.MapPost("checkout/{id}/codes", ApplyCodeAsync)
             .AllowGuests()
-            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Payment)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Code)
             .WithName("ApplyCheckoutCode")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -65,7 +67,7 @@ internal static class CheckoutApiEndpoints
 
         group.MapPost("checkout/{id}/complete", CompleteAsync)
             .AllowGuests()
-            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Payment)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.PaymentStatus)
             .WithName("CompleteCheckout")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
@@ -187,15 +189,17 @@ internal static class CheckoutApiEndpoints
         HttpContext httpContext,
         ICheckoutSessionStore store,
         ICheckoutEngine engine,
-        IPaymentAttemptLimiter limiter)
+        IAttemptLimiter limiter)
     {
         if (string.IsNullOrWhiteSpace(request?.PaymentMethod))
         {
             return ApiProblems.Validation("paymentMethod", "Choose how to pay.");
         }
 
-        if (!await limiter.AcquireAsync("api-checkout-begin", GetBeginPaymentKey(httpContext)))
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, GetBeginPaymentKey(httpContext), httpContext.RequestAborted) is { Allowed: false } begun)
         {
+            PaymentEndpoints.SetRetryAfter(httpContext, begun.RetryAfter);
+
             return ApiProblems.TooManyRequests("Too many payment attempts. Wait a moment and try again.");
         }
 
@@ -231,11 +235,13 @@ internal static class CheckoutApiEndpoints
         HttpContext httpContext,
         ICheckoutSessionStore store,
         ICheckoutEngine engine,
-        IPaymentAttemptLimiter limiter)
+        IAttemptLimiter limiter)
     {
         // Polled while a provider settles, so it's throttled: a stuck client mustn't hammer the provider through it.
-        if (!await limiter.AcquireAsync("api-checkout-complete", GetStatusKey(httpContext, id)))
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, GetStatusKey(httpContext, id), httpContext.RequestAborted) is { Allowed: false } polled)
         {
+            PaymentEndpoints.SetRetryAfter(httpContext, polled.RetryAfter);
+
             return ApiProblems.TooManyRequests("Too many status checks. Wait a moment and try again.");
         }
 
@@ -268,7 +274,7 @@ internal static class CheckoutApiEndpoints
     }
 
     private static string GetClientAddress(HttpContext httpContext)
-        => httpContext.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+        => ClientNetworkKey.NetworkOnly(httpContext);
 
     // Beginning a payment is counted per caller across every checkout, so starting a new checkout gives no new budget.
     internal static string GetBeginPaymentKey(HttpContext httpContext)

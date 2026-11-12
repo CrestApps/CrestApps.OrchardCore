@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using Microsoft.Extensions.Localization;
@@ -15,7 +17,7 @@ public sealed class CheckoutCouponService
     private readonly ICouponStore _couponStore;
     private readonly CouponScopeEvaluator _scopeEvaluator;
     private readonly ICouponRedemptionService _redemptions;
-    private readonly IPaymentAttemptLimiter _limiter;
+    private readonly IAttemptLimiter _limiter;
     private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly IClock _clock;
 
@@ -25,7 +27,7 @@ public sealed class CheckoutCouponService
         ICouponStore couponStore,
         CouponScopeEvaluator scopeEvaluator,
         ICouponRedemptionService redemptions,
-        IPaymentAttemptLimiter limiter,
+        IAttemptLimiter limiter,
         CheckoutInvoiceBuilder invoiceBuilder,
         IClock clock,
         IStringLocalizer<CheckoutCouponService> stringLocalizer)
@@ -72,8 +74,11 @@ public sealed class CheckoutCouponService
             return S["This payment takes no promotion codes."];
         }
 
-        // Codes are short enough to guess, so how fast they can be tried from one address is limited.
-        if (!await _limiter.AcquireAsync("coupon-code", clientAddress ?? "unknown"))
+        // Codes are short enough to guess, so wrong codes from one network are limited; a network that tried too many is
+        // refused before the code is even looked up.
+        var network = ClientNetworkKey.FromAddress(clientAddress);
+
+        if (!(await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.CouponCode, network)).Allowed)
         {
             return S["Too many codes were tried. Wait a few minutes, then try again."];
         }
@@ -93,6 +98,8 @@ public sealed class CheckoutCouponService
 
         if (coupon is null)
         {
+            await _limiter.RecordFailureAsync(CheckoutConstants.AttemptPolicies.CouponCode, network);
+
             return S["That code is not recognized."];
         }
 

@@ -1,38 +1,31 @@
-using System.Text.Json;
 using CrestApps.OrchardCore.Checkout.Services;
-using Microsoft.Extensions.Caching.Distributed;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Locking.Distributed;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Services;
 
 /// <summary>
-/// A fixed-window <see cref="IPaymentAttemptLimiter"/> backed by the distributed cache so the limit is
-/// enforced consistently across every instance of a multi-instance deployment. Counting is serialized per
-/// (scope, discriminator) key with a short distributed lock; payment attempts are infrequent, so the
-/// added latency is negligible while the count stays accurate.
+/// Kept for one release so code outside this repository that calls <see cref="IPaymentAttemptLimiter"/> keeps working. It
+/// counts each scope and discriminator against one attempt policy with the old limit (20 per 5 minutes, or what
+/// <see cref="PaymentRateLimitOptions"/> configures). New code uses <see cref="IAttemptLimiter"/> with a named policy.
 /// </summary>
+[Obsolete("Use IAttemptLimiter with a registered attempt policy. This adapter is removed in the next release.")]
 public sealed class PaymentAttemptLimiter : IPaymentAttemptLimiter
 {
-    private readonly IDistributedCache _distributedCache;
-    private readonly IDistributedLock _distributedLock;
-    private readonly ShellSettings _shellSettings;
-    private readonly IClock _clock;
+    /// <summary>
+    /// The attempt policy the legacy scopes are counted against.
+    /// </summary>
+    public const string LegacyPolicyName = "payment-legacy";
+
+    private readonly IAttemptLimiter _limiter;
     private readonly PaymentRateLimitOptions _options;
 
-    public PaymentAttemptLimiter(
-        IDistributedCache distributedCache,
-        IDistributedLock distributedLock,
-        ShellSettings shellSettings,
-        IClock clock,
-        IOptions<PaymentRateLimitOptions> options)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PaymentAttemptLimiter"/> class.
+    /// </summary>
+    public PaymentAttemptLimiter(IAttemptLimiter limiter, IOptions<PaymentRateLimitOptions> options)
     {
-        _distributedCache = distributedCache;
-        _distributedLock = distributedLock;
-        _shellSettings = shellSettings;
-        _clock = clock;
+        _limiter = limiter;
         _options = options.Value;
     }
 
@@ -47,65 +40,6 @@ public sealed class PaymentAttemptLimiter : IPaymentAttemptLimiter
             return true;
         }
 
-        var key = $"{_shellSettings.Name}_CheckoutRateLimit_{scope}_{discriminator}";
-        var lockKey = $"{key}_LOCK";
-
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
-            lockKey,
-            TimeSpan.FromSeconds(5),
-            TimeSpan.FromSeconds(10));
-
-        if (!locked)
-        {
-            // If we cannot take the lock we fail closed and throttle, since being unable to account for an
-            // attempt most likely coincides with contention/abuse.
-            return false;
-        }
-
-        await using (locker)
-        {
-            var now = _clock.UtcNow;
-            Window window = null;
-
-            var data = await _distributedCache.GetAsync(key);
-
-            if (data != null)
-            {
-                window = JsonSerializer.Deserialize<Window>(data);
-            }
-
-            if (window == null || now >= window.ExpiresAtUtc)
-            {
-                window = new Window
-                {
-                    Count = 1,
-                    ExpiresAtUtc = now.Add(_options.Window),
-                };
-            }
-            else if (window.Count >= _options.PermitLimit)
-            {
-                return false;
-            }
-            else
-            {
-                window.Count++;
-            }
-
-            var serialized = JsonSerializer.SerializeToUtf8Bytes(window);
-
-            await _distributedCache.SetAsync(key, serialized, new DistributedCacheEntryOptions
-            {
-                AbsoluteExpiration = window.ExpiresAtUtc,
-            });
-
-            return true;
-        }
-    }
-
-    private sealed class Window
-    {
-        public int Count { get; set; }
-
-        public DateTime ExpiresAtUtc { get; set; }
+        return (await _limiter.AcquireAsync(LegacyPolicyName, scope + ":" + discriminator)).Allowed;
     }
 }

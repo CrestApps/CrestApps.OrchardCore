@@ -1,3 +1,7 @@
+using OrchardCore.RateLimits;
+using OrchardCore.Environment.Shell.Configuration;
+using CrestApps.OrchardCore.Throttling;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Commerce;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -47,6 +51,17 @@ namespace CrestApps.OrchardCore.Checkout;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration, which can override attempt policies by name.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -114,7 +129,23 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutRefundService, DefaultCheckoutRefundService>();
         services.AddScoped<ICheckoutRefundReconciliationService, DefaultCheckoutRefundReconciliationService>();
         services.AddScoped<IPaymentEvent, RefundReconciliationPaymentEventHandler>();
+        // The attempt policies are always on and need no middleware: card testing and code guessing are stopped whether
+        // or not Orchard Core's Rate Limits feature is enabled. Each can be overridden by name in configuration.
+        services
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, 30, TimeSpan.FromMinutes(10))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginCheckout, 8, TimeSpan.FromHours(24))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, 5, TimeSpan.FromMinutes(30), blockDuration: TimeSpan.FromMinutes(30))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer, 5, TimeSpan.FromHours(1), blockDuration: TimeSpan.FromHours(1))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineStore, 30, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(30))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentStatus, 120, TimeSpan.FromMinutes(5))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, 60, TimeSpan.FromHours(1))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CouponCode, 10, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(10))
+            .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(AttemptLimitOptions.SectionName));
+
+#pragma warning disable CS0618 // The obsolete limiter stays registered for one release for code outside this repository.
+        services.AddAttemptPolicy(PaymentAttemptLimiter.LegacyPolicyName, 20, TimeSpan.FromMinutes(5));
         services.AddScoped<IPaymentAttemptLimiter, PaymentAttemptLimiter>();
+#pragma warning restore CS0618
         services.AddScoped<PaymentSessionCache>();
         services.AddScoped<CheckoutInvoiceBuilder>();
         services.AddScoped<ICheckoutHandler, PaymentCheckoutHandler>();
@@ -181,5 +212,30 @@ public sealed class ApiStartup : StartupBase
     {
         routes.MapCheckoutApi();
         routes.MapCouponAdminApi();
+    }
+}
+
+/// <summary>
+/// Payment Rate Limits: Checkout's built-in group limits for Orchard Core's Rate Limits, and one JSON 429 body with a
+/// Retry-After header for the routes they cover. They show read-only under Tools &gt; Rate Limits.
+/// </summary>
+[Feature(CheckoutConstants.Features.RateLimits)]
+public sealed class PaymentRateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.Payment, 30, TimeSpan.FromMinutes(5), networkOnly: true)
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.PaymentStatus, 60, TimeSpan.FromMinutes(1))
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.Start, 30, TimeSpan.FromMinutes(10), networkOnly: true)
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.Checkout, 120, TimeSpan.FromMinutes(1))
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.Code, 20, TimeSpan.FromMinutes(5))
+            .AddJsonRejectionHandler(
+                CheckoutConstants.RouteNames.BeginPayment,
+                CheckoutConstants.RouteNames.PaymentStatus,
+                "BeginCheckoutPayment",
+                "CompleteCheckout",
+                "ApplyCheckoutCode"));
     }
 }

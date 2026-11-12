@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Emails;
@@ -30,7 +32,7 @@ public sealed class OrderViewController : Controller
     private readonly IOrderStore _orderStore;
     private readonly IOrderLinkService _orderLinks;
     private readonly OrderLinksEmailBuilder _linksEmailBuilder;
-    private readonly IPaymentAttemptLimiter _limiter;
+    private readonly IAttemptLimiter _limiter;
     private readonly IClock _clock;
     private readonly IShapeFactory _shapeFactory;
     private readonly ICommerceEmailSender _emailSender;
@@ -41,7 +43,7 @@ public sealed class OrderViewController : Controller
         IOrderStore orderStore,
         IOrderLinkService orderLinks,
         OrderLinksEmailBuilder linksEmailBuilder,
-        IPaymentAttemptLimiter limiter,
+        IAttemptLimiter limiter,
         IClock clock,
         IShapeFactory shapeFactory,
         ICommerceEmailSender emailSender,
@@ -124,7 +126,7 @@ public sealed class OrderViewController : Controller
 
         // Both must match, and the guesses are limited, so a number alone or an email alone shows nothing.
         if (!string.IsNullOrEmpty(number) && !string.IsNullOrEmpty(email) &&
-            await _limiter.AcquireAsync("track-order", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"))
+            (await _limiter.AcquireAsync(OrderConstants.AttemptPolicies.OrderLookupNetwork, ClientNetworkKey.NetworkOnly(HttpContext))).Allowed)
         {
             order = await _orderStore.FindByNumberAsync(number.ToUpperInvariant());
         }
@@ -164,8 +166,8 @@ public sealed class OrderViewController : Controller
 
         // The answer is the same whether or not there are orders, so the page never tells who has bought here. The
         // limits keep it from being used to send someone a flood of email.
-        if (await _limiter.AcquireAsync("find-order", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown") &&
-            await _limiter.AcquireAsync("find-order-email", email.ToUpperInvariant()))
+        if ((await _limiter.AcquireAsync(OrderConstants.AttemptPolicies.OrderLookupNetwork, ClientNetworkKey.NetworkOnly(HttpContext))).Allowed &&
+            (await _limiter.AcquireAsync(OrderConstants.AttemptPolicies.OrderLookupEmail, email.ToUpperInvariant())).Allowed)
         {
             await SendLinksAsync(email);
         }

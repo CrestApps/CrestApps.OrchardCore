@@ -110,11 +110,11 @@ public sealed class CommerceTenantIsolationTests
         var limiterA = LimiterFor(cache, "storeA");
         var limiterB = LimiterFor(cache, "storeB");
 
-        Assert.True(await limiterA.AcquireAsync("coupon-code", "203.0.113.5"));
-        Assert.True(await limiterA.AcquireAsync("coupon-code", "203.0.113.5"));
-        Assert.False(await limiterA.AcquireAsync("coupon-code", "203.0.113.5"));
+        Assert.True((await limiterA.AcquireAsync("coupon-code", "203.0.113.5", TestContext.Current.CancellationToken)).Allowed);
+        Assert.True((await limiterA.AcquireAsync("coupon-code", "203.0.113.5", TestContext.Current.CancellationToken)).Allowed);
+        Assert.False((await limiterA.AcquireAsync("coupon-code", "203.0.113.5", TestContext.Current.CancellationToken)).Allowed);
 
-        Assert.True(await limiterB.AcquireAsync("coupon-code", "203.0.113.5"));
+        Assert.True((await limiterB.AcquireAsync("coupon-code", "203.0.113.5", TestContext.Current.CancellationToken)).Allowed);
     }
 
     private static IDigitalFileStore FileStoreFor(string root, string tenant)
@@ -196,7 +196,7 @@ public sealed class CommerceTenantIsolationTests
         return availability;
     }
 
-    private static PaymentAttemptLimiter LimiterFor(IDistributedCache cache, string tenant)
+    private static CrestApps.OrchardCore.Core.Throttling.DistributedAttemptLimiter LimiterFor(IDistributedCache cache, string tenant)
     {
         var distributedLock = new Mock<IDistributedLock>();
         distributedLock
@@ -209,11 +209,15 @@ public sealed class CommerceTenantIsolationTests
         var clock = new Mock<IClock>();
         clock.Setup(value => value.UtcNow).Returns(now);
 
-        return new PaymentAttemptLimiter(
+        var options = new CrestApps.OrchardCore.Throttling.AttemptLimitOptions();
+        options.AddPolicy("coupon-code", permitLimit: 2, window: TimeSpan.FromMinutes(5));
+
+        return new CrestApps.OrchardCore.Core.Throttling.DistributedAttemptLimiter(
             cache,
             distributedLock.Object,
             new ShellSettings { Name = tenant },
             clock.Object,
-            Options.Create(new PaymentRateLimitOptions { PermitLimit = 2, Window = TimeSpan.FromMinutes(5) }));
+            Options.Create(options),
+            NullLogger<CrestApps.OrchardCore.Core.Throttling.DistributedAttemptLimiter>.Instance);
     }
 }

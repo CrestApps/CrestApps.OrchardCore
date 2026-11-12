@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Addresses.Core;
 using CrestApps.OrchardCore.Addresses.Drivers;
 using CrestApps.OrchardCore.Addresses.Endpoints;
@@ -55,12 +56,11 @@ public sealed class RateLimitsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.Configure<RateLimitsOptions>(options => options.AddGroupRateLimit(
+        services.Configure<RateLimitsOptions>(options => options.AddClientGroupRateLimit(
             AddressConstants.AutocompleteRateLimitGroup,
-            RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(
-                policyName: AddressConstants.AutocompleteRateLimitGroup,
-                permitLimit: AddressAutocompleteEndpoints.RequestsPerMinute,
-                window: TimeSpan.FromMinutes(1))));
+            AddressAutocompleteEndpoints.RequestsPerMinute,
+            TimeSpan.FromMinutes(1),
+            networkOnly: true));
     }
 }
 

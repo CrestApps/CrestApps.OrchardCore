@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
@@ -202,6 +203,9 @@ public sealed class ReferralsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Referral codes generated per network.
+        services.AddAttemptPolicy(Controllers.ReferralController.ReferralAttemptPolicy, 20, TimeSpan.FromHours(1));
+
         services.AddDataMigration<ReferralMigrations>()
             .AddIndexProvider<Indexes.ReferralProfileIndexProvider>();
         services.AddScoped<IReferralStore, ReferralStore>();

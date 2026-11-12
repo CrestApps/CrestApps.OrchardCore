@@ -6,6 +6,33 @@ namespace CrestApps.OrchardCore.Orders.Core;
 public static class OrderConstants
 {
     /// <summary>
+    /// The attempt policies Orders registers. Each can be overridden by name under
+    /// <c>CrestApps_Throttling:AttemptPolicies</c>.
+    /// </summary>
+    public static class AttemptPolicies
+    {
+        /// <summary>
+        /// Wrong gift card codes per network: 5 per 10 minutes, then blocked 30 minutes.
+        /// </summary>
+        public const string GiftCardCode = "gift-card-code";
+
+        /// <summary>
+        /// Order lookups per network: 10 per 10 minutes.
+        /// </summary>
+        public const string OrderLookupNetwork = "order-lookup-network";
+
+        /// <summary>
+        /// Order lookups per e-mail address: 5 per hour.
+        /// </summary>
+        public const string OrderLookupEmail = "order-lookup-email";
+
+        /// <summary>
+        /// Accounts created from an order per network: 5 per hour.
+        /// </summary>
+        public const string OrderCreateAccount = "order-create-account";
+    }
+
+    /// <summary>
     /// The display types an order is built in for the sections other modules add to its pages.
     /// </summary>
     public static class DisplayTypes

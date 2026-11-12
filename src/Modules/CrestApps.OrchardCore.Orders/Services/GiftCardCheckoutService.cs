@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -16,7 +18,7 @@ namespace CrestApps.OrchardCore.Orders.Services;
 public sealed class GiftCardCheckoutService
 {
     private readonly IGiftCardStore _store;
-    private readonly IPaymentAttemptLimiter _limiter;
+    private readonly IAttemptLimiter _limiter;
     private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly IClock _clock;
 
@@ -24,7 +26,7 @@ public sealed class GiftCardCheckoutService
 
     public GiftCardCheckoutService(
         IGiftCardStore store,
-        IPaymentAttemptLimiter limiter,
+        IAttemptLimiter limiter,
         CheckoutInvoiceBuilder invoiceBuilder,
         IClock clock,
         IStringLocalizer<GiftCardCheckoutService> stringLocalizer)
@@ -61,8 +63,11 @@ public sealed class GiftCardCheckoutService
             return S["This payment takes no gift cards."];
         }
 
-        // A gift card code is money, so how fast codes can be tried from one address is limited.
-        if (!await _limiter.AcquireAsync("gift-card-code", clientAddress ?? "unknown"))
+        // A gift card code is money, so wrong codes from one network are limited; a network that tried too many is refused
+        // before the code is even looked up.
+        var network = ClientNetworkKey.FromAddress(clientAddress);
+
+        if (!(await _limiter.PeekAsync(OrderConstants.AttemptPolicies.GiftCardCode, network)).Allowed)
         {
             return S["Too many codes were tried. Wait a few minutes, then try again."];
         }
@@ -72,6 +77,8 @@ public sealed class GiftCardCheckoutService
 
         if (card is null)
         {
+            await _limiter.RecordFailureAsync(OrderConstants.AttemptPolicies.GiftCardCode, network);
+
             return S["That gift card code is not recognized."];
         }
 
