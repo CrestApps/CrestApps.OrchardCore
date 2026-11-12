@@ -8,6 +8,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
@@ -123,9 +124,13 @@ public sealed class SubscriptionRegisterUserFormDisplayDriver : DisplayDriver<Su
         // the payment.
         if (hasValidPassword)
         {
+            // The account doesn't exist yet, but a validator may compare the password with the user name or e-mail
+            // address, so it is given the user being registered rather than none.
+            var user = new User { UserName = model.UserName, Email = model.Email };
+
             foreach (var validator in _userManager.PasswordValidators)
             {
-                var result = await validator.ValidateAsync(_userManager, null, model.Password);
+                var result = await validator.ValidateAsync(_userManager, user, model.Password);
 
                 foreach (var error in result.Errors)
                 {
