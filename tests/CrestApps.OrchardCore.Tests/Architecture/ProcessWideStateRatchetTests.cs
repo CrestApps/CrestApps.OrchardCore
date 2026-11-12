@@ -20,6 +20,7 @@ public sealed partial class ProcessWideStateRatchetTests
         ["src/Core/CrestApps.OrchardCore.Core/Deployments/CatalogRecordSerializer.cs"] = 1,
         ["src/Core/CrestApps.OrchardCore.DataConnectors.Core/DataSources/ImportedDataSource.cs"] = 1,
         ["src/Core/CrestApps.OrchardCore.Products.Core/Services/ProductPriceFormatter.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.EventGrid/Services/EventGridAadTokens.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Services/TransientDatabaseErrors.cs"] = 1,
 
         // Live-call state still per node (CQ-1 step 3): the voicemail claim and the turn-based fillers.

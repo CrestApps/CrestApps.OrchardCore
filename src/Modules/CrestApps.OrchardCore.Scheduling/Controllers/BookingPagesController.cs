@@ -314,8 +314,7 @@ public sealed class BookingPagesController : Controller
         {
             To = appointment.CustomerEmail,
             Subject = S["Confirm your booking: {0}", type.Name],
-            IsHtmlBody = true,
-            Body = $"<p>{WebUtility.HtmlEncode(S["Confirm your booking of {0} within {1} minutes, or the time is released.", type.Name, Math.Max(1, type.HoldMinutes)])}</p><p><a href=\"{WebUtility.HtmlEncode(link)}\">{name}</a></p>",
+            HtmlBody = $"<p>{WebUtility.HtmlEncode(S["Confirm your booking of {0} within {1} minutes, or the time is released.", type.Name, Math.Max(1, type.HoldMinutes)])}</p><p><a href=\"{WebUtility.HtmlEncode(link)}\">{name}</a></p>",
         }, cancellationToken: HttpContext.RequestAborted);
     }
 

@@ -9,7 +9,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 internal sealed class TwilioRequestValidator
 {
     // The body hash Twilio sends with a JSON body, checked as this validator always has.
-    private static readonly HmacWebhookSignatureValidator _bodySignature = new("twilio-body-hmac-sha1-hex", HashAlgorithmName.SHA1, WebhookSignatureEncoding.Hex);
 
     private readonly string _secret;
 
@@ -118,14 +117,20 @@ internal sealed class TwilioRequestValidator
     /// </summary>
     /// <param name="rawBody">Raw body of the request</param>
     /// <param name="expected">The expected SHA256 hash of the body</param>
+#pragma warning disable CA1822 // An instance member like the rest of the validator, matching Twilio's own RequestValidator.
     public bool ValidateBody(string rawBody, string expected)
+#pragma warning restore CA1822
     {
-        return _bodySignature.IsValid(new WebhookSignatureValidationContext
+        // bodySHA256 is the plain SHA-256 of the raw body in lower-case hex, as Twilio's own RequestValidator computes
+        // it; the URL that carries it is what the auth token signs.
+        if (string.IsNullOrEmpty(expected))
         {
-            Secret = _secret,
-            Signature = expected,
-            SignedContent = rawBody,
-        });
+            return false;
+        }
+
+        var actual = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(rawBody ?? string.Empty)));
+
+        return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(actual), Encoding.ASCII.GetBytes(expected));
     }
 
     private static Dictionary<string, string> ToDictionary(NameValueCollection col)

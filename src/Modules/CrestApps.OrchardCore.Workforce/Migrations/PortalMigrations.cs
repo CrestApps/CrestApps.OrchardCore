@@ -24,7 +24,7 @@ internal sealed class PortalMigrations : DataMigration
 
     // Feed secrets are stored hashed and protected: the workers whose secret is from before get both. The plain secret
     // stays one release, for a rollback.
-    public int UpdateFrom2Async()
+    public static int UpdateFrom2Async()
     {
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<WorkerFeedTokenBackfill>().RunAsync());
 

@@ -98,7 +98,7 @@ public sealed class OutboundHttpArchitectureTests
             bare));
     }
 
-    private static IReadOnlyList<Registration> Scan()
+    private static List<Registration> Scan()
     {
         var repositoryRoot = ProjectReferenceRulesTests.FindRepositoryRoot();
         var registrations = new List<Registration>();

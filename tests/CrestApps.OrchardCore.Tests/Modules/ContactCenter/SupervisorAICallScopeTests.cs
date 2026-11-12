@@ -38,9 +38,9 @@ public sealed class SupervisorAICallScopeTests
         var harness = new Harness(MonitorAndIntervene());
 
         // Act
-        var ours = await SupervisorAICallsEndpoints.HandleTranscriptAsync("ours", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, harness.Request());
-        var theirs = await SupervisorAICallsEndpoints.HandleTranscriptAsync("theirs", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, harness.Request());
-        var unscoped = await SupervisorAICallsEndpoints.HandleTranscriptAsync("unscoped", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, harness.Request());
+        var ours = await SupervisorAICallsEndpoints.HandleTranscriptAsync("ours", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, Harness.Request());
+        var theirs = await SupervisorAICallsEndpoints.HandleTranscriptAsync("theirs", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, Harness.Request());
+        var unscoped = await SupervisorAICallsEndpoints.HandleTranscriptAsync("unscoped", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, Harness.Request());
 
         // Assert
         Assert.Equal(200, Status(ours));
@@ -56,8 +56,8 @@ public sealed class SupervisorAICallScopeTests
         var withRecordings = new Harness([.. MonitorAndIntervene(), ContactCenterPermissions.ListenToAllCallRecordings.Name]);
 
         // Act
-        var refused = await SupervisorAICallsEndpoints.HandleTranscriptAsync("ended", null, withoutRecordings.Authorization, withoutRecordings.Activities.Object, withoutRecordings.Prompts.Object, withoutRecordings.QueueAuthorization, withoutRecordings.Request());
-        var allowed = await SupervisorAICallsEndpoints.HandleTranscriptAsync("ended", null, withRecordings.Authorization, withRecordings.Activities.Object, withRecordings.Prompts.Object, withRecordings.QueueAuthorization, withRecordings.Request());
+        var refused = await SupervisorAICallsEndpoints.HandleTranscriptAsync("ended", null, withoutRecordings.Authorization, withoutRecordings.Activities.Object, withoutRecordings.Prompts.Object, withoutRecordings.QueueAuthorization, Harness.Request());
+        var allowed = await SupervisorAICallsEndpoints.HandleTranscriptAsync("ended", null, withRecordings.Authorization, withRecordings.Activities.Object, withRecordings.Prompts.Object, withRecordings.QueueAuthorization, Harness.Request());
 
         // Assert
         Assert.Equal(403, Status(refused));
@@ -69,8 +69,8 @@ public sealed class SupervisorAICallScopeTests
     {
         var harness = new Harness([.. MonitorAndIntervene(), ContactCenterPermissions.MonitorAllAICalls.Name]);
 
-        var theirs = await SupervisorAICallsEndpoints.HandleTranscriptAsync("theirs", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, harness.Request());
-        var unscoped = await SupervisorAICallsEndpoints.HandleTranscriptAsync("unscoped", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, harness.Request());
+        var theirs = await SupervisorAICallsEndpoints.HandleTranscriptAsync("theirs", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, Harness.Request());
+        var unscoped = await SupervisorAICallsEndpoints.HandleTranscriptAsync("unscoped", null, harness.Authorization, harness.Activities.Object, harness.Prompts.Object, harness.QueueAuthorization, Harness.Request());
 
         Assert.Equal(200, Status(theirs));
         Assert.Equal(200, Status(unscoped));
@@ -83,10 +83,10 @@ public sealed class SupervisorAICallScopeTests
         var harness = new Harness(MonitorAndIntervene());
 
         // Act
-        var note = await SupervisorAICallsEndpoints.HandleNoteAsync("theirs", new SupervisorAICallsEndpoints.NoteRequest { Note = "Offer the discount." }, harness.Authorization, harness.Antiforgery.Object, [harness.Supervision.Object], harness.Activities.Object, harness.QueueAuthorization, harness.Request());
-        var takeOver = await SupervisorAICallsEndpoints.HandleTakeOverAsync("theirs", harness.Authorization, harness.Antiforgery.Object, [harness.Supervision.Object], harness.Agents.Object, harness.Activities.Object, harness.QueueAuthorization, harness.Request());
-        var end = await SupervisorAICallsEndpoints.HandleEndAsync("theirs", harness.Authorization, harness.Antiforgery.Object, [harness.Supervision.Object], harness.Activities.Object, harness.QueueAuthorization, harness.Request());
-        var listen = await SupervisorAICallsEndpoints.HandleListenAsync("theirs", harness.Authorization, harness.Antiforgery.Object, harness.Activities.Object, harness.PhoneCalls.Object, harness.QueueAuthorization, harness.Request());
+        var note = await SupervisorAICallsEndpoints.HandleNoteAsync("theirs", new SupervisorAICallsEndpoints.NoteRequest { Note = "Offer the discount." }, harness.Authorization, harness.Antiforgery.Object, [harness.Supervision.Object], harness.Activities.Object, harness.QueueAuthorization, Harness.Request());
+        var takeOver = await SupervisorAICallsEndpoints.HandleTakeOverAsync("theirs", harness.Authorization, harness.Antiforgery.Object, [harness.Supervision.Object], harness.Agents.Object, harness.Activities.Object, harness.QueueAuthorization, Harness.Request());
+        var end = await SupervisorAICallsEndpoints.HandleEndAsync("theirs", harness.Authorization, harness.Antiforgery.Object, [harness.Supervision.Object], harness.Activities.Object, harness.QueueAuthorization, Harness.Request());
+        var listen = await SupervisorAICallsEndpoints.HandleListenAsync("theirs", harness.Authorization, harness.Antiforgery.Object, harness.Activities.Object, harness.PhoneCalls.Object, harness.QueueAuthorization, Harness.Request());
 
         // Assert
         Assert.Equal(403, Status(note));
@@ -106,7 +106,7 @@ public sealed class SupervisorAICallScopeTests
             [harness.Activity("ours"), harness.Activity("theirs"), harness.Activity("unscoped")],
             harness.Authorization,
             harness.QueueAuthorization,
-            harness.Request().User,
+            Harness.Request().User,
             TestContext.Current.CancellationToken);
 
         Assert.Equal(["ours"], visible.Select(activity => activity.ItemId));
@@ -164,7 +164,7 @@ public sealed class SupervisorAICallScopeTests
 
         public OmnichannelActivity Activity(string id) => _activities[id];
 
-        public HttpContext Request()
+        public static DefaultHttpContext Request()
             => new DefaultHttpContext
             {
                 User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, SupervisorId), new Claim(ClaimTypes.Name, "supervisor")], "test")),
