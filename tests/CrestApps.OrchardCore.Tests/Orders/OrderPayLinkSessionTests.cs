@@ -40,6 +40,10 @@ public sealed class OrderPayLinkSessionTests
         sessions.Setup(value => value.GetByReferenceAsync(CheckoutReferenceTypes.Order, order.ItemId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => started);
 
+        // The browser that opened it owns it, so the ownership-checked read finds it.
+        sessions.Setup(value => value.GetAsync(It.IsAny<string>(), CheckoutSessionStatus.Pending, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string sessionId, CheckoutSessionStatus _, CancellationToken _) => started?.SessionId == sessionId ? started : null);
+
         var controller = CreateController(order, engine.Object, sessions.Object);
 
         // Act
@@ -50,6 +54,40 @@ public sealed class OrderPayLinkSessionTests
         Assert.Equal(1, starts);
     }
 
+    /// <summary>
+    /// SEC-C17g (review): a link scanner, a mail preview or the buyer's other device opened the link first. The checkout
+    /// it started belongs to that client, so sending the buyer to it gave them a 404 until it expired, a day later. The
+    /// buyer gets a checkout of their own.
+    /// </summary>
+    [Fact]
+    public async Task Guest_AfterAnotherClientOpenedTheLink_StartsTheBuyerTheirOwnCheckout()
+    {
+        // Arrange
+        var order = new Order { ItemId = "order-1", Status = OrderStatus.Draft, Invoice = new OrderInvoice(), Currency = "USD" };
+        var foreign = new CheckoutSession { SessionId = "scanner-session", Status = CheckoutSessionStatus.Pending, ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = order.ItemId };
+        var starts = 0;
+
+        var engine = new Mock<ICheckoutEngine>();
+        engine.Setup(value => value.StartAsync(It.IsAny<StartCheckoutRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new CheckoutSession { SessionId = "buyer-session-" + ++starts, Status = CheckoutSessionStatus.Pending });
+
+        var sessions = new Mock<ICheckoutSessionStore>();
+        sessions.Setup(value => value.GetByReferenceAsync(CheckoutReferenceTypes.Order, order.ItemId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(foreign);
+
+        // This browser doesn't own the scanner's checkout: the ownership-checked read doesn't find it.
+        sessions.Setup(value => value.GetAsync(It.IsAny<string>(), CheckoutSessionStatus.Pending, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CheckoutSession)null);
+
+        var controller = CreateController(order, engine.Object, sessions.Object);
+
+        // Act
+        var result = await controller.Guest("token");
+
+        // Assert
+        Assert.Equal(1, starts);
+        Assert.Equal("buyer-session-1", Assert.IsType<RedirectToRouteResult>(result).RouteValues["sessionId"]);
+    }
     private static OrderPayController CreateController(Order order, ICheckoutEngine engine, ICheckoutSessionStore sessions)
     {
         var orders = new Mock<IOrderStore>();
@@ -66,6 +104,7 @@ public sealed class OrderPayLinkSessionTests
             .AddSingleton(Mock.Of<IAuthorizationService>())
             .AddSingleton(Mock.Of<IClock>(clock => clock.UtcNow == new DateTime(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc)))
             .AddSingleton<global::CrestApps.OrchardCore.Orders.Services.OrderPayLinks>()
+            .AddSingleton(Mock.Of<global::CrestApps.OrchardCore.Throttling.IAttemptLimiter>(limiter => limiter.AcquireAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult(global::CrestApps.OrchardCore.Throttling.AttemptLimitResult.Unlimited)))
             .BuildServiceProvider();
 
         var controller = ActivatorUtilities.CreateInstance<OrderPayController>(services);
