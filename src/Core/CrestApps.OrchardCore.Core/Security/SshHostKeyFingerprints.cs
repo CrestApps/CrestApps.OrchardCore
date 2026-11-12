@@ -1,14 +1,13 @@
-using Renci.SshNet;
-
-namespace CrestApps.OrchardCore.AI.FileTransfer.Core;
+namespace CrestApps.OrchardCore.Core.Security;
 
 /// <summary>
-/// The one SFTP host-key check: a connection trusts the server only when the server's SHA-256 host-key fingerprint is
-/// the one configured for it, and refuses every server when none is configured (fail closed). Without it, anyone on the
-/// network path, or a DNS change, can stand in for the server and collect the credentials and the files. Use it for
-/// every <see cref="SftpClient"/> this solution creates.
+/// The one SSH host-key fingerprint check: a connection trusts the server only when the server's SHA-256 host-key
+/// fingerprint is the one configured for it, and an empty configuration trusts no server (fail closed). Without it,
+/// anyone on the network path, or a DNS change, can stand in for the server and collect the credentials and the files.
+/// Every SFTP client this solution creates checks its server with <see cref="Matches"/> in its <c>HostKeyReceived</c>
+/// handler.
 /// </summary>
-public static class SftpHostKeys
+public static class SshHostKeyFingerprints
 {
     /// <summary>
     /// Brings a fingerprint to one form: the base64 SHA-256 digest without the <c>SHA256:</c> prefix, padding or spaces,
@@ -66,17 +65,5 @@ public static class SftpHostKeys
         return normalizedExpected is not null &&
             normalizedActual is not null &&
             string.Equals(normalizedExpected, normalizedActual, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// Makes a client trust only the server whose host key has the expected fingerprint. Call it before connecting.
-    /// </summary>
-    /// <param name="client">The SSH or SFTP client.</param>
-    /// <param name="expectedFingerprint">The configured fingerprint; when empty, every server is refused.</param>
-    public static void Require(BaseClient client, string expectedFingerprint)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-
-        client.HostKeyReceived += (_, e) => e.CanTrust = Matches(expectedFingerprint, e.FingerPrintSHA256);
     }
 }

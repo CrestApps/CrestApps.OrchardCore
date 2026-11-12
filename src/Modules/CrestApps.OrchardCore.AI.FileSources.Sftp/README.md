@@ -18,7 +18,7 @@ Enabling a feature of this module enables the features it depends on:
 
 ## Host keys
 
-The SFTP client CrestApps.Core builds does not check the server's host key yet. `SftpHostKeys` (in `CrestApps.OrchardCore.AI.FileTransfer.Core`) is the shared check for every SFTP client this solution creates: it trusts a server only when its SHA-256 host-key fingerprint is the configured one, and refuses every server when none is configured.
+The SFTP client CrestApps.Core builds does not check the server's host key yet, and its connection has no fingerprint to check against, so an SFTP file source still trusts any host key. CrestApps.Core #322 adds the fingerprint and refuses a connection without one; the editor gets a fingerprint field with that package. `SshHostKeyFingerprints` (in `CrestApps.OrchardCore.Core`) is the one fingerprint check for the SFTP clients this solution creates itself, such as the agentic commerce feed push: it trusts a server only when its SHA-256 host-key fingerprint is the configured one, and refuses every server when none is configured.
 
 ## Documentation
 

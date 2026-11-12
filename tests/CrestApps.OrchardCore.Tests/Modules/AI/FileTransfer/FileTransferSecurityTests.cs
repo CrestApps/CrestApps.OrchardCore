@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Ftp.Models;
 using CrestApps.OrchardCore.AI.FileTransfer.Core;
 using CrestApps.OrchardCore.AI.FileTransfer.Core.Drivers;
 using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -26,14 +27,14 @@ public sealed class FileTransferSecurityTests
     [InlineData(null, false)]
     public void Matches_ComparesNormalizedFingerprints(string actual, bool expected)
     {
-        Assert.Equal(expected, SftpHostKeys.Matches(Fingerprint, actual));
+        Assert.Equal(expected, SshHostKeyFingerprints.Matches(Fingerprint, actual));
     }
 
     [Fact]
     public void Matches_WithoutAnExpectedFingerprint_TrustsNothing()
     {
-        Assert.False(SftpHostKeys.Matches(null, "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU"));
-        Assert.False(SftpHostKeys.Matches(" ", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU"));
+        Assert.False(SshHostKeyFingerprints.Matches(null, "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU"));
+        Assert.False(SshHostKeyFingerprints.Matches(" ", "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU"));
     }
 
     [Theory]
@@ -43,7 +44,7 @@ public sealed class FileTransferSecurityTests
     [InlineData("AAAA", false)]
     public void IsValid_AcceptsOnlyASha256Fingerprint(string value, bool expected)
     {
-        Assert.Equal(expected, SftpHostKeys.IsValid(value));
+        Assert.Equal(expected, SshHostKeyFingerprints.IsValid(value));
     }
 
     [Fact]
