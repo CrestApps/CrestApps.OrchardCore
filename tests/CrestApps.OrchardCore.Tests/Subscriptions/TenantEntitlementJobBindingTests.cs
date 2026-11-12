@@ -29,7 +29,8 @@ public sealed class TenantEntitlementJobBindingTests
     [Fact]
     public async Task RevokeAsync_WhenTheJobCreatedAnotherTenant_LeavesTheTenantAlone()
     {
-        var (applier, shellHost) = CreateApplier(new TenantProvisioningJob { ItemId = "job-1", TenantName = "Shop1", Status = TenantProvisioningStatus.Succeeded, SubscriptionId = "sub-1" });
+        // The tenant named in the entitlement exists and runs, so only the job binding keeps it alone.
+        var (applier, shellHost) = CreateApplier(new TenantProvisioningJob { ItemId = "job-1", TenantName = "Shop1", Status = TenantProvisioningStatus.Succeeded, SubscriptionId = "sub-1" }, existingTenant: "Victim");
 
         await applier.RevokeAsync(Context("Victim", jobId: "job-1"));
 
@@ -68,14 +69,16 @@ public sealed class TenantEntitlementJobBindingTests
         return new SubscriptionEntitlementContext(new Subscription { ItemId = "sub-1", Status = SubscriptionStatus.Canceled }, entitlement);
     }
 
-    private static (TenantSubscriptionEntitlementApplier Applier, Mock<IShellHost> ShellHost) CreateApplier(TenantProvisioningJob job)
+    private static (TenantSubscriptionEntitlementApplier Applier, Mock<IShellHost> ShellHost) CreateApplier(TenantProvisioningJob job, string existingTenant = null)
     {
-        var running = new ShellSettings { Name = job.TenantName };
+        existingTenant ??= job.TenantName;
+
+        var running = new ShellSettings { Name = existingTenant };
         running.AsRunning();
 
         var shellHost = new Mock<IShellHost>();
         var found = running;
-        shellHost.Setup(host => host.TryGetSettings(job.TenantName, out found)).Returns(true);
+        shellHost.Setup(host => host.TryGetSettings(existingTenant, out found)).Returns(true);
 
         var store = new Mock<ITenantProvisioningJobStore>();
         store.Setup(s => s.FindByIdAsync(job.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(job);
