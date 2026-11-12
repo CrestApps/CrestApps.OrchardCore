@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Security;
 using CrestApps.OrchardCore.AI.Documents.Endpoints;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -42,6 +43,34 @@ public sealed class ChatSessionDocumentUploadGuardTests
     public async Task InvokeAsync_WhenSessionStartsAreThrottled_Answers429()
     {
         var (httpContext, _) = CreateContext(authorized: true, files: 1, throttled: true);
+        var called = false;
+
+        await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
+        {
+            called = true;
+
+            return ValueTask.FromResult<object>(Results.Ok());
+        });
+
+        Assert.False(called);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, httpContext.Response.StatusCode);
+    }
+
+    /// <summary>
+    /// The package's session-start limiter counts anonymous visitors only, so without Orchard Core's Rate Limits a
+    /// signed-in caller could start upload sessions in a loop. Each signed-in user is held to the
+    /// <see cref="ChatSessionDocumentUploadOptions.SessionStartPolicyName"/> attempt policy.
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_ASignedInCallerPastTheSessionStartQuota_Answers429()
+    {
+        var limiter = new Mock<IAttemptLimiter>();
+        limiter
+            .Setup(l => l.AcquireAsync(ChatSessionDocumentUploadOptions.SessionStartPolicyName, "user:user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AttemptLimitResult(false, 0, TimeSpan.FromMinutes(10)));
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test"));
+        var (httpContext, _) = CreateContext(authorized: true, files: 1, user: user, attemptLimiter: limiter.Object);
         var called = false;
 
         await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
@@ -143,10 +172,10 @@ public sealed class ChatSessionDocumentUploadGuardTests
 
         Assert.False(called);
         var status = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
-        Assert.Equal(StatusCodes.Status415UnsupportedMediaType, status.StatusCode);
+        Assert.Equal(StatusCodes.Status400BadRequest, status.StatusCode);
     }
 
-    private static (DefaultHttpContext HttpContext, Mock<IAIChatSessionManager> SessionManager) CreateContext(bool authorized, int files, bool throttled = false, int? sessionDocuments = null, bool unknownSessionId = false)
+    private static (DefaultHttpContext HttpContext, Mock<IAIChatSessionManager> SessionManager) CreateContext(bool authorized, int files, bool throttled = false, int? sessionDocuments = null, bool unknownSessionId = false, ClaimsPrincipal user = null, IAttemptLimiter attemptLimiter = null)
     {
         var profile = new AIProfile { ItemId = "profile-1" };
         var profileManager = new Mock<IAIProfileManager>();
@@ -182,6 +211,8 @@ public sealed class ChatSessionDocumentUploadGuardTests
             .AddSingleton(authorizationService.Object)
             .AddSingleton(sessionStartLimiter.Object)
             .AddSingleton(Options.Create(new ChatSessionDocumentUploadOptions()))
+            .AddSingleton(typeof(Microsoft.Extensions.Localization.IStringLocalizer<>), typeof(CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<>))
+            .AddSingleton(attemptLimiter ?? Mock.Of<IAttemptLimiter>(limiter => limiter.AcquireAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult(new AttemptLimitResult(true, 10, TimeSpan.Zero))))
             .BuildServiceProvider();
 
         var fields = new Dictionary<string, StringValues>();
@@ -207,7 +238,7 @@ public sealed class ChatSessionDocumentUploadGuardTests
             formFiles.Add(new FormFile(Stream.Null, 0, 0, "files", $"file{i}.txt"));
         }
 
-        var httpContext = new DefaultHttpContext { RequestServices = services };
+        var httpContext = new DefaultHttpContext { RequestServices = services, User = user ?? new ClaimsPrincipal(new ClaimsIdentity()) };
         httpContext.Request.ContentType = "multipart/form-data; boundary=x";
         httpContext.Features.Set<IFormFeature>(new FormFeature(new FormCollection(fields, formFiles)));
 

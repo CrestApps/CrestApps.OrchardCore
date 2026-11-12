@@ -63,8 +63,17 @@ internal sealed class McpConnectionStep : CatalogRecipeStepBase<McpConnection>
 
     protected override async ValueTask<McpConnection> PrepareUpdateAsync(McpConnection entry, JsonObject token)
     {
+        // The package copies Source from the entry when it updates a connection, so an entry could turn a remote connection
+        // into a local one that starts a process. A recipe never changes a connection's transport.
+        var source = token[nameof(McpConnection.Source)] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+
+        if (!string.IsNullOrEmpty(source) && !string.Equals(source, entry.Source, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"The recipe can't change the transport of the MCP connection '{entry.ItemId}' from '{entry.Source}' to '{source}'. Remove the connection and import it again.");
+        }
+
         // Changing an existing local connection changes the process it starts, so it needs the same right as creating one.
-        if (IsStdio(entry.Source) && !await CanManageStdioAsync())
+        if ((IsStdio(entry.Source) || IsStdio(source)) && !await CanManageStdioAsync())
         {
             throw new InvalidOperationException($"The recipe can't change the local (stdio) MCP connection '{entry.ItemId}': local connections need the 'Manage local (stdio) MCP connections' permission on the default tenant.");
         }
@@ -109,7 +118,7 @@ internal sealed class McpConnectionStep : CatalogRecipeStepBase<McpConnection>
         => _manager.CreateAsync(entry);
 
     private static bool IsStdio(string source)
-        => string.Equals(source, McpConstants.TransportTypes.StdIo, StringComparison.Ordinal);
+        => string.Equals(source, McpConstants.TransportTypes.StdIo, StringComparison.OrdinalIgnoreCase);
 
     private Task<bool> CanManageStdioAsync()
         => McpStdioAccess.CanManageAsync(_shellSettings, _authorizationService, _httpContextAccessor.HttpContext?.User);

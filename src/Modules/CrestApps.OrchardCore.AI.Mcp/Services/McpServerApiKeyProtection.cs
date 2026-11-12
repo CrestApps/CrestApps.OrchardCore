@@ -15,6 +15,8 @@ internal static class McpServerApiKeyProtection
     /// </summary>
     public const string Purpose = "CrestApps.OrchardCore.AI.Mcp.ServerApiKey";
 
+    private const string ProtectedPayloadPrefix = "CfDJ8";
+
     /// <summary>
     /// Returns the key to store for what the settings form posted: a new key protected, a blank one keeping the stored
     /// key.
@@ -27,7 +29,8 @@ internal static class McpServerApiKeyProtection
 
     /// <summary>
     /// Reads the stored key. A key stored before it was protected is read as it is, and is protected the next time the
-    /// settings are saved with a new key.
+    /// settings are saved with a new key. A protected key this site's keys can't read (a lost key ring) gives no key:
+    /// its ciphertext must never become the key clients are compared with.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="stored">The stored key.</param>
@@ -44,7 +47,8 @@ internal static class McpServerApiKeyProtection
         }
         catch (CryptographicException)
         {
-            return stored;
+            // Data protection payloads start with the magic header 09 F0 C9 F0, which base64url writes as "CfDJ8".
+            return stored.StartsWith(ProtectedPayloadPrefix, StringComparison.Ordinal) ? null : stored;
         }
     }
 }

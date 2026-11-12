@@ -77,6 +77,23 @@ public sealed class AIChatHubTemplatePromptAuthorizationTests
         caller.Verify(client => client.ReceiveError(It.Is<string>(message => message.Contains("30", StringComparison.Ordinal))), Times.Once);
     }
 
+    /// <summary>
+    /// A template session is a chat session under its parent profile, whose rate limits then apply. A parent that is
+    /// not a chat profile (a utility profile, another template) can't start one.
+    /// </summary>
+    [Theory]
+    [InlineData(AIProfileType.Utility)]
+    [InlineData(AIProfileType.TemplatePrompt)]
+    public async Task HandleSendMessageAsync_WhenTheParentIsNotAChatProfile_RefusesAndRunsNothing(AIProfileType parentType)
+    {
+        var (hub, caller) = CreateHub(authorizedIds: [TemplateId, ParentId], parentType: parentType);
+
+        await hub.SendForTestAsync();
+
+        Assert.False(hub.GeneratedPromptRan);
+        caller.Verify(client => client.ReceiveError("Only chat profiles can start chat sessions."), Times.Once);
+    }
+
     [Fact]
     public async Task GetAccessibleProfilesAsync_ReturnsOnlyTheProfilesTheCallerMayUse()
     {
@@ -95,7 +112,7 @@ public sealed class AIChatHubTemplatePromptAuthorizationTests
         Assert.Equal([allowed], profiles);
     }
 
-    private static (TestAIChatHub Hub, Mock<IAIChatHubClient> Caller) CreateHub(string[] authorizedIds, IChatRateLimiter rateLimiter = null)
+    private static (TestAIChatHub Hub, Mock<IAIChatHubClient> Caller) CreateHub(string[] authorizedIds, IChatRateLimiter rateLimiter = null, AIProfileType parentType = AIProfileType.Chat)
     {
         var profileManager = new Mock<IAIProfileManager>();
         profileManager
@@ -103,7 +120,7 @@ public sealed class AIChatHubTemplatePromptAuthorizationTests
             .ReturnsAsync(new AIProfile { ItemId = TemplateId, Type = AIProfileType.TemplatePrompt });
         profileManager
             .Setup(manager => manager.FindByIdAsync(ParentId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AIProfile { ItemId = ParentId, Type = AIProfileType.Chat });
+            .ReturnsAsync(new AIProfile { ItemId = ParentId, Type = parentType });
 
         var serviceCollection = new ServiceCollection()
             .AddSingleton(profileManager.Object);

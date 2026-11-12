@@ -102,7 +102,22 @@ public abstract class ImportRecipeBaseTool : AIFunction
         return $"Unable to find a '{name}' argument in the arguments parameter.";
     }
 
-    protected static async ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, ILogger logger, CancellationToken cancellationToken)
+    protected static ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, ILogger logger, CancellationToken cancellationToken)
+        => ProcessRecipeAsync(services, json, logger, allowedSteps: null, cancellationToken);
+
+    /// <summary>
+    /// Validates and imports a recipe that may contain only the named steps.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <param name="json">The recipe.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="allowedSteps">
+    /// The names of the steps the recipe may contain, or <see langword="null"/> for any step. A tool that needs less than
+    /// <c>ManageRecipes</c> names its own steps: a recipe runs every step it carries, so without the list the tool's
+    /// permission would import a Roles, Users or settings step too.
+    /// </param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    protected static async ValueTask<object> ProcessRecipeAsync(IServiceProvider services, string json, ILogger logger, IReadOnlyCollection<string> allowedSteps, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(services, nameof(services));
 
@@ -117,6 +132,14 @@ public abstract class ImportRecipeBaseTool : AIFunction
             RecordImport(AIModuleTelemetry.ModeInline, AIModuleTelemetry.OutcomeInvalid);
 
             return "Invalid recipe format. The recipe payload could not be deserialized.";
+        }
+
+        if (allowedSteps is not null && !HasOnlySteps(data, allowedSteps))
+        {
+            logger.LogWarning("AI tool recipe import refused: the recipe has a step the tool may not run.");
+            RecordImport(AIModuleTelemetry.ModeInline, AIModuleTelemetry.OutcomeInvalid);
+
+            return $"This tool can only import a recipe whose steps are: {string.Join(", ", allowedSteps)}.";
         }
 
         var result = rootSchema.Evaluate(JsonSerializer.SerializeToElement(data, RecipeSerializerOptions), new EvaluationOptions()
@@ -162,6 +185,28 @@ public abstract class ImportRecipeBaseTool : AIFunction
         logger.LogInformation("AI tool recipe import scheduled for deferred execution.");
 
         return "Recipe was successfully imported";
+    }
+
+    private static bool HasOnlySteps(JsonObject recipe, IReadOnlyCollection<string> allowedSteps)
+    {
+        if (recipe["steps"] is not JsonArray steps)
+        {
+            return true;
+        }
+
+        foreach (var step in steps)
+        {
+            var name = (step as JsonObject)?["name"] is JsonValue value && value.TryGetValue<string>(out var text)
+                ? text
+                : null;
+
+            if (name is null || !allowedSteps.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static async Task ExecuteDeferredRecipeAsync(ShellScope scope, string serializedRecipe)

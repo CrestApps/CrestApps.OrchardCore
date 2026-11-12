@@ -262,12 +262,7 @@ public abstract class IndexedReportDataSet<TDocument, TIndex, TRow> : RecordData
     /// Gets a value indicating whether the data set returns only the rows its reader may see, which it does when it
     /// overrides <see cref="RestrictAsync"/>.
     /// </summary>
-    protected bool RestrictsRows => _restrictsRows.GetOrAdd(GetType(), static type =>
-    {
-        var method = type.GetMethod(nameof(RestrictAsync), BindingFlags.Instance | BindingFlags.NonPublic);
-
-        return method is not null && method.GetBaseDefinition() != method;
-    });
+    protected bool RestrictsRows => _restrictsRows.GetOrAdd(GetType(), static type => ReportRowScope.Overrides(type, nameof(RestrictAsync)));
 
     /// <summary>
     /// Decides which documents the principal may read, when the data set's permissions alone do not decide it. The

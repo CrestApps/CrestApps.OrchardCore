@@ -13,13 +13,18 @@ public static class CsvReader
 
     /// <summary>
     /// Takes off the apostrophe <see cref="CsvWriter"/> puts in front of a cell a spreadsheet would run as a formula, so
-    /// a file that was exported and imported again keeps its values. An apostrophe in front of anything else is part of
-    /// the value and stays.
+    /// a file that was exported and imported again keeps its values. The writer also guards a value that itself starts
+    /// with an apostrophe and a formula character, so exactly one apostrophe comes off. An apostrophe in front of
+    /// anything else is part of the value and stays.
     /// </summary>
     /// <param name="value">The cell as it was read.</param>
     /// <returns>The value.</returns>
+    /// <remarks>
+    /// A file written elsewhere whose cell starts with an apostrophe and a formula character, such as <c>'=x</c>, loses
+    /// that apostrophe, as it would were it this writer's guard.
+    /// </remarks>
     public static string RemoveFormulaGuard(string value)
-        => value is { Length: > 1 } && value[0] == '\'' && CsvWriter.StartsLikeAFormula(value[1..]) ? value[1..] : value;
+        => value is { Length: > 1 } && value[0] == '\'' && CsvWriter.NeedsFormulaGuard(value[1..]) ? value[1..] : value;
 
     /// <summary>
     /// Reads the records of a file one at a time, so a large file is never held in memory. An empty line reads as one
@@ -28,10 +33,22 @@ public static class CsvReader
     /// <param name="reader">The reader of the file.</param>
     /// <returns>The records, each as its cells.</returns>
     public static IEnumerable<string[]> ReadRecords(TextReader reader)
+        => ReadRecords(reader, int.MaxValue);
+
+    /// <summary>
+    /// Reads the records of a file one at a time, refusing a cell longer than a limit. A quote that is never closed
+    /// would otherwise read the rest of the file into one cell.
+    /// </summary>
+    /// <param name="reader">The reader of the file.</param>
+    /// <param name="maxCellLength">The most characters a cell may hold.</param>
+    /// <returns>The records, each as its cells.</returns>
+    /// <exception cref="InvalidOperationException">A cell holds more than <paramref name="maxCellLength"/> characters.</exception>
+    public static IEnumerable<string[]> ReadRecords(TextReader reader, int maxCellLength)
     {
         ArgumentNullException.ThrowIfNull(reader);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxCellLength);
 
-        return ReadRecordsIterator(reader);
+        return ReadRecordsIterator(reader, maxCellLength);
     }
 
     /// <summary>
@@ -43,7 +60,7 @@ public static class CsvReader
     {
         using var reader = new StringReader(text ?? string.Empty);
 
-        return [.. ReadRecordsIterator(reader)];
+        return [.. ReadRecordsIterator(reader, int.MaxValue)];
     }
 
     /// <summary>
@@ -56,7 +73,7 @@ public static class CsvReader
     {
         using var reader = new StringReader(line ?? string.Empty);
 
-        return ReadRecord(reader, skipByteOrderMark: true) ?? [string.Empty];
+        return ReadRecord(reader, skipByteOrderMark: true, int.MaxValue) ?? [string.Empty];
     }
 
     /// <summary>
@@ -116,11 +133,11 @@ public static class CsvReader
         return rows;
     }
 
-    private static IEnumerable<string[]> ReadRecordsIterator(TextReader reader)
+    private static IEnumerable<string[]> ReadRecordsIterator(TextReader reader, int maxCellLength)
     {
         var first = true;
 
-        while (ReadRecord(reader, skipByteOrderMark: first) is { } record)
+        while (ReadRecord(reader, skipByteOrderMark: first, maxCellLength) is { } record)
         {
             first = false;
 
@@ -129,7 +146,7 @@ public static class CsvReader
     }
 
     // One record, which a quoted cell may spread over several lines; null at the end of the text.
-    private static string[] ReadRecord(TextReader reader, bool skipByteOrderMark)
+    private static string[] ReadRecord(TextReader reader, bool skipByteOrderMark, int maxCellLength)
     {
         if (skipByteOrderMark && reader.Peek() == ByteOrderMark)
         {
@@ -157,6 +174,12 @@ public static class CsvReader
             }
 
             var character = (char)next;
+
+            // Checked as the cell grows, so a quote that is never closed stops at the limit instead of reading the file.
+            if (cell.Length > maxCellLength)
+            {
+                throw new InvalidOperationException($"A cell of the file holds more than {maxCellLength} characters, the most an import may have.");
+            }
 
             if (quoted)
             {

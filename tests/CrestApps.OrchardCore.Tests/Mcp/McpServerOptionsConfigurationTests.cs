@@ -32,6 +32,20 @@ public sealed class McpServerOptionsConfigurationTests
         Assert.Equal("legacy-key", options.ApiKey);
     }
 
+    /// <summary>
+    /// A key protected with keys the site no longer has (a lost key ring) can't be read. Its ciphertext must not become
+    /// the accepted key: the server then has no key until one is entered again.
+    /// </summary>
+    [Fact]
+    public void Configure_AKeyProtectedWithLostKeys_IsNotAccepted()
+    {
+        var stored = McpServerApiKeyProtection.Apply(new EphemeralDataProtectionProvider(), stored: null, posted: "mcp-key-123");
+
+        var options = Configure(new McpServerSettings { ApiKey = stored }, []);
+
+        Assert.Null(options.ApiKey);
+    }
+
     [Fact]
     public void Configure_DefaultsAuthenticationTypeToOpenId_WhenNotConfigured()
     {

@@ -42,6 +42,31 @@ public sealed class ExcelContentTransferFileFormatProviderTests
         Assert.Equal("Value 1", rows[0][1]);
     }
 
+    /// <summary>
+    /// SEC-A17: the module's own export writes a long HTML or Markdown body into one cell. With the default limits, a
+    /// workbook it exported imports again.
+    /// </summary>
+    [Fact]
+    public void CreateReaderAndWriter_RoundTripACellLongerThanExcelsOwnLimit_WithTheDefaultLimits()
+    {
+        var provider = new ExcelContentTransferFileFormatProvider();
+        var body = new string('x', 40_000);
+        using var stream = new MemoryStream();
+
+        using (var writer = provider.CreateWriter(stream, "Content Items"))
+        {
+            writer.WriteHeader(["Title", "Body"]);
+            writer.WriteRow(["Item 1", body]);
+            writer.Flush();
+        }
+
+        stream.Position = 0;
+
+        using var reader = provider.CreateReader(stream);
+
+        Assert.Equal(body, reader.ReadRows().Single()[1]);
+    }
+
     [Fact]
     public void CanHandle_IgnoresExtensionCase_AndRejectsOtherFormats()
     {

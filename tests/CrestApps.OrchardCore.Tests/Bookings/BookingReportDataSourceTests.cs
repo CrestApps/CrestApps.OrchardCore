@@ -430,6 +430,56 @@ public sealed class BookingReportDataSourceTests : IAsyncLifetime
         Assert.Equal(3, dataSets.Count);
     }
 
+    /// <summary>
+    /// SEC-A12: a data set that doesn't override <c>RestrictAsync</c> gives every reader the same rows, so its read is
+    /// not marked as restricted and a scheduled view over it serves its stored rows to every reader.
+    /// </summary>
+    [Fact]
+    public async Task Query_ADataSetThatGivesEveryReaderTheSameRows_IsNotMarkedRestricted()
+    {
+        await using var session = _store.CreateSession();
+        var query = Query(CommerceReportDataSets.BookingSource.Slots, CommerceReportDataSets.ItemIdField);
+
+        var table = await ReportDesignerTestServices.ReadAsync(Source(session), query, TestContext.Current.CancellationToken);
+
+        Assert.NotEmpty(table.Rows);
+        Assert.False(ReportRowScope.IsRestricted(query.Context));
+    }
+
+    /// <summary>
+    /// SEC-A12: a data set that overrides <c>RestrictAsync</c> returns rows that depend on the reader, so its read is
+    /// marked as restricted.
+    /// </summary>
+    [Fact]
+    public async Task Query_ADataSetThatNarrowsTheRowsByReader_IsMarkedRestricted()
+    {
+        await using var session = _store.CreateSession();
+        var authorizationService = Authorization([BookingsPermissions.ManageBookings.Name]);
+        var source = new BookingReportDataSource([new ReaderScopedSlotsDataSet(session, authorizationService)]);
+        var query = Query(ReaderScopedSlotsDataSet.Name, CommerceReportDataSets.ItemIdField);
+
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
+
+        Assert.NotEmpty(table.Rows);
+        Assert.True(ReportRowScope.IsRestricted(query.Context));
+    }
+
+    private sealed class ReaderScopedSlotsDataSet : CrestApps.OrchardCore.Reports.Designer.DataSources.IndexedReportDataSet<BookingSlot, BookingSlotIndex>, IBookingReportDataSet
+    {
+        public const string Name = "ReaderScopedSlots";
+
+        public ReaderScopedSlotsDataSet(ISession session, IAuthorizationService authorizationService)
+            : base(new DataSetDescriptor(Name, new LocalizedString(Name, Name), new LocalizedString(Name, Name)), session, authorizationService, BookingsConstants.CollectionName)
+        {
+            AddField(CommerceReportDataSets.ItemIdField, new LocalizedString("ID", "ID"), DataFieldType.Text, record => record.ItemId, "Date").Identifier();
+
+            CompleteDescription();
+        }
+
+        protected override Task<Func<IQueryIndex<BookingSlotIndex>, IQueryIndex<BookingSlotIndex>>> RestrictAsync(DataSourceContext context, CancellationToken cancellationToken)
+            => Task.FromResult<Func<IQueryIndex<BookingSlotIndex>, IQueryIndex<BookingSlotIndex>>>(rows => rows);
+    }
+
     private static BookingSlot Slot(int index, string productId, int capacity, int held, int sold, bool closed, decimal? price)
     {
         var starts = _start.AddDays(10 + index);

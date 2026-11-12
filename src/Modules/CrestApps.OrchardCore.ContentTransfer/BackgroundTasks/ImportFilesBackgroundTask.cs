@@ -31,7 +31,7 @@ namespace CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
     Description = "Regularly check for imported files and process them, and resume imports that a restart interrupted.",
     LockTimeout = 3_000,
     LockExpiration = 30_000)]
-public sealed class ImportFilesBackgroundTask : IBackgroundTask
+public sealed partial class ImportFilesBackgroundTask : IBackgroundTask
 {
     private static readonly TimeSpan _importLockTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan _importLockExpiration = TimeSpan.FromMinutes(30);
@@ -1037,55 +1037,17 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             return false;
         }
 
-        if (existingRows.Count > 0)
-        {
-            var existingContentItems = (await contentManager.GetAsync(existingRows.Keys, VersionOptions.DraftRequired))
-                .ToDictionary(x => x.ContentItemId);
-
-            foreach (var existingRow in existingRows)
-            {
-                monitor.BeginRow(existingRow.Value.Key);
-
-                try
-                {
-                    var isNew = false;
-
-                    if (!existingContentItems.TryGetValue(existingRow.Key, out var contentItem))
-                    {
-                        contentItem = await contentManager.NewAsync(entry.ContentType);
-                        isNew = true;
-                    }
-                    else if (!IsSameContentType(contentItem, entry))
-                    {
-                        // An id in the file can name any item on the site. An import is for one content type, and the
-                        // uploader's permission is for that type only, so a row that names an item of another type (a
-                        // page, an order) is refused instead of overwriting it.
-                        AddRowError(progressPart, existingRow.Value.Key, localizer["The content item '{0}' is not a {1}.", existingRow.Key, entry.ContentType], localizer["Could not be imported"]);
-                        runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
-
-                        continue;
-                    }
-
-                    await ProcessRowAsync(
-                        entry,
-                        contentItem,
-                        existingRow.Value.Key,
-                        existingRow.Value.Value,
-                        dataTable.Columns,
-                        contentTypeDefinition,
-                        contentManager,
-                        contentImportManager,
-                        progressPart,
-                        localizer,
-                        runTelemetry,
-                        isNew);
-                }
-                finally
-                {
-                    monitor.EndRow();
-                }
-            }
-        }
+        await ImportExistingRowsAsync(
+            entry,
+            dataTable,
+            existingRows,
+            contentTypeDefinition,
+            contentManager,
+            contentImportManager,
+            progressPart,
+            monitor,
+            localizer,
+            runTelemetry);
 
         foreach (var record in newRecords)
         {

@@ -544,7 +544,16 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
                     // Each template message is a model call, so it counts against the same per-message limit as a
                     // typed message. The visitor's own prompt is not used here, so only the limit applies.
-                    var rateLimitResult = await EvaluateMessageRateLimitAsync(services, parentProfile, sessionId, cancellationToken);
+                    // The session is a chat session of the parent profile, and the parent's limits apply to it, so the
+                    // parent must be a chat profile, as it must when a session starts from the base hub.
+                    if (parentProfile.Type != AIProfileType.Chat)
+                    {
+                        await Clients.Caller.ReceiveError(GetOnlyChatProfilesMessage());
+
+                        return;
+                    }
+
+                    var rateLimitResult = await EvaluateTemplateMessageRateLimitAsync(services, parentProfile, sessionId, cancellationToken);
 
                     if (rateLimitResult.IsThrottled)
                     {
@@ -596,7 +605,10 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         await base.HandleSendMessageAsync(writer, services, profileId, prompt, sessionId, sessionProfileId, cancellationToken);
     }
 
-    private async Task<RateLimitResult> EvaluateMessageRateLimitAsync(IServiceProvider services, AIProfile profile, string sessionId, CancellationToken cancellationToken)
+    // Not named EvaluateMessageRateLimitAsync: CrestApps.Core #322 adds a protected virtual member of that name and
+    // signature to the base hub, which a private method here would hide (CS0114). At that bump this method and the
+    // template branch of HandleSendMessageAsync are deleted, since the base hub then does both.
+    private async Task<RateLimitResult> EvaluateTemplateMessageRateLimitAsync(IServiceProvider services, AIProfile profile, string sessionId, CancellationToken cancellationToken)
     {
         var rateLimiter = services.GetService<IChatRateLimiter>();
 

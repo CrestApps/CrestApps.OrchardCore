@@ -67,6 +67,33 @@ public sealed class AICompletionQuotaFilterTests
         Assert.Equal("user:user-1", AICompletionQuotaFilter.GetQuotaKey(user));
     }
 
+    /// <summary>
+    /// A caller with neither an API key nor a user id (an endpoint that lets anonymous callers through) is still held to
+    /// a quota, counted by its network.
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_ForACallerWithoutAKeyOrAUser_CountsByNetwork()
+    {
+        var limiter = new Mock<IAttemptLimiter>();
+        limiter
+            .Setup(l => l.AcquireAsync(AICompletionQuotaFilter.PolicyName, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AttemptLimitResult(false, 0, TimeSpan.FromMinutes(5)));
+
+        var httpContext = CreateContext(limiter.Object);
+        httpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("203.0.113.7");
+        var called = false;
+
+        await new AICompletionQuotaFilter().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
+        {
+            called = true;
+
+            return ValueTask.FromResult<object>(Results.Ok());
+        });
+
+        Assert.False(called);
+        limiter.Verify(l => l.AcquireAsync(AICompletionQuotaFilter.PolicyName, "net:203.0.113.7", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static DefaultHttpContext CreateContext(IAttemptLimiter limiter, params Claim[] claims)
         => new()
         {

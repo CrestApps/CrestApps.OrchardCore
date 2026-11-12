@@ -43,6 +43,11 @@ public sealed class Startup : StartupBase
             .AddDataMigration<ChatInteractionMigrations>()
             .AddDataMigration<ChatInteractionPromptIndexMigrations>();
 
+        // AddCoreAIChatInteractions registers the package's visitor resolver again, which trusts X-Forwarded-For. The
+        // AI Chat feature does not depend on this one, so either may start last: both put the connection-address
+        // resolver back.
+        services.AddConnectionAddressAIVisitorIdentityResolver();
+
         services
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()

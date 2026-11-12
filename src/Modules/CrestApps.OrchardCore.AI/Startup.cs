@@ -99,8 +99,10 @@ public sealed class Startup : StartupBase
         services.Configure<AIEgressOptions>(_shellConfiguration.GetSection(AIEgressOptions.SectionName));
         services.AddScoped<IAIEndpointPolicy, AIEndpointPolicy>();
 
-        // Pages that render chat limit where images may load from, so model output can't send data out in an image URL.
+        // Pages that render chat can limit where images and media may load from (opt in), so model output can't send data
+        // out in an image or audio URL. The tenant's media CDN is allowed without being listed.
         services.Configure<ChatImageContentSecurityPolicyOptions>(_shellConfiguration.GetSection(ChatImageContentSecurityPolicyOptions.SectionName));
+        services.Configure<ChatImageContentSecurityPolicyOptions>(options => options.MediaCdnBaseUrl ??= _shellConfiguration["OrchardCore_Media:CdnBaseUrl"]);
         services.AddSingleton<ChatImageContentSecurityPolicy>();
 
         // Data migrations that skip records show the people who manage AI profiles a warning on admin pages until it is dismissed.

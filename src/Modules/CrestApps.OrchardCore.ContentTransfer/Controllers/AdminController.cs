@@ -161,14 +161,7 @@ public sealed class AdminController : Controller, IUpdateModel
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> ListPOST(ListContentTransferEntryOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ListContentTransferEntries))
-        {
-            return Forbid();
-        }
-
-        // Removing needs the delete permission, checked whatever the action so the posted action never decides that.
-        var canDelete = await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.DeleteContentTransferEntries);
-        if (options.BulkAction == ContentTransferEntryBulkAction.Remove && !canDelete)
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ListContentTransferEntries) || !await CanRunBulkActionAsync(options.BulkAction))
         {
             return Forbid();
         }
@@ -498,7 +491,7 @@ public sealed class AdminController : Controller, IUpdateModel
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> ExportPOST(ListContentTransferEntryOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile))
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile) || !await CanRunBulkActionAsync(options.BulkAction))
         {
             return Forbid();
         }
@@ -852,7 +845,7 @@ public sealed class AdminController : Controller, IUpdateModel
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> ExportDashboardPOST(ListContentTransferEntryOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile))
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile) || !await CanRunBulkActionAsync(options.BulkAction))
         {
             return Forbid();
         }
@@ -1285,6 +1278,11 @@ public sealed class AdminController : Controller, IUpdateModel
 
         return RedirectToAction(actionName, options.RouteValues);
     }
+
+    // Removing needs the delete permission, on every list, whatever else the page needs.
+    private async Task<bool> CanRunBulkActionAsync(ContentTransferEntryBulkAction? bulkAction)
+        => bulkAction != ContentTransferEntryBulkAction.Remove ||
+            await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.DeleteContentTransferEntries);
 
     private async Task ExecuteBulkActionAsync(IEnumerable<string> itemIds, ContentTransferEntryBulkAction? bulkAction, ContentTransferDirection direction, string owner = null)
     {

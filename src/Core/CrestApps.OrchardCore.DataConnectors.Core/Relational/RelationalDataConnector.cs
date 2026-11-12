@@ -354,6 +354,11 @@ public abstract class RelationalDataConnector
     /// balance, it has no statement separator outside of quoted text, and it has no comment. A trailing separator is
     /// removed.
     /// </summary>
+    /// <remarks>
+    /// It reads quoted text the way T-SQL writes it: single quotes doubled inside a string, and bracketed or
+    /// double-quoted names. It is safe for SQL Server, the only relational connector today. A connector for another
+    /// dialect needs a check of its own: PostgreSQL dollar-quoted strings and MySQL backslash escapes would pass it.
+    /// </remarks>
     /// <param name="query">The query.</param>
     /// <returns>The query, ready to wrap.</returns>
     /// <exception cref="DataConnectorException">The query could close the derived table or start another statement.</exception>
@@ -533,7 +538,7 @@ public abstract class RelationalDataConnector
         }
         catch (DbException exception)
         {
-            throw new DataConnectorException($"Couldn't connect to the database: {exception.Message}", exception) { IsTransient = IsTransient(exception) };
+            throw new DataConnectorException("Couldn't connect to the database. See the site's log for the database's message.", exception) { IsTransient = IsTransient(exception) };
         }
     }
 

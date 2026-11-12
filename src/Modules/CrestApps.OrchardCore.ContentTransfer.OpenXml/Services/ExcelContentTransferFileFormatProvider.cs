@@ -83,7 +83,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
                 ?? throw new InvalidOperationException(NoDataMessage);
 
             _worksheetPart = (WorksheetPart)workbookPart.GetPartById(firstSheet.Id);
-            _sharedStrings = ReadSharedStrings(workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault(), options.MaxSharedStrings);
+            _sharedStrings = ReadSharedStrings(workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault(), options.MaxSharedStrings, _maxCellLength);
 
             Row headerRow;
             using (var reader = OpenXmlReader.Create(_worksheetPart))
@@ -160,7 +160,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
             _document.Dispose();
         }
 
-        private static List<string> ReadSharedStrings(SharedStringTablePart sharedStringTablePart, int maxSharedStrings)
+        private static List<string> ReadSharedStrings(SharedStringTablePart sharedStringTablePart, int maxSharedStrings, int maxCellLength)
         {
             if (sharedStringTablePart == null)
             {
@@ -180,8 +180,16 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
                         throw new InvalidOperationException($"The file has more than {maxSharedStrings} shared strings, the most an import may have.");
                     }
 
-                    // Loading one item keeps the text identical to the item's InnerText, rich-text runs included.
-                    sharedStrings.Add(reader.LoadCurrentElement().InnerText);
+                    // Loading one item keeps the text identical to the item's InnerText, rich-text runs included. All of
+                    // them are held while the file is read, so each is held to the cell limit as well.
+                    var text = reader.LoadCurrentElement().InnerText;
+
+                    if (text.Length > maxCellLength)
+                    {
+                        throw new InvalidOperationException($"A cell of the file holds more than {maxCellLength} characters, the most an import may have.");
+                    }
+
+                    sharedStrings.Add(text);
                 }
             }
 

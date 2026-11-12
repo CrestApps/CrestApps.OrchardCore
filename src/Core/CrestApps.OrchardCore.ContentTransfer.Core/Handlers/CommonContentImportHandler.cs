@@ -61,6 +61,13 @@ public sealed class CommonContentImportHandler : ContentImportHandlerBase, ICont
         ArgumentNullException.ThrowIfNull(context.ContentItem, nameof(context.ContentItem));
         ArgumentNullException.ThrowIfNull(context.Row, nameof(context.Row));
 
+        // A stored item keeps its id: the row was matched to it without regard to case, so the file's id may differ
+        // from the stored one in case only.
+        if (context.ContentItem.Id != 0)
+        {
+            return Task.CompletedTask;
+        }
+
         foreach (DataColumn column in context.Columns)
         {
             if (Is(column.ColumnName, nameof(ContentItem.ContentItemId)))

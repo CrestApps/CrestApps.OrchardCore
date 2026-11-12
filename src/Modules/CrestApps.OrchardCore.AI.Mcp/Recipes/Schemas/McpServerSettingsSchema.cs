@@ -25,7 +25,7 @@ public sealed class McpServerSettingsSchema : SiteSettingsSchemaBase
                     .Description("OpenId signs clients in with the site's OpenID server; ApiKey requires the API key below.")),
                 (nameof(McpServerSettings.ApiKey), new JsonSchemaBuilder()
                     .Type(SchemaValueType.String | SchemaValueType.Null)
-                    .Description("The API key clients send when AuthenticationType is ApiKey. It is stored and compared as given (not encrypted), so a recipe should not carry a production key.")),
+                    .Description("The API key clients send when AuthenticationType is ApiKey. A key given in a recipe is stored as given until the settings are saved with a new key, which the settings editor stores encrypted, so a recipe should not carry a production key.")),
                 (nameof(McpServerSettings.RequireAccessPermission), new JsonSchemaBuilder()
                     .Type(SchemaValueType.Boolean)
                     .Default(true)

@@ -369,6 +369,32 @@ public class CommonContentImportHandlerTests
         Assert.Equal("abcdefghijklmnopqrstuvwxyz", contentItem.ContentItemId);
     }
 
+    /// <summary>
+    /// SEC-A7: an existing item keeps its id. A row matched to it on a case-insensitive collation carries the id in
+    /// another case, which must not be written onto the stored item.
+    /// </summary>
+    [Fact]
+    public async Task ImportAsync_KeepsTheIdOfAnExistingItem()
+    {
+        var dataTable = new DataTable();
+        dataTable.Columns.Add(nameof(ContentItem.ContentItemId));
+        var row = dataTable.NewRow();
+        row[nameof(ContentItem.ContentItemId)] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        dataTable.Rows.Add(row);
+
+        var contentItem = new ContentItem { Id = 12, ContentItemId = "abcdefghijklmnopqrstuvwxyz" };
+
+        await _handler.ImportAsync(new ContentImportContext
+        {
+            ContentItem = contentItem,
+            ContentTypeDefinition = new ContentTypeDefinition("Test", "Test"),
+            Columns = dataTable.Columns,
+            Row = row,
+        });
+
+        Assert.Equal("abcdefghijklmnopqrstuvwxyz", contentItem.ContentItemId);
+    }
+
     [Fact]
     public async Task ImportAsync_DoesNotSetContentItemId_WhenEmpty()
     {

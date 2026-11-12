@@ -16,6 +16,10 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
 
     public override string Name => TheName;
 
+    // A recipe runs every step it carries, so the narrower permission is held to the content definition steps: without
+    // the list, EditContentTypes would import a Roles, Users or settings step too.
+    private static readonly string[] _allowedSteps = ["ContentDefinition", "ReplaceContentDefinition"];
+
     protected override Permission RequiredPermission => OrchardCorePermissions.EditContentTypes;
 
     public override string Description => "Creates or updates a content type or part definition based on the provided JSON recipe.";
@@ -44,7 +48,7 @@ public sealed class CreateOrUpdateContentTypeDefinitionsTool : ImportRecipeBaseT
             return MissingArgument();
         }
 
-        var result = await ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
+        var result = await ProcessRecipeAsync(arguments.Services, recipe, logger, _allowedSteps, cancellationToken);
 
         if (logger.IsEnabled(LogLevel.Debug))
         {

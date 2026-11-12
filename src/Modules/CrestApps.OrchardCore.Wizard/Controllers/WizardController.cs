@@ -158,9 +158,15 @@ public sealed class WizardController : Controller
 
         WizardSession session = null;
 
-        if (!string.IsNullOrWhiteSpace(model.SessionId))
+        // A post without a session id continues the pending session the visitor's resume cookie names, as the page they
+        // came from did, so posting the first step again and again does not store a new session each time.
+        var sessionId = !string.IsNullOrWhiteSpace(model.SessionId)
+            ? model.SessionId
+            : _cookieManager.TryGetValue(wizardKey, out var resumeSessionId) ? resumeSessionId : null;
+
+        if (!string.IsNullOrWhiteSpace(sessionId))
         {
-            session = await _wizardSessionStore.GetAsync(model.SessionId, WizardSessionStatus.Pending);
+            session = await _wizardSessionStore.GetAsync(sessionId, WizardSessionStatus.Pending);
 
             if (session != null &&
                 !string.IsNullOrEmpty(model.Step) &&
