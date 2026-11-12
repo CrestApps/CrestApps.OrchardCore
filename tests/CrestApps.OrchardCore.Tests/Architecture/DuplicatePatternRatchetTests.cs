@@ -59,6 +59,23 @@ public sealed class DuplicatePatternRatchetTests
             @"RemoteIpAddress\??\.ToString\s*\(\s*\)",
             "Key a limit with ClientNetworkKey (NetworkOnly, From or FromAddress), which masks IPv6 to its /64 and honors the Reverse Proxy feature.",
             ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Throttling/"),
+        new(
+            "HMAC signature verified by hand",
+            @"\bHMACSHA(?:1|256|384|512)\b",
+            "Check a provider's signature with HmacWebhookSignatureValidator (an IWebhookSignatureValidator in CrestApps.OrchardCore.Webhooks.Core), which computes and compares in constant time (DRY-7).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Webhooks.Core/",
+            RequiredFileText: "FixedTimeEquals"),
+        new(
+            "secret token made and hashed by hand",
+            @"\bSHA256\.HashData\s*\(",
+            "Make a secret token with SecretTokens.Create and hash it with SecretTokens.Hash (CrestApps.OrchardCore.Core.Security) (DRY-2).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Security/",
+            RequiredFileText: "RandomNumberGenerator"),
+        new(
+            "time-limited protector by hand",
+            @"\.ToTimeLimitedDataProtector\s*\(",
+            "Sign a time-limited value with SignedTokenService (CrestApps.OrchardCore.Core.Services), with a purpose of its own (DRY-2).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Services/SignedTokenService.cs"),
     ];
 
     /// <summary>
@@ -87,7 +104,13 @@ public sealed class DuplicatePatternRatchetTests
         },
         ["private FixedTimeEquals"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/DelegatedEntryController.cs"] = 1,
+        },
+        ["secret token made and hashed by hand"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // A SIP credential's digest, a PKCE challenge and a six-digit one-time code: not secret tokens.
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskPjsipCredentialIssuer.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telephony/Services/TelephonyPkceGenerator.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Users/Services/EmailSignInCodes.cs"] = 1,
         },
         ["Status429TooManyRequests"] = new(StringComparer.OrdinalIgnoreCase)
         {

@@ -113,7 +113,9 @@
     <PackageVersion Include="OrchardCore.SignalR.Redis" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Feeds.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Settings" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Sitemaps.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Settings.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Taxonomies" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Tenants" Version="$(OrchardCoreVersion)" />

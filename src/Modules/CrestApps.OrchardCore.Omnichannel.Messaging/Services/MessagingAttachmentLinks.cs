@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using Microsoft.AspNetCore.DataProtection;
@@ -27,7 +28,7 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
     private const string ViewPurpose = "CrestApps.Omnichannel.Messaging.Attachments.View";
     private const char Separator = '\n';
 
-    private readonly ITimeLimitedDataProtector _publicProtector;
+    private readonly SignedTokenService _tokens;
     private readonly IDataProtector _viewProtector;
     private readonly ISiteService _siteService;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -39,12 +40,14 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
     /// </summary>
     public MessagingAttachmentLinks(
         IDataProtectionProvider dataProtectionProvider,
+        SignedTokenService tokens,
         ISiteService siteService,
         IHttpContextAccessor httpContextAccessor,
         IOptions<MessagingWorkspaceOptions> options,
         ILogger<MessagingAttachmentLinks> logger)
     {
-        _publicProtector = dataProtectionProvider.CreateProtector(PublicPurpose).ToTimeLimitedDataProtector();
+        // The public links' purpose is the one they always had, so links already sent keep working.
+        _tokens = tokens;
         _viewProtector = dataProtectionProvider.CreateProtector(ViewPurpose);
         _siteService = siteService;
         _httpContextAccessor = httpContextAccessor;
@@ -88,7 +91,7 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
         }
 
         var lifetime = TimeSpan.FromHours(Math.Max(1, _options.AttachmentLinkLifetimeHours));
-        var token = _publicProtector.Protect(attachment.Id + Separator + attachment.ContentType, lifetime);
+        var token = _tokens.Protect(PublicPurpose, attachment.Id + Separator + attachment.ContentType, lifetime);
 
         // The file name only helps a provider that judges a picture by its extension; the endpoint ignores it.
         return $"{root.AbsoluteUri.TrimEnd('/')}/{PublicPathPrefix}/{token}/{PublicFileName(attachment)}";
@@ -120,23 +123,16 @@ public sealed class MessagingAttachmentLinks : IMessagingAttachmentUrlProvider
             return false;
         }
 
-        try
-        {
-            var parts = _publicProtector.Unprotect(token).Split(Separator);
+        var parts = _tokens.Unprotect(PublicPurpose, token)?.Split(Separator);
 
-            if (parts.Length != 2)
-            {
-                return false;
-            }
-
-            (attachmentId, contentType) = (parts[0], parts[1]);
-
-            return true;
-        }
-        catch (CryptographicException)
+        if (parts is not { Length: 2 })
         {
             return false;
         }
+
+        (attachmentId, contentType) = (parts[0], parts[1]);
+
+        return true;
     }
 
     /// <summary>

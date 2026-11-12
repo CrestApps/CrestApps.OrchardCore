@@ -91,7 +91,7 @@ public sealed class GeoProviderTests
     [Fact]
     public async Task Osrm_ReportsRefusals()
     {
-        await GeoProviderContract.ReportsARefusalAsync(() => Osrm(new RecordedHttp().Answer("/route/", "osrm-error.json", System.Net.HttpStatusCode.BadRequest), "http://osrm.local").GetRouteAsync([GeoProviderContract.CityHall, GeoProviderContract.Cambridge]), "Impossible route between points");
+        await GeoProviderContract.ReportsARefusalAsync(() => Osrm(new RecordedHttp().Answer("/route/", "osrm-error.json", System.Net.HttpStatusCode.BadRequest), "http://osrm.local").GetRouteAsync([GeoProviderContract.CityHall, GeoProviderContract.Cambridge]), "no route between the points");
         await GeoProviderContract.ReportsARefusalAsync(() => Osrm(new RecordedHttp(), null).GetRouteAsync([GeoProviderContract.CityHall, GeoProviderContract.Cambridge]), "no server address");
     }
 

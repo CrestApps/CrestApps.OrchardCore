@@ -1,6 +1,6 @@
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
+using CrestApps.OrchardCore.Webhooks.Core.Signatures;
+using CrestApps.OrchardCore.Webhooks.Models;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 
@@ -25,7 +25,7 @@ public static class TimestampedHmacSignature
 
         var timestamp = unixTimestamp.ToString(CultureInfo.InvariantCulture);
 
-        return "t=" + timestamp + ",v1=" + Convert.ToHexStringLower(Compute(secret, timestamp, body ?? string.Empty));
+        return "t=" + timestamp + ",v1=" + HmacWebhookSignatureValidator.Sha256Hex.Compute(secret, SignedContent(timestamp, body));
     }
 
     /// <summary>
@@ -45,7 +45,7 @@ public static class TimestampedHmacSignature
         }
 
         string timestamp = null;
-        var signatures = new List<byte[]>();
+        var signatures = new List<string>();
 
         foreach (var part in header.Split(','))
         {
@@ -75,7 +75,7 @@ public static class TimestampedHmacSignature
                     return false;
                 }
 
-                signatures.Add(Convert.FromHexString(value));
+                signatures.Add(value);
             }
         }
 
@@ -90,19 +90,23 @@ public static class TimestampedHmacSignature
             return false;
         }
 
-        var expected = Compute(secret, timestamp, body ?? string.Empty);
+        var signedContent = SignedContent(timestamp, body);
         var matched = false;
 
+        // Every member is checked, so the time taken doesn't tell which one matched.
         foreach (var signature in signatures)
         {
-            matched |= CryptographicOperations.FixedTimeEquals(expected, signature);
+            matched |= HmacWebhookSignatureValidator.Sha256Hex.IsValid(new WebhookSignatureValidationContext
+            {
+                Secret = secret,
+                Signature = signature,
+                SignedContent = signedContent,
+            });
         }
 
         return matched;
     }
 
-    private static byte[] Compute(string secret, string timestamp, string body)
-    {
-        return HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(timestamp + "." + body));
-    }
+    private static string SignedContent(string timestamp, string body)
+        => timestamp + "." + (body ?? string.Empty);
 }

@@ -1,0 +1,16 @@
+@model BookingConfirmationViewModel
+
+@{
+    ViewData["Title"] = T["Check your email"];
+}
+
+<div class="container my-4" style="max-width: 48rem">
+    @* The breadcrumb also gives the browser tab its title. *@
+    <div class="product-breadcrumb">
+        <breadcrumb name="SchedulingCheckEmail" title="@T["Check your email"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+    <h1 class="h3">@T["Check your email"]</h1>
+    <p>@T["We have held this time for you. Open the link we sent to {0} within {1} minutes to confirm your booking of {2}; after that the time is released.", Model.Appointment.CustomerEmail, Math.Max(1, Model.AppointmentType.HoldMinutes), Model.AppointmentType.Name]</p>
+</div>

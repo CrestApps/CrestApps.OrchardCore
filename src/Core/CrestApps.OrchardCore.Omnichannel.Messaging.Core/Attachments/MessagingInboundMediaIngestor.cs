@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
@@ -179,7 +180,7 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
                 return null;
             }
 
-            var bytes = await ReadBoundedAsync(response.Content, maxBytes, cancellationToken);
+            var bytes = await response.Content.ReadBoundedAsync(maxBytes, cancellationToken);
 
             if (bytes is null)
             {
@@ -242,26 +243,6 @@ public sealed class MessagingInboundMediaIngestor : IMessagingInboundMediaIngest
             length,
             maxBytes);
 
-    // A declared length can be missing or wrong, so the download itself is held to the limit.
-    private static async Task<byte[]> ReadBoundedAsync(HttpContent content, long maxBytes, CancellationToken cancellationToken)
-    {
-        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
-        using var buffer = new MemoryStream();
-        var chunk = new byte[81920];
-        int read;
-
-        while ((read = await stream.ReadAsync(chunk, cancellationToken)) > 0)
-        {
-            if (buffer.Length + read > maxBytes)
-            {
-                return null;
-            }
-
-            buffer.Write(chunk, 0, read);
-        }
-
-        return buffer.ToArray();
-    }
 
     // The provider's message id keeps the key stable across redeliveries of the same message; a message without one
     // gets keys of its own.

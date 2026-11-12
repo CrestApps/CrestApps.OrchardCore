@@ -25,7 +25,7 @@
 
 @if (canProcess)
 {
-    <a asp-action="ProcessNow" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" asp-route-returnUrl="@FullRequestPath" class="dropdown-item btn-sm">
+    <a asp-action="ProcessNow" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" asp-route-returnUrl="@FullRequestPath" data-url-af="UnsafeUrl" class="dropdown-item btn-sm">
         <i class="fa-solid fa-play text-primary" aria-hidden="true"></i> @T["Process now"]
     </a>
 }

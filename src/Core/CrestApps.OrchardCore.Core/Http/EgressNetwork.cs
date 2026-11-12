@@ -3,13 +3,16 @@ using System.Net.Http;
 using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
 
 namespace CrestApps.OrchardCore.Core.Http;
 
 /// <summary>
-/// The one egress guard for outbound calls to addresses an administrator or a workflow enters (webhooks, connectors):
-/// it keeps them off the site's own network, so they cannot be used for server-side request forgery against internal
-/// services.
+/// The one egress guard for outbound calls to addresses an administrator, a workflow or a request supplies (webhooks,
+/// connectors, calendar subscriptions, push endpoints, self-hosted services): it keeps them off the site's own network, so
+/// they cannot be used for server-side request forgery against internal services. It is the only classifier of internal
+/// addresses; never write another.
 /// </summary>
 /// <remarks>
 /// An address is checked when it is saved, but a host name can resolve to anything when it is called, so the guarded
@@ -25,7 +28,9 @@ public static class EgressNetwork
 
     /// <summary>
     /// Returns whether an address is on the site's own network: loopback, private, link-local, shared (carrier-grade
-    /// NAT), multicast, reserved or unspecified.
+    /// NAT), IETF protocol assignments (192.0.0.0/24), benchmarking (198.18.0.0/15), multicast, reserved, broadcast or
+    /// unspecified, an IPv6 site-local, unique-local or multicast address, and a NAT64 address (64:ff9b::/96) whose
+    /// embedded IPv4 address is any of these. An address of an unknown family is treated as internal.
     /// </summary>
     /// <param name="address">The address to classify.</param>
     public static bool IsInternal(IPAddress address)
@@ -50,20 +55,32 @@ public static class EgressNetwork
 
         var bytes = address.GetAddressBytes();
 
-        return bytes.Length == 4 &&
-            (bytes[0] == 0 ||
-             bytes[0] == 10 ||
-             bytes[0] == 127 ||
-             (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127) ||
-             (bytes[0] == 169 && bytes[1] == 254) ||
-             (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
-             (bytes[0] == 192 && bytes[1] == 168) ||
-             bytes[0] >= 224);
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+        {
+            return bytes[0] == 0 ||
+                bytes[0] == 10 ||
+                bytes[0] == 127 ||
+                (bytes[0] == 100 && bytes[1] >= 64 && bytes[1] <= 127) ||
+                (bytes[0] == 169 && bytes[1] == 254) ||
+                (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) ||
+                (bytes[0] == 192 && bytes[1] == 168) ||
+                (bytes[0] == 192 && bytes[1] == 0 && bytes[2] == 0) ||
+                (bytes[0] == 198 && (bytes[1] == 18 || bytes[1] == 19)) ||
+                bytes[0] >= 224;
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            // 64:ff9b::/96 translates to IPv4, so the embedded address decides.
+            return TryGetNat64Embedded(bytes, out var embedded) && IsInternal(embedded);
+        }
+
+        return true;
     }
 
     /// <summary>
     /// Returns whether a URL names a host on the site's own network by its address or as <c>localhost</c>. A host name
-    /// that only resolves to an internal address is caught when it is called, by <see cref="CreateHandler"/>.
+    /// that only resolves to an internal address is caught when it is called, by <see cref="CreateHandler(bool)"/>.
     /// </summary>
     /// <param name="uri">The absolute URL.</param>
     public static bool IsInternalHost(Uri uri)
@@ -155,7 +172,8 @@ public static class EgressNetwork
     }
 
     /// <summary>
-    /// Whether the address is link-local (169.254.0.0/16 or fe80::/10), where the cloud metadata service answers.
+    /// Whether the address is link-local (169.254.0.0/16 or fe80::/10, or a NAT64 address embedding 169.254.0.0/16),
+    /// where the cloud metadata service answers.
     /// </summary>
     /// <param name="address">The address.</param>
     public static bool IsLinkLocal(IPAddress address)
@@ -174,6 +192,11 @@ public static class EgressNetwork
 
         var bytes = address.GetAddressBytes();
 
+        if (bytes.Length == 16)
+        {
+            return TryGetNat64Embedded(bytes, out var embedded) && IsLinkLocal(embedded);
+        }
+
         return bytes.Length == 4 && bytes[0] == 169 && bytes[1] == 254;
     }
 
@@ -189,16 +212,89 @@ public static class EgressNetwork
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrEmpty(name);
 
+        return AddGuardedClient(services, name, configureClient, allowPrivateNetwork: null);
+    }
+
+    /// <summary>
+    /// Registers a named HTTP client whose connections go through the egress guard and whose requests go through the
+    /// standard resilience handler: a total and a per-attempt timeout, a circuit breaker, and retries of safe methods
+    /// only (a failed POST may have been carried out, so it is never replayed). A connection the guard refuses is not
+    /// retried.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="name">The name of the client.</param>
+    /// <param name="configureClient">Configures the client, for example its time-out, or <see langword="null"/>.</param>
+    /// <param name="configureResilience">Adjusts the resilience options, or <see langword="null"/> for the defaults.</param>
+    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed, decided by the host (for a
+    /// self-hosted service the host opts in to), or <see langword="null"/> to refuse them. Link-local addresses are
+    /// refused even then.</param>
+    public static IHttpClientBuilder AddEgressGuardedHttpClient(
+        this IServiceCollection services,
+        string name,
+        Action<HttpClient> configureClient,
+        Action<HttpStandardResilienceOptions> configureResilience,
+        Func<IServiceProvider, bool> allowPrivateNetwork = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        var builder = AddGuardedClient(services, name, configureClient, allowPrivateNetwork);
+
+        builder.AddStandardResilienceHandler(options =>
+        {
+            var shouldRetry = options.Retry.ShouldHandle;
+
+            options.Retry.ShouldHandle = arguments => IsRefusal(arguments.Outcome.Exception)
+                ? PredicateResult.False()
+                : shouldRetry(arguments);
+
+            configureResilience?.Invoke(options);
+
+            // Applied last, so no caller can turn it back on.
+            options.Retry.DisableForUnsafeHttpMethods();
+        });
+
+        return builder;
+    }
+
+    private static IHttpClientBuilder AddGuardedClient(IServiceCollection services, string name, Action<HttpClient> configureClient, Func<IServiceProvider, bool> allowPrivateNetwork)
+    {
         var builder = configureClient is null
             ? services.AddHttpClient(name)
             : services.AddHttpClient(name, configureClient);
 
-        return builder.ConfigurePrimaryHttpMessageHandler(serviceProvider =>
-            CreateHandler(serviceProvider.GetService<IHostEnvironment>()?.IsDevelopment() == true));
+        return builder.ConfigurePrimaryHttpMessageHandler(serviceProvider => CreateHandler(
+            serviceProvider.GetService<IHostEnvironment>()?.IsDevelopment() == true,
+            allowPrivateNetwork?.Invoke(serviceProvider) == true,
+            allowRedirects: false));
     }
 
-    private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, bool allowLoopback, CancellationToken cancellationToken)
-        => await ConnectAsync(context, allowLoopback, allowPrivateNetwork: false, cancellationToken);
+    private static bool IsRefusal(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is HttpRequestException && current.Message.Contains(RefusedMessage, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryGetNat64Embedded(byte[] bytes, out IPAddress embedded)
+    {
+        if (bytes.Length == 16 && bytes[0] == 0x00 && bytes[1] == 0x64 && bytes[2] == 0xff && bytes[3] == 0x9b)
+        {
+            embedded = new IPAddress(bytes.AsSpan(12, 4));
+
+            return true;
+        }
+
+        embedded = null;
+
+        return false;
+    }
 
     private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, bool allowLoopback, bool allowPrivateNetwork, CancellationToken cancellationToken)
     {

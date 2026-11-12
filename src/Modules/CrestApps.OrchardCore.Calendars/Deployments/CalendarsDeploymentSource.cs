@@ -38,6 +38,8 @@ internal sealed class CalendarsDeploymentSource : DeploymentSourceBase<Calendars
             var node = JsonSerializer.SerializeToNode(calendar, _jsonOptions).AsObject();
 
             node.Remove("FeedToken");
+            node.Remove("FeedTokenHash");
+            node.Remove("ProtectedFeedToken");
             node.Remove("BookingVersion");
 
             if (step.IncludeEvents)

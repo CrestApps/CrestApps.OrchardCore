@@ -3,6 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Shipping.Models;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Core.Signatures;
+using CrestApps.OrchardCore.Webhooks.Models;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Shipping.Services;
@@ -15,6 +18,9 @@ public sealed class EasyPostTrackingUpdater
 {
     private const int MaxEvents = 50;
     private const string SignaturePrefix = "hmac-sha256-hex=";
+
+    // EasyPost signs the body with HMAC-SHA256, sent as "hmac-sha256-hex=<lowercase hex>".
+    private static readonly IWebhookSignatureValidator _signature = new HmacWebhookSignatureValidator("easypost-hmac-sha256-hex", HashAlgorithmName.SHA256, WebhookSignatureEncoding.Hex, SignaturePrefix);
 
     private readonly IShipmentStore _shipments;
     private readonly IShipmentService _shipmentService;
@@ -32,15 +38,18 @@ public sealed class EasyPostTrackingUpdater
     /// </summary>
     public static bool IsSigned(string body, string signature, string secret)
     {
-        if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(signature) || !signature.StartsWith(SignaturePrefix, StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(signature))
         {
             return false;
         }
 
-        var key = Encoding.UTF8.GetBytes(secret.Normalize(NormalizationForm.FormKD));
-        var expected = Convert.ToHexStringLower(HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(body ?? string.Empty)));
-
-        return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(signature[SignaturePrefix.Length..].ToLowerInvariant()));
+        // EasyPost normalizes the secret (NFKD) before keying the HMAC.
+        return _signature.IsValid(new WebhookSignatureValidationContext
+        {
+            Secret = secret.Normalize(NormalizationForm.FormKD),
+            Signature = signature,
+            SignedContent = body ?? string.Empty,
+        });
     }
 
     /// <summary>

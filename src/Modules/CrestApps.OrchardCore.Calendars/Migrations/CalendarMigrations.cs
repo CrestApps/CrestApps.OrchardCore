@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.Calendars.Core.Indexes;
+using CrestApps.OrchardCore.Calendars.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.Calendars.Migrations;
 
@@ -11,7 +14,7 @@ internal sealed class CalendarMigrations : DataMigration
         await CalendarIndexSchema.CreateAsync(SchemaBuilder);
         await CreateReportIndexAsync();
 
-        return 3;
+        return 4;
     }
 
     // The categories events are put in.
@@ -28,6 +31,16 @@ internal sealed class CalendarMigrations : DataMigration
         await CreateReportIndexAsync();
 
         return 3;
+    }
+
+    // Feed secrets are stored hashed (and protected, to show the address again): the calendars that have a secret from
+    // before get its hash and protected copy, and are indexed again, so the index holds the hash. The plain secret stays
+    // one release, for a rollback.
+    public int UpdateFrom3Async()
+    {
+        ShellScope.AddDeferredTask(scope => ActivatorUtilities.CreateInstance<CalendarFeedTokenBackfill>(scope.ServiceProvider).RunAsync());
+
+        return 4;
     }
 
     private Task<bool> CreateReportIndexAsync()

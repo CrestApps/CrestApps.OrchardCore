@@ -397,7 +397,11 @@ internal static class WorkforceApiEndpoints
             return Problem("Give the worker's id.");
         }
 
-        if (!await services.GetRequiredService<IWorkforceScopeService>().ManagesWorkerAsync(httpContext.User, worker, httpContext.RequestAborted))
+        var scopeService = services.GetRequiredService<IWorkforceScopeService>();
+
+        // A manager adds punches for the workers they manage, never for themselves.
+        if (!await scopeService.ManagesWorkerAsync(httpContext.User, worker, httpContext.RequestAborted) ||
+            !await scopeService.CanDecideForWorkerAsync(httpContext.User, worker.ItemId, httpContext.RequestAborted))
         {
             return Results.Forbid();
         }
@@ -463,6 +467,11 @@ internal static class WorkforceApiEndpoints
             return denied;
         }
 
+        if (!await services.GetRequiredService<IWorkforceScopeService>().CanDecideForWorkerAsync(httpContext.User, timesheet.WorkerId, httpContext.RequestAborted))
+        {
+            return Results.Forbid();
+        }
+
         var result = await timesheets.ApproveAsync(id, httpContext.User.Identity?.Name, httpContext.RequestAborted);
 
         return result.Succeeded ? Results.Ok(Timesheet(result.Value)) : Problem(result.Errors);
@@ -483,6 +492,11 @@ internal static class WorkforceApiEndpoints
         if (denied is not null)
         {
             return denied;
+        }
+
+        if (!await services.GetRequiredService<IWorkforceScopeService>().CanDecideForWorkerAsync(httpContext.User, request.WorkerId, httpContext.RequestAborted))
+        {
+            return Results.Forbid();
         }
 
         var result = await decide(requests, httpContext.User.Identity?.Name);

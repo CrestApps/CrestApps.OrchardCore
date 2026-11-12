@@ -878,7 +878,7 @@ See [Messaging Workspace](omnichannel/messaging-workspace.md).
 | **Section** | `CrestApps:Omnichannel:EventGrid` |
 | **Controls** | How the Event Grid webhook authenticates incoming events |
 
-Keys: `EventGridSasKey`, `AADIssuer`, `AADAudience`, `AADMetadataAddress`.
+Keys: `EventGridSasKey`, `AADIssuer`, `AADAudience`, `AADMetadataAddress`. `AADMetadataAddress` must be an `https://` address. The endpoint keeps one OpenID configuration manager per metadata address, which caches the metadata and signing keys, and refuses a bearer value that isn't a JWT before fetching anything, so an anonymous request never causes an outbound fetch of its own.
 
 ```json
 {

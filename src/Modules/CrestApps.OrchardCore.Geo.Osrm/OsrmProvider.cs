@@ -114,6 +114,20 @@ public sealed class OsrmProvider : ITravelTimeProvider, IRouteProvider
 
     private static string Capitalize(string text) => string.IsNullOrEmpty(text) ? text : char.ToUpperInvariant(text[0]) + text[1..];
 
+    // OSRM's documented error codes, described in our words; anything else is named by the HTTP status only.
+    internal static string DescribeRefusal(string code, System.Net.HttpStatusCode statusCode)
+        => code switch
+        {
+            "NoRoute" => "no route between the points (NoRoute).",
+            "NoSegment" => "a point is too far from any road (NoSegment).",
+            "NoTable" => "no route between some of the points (NoTable).",
+            "NoMatch" => "the points could not be matched to roads (NoMatch).",
+            "NoTrips" => "no trip through the points (NoTrips).",
+            "TooBig" => "the request has too many points (TooBig).",
+            "InvalidUrl" or "InvalidService" or "InvalidVersion" or "InvalidOptions" or "InvalidQuery" or "InvalidValue" => $"the server refused the request ({code}).",
+            _ => $"the server answered {(int)statusCode}.",
+        };
+
     private async Task<JsonElement> SendAsync(string service, IEnumerable<GeoPoint> points, string query, CancellationToken cancellationToken)
     {
         var settings = await _siteService.GetSettingsAsync<OsrmSettings>();
@@ -135,9 +149,8 @@ public sealed class OsrmProvider : ITravelTimeProvider, IRouteProvider
 
         if (!response.IsSuccessStatusCode || code != "Ok")
         {
-            var message = root.TryGetProperty("message", out var text) ? text.GetString() : code ?? ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture);
-
-            throw new GeoProviderException($"OSRM couldn't answer: {message}");
+            // The server's own message is never passed on: it is whatever the configured host answered.
+            throw new GeoProviderException($"OSRM couldn't answer: {DescribeRefusal(code, response.StatusCode)}");
         }
 
         return root;

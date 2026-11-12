@@ -249,6 +249,34 @@ public sealed class DefaultAppointmentService : IAppointmentService
     }
 
     /// <inheritdoc />
+    public async Task<AppointmentResult> ConfirmContactAsync(Appointment appointment, string actor = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(appointment);
+
+        var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
+
+        if (appointment.Status != AppointmentStatus.Held || type is null)
+        {
+            return new AppointmentResult { Appointment = appointment, Errors = { S["This booking can no longer be confirmed."] } };
+        }
+
+        // The customer proved the address; a type that waits for staff still waits for them.
+        if (!type.RequiresConfirmation)
+        {
+            return await ConfirmAsync(appointment, actor, cancellationToken);
+        }
+
+        appointment.Status = AppointmentStatus.Requested;
+        appointment.HoldExpiresUtc = null;
+        appointment.ModifiedUtc = _clock.UtcNow;
+
+        await _appointmentStore.UpdateAsync(appointment, cancellationToken);
+        Enqueue(AppointmentChangeKind.Requested, appointment, type, actor);
+
+        return new AppointmentResult { Appointment = appointment };
+    }
+
+    /// <inheritdoc />
     public async Task<AppointmentResult> RescheduleAsync(Appointment appointment, DateTime startUtc, string resourceId = null, string actor = null, bool selfService = false, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(appointment);

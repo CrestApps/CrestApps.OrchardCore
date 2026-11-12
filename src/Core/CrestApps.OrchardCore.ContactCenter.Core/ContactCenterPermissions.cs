@@ -82,6 +82,12 @@ public static class ContactCenterPermissions
     public static readonly Permission MonitorContactCenter = new("MonitorContactCenter", LocalizationSource.Create("Monitor the Contact Center in real time", typeof(ContactCenterPermissions)), [ManageContactCenter]);
 
     /// <summary>
+    /// See and act on every live AI call on the supervisor dashboard, whatever its campaign. Without it a supervisor sees
+    /// the AI calls of the campaigns they oversee, as they see people's calls only in their queues and campaigns.
+    /// </summary>
+    public static readonly Permission MonitorAllAICalls = new("MonitorAllContactCenterAICalls", LocalizationSource.Create("Monitor every AI call, whatever its campaign", typeof(ContactCenterPermissions)), [ManageContactCenter]);
+
+    /// <summary>
     /// Grants permission to transfer live interactions to approved external destinations.
     /// </summary>
     public static readonly Permission TransferExternally = new("ContactCenterTransferExternally", LocalizationSource.Create("Transfer Contact Center calls externally", typeof(ContactCenterPermissions)), [MonitorContactCenter, ManageContactCenter]);

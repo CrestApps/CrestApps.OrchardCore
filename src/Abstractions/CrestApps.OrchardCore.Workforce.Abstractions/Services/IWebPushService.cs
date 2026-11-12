@@ -15,7 +15,9 @@ public interface IWebPushService
     Task<string> GetPublicKeyAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds a device for a worker, or updates it when its endpoint is known.
+    /// Adds a device for a worker, or updates it when its endpoint is known. The site posts notifications to the endpoint,
+    /// so an endpoint that isn't a public HTTPS address (or, when the site lists push services, one of theirs) is refused.
+    /// A worker keeps a limited number of devices; adding one more replaces the oldest.
     /// </summary>
     /// <param name="workerId">The worker.</param>
     /// <param name="endpoint">The push endpoint.</param>
@@ -23,7 +25,7 @@ public interface IWebPushService
     /// <param name="auth">The device's secret.</param>
     /// <param name="userAgent">The browser.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>The subscription.</returns>
+    /// <returns>The subscription, or <see langword="null"/> when the endpoint is refused.</returns>
     Task<WebPushSubscription> SubscribeAsync(string workerId, string endpoint, string p256dh, string auth, string userAgent, CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.Core.Services;
@@ -15,11 +16,12 @@ public static class DelegatedAccessTokens
     /// </summary>
     public static string CreateToken()
     {
-        return WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
+        return SecretTokens.Create();
     }
 
     /// <summary>
-    /// Returns the SHA-256 hash of a value, encoded as base64url. Codes and session identifiers are stored as hashes.
+    /// Returns the SHA-256 hash of a value, encoded as base64url (the form already stored). Codes and session identifiers
+    /// are stored as hashes.
     /// </summary>
     /// <param name="value">The value.</param>
     public static string Hash(string value)

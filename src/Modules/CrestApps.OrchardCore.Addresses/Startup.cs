@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Addresses.Core;
 using CrestApps.OrchardCore.Addresses.Drivers;
 using CrestApps.OrchardCore.Addresses.Endpoints;
@@ -6,13 +5,19 @@ using CrestApps.OrchardCore.Addresses.Handlers;
 using CrestApps.OrchardCore.Addresses.Indexes;
 using CrestApps.OrchardCore.Addresses.Migrations;
 using CrestApps.OrchardCore.Addresses.Services;
+using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
 
@@ -28,6 +33,21 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAddressesCore();
+
+        // The editor token is a signed, short-lived token.
+        services.AddSignedLinks();
+
+        // The suggestion endpoints are throttled whether or not Orchard Core's Rate Limits feature is on: a minute per
+        // network, and a day for the whole site that the tenant's configuration sets.
+        services.AddOptions<AddressAutocompleteOptions>()
+            .Configure<IServiceProvider>((options, serviceProvider) =>
+                serviceProvider.GetService<IShellConfiguration>()?.GetSection(AddressAutocompleteOptions.SectionName).Bind(options));
+        services.AddAttemptPolicy(AddressAutocompleteEndpoints.NetworkAttemptPolicy, AddressAutocompleteEndpoints.RequestsPerMinute, TimeSpan.FromMinutes(1));
+        services.AddOptions<AttemptLimitOptions>()
+            .Configure<IOptions<AddressAutocompleteOptions>>((attempts, addresses) => attempts.AddPolicy(
+                AddressAutocompleteEndpoints.DailyAttemptPolicy,
+                addresses.Value.DailyRequestLimit,
+                TimeSpan.FromDays(1)));
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -37,11 +57,12 @@ public sealed class Startup : StartupBase
         routes.MapGet("/addresses/formats/{countryCode}", AddressFormatsEndpoint.HandleAsync)
             .WithName("AddressFormats");
 
-        // Address suggestions, when a provider is set up; none answers 404 and the editor offers none.
-        routes.MapGet("/" + AddressAutocompleteEndpoints.SuggestPath, AddressAutocompleteEndpoints.SuggestAsync)
+        // Address suggestions, when a provider is set up; none answers 404 and the editor offers none. The editor puts
+        // its token in the address, so only a page that shows the editor can ask.
+        routes.MapGet("/" + AddressAutocompleteEndpoints.SuggestPath + "/{token}", AddressAutocompleteEndpoints.SuggestAsync)
             .WithName("AddressSuggestions")
             .WithRateLimitGroup(AddressConstants.AutocompleteRateLimitGroup);
-        routes.MapGet("/" + AddressAutocompleteEndpoints.ResolvePath, AddressAutocompleteEndpoints.ResolveAsync)
+        routes.MapGet("/" + AddressAutocompleteEndpoints.ResolvePath + "/{token}", AddressAutocompleteEndpoints.ResolveAsync)
             .WithName("AddressSuggestionResolve")
             .WithRateLimitGroup(AddressConstants.AutocompleteRateLimitGroup);
     }

@@ -221,6 +221,11 @@ public sealed class MyTeamController : Controller
             return NotFound();
         }
 
+        if (!await _scopeService.CanDecideForWorkerAsync(User, timesheet.WorkerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
         var result = await timesheets.ApproveAsync(id, User.Identity?.Name, HttpContext.RequestAborted);
 
         await NotifyAsync(result.Errors, H["The timesheet has been approved."]);
@@ -253,10 +258,16 @@ public sealed class MyTeamController : Controller
         }
 
         var pending = await attendance.ListPendingCorrectionsAsync(scope.All ? null : scope.TeamIds.ToArray(), null, HttpContext.RequestAborted);
+        var correction = pending.FirstOrDefault(item => item.ItemId == id);
 
-        if (pending.All(correction => correction.ItemId != id))
+        if (correction is null)
         {
             return NotFound();
+        }
+
+        if (!await _scopeService.CanDecideForWorkerAsync(User, correction.WorkerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
         }
 
         var result = await attendance.DecideCorrectionAsync(id, approve, User.Identity?.Name, HttpContext.RequestAborted);
@@ -295,6 +306,11 @@ public sealed class MyTeamController : Controller
         if (exception is null || exception.Status != AttendanceExceptionStatus.Open || !scope.Covers(exception.TeamId))
         {
             return NotFound();
+        }
+
+        if (!await _scopeService.CanDecideForWorkerAsync(User, exception.WorkerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
         }
 
         var result = excuse
@@ -337,6 +353,11 @@ public sealed class MyTeamController : Controller
             return NotFound();
         }
 
+        if (!await _scopeService.CanDecideForWorkerAsync(User, request.WorkerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
         var result = approve
             ? await requests.ApproveAsync(id, User.Identity?.Name, null, HttpContext.RequestAborted)
             : await requests.DeclineAsync(id, User.Identity?.Name, null, HttpContext.RequestAborted);
@@ -365,7 +386,8 @@ public sealed class MyTeamController : Controller
 
         var trade = await _tradeService.FindAsync(id, HttpContext.RequestAborted);
 
-        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveShiftTrades) || trade is null || !scope.Covers(trade.TeamId))
+        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveShiftTrades) || trade is null || !scope.Covers(trade.TeamId) ||
+            !await CanDecideForAllAsync(trade.OfferedByWorkerId, trade.TargetWorkerId, trade.AcceptedByWorkerId))
         {
             return Forbid();
         }
@@ -399,7 +421,8 @@ public sealed class MyTeamController : Controller
 
         var shift = await _openShiftService.FindAsync(id, HttpContext.RequestAborted);
 
-        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ManageOpenShifts) || shift is null || !scope.Covers(shift.TeamId))
+        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ManageOpenShifts) || shift is null || !scope.Covers(shift.TeamId) ||
+            !await CanDecideForAllAsync(workerId))
         {
             return Forbid();
         }
@@ -479,6 +502,20 @@ public sealed class MyTeamController : Controller
         model.Working = model.Working.OrderBy(item => item.TeamName).ThenBy(item => item.Name).ToList();
 
         return View(model);
+    }
+
+    // The caller may decide for every worker named: none of them is the caller (unless they may decide on their own).
+    private async Task<bool> CanDecideForAllAsync(params string[] workerIds)
+    {
+        foreach (var workerId in workerIds.Where(workerId => !string.IsNullOrEmpty(workerId)))
+        {
+            if (!await _scopeService.CanDecideForWorkerAsync(User, workerId, HttpContext.RequestAborted))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private async Task<(WorkforceScope Scope, IActionResult Denied)> AuthorizeAsync()

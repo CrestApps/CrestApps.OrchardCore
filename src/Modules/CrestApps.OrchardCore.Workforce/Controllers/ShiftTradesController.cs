@@ -319,6 +319,11 @@ public sealed class ShiftTradesController : Controller
             return denied;
         }
 
+        if (!await CanDecideAsync(trade))
+        {
+            return Forbid();
+        }
+
         var result = await _tradeService.ApproveAsync(trade.ItemId, User.Identity?.Name, HttpContext.RequestAborted);
 
         await NotifyAsync(result.Errors, H["The trade has been approved and the shifts changed hands."]);
@@ -341,6 +346,11 @@ public sealed class ShiftTradesController : Controller
         if (denied is not null)
         {
             return denied;
+        }
+
+        if (!await CanDecideAsync(trade))
+        {
+            return Forbid();
         }
 
         var result = await _tradeService.DeclineAsync(trade.ItemId, note, User.Identity?.Name, HttpContext.RequestAborted);
@@ -384,6 +394,20 @@ public sealed class ShiftTradesController : Controller
         {
             await _notifier.SuccessAsync(success);
         }
+    }
+
+    // A manager doesn't decide a trade they are part of.
+    private async Task<bool> CanDecideAsync(ShiftTrade trade)
+    {
+        foreach (var workerId in new[] { trade.OfferedByWorkerId, trade.TargetWorkerId, trade.AcceptedByWorkerId }.Where(workerId => !string.IsNullOrEmpty(workerId)))
+        {
+            if (!await _scopeService.CanDecideForWorkerAsync(User, workerId, HttpContext.RequestAborted))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private async Task<(ShiftTrade Trade, Team Team, IActionResult Denied)> AuthorizeTradeAsync(string id)

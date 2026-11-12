@@ -57,9 +57,10 @@ public sealed class Startup : StartupBase
                 options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(5);
             });
 
-        // The typed client every Telnyx call now goes through. It is registered against the same named client so
-        // it inherits the resilience handler above; its own retry policy sits inside it and decides per command
-        // whether repeating is safe, which the transport cannot know.
+        // The typed client every Telnyx call-control command goes through. Its name is its type, so the handler above
+        // never reached it: it gets the same timeouts and circuit breaker here, but no transport retry. Its own retry
+        // policy sits inside it and decides per command whether repeating is safe, which the transport cannot know, so
+        // a transport retry would repeat a GET at both layers.
         services.AddHttpClient<TelnyxApiClient>((serviceProvider, client) =>
         {
             // Read as it is now: this runs for every client created, so a saved API base URL applies to the next one.
@@ -69,7 +70,19 @@ public sealed class Startup : StartupBase
             {
                 client.BaseAddress = new Uri(options.ApiBaseUrl);
             }
-        });
+        })
+            .AddResilienceHandler("TelnyxApiClient", pipeline =>
+            {
+                pipeline.AddTimeout(TimeSpan.FromSeconds(30));
+                pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+                {
+                    FailureRatio = 0.1,
+                    SamplingDuration = TimeSpan.FromSeconds(30),
+                    MinimumThroughput = 100,
+                    BreakDuration = TimeSpan.FromSeconds(5),
+                });
+                pipeline.AddTimeout(TimeSpan.FromSeconds(10));
+            });
 
         services.AddSingleton<TelnyxApiRetryPolicy>();
 

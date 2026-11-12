@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -23,10 +24,22 @@ namespace CrestApps.OrchardCore.Workforce;
 [Feature(WorkforceConstants.Features.Portal)]
 public sealed class PortalStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PortalStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration.</param>
+    public PortalStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkforcePortalCore();
+        services.Configure<WebPushOptions>(_shellConfiguration.GetSection(WebPushOptions.SectionName));
         services.AddSingleton<IBackgroundTask, BackgroundTasks.ShiftReminderBackgroundTask>();
         services.AddDataMigration<PortalMigrations>()
             .AddIndexProvider<WorkforceInboxIndexProvider>()

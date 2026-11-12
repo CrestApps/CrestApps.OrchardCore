@@ -25,6 +25,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
         public static readonly OrchardCore.Security.Permissions.Permission ManageSharedVoicemail;
         public static readonly OrchardCore.Security.Permissions.Permission ManageSkills;
         public static readonly OrchardCore.Security.Permissions.Permission ManageVoiceMedia;
+        public static readonly OrchardCore.Security.Permissions.Permission MonitorAllAICalls;
         public static readonly OrchardCore.Security.Permissions.Permission MonitorContactCenter;
         public static readonly OrchardCore.Security.Permissions.Permission SecurePauseRecording;
         public static readonly OrchardCore.Security.Permissions.Permission SignIntoQueues;

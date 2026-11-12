@@ -87,9 +87,22 @@ public sealed class Calendar : CatalogItem, INameAwareModel
     public string SourceId { get; set; }
 
     /// <summary>
-    /// Gets or sets the secret part of the calendar's private iCalendar feed address, or <see langword="null"/> when it has no feed.
+    /// Gets or sets the secret of a private iCalendar feed address given before secrets were hashed. A new secret is
+    /// never stored here: see <see cref="FeedTokenHash"/> and <see cref="ProtectedFeedToken"/>. Kept for one release, so
+    /// existing addresses keep working; it will be removed.
     /// </summary>
     public string FeedToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SHA-256 (lower-case hex) of the secret of the calendar's private iCalendar feed address, which the
+    /// feed is found by, or <see langword="null"/> when it has no feed.
+    /// </summary>
+    public string FeedTokenHash { get; set; }
+
+    /// <summary>
+    /// Gets or sets the feed secret protected with the tenant's data protection keys, so its address can be shown again.
+    /// </summary>
+    public string ProtectedFeedToken { get; set; }
 
     /// <summary>
     /// Gets or sets when the calendar was created.

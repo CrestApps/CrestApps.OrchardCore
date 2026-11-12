@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Core.Telemetry;
 using CrestApps.OrchardCore.Dispatch.Models;
@@ -34,22 +35,25 @@ public interface IDispatchSiteInfo
 }
 
 /// <summary>
-/// Signs tracking links with data protection. A link works until a week after it was made and stops when the visit
-/// is done, canceled or ended incomplete.
+/// Signs tracking links with <see cref="SignedTokenService"/>. A link works until a week after it was made and stops
+/// when the visit is done, canceled or ended incomplete. The purpose is the one the links always had, so links already
+/// sent keep working.
 /// </summary>
 public sealed class VisitTrackingLinks : IVisitTrackingLinks
 {
+    internal const string Purpose = "CrestApps.Dispatch.Tracking";
+
     private static readonly TimeSpan _lifetime = TimeSpan.FromDays(7);
 
-    private readonly ITimeLimitedDataProtector _protector;
+    private readonly SignedTokenService _tokens;
     private readonly ServiceVisitStore _store;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VisitTrackingLinks"/> class.
     /// </summary>
-    public VisitTrackingLinks(IDataProtectionProvider dataProtectionProvider, ServiceVisitStore store)
+    public VisitTrackingLinks(SignedTokenService tokens, ServiceVisitStore store)
     {
-        _protector = dataProtectionProvider.CreateProtector("CrestApps.Dispatch.Tracking").ToTimeLimitedDataProtector();
+        _tokens = tokens;
         _store = store;
     }
 
@@ -58,7 +62,7 @@ public sealed class VisitTrackingLinks : IVisitTrackingLinks
     {
         ArgumentNullException.ThrowIfNull(visit);
 
-        return _protector.Protect(visit.ItemId, _lifetime);
+        return _tokens.Protect(Purpose, visit.ItemId, _lifetime);
     }
 
     /// <inheritdoc/>
@@ -69,13 +73,9 @@ public sealed class VisitTrackingLinks : IVisitTrackingLinks
             return null;
         }
 
-        string visitId;
+        var visitId = _tokens.Unprotect(Purpose, token);
 
-        try
-        {
-            visitId = _protector.Unprotect(token);
-        }
-        catch (CryptographicException)
+        if (visitId is null)
         {
             return null;
         }
