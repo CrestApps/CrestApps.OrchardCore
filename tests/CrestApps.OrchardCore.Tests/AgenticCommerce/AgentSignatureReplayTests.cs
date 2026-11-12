@@ -118,7 +118,7 @@ public sealed class AgentSignatureReplayTests : IDisposable
         var verification = new HttpSignatureVerification { Succeeded = true, CoveredComponents = components };
 
         // Act
-        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: null, _now);
+        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: null, idempotent: true, _now);
 
         // Assert
         Assert.NotNull(error);
@@ -136,7 +136,7 @@ public sealed class AgentSignatureReplayTests : IDisposable
         };
 
         // Act
-        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: null, _now);
+        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: null, idempotent: true, _now);
 
         // Assert
         Assert.NotNull(error);
@@ -154,7 +154,7 @@ public sealed class AgentSignatureReplayTests : IDisposable
         };
 
         // Act
-        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: "key-1", _now);
+        var error = UcpSignaturePolicy.Check(verification, hasBody: true, idempotencyKey: "key-1", idempotent: true, _now);
 
         // Assert
         Assert.Null(error);

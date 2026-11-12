@@ -27,14 +27,16 @@ public static class UcpEndpoints
     public const string IdempotencyInFlightCode = "idempotency_in_flight";
 
     /// <summary>
-    /// The idempotency rules of UCP: a retry with the same key and body gets the first answer for two days, another
-    /// body with the same key gets 409.
+    /// The idempotency rules of UCP: every POST and PUT carries a key (UCP's OpenAPI requires it, and a request
+    /// signature without a created time relies on it against replays); a retry with the same key and body gets the
+    /// first answer for two days, another body with the same key gets 409.
     /// </summary>
     public static readonly IdempotencyPolicy Idempotency = new()
     {
         Lifetime = TimeSpan.FromHours(48),
         MaxKeyLength = 255,
         Fingerprint = httpContext => Convert.ToHexStringLower(SHA256.HashData(AgentRequest.Get(httpContext)?.Body ?? [])),
+        MissingKey = _ => UcpResults.Error(StatusCodes.Status400BadRequest, "invalid_request", "Send an Idempotency-Key header with every POST and PUT."),
         Conflict = _ => UcpResults.Error(StatusCodes.Status409Conflict, IdempotencyConflictCode, "This idempotency key was used for another request."),
         InFlight = _ => UcpResults.Error(StatusCodes.Status409Conflict, IdempotencyInFlightCode, "A request with this idempotency key is still running. Try again in a moment."),
         InvalidKey = _ => UcpResults.Error(StatusCodes.Status400BadRequest, "invalid_request", "An idempotency key is at most 255 characters."),

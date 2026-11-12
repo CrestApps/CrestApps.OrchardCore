@@ -146,6 +146,8 @@ Then the platform must be enabled (**Its agents may buy**), use the protocol of 
 
 A signed request is checked even when an API key or a token also signed it in. A body that doesn't match its digest gets `400 digest_mismatch`, an algorithm the store doesn't verify `400 algorithm_unsupported`, and a signature that can't be verified `401`. When the signature alone signs the request in, the platform is found by its profile address. With **Let UCP platforms the store doesn't know buy** (`AgenticCommerceSettings.AllowUnregisteredUcpPlatforms`) on, a signed request from a profile no platform has is let in as an unregistered platform, whose checkouts are kept under `ucp-` and a hash of the profile address. Such a platform has no test mode, no allowed IP addresses and no payment handler limit.
 
+A UCP signature must cover `@method`, `@authority`, `@path`, `content-digest` when there is a body, and `idempotency-key` when the request has one. It must also age: it carries a `created` time within five minutes of the store's clock, or it covers the `Idempotency-Key` of a REST POST or PUT, whose first answer a replay gets back. A signature with neither, such as a GET or an MCP or A2A call without `created`, gets `401`. A verified signature is remembered for ten minutes by the platform, its key and the signature base it was verified over, so the same signature again, under any label, gets `401` unless it comes with the same `Idempotency-Key`.
+
 A request without credentials gets `401` with `WWW-Authenticate: Bearer`.
 
 ## ACP request signatures
@@ -183,7 +185,7 @@ The checkout and cart endpoints that change something take an `Idempotency-Key` 
 
 | | UCP | ACP |
 | --- | --- | --- |
-| Key required | No; a request without a key isn't de-duplicated | On every POST (`400 idempotency_key_required`) |
+| Key required | On every POST and PUT (`400 invalid_request`) | On every POST (`400 idempotency_key_required`) |
 | Kept for | 48 hours | 24 hours |
 | Key length | At most 255 characters (`400`) | 1 to 255 characters (`400`) |
 | Same key, same body | The first answer again | The first answer again, with `Idempotent-Replayed: true` and the key echoed |

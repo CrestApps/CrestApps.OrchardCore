@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.AgenticCommerce.Services;
+using CrestApps.OrchardCore.Commerce.Api;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -223,8 +224,9 @@ public sealed class UcpRequestFilter : IEndpointFilter
         {
             var now = new DateTimeOffset(DateTime.SpecifyKind(httpContext.RequestServices.GetRequiredService<IClock>().UtcNow, DateTimeKind.Utc));
             var idempotencyKey = request.Headers["Idempotency-Key"].ToString();
+            var idempotent = httpContext.GetEndpoint()?.Metadata.GetMetadata<IdempotencyPolicy>() is not null;
 
-            if (UcpSignaturePolicy.Check(verification, body.Length > 0, idempotencyKey, now) is { } policyError)
+            if (UcpSignaturePolicy.Check(verification, body.Length > 0, idempotencyKey, idempotent, now) is { } policyError)
             {
                 return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", policyError);
             }
