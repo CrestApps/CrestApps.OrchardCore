@@ -49,4 +49,10 @@ public class NewAppointmentViewModel
     /// <summary>Gets or sets the errors.</summary>
     [BindNever]
     public IList<string> Errors { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the form shows the reCAPTCHA challenge (the public booking page, with the
+    /// reCAPTCHA feature on and set up).
+    /// </summary>
+    public bool ShowReCaptcha { get; set; }
 }

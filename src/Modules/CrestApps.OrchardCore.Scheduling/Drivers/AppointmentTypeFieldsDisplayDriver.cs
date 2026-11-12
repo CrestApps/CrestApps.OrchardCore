@@ -61,6 +61,7 @@ internal sealed partial class AppointmentTypeFieldsDisplayDriver : DisplayDriver
                 })
                 .ToList();
             model.RequiresConfirmation = type.RequiresConfirmation;
+            model.RequireEmailConfirmation = type.RequireEmailConfirmation;
             model.HoldMinutes = type.HoldMinutes;
             model.AllowSelfService = type.AllowSelfService;
             model.Location = type.Location;
@@ -133,6 +134,7 @@ internal sealed partial class AppointmentTypeFieldsDisplayDriver : DisplayDriver
         }
 
         type.RequiresConfirmation = posted.RequiresConfirmation;
+        type.RequireEmailConfirmation = posted.RequireEmailConfirmation;
         type.HoldMinutes = Math.Clamp(posted.HoldMinutes, 1, 1440);
         type.AllowSelfService = posted.AllowSelfService;
         type.Location = posted.Location?.Trim();
@@ -159,6 +161,7 @@ internal sealed partial class AppointmentTypeFieldsDisplayDriver : DisplayDriver
             model.Capacity = posted.Capacity;
             model.Requirements = posted.Requirements;
             model.RequiresConfirmation = posted.RequiresConfirmation;
+            model.RequireEmailConfirmation = posted.RequireEmailConfirmation;
             model.HoldMinutes = posted.HoldMinutes;
             model.AllowSelfService = posted.AllowSelfService;
             model.Location = posted.Location;

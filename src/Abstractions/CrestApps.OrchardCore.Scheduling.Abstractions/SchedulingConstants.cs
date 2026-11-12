@@ -46,4 +46,27 @@ public static class SchedulingConstants
         public const string Api = "CrestApps.OrchardCore.Scheduling.Api";
 
     }
+
+    /// <summary>
+    /// The rate-limit groups of the scheduling endpoints. A Rate Limits policy can target them.
+    /// </summary>
+    public static class RateLimitGroups
+    {
+        /// <summary>
+        /// The public booking page's booking post.
+        /// </summary>
+        public const string Booking = "scheduling-booking";
+    }
+
+    /// <summary>
+    /// The attempt policies of the scheduling endpoints, overridable in the <c>CrestApps_Throttling:AttemptPolicies</c>
+    /// configuration section.
+    /// </summary>
+    public static class AttemptPolicies
+    {
+        /// <summary>
+        /// Bookings from the public booking page, per network.
+        /// </summary>
+        public const string BookingNetwork = "scheduling-booking-network";
+    }
 }

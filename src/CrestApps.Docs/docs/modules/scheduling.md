@@ -136,7 +136,14 @@ A group session (`Capacity` > 1) shares one calendar event per time, with `Sourc
 
 With Scheduling Self-Service on, an appointment type with **Customers can book it themselves** (`AllowSelfService`) and a slug gets a public page at `/book/{slug}`: pick a day, pick an open time (shown in the site's time zone), enter a name, email, phone and notes, and book. The customer lands on their manage page, `/book/manage/{id}/{token}`, whose secret `ManageToken` lets them move the appointment to another open time or cancel it without signing in. A disabled type, or one without self-service, returns `404`.
 
-Scheduling sends no email of its own. To send the confirmation and the manage link, add a workflow on **Appointment Confirmed** (or **Appointment Requested**) with a **Send Email** task; the input has `AppointmentId` and `ManageToken` to build the link.
+Scheduling sends no email of its own, except the confirmation link below. To send the confirmation and the manage link, add a workflow on **Appointment Confirmed** (or **Appointment Requested**) with a **Send Email** task; the input has `AppointmentId` and `ManageToken` to build the link.
+
+The booking post is guarded against scripts that would book every open time:
+
+- **A few bookings per network, always.** The attempt policy `scheduling-booking-network` holds each network (an IPv4 address or an IPv6 /64) to 10 bookings an hour across every booking page, whether or not Orchard Core's **Rate Limits** feature is on; over it the post answers `429` with `Retry-After`. Override it under `CrestApps_Throttling:AttemptPolicies`.
+- **A rate-limit group.** The post is in the `scheduling-booking` group (`SchedulingConstants.RateLimitGroups.Booking`). With **Rate Limits** on, a built-in limit holds each network to 20 posts in ten minutes; it shows read-only under **Tools > Rate Limits**, where a Group policy can add stricter limits.
+- **reCAPTCHA.** With Orchard Core's **reCAPTCHA** feature on and set up, the booking form shows the challenge and the post refuses a booking without a valid answer.
+- **E-mail confirmation.** An appointment type with **Customers confirm their booking from an email** (`RequireEmailConfirmation`) only holds a booking made on the public booking page (status `Held`, for the type's **Hold a time for** minutes) and e-mails the customer a confirmation link, `book/confirm/{id}/{token}` (a `SignedTokenService` token that lasts as long as the hold). Opening the link shows a **Confirm** button; confirming calls `IAppointmentService.ConfirmContactAsync`, which confirms the appointment, or makes it `Requested` when the type waits for staff, and opens the manage page. An unconfirmed hold expires with the other holds and frees the time. The page shows the manage link only after confirmation. The setting needs an email service: without one the page refuses the booking rather than holding it.
 
 ## Workflows
 
