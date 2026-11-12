@@ -13,6 +13,16 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 public sealed class AgentCheckout : CatalogItem, IModifiedUtcAwareModel
 {
     /// <summary>
+    /// The storage key of what kind of record this is, when it isn't a checkout, such as a UCP cart.
+    /// </summary>
+    public const string KindProperty = "ucp.kind";
+
+    /// <summary>
+    /// The <see cref="KindProperty"/> of a UCP cart: a list of items the agent keeps, not a checkout.
+    /// </summary>
+    public const string CartKind = "cart";
+
+    /// <summary>
     /// Gets or sets the agent platform that made it.
     /// </summary>
     public string PlatformId { get; set; }

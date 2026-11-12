@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using OrchardCore;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
 
@@ -21,7 +22,7 @@ public static class UcpCatalogEndpoints
     /// <summary>
     /// The storage key that marks an agent checkout record as a UCP cart.
     /// </summary>
-    public const string CartKindProperty = "ucp.kind";
+    public const string CartKindProperty = AgentCheckout.KindProperty;
 
     /// <summary>
     /// Maps the catalog and cart endpoints.
@@ -120,13 +121,21 @@ public static class UcpCatalogEndpoints
         });
     }
 
-    private static async Task<IResult> CreateCartAsync(HttpContext httpContext, IAgentCheckoutService checkouts, IAgentCheckoutStore store, IClock clock)
+    private static async Task<IResult> CreateCartAsync(HttpContext httpContext, IAgentCheckoutService checkouts, IAgentCheckoutStore store, ISiteService siteService, IClock clock)
     {
         var request = AgentRequest.Get(httpContext);
 
         if (request.Json is not JsonObject body)
         {
             return UcpResults.Error(StatusCodes.Status400BadRequest, "invalid_request", "Send the cart as a JSON object.");
+        }
+
+        // Carts count against the platform's cap on open checkouts, so an agent can't keep making them without end.
+        var settings = await siteService.GetSettingsAsync<AgenticCommerceSettings>();
+
+        if (await store.CountOpenAsync(request.Platform.ItemId, httpContext.RequestAborted) >= Math.Max(1, settings.MaxOpenCheckoutsPerPlatform))
+        {
+            return UcpResults.Error(StatusCodes.Status429TooManyRequests, "rate_limited", "Too many carts and checkouts are open. Complete or cancel some first.");
         }
 
         var now = clock.UtcNow;
@@ -143,7 +152,7 @@ public static class UcpCatalogEndpoints
             ExpiresUtc = now.AddDays(1),
         };
 
-        cart.SetProperty(CartKindProperty, "cart");
+        cart.SetProperty(CartKindProperty, AgentCheckout.CartKind);
         await store.CreateAsync(cart, httpContext.RequestAborted);
 
         return UcpResults.Json(await WriteCartAsync(request, cart, checkouts, httpContext.RequestAborted), StatusCodes.Status201Created);
@@ -215,7 +224,7 @@ public static class UcpCatalogEndpoints
         var cart = await store.FindByIdAsync(id, cancellationToken);
 
         return cart is not null &&
-            cart.GetProperty(CartKindProperty) == "cart" &&
+            cart.GetProperty(CartKindProperty) == AgentCheckout.CartKind &&
             string.Equals(cart.PlatformId, request.Platform.ItemId, StringComparison.Ordinal)
             ? cart
             : null;

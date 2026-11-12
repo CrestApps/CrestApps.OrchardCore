@@ -476,8 +476,11 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         {
             var checkout = await _store.FindByIdAsync(id, cancellationToken);
 
-            // A platform only sees its own checkouts; the store's background work sees all of them.
-            if (checkout is null || (context is not null && !string.Equals(checkout.PlatformId, context.PlatformId, StringComparison.Ordinal)))
+            // A platform only sees its own checkouts; the store's background work sees all of them. A cart is not a
+            // checkout: taking its id here would make it a store checkout (with stock held) outside the platform's cap.
+            if (checkout is null ||
+                (context is not null && !string.Equals(checkout.PlatformId, context.PlatformId, StringComparison.Ordinal)) ||
+                (context is not null && string.Equals(checkout.GetProperty(AgentCheckout.KindProperty), AgentCheckout.CartKind, StringComparison.Ordinal)))
             {
                 return AgentCheckoutResult.Fail(AgentCheckoutFailure.NotFound, S["There is no such checkout."]);
             }
