@@ -29,6 +29,7 @@ public static class WorkforcePortalServiceCollectionExtensions
         services.TryAddScoped<DefaultWebPushService>();
         services.TryAddScoped<IWebPushService>(provider => provider.GetRequiredService<DefaultWebPushService>());
         services.TryAddScoped<IWorkerFeedService, DefaultWorkerFeedService>();
+        services.TryAddScoped<WorkerFeedTokenBackfill>();
         services.AddOptions<WebPushOptions>();
 
         // Endpoints come from workers' browsers, so the client never reaches the site's own network or follows a

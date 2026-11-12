@@ -297,6 +297,40 @@ public sealed class PortalTests
         Assert.Null(await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync("not-a-real-secret-at-all"), commit: false));
     }
 
+    // SEC-P10i: the feed secret was stored in the worker's document in plain text, so anyone who could read the database
+    // or a backup could open every worker's schedule.
+    [Fact]
+    public async Task Feed_SecretIsNotStoredInPlainText_AndStillShownAndOpened()
+    {
+        await using var harness = await CreateAsync();
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+
+        var token = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IWorkerManager>().FindByIdAsync(ana.ItemId), true));
+        var shownAgain = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IWorkerManager>().FindByIdAsync(ana.ItemId), false));
+        var document = await harness.RunAsync(async services => System.Text.Json.JsonSerializer.Serialize(await services.GetRequiredService<IWorkerManager>().FindByIdAsync(ana.ItemId)), commit: false);
+        var feed = await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync(token), commit: false);
+
+        Assert.Equal(token, shownAgain);
+        Assert.DoesNotContain(token, document, StringComparison.Ordinal);
+        Assert.NotNull(feed);
+    }
+
+    [Fact]
+    public async Task Feed_AnAddressGivenBeforeTheSecretWasHashed_StillOpens()
+    {
+        await using var harness = await CreateAsync();
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        const string legacy = "legacy-plain-feed-secret-0123456789abcdef";
+
+        await SettingsAsync(harness, ana, settings => settings.FeedToken = legacy);
+
+        var feed = await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync(legacy), commit: false);
+
+        Assert.NotNull(feed);
+    }
+
     [Fact]
     public async Task Reminders_AreSentOncePerShift_AsLongBeforeAsEachWorkerChose()
     {
