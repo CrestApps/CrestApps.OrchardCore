@@ -35,8 +35,10 @@ public sealed class RealtimeController : Controller
 
     public async Task<IActionResult> Voices(string deploymentName)
     {
-        // The list names the site's deployments and their voices, so only someone who may use AI profiles sees it.
-        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile))
+        // The list names the site's deployments and their voices, so only someone who may use AI profiles, or chat
+        // interactions (whose page shows the same list), sees it.
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile) &&
+            !await _authorizationService.AuthorizeAsync(User, AIPermissions.EditOwnChatInteractions))
         {
             return Forbid();
         }
