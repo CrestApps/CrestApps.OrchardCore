@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Accounts.B2B.Controllers;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
@@ -36,10 +37,12 @@ internal static class B2BAccountApiEndpoints
         var checkout = routes.MapCommerceApi(CheckoutApi.Tag);
 
         checkout.MapPut("checkout/{id}/business", SaveB2BAccountStepAsync)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("SaveCheckoutB2BAccount")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Saves the Business account step of an account buyer's checkout: the purchase order number, required when the account says so.");
+            .WithSummary("Saves the Business account step of an account buyer's checkout: the purchase order number, required when the account says so.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         account.MapGet("account/business/approvals", ListApprovalsAsync)
             .WithName("ListMyB2BApprovals")
@@ -53,15 +56,19 @@ internal static class B2BAccountApiEndpoints
             .WithSummary("Approves or rejects an order waiting for an account admin's approval. A rejected order is canceled.");
 
         checkout.MapPost("checkout/{id}/account", ApplyAccountAsync)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("ApplyCheckoutAccount")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Puts what the account's deposit doesn't cover on the account's terms, invoiced and due in its net days.");
+            .WithSummary("Puts what the account's deposit doesn't cover on the account's terms, invoiced and due in its net days.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         checkout.MapDelete("checkout/{id}/account", RemoveAccountAsync)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("RemoveCheckoutAccount")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Takes the account payment off the checkout, so it's paid in full at checkout.");
+            .WithSummary("Takes the account payment off the checkout, so it's paid in full at checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         return routes;
     }
