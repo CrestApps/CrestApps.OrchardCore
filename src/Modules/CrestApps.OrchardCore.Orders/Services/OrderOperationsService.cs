@@ -9,6 +9,8 @@ using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using CrestApps.OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Services;
@@ -26,6 +28,8 @@ public sealed class OrderOperationsService : IOrderOperationsService
 {
     private const string StoreCreditRefundPrefix = "store-credit:";
 
+    private static readonly TimeSpan _refundLockExpiration = TimeSpan.FromMinutes(2);
+
     private readonly IOrderStore _orderStore;
     private readonly IOrderService _orderService;
     private readonly OrderOperationScope _scope;
@@ -36,6 +40,7 @@ public sealed class OrderOperationsService : IOrderOperationsService
     private readonly IPaymentAttemptStore _attemptStore;
     private readonly IPaymentRefundStore _refundStore;
     private readonly ICheckoutPaymentProviderResolver _paymentProviders;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
@@ -53,6 +58,7 @@ public sealed class OrderOperationsService : IOrderOperationsService
         IPaymentAttemptStore attemptStore,
         IPaymentRefundStore refundStore,
         ICheckoutPaymentProviderResolver paymentProviders,
+        IDistributedLock distributedLock,
         IClock clock,
         IServiceProvider serviceProvider,
         ILogger<OrderOperationsService> logger,
@@ -68,6 +74,7 @@ public sealed class OrderOperationsService : IOrderOperationsService
         _attemptStore = attemptStore;
         _refundStore = refundStore;
         _paymentProviders = paymentProviders;
+        _distributedLock = distributedLock;
         _clock = clock;
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -144,6 +151,38 @@ public sealed class OrderOperationsService : IOrderOperationsService
     {
         ArgumentNullException.ThrowIfNull(order);
 
+        // One refund of an order at a time, on every node: a double submit would otherwise read the same refundable
+        // amount twice and give it back twice (as store credit, or a manual refund settled twice).
+        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"ORDER_REFUND_{order.ItemId}", _refundLockExpiration);
+
+        if (!locked)
+        {
+            var busy = new OrderOperationResult();
+
+            busy.Errors.Add(S["Another refund of this order is being made. Try again in a moment."]);
+
+            return busy;
+        }
+
+        await using (locker)
+        {
+            // Read again inside the lock, so what's refundable includes a refund that finished just before.
+            order = await _orderStore.FindByIdAsync(order.ItemId, cancellationToken) ?? order;
+
+            var refunded = await RefundLockedAsync(order, amount, reason, restock, actorName, asStoreCredit, cancellationToken);
+
+            // Committed before the lock is let go, so the next refund reads this one.
+            if (_serviceProvider.GetService<global::YesSql.ISession>() is { } session)
+            {
+                await session.SaveChangesAsync(cancellationToken);
+            }
+
+            return refunded;
+        }
+    }
+
+    private async Task<OrderOperationResult> RefundLockedAsync(Order order, decimal? amount, string reason, bool restock, string actorName, bool asStoreCredit, CancellationToken cancellationToken)
+    {
         var result = new OrderOperationResult();
         var money = await GetMoneyAsync(order, cancellationToken);
 
