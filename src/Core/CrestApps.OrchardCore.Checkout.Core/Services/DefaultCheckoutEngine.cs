@@ -89,7 +89,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         IEnumerable<ICheckoutPaymentGate> paymentGates = null,
         IPaymentIssueRecorder paymentIssues = null)
     {
-        _paymentIssues = paymentIssues;
+        // A host without the payment issue store still records issues in the log, so no caller needs a null check.
+        _paymentIssues = paymentIssues ?? new LoggingPaymentIssueRecorder(logger);
         _sessionStore = sessionStore;
         _attemptStore = attemptStore;
         _providerResolver = providerResolver;
@@ -495,6 +496,38 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 await _session.SaveChangesAsync(cancellationToken);
 
                 return pending;
+            }
+
+            // A payment is checked against the invoice when it begins, but the buyer can change the checkout afterwards
+            // (shipping, an order bump, a taxed address) and confirm the payment they already began. What settled is
+            // checked again against the invoice as it is now, so a purchase is never completed for less than it costs.
+            var shortfall = await FindShortfallAsync(session, invoice, reconciliation.SettledObligationIds, cancellationToken);
+
+            if (shortfall is not null)
+            {
+                _logger.LogWarning(
+                    "Obligation '{ObligationId}' of checkout '{SessionId}' settled {Paid} {Currency} but the invoice now asks {Due}; the checkout is not completed and the payment is refunded.",
+                    shortfall.Value.ObligationId,
+                    session.SessionId,
+                    shortfall.Value.Paid,
+                    invoice.Currency,
+                    shortfall.Value.Due);
+
+                await _paymentIssues.RecordAsync(new PaymentIssue
+                {
+                    Kind = PaymentIssueKinds.PaymentShortOfInvoice,
+                    Message = "The checkout changed after its payment was begun and the payment no longer covered it, so the checkout was not completed and the payment was refunded.",
+                    ReferenceType = "CheckoutSession",
+                    ReferenceId = session.SessionId,
+                    ProviderKey = shortfall.Value.ProviderKey,
+                    ProviderReference = shortfall.Value.TransactionId,
+                    Amount = shortfall.Value.Paid,
+                    Currency = invoice.Currency,
+                }, cancellationToken);
+
+                await CompensateAsync(session, reconciliation.SettledObligationIds, cancellationToken);
+
+                return await FailAsync(session, flow, "The checkout changed after the payment was started, so the payment was refunded. Please pay again for the new total.", cancellationToken);
             }
 
             // Every obligation is confirmed. That fact is committed before anything is fulfilled, so a
@@ -969,6 +1002,45 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private static BillingDurationKey TryGetRecurringInterval(CheckoutInvoice invoice, string obligationId)
         => CheckoutObligations.TryGetRecurringGroup(invoice, obligationId, out var interval, out _) ? interval : null;
 
+    // Returns the first settled obligation whose confirmed payments add up to less than the invoice now asks for it,
+    // in minor units. A provider that reports no authoritative amount is held to what its attempt expected, which is
+    // what reconciliation records as its confirmed amount.
+    private async Task<(string ObligationId, decimal Paid, decimal Due, string ProviderKey, string TransactionId)?> FindShortfallAsync(
+        CheckoutSession session,
+        CheckoutInvoice invoice,
+        IEnumerable<string> settledObligationIds,
+        CancellationToken cancellationToken)
+    {
+        var settled = settledObligationIds.ToHashSet(StringComparer.Ordinal);
+
+        if (settled.Count == 0)
+        {
+            return null;
+        }
+
+        var attempts = await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken);
+
+        foreach (var group in attempts
+            .Where(attempt => attempt.State == PaymentAttemptState.Succeeded &&
+                !string.IsNullOrEmpty(attempt.TransactionId) &&
+                settled.Contains(attempt.ObligationId))
+            .GroupBy(attempt => attempt.ObligationId, StringComparer.Ordinal))
+        {
+            var (amount, taxAmount) = GetObligationAmounts(invoice, group.Key);
+            var due = amount + taxAmount;
+            var paid = group.Sum(attempt => attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount);
+
+            if (Money.ToMinorUnits(paid, invoice.Currency) < Money.ToMinorUnits(due, invoice.Currency))
+            {
+                var last = group.Last();
+
+                return (group.Key, paid, due, last.ProviderKey, last.TransactionId);
+            }
+        }
+
+        return null;
+    }
+
     private static bool MatchesInvoice(PaymentAttempt attempt, CheckoutInvoice invoice)
     {
         var (amount, taxAmount) = GetObligationAmounts(invoice, attempt.ObligationId);
@@ -1421,21 +1493,18 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 // listed as a payment issue as well as logged.
                 _logger.LogError(exception, "Failed to compensate settled obligation '{ObligationId}' of checkout '{SessionId}'. This payment must be refunded manually.", attempt.ObligationId, session.SessionId);
 
-                if (_paymentIssues is not null)
+                await _paymentIssues.RecordAsync(new PaymentIssue
                 {
-                    await _paymentIssues.RecordAsync(new PaymentIssue
-                    {
-                        Kind = PaymentIssueKinds.RefundFailed,
-                        Message = "Refund this payment in the payment provider's dashboard: the checkout could not be completed and the automatic refund failed.",
-                        Error = exception.Message,
-                        ReferenceType = "CheckoutSession",
-                        ReferenceId = session.SessionId,
-                        ProviderKey = attempt.ProviderKey,
-                        ProviderReference = attempt.TransactionId,
-                        Amount = attempt.ConfirmedAmount > 0m ? attempt.ConfirmedAmount : attempt.ExpectedAmount,
-                        Currency = attempt.Currency,
-                    }, cancellationToken);
-                }
+                    Kind = PaymentIssueKinds.RefundFailed,
+                    Message = "Refund this payment in the payment provider's dashboard: the checkout could not be completed and the automatic refund failed.",
+                    Error = exception.Message,
+                    ReferenceType = "CheckoutSession",
+                    ReferenceId = session.SessionId,
+                    ProviderKey = attempt.ProviderKey,
+                    ProviderReference = attempt.TransactionId,
+                    Amount = attempt.ConfirmedAmount > 0m ? attempt.ConfirmedAmount : attempt.ExpectedAmount,
+                    Currency = attempt.Currency,
+                }, cancellationToken);
             }
         }
     }

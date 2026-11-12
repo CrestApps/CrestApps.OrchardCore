@@ -21,4 +21,10 @@ public static class PaymentIssueKinds
     /// A payment was settled and a discount provider could not record the redemption of its code.
     /// </summary>
     public const string DiscountRedemptionFailed = "DiscountRedemptionFailed";
+
+    /// <summary>
+    /// A payment settled for less than the checkout costs by the time it completed, such as when the buyer changed
+    /// shipping after the payment was begun. The checkout was not completed and the payment was refunded.
+    /// </summary>
+    public const string PaymentShortOfInvoice = "PaymentShortOfInvoice";
 }
