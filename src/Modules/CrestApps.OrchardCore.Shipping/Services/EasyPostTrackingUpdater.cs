@@ -61,9 +61,7 @@ public sealed class EasyPostTrackingUpdater
         }
 
         var status = tracker["status"]?.GetValue<string>();
-
-        shipment.TrackingStatus = Describe(status);
-        shipment.TrackingEvents = [.. (tracker["tracking_details"] as JsonArray ?? [])
+        var events = (tracker["tracking_details"] as JsonArray ?? [])
             .OfType<JsonObject>()
             .Select(detail => new ShipmentTrackingEvent
             {
@@ -73,7 +71,19 @@ public sealed class EasyPostTrackingUpdater
                 Location = string.Join(", ", new[] { detail["tracking_location"]?["city"]?.GetValue<string>(), detail["tracking_location"]?["state"]?.GetValue<string>() }.Where(part => !string.IsNullOrWhiteSpace(part))),
             })
             .OrderByDescending(entry => entry.Utc)
-            .Take(MaxEvents)];
+            .Take(MaxEvents)
+            .ToList();
+
+        // EasyPost retries and may deliver late: an update older than what the shipment already shows (the same
+        // signed body sent again, or an earlier one arriving last) doesn't move the parcel back.
+        if (shipment.TrackingEvents is { Count: > 0 } known &&
+            (events.Count == 0 || events[0].Utc < known.Max(entry => entry.Utc)))
+        {
+            return false;
+        }
+
+        shipment.TrackingStatus = Describe(status);
+        shipment.TrackingEvents = events;
 
         if (tracker["public_url"]?.GetValue<string>() is { Length: > 0 } url && string.IsNullOrEmpty(shipment.TrackingUrl))
         {
