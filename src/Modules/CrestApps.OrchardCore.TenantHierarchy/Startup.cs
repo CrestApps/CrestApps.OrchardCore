@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
@@ -120,6 +121,7 @@ public sealed class ChildStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         ParentStartup.AddCommonServices(services);
+        services.AddSignedLinks();
 
         services
             .AddScoped<UserLinkStore>()

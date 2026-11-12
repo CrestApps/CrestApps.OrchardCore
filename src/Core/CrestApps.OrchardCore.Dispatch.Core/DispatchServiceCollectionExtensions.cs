@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch;
 using CrestApps.OrchardCore.Dispatch.Core.Services;
@@ -38,6 +39,7 @@ public static class DispatchServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkOrderObserver, DispatchWorkOrderObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IDispatchOptimizer, DefaultDispatchOptimizer>());
         services.TryAddScoped<IDispatchOptimizationService, DispatchOptimizationService>();
+        services.AddSignedLinks();
         services.TryAddScoped<IVisitTrackingLinks, VisitTrackingLinks>();
         services.TryAddScoped<VisitNoticeService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IVisitObserver, VisitNoticeObserver>());

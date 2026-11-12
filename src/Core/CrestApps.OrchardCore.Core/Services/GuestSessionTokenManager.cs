@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.Modules;
@@ -66,7 +67,7 @@ public sealed class GuestSessionTokenManager
             return null;
         }
 
-        var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(TokenByteLength));
+        var token = SecretTokens.Create(TokenByteLength);
 
         var tokens = ReadTokens(scope, httpContext);
 

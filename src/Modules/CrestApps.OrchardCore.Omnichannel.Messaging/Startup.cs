@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -179,6 +180,7 @@ public sealed class Startup : StartupBase
                 serviceProvider.GetRequiredService<IDataProtectionProvider>());
         });
         services.AddHttpContextAccessor();
+        services.AddSignedLinks();
         services.AddScoped<MessagingAttachmentLinks>();
         services.AddScoped<MessagingAttachmentUploads>();
         services.AddScoped<IMessagingAttachmentUrlProvider>(serviceProvider => serviceProvider.GetRequiredService<MessagingAttachmentLinks>());

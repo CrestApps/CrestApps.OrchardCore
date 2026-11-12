@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using CrestApps.OrchardCore.Core.Security;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 
@@ -13,18 +12,21 @@ public static class AgentPlatformApiKeys
     /// </summary>
     public const string Prefix = "agk_";
 
+    // The hash of an empty key, as before: an empty key never matches a stored hash.
+    private const string EmptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
     /// <summary>
     /// Returns a new random key.
     /// </summary>
     public static string Create()
-        => Prefix + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
+        => Prefix + SecretTokens.Create();
 
     /// <summary>
     /// Returns the hash a key is kept as.
     /// </summary>
     /// <param name="apiKey">The key.</param>
     public static string Hash(string apiKey)
-        => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(apiKey ?? string.Empty)));
+        => string.IsNullOrEmpty(apiKey) ? EmptyHash : SecretTokens.Hash(apiKey);
 
     /// <summary>
     /// Returns the last characters of a key, to tell keys apart.

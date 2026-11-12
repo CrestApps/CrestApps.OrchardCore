@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -23,7 +24,9 @@ public sealed class TimeClockKioskController : Controller
     private readonly ITimeClockService _timeClock;
     private readonly ITimeClockKioskManager _kioskManager;
     private readonly ITeamManager _teamManager;
-    private readonly IDataProtectionProvider _dataProtection;
+    private const string TicketPurpose = "CrestApps.Workforce.Kiosk";
+
+    private readonly SignedTokenService _tokens;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -34,21 +37,21 @@ public sealed class TimeClockKioskController : Controller
     /// <param name="timeClock">The time clock.</param>
     /// <param name="kioskManager">The kiosk manager.</param>
     /// <param name="teamManager">The team manager.</param>
-    /// <param name="dataProtection">The data protection provider.</param>
+    /// <param name="tokens">The signed token service.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TimeClockKioskController(
         ITimeClockService timeClock,
         ITimeClockKioskManager kioskManager,
         ITeamManager teamManager,
-        IDataProtectionProvider dataProtection,
+        SignedTokenService tokens,
         IClock clock,
         IStringLocalizer<TimeClockKioskController> stringLocalizer)
     {
         _timeClock = timeClock;
         _kioskManager = kioskManager;
         _teamManager = teamManager;
-        _dataProtection = dataProtection;
+        _tokens = tokens;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -107,7 +110,7 @@ public sealed class TimeClockKioskController : Controller
 
         model.Worker = identified.Value;
         model.Status = await _timeClock.GetStatusAsync(identified.Value, HttpContext.RequestAborted);
-        model.Ticket = Protector().Protect(kiosk.ItemId + "|" + identified.Value.ItemId, _ticketLifetime);
+        model.Ticket = _tokens.Protect(TicketPurpose, kiosk.ItemId + "|" + identified.Value.ItemId, _ticketLifetime);
 
         if (model.Status.Policy is null)
         {
@@ -139,16 +142,8 @@ public sealed class TimeClockKioskController : Controller
         }
 
         var model = new KioskViewModel { Kiosk = kiosk, Token = token };
-        string[] parts;
-
-        try
-        {
-            parts = Protector().Unprotect(ticket ?? string.Empty).Split('|');
-        }
-        catch (System.Security.Cryptography.CryptographicException)
-        {
-            parts = [];
-        }
+        // The ticket's purpose is the one it always had.
+        var parts = _tokens.Unprotect(TicketPurpose, ticket)?.Split('|') ?? [];
 
         if (parts.Length != 2 || parts[0] != kiosk.ItemId)
         {
@@ -199,8 +194,4 @@ public sealed class TimeClockKioskController : Controller
         return worker.MembershipsOn(today).Any(membership => teams.Contains(membership.TeamId));
     }
 
-    private ITimeLimitedDataProtector Protector()
-    {
-        return _dataProtection.CreateProtector("CrestApps.Workforce.Kiosk").ToTimeLimitedDataProtector();
-    }
 }

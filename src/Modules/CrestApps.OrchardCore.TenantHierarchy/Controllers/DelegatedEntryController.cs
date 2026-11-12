@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CrestApps.OrchardCore.Core.Security;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Guards;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
@@ -30,7 +32,9 @@ public sealed class DelegatedEntryController : Controller
     private readonly ITenantHierarchyBroker _broker;
     private readonly LinkedUserService _linkedUserService;
     private readonly SignInManager<IUser> _signInManager;
-    private readonly ITimeLimitedDataProtector _protector;
+    private const string StatePurpose = "TenantHierarchy.DelegatedAccess.State";
+
+    private readonly SignedTokenService _tokens;
     private readonly ShellSettings _shellSettings;
     private readonly AdminOptions _adminOptions;
     private readonly ILogger _logger;
@@ -41,7 +45,7 @@ public sealed class DelegatedEntryController : Controller
     /// <param name="broker">The tenant hierarchy broker.</param>
     /// <param name="linkedUserService">The linked user service.</param>
     /// <param name="signInManager">The sign-in manager.</param>
-    /// <param name="dataProtectionProvider">The data protection provider of the child tenant.</param>
+    /// <param name="tokens">The child tenant's signed token service.</param>
     /// <param name="shellSettings">The settings of the child tenant.</param>
     /// <param name="adminOptions">The admin options.</param>
     /// <param name="logger">The logger.</param>
@@ -49,7 +53,7 @@ public sealed class DelegatedEntryController : Controller
         ITenantHierarchyBroker broker,
         LinkedUserService linkedUserService,
         SignInManager<IUser> signInManager,
-        IDataProtectionProvider dataProtectionProvider,
+        SignedTokenService tokens,
         ShellSettings shellSettings,
         IOptions<AdminOptions> adminOptions,
         ILogger<DelegatedEntryController> logger)
@@ -57,7 +61,8 @@ public sealed class DelegatedEntryController : Controller
         _broker = broker;
         _linkedUserService = linkedUserService;
         _signInManager = signInManager;
-        _protector = dataProtectionProvider.CreateProtector("TenantHierarchy.DelegatedAccess.State").ToTimeLimitedDataProtector();
+        // The state cookie's purpose is the one it always had.
+        _tokens = tokens;
         _shellSettings = shellSettings;
         _adminOptions = adminOptions.Value;
         _logger = logger;
@@ -96,7 +101,7 @@ public sealed class DelegatedEntryController : Controller
 
         Response.Cookies.Append(
             GetStateCookieName(),
-            _protector.Protect(JsonSerializer.Serialize(state), _stateLifetime),
+            _tokens.Protect(StatePurpose, JsonSerializer.Serialize(state), _stateLifetime),
             new CookieOptions
             {
                 HttpOnly = true,
@@ -151,7 +156,7 @@ public sealed class DelegatedEntryController : Controller
             Secure = Request.IsHttps,
         });
 
-        if (remembered is null || string.IsNullOrEmpty(state) || !FixedTimeEquals(remembered.State, state))
+        if (remembered is null || string.IsNullOrEmpty(state) || !SecretTokens.FixedTimeEquals(remembered.State ?? string.Empty, state))
         {
             return ErrorView(EntryErrorKind.SignInExpired, null);
         }
@@ -212,13 +217,16 @@ public sealed class DelegatedEntryController : Controller
             return null;
         }
 
-        try
-        {
-            return JsonSerializer.Deserialize<DelegatedAccessState>(_protector.Unprotect(protectedState));
-        }
-        catch (CryptographicException)
+        var json = _tokens.Unprotect(StatePurpose, protectedState);
+
+        if (json is null)
         {
             return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<DelegatedAccessState>(json);
         }
         catch (JsonException)
         {
@@ -252,8 +260,5 @@ public sealed class DelegatedEntryController : Controller
         Response.Headers["Referrer-Policy"] = "no-referrer";
     }
 
-    private static bool FixedTimeEquals(string expected, string actual)
-    {
-        return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected ?? string.Empty), Encoding.UTF8.GetBytes(actual ?? string.Empty));
-    }
+
 }
