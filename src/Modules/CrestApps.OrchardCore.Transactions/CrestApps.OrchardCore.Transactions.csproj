@@ -35,6 +35,7 @@
     <PackageReference Include="OrchardCore.Notifications.Core" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
+    <PackageReference Include="OrchardCore.RateLimits.Core" />
   </ItemGroup>
 
   <ItemGroup>

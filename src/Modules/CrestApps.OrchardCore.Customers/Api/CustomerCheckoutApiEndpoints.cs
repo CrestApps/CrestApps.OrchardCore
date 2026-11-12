@@ -41,6 +41,7 @@ internal static class CustomerCheckoutApiEndpoints
         var group = routes.MapCommerceApi(CheckoutApi.Tag);
 
         group.MapPost("checkout/{id}/store-credit", ApplyStoreCreditAsync)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("ApplyCheckoutStoreCredit")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -48,6 +49,7 @@ internal static class CustomerCheckoutApiEndpoints
             .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapDelete("checkout/{id}/store-credit", RemoveStoreCreditAsync)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("RemoveCheckoutStoreCredit")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Takes the buyer's store credit off the checkout.")
@@ -61,6 +63,7 @@ internal static class CustomerCheckoutApiEndpoints
         var group = routes.MapCommerceApi(CheckoutApi.Tag);
 
         group.MapPost("checkout/{id}/points", ApplyPointsAsync)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("ApplyCheckoutPoints")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -68,6 +71,7 @@ internal static class CustomerCheckoutApiEndpoints
             .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapDelete("checkout/{id}/points", RemovePointsAsync)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("RemoveCheckoutPoints")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Takes the buyer's points off the checkout.")
