@@ -280,7 +280,7 @@ Every admin create, edit, settings, import or other form page keeps its buttons 
 
 #### Quality Enforcement
 
-* Treat all warnings as errors and resolve every warning.
+* Treat all warnings as errors and resolve every warning. `Directory.Build.props` sets `TreatWarningsAsErrors`, so a local build fails on a warning just as CI does, and `src` projects run the banned-API analyzer (`BannedSymbols.txt`: inject `IClock`/`ILocalClock`, use `IHttpClientFactory`, convert with `CalendarTime`).
 * Continuously evolve and update this `AGENTS.md` file (and `docs/engineering/building-blocks.md` for building blocks) with newly established preferences and patterns.
 * Use ASD-STE100 Simplified Technical English for all responses.
 
