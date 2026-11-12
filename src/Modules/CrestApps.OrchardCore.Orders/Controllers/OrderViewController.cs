@@ -122,28 +122,28 @@ public sealed class OrderViewController : Controller
     {
         var number = model.OrderNumber?.Trim().TrimStart('#');
         var email = model.Email?.Trim();
-        Order order = null;
 
-        // Both must match, and the guesses are limited, so a number alone or an email alone shows nothing.
-        if (!string.IsNullOrEmpty(number) && !string.IsNullOrEmpty(email) &&
-            (await _limiter.AcquireAsync(OrderConstants.AttemptPolicies.OrderLookupNetwork, ClientNetworkKey.NetworkOnly(HttpContext))).Allowed)
+        if (string.IsNullOrEmpty(number) || string.IsNullOrEmpty(email))
         {
-            order = await _orderStore.FindByNumberAsync(number.ToUpperInvariant());
+            return View(await _shapeFactory.CreateAsync<TrackOrderViewModel>("OrderTrack", shape =>
+            {
+                shape.OrderNumber = model.OrderNumber;
+                shape.Email = model.Email;
+                shape.NotFound = true;
+            }));
         }
 
-        if (order is { Status: OrderStatus.Paid } &&
-            string.Equals(order.CustomerEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase) &&
-            await _orderLinks.CreateUrlAsync(order) is { } url)
+        // Knowing an order's number and e-mail address doesn't open it: its link goes to that address, and the answer is
+        // the same whether or not they matched. Guesses are limited by network and by e-mail address.
+        if ((await _limiter.AcquireAsync(OrderConstants.AttemptPolicies.OrderLookupNetwork, ClientNetworkKey.NetworkOnly(HttpContext))).Allowed &&
+            (await _limiter.AcquireAsync(OrderConstants.AttemptPolicies.OrderLookupEmail, email.ToUpperInvariant())).Allowed &&
+            await _orderStore.FindByNumberAsync(number.ToUpperInvariant()) is { Status: OrderStatus.Paid } order &&
+            string.Equals(order.CustomerEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase))
         {
-            return Redirect(url);
+            await SendOrderLinkAsync(order);
         }
 
-        return View(await _shapeFactory.CreateAsync<TrackOrderViewModel>("OrderTrack", shape =>
-        {
-            shape.OrderNumber = model.OrderNumber;
-            shape.Email = model.Email;
-            shape.NotFound = true;
-        }));
+        return View("FindSent", await LookupShapeAsync("OrderLookupSent", email));
     }
 
     [HttpGet("orders/find", Name = OrderConstants.RouteNames.Find)]
@@ -203,6 +203,20 @@ public sealed class OrderViewController : Controller
             }
         }
 
+        await SendAsync(email, recent);
+    }
+
+    // The order's own link, to the address it was placed with.
+    private async Task SendOrderLinkAsync(Order order)
+    {
+        if (_emailSender.CanSend && await _orderLinks.CreateUrlAsync(order) is { } url)
+        {
+            await SendAsync(order.CustomerEmail.Trim(), [(order, url)]);
+        }
+    }
+
+    private async Task SendAsync(string email, List<(Order Order, string Url)> recent)
+    {
         if (recent.Count == 0)
         {
             return;
