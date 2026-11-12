@@ -41,24 +41,49 @@ public sealed class UcpProfileCache
     /// </summary>
     /// <param name="url">The profile's address.</param>
     public JsonObject Get(string url)
+        => TryGet(url, out var profile, out _) ? profile : null;
+
+    /// <summary>
+    /// Returns whether a profile, or why it couldn't be read, is remembered for an address.
+    /// </summary>
+    /// <param name="url">The profile's address.</param>
+    /// <param name="profile">The profile, or <see langword="null"/> when it couldn't be read.</param>
+    /// <param name="error">Why the profile couldn't be read, or <see langword="null"/>.</param>
+    public bool TryGet(string url, out JsonObject profile, out string error)
     {
+        profile = null;
+        error = null;
+
         lock (_lock)
         {
             if (!_entries.TryGetValue(url, out var entry))
             {
-                return null;
+                return false;
             }
 
             if (entry.ExpiresUtc <= _clock.UtcNow)
             {
                 Remove(url, entry);
 
-                return null;
+                return false;
             }
 
-            return entry.Profile;
+            profile = entry.Profile;
+            error = entry.Error;
+
+            return true;
         }
     }
+
+    /// <summary>
+    /// Remembers for a while that a profile couldn't be read, so a caller can't make the store fetch it on every
+    /// request.
+    /// </summary>
+    /// <param name="url">The profile's address.</param>
+    /// <param name="error">Why it couldn't be read.</param>
+    /// <param name="lifetime">How long to remember it.</param>
+    public void SetFailure(string url, string error, TimeSpan lifetime)
+        => Set(url, null, error, size: 1, lifetime);
 
     /// <summary>
     /// Keeps a profile until <paramref name="lifetime"/> passes, making room by dropping others when the cache is full.
@@ -68,6 +93,9 @@ public sealed class UcpProfileCache
     /// <param name="size">The profile's size in bytes, as read.</param>
     /// <param name="lifetime">How long to keep it.</param>
     public void Set(string url, JsonObject profile, long size, TimeSpan lifetime)
+        => Set(url, profile, error: null, size, lifetime);
+
+    private void Set(string url, JsonObject profile, string error, long size, TimeSpan lifetime)
     {
         if (size > MaxBytes)
         {
@@ -94,7 +122,7 @@ public sealed class UcpProfileCache
                 Remove(victim.Key, victim.Value);
             }
 
-            _entries[url] = new Entry(profile, size, now.Add(lifetime), _sequence++);
+            _entries[url] = new Entry(profile, error, size, now.Add(lifetime), _sequence++);
             _bytes += size;
         }
     }
@@ -105,5 +133,5 @@ public sealed class UcpProfileCache
         _bytes -= entry.Size;
     }
 
-    private sealed record Entry(JsonObject Profile, long Size, DateTime ExpiresUtc, long Sequence);
+    private sealed record Entry(JsonObject Profile, string Error, long Size, DateTime ExpiresUtc, long Sequence);
 }
