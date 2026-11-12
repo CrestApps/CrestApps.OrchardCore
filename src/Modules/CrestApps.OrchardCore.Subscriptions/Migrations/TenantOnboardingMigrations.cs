@@ -1,6 +1,15 @@
+using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
+using CrestApps.OrchardCore.Subscriptions.Models;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
+using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Settings;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Subscriptions.Migrations;
 
@@ -21,7 +30,8 @@ internal sealed class TenantOnboardingMigrations : DataMigration
     }
 
     /// <summary>
-    /// Creates the tenant onboarding content part definition.
+    /// Creates the tenant onboarding content part definition. A new store starts with buyers unable to choose a prefix
+    /// or a domain, so the upgrade step that keeps those on for existing stores is skipped.
     /// </summary>
     /// <returns>The migration version after the tenant onboarding definition is created.</returns>
     public async Task<int> CreateAsync()
@@ -32,6 +42,36 @@ internal sealed class TenantOnboardingMigrations : DataMigration
             .WithDescription("Provides the key properties for tenant onboarding subscription.")
         );
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// A store that already sold sites with domains of their own, or prefixes other than the site's name, keeps offering
+    /// them now that both default to off.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public int UpdateFrom1()
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var session = scope.ServiceProvider.GetRequiredService<ISession>();
+            var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
+
+            var site = await siteService.LoadSiteSettingsAsync();
+            var settings = site.As<SubscriptionOnboardingSettings>();
+
+            // One row per site ever sold through this store, read once at upgrade.
+            var jobs = await session
+                .Query<TenantProvisioningJob>(collection: SubscriptionConstants.TenantProvisioningCollectionName)
+                .ListAsync();
+
+            if (SubscriptionOnboardingUpgrade.Apply(settings, jobs))
+            {
+                site.Put(settings);
+                await siteService.UpdateSiteSettingsAsync(site);
+            }
+        });
+
+        return 2;
     }
 }

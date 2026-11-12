@@ -76,6 +76,11 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
             model.DatabaseProvider = settings.DatabaseProvider;
             model.HasConnectionString = !string.IsNullOrEmpty(settings.ProtectedConnectionString);
             model.Schema = settings.Schema;
+            model.AllowCustomPrefix = settings.AllowCustomPrefix;
+            model.AllowCustomDomains = settings.AllowCustomDomains;
+            model.ReservedPrefixes = string.Join(", ", settings.ReservedPrefixes ?? SubscriptionOnboardingSettings.DefaultReservedPrefixes);
+            model.ReservedHosts = string.Join(", ", settings.ReservedHosts ?? []);
+            model.BaseDomain = settings.BaseDomain;
             model.DatabaseProviders = _databaseProviders
                 .Where(provider => !string.Equals(provider.Value, SubscriptionOnboardingSettings.DefaultDatabaseProvider, StringComparison.OrdinalIgnoreCase))
                 .Select(provider => new SelectListItem(provider.Name, provider.Value));
@@ -111,6 +116,13 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
             : _databaseProviders.FirstOrDefault(candidate => string.Equals(candidate.Value, providerValue, StringComparison.OrdinalIgnoreCase));
         var connectionString = model.ConnectionString?.Trim();
 
+        // Where a sold site may answer. The admin prefix and the default tenant's hosts are reserved whatever is typed here.
+        settings.AllowCustomPrefix = model.AllowCustomPrefix;
+        settings.AllowCustomDomains = model.AllowCustomDomains;
+        settings.ReservedPrefixes = SplitList(model.ReservedPrefixes);
+        settings.ReservedHosts = SplitList(model.ReservedHosts);
+        settings.BaseDomain = string.IsNullOrWhiteSpace(model.BaseDomain) ? null : model.BaseDomain.Trim().Trim('.').ToLowerInvariant();
+
         // A stored connection string belongs to the provider it was entered for.
         var keepsConnectionString = string.IsNullOrEmpty(connectionString) &&
             !string.IsNullOrEmpty(settings.ProtectedConnectionString) &&
@@ -143,4 +155,9 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
 
         return await EditAsync(site, settings, context);
     }
+
+    private static string[] SplitList(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? []
+            : [.. value.Split([',', ';', ' ', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase)];
 }

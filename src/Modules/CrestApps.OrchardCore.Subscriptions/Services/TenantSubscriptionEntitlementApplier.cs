@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
@@ -23,6 +24,7 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
 {
     private readonly IShellHost _shellHost;
     private readonly ShellSettings _shellSettings;
+    private readonly ITenantProvisioningJobStore _jobStore;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -34,10 +36,12 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
     public TenantSubscriptionEntitlementApplier(
         IShellHost shellHost,
         ShellSettings shellSettings,
+        ITenantProvisioningJobStore jobStore,
         ILogger<TenantSubscriptionEntitlementApplier> logger)
     {
         _shellHost = shellHost;
         _shellSettings = shellSettings;
+        _jobStore = jobStore;
         _logger = logger;
     }
 
@@ -77,6 +81,15 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
             return;
         }
 
+        // The entitlement acts only on a tenant its own provisioning job created. A name typed at checkout, for a site
+        // that was never created because the name was taken, must not reach the tenant that already had it.
+        if (!await WasCreatedForAsync(context, tenantName))
+        {
+            _logger.LogWarning("A tenant entitlement of subscription '{SubscriptionId}' names a tenant its provisioning job did not create. It was ignored.", context.Subscription?.ItemId);
+
+            return;
+        }
+
         if (!_shellHost.TryGetSettings(tenantName, out var settings))
         {
             // The site has not been created yet, or was removed. Neither is an error here: the provisioning
@@ -104,5 +117,31 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
                 context.Subscription.ItemId,
                 context.Subscription.Status);
         }
+    }
+
+    private async Task<bool> WasCreatedForAsync(SubscriptionEntitlementContext context, string tenantName)
+    {
+        TenantProvisioningJob job;
+
+        if (context.Entitlement.Data is not null &&
+            context.Entitlement.Data.TryGetValue(SubscriptionConstants.EntitlementData.ProvisioningJobId, out var jobId) &&
+            !string.IsNullOrEmpty(jobId))
+        {
+            job = await _jobStore.FindByIdAsync(jobId);
+        }
+        else
+        {
+            // An entitlement recorded before it carried its job: the tenant's job must belong to this subscription.
+            job = await _jobStore.GetByTenantNameAsync(tenantName);
+
+            if (job is not null && !string.Equals(job.SubscriptionId, context.Subscription?.ItemId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return job is not null &&
+            job.Status == TenantProvisioningStatus.Succeeded &&
+            string.Equals(job.TenantName, tenantName, StringComparison.OrdinalIgnoreCase);
     }
 }

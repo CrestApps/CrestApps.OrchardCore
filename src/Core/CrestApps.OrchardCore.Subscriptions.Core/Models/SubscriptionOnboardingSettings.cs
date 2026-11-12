@@ -1,43 +1,84 @@
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
+
 namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 
 /// <summary>
-/// Represents tenant onboarding settings used by subscription flows that provision sites.
+/// How the sites a subscription sells are created: their database, and where a buyer may make them answer.
 /// </summary>
 public sealed class SubscriptionOnboardingSettings
 {
     /// <summary>
-    /// Gets or sets the database provider every provisioned site is created with.
+    /// The prefixes reserved by default, because the host's own routes use them.
     /// </summary>
-    /// <remarks>
-    /// A site cannot be created without one — setup refuses outright — and the buyer is in no position to
-    /// choose it, so it is configured once by the operator and applied to every site sold. When it is left
-    /// empty the sites are created on <c>Sqlite</c>, which needs no server and gives each site its own file.
-    /// </remarks>
+    public static readonly string[] DefaultReservedPrefixes =
+    [
+        "admin",
+        "api",
+        "login",
+        "connect",
+        "stripe",
+        "media",
+        "checkout",
+        "cart",
+        "orders",
+    ];
+
     public string DatabaseProvider { get; set; }
 
-    /// <summary>
-    /// Gets or sets the connection string provisioned sites are created with, protected with data protection
-    /// (purpose <see cref="SubscriptionConstants.ProtectorPurposes.OnboardingConnectionString"/>) so the database
-    /// credentials are never stored in clear text. Not needed for <c>Sqlite</c>, which stores each site under its
-    /// own tenant folder.
-    /// </summary>
     public string ProtectedConnectionString { get; set; }
 
-    /// <summary>
-    /// Gets or sets the schema provisioned sites are created in, when the provider supports one.
-    /// </summary>
     public string Schema { get; set; }
 
     /// <summary>
-    /// Gets the database provider to create a site with, falling back to the one that works without any
-    /// server to configure.
+    /// Gets or sets a value indicating whether a buyer may choose the site's URL prefix. When off, the prefix is the
+    /// site's name.
     /// </summary>
+    public bool AllowCustomPrefix { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a buyer may make the site answer on host names of their own. Off for new
+    /// sites; an upgrade turns it on where sites were already sold with domains.
+    /// </summary>
+    public bool AllowCustomDomains { get; set; }
+
+    /// <summary>
+    /// Gets or sets the URL prefixes no sold site may take. Null means <see cref="DefaultReservedPrefixes"/>.
+    /// </summary>
+    public string[] ReservedPrefixes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the host names no sold site may take, such as the operator's own. The host the settings were saved
+    /// from and the default tenant's hosts are always reserved too.
+    /// </summary>
+    public string[] ReservedHosts { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the domain under which each sold site gets its own host, <c>{name}.{BaseDomain}</c>, when buyers may
+    /// not name their own. Empty means sold sites answer on a prefix.
+    /// </summary>
+    public string BaseDomain { get; set; }
+
     public string GetDatabaseProviderOrDefault()
         => string.IsNullOrWhiteSpace(DatabaseProvider) ? DefaultDatabaseProvider : DatabaseProvider.Trim();
 
     /// <summary>
-    /// The provider used when the operator has configured none. It needs no connection string and keeps
-    /// each site's data in its own file, so selling a site works before anything is configured.
+    /// Builds the rules a purchase of a plan is held to.
     /// </summary>
+    /// <param name="planRecipeName">The recipe the plan names.</param>
+    /// <param name="adminPrefix">The admin URL prefix.</param>
+    /// <param name="hostNames">Host names that are always reserved, such as the default tenant's and the operator's.</param>
+    /// <returns>The rules.</returns>
+    public TenantPurchaseRules ToRules(string planRecipeName, string adminPrefix, IEnumerable<string> hostNames)
+        => new()
+        {
+            PlanRecipeName = planRecipeName,
+            AllowCustomPrefix = AllowCustomPrefix,
+            AllowCustomDomains = AllowCustomDomains,
+            ReservedPrefixes = ReservedPrefixes ?? DefaultReservedPrefixes,
+            ReservedHosts = (ReservedHosts ?? []).Concat(hostNames ?? []).ToArray(),
+            BaseDomain = BaseDomain,
+            AdminPrefix = adminPrefix,
+        };
+
     public const string DefaultDatabaseProvider = "Sqlite";
 }

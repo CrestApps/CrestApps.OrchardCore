@@ -190,18 +190,8 @@ public sealed class TenantProvisioningCheckoutHandler : CheckoutHandlerBase
 
         await _jobStore.CreateAsync(job);
 
-        if (subscription is not null)
-        {
-            // The site exists for as long as the subscription does, so the agreement carries an entitlement
-            // naming it. That is what lets the site be suspended when the customer stops paying.
-            subscription.Entitlements.Add(new SubscriptionEntitlement
-            {
-                Kind = SubscriptionConstants.EntitlementKinds.Tenant,
-                Value = info.TenantName,
-            });
-
-            await _subscriptionManager.UpdateAsync(subscription);
-        }
+        // The tenant entitlement is added by the provisioning job once the site exists, naming that job, so a name that
+        // turns out to be taken never gives this subscription power over the tenant that already had it.
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

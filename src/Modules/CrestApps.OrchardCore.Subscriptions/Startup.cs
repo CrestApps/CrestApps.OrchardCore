@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
@@ -241,7 +242,11 @@ public sealed class TenantProvisioningStartup : StartupBase
 
         services.AddScoped<ITenantProvisioningJobStore, TenantProvisioningJobStore>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+        services.AddScoped<ITenantPurchaseRulesProvider, TenantPurchaseRulesProvider>();
         services.AddScoped<ICheckoutHandler, TenantProvisioningCheckoutHandler>();
+
+        // A purchase saved before a rule existed, or edited around the step, is checked again before it is paid for.
+        services.AddScoped<ICheckoutPaymentGate, TenantProvisioningPaymentGate>();
         services.AddDisplayDriver<CheckoutFlow, TenantProvisioningStepDisplayDriver>();
 
         // A site that keeps serving after the customer stops paying costs the owner money indefinitely, so

@@ -15,32 +15,33 @@
     <span class="hint">@T["What visitors see. You can change this at any time."]</span>
 </div>
 
-<div class="row">
-    <div class="col-md-6 mb-3">
-        <label asp-for="Prefix" class="form-label">@T["URL prefix"]</label>
-        <input asp-for="Prefix" class="form-control" autocomplete="off" />
-        <span asp-validation-for="Prefix"></span>
-    </div>
-    <div class="col-md-6 mb-3">
-        <label asp-for="Domains" class="form-label">@T["Custom domains"]</label>
-        <input asp-for="Domains" class="form-control" autocomplete="off" placeholder="@T["example.com, www.example.com"]" />
-        <span asp-validation-for="Domains"></span>
-        <span class="hint">@T["Optional, separated by commas."]</span>
-    </div>
-</div>
-
-@if (Model.Recipes.Count > 1)
+@if (Model.AllowCustomPrefix || Model.AllowCustomDomains)
 {
-    <div class="mb-3">
-        <label asp-for="RecipeName" class="form-label">@T["Site template"]</label>
-        <select asp-for="RecipeName" class="form-select">
-            @foreach (var recipe in Model.Recipes)
-            {
-                <option value="@recipe.Name" selected="@(recipe.Name == Model.RecipeName)">@recipe.DisplayName</option>
-            }
-        </select>
-        <span asp-validation-for="RecipeName"></span>
+    <div class="row">
+        @if (Model.AllowCustomPrefix)
+        {
+            <div class="col-md-6 mb-3">
+                <label asp-for="Prefix" class="form-label">@T["URL prefix"]</label>
+                <input asp-for="Prefix" class="form-control" autocomplete="off" />
+                <span asp-validation-for="Prefix"></span>
+                <span class="hint">@T["Leave blank to use the site name."]</span>
+            </div>
+        }
+        @if (Model.AllowCustomDomains)
+        {
+            <div class="col-md-6 mb-3">
+                <label asp-for="Domains" class="form-label">@T["Custom domains"]</label>
+                <input asp-for="Domains" class="form-control" autocomplete="off" placeholder="@T["example.com, www.example.com"]" />
+                <span asp-validation-for="Domains"></span>
+                <span class="hint">@T["Optional, separated by commas."]</span>
+            </div>
+        }
     </div>
+}
+else
+{
+    <span asp-validation-for="Prefix"></span>
+    <span asp-validation-for="Domains"></span>
 }
 
 <hr />

@@ -65,7 +65,13 @@ public sealed class FeatureProfilesTenantOnboardingPartDisplayDriver : ContentPa
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!string.IsNullOrEmpty(model.FeatureProfile))
+        // A sold site with no feature profile lets its buyer enable any feature the host has, including the ones that
+        // reach the host itself, so the profile is required.
+        if (string.IsNullOrEmpty(model.FeatureProfile))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.FeatureProfile), S["Choose the feature profile that limits what the buyer's site may enable."]);
+        }
+        else
         {
             var profiles = await _featureProfilesService.GetFeatureProfilesAsync();
 

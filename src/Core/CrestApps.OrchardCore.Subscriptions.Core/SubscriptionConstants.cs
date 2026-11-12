@@ -95,6 +95,18 @@ public static class SubscriptionConstants
     }
 
     /// <summary>
+    /// Keys of a subscription entitlement's data.
+    /// </summary>
+    public static class EntitlementData
+    {
+        /// <summary>
+        /// The provisioning job that created the tenant a tenant entitlement names. The entitlement acts only on a tenant
+        /// that job created, so it can never suspend another customer's site that happens to have the same name.
+        /// </summary>
+        public const string ProvisioningJobId = "ProvisioningJobId";
+    }
+
+    /// <summary>
     /// The content type name for the subscription summary dashboard widget.
     /// </summary>
     public const string SubscriptionSummaryWidgetType = "SubscriptionSummaryWidget";

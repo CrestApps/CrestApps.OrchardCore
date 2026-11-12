@@ -2,8 +2,12 @@ using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -135,22 +139,108 @@ public sealed class TenantProvisioningServiceTests
         Assert.Contains("connection string", store.Jobs.First().LastError);
     }
 
+    /// <summary>
+    /// SEC-C18: a sold site with no feature profile would let its buyer enable any feature the host has, including the
+    /// ones that reach the host itself, so provisioning refuses it.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WithoutAFeatureProfile_FailsAndCreatesNothing()
+    {
+        var (service, setup, store) = CreateService(new SubscriptionOnboardingSettings(), featureProfile: null);
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(TenantProvisioningStatus.Succeeded, status);
+        Assert.Null(setup.Captured);
+        Assert.Contains("feature profile", store.Jobs.First().LastError, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// SEC-C2: a recipe that is not available is a failure, never a quiet fall back to whatever recipe comes first.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WithARecipeThatIsNotAvailable_FailsInsteadOfUsingAnother()
+    {
+        var (service, setup, store) = CreateService(new SubscriptionOnboardingSettings(), recipeName: "SaaS");
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(TenantProvisioningStatus.Succeeded, status);
+        Assert.Null(setup.Captured);
+    }
+
+    /// <summary>
+    /// SEC-C2: a job saved before the rules existed is checked again before the site is set up.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WithAReservedPrefix_FailsAndCreatesNothing()
+    {
+        var (service, setup, _) = CreateService(new SubscriptionOnboardingSettings { AllowCustomPrefix = true }, prefix: "admin");
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(TenantProvisioningStatus.Succeeded, status);
+        Assert.Null(setup.Captured);
+    }
+
+    /// <summary>
+    /// SEC-C16: the subscription gains the tenant entitlement only once the site exists, and it names the job that
+    /// created it.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WhenTheSiteIsCreated_GrantsAnEntitlementNamingTheJob()
+    {
+        var subscription = new Subscription { ItemId = "sub-1" };
+        var (service, _, _) = CreateService(new SubscriptionOnboardingSettings(), subscription: subscription);
+
+        await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        var entitlement = Assert.Single(subscription.Entitlements);
+        Assert.Equal(SubscriptionConstants.EntitlementKinds.Tenant, entitlement.Kind);
+        Assert.Equal("qasite1", entitlement.Value);
+        Assert.Equal("job-1", entitlement.Data[SubscriptionConstants.EntitlementData.ProvisioningJobId]);
+    }
+
+    /// <summary>
+    /// SEC-C16: a failed job grants nothing, so revoking the subscription can never touch the tenant that already had
+    /// the name.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WhenTheNameIsTaken_GrantsNoEntitlement()
+    {
+        var running = new ShellSettings { Name = "qasite1" };
+        running.AsRunning();
+        var subscription = new Subscription { ItemId = "sub-1" };
+
+        var (service, _, _) = CreateService(new SubscriptionOnboardingSettings(), existing: running, subscription: subscription);
+
+        await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.Empty(subscription.Entitlements);
+    }
+
     private static (TenantProvisioningService Service, RecordingSetupService Setup, InMemoryTenantProvisioningJobStore Store) CreateService(
         SubscriptionOnboardingSettings onboarding,
-        ShellSettings existing = null)
+        ShellSettings existing = null,
+        string featureProfile = "sold-tenant",
+        string recipeName = "Blog",
+        string prefix = "qasite1",
+        Subscription subscription = null)
     {
         var store = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
         {
             ItemId = "job-1",
             TenantName = "qasite1",
             TenantTitle = "QA Customer Site",
-            Prefix = "qasite1",
+            Prefix = prefix,
             AdminUsername = "siteadmin",
             AdminEmail = "siteadmin@example.com",
             ProtectedAdminPassword = _protection
                 .CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep)
                 .Protect("Password!1"),
-            RecipeName = "Blog",
+            RecipeName = recipeName,
+            FeatureProfile = featureProfile,
+            SubscriptionId = subscription?.ItemId,
             Status = TenantProvisioningStatus.Pending,
             CreatedUtc = _now,
         });
@@ -164,9 +254,11 @@ public sealed class TenantProvisioningServiceTests
 
         var setup = new RecordingSetupService();
 
+        var siteService = SiteServiceFactory.Create(onboarding);
+
         var service = new TenantProvisioningService(
             store,
-            SiteServiceFactory.Create(onboarding),
+            siteService,
             shellHost.Object,
             settingsManager.Object,
             setup,
@@ -175,7 +267,9 @@ public sealed class TenantProvisioningServiceTests
             new ServiceCollection().BuildServiceProvider(),
             CreateSession(),
             new ProvisioningClock(_now),
-            NullLogger<TenantProvisioningService>.Instance);
+            NullLogger<TenantProvisioningService>.Instance,
+            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions())),
+            CreateSubscriptionManager(subscription));
 
         return (service, setup, store);
     }
@@ -200,6 +294,15 @@ public sealed class TenantProvisioningServiceTests
 
         public DateTimeOffset ConvertToTimeZone(DateTimeOffset dateTimeOffset, ITimeZone timeZone)
             => _inner.ConvertToTimeZone(dateTimeOffset, timeZone);
+    }
+
+    private static ISubscriptionManager CreateSubscriptionManager(Subscription subscription)
+    {
+        var manager = new Mock<ISubscriptionManager>();
+        manager.Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(subscription);
+        manager.Setup(m => m.GetByCheckoutSessionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(subscription is null ? [] : [subscription]);
+
+        return manager.Object;
     }
 
     private static ISession CreateSession()

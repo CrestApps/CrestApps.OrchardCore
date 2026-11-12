@@ -32,4 +32,14 @@ public class SubscriptionOnboardingSettingsViewModel
     /// Gets or sets the database providers this installation can create a site on.
     /// </summary>
     public IEnumerable<SelectListItem> DatabaseProviders { get; set; }
+
+    public bool AllowCustomPrefix { get; set; }
+
+    public bool AllowCustomDomains { get; set; }
+
+    public string ReservedPrefixes { get; set; }
+
+    public string ReservedHosts { get; set; }
+
+    public string BaseDomain { get; set; }
 }

@@ -22,6 +22,53 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <div class="ocat-end ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowCustomPrefix" />
+            <label class="form-check-label" asp-for="AllowCustomPrefix">@T["Buyers may choose the URL prefix"]</label>
+            <span class="hint dashed">@T["When off, a sold site answers on a prefix equal to its name."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowCustomDomains" />
+            <label class="form-check-label" asp-for="AllowCustomDomains">@T["Buyers may use their own domains"]</label>
+            <span class="hint dashed">@T["Only turn this on if you check who controls a domain: a site answers every request to the domains it names."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ReservedPrefixes">
+    <label asp-for="ReservedPrefixes" class="ocat-label">@T["Reserved prefixes"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReservedPrefixes" class="form-control" />
+        <span asp-validation-for="ReservedPrefixes"></span>
+        <span class="hint">@T["URL prefixes no sold site may take, separated by commas. The admin prefix is always reserved."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ReservedHosts">
+    <label asp-for="ReservedHosts" class="ocat-label">@T["Reserved host names"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReservedHosts" class="form-control" />
+        <span asp-validation-for="ReservedHosts"></span>
+        <span class="hint">@T["Host names no sold site may take, such as your own, separated by commas. This site's host names are always reserved."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="BaseDomain">
+    <label asp-for="BaseDomain" class="ocat-label">@T["Base domain"]</label>
+    <div class="ocat-end">
+        <input asp-for="BaseDomain" class="form-control" placeholder="sites.example.com" />
+        <span asp-validation-for="BaseDomain"></span>
+        <span class="hint">@T["Optional. Each sold site answers on its own host, the site name followed by this domain, instead of a prefix. Point a wildcard DNS record at this site first."]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="Schema">
     <label asp-for="Schema" class="ocat-label">@T["Schema"]</label>
     <div class="ocat-end">
