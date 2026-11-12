@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.Modules;
 
@@ -120,7 +121,7 @@ internal static class CouponAdminApiEndpoints
         var model = ToModel(request);
         var modelState = new ModelStateDictionary();
 
-        ValidateKind(request, modelState);
+        ValidateKind(request, modelState, editor.S);
         await editor.ValidateAsync(model, existingItemId: null, modelState);
 
         if (!modelState.IsValid)
@@ -161,7 +162,7 @@ internal static class CouponAdminApiEndpoints
         var model = ToModel(request);
         var modelState = new ModelStateDictionary();
 
-        ValidateKind(request, modelState);
+        ValidateKind(request, modelState, editor.S);
         await editor.ValidateAsync(model, coupon.ItemId, modelState);
 
         if (!modelState.IsValid)
@@ -248,16 +249,16 @@ internal static class CouponAdminApiEndpoints
     private static List<string> Clean(IEnumerable<string> ids)
         => ids?.Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id.Trim()).Distinct(StringComparer.Ordinal).ToList() ?? [];
 
-    private static void ValidateKind(ApiCouponRequest request, ModelStateDictionary modelState)
+    private static void ValidateKind(ApiCouponRequest request, ModelStateDictionary modelState, IStringLocalizer S)
     {
         if (!string.IsNullOrEmpty(request?.Kind) && ParseKnownKind(request.Kind) is null)
         {
-            modelState.AddModelError("Kind", "Use percentage, fixedAmount, freeShipping or buyXGetY.");
+            modelState.AddModelError("Kind", S["Use percentage, fixedAmount, freeShipping or buyXGetY."]);
         }
 
         if (!string.IsNullOrEmpty(request?.Method) && request.Method.ToLowerInvariant() is not ("code" or "automatic"))
         {
-            modelState.AddModelError("Method", "Use code or automatic.");
+            modelState.AddModelError("Method", S["Use code or automatic."]);
         }
     }
 

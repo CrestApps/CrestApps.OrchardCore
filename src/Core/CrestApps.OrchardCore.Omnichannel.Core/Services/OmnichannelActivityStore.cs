@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -145,8 +146,8 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
         }
 
         // Add pagination to the main query.
-        context.SqlBuilder.Skip(skip.ToString());
-        context.SqlBuilder.Take(take.ToString());
+        context.SqlBuilder.Skip(skip.ToString(CultureInfo.InvariantCulture));
+        context.SqlBuilder.Take(take.ToString(CultureInfo.InvariantCulture));
 
         var documentIds = (await connection.QueryAsync<long>(
             new CommandDefinition(context.SqlBuilder.ToSqlString(), context.Parameters, cancellationToken: cancellationToken)))
@@ -196,7 +197,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
 
         if (filter.Limit.HasValue && filter.Limit.Value > 0)
         {
-            context.SqlBuilder.Take(filter.Limit.Value.ToString());
+            context.SqlBuilder.Take(filter.Limit.Value.ToString(CultureInfo.InvariantCulture));
         }
 
         await using var connection = _dbConnectionAccessor.CreateConnection();

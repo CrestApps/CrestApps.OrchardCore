@@ -1,3 +1,4 @@
+using System.Globalization;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
@@ -30,8 +31,8 @@ public sealed class ContentTransferPermissions
         // The description is the template's text with a name filled in at run time, so it cannot be extracted.
 #pragma warning disable OCLOC103 // The value of the localization source is not a compile-time constant
         permission = new Permission(
-            string.Format(template.Name, contentType),
-            LocalizationSource.Create<ContentTransferPermissions>(string.Format(template.Description?.Value, contentType)),
+            string.Format(CultureInfo.InvariantCulture, template.Name, contentType),
+            LocalizationSource.Create<ContentTransferPermissions>(string.Format(CultureInfo.CurrentCulture, template.Description?.Value, contentType)),
             (template.ImpliedBy ?? []).Select(t => CreateDynamicPermission(t, contentType)
             )
         );
