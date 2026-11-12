@@ -91,6 +91,11 @@ internal sealed class LeadListQuery : IQuery<ContentItem>
         => _query.GetTypeAlias(t);
 
     /// <inheritdoc/>
+    public IQuery<ContentItem> SkipDeduplication()
+        => _query.SkipDeduplication();
+
+    /// <inheritdoc/>
+    [Obsolete("Use SkipDeduplication() instead, as this method doesn't remove duplicates but skips removing them.")]
     public IQuery<ContentItem> NoDuplicates()
-        => _query.NoDuplicates();
+        => _query.SkipDeduplication();
 }

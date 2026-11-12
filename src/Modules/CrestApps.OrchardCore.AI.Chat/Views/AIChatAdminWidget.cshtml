@@ -16,6 +16,7 @@
 
 @inject ShellSettings ShellSettings
 @inject IAIDeploymentManager AIDeploymentManager
+@inject CrestApps.OrchardCore.AI.Chat.Services.AIChatUIConfiguration ChatUIConfiguration
 @inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
 @{
     // Model output is rendered as Markdown here; images may load only from the site and the configured sources.
@@ -26,6 +27,8 @@
     IEnumerable<AIChatSessionEntry> sessions = Model.Sessions;
     var maxSessions = (int)Model.MaxSessions;
     var primaryColor = (string)Model.PrimaryColor;
+    var sendPageContext = Model.SendPageContext is bool send ? send : true;
+    IEnumerable<CrestApps.Core.AI.Models.ChatClientContextEntry> pageContext = Model.PageContext ?? Array.Empty<CrestApps.Core.AI.Models.ChatClientContextEntry>();
 
     var hubLink = Html.SignalRHubUrl<AIChatHub>();
     var showHistory = maxSessions > 0;
@@ -282,7 +285,7 @@
 
 @{
     var widgetStateName = storagePrefix + "-ai-admin-widget";
-    var widgetConfigJson = JsonSerializer.Serialize(new
+    var widgetConfigJson = ChatUIConfiguration.SerializeWidgetConfig(new
     {
         shellSelector = $"#{baseId}_Shell",
         widgetContainerSelector = $"#{widgetContainerId}",
@@ -306,6 +309,9 @@
             sendButtonElementSelector = $"#{buttonHtmlId}",
             placeholderElementSelector = $"#{placeholderHtmlId}",
             autoCreateSession = false,
+            // AG-UI: the page title and address and the selected text go with each message, plus the entries the
+            // page context providers added for this page (registered below).
+            sendPageContext,
             initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
             assistantLabel = assistantDisplay.GetAssistantLabel(T["Assistant"].Value),
             assistantAvatarUrl = assistantDisplay.AvatarUrl,
@@ -350,9 +356,27 @@
                 minHeight = 320,
             },
         },
-    }, JOptions.CamelCase);
+    });
 }
 <script asp-name="AIChatWidgetApp" at="Foot"></script>
+@if (sendPageContext && pageContext.Any())
+{
+    var pageContextJson = JsonSerializer.Serialize(pageContext.Select(entry => new { description = entry.Description, value = entry.Value }));
+
+    @* What the page is about (the content item being edited, the site), sent with each message. Registered on the shared
+       AG-UI registry whether or not ai-chat.js has loaded yet. *@
+    <script at="Foot">
+        (function (entries) {
+            var registry = window.crestAppsAGUI = window.crestAppsAGUI || {};
+
+            if (typeof registry.registerContextProvider === 'function') {
+                registry.registerContextProvider(function () { return entries; });
+            } else {
+                (registry._contextProviders = registry._contextProviders || []).push(function () { return entries; });
+            }
+        })(@Html.Raw(pageContextJson));
+    </script>
+}
 <script at="Foot">
     // A dragged or restored assistant button keeps the position it was left at, which can sit over Orchard Core's bottom
     // action bar and its Save and Cancel buttons. Move it back above the bar whenever it lands there.

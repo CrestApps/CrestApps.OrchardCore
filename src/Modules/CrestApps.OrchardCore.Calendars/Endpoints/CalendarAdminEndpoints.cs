@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Admin;
 using OrchardCore.Localization;
+using OrchardCore.Users;
 using Calendar = CrestApps.OrchardCore.Calendars.Models.Calendar;
 
 namespace CrestApps.OrchardCore.Calendars.Endpoints;
@@ -249,18 +251,23 @@ internal static class CalendarAdminEndpoints
         return Results.Ok(new { id = result.Value.ItemId });
     }
 
-    private static async Task<IResult> SearchUsersAsync(
+    // The pickers on the calendar admin pages call this. A minimal API doesn't run the admin filter, so the endpoint
+    // checks Access admin panel itself. Emails are matched and shown only to someone who may view users, as the shared
+    // user search does.
+    internal static async Task<IResult> SearchUsersAsync(
         string query,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
         CalendarUserLookup userLookup)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, CalendarPermissions.AccessCalendars))
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, CalendarPermissions.AccessCalendars)
+            || !await authorizationService.AuthorizeAsync(httpContext.User, AdminPermissions.AccessAdminPanel))
         {
             return Results.Forbid();
         }
 
-        var users = await userLookup.SearchAsync(query);
+        var includeEmails = await authorizationService.AuthorizeAsync(httpContext.User, UsersPermissions.ViewUsers);
+        var users = await userLookup.SearchAsync(query, includeEmails);
 
         return Results.Ok(users.Select(user => new { value = user.Value, text = user.Text }));
     }

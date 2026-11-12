@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat.AGUI;
 using CrestApps.Core.AI.Chat.Privacy;
 using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
@@ -19,6 +20,7 @@ using CrestApps.OrchardCore.AI.Chat.Reports;
 using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -26,6 +28,7 @@ using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -59,6 +62,7 @@ public sealed class Startup : StartupBase
             .AddPermissionProvider<ChatSessionPermissionProvider>()
             .AddPermissionProvider<ChatAnalyticsPermissionProvider>()
             .AddScoped<AIChatProfileAccessEvaluator>()
+            .AddScoped<AIChatUIConfiguration>()
             .AddSingleton<IAIProfileAdminMenuCacheService, DefaultAIProfileAdminMenuCacheService>()
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
@@ -149,10 +153,47 @@ public sealed class AdminWidgetStartup : StartupBase
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
         services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageAIProfiles);
 
+        services.AddScoped<IAIChatPageContextProvider, SitePageContextProvider>();
+
         services.Configure<MvcOptions>(options =>
         {
             options.Filters.Add<AIChatAdminWidgetFilter>();
         });
+    }
+}
+
+/// <summary>
+/// Tells the admin chat widget which content item the user is editing, when Orchard Core's Contents feature is on.
+/// </summary>
+[Feature(AIConstants.Feature.ChatAdminWidget)]
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
+public sealed class AdminWidgetContentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IAIChatPageContextProvider, ContentItemPageContextProvider>();
+    }
+}
+
+/// <summary>
+/// Maps the AG-UI endpoint, through which any AG-UI client runs the AI chat profiles over HTTP and Server-Sent
+/// Events, when the AI Chat API is on.
+/// </summary>
+[RequireFeatures(AIConstants.Feature.ChatApi)]
+public sealed class AGUIEndpointStartup : StartupBase
+{
+    /// <summary>
+    /// The route of the AG-UI endpoint, next to the other AI APIs.
+    /// </summary>
+    public const string RoutePattern = "api/ai/v1/agui";
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        // The hub authorizes the profile and the session; the endpoint only needs an authenticated API caller (an AI API
+        // key or a bearer token), and answers others with 401. It reads JSON only, which a cross-site page cannot send
+        // without the browser asking first, so it needs no antiforgery token. The chat UI and the widgets use the hub.
+        routes.MapAGUIChat<AIChatHub, CrestApps.OrchardCore.AI.Chat.Hubs.IAIChatHubClient>(RoutePattern)
+            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes });
     }
 }
 

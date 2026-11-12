@@ -556,7 +556,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
                 .Take(ReindexBatchSize)
                 .ListAsync();
 
-            if (!batch.Any())
+            if (batch.Count == 0)
             {
                 break;
             }

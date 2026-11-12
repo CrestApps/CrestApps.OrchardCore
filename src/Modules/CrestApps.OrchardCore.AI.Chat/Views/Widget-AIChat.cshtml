@@ -16,6 +16,7 @@
 @using CrestApps.Core.AI.Profiles
 @using CrestApps.OrchardCore.AI.Chat.Core.Services
 
+@inject CrestApps.OrchardCore.AI.Chat.Services.AIChatUIConfiguration ChatUIConfiguration
 @inject IAIProfileStore ProfileCatalog
 @inject AIChatProfileAccessEvaluator AIChatProfileAccessEvaluator
 @inject ShellSettings ShellSettings
@@ -348,7 +349,7 @@
 
 @{
     var widgetStateName = storagePrefix + "-ai-admin-widget";
-    var widgetConfigJson = JsonSerializer.Serialize(new
+    var widgetConfigJson = ChatUIConfiguration.SerializeWidgetConfig(new
     {
         shellSelector = $"#{baseId}_Shell",
         widgetContainerSelector = $"#{widgetContainerId}",
@@ -416,7 +417,7 @@
                 minHeight = 320,
             },
         },
-    }, JOptions.CamelCase);
+    });
 }
 <div id="@($"{baseId}_Config")"
      class="d-none"

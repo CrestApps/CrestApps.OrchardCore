@@ -56,7 +56,7 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
         // A session hands back the very instance it tracks, so a stored copy that is not this instance means the
         // session does not track this one. Copies an earlier defect left behind are each still tracked in their own
         // right, which is why every stored copy is checked rather than the first.
-        if (stored.Any() && !stored.Any(copy => ReferenceEquals(copy, record)))
+        if (stored.Count > 0 && !stored.Any(copy => ReferenceEquals(copy, record)))
         {
             var index = await Session.QueryIndex<InteractionIndex>(
                 index => index.ItemId == record.ItemId,

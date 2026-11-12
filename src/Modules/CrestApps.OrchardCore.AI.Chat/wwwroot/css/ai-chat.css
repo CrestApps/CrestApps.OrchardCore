@@ -1,3 +1,98 @@
+/* AG-UI: what the assistant did while answering (tool calls, reasoning, approvals), above the answer. */
+.ai-chat-agui-activity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.ai-chat-agui-tool,
+.ai-chat-agui-reasoning {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.375rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.ai-chat-agui-tool > details > summary,
+.ai-chat-agui-tool-summary,
+.ai-chat-agui-reasoning > summary {
+    padding: 0.25rem 0.5rem;
+    cursor: default;
+    list-style-position: inside;
+}
+
+.ai-chat-agui-tool > details > summary,
+.ai-chat-agui-reasoning > summary {
+    cursor: pointer;
+}
+
+.ai-chat-agui-tool-name {
+    color: var(--bs-body-color, #212529);
+}
+
+.ai-chat-agui-tool-state {
+    margin-inline-start: 0.25rem;
+    font-style: italic;
+}
+
+.ai-chat-agui-tool-completed .fa-check,
+.ai-chat-agui-tool-approved .fa-check {
+    color: var(--bs-success, #198754);
+}
+
+.ai-chat-agui-tool-rejected .fa-ban {
+    color: var(--bs-danger, #dc3545);
+}
+
+.ai-chat-agui-tool-awaitingApproval {
+    border-color: var(--bs-warning, #ffc107);
+}
+
+.ai-chat-agui-tool-awaitingApproval .fa-hand {
+    color: var(--bs-warning, #ffc107);
+}
+
+.ai-chat-agui-tool-section {
+    padding: 0 0.5rem 0.375rem;
+}
+
+.ai-chat-agui-tool-section-label {
+    font-weight: 600;
+}
+
+.ai-chat-agui-tool-section pre,
+.ai-chat-agui-reasoning-text {
+    max-height: 12rem;
+    overflow: auto;
+    margin: 0;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.25rem;
+    background: var(--bs-body-bg, #fff);
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.75rem;
+}
+
+.ai-chat-agui-reasoning-text {
+    margin: 0 0.5rem 0.375rem;
+}
+
+.ai-chat-agui-approval {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.5rem;
+    border-top: 1px solid var(--bs-border-color, #dee2e6);
+    color: var(--bs-body-color, #212529);
+}
+
+.ai-chat-agui-approval span {
+    margin-inline-end: auto;
+}
+
 .ai-chat-message-heading {
     font-size: 0.75rem;
     margin-bottom: 0.35rem;
@@ -592,3 +687,4 @@ img.medium-zoom-image--opened {
         animation: none;
     }
 }
+

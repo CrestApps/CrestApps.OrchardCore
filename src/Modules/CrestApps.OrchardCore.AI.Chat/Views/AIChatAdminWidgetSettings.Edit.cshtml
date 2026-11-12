@@ -40,6 +40,16 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" data-ai-chat-widget-options="true">
+    <div class="ocat-end ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="SendPageContext" />
+            <label class="form-check-label" asp-for="SendPageContext">@T["Tell the AI which page the user is on"]</label>
+            <span class="hint dashed">@T["With each message, the widget sends the page title and address, the text the user selected, the content item being edited and the site. The AI reads it as data, never as instructions."]</span>
+        </div>
+    </div>
+</div>
+
 <script asp-name="AIChatAdminWidgetSettings.Toggle" at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const profileSelect = document.querySelector('[data-ai-chat-widget-profile-select="true"]');

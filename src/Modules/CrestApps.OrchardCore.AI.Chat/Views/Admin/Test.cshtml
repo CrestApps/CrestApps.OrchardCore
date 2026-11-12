@@ -1,6 +1,7 @@
 ﻿@using System.Text.Json
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Chat.ViewModels
+@inject CrestApps.OrchardCore.AI.Chat.Services.AIChatUIConfiguration ChatUIConfiguration
 
 @model TestProfileViewModel
 @inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
@@ -16,7 +17,7 @@
     var userPromptHtmlId = $"{baseId}_UserPrompt";
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
     var placeholderHtmlId = $"{baseId}_Placeholder";
-    var chatConfigJson = JsonSerializer.Serialize(new
+    var chatConfigJson = ChatUIConfiguration.SerializeChatConfig(new
     {
         signalRHubUrl = Html.SignalRHubUrl<AIChatHub>(),
         appElementSelector = $"#{chatAppHtmlId}",
@@ -30,7 +31,7 @@
         chatMode = ChatMode.TextInput.ToString(),
         isOrchestratorAvailable = true,
         singleResponseMode = true,
-    }, JOptions.CamelCase);
+    });
 }
 
 <zone Name="Title">
