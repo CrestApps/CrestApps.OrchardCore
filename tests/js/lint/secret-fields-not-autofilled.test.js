@@ -17,8 +17,10 @@ function views(directory) {
 }
 
 describe('secret fields', () => {
-    const fields = views('src').flatMap(path =>
-        [...readFileSync(path, 'utf8').matchAll(/<input\b[^>]*\btype="password"[^>]*>/gs)].map(match => ({ path, tag: match[0] })));
+    // Each view is read once, here, for every check below.
+    const sources = views('src').map(path => ({ path, text: readFileSync(path, 'utf8') }));
+    const fields = sources.flatMap(({ path, text }) =>
+        [...text.matchAll(/<input\b[^>]*\btype="password"[^>]*>/gs)].map(match => ({ path, tag: match[0] })));
 
     it('are found, so the check below is not passing on nothing', () => {
         expect(fields.length).toBeGreaterThan(20);
@@ -39,8 +41,8 @@ describe('secret fields', () => {
     const notSecret = new Set(['LivePublishableKey', 'TestPublishableKey', 'StickyKey', 'Treatment.CallbackDtmfKey']);
 
     it('bound to a secret-named property are never plain text', () => {
-        const plain = views('src').flatMap(path =>
-            [...readFileSync(path, 'utf8').matchAll(/<input\b[^>]*\basp-for="([\w.]*(?:Key|Secret|Token|Password))"[^>]*>/gs)]
+        const plain = sources.flatMap(({ path, text }) =>
+            [...text.matchAll(/<input\b[^>]*\basp-for="([\w.]*(?:Key|Secret|Token|Password))"[^>]*>/gs)]
                 .filter(match => !notSecret.has(match[1]))
                 .filter(match => !/\btype="(password|hidden|checkbox)"/.test(match[0]) && !/\bsecret-input\b/.test(match[0]))
                 .map(match => `${path}: ${match[1]}`));
