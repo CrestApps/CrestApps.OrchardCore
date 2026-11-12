@@ -13,6 +13,7 @@ internal sealed class WorkforcePermissionsProvider : IPermissionProvider
         WorkforcePermissions.ViewWorkers,
         WorkforcePermissions.ViewSensitiveWorkerData,
         WorkforcePermissions.ManageActivityCodes,
+        WorkforcePermissions.ApproveOwnRecords,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()

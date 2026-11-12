@@ -63,7 +63,7 @@ The module registers the `Workforce` calendar type with `ManagedByCode()` and cr
 | `IWorkerManager` | `ICatalogManager<WorkerProfile>` plus `FindByUserIdAsync`, `FindByEmployeeNumberAsync`, `SearchAsync(WorkerQuery, skip, take)` (search, status, a team with its sub-teams, and a set of teams such as a manager's scope) and `ListByTeamAsync(teamId, date)` (members that day). Validation refuses a blank name, a duplicate employee number or user, an unknown team, a bad time zone, a membership that ends before it starts, and fewest hours above most hours. |
 | `ITeamManager` | From the [Teams](./teams.md) module: `ICatalogManager<Team>` plus `ListTreeAsync` (each team followed by its sub-teams, with its depth), `GetSubtreeIdsAsync`, `GetAncestorsAsync` and `GetDeletionBlockersAsync`. |
 | `IActivityCodeManager` | `ICatalogManager<ActivityCode>` plus `GetEnabledAsync`. |
-| `IWorkforceScopeService` | `GetManagedScopeAsync(user)` returns `WorkforceScope.Everything` for **Manage the whole workforce**, otherwise the teams where the user's worker is a `Manager` or `Scheduler` today, with their sub-teams. `ManagesWorkerAsync(user, worker)` checks that a worker belongs, today, to a team in that scope. The scope is worked out once per request. |
+| `IWorkforceScopeService` | `GetManagedScopeAsync(user)` returns `WorkforceScope.Everything` for **Manage the whole workforce**, otherwise the teams where the user's worker is a `Manager` or `Scheduler` today, with their sub-teams. `ManagesWorkerAsync(user, worker)` checks that a worker belongs, today, to a team in that scope. `CanDecideForWorkerAsync(user, workerId)` refuses the caller's own worker record unless they hold **Manage the whole workforce** or **Approve own timesheets, punches, time off, trades and claims** (`ApproveOwnRecords`); every timesheet, punch, attendance, time-off, shift-trade and open-shift decision, and the matching API endpoints, check it besides the scope. The scope is worked out once per request. |
 
 ## Calendar access by team
 
@@ -357,6 +357,7 @@ The **Workforce API** feature maps `api/workforce/v1` with the API authenticatio
 | `ApprovePredictabilityPay` (Approve predictability pay) | Approving and waiving the predictability pay of the teams in one's scope. |
 | `ManageTimeClockPolicies` (Manage time clock policies) | Time clock policies, pay periods, pay codes and kiosks. |
 | `ApproveTimesheets` (Approve timesheets) | Approving timesheets, attendance exceptions and punch corrections of the teams the user manages. |
+| `ApproveOwnWorkforceRecords` (Approve own timesheets, punches, time off, trades and claims) | Deciding on one's own records. Without it (or Manage the whole workforce) a manager can't approve or edit their own timesheet, add or correct their own punches, decide their own time off or attendance exceptions, decide a trade they are part of, or give themselves an open shift, even in a team they manage; bulk approvals skip their own rows. Given to Administrator. |
 | `EditPunches` (Edit punches) | Adding, changing and removing punches. |
 | `ExportPayroll` (Export payroll) | Locking periods and exporting payroll. |
 | `ViewPayRates` (View pay rates) | Workers' pay rates. |

@@ -116,6 +116,13 @@ public static class WorkforcePermissions
     public static readonly Permission ApproveTimesheets = new("ApproveTimesheets", LocalizationSource.Create("Approve timesheets", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
 
     /// <summary>
+    /// Decide on one's own records: approve one's own timesheet, add or correct one's own punches, and decide one's own
+    /// time off, shift trades and open-shift claims. Without it (or Manage the whole workforce) a manager decides only
+    /// for others.
+    /// </summary>
+    public static readonly Permission ApproveOwnRecords = new("ApproveOwnWorkforceRecords", LocalizationSource.Create("Approve own timesheets, punches, time off, trades and claims", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
     /// Add, change and remove the punches of the workers of the teams the user manages.
     /// </summary>
     public static readonly Permission EditPunches = new("EditPunches", LocalizationSource.Create("Edit punches", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
