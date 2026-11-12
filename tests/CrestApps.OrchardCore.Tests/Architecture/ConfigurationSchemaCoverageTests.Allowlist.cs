@@ -17,7 +17,6 @@ public sealed partial class ConfigurationSchemaCoverageTests
         ["CrestApps.OrchardCore.AI.DataSources.Elasticsearch: CrestApps:Elasticsearch"] = 1,
         ["CrestApps.OrchardCore.AI.DataSources.PostgreSQL: CrestApps:AI:DataSources:PostgreSQL"] = 1,
         ["CrestApps.OrchardCore.AI.DataSources.PostgreSQL: CrestApps:PostgreSQL"] = 1,
-        ["CrestApps.OrchardCore.AI.Documents: CrestApps_AI:ChatSessionDocuments"] = 1,
         ["CrestApps.OrchardCore.AI.FileSources: CrestApps:AI:FileSources"] = 1,
         ["CrestApps.OrchardCore.AI.Mcp: CrestApps:AI:Mcp:FileResources"] = 1,
         ["CrestApps.OrchardCore.AI.Mcp: CrestApps:AI:Mcp:Stdio"] = 1,
