@@ -66,7 +66,7 @@ public sealed class InventoryPaymentGate : ICheckoutPaymentGate
         // What the order still holds is left as it is; only lines whose hold was let go are held again.
         var result = await _inventory.ReserveAsync(order.ItemId, InventoryOrderEventHandler.ToRequests(order), expires, cancellationToken);
 
-        if (result.Shortages.FirstOrDefault() is { } shortage)
+        if (result.Shortages is { Count: > 0 } shortages && shortages[0] is { } shortage)
         {
             context.Refuse(shortage.Available > 0
                 ? S["Only {0} of {1} is left now: your hold on it ran out. Lower the quantity to check out.", shortage.Available, shortage.Item.Title]
