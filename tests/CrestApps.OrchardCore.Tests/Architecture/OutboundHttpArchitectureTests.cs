@@ -38,7 +38,6 @@ public sealed class OutboundHttpArchitectureTests
         ["src/Modules/CrestApps.OrchardCore.DncRegistry/Startup.cs|nameof(CanadaDnclRegistry)"] = "Fixed host: the Canadian DNCL registry.",
         ["src/Modules/CrestApps.OrchardCore.Geo.AzureMaps/Startup.cs|AzureMapsProvider.HttpClientName"] = "Fixed host: atlas.microsoft.com.",
         ["src/Modules/CrestApps.OrchardCore.Geo.GoogleMaps/Startup.cs|GoogleMapsProvider.HttpClientName"] = "Fixed host: maps.googleapis.com.",
-        ["src/Modules/CrestApps.OrchardCore.Geo.Osrm/Startup.cs|OsrmProvider.HttpClientName"] = "Pending SEC-P10b.",
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Sms/Startup.cs|TwilioSmsMediaSender.HttpClientName"] = "Fixed host: api.twilio.com.",
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Startup.cs|MessagingInboundMediaIngestor.HttpClientName"] = "Pending SEC-P10f.",
         ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Startup.cs|nameof(AbstractApiPhoneNumberVerificationProvider)"] = "Fixed host: the AbstractAPI phone validation service.",
