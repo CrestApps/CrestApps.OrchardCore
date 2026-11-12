@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.AgenticCommerce.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
@@ -131,7 +132,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
         if (signed)
         {
-            var verified = Verify(httpContext, body, platformProfile);
+            var verified = await VerifyAsync(httpContext, body, platformProfile);
 
             if (verified is not null)
             {
@@ -198,8 +199,9 @@ public sealed class UcpRequestFilter : IEndpointFilter
         return await next(context);
     }
 
-    // A signed request is checked against the key it names in the platform's profile, and its body against its digest.
-    private static IResult Verify(HttpContext httpContext, byte[] body, JsonObject platformProfile)
+    // A signed request is checked against the key it names in the platform's profile, and its body against its digest;
+    // the signature must cover the request's target and body, be fresh, and not have been used before.
+    private static async Task<IResult> VerifyAsync(HttpContext httpContext, byte[] body, JsonObject platformProfile)
     {
         var request = httpContext.Request;
 
@@ -218,6 +220,19 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
         if (verification.Succeeded)
         {
+            var now = new DateTimeOffset(DateTime.SpecifyKind(httpContext.RequestServices.GetRequiredService<IClock>().UtcNow, DateTimeKind.Utc));
+            var idempotencyKey = request.Headers["Idempotency-Key"].ToString();
+
+            if (UcpSignaturePolicy.Check(verification, body.Length > 0, idempotencyKey, now) is { } policyError)
+            {
+                return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", policyError);
+            }
+
+            if (!await httpContext.RequestServices.GetRequiredService<AgentSignatureReplayGuard>().TryUseAsync(request.Headers["Signature"].ToString(), idempotencyKey, UcpSignaturePolicy.ReplayWindow, httpContext.RequestAborted))
+            {
+                return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", "The signature was used before. Sign each request anew.");
+            }
+
             return null;
         }
 

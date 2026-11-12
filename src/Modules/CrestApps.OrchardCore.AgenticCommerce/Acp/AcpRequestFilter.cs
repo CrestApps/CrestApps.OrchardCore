@@ -48,16 +48,25 @@ public sealed class AcpRequestFilter : IEndpointFilter
         }
 
         var agentRequest = signIn.Request;
+        var signature = request.Headers[AcpRequestSignature.SignatureHeader].ToString();
         var signatureError = AcpSignatureCheck.Check(
             agentRequest.Platform,
             AcpRequestSignature.TryGetSigningInput(body, out var input) ? input : null,
-            request.Headers[AcpRequestSignature.SignatureHeader].ToString(),
+            signature,
             request.Headers[AcpRequestSignature.TimestampHeader].ToString(),
+            request.Method,
+            $"{request.PathBase}{request.Path}",
             GetNow(httpContext));
 
         if (signatureError is not null)
         {
             return AcpResults.Error(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, signatureError);
+        }
+
+        // A signature is accepted once in its window; again only for the same idempotent request.
+        if (!await AcpSignatureCheck.TryUseAsync(httpContext, agentRequest.Platform, signature, request.Headers["Idempotency-Key"].ToString()))
+        {
+            return AcpResults.Error(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, "The signature was used before. Sign each request anew.");
         }
 
         agentRequest.Set(httpContext);
