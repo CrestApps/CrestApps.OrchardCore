@@ -495,6 +495,22 @@ public sealed class PhoneCallSupervisionServiceTests
     }
 
     [Fact]
+    public async Task AnAICallsKey_IsRefused_UnlessTheSupervisorListensToItOrMayMonitorEveryAICall()
+    {
+        // Arrange: a supervisor with Intervene in calls posts the key of an AI call they never opened through the
+        // scoped AI-call dashboard.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fixture = new Fixture();
+        var aiKey = "phone:" + ContactCenterPhoneCallSupervisionService.AICallUserMarker + ":v3:ai-leg";
+
+        // Act
+        var authorized = await fixture.Service.IsAuthorizedAsync(Fixture.Principal, "sup-user", aiKey, cancellationToken);
+
+        // Assert
+        Assert.False(authorized);
+    }
+
+    [Fact]
     public void TheModesOffered_AreTheProvidersOnACallItCanJoin()
     {
         var fixture = new Fixture();

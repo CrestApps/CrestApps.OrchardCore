@@ -67,18 +67,8 @@ internal static class SupervisorAICallsEndpoints
             return TypedResults.Forbid();
         }
 
-        var activities = await session
-            .Query<OmnichannelActivity, OmnichannelActivityIndex>(
-                index => index.InteractionType == ActivityInteractionType.Automated &&
-                    index.Status == ActivityStatus.InProgress &&
-                    index.Channel == OmnichannelConstants.Channels.Phone &&
-                    !index.AiEscalated,
-                collection: OmnichannelConstants.CollectionName)
-            .OrderByDescending(index => index.ScheduledUtc)
-            .Take(MaxLiveCalls)
-            .ListAsync(httpContext.RequestAborted);
-
-        activities = await SupervisorAICallScope.FilterAsync(activities, authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted);
+        // Filtered by the supervisor's campaigns in the query, so out-of-scope calls never use up the limit.
+        var activities = await SupervisorAICallScope.ListLiveAsync(session, MaxLiveCalls, authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted);
 
         var now = clock.UtcNow;
         var profileNames = new Dictionary<string, string>(StringComparer.Ordinal);

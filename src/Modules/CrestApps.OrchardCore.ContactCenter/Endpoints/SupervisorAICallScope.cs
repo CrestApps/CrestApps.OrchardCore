@@ -1,8 +1,12 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
@@ -55,6 +59,80 @@ internal static class SupervisorAICallScope
     /// <param name="queueAuthorization">The supervisor queue authorization.</param>
     /// <param name="user">The user.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <summary>
+    /// The live AI calls a supervisor may see, newest first, at most <paramref name="max"/>. The campaigns in scope are
+    /// found first and the calls are filtered by them in the query, so calls out of scope never use up the limit.
+    /// </summary>
+    /// <param name="session">The document session.</param>
+    /// <param name="max">The most calls returned.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="queueAuthorization">The supervisor queue authorization.</param>
+    /// <param name="user">The supervisor.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public static async Task<IReadOnlyList<OmnichannelActivity>> ListLiveAsync(
+        ISession session,
+        int max,
+        IAuthorizationService authorizationService,
+        ISupervisorQueueAuthorizationService queueAuthorization,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken)
+    {
+        if (user is null)
+        {
+            return [];
+        }
+
+        if (await authorizationService.AuthorizeAsync(user, ContactCenterPermissions.MonitorAllAICalls))
+        {
+            return [.. await session
+                .Query<OmnichannelActivity, OmnichannelActivityIndex>(
+                    index => index.InteractionType == ActivityInteractionType.Automated &&
+                        index.Status == ActivityStatus.InProgress &&
+                        index.Channel == OmnichannelConstants.Channels.Phone &&
+                        !index.AiEscalated,
+                    collection: OmnichannelConstants.CollectionName)
+                .OrderByDescending(index => index.ScheduledUtc)
+                .Take(max)
+                .ListAsync(cancellationToken)];
+        }
+
+        var live = await session
+            .QueryIndex<OmnichannelActivityIndex>(
+                index => index.InteractionType == ActivityInteractionType.Automated &&
+                    index.Status == ActivityStatus.InProgress &&
+                    index.Channel == OmnichannelConstants.Channels.Phone &&
+                    !index.AiEscalated,
+                collection: OmnichannelConstants.CollectionName)
+            .ListAsync(cancellationToken);
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var allowed = new List<string>();
+
+        foreach (var campaignId in live.Select(index => index.CampaignId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
+        {
+            if (await queueAuthorization.IsAuthorizedAsync(user, userId, ContactCenterConstants.CampaignQueue.CreateId(campaignId), cancellationToken))
+            {
+                allowed.Add(campaignId);
+            }
+        }
+
+        if (allowed.Count == 0)
+        {
+            return [];
+        }
+
+        return [.. await session
+            .Query<OmnichannelActivity, OmnichannelActivityIndex>(
+                index => index.InteractionType == ActivityInteractionType.Automated &&
+                    index.Status == ActivityStatus.InProgress &&
+                    index.Channel == OmnichannelConstants.Channels.Phone &&
+                    !index.AiEscalated &&
+                    index.CampaignId.IsIn(allowed),
+                collection: OmnichannelConstants.CollectionName)
+            .OrderByDescending(index => index.ScheduledUtc)
+            .Take(max)
+            .ListAsync(cancellationToken)];
+    }
+
     public static async Task<IReadOnlyList<OmnichannelActivity>> FilterAsync(
         IEnumerable<OmnichannelActivity> activities,
         IAuthorizationService authorizationService,
