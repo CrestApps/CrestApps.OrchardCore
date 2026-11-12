@@ -273,12 +273,9 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
 
             if (update is not null && !await IsBeingPaidAsync(checkout, cancellationToken))
             {
-                foreach (var gate in _completionGates)
+                if (await AgentCheckoutCompletionGates.CheckChangesAsync(_completionGates, completion, cancellationToken) is { } changeRefusal)
                 {
-                    if (await gate.CheckChangesAsync(completion, cancellationToken) is { } refusal)
-                    {
-                        return await RefuseAsync(checkout, context, refusal, cancellationToken);
-                    }
+                    return await RefuseAsync(checkout, context, changeRefusal, cancellationToken);
                 }
 
                 Apply(checkout, update);
@@ -304,14 +301,9 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             // the same gates on the checkout exactly as it will be paid.
             completion.View = view;
 
-            foreach (var gate in _completionGates)
+            if (await AgentCheckoutCompletionGates.CheckAsync(_completionGates, completion, cancellationToken) is { } refused)
             {
-                if (await gate.CheckAsync(completion, cancellationToken) is { } refusal)
-                {
-                    view.Messages.Add(refusal);
-
-                    return AgentCheckoutResult.Fail(AgentCheckoutFailure.Refused, error: null, checkout, view);
-                }
+                return refused;
             }
 
             await PayAsync(checkout, context, view, payment, cancellationToken);
@@ -334,7 +326,8 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
     }
 
     // Finishes a payment the bank asked the buyer to approve, with the result of the 3-D Secure the agent ran. The same
-    // payment attempt is resumed, so the provider confirms the payment it began rather than making a second one.
+    // payment attempt is resumed, so the provider confirms the payment it began rather than making a second one. The
+    // gates check the checkout again as it will be paid, so an AP2 checkout is paid only with its mandate.
     private async Task<AgentCheckoutResult> ContinueAuthenticationAsync(AgentCheckout checkout, AgentCheckoutContext context, AgentPayment payment, CancellationToken cancellationToken)
     {
         var result = payment.Authentication;
@@ -382,7 +375,14 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                 };
         }
 
-        await PayAsync(checkout, context, await SyncAsync(checkout, context, cancellationToken), payment, cancellationToken);
+        var current = await SyncAsync(checkout, context, cancellationToken);
+
+        if (await AgentCheckoutCompletionGates.CheckAsync(_completionGates, new AgentCheckoutCompletionContext { Context = context, Checkout = checkout, Payment = payment, View = current }, cancellationToken) is { } refused)
+        {
+            return refused;
+        }
+
+        await PayAsync(checkout, context, current, payment, cancellationToken);
 
         return new AgentCheckoutResult
         {

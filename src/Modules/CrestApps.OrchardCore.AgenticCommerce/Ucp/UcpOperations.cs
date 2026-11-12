@@ -144,11 +144,34 @@ public sealed class UcpOperations
             return UcpOperationResult.Answer(UcpCheckoutMapper.WriteError(request, "Give the payment instrument to complete the checkout with.", AgentMessageCodes.PaymentFailed));
         }
 
+        var result = await CompleteAsync(request, id, payment, json, cancellationToken);
+
+        return result.Succeeded
+            ? UcpOperationResult.Answer(await _mapper.WriteAsync(request, result, cancellationToken))
+            : await FailAsync(request, result, cancellationToken);
+    }
+
+    /// <summary>
+    /// Completes a checkout session after every checkout extension agreed, and lets them keep what they need once it
+    /// completed (such as AP2's mandate and receipt). Every binding (REST, MCP, A2A) completes through it.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <param name="id">The checkout's id.</param>
+    /// <param name="payment">The payment.</param>
+    /// <param name="json">The complete request's checkout JSON, with any other members the extensions read.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The completion; a refusal by an extension is <see cref="AgentCheckoutFailure.Refused"/>.</returns>
+    public async Task<AgentCheckoutResult> CompleteAsync(AgentRequest request, string id, AgentPayment payment, JsonObject json, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(payment);
+        ArgumentNullException.ThrowIfNull(json);
+
         var current = await _checkouts.GetAsync(request.Context, id, cancellationToken);
 
         if (!current.Succeeded)
         {
-            return await FailAsync(request, current, cancellationToken);
+            return current;
         }
 
         var context = new UcpCheckoutContext
@@ -165,11 +188,7 @@ public sealed class UcpOperations
             {
                 current.View.Messages.Add(refusal);
 
-                var refused = await _mapper.WriteAsync(request, current, cancellationToken);
-
-                refused["ucp"]["status"] = "error";
-
-                return UcpOperationResult.Answer(refused);
+                return AgentCheckoutResult.Fail(AgentCheckoutFailure.Refused, error: null, current.Checkout, current.View);
             }
         }
 
@@ -179,12 +198,7 @@ public sealed class UcpOperations
 
         var result = await _checkouts.CompleteAsync(request.Context, id, payment, update, cancellationToken);
 
-        if (!result.Succeeded)
-        {
-            return await FailAsync(request, result, cancellationToken);
-        }
-
-        if (result.View.Status == AgentCheckoutStatus.Completed)
+        if (result.Succeeded && result.View?.Status == AgentCheckoutStatus.Completed)
         {
             context.Checkout = result.Checkout;
             context.View = result.View;
@@ -195,7 +209,7 @@ public sealed class UcpOperations
             }
         }
 
-        return UcpOperationResult.Answer(await _mapper.WriteAsync(request, result, cancellationToken));
+        return result;
     }
 
     /// <summary>
