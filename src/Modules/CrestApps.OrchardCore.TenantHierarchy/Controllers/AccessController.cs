@@ -170,6 +170,24 @@ public sealed class AccessController : Controller
         model.ParentRoles = (await _grantManager.GetParentRolesAsync()).ToList();
         model.ChildRoles = (await _broker.GetChildRolesAsync(child?.Entry.EntryId)).ToList();
 
+        // On a child tenant's screen, the rules for every child tenant apply too, so they are listed after its own.
+        AccessGrantListItem Row(AccessGrant grant, bool inherited) => new()
+        {
+            Grant = grant,
+            Inherited = inherited,
+            ChildEntryId = child?.Entry.EntryId,
+            ChildDisplayName = child?.Entry.DisplayName,
+            Labels = model.Labels,
+        };
+
+        model.List = new AdminListContext<AccessGrantListItem>
+        {
+            Source = model.Grants.Select(grant => Row(grant, false))
+                .Concat(model.InheritedGrants.Select(grant => Row(grant, true)))
+                .ToList(),
+            ShowSelectAll = false,
+        };
+
         return model;
     }
 

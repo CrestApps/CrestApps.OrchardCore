@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.TenantHierarchy.Services;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.ViewModels;
 
@@ -16,6 +17,16 @@ public class PlatformIndexViewModel
     /// Gets or sets the parents that match the search.
     /// </summary>
     public List<HierarchyTreeNode> Parents { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the list of the parents that match the search.
+    /// </summary>
+    public AdminListContext ParentList { get; set; }
+
+    /// <summary>
+    /// Gets or sets the list of the child tenants whose parent no longer exists.
+    /// </summary>
+    public AdminListContext OrphanList { get; set; }
 
     /// <summary>
     /// Gets or sets the search text.

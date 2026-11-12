@@ -1,0 +1,17 @@
+@model ShapeViewModel<ChildFeatureListItem>
+
+@{
+    var item = Model.Value;
+    var feature = item.Feature;
+}
+
+@* Posts with the antiforgery token of the page (data-url-af="UnsafeUrl"). Changing a feature restarts the child
+   tenant for a few seconds, so the button says the request is on its way (data-th-busy). *@
+@if (feature.IsEnabled)
+{
+    <a class="btn btn-danger btn-sm" asp-controller="ChildTenants" asp-action="Features" asp-route-id="@item.EntryId" asp-route-featureIds="@feature.Id" asp-route-enable="false" data-url-af="UnsafeUrl" data-th-busy="@T["Disabling…"]">@T["Disable"]</a>
+}
+else
+{
+    <a class="btn btn-primary btn-sm" asp-controller="ChildTenants" asp-action="Features" asp-route-id="@item.EntryId" asp-route-featureIds="@feature.Id" asp-route-enable="true" data-url-af="UnsafeUrl" data-th-busy="@T["Enabling…"]">@T["Enable"]</a>
+}
