@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Inventory.Deployments;
 using CrestApps.OrchardCore.Inventory.Drivers;
 using CrestApps.OrchardCore.Inventory.Endpoints;
 using CrestApps.OrchardCore.Inventory.Migrations;
+using CrestApps.OrchardCore.Inventory.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Inventory.Navigation;
 using CrestApps.OrchardCore.Inventory.Recipes;
@@ -94,6 +95,7 @@ public sealed class Startup : StartupBase
 
         // The rows of the inventory admin list.
         services.AddDisplayDriver<StockItem, StockItemDisplayDriver>();
+        services.AddDisplayDriver<StockMovementRow, StockMovementRowDisplayDriver>();
 
         services.AddSiteDisplayDriver<InventorySettingsDisplayDriver>();
 
