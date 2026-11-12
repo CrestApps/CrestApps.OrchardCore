@@ -741,7 +741,11 @@ public sealed class MyWorkController : Controller
             return BadRequest();
         }
 
-        await _pushService.SubscribeAsync(worker.ItemId, input.Endpoint, input.Keys.P256dh, input.Keys.Auth, Request.Headers.UserAgent.ToString(), HttpContext.RequestAborted);
+        // An endpoint on the site's own network, or outside the allowed push services, is refused.
+        if (await _pushService.SubscribeAsync(worker.ItemId, input.Endpoint, input.Keys.P256dh, input.Keys.Auth, Request.Headers.UserAgent.ToString(), HttpContext.RequestAborted) is null)
+        {
+            return BadRequest();
+        }
 
         return NoContent();
     }

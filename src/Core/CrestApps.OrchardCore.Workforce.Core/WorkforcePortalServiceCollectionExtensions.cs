@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +29,11 @@ public static class WorkforcePortalServiceCollectionExtensions
         services.TryAddScoped<DefaultWebPushService>();
         services.TryAddScoped<IWebPushService>(provider => provider.GetRequiredService<DefaultWebPushService>());
         services.TryAddScoped<IWorkerFeedService, DefaultWorkerFeedService>();
-        services.AddHttpClient(WorkforceConstants.WebPushHttpClient);
+        services.AddOptions<WebPushOptions>();
+
+        // Endpoints come from workers' browsers, so the client never reaches the site's own network or follows a
+        // redirect, whatever a host resolves to when it is called.
+        services.AddEgressGuardedHttpClient(WorkforceConstants.WebPushHttpClient, client => client.Timeout = TimeSpan.FromSeconds(30));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkforceNotificationChannel, InboxNotificationChannel>(provider => provider.GetRequiredService<InboxNotificationChannel>()));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkforceNotificationChannel, WebPushNotificationChannel>());
         services.Replace(ServiceDescriptor.Scoped<IWorkforceNotifier, DefaultWorkforceNotifier>());
