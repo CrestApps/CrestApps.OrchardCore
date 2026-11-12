@@ -82,6 +82,31 @@ public sealed class WizardControllerSessionTests
         store.Verify(s => s.SaveAsync(It.IsAny<WizardSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// SEC-A18: a post with a blank session id used to create a new session every time, so a script that posted the first
+    /// step in a loop stored a session per request. A visitor whose resume cookie names a pending session continues it.
+    /// </summary>
+    [Fact]
+    public async Task StartPOST_ABlankSessionIdWithAResumeCookie_ContinuesThatSession()
+    {
+        var (controller, store) = CreateController();
+        var session = new WizardSession { SessionId = "session-9", WizardType = WizardType, Status = WizardSessionStatus.Pending };
+        store.Setup(s => s.GetAsync("session-9", WizardSessionStatus.Pending, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        // The browser carries the resume cookie an earlier post set for this wizard.
+        var cookieManager = (WizardResumeCookieManager)typeof(WizardController)
+            .GetField("_cookieManager", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            .GetValue(controller);
+        cookieManager.Append(WizardType, "session-9");
+        var setCookie = controller.HttpContext.Response.Headers.SetCookie.ToString();
+        controller.HttpContext.Request.Headers.Cookie = setCookie[setCookie.LastIndexOf("wizard_sessions=", StringComparison.Ordinal)..].Split(';')[0];
+
+        await controller.StartPOST(new WizardViewModel { WizardType = WizardType });
+
+        store.Verify(s => s.NewAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        store.Verify(s => s.SaveAsync(session, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
     [Theory]
     [InlineData(nameof(WizardController.Start))]
     [InlineData(nameof(WizardController.StartPOST))]
