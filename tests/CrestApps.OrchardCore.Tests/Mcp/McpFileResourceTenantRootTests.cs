@@ -58,6 +58,49 @@ public sealed class McpFileResourceTenantRootTests : IDisposable
         Assert.Equal("hello", text.Text);
     }
 
+    /// <summary>
+    /// A link inside the tenant folder that points outside it is not followed: a file link to <c>tenants.json</c>, or,
+    /// where this account may not create one (Windows without the privilege), a directory junction to App_Data.
+    /// </summary>
+    [Fact]
+    public async Task ReadAsync_ThroughALinkThatPointsOutsideTheTenantFolder_IsNotFound()
+    {
+        var folder = Path.Combine(_appData, "Sites", "TenantA", "mcp-files");
+        string fileName = null;
+
+        if (TryCreateFileLink(Path.Combine(folder, "linked.txt"), Path.Combine(_appData, "tenants.json")))
+        {
+            fileName = "linked.txt";
+        }
+        else if (TryCreateJunction(Path.Combine(folder, "outside"), _appData))
+        {
+            fileName = "outside/tenants.json";
+        }
+
+        if (fileName is null)
+        {
+            // Skipping is honest; asserting on an unattempted link would not be.
+            Assert.SkipWhen(true, "This account cannot create a link.");
+
+            return;
+        }
+
+        try
+        {
+            var result = await ReadAsync(fileName);
+
+            Assert.True(IsError(result), $"'{fileName}' leads out of the tenant folder and should not be readable.");
+        }
+        finally
+        {
+            // The junction points at the folder that holds it; removing the link first lets the folder be deleted.
+            if (Directory.Exists(Path.Combine(folder, "outside")))
+            {
+                Directory.Delete(Path.Combine(folder, "outside"));
+            }
+        }
+    }
+
     [Fact]
     public async Task ReadAsync_AFileOverTheLimit_IsRefused()
     {
@@ -97,6 +140,40 @@ public sealed class McpFileResourceTenantRootTests : IDisposable
         };
 
         return await handler.ReadAsync(resource, new Dictionary<string, string> { ["fileName"] = fileName }, TestContext.Current.CancellationToken);
+    }
+
+    private static bool TryCreateFileLink(string link, string target)
+    {
+        try
+        {
+            File.CreateSymbolicLink(link, target);
+
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryCreateJunction(string link, string target)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{target}\"")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        });
+
+        process?.WaitForExit(15_000);
+
+        return Directory.Exists(link);
     }
 
     private static bool IsError(ReadResourceResult result)

@@ -302,7 +302,7 @@ The system automatically constructs the full URI by prepending the scheme and a 
 
 | Type | Supported Variables | Description |
 |------|---------------------|-------------|
-| **File** (`file`) | `{providerName}`, `{fileName}` | File access via named file providers |
+| **File** (`file`) | `{fileName}` | A file from the tenant's own `mcp-files` folder under App_Data; paths outside it, links that leave it and files over the size limit are refused |
 | **Media** (`media`) | `{path}` | Orchard Core media library files |
 | **Content Item** (`content-item`) | `{contentItemId}`, `{contentItemVersionId}` | Fetch a specific content item by ID or version |
 | **Content Type** (`content-type`) | `{contentType}` | List all published content items of a type |
