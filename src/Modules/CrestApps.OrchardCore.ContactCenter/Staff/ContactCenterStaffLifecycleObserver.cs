@@ -28,6 +28,10 @@ internal sealed class ContactCenterStaffLifecycleObserver : IStaffLifecycleObser
         }
 
         await _presenceManager.SignOutAsync(context.StaffMember.UserId, cancellationToken);
-        _logger.LogInformation("Staff member {StaffMemberId} left and was signed out of the Contact Center.", context.StaffMember.ItemId);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Staff member {StaffMemberId} left and was signed out of the Contact Center.", context.StaffMember.ItemId);
+        }
     }
 }

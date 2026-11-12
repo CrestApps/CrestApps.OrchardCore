@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -191,8 +192,7 @@ public sealed class ReportingLineTool : StaffAIToolBase
         var name = Read(arguments, "name");
         var person = name is null
             ? await manager.FindByUserIdAsync(user.FindFirstValue(ClaimTypes.NameIdentifier), cancellationToken)
-            : await manager.FindByEmployeeNumberAsync(name, cancellationToken)
-                ?? (await manager.SearchAsync(new StaffQuery { Search = name }, 0, 1, cancellationToken)).Items.FirstOrDefault();
+            : await manager.FindByEmployeeNumberAsync(name, cancellationToken) ?? await FindFirstMatchAsync(manager, name, cancellationToken);
 
         if (person is null)
         {
@@ -210,5 +210,12 @@ public sealed class ReportingLineTool : StaffAIToolBase
             reportsTo = chain.Select(item => new { name = item.DisplayName, jobTitle = item.JobTitle }),
             directReports = reports.Select(item => new { name = item.DisplayName, jobTitle = item.JobTitle }),
         }, JsonOptions);
+    }
+
+    private static async Task<StaffMember> FindFirstMatchAsync(IStaffMemberManager manager, string name, CancellationToken cancellationToken)
+    {
+        var page = await manager.SearchAsync(new StaffQuery { Search = name }, 0, 1, cancellationToken);
+
+        return page.Items.Count > 0 ? page.Items[0] : null;
     }
 }

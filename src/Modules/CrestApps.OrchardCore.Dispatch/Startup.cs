@@ -39,7 +39,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddStaffLifecycleObserver<CrestApps.OrchardCore.Dispatch.Core.Services.DispatchStaffLifecycleObserver>();
-        services.AddStaffCapability(DispatchConstants.TechnicianCapability, LocalizationSource.Create("Technician", typeof(Startup)), LocalizationSource.Create("Goes out to jobs. Work orders and fleet vehicles offer technicians to pick.", typeof(Startup)), 20);
+        services.AddStaffCapability(DispatchConstants.TechnicianCapability, LocalizationSource.Create<Startup>("Technician"), LocalizationSource.Create<Startup>("Goes out to jobs. Work orders and fleet vehicles offer technicians to pick."), 20);
 
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(DispatchConstants.CollectionName));
         services.AddDispatchCore();

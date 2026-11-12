@@ -34,7 +34,7 @@ The name and email have a single owner. For a linked staff member the user accou
 | `PrimaryTeamId`, `TeamMemberships` | Dated memberships (`TeamId`, `Role` of `Member`/`Lead`/`Scheduler`/`Manager`, `EffectiveFrom`, `EffectiveTo`) in the shared [Teams](./teams.md). The first membership is the main team. |
 | `TimeZoneId`, `HomeBase`, `WorkLocation` | The home base is geocoded through [Geo](./geo.md) when it is on. |
 | `ContractedHoursPerWeek` | The hours of the person's contract. |
-| `Capabilities` | The kinds of work the person does, as registered by other modules (see [Capabilities](#capabilities)). |
+| `Capabilities` | The kinds of work the person does, as registered by other modules (see [Extension points](#extension-points)). |
 | `Properties` | Other modules' data on the person, such as Workforce's scheduling hours (`WorkforceStaffSettings`), pay rates (`StaffPayRates`) and the badge PIN (`StaffBadge`). |
 
 Each staff member is a YesSql document in the `Staff` collection, with `StaffMemberIndex`, `StaffTeamMembershipIndex` (one row per membership, dates as `yyyyMMdd` numbers) and `StaffCapabilityIndex`. Every change to the job title, status, employment type, manager, teams, work location or last day adds a `StaffHistoryEntry` (who, when, from, to) to an append-only log, shown on the staff editor and in the Staff reports.

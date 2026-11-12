@@ -126,7 +126,11 @@ internal sealed class StaffTerminationBackgroundTask : IBackgroundTask
 
                 staff.Status = StaffStatus.Terminated;
                 await manager.UpdateAsync(staff, cancellationToken: cancellationToken);
-                logger.LogInformation("Staff member {StaffMemberId} was terminated after their last working day.", staff.ItemId);
+
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Staff member {StaffMemberId} was terminated after their last working day.", staff.ItemId);
+                }
             }
         }
 

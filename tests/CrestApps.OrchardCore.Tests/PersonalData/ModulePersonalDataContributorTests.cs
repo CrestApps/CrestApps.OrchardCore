@@ -12,7 +12,6 @@ using CrestApps.OrchardCore.Tests.Commerce.B2B;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Staff.Core.Services;
-using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;

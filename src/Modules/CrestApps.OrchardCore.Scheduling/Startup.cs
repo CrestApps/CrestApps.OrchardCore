@@ -36,7 +36,7 @@ public sealed class StaffStartup : StartupBase
     {
         services.Configure<Staff.SchedulingStaffOptions>(options => options.UseStaffPicker = true);
         services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.Core.Services.ICatalogEntryHandler<SchedulingResource>, Staff.SchedulingResourceStaffHandler>());
-        services.AddStaffCapability(Staff.SchedulingResourceStaffHandler.BookableCapability, global::OrchardCore.Localization.LocalizationSource.Create("Bookable", typeof(StaffStartup)), global::OrchardCore.Localization.LocalizationSource.Create("Takes appointments as a scheduling resource.", typeof(StaffStartup)), 30);
+        services.AddStaffCapability(Staff.SchedulingResourceStaffHandler.BookableCapability, global::OrchardCore.Localization.LocalizationSource.Create<StaffStartup>("Bookable"), global::OrchardCore.Localization.LocalizationSource.Create<StaffStartup>("Takes appointments as a scheduling resource."), 30);
     }
 }
 

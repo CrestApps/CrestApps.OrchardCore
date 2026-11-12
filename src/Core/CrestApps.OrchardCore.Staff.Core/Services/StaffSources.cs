@@ -484,7 +484,7 @@ internal sealed class StaffUserAudienceProvider : IUserAudienceProvider
 
     public async Task<IReadOnlyCollection<string>> GetRoleNamesAsync(CancellationToken cancellationToken = default)
     {
-        if (!(await _siteService.GetSiteSettingsAsync()).As<StaffSettings>().LimitPickersToStaff)
+        if (!(await _siteService.GetSiteSettingsAsync()).GetOrCreate<StaffSettings>().LimitPickersToStaff)
         {
             return null;
         }

@@ -58,7 +58,7 @@ internal sealed class SkillsMigrations : DataMigration
     /// member, so they are mapped again to index them under the new kind name.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public int UpdateFrom2()
+    public static int UpdateFrom2()
     {
         ShellScope.AddDeferredTask(async scope =>
         {

@@ -179,7 +179,8 @@ internal sealed class StaffMemberCatalogHandler : CatalogEntryHandlerBase<StaffM
             return;
         }
 
-        var user = (await _userSearchService.GetAsync([staff.UserId], cancellationToken)).FirstOrDefault();
+        var users = await _userSearchService.GetAsync([staff.UserId], cancellationToken);
+        var user = users.Count > 0 ? users[0] : null;
 
         if (user is null)
         {

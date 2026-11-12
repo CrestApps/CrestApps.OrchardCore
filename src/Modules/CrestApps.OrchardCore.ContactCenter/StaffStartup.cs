@@ -26,7 +26,7 @@ public sealed class StaffStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddStaffCapability(AgentCapability, LocalizationSource.Create("Contact Center agent", typeof(StaffStartup)), LocalizationSource.Create("Handles calls and messages. Signing in to a queue makes a person an agent.", typeof(StaffStartup)), 10);
+        services.AddStaffCapability(AgentCapability, LocalizationSource.Create<StaffStartup>("Contact Center agent"), LocalizationSource.Create<StaffStartup>("Handles calls and messages. Signing in to a queue makes a person an agent."), 10);
         services.AddStaffLifecycleObserver<ContactCenterStaffLifecycleObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<AgentProfile>, AgentProfileStaffHandler>());
         services.AddDisplayDriver<StaffMember, AgentStaffDisplayDriver>();

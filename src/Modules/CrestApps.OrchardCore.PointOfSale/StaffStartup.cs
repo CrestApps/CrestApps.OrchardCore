@@ -17,7 +17,7 @@ public sealed class StaffStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddStaffCapability(CashierStaffHandler.CashierCapability, LocalizationSource.Create("Cashier", typeof(StaffStartup)), LocalizationSource.Create("Runs a register. Opening a register makes a person a cashier.", typeof(StaffStartup)), 40);
+        services.AddStaffCapability(CashierStaffHandler.CashierCapability, LocalizationSource.Create<StaffStartup>("Cashier"), LocalizationSource.Create<StaffStartup>("Runs a register. Opening a register makes a person a cashier."), 40);
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IRegisterShiftHandler, CashierStaffHandler>());
     }
 }
