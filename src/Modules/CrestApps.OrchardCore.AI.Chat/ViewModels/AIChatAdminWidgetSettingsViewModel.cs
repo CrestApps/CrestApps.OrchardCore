@@ -24,6 +24,11 @@ public class AIChatAdminWidgetSettingsViewModel
     public string PrimaryColor { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the widget sends the page context with each message.
+    /// </summary>
+    public bool SendPageContext { get; set; }
+
+    /// <summary>
     /// Gets or sets the profiles.
     /// </summary>
     [BindNever]

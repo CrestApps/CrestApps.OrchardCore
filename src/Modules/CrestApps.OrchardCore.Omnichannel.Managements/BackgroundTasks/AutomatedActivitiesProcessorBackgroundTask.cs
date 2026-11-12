@@ -125,7 +125,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 .Take(batchSize)
                 .ListAsync(cancellationToken);
 
-            if (!activities.Any())
+            if (activities.Count == 0)
             {
                 drained = true;
 
@@ -363,7 +363,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 .Take(batchSize)
                 .ListAsync(cancellationToken);
 
-            if (!expiredActivities.Any())
+            if (expiredActivities.Count == 0)
             {
                 break;
             }

@@ -20,6 +20,7 @@
 
 @model ChatSessionCapsuleViewModel
 
+@inject CrestApps.OrchardCore.AI.Chat.Services.AIChatUIConfiguration ChatUIConfiguration
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject IDisplayManager<AIChatSessionPrompt> DisplayManager
 @inject IAIProfileStore ProfilesCatalog
@@ -283,7 +284,7 @@
     var sessionUrlTemplate = Url.RouteUrl("AIChatSessionsIndex", new { profileId, sessionId = "__SESSION_ID__" })
         ?.Replace("__SESSION_ID__", "{sessionId}");
 
-    var chatConfigJson = JsonSerializer.Serialize(new
+    var chatConfigJson = ChatUIConfiguration.SerializeChatConfig(new
     {
         signalRHubUrl = Html.SignalRHubUrl<AIChatHub>(),
         appElementSelector = $"#{chatAppHtmlId}",
@@ -322,7 +323,7 @@
         existingDocuments = sessionDocumentsEnabled
             ? Model.Session.Documents ?? new List<ChatDocumentInfo>()
             : new List<ChatDocumentInfo>(),
-    }, JOptions.CamelCase);
+    });
 }
 
 <style asp-name="AIChatApp" at="Head"></style>

@@ -1,12 +1,14 @@
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Settings;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -28,6 +30,8 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
     private readonly IAIChatSessionManager _sessionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IResourceManager _resourceManager;
+    private readonly IEnumerable<IAIChatPageContextProvider> _pageContextProviders;
+    private readonly ILogger _logger;
 
     private readonly AdminOptions _adminOptions;
 
@@ -41,6 +45,8 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
     /// <param name="sessionManager">The session manager.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="resourceManager">The resource manager.</param>
+    /// <param name="pageContextProviders">The providers of what the page is about.</param>
+    /// <param name="logger">The logger.</param>
     /// <param name="adminOptions">The admin options.</param>
     public AIChatAdminWidgetFilter(
         ILayoutAccessor layoutAccessor,
@@ -50,6 +56,8 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         IAIChatSessionManager sessionManager,
         IAuthorizationService authorizationService,
         IResourceManager resourceManager,
+        IEnumerable<IAIChatPageContextProvider> pageContextProviders,
+        ILogger<AIChatAdminWidgetFilter> logger,
         IOptions<AdminOptions> adminOptions)
     {
         _layoutAccessor = layoutAccessor;
@@ -59,6 +67,8 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         _sessionManager = sessionManager;
         _authorizationService = authorizationService;
         _resourceManager = resourceManager;
+        _pageContextProviders = pageContextProviders;
+        _logger = logger;
         _adminOptions = adminOptions.Value;
     }
 
@@ -146,12 +156,36 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         shape.Properties["PrimaryColor"] = string.IsNullOrWhiteSpace(settings.PrimaryColor)
             ? AIChatAdminWidgetSettings.DefaultPrimaryColor
             : settings.PrimaryColor;
+        shape.Properties["SendPageContext"] = settings.SendPageContext;
+        shape.Properties["PageContext"] = settings.SendPageContext
+            ? await GetPageContextAsync(context)
+            : [];
 
         var layout = await _layoutAccessor.GetLayoutAsync();
 
         await layout.Zones["Footer"].AddAsync(shape, "999");
 
         await next();
+    }
+
+    private async Task<IReadOnlyList<CrestApps.Core.AI.Models.ChatClientContextEntry>> GetPageContextAsync(ResultExecutingContext context)
+    {
+        var pageContext = new AIChatPageContext(context.HttpContext, context.RouteData.Values);
+
+        foreach (var provider in _pageContextProviders)
+        {
+            try
+            {
+                await provider.PopulateAsync(pageContext);
+            }
+            catch (Exception ex)
+            {
+                // The page renders without that context rather than failing.
+                _logger.LogWarning(ex, "The AI chat page context provider {Provider} failed.", provider.GetType().Name);
+            }
+        }
+
+        return pageContext.Entries;
     }
 
     private bool IsAdminPage(ResultExecutingContext context)

@@ -131,12 +131,30 @@
 			return descriptors;
 		}
 		/**
-		* Runs a page tool the chat asked for with executeTool, and answers what the hub expects back: `{ text, isError }`.
+		* Runs one of the page tools CrestApps registered in this page itself, as executeTool would: on a copy of the input,
+		* with a signal, answering the result as text. Unlike executeTool, which reports every failure as "Tool execution
+		* failed", it keeps the message the tool failed with, so the model learns why and can correct itself.
+		*
+		* @param {any} tool The tool as it was registered, with its execute callback.
+		* @param {any} input The tool's input.
+		*/
+		async function runOwnTool(tool, input) {
+			var value = await tool.execute(JSON.parse(JSON.stringify(input)), { signal: new AbortController().signal });
+			if (typeof value === "string") return value;
+			return value === void 0 ? "" : JSON.stringify(value);
+		}
+		/**
+		* Runs a page tool the chat asked for, and answers what the hub expects back: `{ text, isError }`.
+		*
+		* A tool another script registered runs through the standard executeTool. A page tool CrestApps registered in this
+		* page itself, which `findOwnTool` answers, runs through its own execute callback, so a failure reaches the model
+		* with its reason.
 		*
 		* @param {any} modelContext The page's ModelContext.
 		* @param {string} name The tool's name.
 		* @param {string} argumentsJson The tool's input as JSON.
-		* @param {{ fromOrigins?: string[], excludedNames?: Set<string> }} [options] The frames to look in and the names to refuse.
+		* @param {{ fromOrigins?: string[], excludedNames?: Set<string>, findOwnTool?: (registeredTool: any) => any }} [options]
+		*   The frames to look in, the names to refuse, and how to find the tools CrestApps registered in this page.
 		*/
 		async function runPageTool(modelContext, name, argumentsJson, options) {
 			var input;
@@ -165,6 +183,11 @@
 					text: "The page has no tool named \"" + name + "\".",
 					isError: true
 				};
+				var ownTool = options && typeof options.findOwnTool === "function" ? options.findOwnTool(tool) : null;
+				if (ownTool && typeof ownTool.execute === "function") return {
+					text: await runOwnTool(ownTool, input),
+					isError: false
+				};
 				var serialized = await modelContext.executeTool(tool, input);
 				var text = serialized;
 				try {
@@ -188,7 +211,8 @@
 		*
 		* @param {any} modelContext The page's ModelContext, or null when the page has no WebMCP.
 		* @param {any} connection The SignalR hub connection of the chat.
-		* @param {{ fromOrigins?: string[], excludedNames?: Set<string> }} [options] The frames to look in and the names to leave out.
+		* @param {{ fromOrigins?: string[], excludedNames?: Set<string>, findOwnTool?: (registeredTool: any) => any }} [options]
+		*   The frames to look in, the names to leave out, and how to find the page tools CrestApps registered in this page.
 		*/
 		function connectChat(modelContext, connection, options) {
 			if (!modelContext) return {
@@ -237,6 +261,19 @@
 				}
 			};
 		}
+		/**
+		* Finds the page tool webmcp-page-tools.js registered in this window for a tool getTools() listed. A tool of another
+		* frame, or one another script registered, is not one of them.
+		*
+		* @param {any} win The window.
+		* @param {any} modelContext The window's ModelContext.
+		* @param {any} registeredTool The RegisteredTool record getTools() answered.
+		*/
+		function findOwnPageTool(win, modelContext, registeredTool) {
+			var pageTools = win.CrestAppsWebMcpPageTools;
+			if (!registeredTool || registeredTool.window !== win || !pageTools || typeof pageTools.getRegisteredTool !== "function") return null;
+			return pageTools.getRegisteredTool(modelContext, registeredTool.name);
+		}
 		function init(win) {
 			if (win.crestAppsWebMcp) return win.crestAppsWebMcp;
 			var config = readConfig(win.document) || {};
@@ -257,7 +294,10 @@
 				connectChat: function(connection) {
 					return connectChat(modelContext, connection, {
 						fromOrigins: Array.isArray(config.pageToolOrigins) ? config.pageToolOrigins : void 0,
-						excludedNames: serverToolNames
+						excludedNames: serverToolNames,
+						findOwnTool: function(registeredTool) {
+							return findOwnPageTool(win, modelContext, registeredTool);
+						}
 					});
 				}
 			};
@@ -272,6 +312,7 @@
 			registerServerTools,
 			toPageToolDescriptors,
 			runPageTool,
+			findOwnPageTool,
 			connectChat,
 			init
 		};
