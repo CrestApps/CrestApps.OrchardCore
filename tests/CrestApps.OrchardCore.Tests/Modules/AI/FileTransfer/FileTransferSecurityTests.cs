@@ -56,7 +56,7 @@ public sealed class FileTransferSecurityTests
         Assert.True(allowed.ModelState.IsValid);
     }
 
-    private static IUpdateModel Apply(bool allowAnyCertificate)
+    private static TestUpdater Apply(bool allowAnyCertificate)
     {
         var updater = new TestUpdater();
         var driver = new TestFtpDriver(Options.Create(new FileTransferHostOptions { AllowAnyFtpCertificate = allowAnyCertificate }));
