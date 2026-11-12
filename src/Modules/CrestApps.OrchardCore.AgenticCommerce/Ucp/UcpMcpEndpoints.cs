@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
@@ -32,7 +33,7 @@ public static class UcpMcpEndpoints
             .AllowAnonymous()
             .DisableAntiforgery()
             .AddEndpointFilter<UcpRequestFilter>()
-            .WithName("UcpMcp");
+            .WithName("UcpMcp").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         return routes;
     }

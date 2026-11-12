@@ -103,6 +103,12 @@ public static class ThrottlingServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(groupName);
 
+        // Two modules may share a group, such as the provider webhooks; the first registration stands.
+        if (options.GroupRateLimits.Any(limit => string.Equals(limit.GroupName, groupName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return options;
+        }
+
         options.AddGroupRateLimit(groupName, RateLimitPartitionHelpers.CreateFixedWindowPolicy(
             groupName,
             permitLimit,

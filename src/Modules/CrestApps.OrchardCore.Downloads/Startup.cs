@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Downloads.Drivers;
 using CrestApps.OrchardCore.Downloads.Handlers;
@@ -90,4 +92,16 @@ public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
         => services.AddReport<DownloadsReport>();
+}
+
+/// <summary>
+/// The built-in limit of the download links, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(DownloadsConstants.RateLimitGroup, 60, TimeSpan.FromMinutes(1)));
 }

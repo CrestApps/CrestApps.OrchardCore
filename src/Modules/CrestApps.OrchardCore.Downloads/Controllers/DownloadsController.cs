@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
 using CrestApps.OrchardCore.Downloads.ViewModels;
@@ -31,6 +32,7 @@ public sealed class DownloadsController : Controller
     }
 
     [HttpGet("downloads/{token}", Name = DownloadsConstants.RouteNames.Download)]
+    [RateLimitGroup(DownloadsConstants.RateLimitGroup)]
     public async Task<IActionResult> Index(string token)
     {
         var (entitlement, problem) = await _downloads.ResolveAsync(token, HttpContext.RequestAborted);
@@ -39,6 +41,7 @@ public sealed class DownloadsController : Controller
     }
 
     [HttpPost("downloads/{token}")]
+    [RateLimitGroup(DownloadsConstants.RateLimitGroup)]
     [ActionName(nameof(Index))]
     public async Task<IActionResult> Download(string token)
     {

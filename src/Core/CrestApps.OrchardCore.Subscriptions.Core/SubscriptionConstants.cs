@@ -6,6 +6,17 @@ namespace CrestApps.OrchardCore.Subscriptions.Core;
 public static class SubscriptionConstants
 {
     /// <summary>
+    /// The request groups of Orchard Core's Rate Limits that Subscriptions tags its routes with.
+    /// </summary>
+    public static class RateLimitGroups
+    {
+        /// <summary>
+        /// Beginning an installment plan's down payment and polling its status: 60 a minute per user.
+        /// </summary>
+        public const string InstallmentPayment = "installment-payment";
+    }
+
+    /// <summary>
     /// The content type stereotype used to identify subscription content types.
     /// </summary>
     public const string Stereotype = "Subscription";

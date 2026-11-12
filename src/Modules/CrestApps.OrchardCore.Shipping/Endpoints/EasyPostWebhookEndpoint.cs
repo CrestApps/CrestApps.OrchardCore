@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Payments;
+using OrchardCore.RateLimits;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
@@ -27,6 +29,7 @@ internal static class EasyPostWebhookEndpoint
             .AllowAnonymous()
             .DisableAntiforgery()
             .WithMetadata(new RequestSizeLimitAttribute(MaxBodyBytes))
+            .WithRateLimitGroup(PaymentConstants.RateLimitGroups.Webhook)
             .WithName(RouteName);
 
         return builder;

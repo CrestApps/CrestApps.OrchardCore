@@ -152,7 +152,7 @@ A record already flagged `PendingManualReview` is never regressed by a later web
 The framework is built to run on multiple nodes:
 
 - **`PaymentSessionCache`** relays short-lived signals (such as a webhook result) between the payment endpoints and the provider webhooks using `IDistributedCache`, coordinated by `IDistributedLock`. It is a *notification/optimization* layer only — losing an entry can slow a checkout but can never lose money, because completion always re-verifies against the durable ledger and the provider.
-- **`IPaymentAttemptLimiter`** enforces a fixed-window attempt limit through the distributed cache to mitigate card-testing abuse of the anonymous payment endpoints, consistently across every instance.
+- **The card-testing protection.** `PaymentVelocityGate` (an `ICheckoutPaymentGate`, always on) refuses a card payment from a network or a customer whose declines reached the limit, from a checkout that has begun eight payments, and, during a store-wide run of declines, from guests as **Payment protection** settings choose. `PaymentDeclineRecorder` counts each decline once, when its attempt becomes failed. Both use the platform's `IAttemptLimiter`; see [Rate limits and card-testing protection](commerce-rate-limits).
 
 ### Who owns a guest checkout
 
@@ -208,7 +208,7 @@ Between applying a code and completing, a use is **held**, like stock. `ICheckou
 
 Each use is a `CouponRedemption` in the coupon collection (`CouponRedemptionIndex`): **Held** with an expiry as long as the checkout can live (`CheckoutSettings.SessionLifetimeHours`), **Redeemed** when the checkout completes, **Released** when it is canceled, fails or expires, and **Returned** when its order is canceled (`ReturnAsync`, called by the Orders feature). A coupon has used `RedemptionCount`, plus uses recorded while its lock couldn't be taken, plus the live holds of other checkouts. Every change is made under the coupon's lock and committed before the lock is let go, so the second of two buyers racing for the last use is told it's gone. A limit per customer counts the customer's redeemed and held uses by account or by email, so a buyer who checks out as a guest with the same email is the same customer. The coupon's edit page lists its recent uses and how many are held.
 
-Applying codes is throttled per address (`IPaymentAttemptLimiter`, scope `coupon-code`), since short codes can be guessed.
+Wrong codes are counted per network (the `coupon-code` attempt policy of `IAttemptLimiter`), since short codes can be guessed; a network that enters ten wrong codes in ten minutes is stopped for ten minutes.
 
 ### Several codes and combining rules
 
@@ -502,7 +502,7 @@ Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{
 - The shared frame (progress stepper, invoice summary, navigation) is a separate driver, so a step never has to re-render its surroundings. Override the `CheckoutFlow` shape template in a theme to restyle the whole checkout.
 - The payment step lists the payment providers **actually registered on the tenant** and filters out any that cannot settle what the invoice owes, so the page can never offer a method the framework cannot execute.
 - Each provider renders its own panel through an `IDisplayDriver<CheckoutFlowPaymentMethod>` grouped by its provider key. Only the selected panel is shown.
-- Two JSON endpoints (`checkout/{sessionId}/payment/begin` and `.../status`) carry the begin-then-poll conversation. Both are rate limited per visitor per checkout, resolve the session through the ownership-checked lookup, and require a same-origin request as defense in depth.
+- Two JSON endpoints (`checkout/{sessionId}/payment/begin` and `.../status`) carry the begin-then-poll conversation. Beginning a payment is counted per network (`payment-begin-network`) and the status per network and checkout (`payment-status`); both resolve the session through the ownership-checked lookup, and require a same-origin request as defense in depth.
 - The begin endpoint drops the saved-card keys (`savePaymentMethod`, `offSession`, `savedCustomerReference`, `savedPaymentMethodReference`) from the provider data the browser sends. Only server code decides whether a card is kept, and nothing a browser sends can spend a card kept earlier.
 - A session whose `CheckoutSession.SavePaymentMethod` is set (server code sets it, for example when a customer chooses to pay a balance in [installments](installment-plans#installments-at-checkout)) keeps the payment method for later charges without the customer: the payment step offers only providers with `SupportsSavedPaymentMethods`, tells the customer the card is saved, and renders each provider panel with `CheckoutFlowPaymentMethod.SavePaymentMethod`; `ICheckoutEngine.BeginPaymentAsync` refuses any other provider and adds `CheckoutPaymentDataKeys.SavePaymentMethod` to the provider data itself.
 

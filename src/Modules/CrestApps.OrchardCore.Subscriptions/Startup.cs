@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -336,4 +338,17 @@ public sealed class InstallmentPlansStartup : StartupBase
     /// <inheritdoc/>
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.AddInstallmentPlanPaymentEndpoints();
+}
+
+/// <summary>
+/// The built-in limit of the installment down payment routes, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(SubscriptionConstants.RateLimitGroups.InstallmentPayment, 60, TimeSpan.FromMinutes(1))
+            .AddJsonRejectionHandler(SubscriptionConstants.InstallmentPlans.BeginPaymentRouteName, SubscriptionConstants.InstallmentPlans.PaymentStatusRouteName));
 }

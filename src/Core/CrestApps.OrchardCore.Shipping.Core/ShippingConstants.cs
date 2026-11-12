@@ -3,6 +3,17 @@ namespace CrestApps.OrchardCore.Shipping;
 public static class ShippingConstants
 {
     /// <summary>
+    /// The request groups of Orchard Core's Rate Limits that Shipping tags its routes with.
+    /// </summary>
+    public static class RateLimitGroups
+    {
+        /// <summary>
+        /// Quoting shipping rates for a checkout, which asks the carriers: 30 a minute per client.
+        /// </summary>
+        public const string Quote = "checkout-quote";
+    }
+
+    /// <summary>
     /// The site settings group of the Shipping settings.
     /// </summary>
     public const string SettingsGroupId = "shipping";

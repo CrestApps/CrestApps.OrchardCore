@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Commerce;
@@ -332,4 +333,16 @@ public sealed class ReturnsProductFeedsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
         => services.AddScoped<IProductFeedItemContributor, ReturnsProductFeedContributor>();
+}
+
+/// <summary>
+/// The built-in limit of the order lookup, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(OrderConstants.FindRateLimitGroup, 10, TimeSpan.FromMinutes(10), networkOnly: true));
 }

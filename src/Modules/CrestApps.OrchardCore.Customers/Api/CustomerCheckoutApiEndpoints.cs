@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
@@ -26,6 +27,7 @@ internal static class CustomerCheckoutApiEndpoints
 
         group.MapPut("checkout/{id}/contact", SaveContactAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("SaveCheckoutContact")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Saves the Contact step: who the buyer is, and their billing address when the store asks for one.")

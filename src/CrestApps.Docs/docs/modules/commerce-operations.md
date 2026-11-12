@@ -52,12 +52,14 @@ On a web farm, every node must see the same locks, cache, files and keys:
 
 ## Throttling
 
+Every store stops card testing: a network or a customer whose card payments are declined five times is stopped for a while, and a run of declines across the store applies the store's chosen action. On top of that, the **Payment Rate Limits** feature limits how often the payment, code, lookup and cart routes can be called. [Rate limits and card-testing protection](commerce-rate-limits) lists every limit, its default and how to change it.
+
 | What | Limit | Where it is counted |
 | --- | --- | --- |
-| Cart forms (`POST cart/add`, `cart/update`, `cart/remove`) | The `Cart` group of Orchard Core's Rate Limits feature | Its configuration |
-| Starting a payment and checking its status | 20 attempts per 5 minutes per client address and checkout (`PaymentRateLimitOptions`) | The distributed cache, per tenant |
-| Entering coupon codes | The same limit, per client address | The distributed cache, per tenant |
-| Looking up a guest order | The same limit, per client address and per email | The distributed cache, per tenant |
+| Declined card payments | 5 per network in 30 minutes, 5 per customer in an hour, 30 across the store in 10 minutes | Attempt policies in the distributed cache, per tenant |
+| Beginning a payment | 30 per network in 10 minutes, 8 per checkout in a day | Attempt policies |
+| Wrong coupon and gift card codes, order lookups | Per network and per email | Attempt policies |
+| Cart, checkout, payment, code, shipping quote and webhook routes | The request groups of the Payment Rate Limits feature and the owning modules | Orchard Core's Rate Limits, under **Tools › Rate Limits** |
 
 Counts are kept per tenant, so a busy tenant never throttles another, even with a shared cache.
 

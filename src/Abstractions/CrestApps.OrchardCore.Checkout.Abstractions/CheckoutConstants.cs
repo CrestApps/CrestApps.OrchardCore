@@ -179,6 +179,11 @@ public static class CheckoutConstants
         public const string Confirmation = "CheckoutConfirmation";
 
         /// <summary>
+        /// The discount link, <c>discount/{code}</c>, which keeps a code for the buyer's next checkout.
+        /// </summary>
+        public const string DiscountLink = "CheckoutDiscountLink";
+
+        /// <summary>
         /// The endpoint that begins payment with the selected provider.
         /// </summary>
         public const string BeginPayment = "CheckoutBeginPayment";

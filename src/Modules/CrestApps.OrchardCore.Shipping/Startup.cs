@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Core.Throttling;
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Products.Core;
@@ -196,4 +199,17 @@ public sealed class ProductFeedsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
         => services.AddScoped<IProductFeedItemContributor, ShippingProductFeedContributor>();
+}
+
+/// <summary>
+/// The built-in limits of the shipping quote and the carrier webhook, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(ShippingConstants.RateLimitGroups.Quote, 30, TimeSpan.FromMinutes(1))
+            .AddClientGroupRateLimit(PaymentConstants.RateLimitGroups.Webhook, PaymentConstants.RateLimitGroups.WebhookRequestsPerMinute, TimeSpan.FromMinutes(1), networkOnly: true));
 }

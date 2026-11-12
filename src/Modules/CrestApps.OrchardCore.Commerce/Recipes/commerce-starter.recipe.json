@@ -16,6 +16,7 @@
         "CrestApps.OrchardCore.Products.Listing",
         "OrchardCore.Autoroute",
         "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Checkout.RateLimits",
         "CrestApps.OrchardCore.Transactions",
         "CrestApps.OrchardCore.PayLater",
         "CrestApps.OrchardCore.Subscriptions",

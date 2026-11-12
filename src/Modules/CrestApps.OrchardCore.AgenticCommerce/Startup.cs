@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using OrchardCore.RateLimits;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Core;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
@@ -124,4 +126,18 @@ public sealed class RecipeSchemasStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, AgentPlatformsRecipeStepSchema>();
     }
+}
+
+/// <summary>
+/// The built-in limits of the agent protocols' routes, listed read-only under Tools &gt; Rate Limits. They count by
+/// network: an agent is signed in to no user, and its key is verified after the limiter runs.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(AgenticCommerceConstants.RateLimitGroups.Checkout, 120, TimeSpan.FromMinutes(1), networkOnly: true)
+            .AddClientGroupRateLimit(AgenticCommerceConstants.RateLimitGroups.CheckoutComplete, 30, TimeSpan.FromMinutes(5), networkOnly: true));
 }

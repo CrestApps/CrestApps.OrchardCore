@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Diagnostics;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Core.Http;
@@ -65,6 +66,7 @@ public static class CreateWebhookEndpoint
         builder.MapPost("stripe/webhook", HandleAsync<T>)
             .AllowAnonymous()
             .WithName(StripeConstants.RouteName.CreateWebhookEndpoint)
+            .WithRateLimitGroup(PaymentConstants.RateLimitGroups.Webhook)
             .DisableAntiforgery();
 
         return builder;

@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Api;
@@ -71,6 +72,7 @@ internal static class PosApiEndpoints
 
         group.MapPost("pos/sales/{checkoutId}/pay", PayAsync)
             .WithIdempotency()
+            .WithRateLimitGroup(PosConstants.PaymentRateLimitGroup)
             .WithName("PayPosSale")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
@@ -89,6 +91,7 @@ internal static class PosApiEndpoints
 
         group.MapPost("pos/returns", ReturnAsync)
             .WithIdempotency()
+            .WithRateLimitGroup(PosConstants.PaymentRateLimitGroup)
             .WithName("PosReturn")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)

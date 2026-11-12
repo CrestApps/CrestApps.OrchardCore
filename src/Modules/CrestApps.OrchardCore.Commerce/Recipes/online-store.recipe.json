@@ -56,6 +56,7 @@
         "CrestApps.OrchardCore.Products.Listing",
         "CrestApps.OrchardCore.Carts",
         "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Checkout.RateLimits",
         "CrestApps.OrchardCore.Orders",
         "CrestApps.OrchardCore.Customers",
         "CrestApps.OrchardCore.Transactions",

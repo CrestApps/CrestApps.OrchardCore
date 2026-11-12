@@ -69,6 +69,7 @@ public sealed class Startup : StartupBase
         services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<ICheckoutSessionStore, CheckoutSessionStore>();
         services.AddScoped<IStoreSetupStep, CurrencySetupStep>();
+        services.AddScoped<IStoreSetupStep, ProtectPaymentsSetupStep>();
         services.AddScoped<ICheckoutSessionAnonymizer, CheckoutSessionAnonymizer>();
         services.AddScoped<IPaymentAttemptStore, PaymentAttemptStore>();
         services.AddScoped<IPaymentRefundStore, PaymentRefundStore>();
@@ -254,6 +255,8 @@ public sealed class PaymentRateLimitsStartup : StartupBase
                 CheckoutConstants.RouteNames.PaymentStatus,
                 "BeginCheckoutPayment",
                 "CompleteCheckout",
-                "ApplyCheckoutCode"));
+                "ApplyCheckoutCode",
+                "ApplyCheckoutGiftCard",
+                "StartCheckout"));
     }
 }

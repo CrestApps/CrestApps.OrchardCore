@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Checkout.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -39,7 +40,8 @@ public sealed class DiscountLinkController : Controller
     /// </summary>
     /// <param name="code">The code.</param>
     /// <param name="redirect">The page to go to, on this site.</param>
-    [HttpGet("discount/{code}")]
+    [HttpGet("discount/{code}", Name = CheckoutConstants.RouteNames.DiscountLink)]
+    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Code)]
     public async Task<IActionResult> Apply(string code, string redirect)
     {
         var coupon = await _couponStore.GetByCodeAsync(code);

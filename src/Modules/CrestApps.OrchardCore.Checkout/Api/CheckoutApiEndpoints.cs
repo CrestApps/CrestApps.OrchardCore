@@ -29,6 +29,7 @@ internal static class CheckoutApiEndpoints
 
         group.MapGet("checkout/{id}", GetAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("GetCheckout")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Gets a checkout: its steps, what's saved on them, and the invoice with what's left to pay.");
@@ -44,6 +45,7 @@ internal static class CheckoutApiEndpoints
 
         group.MapDelete("checkout/{id}/codes/{code}", RemoveCodeAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("RemoveCheckoutCode")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Takes a discount code off the checkout.")
@@ -51,6 +53,7 @@ internal static class CheckoutApiEndpoints
 
         group.MapGet("checkout/{id}/payment-methods", GetPaymentMethodsAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("ListCheckoutPaymentMethods")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Lists the ways the checkout can be paid, with what a client needs to collect each payment itself.");
@@ -75,6 +78,7 @@ internal static class CheckoutApiEndpoints
 
         group.MapDelete("checkout/{id}", CancelAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("CancelCheckout")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Cancels a checkout that isn't paid.");

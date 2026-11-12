@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Checkout;
@@ -24,18 +25,21 @@ internal static class ShippingCheckoutApiEndpoints
 
         group.MapGet("checkout/{id}/pickup-locations", GetPickupLocationsAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("ListCheckoutPickupLocations")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Lists the store's locations the order can be picked up from, and what picking up costs.");
 
         group.MapPost("checkout/{id}/shipping-rates", QuoteAsync)
             .AllowGuests()
+            .WithRateLimitGroup(ShippingConstants.RateLimitGroups.Quote)
             .WithName("QuoteCheckoutShipping")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Lists the ways to ship the order to an address, with what each costs.");
 
         group.MapPut("checkout/{id}/shipping", SaveAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("SaveCheckoutShipping")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Saves the Shipping step: a pickup location, or an address and one of its rates. With several rates and none chosen, the answer asks for rateId.")

@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
@@ -34,13 +35,13 @@ public static class UcpCatalogEndpoints
             .DisableAntiforgery()
             .AddEndpointFilter<UcpRequestFilter>();
 
-        group.MapPost("catalog/search", SearchAsync).WithName("UcpCatalogSearch");
-        group.MapPost("catalog/lookup", LookupAsync).WithName("UcpCatalogLookup");
-        group.MapPost("catalog/product", ProductAsync).WithName("UcpCatalogProduct");
-        group.MapPost("carts", CreateCartAsync).WithIdempotency(UcpEndpoints.Idempotency).WithName("UcpCreateCart");
-        group.MapGet("carts/{id}", GetCartAsync).WithName("UcpGetCart");
-        group.MapPut("carts/{id}", UpdateCartAsync).WithIdempotency(UcpEndpoints.Idempotency).WithName("UcpUpdateCart");
-        group.MapPost("carts/{id}/cancel", CancelCartAsync).WithIdempotency(UcpEndpoints.Idempotency).WithName("UcpCancelCart");
+        group.MapPost("catalog/search", SearchAsync).WithName("UcpCatalogSearch").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPost("catalog/lookup", LookupAsync).WithName("UcpCatalogLookup").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPost("catalog/product", ProductAsync).WithName("UcpCatalogProduct").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPost("carts", CreateCartAsync).WithIdempotency(UcpEndpoints.Idempotency).WithName("UcpCreateCart").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapGet("carts/{id}", GetCartAsync).WithName("UcpGetCart").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPut("carts/{id}", UpdateCartAsync).WithIdempotency(UcpEndpoints.Idempotency).WithName("UcpUpdateCart").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPost("carts/{id}/cancel", CancelCartAsync).WithIdempotency(UcpEndpoints.Idempotency).WithName("UcpCancelCart").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         return routes;
     }

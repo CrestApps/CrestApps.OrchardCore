@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -47,23 +48,23 @@ public static class UcpEndpoints
     {
         routes.MapGet("/" + UcpConstants.ProfilePath, (HttpContext httpContext, UcpProfileBuilder profiles) => ProfileAsync(httpContext, profiles, UcpConstants.Versions[0]))
             .AllowAnonymous()
-            .WithName("UcpProfile");
+            .WithName("UcpProfile").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         routes.MapGet("/" + UcpConstants.ProfilePath + "/{version}", (string version, HttpContext httpContext, UcpProfileBuilder profiles) => ProfileAsync(httpContext, profiles, version))
             .AllowAnonymous()
-            .WithName("UcpVersionProfile");
+            .WithName("UcpVersionProfile").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         var group = routes.MapGroup(UcpConstants.RoutePrefix)
             .AllowAnonymous()
             .DisableAntiforgery()
             .AddEndpointFilter<UcpRequestFilter>();
 
-        group.MapPost("checkout-sessions", CreateAsync).WithIdempotency(Idempotency).WithName("UcpCreateCheckout");
-        group.MapGet("checkout-sessions/{id}", GetAsync).WithName("UcpGetCheckout");
-        group.MapPut("checkout-sessions/{id}", UpdateAsync).WithIdempotency(Idempotency).WithName("UcpUpdateCheckout");
-        group.MapPost("checkout-sessions/{id}/complete", CompleteAsync).WithIdempotency(Idempotency).WithName("UcpCompleteCheckout");
-        group.MapPost("checkout-sessions/{id}/cancel", CancelAsync).WithIdempotency(Idempotency).WithName("UcpCancelCheckout");
-        group.MapGet("orders/{id}", GetOrderAsync).WithName("UcpGetOrder");
+        group.MapPost("checkout-sessions", CreateAsync).WithIdempotency(Idempotency).WithName("UcpCreateCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapGet("checkout-sessions/{id}", GetAsync).WithName("UcpGetCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPut("checkout-sessions/{id}", UpdateAsync).WithIdempotency(Idempotency).WithName("UcpUpdateCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPost("checkout-sessions/{id}/complete", CompleteAsync).WithIdempotency(Idempotency).WithName("UcpCompleteCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.CheckoutComplete);
+        group.MapPost("checkout-sessions/{id}/cancel", CancelAsync).WithIdempotency(Idempotency).WithName("UcpCancelCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapGet("orders/{id}", GetOrderAsync).WithName("UcpGetOrder").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         return routes;
     }
