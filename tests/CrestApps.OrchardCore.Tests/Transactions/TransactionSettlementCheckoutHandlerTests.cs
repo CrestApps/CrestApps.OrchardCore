@@ -656,8 +656,94 @@ public sealed class TransactionSettlementCheckoutHandlerTests
             => throw new InvalidOperationException("The receipt could not be sent.");
     }
 
+    [Fact]
+    public async Task PaymentGate_ASecondSessionForASettledTransaction_IsRefused()
+    {
+        // Arrange: two tabs of a pay link each started a checkout for the 108 owed; the first one was paid.
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var handler = CreateHandler(store);
+        var second = CreateSettlementSession(transaction, "settlement-2");
+
+        await handler.ActivatingAsync(new CheckoutFlowActivatingContext(second));
+
+        transaction.AmountPaid = 108m;
+        transaction.Status = TransactionStatus.Paid;
+
+        var gate = new TransactionSettlementPaymentGate(TransactionManagerFactory.Create(store), new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+        var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(second), "test");
+
+        // Act
+        await gate.BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(context.IsRefused);
+    }
+
+    [Fact]
+    public async Task PaymentGate_ATransactionStillOwingWhatWasBilled_IsPaid()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var handler = CreateHandler(store);
+        var session = CreateSettlementSession(transaction, "settlement-1");
+
+        await handler.ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        var gate = new TransactionSettlementPaymentGate(TransactionManagerFactory.Create(store), new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+        var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), "test");
+
+        // Act
+        await gate.BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(context.IsRefused);
+    }
+
+    [Fact]
+    public async Task CompletedAsync_MoneyCollectedForATransactionAlreadyPaid_IsRecordedAsAPaymentIssue()
+    {
+        // Arrange: the transaction was settled by another checkout while this one was being paid.
+        var transaction = CreateOutstandingTransaction();
+
+        transaction.AmountPaid = 108m;
+        transaction.Status = TransactionStatus.Paid;
+
+        var store = new FakeTransactionStore(transaction);
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            ItemId = "attempt-2",
+            SessionId = "settlement-2",
+            Currency = "USD",
+            State = PaymentAttemptState.Succeeded,
+            ConfirmedAmount = 108m,
+        });
+        var issues = new List<PaymentIssue>();
+        var handler = CreateHandler(store, attempts, discountProvider: null, issues);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(CreateSettlementSession(transaction, "settlement-2"))));
+
+        // Assert
+        var issue = Assert.Single(issues);
+
+        Assert.Equal(108m, issue.Amount);
+        Assert.Equal("settlement-2", issue.ReferenceId);
+    }
+
     private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts = null, params ITransactionPaymentHandler[] paymentHandlers)
         => CreateHandler(store, attempts, discountProvider: null, paymentHandlers);
+
+    private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts, ICheckoutDiscountProvider discountProvider, List<PaymentIssue> issues)
+        => CreateHandler(store, attempts, discountProvider, issues, []);
+
+    private static TransactionSettlementCheckoutHandler CreateHandler(
+        FakeTransactionStore store,
+        InMemoryPaymentAttemptStore attempts,
+        ICheckoutDiscountProvider discountProvider,
+        params ITransactionPaymentHandler[] paymentHandlers)
+        => CreateHandler(store, attempts, discountProvider, issues: null, paymentHandlers);
 
     // The handler with the transaction commands it records a promotion code through, and the discount provider it
     // redeems the code with once the transaction is settled.
@@ -665,9 +751,20 @@ public sealed class TransactionSettlementCheckoutHandlerTests
         FakeTransactionStore store,
         InMemoryPaymentAttemptStore attempts,
         ICheckoutDiscountProvider discountProvider,
-        params ITransactionPaymentHandler[] paymentHandlers)
+        List<PaymentIssue> issues,
+        ITransactionPaymentHandler[] paymentHandlers)
     {
         var services = new ServiceCollection();
+
+        if (issues is not null)
+        {
+            var recorder = new Mock<IPaymentIssueRecorder>();
+
+            recorder.Setup(value => value.RecordAsync(It.IsAny<PaymentIssue>(), It.IsAny<CancellationToken>()))
+                .Callback((PaymentIssue issue, CancellationToken _) => issues.Add(issue))
+                .ReturnsAsync(true);
+            services.AddSingleton(recorder.Object);
+        }
 
         foreach (var paymentHandler in paymentHandlers)
         {

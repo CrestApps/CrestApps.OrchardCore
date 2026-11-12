@@ -382,6 +382,7 @@ public sealed class BookingPaymentEventsTests
             Mock.Of<ICheckoutSessionStore>(),
             Mock.Of<IPaymentAttemptStore>(),
             [],
+            new LocalLock(NullLogger<LocalLock>.Instance),
             CreateClock(),
             NullLogger<BookingBalanceCharger>.Instance,
             new PassThroughLocalizer<BookingBalanceCharger>(),

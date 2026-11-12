@@ -12,6 +12,7 @@
         PaymentIssueKinds.GatewaySubscriptionChangeFailed => T["The payment provider did not change a subscription"],
         PaymentIssueKinds.DiscountRedemptionFailed => T["A promotion code's use was not recorded"],
         PaymentIssueKinds.PaymentShortOfInvoice => T["A payment no longer covered its checkout"],
+        PaymentIssueKinds.PaymentNotApplied => T["A payment was collected for a balance already paid"],
         _ => T["A payment operation failed"],
     };
 }

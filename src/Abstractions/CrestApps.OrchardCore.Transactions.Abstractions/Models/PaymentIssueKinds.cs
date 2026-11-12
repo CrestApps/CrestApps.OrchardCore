@@ -27,4 +27,10 @@ public static class PaymentIssueKinds
     /// shipping after the payment was begun. The checkout was not completed and the payment was refunded.
     /// </summary>
     public const string PaymentShortOfInvoice = "PaymentShortOfInvoice";
+
+    /// <summary>
+    /// A payment was collected for transactions that no longer owed it, such as a second tab of a pay link paid after
+    /// the first, so it was not applied to any of them and needs to be refunded or applied by hand.
+    /// </summary>
+    public const string PaymentNotApplied = "PaymentNotApplied";
 }
