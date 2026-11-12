@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Reports.DataSources;
@@ -31,6 +31,8 @@ public abstract class IndexedReportDataSet<TDocument, TIndex, TRow> : RecordData
     where TIndex : MapIndex
     where TRow : class
 {
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> _restrictsRows = new();
+
     // Bounds are widened by this much before they reach the store, so a date the store keeps with less precision
     // than the record never falls outside a bound the record itself is inside. The consumer filters every row again.
     private static readonly TimeSpan _boundSlack = TimeSpan.FromSeconds(1);
@@ -161,6 +163,12 @@ public abstract class IndexedReportDataSet<TDocument, TIndex, TRow> : RecordData
     {
         var restrict = await RestrictAsync(query.Context, cancellationToken);
 
+        if (RestrictsRows)
+        {
+            // The rows depend on the reader, so a stored result of this read belongs to this reader only.
+            ReportRowScope.MarkRestricted(query.Context);
+        }
+
         if (restrict is null)
         {
             yield break;
@@ -251,8 +259,20 @@ public abstract class IndexedReportDataSet<TDocument, TIndex, TRow> : RecordData
     }
 
     /// <summary>
+    /// Gets a value indicating whether the data set returns only the rows its reader may see, which it does when it
+    /// overrides <see cref="RestrictAsync"/>.
+    /// </summary>
+    protected bool RestrictsRows => _restrictsRows.GetOrAdd(GetType(), static type =>
+    {
+        var method = type.GetMethod(nameof(RestrictAsync), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        return method is not null && method.GetBaseDefinition() != method;
+    });
+
+    /// <summary>
     /// Decides which documents the principal may read, when the data set's permissions alone do not decide it. The
-    /// default reads every document.
+    /// default reads every document. A data set that overrides it is treated as returning rows that depend on the
+    /// reader: a scheduled report view keeps a stored result of it for its owner only.
     /// </summary>
     /// <param name="context">The context of the run.</param>
     /// <param name="cancellationToken">The cancellation token.</param>

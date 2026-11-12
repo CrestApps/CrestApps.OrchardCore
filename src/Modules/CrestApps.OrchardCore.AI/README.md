@@ -1,4 +1,4 @@
-# Artificial Intelligence
+﻿# Artificial Intelligence
 
 Provides AI services.
 
@@ -34,6 +34,11 @@ Enabling a feature of this module enables the features it depends on:
 - `IAIConversationEvaluator` (CrestApps.OrchardCore.AI.Core): Scores a conversation against criteria.
 - `IAIChatSessionCloser` (CrestApps.OrchardCore.AI.Core): Closes an AI conversation as soon as it is known to be over, such as when a call hangs up, instead of waiting for the profile's inactivity timeout.
 - and 15 more contracts in the same projects.
+
+## Completion API limits
+
+- Every API key, and every signed-in API caller, has a quota of model calls on `api/ai/completion/chat` and `api/ai/completion/utility`: 1,000 an hour by default. Change it under `CrestApps_Throttling:AttemptPolicies:ai-api-completions` (`PermitLimit`, `Window`). A caller over the quota gets `429` with `Retry-After`.
+- With Orchard Core's Rate Limits feature on, the same routes carry the `ai-completion` rate-limit group (60 requests a minute per caller by default).
 
 ## Documentation
 

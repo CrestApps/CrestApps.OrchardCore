@@ -17,8 +17,10 @@ function views(directory) {
 }
 
 describe('secret fields', () => {
-    const fields = views('src').flatMap(path =>
-        [...readFileSync(path, 'utf8').matchAll(/<input\b[^>]*\btype="password"[^>]*>/gs)].map(match => ({ path, tag: match[0] })));
+    // Each view is read once, here, for every check below.
+    const sources = views('src').map(path => ({ path, text: readFileSync(path, 'utf8') }));
+    const fields = sources.flatMap(({ path, text }) =>
+        [...text.matchAll(/<input\b[^>]*\btype="password"[^>]*>/gs)].map(match => ({ path, tag: match[0] })));
 
     it('are found, so the check below is not passing on nothing', () => {
         expect(fields.length).toBeGreaterThan(20);
@@ -30,6 +32,22 @@ describe('secret fields', () => {
             .map(({ path, tag }) => `${path}: ${tag.slice(0, 80)}`);
 
         expect(filled).toEqual([]);
+    });
+
+    // SEC-FE4 d: a secret typed into a type="text" field is shown while it is typed and kept in the browser's form
+    // history. A field bound to a property whose name ends in Key, Secret, Token or Password is either a password
+    // field or uses the shared secret-input tag helper (CrestApps.OrchardCore.Core), which renders one. Names that end
+    // that way but hold no secret are listed here.
+    const notSecret = new Set(['LivePublishableKey', 'TestPublishableKey', 'StickyKey', 'Treatment.CallbackDtmfKey']);
+
+    it('bound to a secret-named property are never plain text', () => {
+        const plain = sources.flatMap(({ path, text }) =>
+            [...text.matchAll(/<input\b[^>]*\basp-for="([\w.]*(?:Key|Secret|Token|Password))"[^>]*>/gs)]
+                .filter(match => !notSecret.has(match[1]))
+                .filter(match => !/\btype="(password|hidden|checkbox)"/.test(match[0]) && !/\bsecret-input\b/.test(match[0]))
+                .map(match => `${path}: ${match[1]}`));
+
+        expect(plain).toEqual([]);
     });
 
     // A new account's own password, marked data-account-password, is the one field a password manager should offer

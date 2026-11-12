@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
@@ -151,7 +151,7 @@ public sealed class ReportSubscriptionService
 
             subscription.LastRunUtc = runUtc;
 
-            if (reschedule)
+            if (reschedule && subscription.IsEnabled)
             {
                 subscription.NextRunUtc = ReportSubscriptionSchedule.GetNextRunUtc(subscription, runUtc, timeZone);
             }
@@ -192,6 +192,22 @@ public sealed class ReportSubscriptionService
         if (_reports.GetDescriptor(subscription.ReportName) is not { } descriptor)
         {
             return (S["The report {0} isn't available; its feature may be off.", subscription.ReportName], "report_unavailable");
+        }
+
+        // The report goes out with the access of the person who last saved the subscription, so that person must still
+        // exist, be enabled, and hold both the report's permission and the subscription permission. Otherwise the
+        // subscription is turned off and says why, rather than keep mailing a report its author can no longer see.
+        var author = subscription.ModifiedBy ?? subscription.CreatedBy;
+        var authorPrincipal = await _owners.ResolveByUserNameAsync(author);
+
+        if (authorPrincipal is null ||
+            (descriptor.Permission is not null && !await _authorizationService.AuthorizeAsync(authorPrincipal, descriptor.Permission)) ||
+            !await _authorizationService.AuthorizeAsync(authorPrincipal, ReportSubscriptionPermissions.ManageReportSubscriptions))
+        {
+            subscription.IsEnabled = false;
+            subscription.NextRunUtc = null;
+
+            return (S["The subscription was turned off because {0}, who last saved it, no longer exists, is disabled, or may no longer view this report or manage report subscriptions. Save it again as someone who may, then turn it back on.", author ?? "-"], "author_denied");
         }
 
         var format = string.IsNullOrWhiteSpace(subscription.AttachmentFormat) ? null : _exports.GetDescriptor(subscription.AttachmentFormat);

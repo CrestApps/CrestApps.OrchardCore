@@ -108,7 +108,9 @@ public sealed class Startup : StartupBase
 
         services.AddDataProtection();
         services.AddOptions<AIVisitorIdentityOptions>();
-        services.Replace(ServiceDescriptor.Singleton<IAIVisitorIdentityResolver, DefaultAIVisitorIdentityResolver>());
+        // The package's resolver takes the visitor's address from the first X-Forwarded-For value of the raw request,
+        // which a client sets at will; this one takes it from the connection.
+        services.Replace(ServiceDescriptor.Singleton<IAIVisitorIdentityResolver, ConnectionAddressAIVisitorIdentityResolver>());
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

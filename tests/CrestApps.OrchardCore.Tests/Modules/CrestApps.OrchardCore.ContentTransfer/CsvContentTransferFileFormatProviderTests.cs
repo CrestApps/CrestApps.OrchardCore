@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using CrestApps.OrchardCore.ContentTransfer.FileFormats;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContentTransfer;
@@ -13,6 +13,27 @@ public sealed class CsvContentTransferFileFormatProviderTests
         var result = provider.CanHandle("items.csv");
 
         Assert.True(result);
+    }
+
+    // SEC-A17 / DRY-12h: the module wrote CSV with its own writer, which left a value that starts like a formula as a
+    // formula, so an exported file ran it when opened in a spreadsheet. It now writes through the guarded CsvWriter.
+    [Fact]
+    public void CreateWriter_GuardsValuesThatStartLikeAFormula()
+    {
+        var provider = new CsvContentTransferFileFormatProvider();
+        using var stream = new MemoryStream();
+
+        using (var writer = provider.CreateWriter(stream, "Ignored"))
+        {
+            writer.WriteHeader(["Title", "Total"]);
+            writer.WriteRow(["=1+1", "-42"]);
+            writer.Flush();
+        }
+
+        var text = System.Text.Encoding.UTF8.GetString(stream.ToArray()).TrimStart('﻿');
+
+        Assert.Contains("'=1+1", text);
+        Assert.Contains(",-42", text);
     }
 
     [Fact]

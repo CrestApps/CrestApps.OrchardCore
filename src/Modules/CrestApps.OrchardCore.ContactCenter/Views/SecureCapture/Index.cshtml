@@ -1,4 +1,4 @@
-@model SecureCaptureFormViewModel
+﻿@model SecureCaptureFormViewModel
 @{
     Layout = null;
     var title = T["Secure information"].Value;
@@ -10,7 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <title>@title</title>
-    <style>
+    <style nonce="@Model.CspNonce">
         :root { color-scheme: light dark; }
         body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f4f5f7; color: #1b1b1f; }
         .secure-capture { max-width: 32rem; margin: 3rem auto; padding: 0 1rem; }
@@ -48,7 +48,7 @@
                     <div class="secure-capture__error">@Model.ErrorMessage</div>
                 }
 
-                <form method="post" action="@Url.RouteUrl(CrestApps.OrchardCore.ContactCenter.Controllers.SecureCaptureController.CaptureRouteName, new { token = Model.Token })" autocomplete="off">
+                <form method="post" action="@Url.RouteUrl(CrestApps.OrchardCore.ContactCenter.Controllers.SecureCaptureController.CaptureRouteName, new { token = Model.Token })">
                     @Html.AntiForgeryToken()
                     @foreach (var field in Model.Fields)
                     {
@@ -58,7 +58,7 @@
                                    id="field_@field"
                                    name="field_@field"
                                    inputmode="@SecureCaptureFieldInputMode(field)"
-                                   autocomplete="off"
+                                   autocomplete="@SecureCaptureFieldAutocomplete(field)"
                                    required />
                         </div>
                     }
@@ -83,6 +83,18 @@
             SecureCaptureField.BankAccountNumber => T["Bank account number"].Value,
             SecureCaptureField.NationalId => T["National identification number"].Value,
             _ => T["Requested information"].Value,
+        };
+    }
+
+    // The card tokens let the browser fill a saved card; other values are never offered or remembered.
+    string SecureCaptureFieldAutocomplete(SecureCaptureField field)
+    {
+        return field switch
+        {
+            SecureCaptureField.CreditCardNumber => "cc-number",
+            SecureCaptureField.CardExpiry => "cc-exp",
+            SecureCaptureField.CardSecurityCode => "cc-csc",
+            _ => "off",
         };
     }
 

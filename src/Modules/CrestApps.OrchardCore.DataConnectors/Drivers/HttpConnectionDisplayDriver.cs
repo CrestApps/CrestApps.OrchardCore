@@ -158,6 +158,16 @@ internal sealed class HttpConnectionDisplayDriver : DisplayDriver<DataConnection
             headers.Add(new HttpHeaderSetting { Name = name, Value = line[(separator + 1)..].Trim() });
         }
 
+        // A stored secret was given for one host. When the connection now sends its requests or its token requests to
+        // another host, the secrets are dropped and must be entered again, so an edit can't hand them to a new server.
+        if (SendsSecretsElsewhere(connection.GetOrCreate<HttpConnectionSettings>(), model.BaseUrl, model.TokenUrl, model.Authority))
+        {
+            foreach (var secret in new[] { HttpAuthenticationSecrets.ApiKey, HttpAuthenticationSecrets.Password, HttpAuthenticationSecrets.BearerToken, HttpAuthenticationSecrets.ClientSecret })
+            {
+                _secretManager.Remove(connection, secret);
+            }
+        }
+
         connection.Put(new HttpConnectionSettings
         {
             BaseUrl = model.BaseUrl?.Trim(),
@@ -224,6 +234,34 @@ internal sealed class HttpConnectionDisplayDriver : DisplayDriver<DataConnection
         }
 
         return [.. types];
+    }
+
+    /// <summary>
+    /// Gets whether the posted connection sends its requests, or its token requests, to another origin than the stored
+    /// one, for a connection that was saved before.
+    /// </summary>
+    internal static bool SendsSecretsElsewhere(HttpConnectionSettings stored, string baseUrl, string tokenUrl, string authority)
+    {
+        if (stored is null || string.IsNullOrWhiteSpace(stored.BaseUrl))
+        {
+            return false;
+        }
+
+        return !SameOrigin(stored.BaseUrl, baseUrl) ||
+            !SameOrigin(stored.Authentication?.TokenUrl, tokenUrl) ||
+            !SameOrigin(stored.Authentication?.Authority, authority);
+    }
+
+    private static bool SameOrigin(string stored, string posted)
+    {
+        if (string.IsNullOrWhiteSpace(stored))
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(stored.Trim(), UriKind.Absolute, out var before) &&
+            Uri.TryCreate(posted?.Trim(), UriKind.Absolute, out var after) &&
+            Uri.Compare(before, after, UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0;
     }
 }
 

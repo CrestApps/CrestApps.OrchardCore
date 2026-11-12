@@ -1,3 +1,4 @@
+@inject OrchardCore.Environment.Shell.ShellSettings ShellSettings
 @* The styles of the My Work pages, and the service worker that shows their push notifications and keeps the
    pages that work offline. *@
 <style>
@@ -6,8 +7,14 @@
     .my-work-shift { border-left: .3rem solid #2b8a3e; }
     .my-work-time-off { border-left: .3rem solid #e8590c; }
 </style>
+@{
+    // The worker's caches are named for the signed-in user, so a shared device never shows one worker another's pages.
+    var serviceWorkerUserKey = CrestApps.OrchardCore.Workforce.Controllers.MyWorkController.GetServiceWorkerUserKey(
+        User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+        ShellSettings.Name);
+}
 <script at="Foot">
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('@Url.Content("~/my-work/sw.js")', { scope: '@Url.Content("~/Admin/my-work")' }).catch(() => { });
+        navigator.serviceWorker.register('@Url.Content("~/my-work/sw.js")?u=@serviceWorkerUserKey', { scope: '@Url.Content("~/Admin/my-work")' }).catch(() => { });
     }
 </script>

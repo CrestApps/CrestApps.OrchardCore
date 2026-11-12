@@ -1,4 +1,6 @@
-using CrestApps.OrchardCore.Core.Services;
+﻿using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.YesSql.Core.Retention;
 using CrestApps.OrchardCore.Wizard.Contents;
 using CrestApps.OrchardCore.Wizard.Core.Indexes;
 using CrestApps.OrchardCore.Wizard.Core.Migrations;
@@ -20,6 +22,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
@@ -43,6 +46,31 @@ public sealed class Startup : StartupBase
 
         services.AddDataMigration<WizardMigrations>()
             .AddIndexProvider<WizardSessionIndexProvider>();
+
+        // Pending sessions nobody came back to are removed by the platform retention task.
+        services.AddRetentionPolicy<WizardSessionRetentionPolicy>();
+    }
+}
+
+/// <summary>
+/// Holds each visitor to <see cref="RequestsPerMinute"/> wizard requests a minute when Orchard Core's Rate Limits
+/// feature is enabled. The wizard routes are public, and the first submission of a wizard stores a session.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <summary>
+    /// The wizard requests a visitor may make in a minute.
+    /// </summary>
+    public const int RequestsPerMinute = 60;
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options.AddClientGroupRateLimit(
+            WizardConstants.RateLimitGroups.Wizard,
+            RequestsPerMinute,
+            TimeSpan.FromMinutes(1)));
     }
 }
 

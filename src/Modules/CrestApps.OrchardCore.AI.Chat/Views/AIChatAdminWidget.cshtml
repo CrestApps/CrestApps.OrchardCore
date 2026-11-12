@@ -1,4 +1,4 @@
-@using CrestApps.Core.AI.Ingestion
+﻿@using CrestApps.Core.AI.Ingestion
 @using System.Text.Json
 @using CrestApps.Core
 @using CrestApps.Core.AI.Chat.Realtime
@@ -16,6 +16,11 @@
 
 @inject ShellSettings ShellSettings
 @inject IAIDeploymentManager AIDeploymentManager
+@inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
+@{
+    // Model output is rendered as Markdown here; images may load only from the site and the configured sources.
+    ChatImageContentSecurityPolicy.Apply(Context);
+}
 @{
     var profile = (AIProfile)Model.Profile;
     IEnumerable<AIChatSessionEntry> sessions = Model.Sessions;

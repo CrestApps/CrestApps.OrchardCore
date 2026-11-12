@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.DataConnectors.Models;
+﻿using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.ViewModels;
 using CrestApps.OrchardCore.Diagnostics;
@@ -345,6 +345,8 @@ public sealed class ConnectedDataSetsController : Controller
         }
         catch (DataConnectorException exception)
         {
+            // The database's own message can name tables, columns and logins, so it goes to the log, not the page.
+            LogDatabaseError(exception, dataSet.Name);
             model.Error = exception.Message;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -535,6 +537,7 @@ public sealed class ConnectedDataSetsController : Controller
         }
         catch (DataConnectorException exception)
         {
+            LogDatabaseError(exception, dataSet.Name);
             ModelState.AddModelError(string.Empty, S["The fields couldn't be read: {0}", exception.Message]);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -610,4 +613,12 @@ public sealed class ConnectedDataSetsController : Controller
 
     private async Task<ConnectedDataSet> FindAsync(string id)
         => string.IsNullOrEmpty(id) ? null : await _dataSetStore.FindByIdAsync(id, HttpContext.RequestAborted);
+
+    private void LogDatabaseError(DataConnectorException exception, string dataSetName)
+    {
+        if (exception.InnerException is System.Data.Common.DbException && _logger.IsEnabled(LogLevel.Warning))
+        {
+            _logger.LogWarning(exception, "The database refused a read of the data set '{DataSet}'.", dataSetName);
+        }
+    }
 }

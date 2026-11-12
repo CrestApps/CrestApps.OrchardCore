@@ -1,3 +1,4 @@
+﻿using System.Security.Cryptography;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
@@ -21,6 +22,8 @@ public sealed class SecureCaptureController : Controller
     /// The route name of the customer capture page, used to build the link the agent shares.
     /// </summary>
     public const string CaptureRouteName = "ContactCenterSecureCapture";
+
+    private const string CspNonceKey = "CrestApps.ContactCenter.SecureCapture.CspNonce";
 
     private readonly ISecureCaptureService _secureCaptureService;
 
@@ -55,6 +58,7 @@ public sealed class SecureCaptureController : Controller
         {
             Token = token,
             Fields = session.RequestedFields.ToArray(),
+            CspNonce = CspNonce,
         });
     }
 
@@ -94,6 +98,7 @@ public sealed class SecureCaptureController : Controller
                 Token = token,
                 Fields = session.RequestedFields.ToArray(),
                 ErrorMessage = result.Reason,
+                CspNonce = CspNonce,
             });
         }
 
@@ -102,6 +107,7 @@ public sealed class SecureCaptureController : Controller
             Token = token,
             Fields = session.RequestedFields.ToArray(),
             Completed = true,
+            CspNonce = CspNonce,
         });
     }
 
@@ -114,5 +120,14 @@ public sealed class SecureCaptureController : Controller
         Response.Headers.CacheControl = "no-store, no-cache, max-age=0";
         Response.Headers.Pragma = "no-cache";
         Response.Headers["Referrer-Policy"] = "no-referrer";
+
+        // The page collects card data, so it runs no script at all, takes its one inline style by a nonce made for this
+        // response, posts only to itself and can't be framed by another site.
+        var nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+        HttpContext.Items[CspNonceKey] = nonce;
+        Response.Headers.ContentSecurityPolicy =
+            $"default-src 'none'; style-src 'nonce-{nonce}'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
     }
+
+    private string CspNonce => HttpContext.Items[CspNonceKey] as string;
 }

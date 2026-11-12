@@ -5,7 +5,9 @@ using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.FileTransfer.Core.Drivers;
 using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
+using CrestApps.OrchardCore.AI.FileTransfer.Core;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -23,8 +25,9 @@ public sealed class FtpResourceDisplayDriver : FtpConnectionDisplayDriverBase<Mc
     /// <param name="stringLocalizer">The string localizer.</param>
     public FtpResourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer<FtpResourceDisplayDriver> stringLocalizer)
-        : base(dataProtectionProvider, stringLocalizer)
+        IStringLocalizer<FtpResourceDisplayDriver> stringLocalizer,
+        IOptions<FileTransferHostOptions> hostOptions)
+        : base(dataProtectionProvider, stringLocalizer, hostOptions)
     {
     }
 

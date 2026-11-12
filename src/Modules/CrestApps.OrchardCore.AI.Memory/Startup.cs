@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -79,6 +79,5 @@ public sealed class UserMemoryStartup : StartupBase
     {
         services.AddScoped<IDisplayDriver<User>, UserMemoryDisplayDriver>();
         services.AddPermissionProvider<AIMemoryPermissionsProvider>();
-        services.AddScoped<IAuthorizationHandler, AIMemoryAuthorizationHandler>();
     }
 }

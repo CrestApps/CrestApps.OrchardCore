@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Endpoints;
 using CrestApps.Core.AI.Documents.Models;
@@ -10,17 +10,24 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Documents.Drivers;
+using CrestApps.OrchardCore.AI.Documents.Endpoints;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.AI.Documents.Handlers;
 using CrestApps.OrchardCore.AI.Documents.Migrations;
 using CrestApps.OrchardCore.AI.Documents.Services;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
+using OrchardCore;
 using OrchardCore.Data;
+using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.RateLimits;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.FileStorage;
@@ -135,17 +142,51 @@ public sealed class ProfileDocumentsStartup : StartupBase
 [Feature(AIConstants.Feature.ChatSessionDocuments)]
 public sealed class ChatSessionDocumentsStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ChatSessionDocumentsStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration.</param>
+    public ChatSessionDocumentsStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<AIProfile, AIProfileSessionDocumentsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionDocumentsDisplayDriver>();
+        services.Configure<ChatSessionDocumentUploadOptions>(_shellConfiguration.GetSection(ChatSessionDocumentUploadOptions.SectionName));
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes
-            .AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument)
-            .AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
+        // CrestApps.Core maps these routes without returning their builders, so a group carries the rate-limit group
+        // and the upload guard, which authorizes, limits session starts and caps documents before the upload runs.
+        var upload = routes.MapGroup(string.Empty);
+        upload.AddEndpointFilter<ChatSessionDocumentUploadGuard>();
+        upload.WithRateLimitGroup(ChatSessionDocumentUploadOptions.RateLimitGroup);
+        upload.AddUploadChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionUploadDocument);
+
+        var remove = routes.MapGroup(string.Empty);
+        remove.WithRateLimitGroup(ChatSessionDocumentUploadOptions.RateLimitGroup);
+        remove.AddRemoveChatSessionDocumentEndpoint(AIConstants.RouteNames.ChatSessionRemoveDocument);
+    }
+}
+
+/// <summary>
+/// Holds each visitor to a number of chat session document requests when Orchard Core's Rate Limits feature is enabled.
+/// </summary>
+[Feature(AIConstants.Feature.ChatSessionDocuments)]
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class ChatSessionDocumentsRateLimitsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(ChatSessionDocumentUploadOptions.RateLimitGroup, 30, TimeSpan.FromMinutes(10))
+            .AddJsonRejectionHandler(AIConstants.RouteNames.ChatSessionUploadDocument, AIConstants.RouteNames.ChatSessionRemoveDocument));
     }
 }
 

@@ -302,15 +302,16 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
                     formData.append('files', files[i]);
                 }
 
-                const response = await fetch(uploadUrl, {
-                    method: 'POST',
-                    body: formData
-                });
+                // The shared helper sends the antiforgery token with the post.
+                const response = await crestapps.http.request(uploadUrl, { method: 'POST', form: formData })
+                    .catch(async error => {
+                        if (error instanceof crestapps.http.HttpError) {
+                            const text = await error.response.text();
+                            throw new Error(stripHtml(text) || '@T["Upload failed"]');
+                        }
 
-                if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(stripHtml(error) || '@T["Upload failed"]');
-                }
+                        throw error;
+                    });
 
                 // An expired auth cookie answers a POST with the login page, and reading that as JSON
                 // throws "unexpected character at line 1 column 1" -- which tells a reader nothing about
@@ -480,15 +481,11 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
             if (!(await crestapps.confirm(documentsList.dataset.removeTitle, documentsList.dataset.removeMessage))) return;
 
             try {
-                const response = await fetch(removeUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ itemId: itemId, documentId: documentId })
-                });
+                // The shared helper sends the antiforgery token with the post, and fails on an error status.
+                const response = await crestapps.http.request(removeUrl, { method: 'POST', json: { itemId: itemId, documentId: documentId } })
+                    .catch(() => null);
 
-                if (response.ok) {
+                if (response) {
                     const docItem = documentsList.querySelector(`[data-document-id="${documentId}"]`);
                     if (docItem) docItem.remove();
 

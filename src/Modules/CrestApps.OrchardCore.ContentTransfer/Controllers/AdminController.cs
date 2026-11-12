@@ -166,11 +166,21 @@ public sealed class AdminController : Controller, IUpdateModel
             return Forbid();
         }
 
+        // Listing entries doesn't let a role remove them: removing needs the delete permission, as one entry's Delete does.
+        if (options.BulkAction == ContentTransferEntryBulkAction.Remove &&
+            !await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.DeleteContentTransferEntries))
+        {
+            return Forbid();
+        }
+
         await ExecuteBulkActionAsync(itemIds, options.BulkAction, ContentTransferDirection.Import);
 
         return RedirectToAction(nameof(List));
     }
 
+    // Actions that change an entry answer POST with an antiforgery token only, so a link or an image can't trigger them.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(string entryId, string returnUrl)
     {
         if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.DeleteContentTransferEntries))
@@ -852,6 +862,8 @@ public sealed class AdminController : Controller, IUpdateModel
         return RedirectToAction(nameof(ExportDashboard));
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     [Admin("import/entries/{entryId}/resume", "ResumeImport")]
     public async Task<IActionResult> ResumeImport(string entryId, string returnUrl)
     {
@@ -898,6 +910,8 @@ public sealed class AdminController : Controller, IUpdateModel
         return RedirectTo(returnUrl);
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     [Admin("import/entries/{entryId}/pause", "PauseImport")]
     public async Task<IActionResult> PauseImport(string entryId, string returnUrl)
     {

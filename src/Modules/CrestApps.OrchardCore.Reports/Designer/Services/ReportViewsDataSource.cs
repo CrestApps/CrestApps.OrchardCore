@@ -1,5 +1,7 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using System.Security.Claims;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using Microsoft.AspNetCore.Authorization;
 using OrchardCore.DataSources;
@@ -11,7 +13,8 @@ namespace CrestApps.OrchardCore.Reports.Designer.Services;
 /// Exposes saved report views as data sets, so a report or another view can build on a view's prepared result. Each
 /// result column of the view becomes a field named after the column identifier. A view that reads itself, directly or
 /// through other views, is refused. A scheduled view is read from its stored result while that result still has the
-/// view's fields; otherwise, and for a live view, the view runs.
+/// view's fields and, when a data set returned only the rows the view's owner may see, only by the owner; otherwise, and
+/// for a live view, the view runs.
 /// </summary>
 public sealed class ReportViewsDataSource : IDataSource
 {
@@ -117,8 +120,19 @@ public sealed class ReportViewsDataSource : IDataSource
 
             // A snapshot taken before the view changed its fields is ignored, and the view runs, until the next
             // refresh. A view whose first refresh has not happened yet runs too.
-            if (snapshot?.RefreshedUtc is not null && ReportViewSnapshotData.Matches(snapshot, ReportViewRunner.DescribeFields(plan)))
+            // A result whose rows depended on the owner's access is the owner's alone; any other reader runs the view, so
+            // the data sets apply that reader's own row restrictions.
+            var rowsRestricted = snapshot?.RowsRestricted != false;
+
+            if (snapshot?.RefreshedUtc is not null &&
+                ReportViewSnapshotData.Matches(snapshot, ReportViewRunner.DescribeFields(plan)) &&
+                (!rowsRestricted || IsOwner(query.Context, view)))
             {
+                if (rowsRestricted)
+                {
+                    ReportRowScope.MarkRestricted(query.Context);
+                }
+
                 ReportTelemetry.RecordViewRead("snapshot");
 
                 var table = ReportViewSnapshotData.ToTable(snapshot, query.Fields, maxRows);
@@ -128,7 +142,7 @@ public sealed class ReportViewsDataSource : IDataSource
                 yield break;
             }
 
-            mode = snapshot?.RefreshedUtc is null ? "first_run" : "stale_snapshot";
+            mode = snapshot?.RefreshedUtc is null ? "first_run" : rowsRestricted && !IsOwner(query.Context, view) ? "restricted_snapshot" : "stale_snapshot";
         }
 
         ReportTelemetry.RecordViewRead(mode);
@@ -150,6 +164,13 @@ public sealed class ReportViewsDataSource : IDataSource
         var view = await _views.FindByIdAsync(viewId, cancellationToken);
 
         return view is not null && await CanReadAsync(context, view) ? view : null;
+    }
+
+    private static bool IsOwner(DataSourceContext context, ReportView view)
+    {
+        var userId = context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        return !string.IsNullOrEmpty(userId) && string.Equals(userId, view.OwnerId, StringComparison.Ordinal);
     }
 
     private async Task<bool> CanReadAsync(DataSourceContext context, ReportView view)

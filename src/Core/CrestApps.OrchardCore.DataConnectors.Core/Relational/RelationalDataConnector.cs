@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -351,7 +351,8 @@ public abstract class RelationalDataConnector
 
     /// <summary>
     /// Checks that a custom query is a single query expression that can run as a derived table: its parentheses
-    /// balance and it has no statement separator, outside of quoted text and comments. A trailing separator is removed.
+    /// balance, it has no statement separator outside of quoted text, and it has no comment. A trailing separator is
+    /// removed.
     /// </summary>
     /// <param name="query">The query.</param>
     /// <returns>The query, ready to wrap.</returns>
@@ -388,19 +389,13 @@ public abstract class RelationalDataConnector
                     continue;
 
                 case '-' when index + 1 < text.Length && text[index + 1] == '-':
-                    throw new DataConnectorException("The query can't contain -- comments; use /* */ or remove them.");
+                    throw new DataConnectorException("The query can't contain -- comments; remove them.");
 
+                // SQL Server and PostgreSQL nest block comments, so a comment that looks closed here can still be open
+                // for the database, which would then run text this check took for comment as a statement. Comments are
+                // refused instead of parsed per dialect.
                 case '/' when index + 1 < text.Length && text[index + 1] == '*':
-                    var commentEnd = text.IndexOf("*/", index + 2, StringComparison.Ordinal);
-
-                    if (commentEnd < 0)
-                    {
-                        throw new DataConnectorException("The query has an unclosed comment.");
-                    }
-
-                    index = commentEnd + 1;
-                    code.Append(' ');
-                    continue;
+                    throw new DataConnectorException("The query can't contain /* */ comments; remove them.");
 
                 case '(':
                     depth++;
@@ -550,7 +545,7 @@ public abstract class RelationalDataConnector
         }
         catch (DbException exception)
         {
-            throw new DataConnectorException($"The database refused the query: {exception.Message}", exception) { IsTransient = IsTransient(exception) };
+            throw new DataConnectorException("The database refused the query. See the site's log for the database's message.", exception) { IsTransient = IsTransient(exception) };
         }
     }
 
@@ -562,7 +557,7 @@ public abstract class RelationalDataConnector
         }
         catch (DbException exception)
         {
-            throw new DataConnectorException($"The database failed while reading: {exception.Message}", exception) { IsTransient = IsTransient(exception) };
+            throw new DataConnectorException("The database failed while reading. See the site's log for the database's message.", exception) { IsTransient = IsTransient(exception) };
         }
     }
 }
