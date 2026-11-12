@@ -99,6 +99,7 @@ public sealed class DuplicatePatternRatchetTests
             ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpCheckoutOperations.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpMcpIdempotency.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpOperationResult.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpCatalogEndpoints.cs"] = 1,
             ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpOperations.cs"] = 1,
 
             // The payment endpoints answer an attempt policy's refusal in their own JSON shape.
