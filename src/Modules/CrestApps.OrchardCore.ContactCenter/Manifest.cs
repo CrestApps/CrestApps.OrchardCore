@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore;
-using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Skills;
@@ -24,9 +23,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.Activities,
-
-        // The supervisor dashboard and the voicemail greeting page use the shared browser helpers.
-        ResourcesConstants.Feature.Area,
     ]
 )]
 
