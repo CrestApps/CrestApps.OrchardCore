@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Reports;
@@ -44,6 +44,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"report-view-snapshots-{Guid.NewGuid():N}.db");
     private readonly InMemoryReportDataSource _sales = SalesData();
     private readonly FlakyReportDataSource _flaky = new();
+    private readonly ScopedReportDataSource _scoped = new();
     private DateTime _now = _start;
     private bool _locked = true;
     private IStore _store;
@@ -121,6 +122,45 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
         Assert.Empty(_sales.Queries);
         Assert.Equal(["East", 300m], result.Rows[0]);
         Assert.Equal(["West", 170m], result.Rows[1]);
+    }
+
+    // SEC-A12: a scheduled view is refreshed as its owner, so its stored rows are the owner's. A data set that returns
+    // only the rows its reader may see must not hand the owner's rows to another reader.
+    [Fact]
+    public async Task QueryAsync_ScheduledViewOverRowRestrictedData_GivesAnotherReaderOnlyTheirRows()
+    {
+        // Arrange
+        await using var services = Services(ScopedView("v1", ReportViewRefreshIntervals.Hourly));
+        await RefreshAsync(services, "v1");
+
+        // Act
+        var table = await QueryAsync(services, "v1");
+
+        // Assert
+        Assert.Equal(["designer"], table.Rows.Select(row => (string)row[0]));
+    }
+
+    [Fact]
+    public async Task QueryAsync_ScheduledViewOverRowRestrictedData_StillServesTheOwnerTheStoredRows()
+    {
+        // Arrange
+        await using var services = Services(ScopedView("v1", ReportViewRefreshIntervals.Hourly));
+        await RefreshAsync(services, "v1");
+        _scoped.Reads = 0;
+
+        // Act
+        await using var scope = services.CreateAsyncScope();
+        var table = await ReportDesignerTestServices.ReadAsync(scope.ServiceProvider.GetRequiredService<ReportViewsDataSource>(), new DataSourceQuery
+        {
+            DataSet = "v1",
+            Fields = new HashSet<string>(StringComparer.Ordinal),
+            MaxRows = 1000,
+            Context = new DataSourceContext { User = User("owner", "Owner") },
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, _scoped.Reads);
+        Assert.Equal(2, table.Rows.Count);
     }
 
     [Fact]
@@ -543,6 +583,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
             [
                 new TestDataSourceEntry(_sales.SourceName, _sales),
                 new TestDataSourceEntry(FlakyReportDataSource.SourceName, _flaky),
+                new TestDataSourceEntry(ScopedReportDataSource.SourceName, _scoped),
                 new TestDataSourceEntry(ReportsConstants.ViewsDataSource, typeof(ReportViewsDataSource), sp.GetRequiredService<ReportViewsDataSource>),
             ]))
             .AddScoped<ReportQueryPlanner>()
@@ -589,6 +630,63 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
                 Columns = [Column("name", "t.Name")],
             },
         };
+    }
+
+    private static ReportView ScopedView(string id, int refreshIntervalMinutes)
+    {
+        return new ReportView
+        {
+            ItemId = id,
+            DisplayText = "Scoped",
+            OwnerId = "owner",
+            RefreshIntervalMinutes = refreshIntervalMinutes,
+            Query = new ReportQueryDefinition
+            {
+                DataSets = [new ReportDataSetReference { Alias = "t", Source = ScopedReportDataSource.SourceName, DataSet = "Rows" }],
+                Columns = [Column("seenBy", "t.SeenBy")],
+            },
+        };
+    }
+
+    /// <summary>
+    /// A data source that returns only the rows its reader may see, as a data set with row restrictions does.
+    /// </summary>
+    private sealed class ScopedReportDataSource : IDataSource
+    {
+        public const string SourceName = "Scoped";
+
+        private static readonly DataSetSchema _schema = new()
+        {
+            DataSet = new DataSetDescriptor("Rows", "Rows"),
+            Fields = [new DataField("SeenBy", "Seen by", DataFieldType.Text)],
+        };
+
+        public int Reads { get; set; }
+
+        public static string Name => SourceName;
+
+        public static LocalizationSource DisplayName { get; } = LocalizationSource.Create(SourceName);
+
+        public static LocalizationSource Description { get; } = LocalizationSource.Create(SourceName);
+
+        public Task<IReadOnlyList<DataSetDescriptor>> GetDataSetsAsync(DataSourceContext context, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<DataSetDescriptor>>([_schema.DataSet]);
+
+        public Task<DataSetSchema> GetSchemaAsync(string dataSet, DataSourceContext context, CancellationToken cancellationToken = default)
+            => Task.FromResult(dataSet == "Rows" ? _schema : null);
+
+        public async IAsyncEnumerable<DataBatch> ReadAsync(DataSourceQuery query, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            await Task.Yield();
+
+            Reads++;
+            CrestApps.OrchardCore.Reports.DataSources.ReportRowScope.MarkRestricted(query.Context);
+
+            var userId = query.Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            object[][] rows = userId == "owner" ? [["owner"], ["designer"]] : [[userId]];
+
+            yield return new DataBatch([.. _schema.Fields], rows);
+        }
     }
 
     /// <summary>
