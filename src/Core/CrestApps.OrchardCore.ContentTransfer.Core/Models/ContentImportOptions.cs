@@ -65,9 +65,11 @@ public sealed class ContentImportOptions
     public int MaxRows { get; set; } = 1_048_576;
 
     /// <summary>
-    /// The most characters a cell of an imported spreadsheet may hold. Defaults to 32,767, Excel's own limit.
+    /// The most characters a cell of an imported file (CSV or spreadsheet) may hold, which bounds the memory one cell
+    /// takes. Defaults to 1,048,576. It is above Excel's own 32,767 because the module's export writes a long HTML or
+    /// Markdown body into one cell, and that file must import again.
     /// </summary>
-    public int MaxCellLength { get; set; } = 32_767;
+    public int MaxCellLength { get; set; } = 1_048_576;
 
     /// <summary>
     /// The most shared strings an imported workbook may hold. They are read into memory when the file opens. Defaults

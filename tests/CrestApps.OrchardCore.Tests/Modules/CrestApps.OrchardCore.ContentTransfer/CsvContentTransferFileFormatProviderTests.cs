@@ -102,6 +102,49 @@ public sealed class CsvContentTransferFileFormatProviderTests
         Assert.Equal("'quoted on purpose", row[1]);
     }
 
+    /// <summary>
+    /// SEC-A17: a value that itself starts with an apostrophe and a formula character must come back unchanged. The
+    /// reader takes off one leading apostrophe in front of a formula character, so the writer adds one to such a value
+    /// as well, and the removal is never ambiguous.
+    /// </summary>
+    [Theory]
+    [InlineData("'@home' explained")]
+    [InlineData("'-ism")]
+    [InlineData("'=' operator")]
+    [InlineData("''=x")]
+    public void SEC_A17_AValueThatStartsWithAnApostropheAndAFormulaCharacter_RoundTrips(string value)
+    {
+        var provider = new CsvContentTransferFileFormatProvider();
+        using var stream = new MemoryStream();
+
+        using (var writer = provider.CreateWriter(stream, "Ignored"))
+        {
+            writer.WriteHeader(["Title"]);
+            writer.WriteRow([value]);
+            writer.Flush();
+        }
+
+        stream.Position = 0;
+
+        using var reader = provider.CreateReader(stream);
+
+        Assert.Equal(value, reader.ReadRows().Single()[0]);
+    }
+
+    /// <summary>
+    /// SEC-A17: a quote that is never closed used to read the rest of the file into one cell. The cell limit stops it.
+    /// </summary>
+    [Fact]
+    public void SEC_A17_AnUnclosedQuote_StopsAtTheCellLimit()
+    {
+        var provider = new CsvContentTransferFileFormatProvider(Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.ContentTransfer.Models.ContentImportOptions { MaxCellLength = 100 }));
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes("Title\r\n\"never closed" + string.Concat(Enumerable.Repeat("\r\nmore text", 50))));
+
+        using var reader = provider.CreateReader(stream);
+
+        Assert.Throws<InvalidOperationException>(() => reader.ReadRows().ToList());
+    }
+
     [Fact]
     public void CreateReader_CountsAndReadsRowsAgain_FromASeekableStream()
     {
