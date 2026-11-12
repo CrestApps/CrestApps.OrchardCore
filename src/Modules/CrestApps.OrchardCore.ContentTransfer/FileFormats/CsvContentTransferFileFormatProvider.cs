@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Tabular;
 
 namespace CrestApps.OrchardCore.ContentTransfer.FileFormats;
 
@@ -159,7 +160,7 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
 
             for (var i = 0; i < Math.Min(values.Count, row.Length); i++)
             {
-                row[i] = values[i];
+                row[i] = CsvReader.RemoveFormulaGuard(values[i]);
             }
 
             return row;
@@ -345,24 +346,12 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
                     _writer.Write(',');
                 }
 
-                var value = values[i] ?? string.Empty;
-
-                if (NeedsQuoting(value))
-                {
-                    _writer.Write('"');
-                    _writer.Write(value.Replace("\"", "\"\""));
-                    _writer.Write('"');
-                }
-                else
-                {
-                    _writer.Write(value);
-                }
+                // Escaped with the formula guard: an exported file is opened in a spreadsheet, and a title such as
+                // =HYPERLINK(...) must not run there. The reader takes the guard off again on import.
+                _writer.Write(CsvWriter.Escape(values[i]));
             }
 
             _writer.WriteLine();
         }
-
-        private static bool NeedsQuoting(string value)
-            => value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r');
     }
 }

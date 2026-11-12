@@ -41,6 +41,47 @@ public sealed class CsvContentTransferFileFormatProviderTests
     }
 
     [Fact]
+    public void DRY_12h_AnExport_GuardsCellsASpreadsheetWouldRunAsAFormula()
+    {
+        var provider = new CsvContentTransferFileFormatProvider();
+        using var stream = new MemoryStream();
+
+        using (var writer = provider.CreateWriter(stream, "Ignored"))
+        {
+            writer.WriteHeader(["Title", "Price"]);
+            writer.WriteRow(["=HYPERLINK(\"http://evil.example\",\"Click\")", "-5.00"]);
+            writer.Flush();
+        }
+
+        var text = Encoding.UTF8.GetString(stream.ToArray());
+
+        Assert.Contains("\"'=HYPERLINK(", text, StringComparison.Ordinal);
+        Assert.Contains(",-5.00", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DRY_12h_AGuardedCell_ImportsAsTheOriginalValue()
+    {
+        var provider = new CsvContentTransferFileFormatProvider();
+        using var stream = new MemoryStream();
+
+        using (var writer = provider.CreateWriter(stream, "Ignored"))
+        {
+            writer.WriteHeader(["Title", "Note"]);
+            writer.WriteRow(["=1+1", "'quoted on purpose"]);
+            writer.Flush();
+        }
+
+        stream.Position = 0;
+
+        using var reader = provider.CreateReader(stream);
+        var row = reader.ReadRows().Single();
+
+        Assert.Equal("=1+1", row[0]);
+        Assert.Equal("'quoted on purpose", row[1]);
+    }
+
+    [Fact]
     public void CreateReader_CountsAndReadsRowsAgain_FromASeekableStream()
     {
         // Arrange

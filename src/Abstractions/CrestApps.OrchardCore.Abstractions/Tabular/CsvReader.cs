@@ -12,6 +12,16 @@ public static class CsvReader
     private const char ByteOrderMark = '﻿';
 
     /// <summary>
+    /// Takes off the apostrophe <see cref="CsvWriter"/> puts in front of a cell a spreadsheet would run as a formula, so
+    /// a file that was exported and imported again keeps its values. An apostrophe in front of anything else is part of
+    /// the value and stays.
+    /// </summary>
+    /// <param name="value">The cell as it was read.</param>
+    /// <returns>The value.</returns>
+    public static string RemoveFormulaGuard(string value)
+        => value is { Length: > 1 } && value[0] == '\'' && CsvWriter.StartsLikeAFormula(value[1..]) ? value[1..] : value;
+
+    /// <summary>
     /// Reads the records of a file one at a time, so a large file is never held in memory. An empty line reads as one
     /// empty cell.
     /// </summary>
