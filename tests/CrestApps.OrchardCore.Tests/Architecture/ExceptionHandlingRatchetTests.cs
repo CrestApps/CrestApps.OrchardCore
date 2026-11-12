@@ -77,6 +77,8 @@ public sealed partial class ExceptionHandlingRatchetTests
     [InlineData("return Result.Failed(exception.Message);", 1)]
     [InlineData("await _notifier.ErrorAsync(H[\"The voice could not be saved: {0}\", ex.Message]);", 1)]
     [InlineData("ModelState.AddModelError(string.Empty, S[\"Import failed: {0}\", e.GetBaseException().Message]);", 1)]
+    [InlineData("return BadRequest(exception.Message);", 1)]
+    [InlineData("return TypedResults.BadRequest(ex.GetBaseException().Message);", 1)]
     [InlineData("return PaymentResult.Failure(S[\"The payment could not be taken.\"]);", 0)]
     [InlineData("_logger.LogError(ex, \"Failed: {Message}\", ex.Message);", 0)]
     [InlineData("// return Result.Failure(ex.Message);", 0)]
@@ -151,7 +153,7 @@ public sealed partial class ExceptionHandlingRatchetTests
     }
 
     private static int CountExceptionText(string code)
-        => FailureWithMessage().Count(code) + LocalizedWithMessage().Count(code);
+        => FailureWithMessage().Count(code) + LocalizedWithMessage().Count(code) + ResponseWithMessage().Count(code);
 
     // A catch of Exception (or of everything), with an optional filter, up to the opening brace of its block.
     [GeneratedRegex(@"\bcatch\b(?:\s*\(\s*(?:System\.)?Exception(?:\s+(?<variable>\w+))?\s*\))?(?:\s*when\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))?\s*\{")]
@@ -163,6 +165,10 @@ public sealed partial class ExceptionHandlingRatchetTests
 
     [GeneratedRegex(@"\b\w*Fail\w*\s*\(\s*(?:ex|e|exc|exception|\w+Exception)\s*\.\s*(?:GetBaseException\s*\(\s*\)\s*\.\s*)?Message\b")]
     private static partial Regex FailureWithMessage();
+
+    // An HTTP response that hands the exception's own text to the caller.
+    [GeneratedRegex(@"\b(?:(?:BadRequest|Conflict|NotFound|UnprocessableEntity|Ok|Content|Json)\s*\(|StatusCode\s*\(\s*\d+\s*,)\s*(?:ex|e|exc|exception|\w+Exception)\s*\.\s*(?:GetBaseException\s*\(\s*\)\s*\.\s*)?Message\b")]
+    private static partial Regex ResponseWithMessage();
 
     [GeneratedRegex(@"\b[STH]\s*\[\s*""(?:[^""\\]|\\.)*""\s*,[^\];]*?\b(?:ex|e|exc|exception|\w+Exception)\s*\.\s*(?:GetBaseException\s*\(\s*\)\s*\.\s*)?Message\b")]
     private static partial Regex LocalizedWithMessage();

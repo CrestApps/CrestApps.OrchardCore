@@ -98,6 +98,6 @@ internal sealed class ChatInteractionToolsDisplayDriver : DisplayDriver<ChatInte
             _toolDefinitions.GetSelectableTools().Keys,
             tool => _toolAccessEvaluator.IsAuthorizedAsync(_httpContextAccessor.HttpContext?.User, tool))];
 
-        return Edit(interaction, context);
+        return await EditAsync(interaction, context);
     }
 }

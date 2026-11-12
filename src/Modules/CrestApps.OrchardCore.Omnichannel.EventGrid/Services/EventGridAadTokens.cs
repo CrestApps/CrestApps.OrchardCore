@@ -10,24 +10,12 @@ namespace CrestApps.OrchardCore.Omnichannel.EventGrid.Services;
 /// <summary>
 /// Validates the Microsoft Entra ID bearer token Event Grid sends. The endpoint is anonymous, so nothing a caller sends
 /// may cost an outbound request: a token that isn't a JWT is refused before anything is fetched, the metadata address
-/// must be HTTPS, and one configuration manager is kept per metadata address, which caches the metadata and signing keys
-/// and refreshes them on its own schedule.
+/// must be HTTPS, and one configuration manager is kept per metadata address (by the tenant's
+/// <see cref="EventGridAadTokenValidator"/>), which caches the metadata and signing keys and refreshes them on its own
+/// schedule.
 /// </summary>
 internal static class EventGridAadTokens
 {
-    // The metadata and signing keys are public documents, the same for every tenant that names the address.
-    private static readonly ConcurrentDictionary<string, ConfigurationManager<OpenIdConnectConfiguration>> _managers = new(StringComparer.Ordinal);
-
-    /// <summary>
-    /// Returns whether the token was issued by the configured issuer, for the configured audience, is within its lifetime
-    /// and is signed with one of the issuer's keys.
-    /// </summary>
-    /// <param name="token">The bearer token.</param>
-    /// <param name="options">The Event Grid options.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    public static Task<bool> ValidateAsync(string token, EventGridOptions options, CancellationToken cancellationToken)
-        => ValidateAsync(token, options, _managers, _ => new HttpDocumentRetriever { RequireHttps = true }, cancellationToken);
-
     internal static async Task<bool> ValidateAsync(
         string token,
         EventGridOptions options,

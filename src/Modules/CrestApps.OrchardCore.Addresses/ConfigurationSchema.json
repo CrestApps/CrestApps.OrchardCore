@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps Addresses configuration",
+  "description": "The settings of the Addresses module read from appsettings.json, in the OrchardCore section of the host or a tenant.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps_Addresses": {
+          "type": "object",
+          "properties": {
+            "Autocomplete": {
+              "type": "object",
+              "description": "Limits on the address suggestion endpoints.",
+              "additionalProperties": false,
+              "properties": {
+                "DailyRequestLimit": {
+                  "type": "integer",
+                  "default": 10000,
+                  "description": "How many suggestion and resolve calls the whole site may make to the paid provider in a day. Zero or less turns suggestions off."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

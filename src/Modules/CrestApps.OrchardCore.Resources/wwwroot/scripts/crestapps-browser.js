@@ -9,24 +9,41 @@
 	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js
+	function hostWindow() {
+		return typeof window !== "undefined" ? window : {};
+	}
+	function hasValue(value) {
+		return value !== void 0 && value !== null && value !== "";
+	}
+	function dialogOptions(title, message, options, callback) {
+		const dialog = { callback };
+		if (hasValue(title)) dialog.title = escapeHtml(title);
+		if (hasValue(message)) dialog.message = escapeHtml(message);
+		if (hasValue(options.okText)) dialog.okText = options.okText;
+		if (hasValue(options.cancelText)) dialog.cancelText = options.cancelText;
+		return dialog;
+	}
 	function confirmAction(title, message, options = {}) {
-		const host = typeof window !== "undefined" ? window : {};
+		const host = hostWindow();
 		if (typeof host.confirmDialog === "function") return new Promise((resolve) => {
-			host.confirmDialog({
-				title: escapeHtml(title),
-				message: escapeHtml(message),
-				okText: options.okText,
-				cancelText: options.cancelText,
-				callback: (result) => resolve(Boolean(result))
-			});
+			host.confirmDialog(dialogOptions(title, message, options, (result) => resolve(Boolean(result))));
 		});
 		return Promise.resolve(typeof host.confirm === "function" ? Boolean(host.confirm(message || title || "")) : true);
 	}
 	var submitButtons = "button[type=\"submit\"], input[type=\"submit\"], button:not([type])";
-	var confirmed = /* @__PURE__ */ new WeakSet();
+	var agreedForm = null;
 	function questionOf(form, submitter) {
 		if (submitter && typeof submitter.matches === "function" && submitter.matches("[data-confirm]")) return submitter;
 		return form.matches("form[data-confirm]") ? form : null;
+	}
+	function submitAgreed(form, submitter) {
+		agreedForm = form;
+		try {
+			if (typeof form.requestSubmit === "function") form.requestSubmit(submitter || void 0);
+			else form.submit();
+		} finally {
+			agreedForm = null;
+		}
 	}
 	function bindForms(root) {
 		root.addEventListener("submit", (event) => {
@@ -34,22 +51,25 @@
 			if (!form || typeof form.matches !== "function") return;
 			const submitter = event.submitter;
 			const asking = questionOf(form, submitter);
-			if (asking) {
-				if (!confirmed.has(form)) {
+			if (asking && agreedForm !== form) {
+				const host = hostWindow();
+				if (typeof host.confirmDialog === "function") {
 					event.preventDefault();
 					event.stopPropagation();
 					confirmAction(asking.dataset.confirmTitle, asking.dataset.confirm, {
 						okText: asking.dataset.confirmOk,
 						cancelText: asking.dataset.confirmCancel
 					}).then((agreed) => {
-						if (!agreed) return;
-						confirmed.add(form);
-						if (typeof form.requestSubmit === "function") form.requestSubmit(submitter || void 0);
-						else form.submit();
+						if (agreed) submitAgreed(form, submitter);
 					});
 					return;
 				}
-				confirmed.delete(form);
+				const question = asking.dataset.confirm || asking.dataset.confirmTitle || "";
+				if (typeof host.confirm === "function" && !host.confirm(question)) {
+					event.preventDefault();
+					event.stopPropagation();
+					return;
+				}
 			}
 			if (form.matches("form[data-once]")) setTimeout(() => {
 				if (event.defaultPrevented) return;
@@ -98,6 +118,15 @@
 		});
 		return body;
 	}
+	function isSameOrigin(url) {
+		const here = typeof window !== "undefined" && window.location ? window.location : null;
+		if (!here) return true;
+		try {
+			return new URL(String(url), here.href).origin === here.origin;
+		} catch {
+			return false;
+		}
+	}
 	async function request(url, options = {}) {
 		const method = (options.method || "GET").toUpperCase();
 		const headers = Object.assign({}, options.headers);
@@ -106,7 +135,7 @@
 			headers["Content-Type"] = "application/json";
 			body = JSON.stringify(options.json);
 		} else if (options.form !== void 0 && options.form !== null) body = formBody(options.form);
-		if (!safeMethods.includes(method) && !headers.RequestVerificationToken) {
+		if (!safeMethods.includes(method) && !headers.RequestVerificationToken && isSameOrigin(url)) {
 			const token = antiforgeryToken();
 			if (token) headers.RequestVerificationToken = token;
 		}

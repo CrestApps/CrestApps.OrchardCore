@@ -32,7 +32,7 @@ public sealed class ContactCenterTelnyxInboundCallRouter : ITelnyxInboundCallRou
         {
             ProviderName = TelnyxConstants.ProviderTechnicalName,
             ProviderCallId = callEvent.CallControlId,
-            FromAddress = callEvent.From,
+            FromAddress = Telephony.CallerNumbers.Sanitize(callEvent.From),
             ToAddress = callEvent.To,
             ReceivedUtc = occurredUtc,
         };

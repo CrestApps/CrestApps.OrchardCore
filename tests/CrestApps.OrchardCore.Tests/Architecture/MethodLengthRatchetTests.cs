@@ -40,6 +40,8 @@ public sealed partial class MethodLengthRatchetTests
     [InlineData("    public override string ToString() => Name;", null, 0)]
     [InlineData("    public Service(IA a)\n    {\n        _a = a;\n    }", null, 0)]
     [InlineData("    public string Name { get; set; }", null, 0)]
+    [InlineData("    private async Task<(bool Ok, string Error)> BeginAsync(int id)\n    {\n        return (true, null);\n    }", "BeginAsync", 4)]
+    [InlineData("    private static (int First, List<int> Rest) Split(int[] values)\n    {\n        return default;\n    }", "Split", 4)]
     public void Read_MeasuresBlockBodiedMethods(string source, string name, int lines)
     {
         // Act
@@ -113,8 +115,9 @@ public sealed partial class MethodLengthRatchetTests
         }
     }
 
-    // A member declaration at the start of a line: modifiers, a return type, the name, type parameters and '('.
-    [GeneratedRegex(@"^[ \t]*(?:(?:public|private|protected|internal|static|async|override|virtual|sealed|abstract|extern|new|unsafe|partial)\s+)+(?!(?:class|struct|record|interface|enum|delegate|event|operator|implicit|explicit)\b)[\w.]+(?:<(?:[^<>()]|<(?:[^<>()]|<[^<>()]*>)*>)*>)?(?:\[\])?\??[ \t]+(?<name>\w+)\s*(?:<[^<>()]*(?:<[^<>()]*>[^<>()]*)*>)?\s*\(", RegexOptions.Multiline)]
+    // A member declaration at the start of a line: modifiers, a return type (a tuple too, alone or as a type argument),
+    // the name, type parameters and '('.
+    [GeneratedRegex(@"^[ \t]*(?:(?:public|private|protected|internal|static|async|override|virtual|sealed|abstract|extern|new|unsafe|partial)\s+)+(?!(?:class|struct|record|interface|enum|delegate|event|operator|implicit|explicit)\b)(?:[\w.]+(?:<(?:[^<>()]|\([^()]*\)|<(?:[^<>()]|\([^()]*\)|<[^<>()]*>)*>)*>)?|\((?:[^()]|\([^()]*\))*\))(?:\[\])?\??[ \t]+(?<name>\w+)\s*(?:<[^<>()]*(?:<[^<>()]*>[^<>()]*)*>)?\s*\(", RegexOptions.Multiline)]
     private static partial Regex MethodDeclaration();
 
     private sealed record Method(string Name, int Lines);

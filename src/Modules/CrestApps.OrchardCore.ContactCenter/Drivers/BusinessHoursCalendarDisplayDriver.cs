@@ -141,7 +141,7 @@ internal sealed class BusinessHoursCalendarDisplayDriver : DisplayDriver<Busines
         calendar.WeeklySchedule = BuildSchedule(model.Days);
         calendar.Holidays = ParseHolidays(model.HolidaysText);
 
-        return Edit(calendar, context);
+        return await EditAsync(calendar, context);
     }
 
     private static List<BusinessHoursDayViewModel> BuildDays(IList<BusinessHoursDay> schedule)

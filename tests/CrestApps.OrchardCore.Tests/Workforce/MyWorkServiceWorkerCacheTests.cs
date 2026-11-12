@@ -1,10 +1,16 @@
+using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Controllers;
+using CrestApps.OrchardCore.Workforce.Portal;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.Users;
+using OrchardCore.Users.Events;
 
 namespace CrestApps.OrchardCore.Tests.Workforce;
 
@@ -45,7 +51,64 @@ public sealed class MyWorkServiceWorkerCacheTests
         Assert.DoesNotContain("alert(1)", script);
     }
 
+    // SEC-FE4 e, the sign-out: the next user of a tablet that went offline was shown the last worker's page, because
+    // nothing cleared the worker's caches when that worker signed out.
+    [Fact]
+    public void ServiceWorker_MarksTheDeviceAsOneThatKeepsMyWorkPages()
+    {
+        // Arrange & Act
+        var (_, response) = Serve("worker-key");
+
+        // Assert
+        Assert.Contains(response.Headers.SetCookie, cookie => cookie.StartsWith(MyWorkSignOut.DeviceCookieName + "=1", StringComparison.Ordinal) && cookie.Contains("httponly", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task SigningOut_OnADeviceThatKeptMyWorkPages_ClearsTheSitesCachesAndStorage()
+    {
+        // Arrange
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers.Cookie = $"{MyWorkSignOut.DeviceCookieName}=1";
+        var signOut = new MyWorkSignOut(new HttpContextAccessor { HttpContext = httpContext });
+
+        // Act
+        await signOut.LoggedOutAsync(Mock.Of<IUser>(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("\"cache\", \"storage\"", httpContext.Response.Headers["Clear-Site-Data"].ToString());
+    }
+
+    [Fact]
+    public async Task SigningOut_OnADeviceThatNeverOpenedMyWork_LeavesItsStorageAlone()
+    {
+        // Arrange
+        var httpContext = new DefaultHttpContext();
+        var signOut = new MyWorkSignOut(new HttpContextAccessor { HttpContext = httpContext });
+
+        // Act
+        await signOut.LoggedOutAsync(Mock.Of<IUser>(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(httpContext.Response.Headers.ContainsKey("Clear-Site-Data"));
+    }
+
+    [Fact]
+    public void ThePortal_RegistersTheSignOutHandler()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        new PortalStartup(Mock.Of<IShellConfiguration>(configuration => configuration.GetSection(It.IsAny<string>()) == Mock.Of<IConfigurationSection>())).ConfigureServices(services);
+
+        // Assert
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(ILogoutFormEvent) && descriptor.ImplementationType == typeof(MyWorkSignOut));
+    }
+
     private static string Script(string userKey)
+        => Serve(userKey).Script;
+
+    private static (string Script, HttpResponse Response) Serve(string userKey)
     {
         var localizer = new Mock<IStringLocalizer<MyWorkController>>();
         localizer.Setup(l => l[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));
@@ -67,6 +130,6 @@ public sealed class MyWorkServiceWorkerCacheTests
 
         var result = Assert.IsType<ContentResult>(controller.ServiceWorker(userKey));
 
-        return result.Content;
+        return (result.Content, controller.Response);
     }
 }

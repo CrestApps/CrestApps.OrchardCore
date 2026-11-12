@@ -9,4 +9,4 @@
     string Clock(DateTime utc) => CalendarTime.ToLocal(utc, row.TimeZoneId).ToString("t", CultureInfo.CurrentCulture);
 }
 
-<span class="badge ta-badge fw-normal text-nowrap" title="@T["When"]"><i class="fa-regular fa-calendar text-info" aria-hidden="true"></i> @local.ToString("ddd d MMM", CultureInfo.CurrentCulture), @Clock(offer.StartUtc)–@Clock(offer.EndUtc)</span>
+<span class="badge ta-badge fw-normal text-nowrap" title="@T["When"]"><i class="fa-regular fa-calendar text-info" aria-hidden="true"></i> @local.ToString("ddd", CultureInfo.CurrentCulture) @local.ToString("M", CultureInfo.CurrentCulture), @Clock(offer.StartUtc)–@Clock(offer.EndUtc)</span>

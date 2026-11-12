@@ -908,8 +908,8 @@ public sealed class MyWorkController : Controller
             });
             """;
 
-        Response.Headers["Service-Worker-Allowed"] = Url.Content("~/Admin/my-work");
         Response.Headers.CacheControl = "no-cache";
+        Portal.MyWorkSignOut.RememberDevice(Request, Response);
 
         // The service worker is served here, outside the admin, but looks after the My Work pages in the admin.
         Response.Headers["Service-Worker-Allowed"] = home;

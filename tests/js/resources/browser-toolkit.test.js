@@ -83,6 +83,24 @@ describe('crestapps.http.request', () => {
         expect(init.body).toBe('{"a":1}');
     });
 
+    // UX-8: the token belongs to this site; a post to another origin must not carry it.
+    it('sends the antiforgery token only to the page\'s own origin', async () => {
+        globalThis.document = pageWithToken({ input: 'token-from-form' });
+        globalThis.window = { location: { href: 'https://shop.test/admin/orders', origin: 'https://shop.test' } };
+
+        try {
+            await request('https://elsewhere.test/collect', { method: 'POST' });
+            await request('/admin/orders/refund', { method: 'POST' });
+            await request('https://shop.test/admin/orders/cancel', { method: 'POST' });
+        } finally {
+            delete globalThis.window;
+        }
+
+        const tokens = globalThis.fetch.mock.calls.map(([, init]) => init.headers.RequestVerificationToken);
+
+        expect(tokens).toEqual([undefined, 'token-from-form', 'token-from-form']);
+    });
+
     it('falls back to the meta tag when the page has no form token', async () => {
         globalThis.document = pageWithToken({ meta: 'token-from-meta' });
 
@@ -180,16 +198,43 @@ describe('crestapps.confirm', () => {
         await expect(confirmAction('Cancel', 'Cancel this order?')).resolves.toBe(false);
         expect(globalThis.window.confirm).toHaveBeenCalledWith('Cancel this order?');
     });
+
+    // TheAdmin merges the options over its defaults ({ ...defaults, ...options }): a key passed as undefined replaces
+    // the default, and the dialog's buttons read "undefined".
+    it('passes the admin dialog only the texts it was given, so the theme\'s defaults stand for the rest', async () => {
+        const confirmDialog = vi.fn(options => options.callback(true));
+        globalThis.window = { confirmDialog };
+
+        await confirmAction(undefined, 'Remove this line?', { okText: undefined, cancelText: undefined });
+
+        const options = confirmDialog.mock.calls[0][0];
+
+        expect(Object.keys(options).sort()).toEqual(['callback', 'message']);
+        expect(options.message).toBe('Remove this line?');
+
+        await confirmAction('Stop', 'Stop renewing?', { okText: 'Stop', cancelText: 'Keep' });
+
+        expect(confirmDialog.mock.calls[1][0]).toEqual(expect.objectContaining({ title: 'Stop', okText: 'Stop', cancelText: 'Keep' }));
+    });
 });
 
-// Just enough of a page for the delegated submit listener: forms with data attributes and submit buttons.
-function fakeForm(dataset, buttons = 1) {
+// Just enough of a page for the delegated submit listener: forms with data attributes and submit buttons. Like a
+// browser, requestSubmit sends the form's submit event at once, through the same listeners. What only a browser shows
+// (promise callbacks run between listeners, a submit asked for during another is ignored) is covered by
+// ConfirmFormBindingsTests in the Playwright suite, which drives the built bundle in Chromium with real clicks.
+function fakeForm(page, dataset, buttons = 1) {
     const form = {
         dataset,
         submitted: [],
         matches: selector => (selector === 'form[data-confirm]' && 'confirm' in dataset) || (selector === 'form[data-once]' && 'once' in dataset),
         closest(selector) { return this.matches(selector) ? this : null; },
-        requestSubmit(submitter) { this.submitted.push(submitter); },
+        requestSubmit(submitter) {
+            const event = page.submit(this, submitter);
+
+            if (!event.defaultPrevented) {
+                this.submitted.push(submitter);
+            }
+        },
         buttons: Array.from({ length: buttons }, () => ({ disabled: false, type: 'submit' })),
         querySelectorAll(selector) { return selector === 'button[type="submit"], input[type="submit"], button:not([type])' ? this.buttons : []; },
     };
@@ -221,6 +266,14 @@ function fakePage() {
     };
 }
 
+// The admin theme's dialog: it answers later, when the person clicks OK or Cancel.
+function laterDialog() {
+    const asked = [];
+    const confirmDialog = vi.fn(options => asked.push(options));
+
+    return { confirmDialog, asked, answer: result => asked.shift().callback(result) };
+}
+
 describe('the [data-confirm] and [data-once] form bindings', () => {
     beforeEach(() => {
         vi.useFakeTimers();
@@ -231,40 +284,74 @@ describe('the [data-confirm] and [data-once] form bindings', () => {
         delete globalThis.window;
     });
 
-    it('asks before a [data-confirm] form submits, and submits it with the same button once confirmed', async () => {
+    // The browser's confirm answers at once, so the submit is decided inside the listener and simply goes on: holding it
+    // back and asking for it again would be ignored by a browser that is still sending the first one.
+    it('asks the browser\'s confirm inside the listener, and lets the submit the person agreed to go on', () => {
         globalThis.window = { confirm: vi.fn(() => true) };
         const page = fakePage();
-        const form = fakeForm({ confirm: 'Remove this address?' });
+        const form = fakeForm(page, { confirm: 'Remove this address?' });
+
+        bindForms(page);
+
+        const sent = page.submit(form, form.buttons[0]);
+
+        expect(globalThis.window.confirm).toHaveBeenCalledWith('Remove this address?');
+        expect(sent.defaultPrevented).toBe(false);
+        expect(sent.propagationStopped).toBe(false);
+        expect(form.submitted).toEqual([]);
+
+        // The next submit is asked about again.
+        page.submit(form, form.buttons[0]);
+        expect(globalThis.window.confirm).toHaveBeenCalledTimes(2);
+    });
+
+    it('stops the submit, before the other listeners see it, when the browser\'s confirm is declined', () => {
+        globalThis.window = { confirm: vi.fn(() => false) };
+        const page = fakePage();
+        const form = fakeForm(page, { confirm: 'Cancel?' });
+
+        bindForms(page);
+        const declined = page.submit(form, form.buttons[0]);
+
+        expect(declined.defaultPrevented).toBe(true);
+        expect(declined.propagationStopped).toBe(true);
+        expect(page.listeners.find(entry => entry.type === 'submit').capture).toBe(true);
+    });
+
+    it('holds the submit back for the admin dialog, and submits once with the same button when OK is clicked', async () => {
+        const dialog = laterDialog();
+        globalThis.window = { confirmDialog: dialog.confirmDialog };
+        const page = fakePage();
+        const form = fakeForm(page, { confirm: 'Remove this address?' });
         const button = form.buttons[0];
 
         bindForms(page);
 
         const asked = page.submit(form, button);
 
+        // Held back from the admin theme's no-multisubmit too, which would mark the form as submitting and drop the
+        // agreed submit that follows.
         expect(asked.defaultPrevented).toBe(true);
+        expect(asked.propagationStopped).toBe(true);
+
+        dialog.answer(true);
         await vi.runAllTimersAsync();
 
-        expect(globalThis.window.confirm).toHaveBeenCalledWith('Remove this address?');
         expect(form.submitted).toEqual([button]);
+        expect(dialog.confirmDialog).toHaveBeenCalledTimes(1);
 
-        // The second submit is the confirmed one, and goes through.
-        const sent = page.submit(form, button);
-
-        expect(sent.defaultPrevented).toBe(false);
-
-        // The listener runs first (capture) and keeps the unconfirmed submit from the admin theme's no-multisubmit, which
-        // would otherwise mark the form as submitting and drop the confirmed submit that follows.
-        expect(page.listeners.find(entry => entry.type === 'submit').capture).toBe(true);
-        expect(asked.propagationStopped).toBe(true);
-        expect(sent.propagationStopped).toBe(false);
+        // The agreement was for that submit only: the next one is asked about again.
+        expect(page.submit(form, button).defaultPrevented).toBe(true);
+        expect(dialog.confirmDialog).toHaveBeenCalledTimes(2);
     });
 
     // A button with its own formaction (or one that submits another form through form="...") asks its own question, and
     // the form then goes where that button sends it.
     it('asks the question of a [data-confirm] submit button, and submits with that button', async () => {
-        globalThis.window = { confirm: vi.fn(() => true) };
+        const dialog = laterDialog();
+        globalThis.window = { confirmDialog: dialog.confirmDialog };
         const page = fakePage();
-        const form = fakeForm({}, 2);
+        const form = fakeForm(page, {}, 2);
         const [save, receiveAll] = form.buttons;
         receiveAll.dataset = { confirm: 'Receive everything?' };
         receiveAll.matches = selector => selector === '[data-confirm]';
@@ -273,30 +360,51 @@ describe('the [data-confirm] and [data-once] form bindings', () => {
 
         expect(page.submit(form, save).defaultPrevented).toBe(false);
         expect(page.submit(form, receiveAll).defaultPrevented).toBe(true);
+        expect(dialog.asked[0].message).toBe('Receive everything?');
+
+        dialog.answer(true);
         await vi.runAllTimersAsync();
 
-        expect(globalThis.window.confirm).toHaveBeenCalledTimes(1);
-        expect(globalThis.window.confirm).toHaveBeenCalledWith('Receive everything?');
+        expect(dialog.confirmDialog).toHaveBeenCalledTimes(1);
         expect(form.submitted).toEqual([receiveAll]);
-        expect(page.submit(form, receiveAll).defaultPrevented).toBe(false);
     });
 
-    it('does not submit when the question is declined', async () => {
-        globalThis.window = { confirm: vi.fn(() => false) };
+    it('does not submit when the admin dialog is cancelled', async () => {
+        const dialog = laterDialog();
+        globalThis.window = { confirmDialog: dialog.confirmDialog };
         const page = fakePage();
-        const form = fakeForm({ confirm: 'Cancel?' });
+        const form = fakeForm(page, { confirm: 'Cancel?' });
 
         bindForms(page);
         page.submit(form, form.buttons[0]);
+        dialog.answer(false);
         await vi.runAllTimersAsync();
 
         expect(form.submitted).toEqual([]);
     });
 
+    // An agreed submit the browser refuses (an invalid field stops it before the submit event) leaves nothing behind.
+    it('forgets an agreement whose submit did not happen, so the next click is asked about', async () => {
+        const dialog = laterDialog();
+        globalThis.window = { confirmDialog: dialog.confirmDialog };
+        const page = fakePage();
+        const form = fakeForm(page, { confirm: 'Refund?' });
+        form.requestSubmit = vi.fn();
+
+        bindForms(page);
+        page.submit(form, form.buttons[0]);
+        dialog.answer(true);
+        await vi.runAllTimersAsync();
+
+        expect(form.requestSubmit).toHaveBeenCalledTimes(1);
+        expect(page.submit(form, form.buttons[0]).defaultPrevented).toBe(true);
+        expect(dialog.confirmDialog).toHaveBeenCalledTimes(2);
+    });
+
     it('disables the submit buttons of a [data-once] form after its first submit, keeping the clicked one in the post', async () => {
         globalThis.window = {};
         const page = fakePage();
-        const form = fakeForm({ once: '' }, 2);
+        const form = fakeForm(page, { once: '' }, 2);
 
         bindForms(page);
 
@@ -312,7 +420,7 @@ describe('the [data-confirm] and [data-once] form bindings', () => {
     it('leaves a [data-once] form alone when something else stopped the submit', async () => {
         globalThis.window = {};
         const page = fakePage();
-        const form = fakeForm({ once: '' });
+        const form = fakeForm(page, { once: '' });
 
         bindForms(page);
         const event = page.submit(form, form.buttons[0]);

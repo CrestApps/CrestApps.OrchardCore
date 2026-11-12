@@ -67,6 +67,22 @@ function formBody(form) {
     return body;
 }
 
+// The antiforgery token belongs to this site: it goes with a request to the page's own origin only. A relative URL is
+// always that; without a page to compare with (a test), the URL is taken as relative.
+function isSameOrigin(url) {
+    const here = typeof window !== 'undefined' && window.location ? window.location : null;
+
+    if (!here) {
+        return true;
+    }
+
+    try {
+        return new URL(String(url), here.href).origin === here.origin;
+    } catch {
+        return false;
+    }
+}
+
 // request(url, { method, json, form, body, headers, signal }) resolves with the Response when its status is 2xx, and
 // rejects with an HttpError otherwise. json is sent as JSON; form (an object, a FormData or a form element) as a form.
 export async function request(url, options = {}) {
@@ -81,7 +97,7 @@ export async function request(url, options = {}) {
         body = formBody(options.form);
     }
 
-    if (!safeMethods.includes(method) && !headers.RequestVerificationToken) {
+    if (!safeMethods.includes(method) && !headers.RequestVerificationToken && isSameOrigin(url)) {
         const token = antiforgeryToken();
 
         if (token) {
