@@ -1,4 +1,4 @@
----
+﻿---
 sidebar_label: Data Connectors
 title: Data Connectors
 description: Connect to SQL Server, Elasticsearch, any HTTP API and media library files, and expose their data sets to reports and data pipelines, read live or imported on a schedule.
@@ -84,7 +84,7 @@ Administrators have the first four by default.
 - **Outbound network.** HTTP-based connectors and the SQL Server connector refuse hosts that resolve to loopback, private, link-local, shared (100.64/10), multicast or unspecified addresses, checked on the address when the connection is opened, so a name that later resolves to an internal address is still refused. Allow internal hosts with `Network:AllowedHosts`, or every internal address with `Network:AllowPrivateNetworks`.
 - **Redirects** are followed only on the same scheme, host and port, at most three times, and never with automatic redirection. A next-page link must stay on the connection's server, and a data set's path is resolved against the connection's base URL.
 - **Token endpoints and OpenID Connect issuers** must use HTTPS. Tokens are cached per tenant and connection until a minute before they expire, and a request answered with 401 asks for a new token once.
-- **SQL.** Tables are quoted with the connector's identifier rules, values are always bound as parameters, and every read runs in a transaction that is always rolled back. A custom query must be a single `SELECT` expression: it runs as a derived table, and a query whose parentheses don't balance, that holds a `;` or a `--` comment outside quotes, or that doesn't start with `SELECT` is refused. Give the connection a login that can only read what its data sets need: a connector can't take away rights its login has, and whoever can edit a data set can query anything that login can read.
+- **SQL.** Tables are quoted with the connector's identifier rules, values are always bound as parameters, and every read runs in a transaction that is always rolled back. A custom query must be a single `SELECT` expression: it runs as a derived table, and a query whose parentheses don't balance, that holds a `;` outside quotes, any comment (`--` or `/* */`, since SQL Server and PostgreSQL nest block comments), or that doesn't start with `SELECT` is refused. A refused query or a failed read is reported without the database's own message, which goes to the site's log. Give the connection a read-only login that can only read what its data sets need: a connector can't take away rights its login has, and whoever can edit a data set can query anything that login can read.
 - Responses larger than `Network:MaxResponseBytes` are refused.
 
 ## Connectors
