@@ -55,39 +55,29 @@ internal sealed class ChatSessionDocumentUploadGuard : IEndpointFilter
         var form = await request.ReadFormAsync(httpContext.RequestAborted);
         var fileCount = form.Files.Count;
         var options = services.GetRequiredService<IOptions<ChatSessionDocumentUploadOptions>>().Value;
+        // A session id counts only when the session exists: a made-up one would otherwise skip every check below, and the
+        // endpoint would start a new session for the profile the caller named.
         var sessionId = form["sessionId"].ToString();
+        var session = string.IsNullOrWhiteSpace(sessionId)
+            ? null
+            : await services.GetRequiredService<IAIChatSessionManager>().FindAsync(sessionId);
 
-        if (!string.IsNullOrWhiteSpace(sessionId))
-        {
-            var session = await services.GetRequiredService<IAIChatSessionManager>().FindAsync(sessionId);
-
-            if (session is not null && (session.Documents?.Count ?? 0) + fileCount > options.MaxFilesPerSession)
-            {
-                return TooManyFiles(options);
-            }
-
-            return await next(context);
-        }
-
-        var profileId = form["profileId"].ToString();
-
-        if (string.IsNullOrWhiteSpace(profileId))
-        {
-            return await next(context);
-        }
-
-        var profile = await services.GetRequiredService<IAIProfileManager>().FindByIdAsync(profileId);
+        // An existing session is checked against its own profile, never the one the form names.
+        var profileId = session?.ProfileId ?? form["profileId"].ToString();
+        var profile = string.IsNullOrWhiteSpace(profileId)
+            ? null
+            : await services.GetRequiredService<IAIProfileManager>().FindByIdAsync(profileId);
 
         if (profile is null)
         {
-            return await next(context);
+            return Results.BadRequest("Choose a chat profile or an existing chat session to upload documents to.");
         }
 
-        // The endpoint saves a new session before it authorizes, so the caller is authorized here first.
+        // The endpoint saves a new session before it authorizes, so the caller is authorized here first, every time.
         var authorizationService = services.GetRequiredService<IAuthorizationService>();
         var authorization = await authorizationService.AuthorizeAsync(
             httpContext.User,
-            new AIChatSessionDocumentAuthorizationContext(profile, null),
+            new AIChatSessionDocumentAuthorizationContext(profile, session),
             AIChatDocumentOperations.ManageDocuments);
 
         if (!authorization.Succeeded)
@@ -95,9 +85,14 @@ internal sealed class ChatSessionDocumentUploadGuard : IEndpointFilter
             return Results.Json(new { error = "You do not have permission to manage documents here." }, statusCode: StatusCodes.Status403Forbidden);
         }
 
-        if (fileCount > options.MaxFilesPerSession)
+        if ((session?.Documents?.Count ?? 0) + fileCount > options.MaxFilesPerSession)
         {
             return TooManyFiles(options);
+        }
+
+        if (session is not null)
+        {
+            return await next(context);
         }
 
         // An upload without a session starts one, so it counts against the same limit as a chat that starts one.

@@ -19,7 +19,7 @@ const sourceRoot = join(repositoryRoot, 'src');
 const baselinePath = join(__dirname, 'inline-scripts-ratchet.baseline.json');
 
 // A <script> element with its attributes and body. Razor writes these as plain HTML, so a regular expression is enough.
-const scriptElement = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+const scriptElement = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
 
 // A script loaded from a file or a registered resource has no inline body worth counting.
 const externalScript = /\b(?:src|asp-src|asp-name)\s*=/i;

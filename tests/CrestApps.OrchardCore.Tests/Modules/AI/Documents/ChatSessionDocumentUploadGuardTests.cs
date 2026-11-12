@@ -89,7 +89,44 @@ public sealed class ChatSessionDocumentUploadGuardTests
         Assert.True(called);
     }
 
-    private static (DefaultHttpContext HttpContext, Mock<IAIChatSessionManager> SessionManager) CreateContext(bool authorized, int files, bool throttled = false, int? sessionDocuments = null)
+    [Fact]
+    public async Task InvokeAsync_WithASessionIdThatDoesNotExist_StillAuthorizesTheProfile()
+    {
+        // A made-up session id must not skip the checks: the endpoint would start a new session for the profile.
+        var (httpContext, _) = CreateContext(authorized: false, files: 1, unknownSessionId: true);
+        var called = false;
+
+        var result = await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
+        {
+            called = true;
+
+            return ValueTask.FromResult<object>(Results.Ok());
+        });
+
+        Assert.False(called);
+        var status = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, status.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ToAnExistingSessionWithoutAccess_Refuses()
+    {
+        var (httpContext, _) = CreateContext(authorized: false, files: 1, sessionDocuments: 0);
+        var called = false;
+
+        var result = await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
+        {
+            called = true;
+
+            return ValueTask.FromResult<object>(Results.Ok());
+        });
+
+        Assert.False(called);
+        var status = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, status.StatusCode);
+    }
+
+    private static (DefaultHttpContext HttpContext, Mock<IAIChatSessionManager> SessionManager) CreateContext(bool authorized, int files, bool throttled = false, int? sessionDocuments = null, bool unknownSessionId = false)
     {
         var profile = new AIProfile { ItemId = "profile-1" };
         var profileManager = new Mock<IAIProfileManager>();
@@ -136,6 +173,11 @@ public sealed class ChatSessionDocumentUploadGuardTests
         else
         {
             fields["profileId"] = "profile-1";
+        }
+
+        if (unknownSessionId)
+        {
+            fields["sessionId"] = "made-up";
         }
 
         var formFiles = new FormFileCollection();
