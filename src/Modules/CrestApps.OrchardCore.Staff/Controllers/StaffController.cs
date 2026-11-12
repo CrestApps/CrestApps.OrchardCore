@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Staff.Drivers;
 using CrestApps.OrchardCore.Staff.Models;
@@ -241,6 +242,37 @@ public sealed class StaffController : Controller
         await _notifier.SuccessAsync(H["{0} has been deleted.", staff.DisplayName]);
 
         return RedirectToAction(nameof(Index));
+    }
+
+    [Admin("staff/me", "StaffMe")]
+    public async Task<IActionResult> Me([FromServices] IEnumerable<IStaffHomeLinkProvider> linkProviders, [FromServices] ITeamManager teamManager)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, StaffPermissions.ViewOwnStaffProfile))
+        {
+            return Forbid();
+        }
+
+        var staff = await _directory.FindByUserIdAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted);
+        var model = new StaffHomeViewModel { StaffMember = staff };
+
+        if (staff is not null)
+        {
+            var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+            var teams = (await teamManager.ListTreeAsync(HttpContext.RequestAborted)).ToDictionary(item => item.Team.ItemId, item => item.Team.Name, StringComparer.Ordinal);
+
+            model.ManagerChain = (await _hierarchy.GetManagerChainAsync(staff.ItemId, HttpContext.RequestAborted)).ToList();
+            model.Reports = (await _hierarchy.GetReportsAsync(staff.ItemId, includeIndirect: false, HttpContext.RequestAborted)).ToList();
+            model.Teams = staff.MembershipsOn(today).Select(membership => teams.GetValueOrDefault(membership.TeamId, membership.TeamId)).ToList();
+
+            foreach (var provider in linkProviders)
+            {
+                model.Links.AddRange(await provider.GetLinksAsync(staff, User, HttpContext.RequestAborted) ?? []);
+            }
+
+            model.Links = model.Links.OrderBy(link => link.Position).ThenBy(link => link.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
+        }
+
+        return View(model);
     }
 
     [Admin("staff/organization-chart", "StaffOrgChart")]

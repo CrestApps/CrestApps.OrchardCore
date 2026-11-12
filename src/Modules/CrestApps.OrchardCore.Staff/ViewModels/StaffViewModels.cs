@@ -181,6 +181,19 @@ public class UserStaffViewModel
     public IList<SelectListItem> StatusOptions { get; set; } = [];
 }
 
+public class StaffHomeViewModel
+{
+    public StaffMember StaffMember { get; set; }
+
+    public IList<StaffMember> ManagerChain { get; set; } = [];
+
+    public IList<StaffMember> Reports { get; set; } = [];
+
+    public IList<string> Teams { get; set; } = [];
+
+    public List<CrestApps.OrchardCore.Staff.Services.StaffHomeLink> Links { get; set; } = [];
+}
+
 public class StaffOrgChartViewModel
 {
     public IList<StaffOrgChartNode> Roots { get; set; } = [];

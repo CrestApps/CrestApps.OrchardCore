@@ -15,6 +15,7 @@ public interface IUserAudienceProvider
     /// Gets the roles whose members make up the audience.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>The role names; empty when the audience has no members.</returns>
+    /// <returns>The role names; empty when the audience has no members; <see langword="null"/> when the audience isn't
+    /// limited right now (for example a setting turns it off), so every user can be found.</returns>
     Task<IReadOnlyCollection<string>> GetRoleNamesAsync(CancellationToken cancellationToken = default);
 }

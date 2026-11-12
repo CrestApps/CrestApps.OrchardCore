@@ -10,6 +10,7 @@ internal sealed class StaffPermissionsProvider : IPermissionProvider
         StaffPermissions.ManageStaff,
         StaffPermissions.ManageOwnStaff,
         StaffPermissions.ViewStaff,
+        StaffPermissions.ViewOwnStaffProfile,
         StaffPermissions.ViewSensitiveStaffData,
         StaffPermissions.ManageStaffPay,
     ];
@@ -25,6 +26,12 @@ internal sealed class StaffPermissionsProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
+            },
+            new PermissionStereotype
+            {
+                // Everyone Staff puts in its role sees their own page.
+                Name = StaffConstants.DefaultStaffRoleName,
+                Permissions = [StaffPermissions.ViewOwnStaffProfile],
             },
         ];
     }

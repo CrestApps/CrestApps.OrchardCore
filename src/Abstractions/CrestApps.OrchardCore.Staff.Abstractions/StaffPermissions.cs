@@ -24,6 +24,11 @@ public static class StaffPermissions
     public static readonly Permission ViewStaff = new("ViewStaff", LocalizationSource.Create("View staff", typeof(StaffPermissions)), [ManageStaff, ManageOwnStaff]);
 
     /// <summary>
+    /// See one's own staff page: one's record, reporting line, teams and the links other modules add.
+    /// </summary>
+    public static readonly Permission ViewOwnStaffProfile = new("ViewOwnStaffProfile", LocalizationSource.Create("View one's own staff profile", typeof(StaffPermissions)), [ManageStaff]);
+
+    /// <summary>
     /// See and change sensitive staff data, such as the date of birth.
     /// </summary>
     public static readonly Permission ViewSensitiveStaffData = new("ViewSensitiveStaffData", LocalizationSource.Create("View sensitive staff data", typeof(StaffPermissions)));

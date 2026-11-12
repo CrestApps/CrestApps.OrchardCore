@@ -30,6 +30,7 @@ public sealed class PosShiftService
     private readonly global::YesSql.ISession _session;
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
+    private readonly IEnumerable<IRegisterShiftHandler> _handlers;
 
     public PosShiftService(
         IRegisterStore registers,
@@ -39,8 +40,10 @@ public sealed class PosShiftService
         IDistributedLock distributedLock,
         global::YesSql.ISession session,
         ISiteService siteService,
-        IClock clock)
+        IClock clock,
+        IEnumerable<IRegisterShiftHandler> handlers)
     {
+        _handlers = handlers;
         _registers = registers;
         _shifts = shifts;
         _orders = orders;
@@ -119,6 +122,11 @@ public sealed class PosShiftService
 
         await _shifts.CreateAsync(shift, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
+
+        foreach (var handler in _handlers)
+        {
+            await handler.OpenedAsync(shift, user, cancellationToken);
+        }
 
         return shift;
     }

@@ -102,6 +102,20 @@ public sealed class FleetStartup : StartupBase
 }
 
 /// <summary>
+/// Picks the staff member who drives a fleet vehicle by default.
+/// </summary>
+[Feature(AssetsConstants.Features.Fleet)]
+[RequireFeatures(CrestApps.OrchardCore.Staff.StaffConstants.Features.Staff)]
+public sealed class FleetDriverStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<Asset, Drivers.FleetDriverDisplayDriver>();
+    }
+}
+
+/// <summary>
 /// Registers van stock: an Inventory location for each asset that carries stock.
 /// </summary>
 [Feature(AssetsConstants.Features.Fleet)]

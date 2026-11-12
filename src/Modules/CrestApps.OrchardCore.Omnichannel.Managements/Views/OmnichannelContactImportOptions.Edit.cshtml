@@ -67,6 +67,7 @@
                 <label class="form-label">@T["Lead owner"]</label>
                 @await Component.InvokeAsync("UserPicker", new
                 {
+                    audience = "Staff",
                     name = Html.NameFor(m => m.LeadOwnerId).ToString(),
                     selectedValues = string.IsNullOrEmpty(Model.LeadOwnerId) ? Array.Empty<string>() : new[] { Model.LeadOwnerId },
                     valueType = "userId",

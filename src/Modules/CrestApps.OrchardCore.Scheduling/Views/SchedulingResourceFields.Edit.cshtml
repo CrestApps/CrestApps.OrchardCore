@@ -7,8 +7,15 @@
     <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
     <div class="ocat-wrapper"><label asp-for="Kind" class="ocat-label">@T["Kind"]</label><div class="ocat-end"><select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" style="max-width: 18rem"></select></div></div>
     <div class="ocat-wrapper"><label asp-for="UserId" class="ocat-label">@T["User"]</label><div class="ocat-end">
-        @await Component.InvokeAsync("ItemSelector", new { id = Html.IdFor(m => m.UserId).ToString(), inputName = Html.NameFor(m => m.UserId).ToString(), endpoint = "/Admin/api/calendars/users/search", initialItemsJson = Model.InitialUserJson, multiple = false, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false })
-        <span class="hint">@T["For a staff member: the user, whose own calendar time also counts as busy."]</span></div></div>
+        @if (Model.UseStaffPicker)
+        {
+            @await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", buttonText = T["Choose a staff member"].Value })
+        }
+        else
+        {
+            @await Component.InvokeAsync("ItemSelector", new { id = Html.IdFor(m => m.UserId).ToString(), inputName = Html.NameFor(m => m.UserId).ToString(), endpoint = "/Admin/api/calendars/users/search", initialItemsJson = Model.InitialUserJson, multiple = false, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false })
+        }
+        <span class="hint">@T["For a staff member: who it is. Their own calendar time also counts as busy, and an empty name or time zone is taken from their staff record."]</span></div></div>
     <div class="ocat-wrapper"><label asp-for="CalendarId" class="ocat-label">@T["Calendar"]</label><div class="ocat-end"><select asp-for="CalendarId" asp-items="Model.CalendarOptions" class="selectpicker show-tick" data-live-search="true"><option value="">@T["Make a new calendar"]</option></select><span class="hint">@T["Appointments go on this calendar, and its events make the resource busy."]</span></div></div>
     <div class="ocat-wrapper"><label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label><div class="ocat-end"><select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="selectpicker show-tick" data-live-search="true"></select></div></div>
     <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Takes appointments"]</label></div></div></div>

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
@@ -42,6 +43,7 @@ public static class WorkforceCoreServiceCollectionExtensions
 
         // Workforce always runs with Skills: a worker and their user hold skills together.
         services.AddStaffSkillLinks();
+        services.AddStaffLifecycleObserver<WorkforceStaffLifecycleObserver>();
         services.TryAddScoped<ActivityCodeStore>();
         services.TryAddScoped<IActivityCodeManager, ActivityCodeManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<StaffMember>, WorkforceStaffCatalogHandler>());

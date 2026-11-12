@@ -28,12 +28,14 @@ namespace CrestApps.OrchardCore.Accounts
         public const string Feature = "CrestApps.OrchardCore.Accounts";
         public const string LocationsFeature = "CrestApps.OrchardCore.Accounts.Locations";
         public const string MembersFeature = "CrestApps.OrchardCore.Accounts.Members";
+        public const string TeamFeature = "CrestApps.OrchardCore.Accounts.Team";
         public static class ContentParts
         {
             public const string Account = "AccountPart";
             public const string List = "ListPart";
             public const string Locations = "AccountLocationsPart";
             public const string Members = "AccountMembersPart";
+            public const string Team = "AccountTeamPart";
         }
         public static class ContentTypes
         {
@@ -92,6 +94,12 @@ namespace CrestApps.OrchardCore.Accounts.Models
     {
         public AccountPartSettings() { }
         public string[] OfferedContentTypes { get; set; }
+    }
+    public sealed class AccountTeamPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public AccountTeamPart() { }
+        public string OwnerStaffId { get; set; }
+        public System.Collections.Generic.IList<string> TeamStaffIds { get; set; }
     }
 }
 namespace CrestApps.OrchardCore.Accounts.Services

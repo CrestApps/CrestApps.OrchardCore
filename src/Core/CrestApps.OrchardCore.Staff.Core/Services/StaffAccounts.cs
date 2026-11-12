@@ -85,7 +85,7 @@ public sealed class StaffAccountResult
 /// Creates or updates the staff record of a user: used by the Staff section of the user editor and by modules that need
 /// every person doing their work to be staff, such as agents and cashiers.
 /// </summary>
-public sealed class StaffAccounts
+public sealed class StaffAccounts : IStaffAccountService
 {
     private readonly IStaffMemberManager _manager;
     private readonly IClock _clock;
@@ -188,6 +188,10 @@ public sealed class StaffAccounts
 
         return await SaveAsync(staff, isNew, result, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<StaffMember> EnsureAsync(string userId, string displayName, IReadOnlyCollection<string> capabilities, Action<StaffMember> defaults = null, CancellationToken cancellationToken = default)
+        => (await EnsureForUserAsync(userId, displayName, capabilities, defaults, cancellationToken)).StaffMember;
 
     private void JoinTeam(StaffMember staff, string teamId, bool isNew)
     {

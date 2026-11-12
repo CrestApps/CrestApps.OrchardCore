@@ -39,15 +39,18 @@ internal sealed class DefaultUserSearchService : IUserSearchService
         if (!string.IsNullOrWhiteSpace(query.Audience)
             && _audienceProviders.FirstOrDefault(provider => string.Equals(provider.Name, query.Audience.Trim(), StringComparison.OrdinalIgnoreCase)) is { } audience)
         {
-            var audienceRoles = (await audience.GetRoleNamesAsync(cancellationToken) ?? []).Where(static role => !string.IsNullOrWhiteSpace(role)).ToArray();
-
-            // An audience without roles has no members.
-            if (audienceRoles.Length == 0)
+            // No roles at all means the audience isn't limited now; an empty list means it has no members.
+            if (await audience.GetRoleNamesAsync(cancellationToken) is { } audienceRoles)
             {
-                return [];
-            }
+                var names = audienceRoles.Where(static role => !string.IsNullOrWhiteSpace(role)).ToArray();
 
-            requestedRoles = requestedRoles.Concat(audienceRoles);
+                if (names.Length == 0)
+                {
+                    return [];
+                }
+
+                requestedRoles = requestedRoles.Concat(names);
+            }
         }
 
         var roles = requestedRoles

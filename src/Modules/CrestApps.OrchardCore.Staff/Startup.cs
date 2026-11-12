@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Navigation;
 using CrestApps.OrchardCore.Staff.Recipes;
 using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Users.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,14 +26,18 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataSources;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 using OrchardCore.Users.Handlers;
 using OrchardCore.Users.Models;
+using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 
 namespace CrestApps.OrchardCore.Staff;
 
@@ -50,6 +55,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<StaffHistoryIndexProvider>();
 
         services.AddStaffCore();
+        services.AddRoleGrants();
         services.AddDisplayDriver<StaffMember, StaffMemberDisplayDriver>();
         services.AddDisplayDriver<User, UserStaffDisplayDriver>();
         services.AddScoped<IUserEventHandler, StaffUserEventHandler>();
@@ -57,6 +63,8 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<StaffAdminMenu>();
         services.AddPersonalDataContributor<StaffPersonalDataContributor>();
         services.AddSingleton<IBackgroundTask, StaffTerminationBackgroundTask>();
+        services.AddSiteDisplayDriver<StaffSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(StaffSettingsDisplayDriver.GroupId, StaffPermissions.ManageStaff);
     }
 
     /// <inheritdoc />
@@ -149,6 +157,53 @@ public sealed class GeoStartup : StartupBase
 }
 
 /// <summary>
+/// Adds the Staff report data source: staff members and their employment history.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
+public sealed class ReportsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataSource<Reports.StaffReportDataSource>();
+        services.AddScoped<Reports.IStaffReportDataSet, Reports.StaffMembersReportDataSet>();
+        services.AddScoped<Reports.IStaffReportDataSet, Reports.StaffHistoryReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Starts workflows when people start working, leave or get a new manager.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<Workflows.StaffMemberHiredEvent, Workflows.StaffEventActivityDisplayDriver<Workflows.StaffMemberHiredEvent>>();
+        services.AddActivity<Workflows.StaffMemberLeftEvent, Workflows.StaffEventActivityDisplayDriver<Workflows.StaffMemberLeftEvent>>();
+        services.AddActivity<Workflows.StaffManagerChangedEvent, Workflows.StaffEventActivityDisplayDriver<Workflows.StaffManagerChangedEvent>>();
+        services.AddStaffLifecycleObserver<Workflows.StaffWorkflowLifecycleObserver>();
+    }
+}
+
+/// <summary>
+/// Describes the Staff workflow events to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsRecipeSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<Workflows.StaffMemberHiredEventSchema>()
+            .AddWorkflowActivitySchema<Workflows.StaffMemberLeftEventSchema>()
+            .AddWorkflowActivitySchema<Workflows.StaffManagerChangedEventSchema>();
+    }
+}
+
+/// <summary>
 /// Imports the Staff recipe step.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
@@ -184,6 +239,7 @@ public sealed class RecipesSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IRecipeStep, StaffRecipeStepSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, StaffSettingsSchema>();
         services.AddDeploymentStepSchema<StaffDeploymentStepSchema>();
     }
 }

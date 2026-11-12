@@ -15,6 +15,15 @@ public interface IStaffTimeZoneResolver
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The time zone id.</returns>
     Task<string> GetTimeZoneIdAsync(StaffMember staffMember, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a staff member's own time zone or their main team's (walking up parent teams), without falling back to the
+    /// site's, for modules that have a fallback of their own.
+    /// </summary>
+    /// <param name="staffMember">The staff member.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The time zone id, or <see langword="null"/> when neither the person nor their teams have one.</returns>
+    Task<string> FindTimeZoneIdAsync(StaffMember staffMember, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

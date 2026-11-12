@@ -11,10 +11,14 @@ using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
+using OrchardCore.Entities;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Security;
+using OrchardCore.Settings;
 using YesSql;
 using YesSql.Services;
 
@@ -345,6 +349,7 @@ public sealed class StaffRoles
     private readonly IOptions<StaffRoleOptions> _options;
     private readonly IClock _clock;
     private bool _ensured;
+    private bool _createdNow;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StaffRoles"/> class.
@@ -386,6 +391,8 @@ public sealed class StaffRoles
             return _ensured = true;
         }
 
+        _createdNow = true;
+
         var result = await _roleManager.CreateAsync(new Role
         {
             RoleName = roleName,
@@ -418,6 +425,17 @@ public sealed class StaffRoles
 
         if (working && !granted && await EnsureRoleAsync())
         {
+            if (_createdNow)
+            {
+                // A role added in this request is only saved when the request ends, so the grant waits until then.
+                var userId = staff.UserId;
+                var staffId = staff.ItemId;
+
+                ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<IRoleGrantService>().GrantAsync(userId, roleName, StaffConstants.RoleGrantSource, staffId));
+
+                return;
+            }
+
             await _roleGrantService.GrantAsync(staff.UserId, roleName, StaffConstants.RoleGrantSource, staff.ItemId);
         }
         else if (!working && granted)
@@ -448,19 +466,29 @@ public sealed class StaffRoleOptions
 }
 
 /// <summary>
-/// Defines the <see cref="StaffConstants.UserAudience"/> user audience: the members of the Staff role.
+/// Defines the <see cref="StaffConstants.UserAudience"/> user audience: the members of the Staff role, when the Staff
+/// settings limit people pickers to staff. Otherwise the audience isn't limited and every user can be picked.
 /// </summary>
 internal sealed class StaffUserAudienceProvider : IUserAudienceProvider
 {
     private readonly IOptions<StaffRoleOptions> _options;
+    private readonly ISiteService _siteService;
 
-    public StaffUserAudienceProvider(IOptions<StaffRoleOptions> options)
+    public StaffUserAudienceProvider(IOptions<StaffRoleOptions> options, ISiteService siteService)
     {
         _options = options;
+        _siteService = siteService;
     }
 
     public string Name => StaffConstants.UserAudience;
 
-    public Task<IReadOnlyCollection<string>> GetRoleNamesAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyCollection<string>>(string.IsNullOrWhiteSpace(_options.Value.RoleName) ? [] : [_options.Value.RoleName]);
+    public async Task<IReadOnlyCollection<string>> GetRoleNamesAsync(CancellationToken cancellationToken = default)
+    {
+        if (!(await _siteService.GetSiteSettingsAsync()).As<StaffSettings>().LimitPickersToStaff)
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(_options.Value.RoleName) ? [] : [_options.Value.RoleName];
+    }
 }

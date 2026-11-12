@@ -6,6 +6,11 @@
     "ites where it is serviced, with addresses checked against each country\'s rules.", Id="CrestApps.OrchardCore.Accounts.Locations", Name="Account Locations")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Content Management", Dependencies=new string[] {
         "CrestApps.OrchardCore.Accounts",
+        "CrestApps.OrchardCore.Staff"}, Description="Keeps the staff who look after each account: the owner (the account manager or sa" +
+    "les rep who answers for it) and the rest of the account team, picked from staff " +
+    "and shown on the account page.", Id="CrestApps.OrchardCore.Accounts.Team", Name="Account Team")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Content Management", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Accounts",
         "OrchardCore.Users"}, Description="Lets users sign in for an account: who its members are, and which of them manage " +
     "it for the others. Other modules read the members to know who acts for an accoun" +
     "t.", Id="CrestApps.OrchardCore.Accounts.Members", Name="Account Members")]
@@ -88,6 +93,20 @@ namespace CrestApps.OrchardCore.Accounts
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Team")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Recipes"})]
+    public sealed class TeamRecipesSchemaStartup : OrchardCore.Modules.StartupBase
+    {
+        public TeamRecipesSchemaStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Team")]
+    public sealed class TeamStartup : OrchardCore.Modules.StartupBase
+    {
+        public TeamStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
 }
 namespace CrestApps.OrchardCore.Accounts.Deployments
 {
@@ -138,6 +157,19 @@ namespace CrestApps.OrchardCore.Accounts.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string AccountDisplayText { get; set; }
         public bool Rendered { get; set; }
+    }
+    public class AccountTeamEditViewModel
+    {
+        public AccountTeamEditViewModel() { }
+        public string OwnerStaffId { get; set; }
+        public System.Collections.Generic.IList<string> TeamStaffIds { get; set; }
+    }
+    public class AccountTeamViewModel
+    {
+        public AccountTeamViewModel() { }
+        public string OwnerName { get; set; }
+        public string OwnerStaffId { get; set; }
+        public System.Collections.Generic.IList<System.Collections.Generic.KeyValuePair<string, string>> Team { get; set; }
     }
     public class AccountsDeploymentStepViewModel
     {

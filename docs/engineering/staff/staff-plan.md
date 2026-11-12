@@ -1,6 +1,6 @@
 # Staff: one building block for the people who work for the business
 
-Status: proposed 2026-11-11, waiting for decisions (section 9).
+Status: implemented 2026-11-11 on branch `claude/staff-module`, with the five recommended decisions (section 9). See [Progress](#10-progress) for what was built and where it differs from this plan.
 
 ## 1. Why
 
@@ -199,3 +199,18 @@ Positions and a job catalog (`PositionId`, headcount budgets), onboarding checkl
 3. **Does every agent and cashier get a staff record?** Recommended: yes, created on demand with `EnsureForUserAsync`, but sign-in never fails because a staff record is missing.
 4. **Staff role.** Recommended: yes, a permissionless `Staff` role granted to active linked staff through `IRoleGrantService`, so existing role-filtered pickers and stereotypes work.
 5. **Compensation in Staff.** Recommended: a `Staff.Compensation` feature now, so labor costing in WorkOrders and Contact Center capacity plans can read cost rates without Workforce, and a later Payroll module builds on it.
+
+## 10. Progress
+
+All eight slices are built on `claude/staff-module`. Where the build differs from the plan above:
+
+- **Names.** `StaffMember.DisplayName` and `Email` stay on the record for search and sorting, but Staff takes them from the linked user on every save and when the user changes; other modules read them from Staff and no longer copy them. Contact Center's `AgentProfile.UserName`/`DisplayName` and `AgentSession` copies are left as they are: removing them changes the live routing and sign-in path and needs a live-call test first.
+- **Home base and work location.** The home base keeps the one-line address Workforce stored (`StaffLocation`), and the work location is a name, not a `NamedAddress`; moving both to structured addresses is a follow-up.
+- **Workforce fields.** Fewest and most hours and availability live in `WorkforceStaffSettings`; the contracted hours stay on the staff member. C# extension properties keep `staff.MaxHoursPerWeek` and the like readable in Workforce code.
+- **Workers list.** The Workers list and editor stay in Workforce as a scheduling view of staff; they edit the same record with the same drivers as the staff editor.
+- **Staff-only pickers** are behind a Staff setting (**Offer only staff where people are assigned work**), off by default, so CRM assignment keeps working until a site has set up its staff. Lead and opportunity **Owner** fields are Orchard Core user picker fields; a site that wants them limited sets their roles to Staff.
+- **Account team** is a new feature, Account Team, with an owner and team members; lead conversion carrying the owner over is not built.
+- **Labor cost** is a column of Dispatch's Visits report data set (the crew's hours at each person's cost of an hour) rather than priced work-order lines.
+- **My Work** stays in Workforce. Staff adds **My Profile**, with links other modules add through `IStaffHomeLinkProvider` (Workforce adds My Work and the schedule, Time Tracker adds My time).
+- **Audit Trail** events for staff changes are not built; the append-only `StaffHistoryEntry` log covers who changed what, and the Staff workflow events cover automation.
+- **Orders** still set `StaffUserId` only from Point of Sale; the Calendars attendee picker still offers every user, because attendees can be customers.

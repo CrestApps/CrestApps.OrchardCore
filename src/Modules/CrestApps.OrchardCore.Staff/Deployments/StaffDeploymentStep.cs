@@ -141,7 +141,7 @@ internal sealed class StaffDeploymentStepDisplayDriver : DisplayDriver<Deploymen
     }
 }
 
-public sealed class StaffDeploymentStepViewModel
+public class StaffDeploymentStepViewModel
 {
     public bool IncludeSensitiveData { get; set; }
 }

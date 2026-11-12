@@ -84,6 +84,13 @@ namespace CrestApps.OrchardCore.Telephony
         public SoftPhoneWidgetStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Staff"})]
+    public sealed class StaffStartup : OrchardCore.Modules.StartupBase
+    {
+        public StaffStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     public sealed class Startup : OrchardCore.Modules.StartupBase
     {
         public Startup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
@@ -511,6 +518,13 @@ namespace CrestApps.OrchardCore.Telephony.Services
 }
 namespace CrestApps.OrchardCore.Telephony.ViewModels
 {
+    public class PhoneStaffViewModel
+    {
+        public PhoneStaffViewModel() { }
+        public string ExtensionId { get; set; }
+        public string Name { get; set; }
+        public string Number { get; set; }
+    }
     public sealed class SoftPhoneStandaloneViewModel
     {
         public SoftPhoneStandaloneViewModel() { }

@@ -32,7 +32,7 @@ internal sealed class StaffSkillsDisplayDriver : SkillSubjectSkillsDisplayDriver
         => SkillSubject.Staff(model.ItemId);
 }
 
-public sealed class StaffPayViewModel
+public class StaffPayViewModel
 {
     public decimal? AnnualSalary { get; set; }
 
@@ -41,7 +41,7 @@ public sealed class StaffPayViewModel
     public IList<StaffPayRateRowViewModel> Rates { get; set; } = [];
 }
 
-public sealed class StaffPayRateRowViewModel
+public class StaffPayRateRowViewModel
 {
     public DateOnly? EffectiveFrom { get; set; }
 
@@ -160,7 +160,7 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
     }
 }
 
-public sealed class StaffBadgeViewModel
+public class StaffBadgeViewModel
 {
     public string Pin { get; set; }
 

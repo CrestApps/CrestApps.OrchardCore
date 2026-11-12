@@ -66,6 +66,22 @@ public static class StaffServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a provider of links on a staff member's own page.
+    /// </summary>
+    /// <typeparam name="TProvider">The provider.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddStaffHomeLinkProvider<TProvider>(this IServiceCollection services)
+        where TProvider : class, IStaffHomeLinkProvider
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IStaffHomeLinkProvider, TProvider>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers an observer of staff changes.
     /// </summary>
     /// <typeparam name="TObserver">The observer.</typeparam>

@@ -1,0 +1,66 @@
+@model StaffHomeViewModel
+
+<zone Name="Title"><breadcrumb name="StaffMe" title="@T["My Profile"]" /></zone>
+
+@if (Model.StaffMember is null)
+{
+    <div class="alert alert-info">@T["You aren't a staff member yet. Ask whoever looks after staff to add you."]</div>
+}
+else
+{
+    var staff = Model.StaffMember;
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card text-bg-theme mb-3">
+                <div class="card-header">@staff.DisplayName</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">@T["Job title"]</dt><dd class="col-sm-8">@(staff.JobTitle ?? "-")</dd>
+                        <dt class="col-sm-4">@T["Employee number"]</dt><dd class="col-sm-8">@(staff.EmployeeNumber ?? "-")</dd>
+                        <dt class="col-sm-4">@T["Teams"]</dt><dd class="col-sm-8">@(Model.Teams.Count == 0 ? "-" : string.Join(", ", Model.Teams))</dd>
+                        <dt class="col-sm-4">@T["Work location"]</dt><dd class="col-sm-8">@(staff.WorkLocation ?? "-")</dd>
+                        <dt class="col-sm-4">@T["Hire date"]</dt><dd class="col-sm-8">@(staff.HireDate?.ToString("d") ?? "-")</dd>
+                        <dt class="col-sm-4">@T["Reports to"]</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.ManagerChain.Count == 0)
+                            {
+                                <span>-</span>
+                            }
+                            else
+                            {
+                                @string.Join(" › ", Model.ManagerChain.Select(manager => manager.DisplayName))
+                            }
+                        </dd>
+                        <dt class="col-sm-4">@T["Direct reports"]</dt><dd class="col-sm-8">@(Model.Reports.Count == 0 ? "-" : string.Join(", ", Model.Reports.Select(report => report.DisplayName)))</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card text-bg-theme mb-3">
+                <div class="card-header">@T["My work"]</div>
+                <div class="list-group list-group-flush">
+                    @if (Model.Links.Count == 0)
+                    {
+                        <div class="list-group-item hint">@T["Nothing here yet. The modules you use add their pages here."]</div>
+                    }
+                    @foreach (var link in Model.Links)
+                    {
+                        <a href="@Url.Content(link.Url)" class="list-group-item list-group-item-action">
+                            @if (!string.IsNullOrEmpty(link.Icon))
+                            {
+                                <i class="@link.Icon me-2 text-secondary" aria-hidden="true"></i>
+                            }
+                            <span class="fw-semibold">@link.Title</span>
+                            @if (!string.IsNullOrEmpty(link.Description))
+                            {
+                                <span class="d-block hint">@link.Description</span>
+                            }
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}

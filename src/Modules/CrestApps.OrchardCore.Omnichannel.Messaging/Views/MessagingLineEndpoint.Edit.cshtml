@@ -6,6 +6,7 @@
         <div class="ocat-end">
             @await Component.InvokeAsync("UserPicker", new
             {
+                audience = "Staff",
                 name = Html.NameFor(m => m.TextingUserIds).ToString(),
                 selectedValues = Model.TextingUserIds,
                 valueType = "userId",

@@ -42,6 +42,10 @@ public class SchedulingResourceViewModel
     [BindNever]
     public string InitialUserJson { get; set; } = "[]";
 
+    /// <summary>Gets or sets whether the user is picked among staff, when Staff is on.</summary>
+    [BindNever]
+    public bool UseStaffPicker { get; set; }
+
     /// <summary>Gets or sets the calendars to choose from.</summary>
     [BindNever]
     public IList<SelectListItem> CalendarOptions { get; set; } = [];

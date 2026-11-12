@@ -78,6 +78,7 @@ public sealed class DispatchResources
     private readonly WorkOrderStore _workOrderStore;
     private readonly IEnumerable<IGeoService> _geoServices;
     private readonly IDispatchSettingsProvider _settingsProvider;
+    private readonly IStaffTimeZoneResolver _staffTimeZones;
     private readonly Dictionary<string, GeoPoint?> _places = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Team> _teams = new(StringComparer.Ordinal);
 
@@ -92,9 +93,11 @@ public sealed class DispatchResources
         ISession session,
         WorkOrderStore workOrderStore,
         IEnumerable<IGeoService> geoServices,
-        IDispatchSettingsProvider settingsProvider)
+        IDispatchSettingsProvider settingsProvider,
+        IStaffTimeZoneResolver staffTimeZones)
     {
         _settingsProvider = settingsProvider;
+        _staffTimeZones = staffTimeZones;
         _workerManager = workerManager;
         _teamManager = teamManager;
         _shiftService = shiftService;
@@ -218,13 +221,14 @@ public sealed class DispatchResources
     }
 
     /// <summary>
-    /// Gives a worker's time zone: their own, their team's or a parent team's, or the one dispatch shows.
+    /// Gives a worker's time zone: the one Staff gives everywhere (their own, their main team's or a parent team's),
+    /// else another team's, else the one dispatch shows.
     /// </summary>
     private async Task<string> TimeZoneOfAsync(StaffMember worker, List<Team> teams, CancellationToken cancellationToken)
     {
-        if (Valid(worker.TimeZoneId))
+        if (await _staffTimeZones.FindTimeZoneIdAsync(worker, cancellationToken) is { } zoneFromStaff && Valid(zoneFromStaff))
         {
-            return worker.TimeZoneId;
+            return zoneFromStaff;
         }
 
         foreach (var team in teams)

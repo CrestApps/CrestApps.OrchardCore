@@ -13,18 +13,26 @@ namespace CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 /// </summary>
 public sealed class AgentWorkerService
 {
+    /// <summary>
+    /// The staff capability of Contact Center agents.
+    /// </summary>
+    public const string AgentCapability = "Agent";
+
     private readonly IAgentProfileManager _agentManager;
     private readonly IStaffMemberManager _workerManager;
+    private readonly IStaffAccountService _staffAccounts;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentWorkerService"/> class.
     /// </summary>
     /// <param name="agentManager">The agent manager.</param>
-    /// <param name="workerManager">The worker manager.</param>
-    public AgentWorkerService(IAgentProfileManager agentManager, IStaffMemberManager workerManager)
+    /// <param name="workerManager">The staff manager.</param>
+    /// <param name="staffAccounts">Makes agents staff members.</param>
+    public AgentWorkerService(IAgentProfileManager agentManager, IStaffMemberManager workerManager, IStaffAccountService staffAccounts)
     {
         _agentManager = agentManager;
         _workerManager = workerManager;
+        _staffAccounts = staffAccounts;
     }
 
     /// <summary>
@@ -79,33 +87,19 @@ public sealed class AgentWorkerService
 
         var existing = await _workerManager.FindByUserIdAsync(agent.UserId, cancellationToken);
 
-        if (existing is not null)
+        // Every agent is a staff member with the Agent capability; one who is staff already only gains the capability.
+        var worker = await _staffAccounts.EnsureAsync(agent.UserId, NameOf(agent), [AgentCapability], staff =>
         {
-            return (existing, false);
-        }
+            staff.JobTitle = "Agent";
 
-        var worker = await _workerManager.NewAsync(cancellationToken: cancellationToken);
+            if (!string.IsNullOrEmpty(teamId))
+            {
+                staff.PrimaryTeamId = teamId;
+                staff.TeamMemberships.Add(new TeamMembership { TeamId = teamId });
+            }
+        }, cancellationToken);
 
-        worker.DisplayName = NameOf(agent);
-        worker.UserId = agent.UserId;
-        worker.JobTitle = "Agent";
-
-        if (!string.IsNullOrEmpty(teamId))
-        {
-            worker.PrimaryTeamId = teamId;
-            worker.TeamMemberships.Add(new TeamMembership { TeamId = teamId });
-        }
-
-        var validation = await _workerManager.ValidateAsync(worker, cancellationToken);
-
-        if (!validation.Succeeded)
-        {
-            return (null, false);
-        }
-
-        await _workerManager.CreateAsync(worker, cancellationToken);
-
-        return (worker, true);
+        return (worker, existing is null && worker is not null);
     }
 
     /// <summary>

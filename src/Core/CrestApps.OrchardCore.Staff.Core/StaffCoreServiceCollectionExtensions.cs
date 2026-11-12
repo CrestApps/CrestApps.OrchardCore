@@ -43,6 +43,7 @@ public static class StaffCoreServiceCollectionExtensions
         services.TryAddScoped<IStaffHistoryService, StaffHistoryService>();
         services.TryAddScoped<IStaffBadgeService, StaffBadgeService>();
         services.TryAddScoped<StaffAccounts>();
+        services.TryAddScoped<IStaffAccountService>(sp => sp.GetRequiredService<StaffAccounts>());
         services.TryAddScoped<StaffRoles>();
         services.AddTeamMemberProvider<StaffTeamMemberProvider>();
         services.AddStaffLifecycleObserver<StaffRoleLifecycleObserver>();

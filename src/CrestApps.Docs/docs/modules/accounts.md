@@ -315,3 +315,7 @@ An account's members and locations are parts of the account, so they travel with
 
 Accounts use Orchard Core's content permissions. The `Account` type is securable, so a role can be given rights to
 accounts alone. Choosing an account's members also needs `ManageAccountMembers`.
+
+## Account Team
+
+The **Account Team** feature (`CrestApps.OrchardCore.Accounts.Team`, needs [Staff](./staff.md)) adds the `AccountTeamPart` to the Account type: an **owner** (the account manager or sales rep who answers for the account) and the rest of the **account team**, both picked from staff with the `StaffPicker`. The account page shows them in its Overview tab, with links to their staff pages. The part's values are staff member ids (`OwnerStaffId`, `TeamStaffIds`).

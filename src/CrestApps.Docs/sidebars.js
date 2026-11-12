@@ -460,6 +460,7 @@ const sidebars = {
                 'modules/workforce',
                 'modules/workforce-contact-center',
                 'modules/skills',
+                'modules/staff',
                 'modules/teams',
             ],
         },

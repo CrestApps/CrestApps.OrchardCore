@@ -170,7 +170,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
                     Selected = model.TimeZoneIds?.Contains(x.Key, StringComparer.OrdinalIgnoreCase) == true,
                 });
 
-            model.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId" });
+            model.UserSearchEndpoint = _linkGenerator.GetPathByName("CrestApps.Users.Search", new { valueType = "userId", audience = "Staff" });
 
             if (filter.AssignedToUserIds is { Length: > 0 })
             {

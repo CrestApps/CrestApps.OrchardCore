@@ -1,0 +1,12 @@
+@model CrestApps.OrchardCore.Staff.Drivers.StaffSettingsViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["People pickers"]</div>
+    <div class="card-body">
+        <div class="form-check">
+            <input asp-for="LimitPickersToStaff" class="form-check-input" />
+            <label asp-for="LimitPickersToStaff" class="form-check-label">@T["Offer only staff where people are assigned work"]</label>
+            <span class="hint dashed">@T["Activity assignees, lead and opportunity owners, phone extensions and lines, time entries and certificates then offer only working staff members with an account, instead of every user. Turn it on once your staff are set up."]</span>
+        </div>
+    </div>
+</div>

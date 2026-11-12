@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -31,7 +32,20 @@ public sealed class StaffAdminMenu : AdminNavigationProvider
                 .Id("staffAll")
                 .Action("Index", "Staff", StaffConstants.Features.Staff)
                 .Permission(StaffPermissions.ViewStaff)
+                .LocalNav())
+            .Add(S["My Profile"], S["My Profile"].PrefixPosition("05"), me => me
+                .Id("staffMe")
+                .Action("Me", "Staff", StaffConstants.Features.Staff)
+                .Permission(StaffPermissions.ViewOwnStaffProfile)
                 .LocalNav()));
+
+        builder.Add(S["Configuration"], configuration => configuration
+            .Add(S["Settings"], settings => settings
+                .Add(S["Staff"], S["Staff"].PrefixPosition(), staff => staff
+                    .Id("staffSettings")
+                    .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", Drivers.StaffSettingsDisplayDriver.GroupId } })
+                    .Permission(StaffPermissions.ManageStaff)
+                    .LocalNav())));
 
         return ValueTask.CompletedTask;
     }

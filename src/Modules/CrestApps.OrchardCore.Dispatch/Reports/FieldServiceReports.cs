@@ -1,3 +1,7 @@
+using YesSql;
+using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.Core;
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Models;
@@ -122,6 +126,9 @@ public sealed class WorkOrdersReportDataSet : IndexedReportDataSet<WorkOrder, Wo
 /// </summary>
 public sealed class VisitsReportDataSet : IndexedReportDataSet<ServiceVisit, ServiceVisitIndex>, IFieldServiceReportDataSet
 {
+    private readonly IStaffMemberManager _staffManager;
+    private Dictionary<string, StaffMember> _staff = new(StringComparer.Ordinal);
+
     /// <summary>
     /// The data set's name.
     /// </summary>
@@ -133,9 +140,10 @@ public sealed class VisitsReportDataSet : IndexedReportDataSet<ServiceVisit, Ser
     /// <param name="session">The session.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public VisitsReportDataSet(ISession session, IAuthorizationService authorizationService, IStringLocalizer<VisitsReportDataSet> stringLocalizer)
+    public VisitsReportDataSet(ISession session, IAuthorizationService authorizationService, IStaffMemberManager staffManager, IStringLocalizer<VisitsReportDataSet> stringLocalizer)
         : base(new DataSetDescriptor(DataSetName, stringLocalizer["Visits"], stringLocalizer["One row per visit: the technician, start and end, travel, arrival against the window, time on site, and whether the job was done the first time."]), session, authorizationService, DispatchConstants.CollectionName, DispatchPermissions.ViewDispatch)
     {
+        _staffManager = staffManager;
         var S = stringLocalizer;
         var group = S["Visit"].Value;
 
@@ -145,6 +153,8 @@ public sealed class VisitsReportDataSet : IndexedReportDataSet<ServiceVisit, Ser
         AddField("WorkOrderNumber", S["Work order"], DataFieldType.Text, record => record.WorkOrderNumber, group);
         AddField("Status", S["Status"], DataFieldType.Text, record => record.Status.ToString(), group);
         AddField("LeadWorkerId", S["Technician ID"], DataFieldType.Text, record => record.LeadWorkerId, group);
+        AddField("Technician", S["Technician"], DataFieldType.Text, record => _staff.GetValueOrDefault(record.LeadWorkerId ?? string.Empty)?.DisplayName, group);
+        AddField("LaborCost", S["Labor cost"], DataFieldType.Decimal, record => (object)LaborCost(record), group);
         AddField("CrewSize", S["Crew"], DataFieldType.Integer, record => record.WorkerIds.Count, group);
         AddField("TerritoryId", S["Territory ID"], DataFieldType.Text, record => record.TerritoryId, group);
         AddField("StartUtc", S["Start"], DataFieldType.DateTime, record => record.StartUtc, group);
@@ -158,6 +168,41 @@ public sealed class VisitsReportDataSet : IndexedReportDataSet<ServiceVisit, Ser
         AddField("IncompleteReason", S["Why not finished"], DataFieldType.Text, record => record.IncompleteReason, group);
 
         CompleteDescription();
+    }
+
+    /// <summary>
+    /// Reads the staff once per run, for the technician names and the cost of their hours.
+    /// </summary>
+    /// <param name="context">The context of the run.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>No narrowing: every visit the principal may read.</returns>
+    protected override async Task<Func<IQueryIndex<ServiceVisitIndex>, IQueryIndex<ServiceVisitIndex>>> RestrictAsync(DataSourceContext context, CancellationToken cancellationToken)
+    {
+        var (_, people) = await _staffManager.SearchAsync(new StaffQuery(), 0, 5000, cancellationToken);
+
+        _staff = people.ToDictionary(person => person.ItemId, StringComparer.Ordinal);
+
+        return await base.RestrictAsync(context, cancellationToken);
+    }
+
+    // The crew's hours on the visit (on site when known, else as planned) at each person's cost of an hour on the day.
+    private decimal? LaborCost(ServiceVisit visit)
+    {
+        var minutes = FieldServiceMeasures.OnSiteMinutes(visit) ?? (visit.StartUtc is { } start && visit.EndUtc is { } end ? (int)Math.Max(0, (end - start).TotalMinutes) : 0);
+        var day = DateOnly.FromDateTime(visit.StartUtc ?? visit.CreatedUtc);
+        decimal? total = null;
+
+        foreach (var workerId in visit.WorkerIds.Append(visit.LeadWorkerId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
+        {
+            if (_staff.GetValueOrDefault(workerId) is { } person
+                && person.TryGet<StaffPayRates>(out var pay)
+                && pay.CostOn(day) is { } hourly)
+            {
+                total = (total ?? 0) + Math.Round(hourly * minutes / 60m, 2);
+            }
+        }
+
+        return total;
     }
 
     /// <inheritdoc />

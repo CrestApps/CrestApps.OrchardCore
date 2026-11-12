@@ -254,6 +254,18 @@ internal sealed class StaffTimeZoneResolver : IStaffTimeZoneResolver
 
     public async Task<string> GetTimeZoneIdAsync(StaffMember staffMember, CancellationToken cancellationToken = default)
     {
+        if (await FindTimeZoneIdAsync(staffMember, cancellationToken) is { } found)
+        {
+            return found;
+        }
+
+        var siteZone = (await _siteService.GetSiteSettingsAsync()).TimeZoneId;
+
+        return string.IsNullOrEmpty(siteZone) ? "UTC" : siteZone;
+    }
+
+    public async Task<string> FindTimeZoneIdAsync(StaffMember staffMember, CancellationToken cancellationToken = default)
+    {
         if (staffMember is not null && CalendarTimeZones.IsValid(staffMember.TimeZoneId))
         {
             return staffMember.TimeZoneId;
@@ -278,9 +290,7 @@ internal sealed class StaffTimeZoneResolver : IStaffTimeZoneResolver
             id = team.ParentId;
         }
 
-        var timeZoneId = (await _siteService.GetSiteSettingsAsync()).TimeZoneId;
-
-        return string.IsNullOrEmpty(timeZoneId) ? "UTC" : timeZoneId;
+        return null;
     }
 
     /// <summary>
