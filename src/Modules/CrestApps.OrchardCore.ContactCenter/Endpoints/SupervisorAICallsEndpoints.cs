@@ -26,7 +26,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
 /// <summary>
 /// The supervisor dashboard's live AI calls: the calls the AI is holding right now, each one's transcript as it
-/// grows, and what a supervisor can do to one (send the AI a note, take the call over, end it).
+/// grows, and what a supervisor can do to one (send the AI a note, take the call over, end it). A supervisor sees and
+/// acts only on the AI calls in their scope (<see cref="SupervisorAICallScope"/>), and a call that has ended keeps its
+/// transcript for those who may listen to anyone's recordings.
 /// </summary>
 internal static class SupervisorAICallsEndpoints
 {
@@ -57,6 +59,7 @@ internal static class SupervisorAICallsEndpoints
         IAIProfileManager profileManager,
         IContentManager contentManager,
         IClock clock,
+        ISupervisorQueueAuthorizationService queueAuthorization,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
@@ -74,6 +77,8 @@ internal static class SupervisorAICallsEndpoints
             .OrderByDescending(index => index.ScheduledUtc)
             .Take(MaxLiveCalls)
             .ListAsync(httpContext.RequestAborted);
+
+        activities = await SupervisorAICallScope.FilterAsync(activities, authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted);
 
         var now = clock.UtcNow;
         var profileNames = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -118,6 +123,7 @@ internal static class SupervisorAICallsEndpoints
         IAuthorizationService authorizationService,
         IOmnichannelActivityStore activityStore,
         IAIChatSessionPromptStore promptStore,
+        ISupervisorQueueAuthorizationService queueAuthorization,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
@@ -130,6 +136,14 @@ internal static class SupervisorAICallsEndpoints
         if (activity is null || string.IsNullOrEmpty(activity.AISessionId))
         {
             return TypedResults.NotFound();
+        }
+
+        // Only a call in the supervisor's scope, and a call that has ended only with the right to anyone's recordings:
+        // the dashboard is for watching live calls, not for reading every past conversation.
+        if (!await SupervisorAICallScope.IsAuthorizedAsync(activity, authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted) ||
+            (!VoiceAgentConversationLoop.IsLiveAICall(activity) && !await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.ListenToAllCallRecordings)))
+        {
+            return TypedResults.Forbid();
         }
 
         var turns = AIConversationTranscript.GetTurns(await promptStore.GetPromptsAsync(activity.AISessionId));
@@ -154,9 +168,12 @@ internal static class SupervisorAICallsEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IEnumerable<IAIVoiceCallSupervision> supervisions,
+        IOmnichannelActivityStore activityStore,
+        ISupervisorQueueAuthorizationService queueAuthorization,
         HttpContext httpContext)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.InterveneInCalls))
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.InterveneInCalls) ||
+            !await IsInScopeAsync(activityId, activityStore, authorizationService, queueAuthorization, httpContext))
         {
             return TypedResults.Forbid();
         }
@@ -189,9 +206,12 @@ internal static class SupervisorAICallsEndpoints
         IAntiforgery antiforgery,
         IEnumerable<IAIVoiceCallSupervision> supervisions,
         IAgentProfileManager agentProfileManager,
+        IOmnichannelActivityStore activityStore,
+        ISupervisorQueueAuthorizationService queueAuthorization,
         HttpContext httpContext)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.InterveneInCalls))
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.InterveneInCalls) ||
+            !await IsInScopeAsync(activityId, activityStore, authorizationService, queueAuthorization, httpContext))
         {
             return TypedResults.Forbid();
         }
@@ -225,9 +245,12 @@ internal static class SupervisorAICallsEndpoints
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
         IEnumerable<IAIVoiceCallSupervision> supervisions,
+        IOmnichannelActivityStore activityStore,
+        ISupervisorQueueAuthorizationService queueAuthorization,
         HttpContext httpContext)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.InterveneInCalls))
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.InterveneInCalls) ||
+            !await IsInScopeAsync(activityId, activityStore, authorizationService, queueAuthorization, httpContext))
         {
             return TypedResults.Forbid();
         }
@@ -259,9 +282,11 @@ internal static class SupervisorAICallsEndpoints
         IAntiforgery antiforgery,
         IOmnichannelActivityStore activityStore,
         IContactCenterPhoneCallSupervisionService phoneCalls,
+        ISupervisorQueueAuthorizationService queueAuthorization,
         HttpContext httpContext)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter) ||
+            !await IsInScopeAsync(activityId, activityStore, authorizationService, queueAuthorization, httpContext))
         {
             return TypedResults.Forbid();
         }
@@ -287,6 +312,21 @@ internal static class SupervisorAICallsEndpoints
             result.Succeeded,
             Message = result.Succeeded ? "Your phone is joining the call to listen." : result.Reason,
         });
+    }
+
+    // An unknown activity is left to the handler (it answers that the AI is no longer on the call); a known one must be
+    // in the supervisor's scope.
+    private static async Task<bool> IsInScopeAsync(
+        string activityId,
+        IOmnichannelActivityStore activityStore,
+        IAuthorizationService authorizationService,
+        ISupervisorQueueAuthorizationService queueAuthorization,
+        HttpContext httpContext)
+    {
+        var activity = string.IsNullOrEmpty(activityId) ? null : await activityStore.FindByIdAsync(activityId, httpContext.RequestAborted);
+
+        return activity is not null &&
+            await SupervisorAICallScope.IsAuthorizedAsync(activity, authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted);
     }
 
     private static async Task<string> ResolveProfileNameAsync(IAIProfileManager profileManager, Dictionary<string, string> cache, string profileId)
