@@ -30,8 +30,15 @@ public sealed class ContentTransferAdminActionSecurityTests
         Assert.NotNull(method.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>());
     }
 
-    [Fact]
-    public async Task BulkRemove_WithoutTheDeletePermission_IsForbidden()
+    /// <summary>
+    /// SEC-A20 m: bulk Remove needs the delete permission on every list: the import list, the export list and the export
+    /// dashboard.
+    /// </summary>
+    [Theory]
+    [InlineData(nameof(AdminController.ListPOST))]
+    [InlineData(nameof(AdminController.ExportPOST))]
+    [InlineData(nameof(AdminController.ExportDashboardPOST))]
+    public async Task BulkRemove_WithoutTheDeletePermission_IsForbidden(string action)
     {
         var authorization = new Mock<IAuthorizationService>();
         authorization
@@ -46,7 +53,13 @@ public sealed class ContentTransferAdminActionSecurityTests
         typeof(AdminController).GetField("_authorizationService", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(controller, authorization.Object);
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
 
-        var result = await controller.ListPOST(new ListContentTransferEntryOptions { BulkAction = ContentTransferEntryBulkAction.Remove }, ["entry-1"]);
+        var options = new ListContentTransferEntryOptions { BulkAction = ContentTransferEntryBulkAction.Remove };
+        var result = action switch
+        {
+            nameof(AdminController.ExportPOST) => await controller.ExportPOST(options, ["entry-1"]),
+            nameof(AdminController.ExportDashboardPOST) => await controller.ExportDashboardPOST(options, ["entry-1"]),
+            _ => await controller.ListPOST(options, ["entry-1"]),
+        };
 
         Assert.IsType<ForbidResult>(result);
     }
