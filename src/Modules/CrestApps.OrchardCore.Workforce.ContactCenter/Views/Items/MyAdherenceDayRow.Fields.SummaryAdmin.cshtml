@@ -1,0 +1,4 @@
+@model ShapeViewModel<MyAdherenceDayRow>
+
+@* A calendar day of the worker, not a moment, so it is shown as it was saved. *@
+<span>@Model.Value.Day.Date.ToString("ddd d MMM", CultureInfo.CurrentCulture)</span>

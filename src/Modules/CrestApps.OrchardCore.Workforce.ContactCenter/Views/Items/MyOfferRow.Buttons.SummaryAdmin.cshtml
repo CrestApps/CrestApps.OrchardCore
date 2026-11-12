@@ -1,0 +1,6 @@
+@model ShapeViewModel<MyOfferRow>
+
+<form method="post" action="@Url.Content("~/Admin/my-work/offers/" + Model.Value.Offer.ItemId + "/take")" class="d-inline">
+    @Html.AntiForgeryToken()
+    <button type="submit" class="btn btn-primary btn-sm">@T["Take it"]</button>
+</form>

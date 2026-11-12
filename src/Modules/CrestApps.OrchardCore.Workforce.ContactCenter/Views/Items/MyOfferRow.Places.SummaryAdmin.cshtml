@@ -1,0 +1,8 @@
+@model ShapeViewModel<MyOfferRow>
+
+@{
+    var offer = Model.Value.Offer;
+    var left = offer.Places - offer.Claims.Count;
+}
+
+<span class="badge ta-badge fw-normal" title="@T["First come, first served"]"><i class="fa-solid fa-users text-info" aria-hidden="true"></i> @(left == 1 ? T["1 place left"] : T["{0} places left", left])</span>
