@@ -59,11 +59,15 @@ internal static class SubjectActionEndpoints
         var options = actionOptions.Value;
         var now = clock.UtcNow;
 
-        var responses = await Task.WhenAll(actions.Select(async action =>
+        // One action at a time: the content definition manager and the local clock are scoped services, which are not
+        // safe to call from tasks running at the same time.
+        var responses = new List<SubjectDispositionActionResponse>(actions.Length);
+
+        foreach (var action in actions)
         {
             if (string.Equals(action.Source, OmnichannelConstants.ActionTypes.Finish, StringComparison.OrdinalIgnoreCase))
             {
-                return null;
+                continue;
             }
 
             var typeDisplayName = options.ActionTypes.TryGetValue(action.Source, out var typeEntry)
@@ -107,7 +111,7 @@ internal static class SubjectActionEndpoints
 
             var previewTitle = await ResolvePreviewTitleAsync(action, request, contentDefinitionManager, S);
 
-            return new SubjectDispositionActionResponse
+            responses.Add(new SubjectDispositionActionResponse
             {
                 ActionId = action.ItemId,
                 ActionType = action.Source,
@@ -115,11 +119,10 @@ internal static class SubjectActionEndpoints
                 PreviewTitle = string.IsNullOrWhiteSpace(previewTitle) ? typeDisplayName : previewTitle,
                 RequiresScheduleDate = requiresScheduleDate,
                 DefaultScheduleDate = defaultScheduleDate,
-            };
-        }));
+            });
+        }
 
         var result = responses
-            .OfType<SubjectDispositionActionResponse>()
             .OrderBy(x => x.RequiresScheduleDate ? 1 : 0)
             .ThenBy(x => x.DefaultScheduleDate)
             .ToArray();
