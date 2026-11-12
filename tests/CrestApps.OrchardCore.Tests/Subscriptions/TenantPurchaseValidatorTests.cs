@@ -115,6 +115,29 @@ public sealed class TenantPurchaseValidatorTests
         Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.FeatureProfileRequired);
     }
 
+    /// <summary>
+    /// SEC-C18: Orchard treats a profile it can't find as "everything allowed", so a renamed or deleted profile, or a plan
+    /// that arrived by recipe, import or API naming one that never existed, would sell an unrestricted site.
+    /// </summary>
+    [Fact]
+    public void Validate_AFeatureProfileThatDoesNotExist_IsRefused()
+    {
+        var errors = TenantPurchaseValidator.Validate(Request(featureProfile: "deleted-profile"), Rules(), _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.FeatureProfileNotFound);
+    }
+
+    [Fact]
+    public void Validate_WhenFeatureProfilesCannotBeChecked_IsRefused()
+    {
+        var rules = Rules();
+        rules.KnownFeatureProfiles = null;
+
+        var errors = TenantPurchaseValidator.Validate(Request(), rules, _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.FeatureProfileNotFound);
+    }
+
     [Theory]
     [InlineData("Default")]
     [InlineData("Acme")]
@@ -167,6 +190,7 @@ public sealed class TenantPurchaseValidatorTests
             ReservedHosts = reservedHosts ?? [],
             BaseDomain = baseDomain,
             AdminPrefix = "Admin",
+            KnownFeatureProfiles = ["sold-tenant"],
         };
 }
 

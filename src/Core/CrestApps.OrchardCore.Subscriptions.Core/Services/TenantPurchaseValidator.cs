@@ -74,7 +74,13 @@ public sealed class TenantPurchaseRules
     /// Gets or sets the admin URL prefix, which is always reserved.
     /// </summary>
     public string AdminPrefix { get; set; }
-}
+
+    /// <summary>
+    /// Gets or sets the feature profiles that exist on the host, or <see langword="null"/> when they can't be read (the
+    /// Feature Profiles feature is off). Orchard Core treats a profile it can't find as "every feature allowed", so a
+    /// purchase may name only one of these.
+    /// </summary>
+    public IReadOnlyCollection<string> KnownFeatureProfiles { get; set; }
 
 /// <summary>
 /// Why a tenant purchase was refused.
@@ -95,6 +101,7 @@ public enum TenantPurchaseErrorCode
     HostTaken,
     RecipeNotAllowed,
     FeatureProfileRequired,
+    FeatureProfileNotFound,
 }
 
 /// <summary>
@@ -188,6 +195,13 @@ public static partial class TenantPurchaseValidator
         if (string.IsNullOrWhiteSpace(request.FeatureProfile))
         {
             errors.Add(new TenantPurchaseError(nameof(TenantPurchaseRequest.FeatureProfile), TenantPurchaseErrorCode.FeatureProfileRequired));
+        }
+        else if (rules.KnownFeatureProfiles is null ||
+            !rules.KnownFeatureProfiles.Contains(request.FeatureProfile.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            // Orchard Core treats a profile it can't find as "every feature allowed": a renamed or deleted profile, or a
+            // plan that arrived by recipe, import or API naming one that never existed, would sell an unrestricted site.
+            errors.Add(new TenantPurchaseError(nameof(TenantPurchaseRequest.FeatureProfile), TenantPurchaseErrorCode.FeatureProfileNotFound, request.FeatureProfile));
         }
 
         return errors;

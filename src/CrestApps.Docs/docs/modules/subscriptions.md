@@ -288,6 +288,16 @@ The providers offered are the ones Orchard Core registers (`IEnumerable<Database
 
 Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions → Site provisioning**, including the abandoned ones. A waiting or failed job can be retried once the cause is fixed. An abandoned job has already dropped the administrator password, so it can't be retried: the administrator creates the site by hand and closes the job with **Mark as created** (`TenantProvisioningAdminController.MarkCreated`). That sets it to `Succeeded`, optionally with the site's URL. `TenantProvisioningJobActions` holds the rules for both buttons, and the screen and the actions share them.
 
+### What a sold site may enable
+
+A sold site runs in the same process as the store, so its administrator must not be able to turn on features that reach the host, such as the MCP local client, data connectors, or tenant management. Every plan that sells a site names a **feature profile** (Orchard Core's **Tenants › Feature Profiles**, which needs the `OrchardCore.Tenants.FeatureProfiles` feature on the default tenant), and the site is created with it.
+
+- Create one profile for sold sites before selling, for example **Sold site**, that excludes the Tenants features, the MCP clients, data connectors, Subscriptions, and anything else you keep to the host, and choose it on each plan's tenant onboarding.
+- The profile is checked by its id against the profiles that exist, when the buyer fills in the new-site step, again before payment (`TenantProvisioningPaymentGate`) and again before the site is set up. Orchard Core treats a tenant whose profile it can't find as allowed every feature, so a profile that was renamed or deleted, or a plan that arrived by recipe, import or API naming one that doesn't exist, stops the sale instead of creating an unrestricted site. Without the Feature Profiles feature no site is sold (`ITenantFeatureProfileCatalog`).
+- **Upgrading:** a plan that has no feature profile, or names one that no longer exists, can't be bought until one is chosen; a job already recorded with a missing profile fails with `FeatureProfileNotFound` on Site provisioning and can be retried once a profile with that id exists again.
+
+The recipe is the plan's: the setup recipe recorded on the checkout when the plan was bought, never one named by the buyer or carried on the job.
+
 A site sold this way carries a `Tenant` entitlement naming it, so the site runs for as long as the subscription is current and is **disabled** when it is not. Disabled, never deleted: a disabled tenant stops serving immediately but keeps every byte of the customer's data, so somebody who pays a late invoice gets their site back exactly as it was.
 
 ## Installment plans

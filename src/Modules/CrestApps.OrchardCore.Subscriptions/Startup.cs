@@ -31,6 +31,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentTypes.Events;
 using OrchardCore.Localization;
 using OrchardCore.Navigation;
@@ -251,6 +252,9 @@ public sealed class TenantProvisioningStartup : StartupBase
         services.AddScoped<ITenantProvisioningJobStore, TenantProvisioningJobStore>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         services.AddScoped<ITenantPurchaseRulesProvider, TenantPurchaseRulesProvider>();
+
+        // Without Orchard Core's Feature Profiles no profile can be confirmed, so no site is sold (SEC-C18).
+        services.TryAddScoped<ITenantFeatureProfileCatalog, UnavailableTenantFeatureProfileCatalog>();
         services.AddScoped<ICheckoutHandler, TenantProvisioningCheckoutHandler>();
 
         // A purchase saved before a rule existed, or edited around the step, is checked again before it is paid for.
@@ -289,6 +293,9 @@ public sealed class FeatureProfileTenantProvisioningStartup : StartupBase
     {
         services.AddContentPart<TenantOnboardingPart>()
             .UseDisplayDriver<FeatureProfilesTenantOnboardingPartDisplayDriver>();
+
+        // Registered after the unavailable default, so it is the one resolved.
+        services.AddScoped<ITenantFeatureProfileCatalog, FeatureProfilesTenantFeatureProfileCatalog>();
     }
 }
 

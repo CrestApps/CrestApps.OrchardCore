@@ -156,6 +156,37 @@ public sealed class TenantProvisioningServiceTests
     }
 
     /// <summary>
+    /// SEC-C18: Orchard treats a profile it can't find as "everything allowed", so a job naming a profile that was renamed
+    /// or deleted since the purchase is refused, not created unrestricted.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WithAFeatureProfileThatNoLongerExists_FailsAndCreatesNothing()
+    {
+        var (service, setup, store) = CreateService(new SubscriptionOnboardingSettings(), knownProfiles: ["another-profile"]);
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(TenantProvisioningStatus.Succeeded, status);
+        Assert.Null(setup.Captured);
+        Assert.Contains("FeatureProfileNotFound", store.Jobs.First().LastError, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// SEC-C2: a job recorded before the fix with a recipe the buyer chose, which exists on the host, is checked against
+    /// the recipe the plan named, not against itself.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WithARecipeThePlanDidNotName_FailsAndCreatesNothing()
+    {
+        var (service, setup, _) = CreateService(new SubscriptionOnboardingSettings(), recipeName: "Agency", planRecipe: "Blog");
+
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(TenantProvisioningStatus.Succeeded, status);
+        Assert.Null(setup.Captured);
+    }
+
+    /// <summary>
     /// SEC-C2: a recipe that is not available is a failure, never a quiet fall back to whatever recipe comes first.
     /// </summary>
     [Fact]
@@ -225,8 +256,13 @@ public sealed class TenantProvisioningServiceTests
         string featureProfile = "sold-tenant",
         string recipeName = "Blog",
         string prefix = "qasite1",
-        Subscription subscription = null)
+        Subscription subscription = null,
+        string[] knownProfiles = null,
+        string planRecipe = null)
     {
+        knownProfiles ??= ["sold-tenant"];
+        planRecipe ??= recipeName;
+
         var store = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
         {
             ItemId = "job-1",
@@ -241,6 +277,7 @@ public sealed class TenantProvisioningServiceTests
             RecipeName = recipeName,
             FeatureProfile = featureProfile,
             SubscriptionId = subscription?.ItemId,
+            CheckoutSessionId = "session-1",
             Status = TenantProvisioningStatus.Pending,
             CreatedUtc = _now,
         });
@@ -268,7 +305,7 @@ public sealed class TenantProvisioningServiceTests
             CreateSession(),
             new ProvisioningClock(_now),
             NullLogger<TenantProvisioningService>.Instance,
-            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions())),
+            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), new FixedFeatureProfileCatalog(knownProfiles), CreateSessionStore(planRecipe)),
             CreateSubscriptionManager(subscription));
 
         return (service, setup, store);
@@ -313,6 +350,32 @@ public sealed class TenantProvisioningServiceTests
         return session.Object;
     }
 
+    private static global::CrestApps.OrchardCore.Checkout.ICheckoutSessionStore CreateSessionStore(string planRecipe)
+    {
+        var session = new global::CrestApps.OrchardCore.Checkout.CheckoutSession { SessionId = "session-1" };
+        var step = new global::CrestApps.OrchardCore.Checkout.CheckoutFlowStep { Key = SubscriptionConstants.StepKey.TenantProvisioning };
+        step.Data["RecipeName"] = planRecipe;
+        session.Steps.Add(step);
+
+        var store = new Mock<global::CrestApps.OrchardCore.Checkout.ICheckoutSessionStore>();
+        store.Setup(s => s.GetAsync("session-1", It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        return store.Object;
+    }
+
+    private sealed class FixedFeatureProfileCatalog : ITenantFeatureProfileCatalog
+    {
+        private readonly IReadOnlyCollection<string> _profiles;
+
+        public FixedFeatureProfileCatalog(IReadOnlyCollection<string> profiles)
+        {
+            _profiles = profiles;
+        }
+
+        public Task<IReadOnlyCollection<string>> GetProfileIdsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_profiles);
+    }
+
     private sealed class RecordingSetupService : ISetupService
     {
         public SetupContext Captured { get; private set; }
@@ -320,7 +383,7 @@ public sealed class TenantProvisioningServiceTests
         public string Error { get; set; }
 
         public Task<IEnumerable<RecipeDescriptor>> GetSetupRecipesAsync()
-            => Task.FromResult<IEnumerable<RecipeDescriptor>>([new RecipeDescriptor { Name = "Blog" }]);
+            => Task.FromResult<IEnumerable<RecipeDescriptor>>([new RecipeDescriptor { Name = "Blog" }, new RecipeDescriptor { Name = "Agency" }]);
 
         public Task<string> SetupAsync(SetupContext context)
         {

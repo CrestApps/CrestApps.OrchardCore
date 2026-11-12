@@ -80,7 +80,7 @@ public sealed class TenantProvisioningPaymentGate : ICheckoutPaymentGate
 
         if (errors.Count > 0)
         {
-            context.Refuse(errors.Any(error => error.Code == TenantPurchaseErrorCode.FeatureProfileRequired)
+            context.Refuse(errors.Any(error => error.Code is TenantPurchaseErrorCode.FeatureProfileRequired or TenantPurchaseErrorCode.FeatureProfileNotFound)
                 ? S["This plan can't be bought yet: the store hasn't finished setting it up."]
                 : S["The details of your new site are no longer accepted. Go back to the new-site step and check them."]);
         }
