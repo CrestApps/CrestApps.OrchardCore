@@ -54,6 +54,8 @@ public sealed class BankTransferCheckoutPaymentProvider : OfflineCheckoutPayment
         var settings = await _siteService.GetSettingsAsync<BankTransferSettings>();
 
         // Without bank details the buyer would commit to a transfer they can't make.
-        return settings.Enabled && !string.IsNullOrWhiteSpace(settings.Instructions);
+        return settings.Enabled &&
+            !string.IsNullOrWhiteSpace(settings.Instructions) &&
+            MeetsBuyerRules(settings.RequireSignedIn, settings.MaxOrderAmount, session);
     }
 }
