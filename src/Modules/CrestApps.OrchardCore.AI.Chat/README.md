@@ -1,4 +1,4 @@
-# Artificial Intelligence
+﻿# Artificial Intelligence
 
 Provides UI to interact with AI models using the profiles.
 
@@ -28,6 +28,10 @@ Enabling a feature of this module enables the features it depends on:
 
 - `IAIChatHubClient` (CrestApps.OrchardCore.AI.Chat.Core): OrchardCore-specific extension of the framework `IAIChatHubClient`.
 - `IChatHubClient` (CrestApps.OrchardCore.AI.Chat.Core): Defines the common SignalR client methods shared by both AI Chat and Chat Interaction hubs.
+
+## Visitor address
+
+- The anonymous visitor's address, used by the chat rate limits, is taken from the connection, not from a client's `X-Forwarded-For` header. Behind a proxy, enable Orchard Core's Reverse Proxy feature so the connection carries the client's address.
 
 ## Documentation
 

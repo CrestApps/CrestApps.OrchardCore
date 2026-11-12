@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
@@ -25,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Liquid;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
@@ -40,6 +41,8 @@ internal static class ApiAICompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)
             .AddEndpointFilter(ScopeLogsAsync<T>)
+            .AddEndpointFilter<AICompletionQuotaFilter>()
+            .WithRateLimitGroup(AICompletionQuotaFilter.RateLimitGroup)
             .DisableAntiforgery()
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes })
             .WithTags(AIConversationsApiEndpoints.ChatTag)
