@@ -207,7 +207,8 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
                 return false;
             }
 
-            using var downloadClient = _httpClientFactory.CreateClient();
+            // The address comes from provider data: the egress-guarded client never reaches the site's own network.
+            using var downloadClient = _httpClientFactory.CreateClient(TelnyxConstants.RecordingDownloadHttpClientName);
 
             using var mediaResponse = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 

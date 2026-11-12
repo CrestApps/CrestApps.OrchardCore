@@ -33,6 +33,11 @@ public static class TelnyxConstants
     public const string DefaultApiBaseUrl = "https://api.telnyx.com/v2/";
 
     /// <summary>
+    /// The egress-guarded HTTP client call recordings are downloaded with.
+    /// </summary>
+    public const string RecordingDownloadHttpClientName = "CrestApps.Telnyx.RecordingDownload";
+
+    /// <summary>
     /// The default Telnyx SIP-over-WebSocket signaling endpoint used by the browser WebRTC soft phone. Telnyx
     /// serves SIP over WebSocket on port 7443 (the default 443 does not accept the upgrade and closes with
     /// code 1006), so the port is explicit here.

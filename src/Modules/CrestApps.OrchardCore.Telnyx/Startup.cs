@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
 using CrestApps.OrchardCore.Telephony.Services;
@@ -63,13 +64,11 @@ public sealed class Startup : StartupBase
         // a transport retry would repeat a GET at both layers.
         services.AddHttpClient<TelnyxApiClient>((serviceProvider, client) =>
         {
-            // Read as it is now: this runs for every client created, so a saved API base URL applies to the next one.
+            // Read as it is now: this runs for every client created, so a saved API base URL applies to the next one. Only
+            // an https address on telnyx.com is used: the API key goes to it as a bearer token.
             var options = serviceProvider.GetRequiredService<IOptionsMonitor<TelnyxOptions>>().CurrentValue;
 
-            if (!string.IsNullOrWhiteSpace(options.ApiBaseUrl))
-            {
-                client.BaseAddress = new Uri(options.ApiBaseUrl);
-            }
+            client.BaseAddress = new Uri(TelnyxApiAddress.Resolve(options.ApiBaseUrl));
         })
             .AddResilienceHandler("TelnyxApiClient", pipeline =>
             {
@@ -85,6 +84,10 @@ public sealed class Startup : StartupBase
             });
 
         services.AddSingleton<TelnyxApiRetryPolicy>();
+
+        // A recording is downloaded from the address Telnyx gives for it (a storage link that may redirect), so the
+        // client never reaches the site's own network, on any hop.
+        services.AddEgressGuardedHttpClient(TelnyxConstants.RecordingDownloadHttpClientName, client => client.Timeout = TimeSpan.FromMinutes(5), allowRedirects: true);
 
         services
             .AddOptions<TelnyxOptions>()
