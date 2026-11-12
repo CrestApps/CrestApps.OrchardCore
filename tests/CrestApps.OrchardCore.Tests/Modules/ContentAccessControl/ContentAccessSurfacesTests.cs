@@ -149,14 +149,14 @@ public sealed class ContentAccessSurfacesTests
         return definitions.Object;
     }
 
-    private static IServiceProvider Services()
+    private static ServiceProvider Services()
         => new ServiceCollection().AddSingleton(Definitions()).BuildServiceProvider();
 
     // Everyone may view content; the Content Access Control handler refuses what is restricted.
-    private static IAuthorizationService Authorization()
+    private static HandlerAuthorizationService Authorization()
         => new HandlerAuthorizationService(new RoleBasedContentItemAuthorizationHandler(Services()));
 
-    private static IHttpContextAccessor Accessor(ClaimsPrincipal user)
+    private static HttpContextAccessor Accessor(ClaimsPrincipal user)
         => new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = user } };
 
     private sealed class HandlerAuthorizationService : IAuthorizationService

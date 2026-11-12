@@ -36,7 +36,7 @@ internal sealed class CalendarMigrations : DataMigration
     // Feed secrets are stored hashed (and protected, to show the address again): the calendars that have a secret from
     // before get its hash and protected copy, and are indexed again, so the index holds the hash. The plain secret stays
     // one release, for a rollback.
-    public int UpdateFrom3Async()
+    public static int UpdateFrom3Async()
     {
         ShellScope.AddDeferredTask(scope => ActivatorUtilities.CreateInstance<CalendarFeedTokenBackfill>(scope.ServiceProvider).RunAsync());
 

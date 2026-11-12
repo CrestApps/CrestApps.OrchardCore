@@ -73,7 +73,7 @@ public sealed class CalendarResponseEndpointTests
         return (manager, calendarEvent);
     }
 
-    private static IStringLocalizer<CalendarInvitationObserver> Localizer()
+    private static PassThroughLocalizer Localizer()
         => new PassThroughLocalizer();
 
     private static async Task<string> RenderAsync(IResult result)

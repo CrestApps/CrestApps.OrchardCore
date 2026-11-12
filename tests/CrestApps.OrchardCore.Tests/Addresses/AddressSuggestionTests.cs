@@ -303,7 +303,7 @@ public sealed class AddressSuggestionTests
             return httpContext;
         }
 
-        private static async Task<int> StatusOfAsync(IResult result, HttpContext httpContext)
+        private static async Task<int> StatusOfAsync(IResult result, DefaultHttpContext httpContext)
         {
             await result.ExecuteAsync(httpContext);
 

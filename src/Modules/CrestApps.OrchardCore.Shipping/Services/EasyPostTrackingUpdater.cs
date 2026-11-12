@@ -20,7 +20,7 @@ public sealed class EasyPostTrackingUpdater
     private const string SignaturePrefix = "hmac-sha256-hex=";
 
     // EasyPost signs the body with HMAC-SHA256, sent as "hmac-sha256-hex=<lowercase hex>".
-    private static readonly IWebhookSignatureValidator _signature = new HmacWebhookSignatureValidator("easypost-hmac-sha256-hex", HashAlgorithmName.SHA256, WebhookSignatureEncoding.Hex, SignaturePrefix);
+    private static readonly HmacWebhookSignatureValidator _signature = new("easypost-hmac-sha256-hex", HashAlgorithmName.SHA256, WebhookSignatureEncoding.Hex, SignaturePrefix);
 
     private readonly IShipmentStore _shipments;
     private readonly IShipmentService _shipmentService;
