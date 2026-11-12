@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -169,7 +171,7 @@ public sealed class EmailSignInCodesTests
 
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(() => _now);
-        var codes = new EmailSignInCodes(_cache, new ShellSettings { Name = "Default" }, clock.Object, busy.Object);
+        var codes = new EmailSignInCodes(_cache, CreateLimiter(clock.Object), new ShellSettings { Name = "Default" }, clock.Object, busy.Object);
 
         Assert.False(await codes.VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
     }
@@ -179,7 +181,51 @@ public sealed class EmailSignInCodesTests
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(() => _now);
 
-        return new EmailSignInCodes(_cache, new ShellSettings { Name = tenant }, clock.Object, _lock);
+        return new EmailSignInCodes(_cache, CreateLimiter(clock.Object), new ShellSettings { Name = tenant }, clock.Object, _lock);
+    }
+
+    // The shared attempt limiter with the feature's default policies.
+    private DistributedAttemptLimiter CreateLimiter(IClock clock)
+    {
+        var options = new AttemptLimitOptions()
+            .AddPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
+            .AddPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
+            .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15));
+
+        return new DistributedAttemptLimiter(_cache, _lock, new ShellSettings { Name = "Default" }, clock, Options.Create(options), NullLogger<DistributedAttemptLimiter>.Instance);
+    }
+
+    [Fact]
+    public async Task NoCode_IsToldApartFromAWrongCode()
+    {
+        var codes = Create();
+
+        Assert.Equal(EmailSignInCodeCheck.NoCode, await codes.CheckAsync("jordan@example.test", "123456", TestContext.Current.CancellationToken));
+
+        var code = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var wrong = code == "000000" ? "111111" : "000000";
+
+        Assert.Equal(EmailSignInCodeCheck.Wrong, await codes.CheckAsync("jordan@example.test", wrong, TestContext.Current.CancellationToken));
+        Assert.Equal(EmailSignInCodeCheck.Right, await codes.CheckAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+        Assert.Equal(EmailSignInCodeCheck.NoCode, await codes.CheckAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task TheCacheKeys_HoldNoEmail()
+    {
+        var keys = new List<string>();
+        var cache = new Mock<IDistributedCache>();
+        cache.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()))
+            .Callback<string, byte[], DistributedCacheEntryOptions, CancellationToken>((key, _, _, _) => keys.Add(key))
+            .Returns(Task.CompletedTask);
+        var clock = new Mock<IClock>();
+        clock.Setup(c => c.UtcNow).Returns(() => _now);
+        var codes = new EmailSignInCodes(cache.Object, CreateLimiter(clock.Object), new ShellSettings { Name = "Default" }, clock.Object, _lock);
+
+        await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+
+        Assert.NotEmpty(keys);
+        Assert.DoesNotContain(keys, key => key.Contains("JORDAN", StringComparison.OrdinalIgnoreCase));
     }
 
     // A cache that yields on every read, so concurrent callers interleave between the read and the write the way they do

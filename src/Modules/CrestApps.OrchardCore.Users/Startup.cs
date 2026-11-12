@@ -18,6 +18,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
+using OrchardCore.RateLimits;
 using OrchardCore.ContentFields.Drivers;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentFields.Services;
@@ -221,5 +224,25 @@ public sealed class EmailCodeSignInStartup : StartupBase
         services.AddScoped<EmailSignInCodes>();
         services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
         services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
+
+        // Counted on the shared attempt limiter, across nodes, whether or not Rate Limits is on.
+        services
+            .AddAttemptPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
+            .AddAttemptPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
+            .AddAttemptPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
+            .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(AttemptLimitOptions.SectionName));
     }
+}
+
+/// <summary>
+/// The built-in limit of the sign-in code pages, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[Feature(UsersConstants.Feature.EmailCodeSignIn)]
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class EmailCodeSignInRateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(EmailSignInCodes.RateLimitGroup, 20, TimeSpan.FromMinutes(1)));
 }
