@@ -106,7 +106,6 @@
         "src/Modules/CrestApps.OrchardCore.Inventory/Views/StockAlertForm.cshtml": 43,
         "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Views/Activities/Complete.cshtml": 27,
         "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Views/Activities/CreateInbound.cshtml": 14,
-        "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Views/ActivityBatches/_SaveAndLoadButton.cshtml": 38,
         "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Views/BulkManageOmnichannelActivityContainer.cshtml": 96,
         "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Views/CadenceSteps.Edit.cshtml": 68,
         "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Views/LeadAIConversion.Edit.cshtml": 18,

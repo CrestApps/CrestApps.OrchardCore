@@ -10,10 +10,9 @@ import { describe, expect, it } from 'vitest';
 // - data-action (a bulk action of an admin list; the list script asks with its dialog).
 const modulesDirectory = join('src', 'Modules');
 
-// Views whose own script asks the question with the button's data-title/data-message.
-const ownScript = [
-    'CrestApps.OrchardCore.Omnichannel.Managements/Views/ActivityBatches/_SaveAndLoadButton.cshtml',
-];
+// Views whose own script asks the question with the button's data-title/data-message. None left: the Save & Load
+// button, the last, now asks with data-confirm.
+const ownScript = [];
 
 // The opening tags of a view. A '>' inside a quoted attribute value (a lambda in a Razor expression) does not end one.
 function* tags(text) {
