@@ -216,6 +216,7 @@ internal static class CheckoutApiEndpoints
 
             // What a client may pass a provider is bounded, and never says to keep a card or charge a kept one.
             ProviderData = PaymentEndpoints.SanitizeProviderData(request.ProviderData),
+            ClientNetworkKey = GetBeginPaymentKey(httpContext),
         }, httpContext.RequestAborted);
 
         if (!outcome.Succeeded)

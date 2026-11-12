@@ -747,7 +747,7 @@ public sealed class DefaultCheckoutEngineTests
 
         // The buyer switches to express shipping after the payment was begun for 30.
         var session = await sessionStore.GetAsync("session-1", TestContext.Current.CancellationToken);
-        var invoice = session.As<CheckoutInvoice>();
+        var invoice = session.GetOrCreate<CheckoutInvoice>();
         invoice.InitialPaymentAmount = 45m;
         invoice.DueNow = 45m;
         invoice.GrandTotal = 45m;
@@ -780,7 +780,7 @@ public sealed class DefaultCheckoutEngineTests
         await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
 
         var session = await sessionStore.GetAsync("session-1", TestContext.Current.CancellationToken);
-        var invoice = session.As<CheckoutInvoice>();
+        var invoice = session.GetOrCreate<CheckoutInvoice>();
         invoice.InitialPaymentAmount = 30m;
         session.Put(invoice);
 

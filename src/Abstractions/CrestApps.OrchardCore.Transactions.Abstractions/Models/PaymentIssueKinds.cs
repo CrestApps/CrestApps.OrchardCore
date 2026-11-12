@@ -27,4 +27,16 @@ public static class PaymentIssueKinds
     /// shipping after the payment was begun. The checkout was not completed and the payment was refunded.
     /// </summary>
     public const string PaymentShortOfInvoice = "PaymentShortOfInvoice";
+
+    /// <summary>
+    /// One network or one customer had card payments declined until the card-testing protection stopped them. Someone
+    /// may be testing stolen cards on the store.
+    /// </summary>
+    public const string SuspectedCardTesting = "SuspectedCardTesting";
+
+    /// <summary>
+    /// Card payments were declined across the store far more often than usual, and the store's decline-spike action
+    /// applies for a while.
+    /// </summary>
+    public const string DeclineSpike = "DeclineSpike";
 }

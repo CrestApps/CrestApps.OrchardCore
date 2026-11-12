@@ -12,6 +12,8 @@
         PaymentIssueKinds.GatewaySubscriptionChangeFailed => T["The payment provider did not change a subscription"],
         PaymentIssueKinds.DiscountRedemptionFailed => T["A promotion code's use was not recorded"],
         PaymentIssueKinds.PaymentShortOfInvoice => T["A payment no longer covered its checkout"],
+        PaymentIssueKinds.SuspectedCardTesting => T["Suspected card testing"],
+        PaymentIssueKinds.DeclineSpike => T["Card declines across the store"],
         _ => T["A payment operation failed"],
     };
 }

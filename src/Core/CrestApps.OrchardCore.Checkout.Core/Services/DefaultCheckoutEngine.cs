@@ -53,6 +53,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IPaymentIssueRecorder _paymentIssues;
+    private readonly IPaymentDeclineRecorder _declineRecorder;
 
     // How long a begin that ended without the provider's answer holds off another payment method: long enough for the
     // provider to find a payment it may have made anyway (Stripe's search lags up to a minute behind).
@@ -74,6 +75,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     /// <param name="logger">The logger.</param>
     /// <param name="paymentGates">The gates that hold what a purchase needs before it is paid for, such as a coupon's use.</param>
     /// <param name="paymentIssues">Records a refund that failed, for an operator to finish by hand.</param>
+    /// <param name="declineRecorder">Counts a declined card payment for the card-testing protection.</param>
     public DefaultCheckoutEngine(
         ICheckoutSessionStore sessionStore,
         IPaymentAttemptStore attemptStore,
@@ -87,8 +89,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         IClock clock,
         ILogger<DefaultCheckoutEngine> logger,
         IEnumerable<ICheckoutPaymentGate> paymentGates = null,
-        IPaymentIssueRecorder paymentIssues = null)
+        IPaymentIssueRecorder paymentIssues = null,
+        IPaymentDeclineRecorder declineRecorder = null)
     {
+        _declineRecorder = declineRecorder;
         // A host without the payment issue store still records issues in the log, so no caller needs a null check.
         _paymentIssues = paymentIssues ?? new LoggingPaymentIssueRecorder(logger);
         _sessionStore = sessionStore;
@@ -237,6 +241,17 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             if (provider is null || !await CheckoutPaymentMethodSelector.IsAvailableAsync(provider, session, cancellationToken))
             {
                 return Refused(telemetry, provider, "provider_unavailable", PaymentBeginOutcome.Failure("The selected payment method is not available."));
+            }
+
+            // The network the payment comes from is kept on the checkout, so the card-testing protection counts a decline
+            // reported later, by a webhook or the sweep, against it too.
+            if (!string.IsNullOrEmpty(options.ClientNetworkKey) &&
+                (!session.TryGet<CheckoutClientInfo>(out var client) || !string.Equals(client.NetworkKey, options.ClientNetworkKey, StringComparison.Ordinal)))
+            {
+                session.Put(new CheckoutClientInfo { NetworkKey = options.ClientNetworkKey });
+                session.ModifiedUtc = _clock.UtcNow;
+
+                await _sessionStore.SaveAsync(session, cancellationToken);
             }
 
             // What the purchase needs is held before any provider is contacted, so a buyer who can't have it, such as
@@ -919,6 +934,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 // The gateway refused the money, so this attempt is over. Recording that, with the gateway's
                 // reason and reference, keeps the ledger truthful and stops a later begin from resuming an
                 // attempt that can never settle.
+                var previousState = attempt.State;
+
                 attempt.State = PaymentAttemptState.Failed;
                 attempt.FailureReason = result.ErrorMessage;
 
@@ -928,6 +945,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 }
 
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
+
+                if (_declineRecorder is not null && PaymentDeclineRecorder.IsNewDecline(previousState, attempt.State))
+                {
+                    await _declineRecorder.RecordAsync(session, attempt, cancellationToken);
+                }
             }
 
             return (null, result.ErrorMessage, result.Declined, result.Declined && result.RequiresAuthentication, result.CardBrand);
@@ -1302,6 +1324,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             ReturnUrl = options.ReturnUrl,
             CancelUrl = options.CancelUrl,
             ProviderData = providerData,
+            ClientNetworkKey = options.ClientNetworkKey,
         };
     }
 

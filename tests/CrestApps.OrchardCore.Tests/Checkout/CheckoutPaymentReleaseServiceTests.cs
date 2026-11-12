@@ -88,7 +88,7 @@ public sealed class CheckoutPaymentReleaseServiceTests
                 Currency = "USD",
                 State = state,
                 ProviderReference = "pi_1",
-            }).GetAwaiter().GetResult();
+            }).AsTask().GetAwaiter().GetResult();
         }
 
         var sessionStore = new InMemoryCheckoutSessionStore();

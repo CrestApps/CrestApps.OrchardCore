@@ -1,3 +1,4 @@
+using OrchardCore.Settings.Deployment;
 using OrchardCore.RateLimits;
 using OrchardCore.Environment.Shell.Configuration;
 using CrestApps.OrchardCore.Throttling;
@@ -107,6 +108,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, DiscountLinkCheckoutHandler>();
         services.AddScoped<ICouponRedemptionService, CouponRedemptionService>();
+        // The card-testing protection runs first: a refused payment holds no coupon use or balance.
+        services.AddScoped<IPaymentDeclineRecorder, PaymentDeclineRecorder>();
+        services.AddScoped<ICheckoutPaymentGate, PaymentVelocityGate>();
+        services.AddSiteDisplayDriver<PaymentProtectionSettingsDisplayDriver>();
         services.AddScoped<ICheckoutPaymentGate, CouponHoldPaymentGate>();
 
         // Balances such as gift cards and store credit pay after tax. The seam does nothing until a feature registers
@@ -203,6 +208,19 @@ public sealed class CouponDeploymentStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddDeployment<CouponsDeploymentSource, CouponsDeploymentStep, CouponsDeploymentStepDisplayDriver>();
+}
+
+/// <summary>
+/// Exports the payment protection settings with a deployment; Orchard Core's Settings recipe step imports them.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
+public sealed class PaymentProtectionDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddSiteSettingsPropertyDeploymentStep<PaymentProtectionSettings, PaymentProtectionDeploymentStartup>(
+            S => S["Payment protection settings"],
+            S => S["What the store does when card payments are declined across the store."]);
 }
 
 [Feature(CheckoutConstants.Features.Api)]

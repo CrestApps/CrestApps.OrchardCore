@@ -101,6 +101,9 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         SupportsRecurringPayments = true,
         SupportsHostedCheckout = false,
         SupportsEmbeddedElements = true,
+
+        // The buyer types a card into the page, so its declines count toward the card-testing protection.
+        IsCardNotPresent = true,
         SupportsCombinedOneTimeAndRecurring = true,
         CollectsTaxDynamically = false,
         SupportsRefunds = true,

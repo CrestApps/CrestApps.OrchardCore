@@ -50,7 +50,7 @@ internal sealed class TenantOnboardingMigrations : DataMigration
     /// them now that both default to off.
     /// </summary>
     /// <returns>The migration version.</returns>
-    public int UpdateFrom1()
+    public static int UpdateFrom1()
     {
         ShellScope.AddDeferredTask(async scope =>
         {
@@ -58,7 +58,7 @@ internal sealed class TenantOnboardingMigrations : DataMigration
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
 
             var site = await siteService.LoadSiteSettingsAsync();
-            var settings = site.As<SubscriptionOnboardingSettings>();
+            var settings = site.GetOrCreate<SubscriptionOnboardingSettings>();
 
             // One row per site ever sold through this store, read once at upgrade.
             var jobs = await session

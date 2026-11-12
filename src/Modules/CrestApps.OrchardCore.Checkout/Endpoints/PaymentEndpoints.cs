@@ -94,6 +94,7 @@ public static class PaymentEndpoints
                 ReturnUrl = model.ReturnUrl,
                 CancelUrl = model.CancelUrl,
                 ProviderData = SanitizeProviderData(model.ProviderData),
+                ClientNetworkKey = GetBeginPaymentKey(httpContext),
             },
             cancellationToken);
 

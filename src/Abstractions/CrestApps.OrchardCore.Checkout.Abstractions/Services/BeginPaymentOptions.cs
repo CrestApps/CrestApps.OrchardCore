@@ -32,4 +32,10 @@ public sealed class BeginPaymentOptions
     /// checkout — only the provider that asked for a value interprets it.
     /// </remarks>
     public IReadOnlyDictionary<string, string> ProviderData { get; set; }
+
+    /// <summary>
+    /// Gets or sets the network key of the client beginning the payment, for the card-testing protection. The payment
+    /// endpoints set it; a payment begun without a browser, such as a staff charge, leaves it empty.
+    /// </summary>
+    public string ClientNetworkKey { get; set; }
 }

@@ -82,6 +82,7 @@ internal static class InstallmentPlanPaymentEndpoints
                 ReturnUrl = request.ReturnUrl,
                 CancelUrl = request.CancelUrl,
                 ProviderData = InstallmentPlanPaymentMethods.BuildProviderData(request.ProviderData, plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge),
+                ClientNetworkKey = global::CrestApps.OrchardCore.Core.Throttling.ClientNetworkKey.NetworkOnly(httpContext),
             },
             httpContext.RequestAborted);
 
