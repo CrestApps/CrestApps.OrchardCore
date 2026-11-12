@@ -9,7 +9,7 @@ public static class AIChatUiCdn
     /// <summary>
     /// The version of <c>@crestapps/ai-chat-ui</c> the resource manifests use.
     /// </summary>
-    public const string Version = "2.0.0-preview.246";
+    public const string Version = "2.0.0-preview.258";
 
     /// <summary>
     /// The URL of the package's <c>dist</c> folder, ending with a slash.
