@@ -25,6 +25,7 @@
 @inject IAIProfileStore ProfilesCatalog
 @inject IAIChatSessionPromptStore PromptStore
 @inject IAIDeploymentManager AIDeploymentManager
+@inject CrestApps.OrchardCore.AI.Chat.Core.Services.AIChatProfileAccessEvaluator AIChatProfileAccessEvaluator
 
 @{
     var baseId = Html.IdForModel();
@@ -40,7 +41,8 @@
     // session, so asking it to load, rate, speak or extend the conversation only produced a "Session not found."
     // bubble. The transcript below is rendered from the prompt store instead.
     var isReadOnly = Model.IsReadOnly;
-    var promptGeneratedProfiles = await ProfilesCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
+    // Only the templates this user may use are named; the hub refuses the others anyway.
+    var promptGeneratedProfiles = await AIChatProfileAccessEvaluator.GetAccessibleProfilesAsync(User, await ProfilesCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt));
     var shellFeaturesManager = ShellScope.Services.GetRequiredService<IShellFeaturesManager>();
     var enabledFeatures = await shellFeaturesManager.GetEnabledFeaturesAsync();
     var sessionDocumentsFeatureEnabled = enabledFeatures.Any(f => f.Id == AIConstants.Feature.ChatSessionDocuments);

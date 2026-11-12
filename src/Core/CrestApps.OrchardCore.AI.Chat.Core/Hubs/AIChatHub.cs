@@ -532,9 +532,25 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                         return;
                     }
 
-                    if (!await AuthorizeProfileAsync(services, parentProfile))
+                    // The template runs with its own system prompt, tools and data sources, so the caller must be
+                    // allowed to use it, not only the profile of the session it is sent from.
+                    if (!await AuthorizeProfileAsync(services, parentProfile) ||
+                        !await AuthorizeProfileAsync(services, profile))
                     {
                         await Clients.Caller.ReceiveError(GetNotAuthorizedMessage());
+
+                        return;
+                    }
+
+                    // Each template message is a model call, so it counts against the same per-message limit as a
+                    // typed message. The visitor's own prompt is not used here, so only the limit applies.
+                    var rateLimitResult = await EvaluateMessageRateLimitAsync(services, parentProfile, sessionId, cancellationToken);
+
+                    if (rateLimitResult.IsThrottled)
+                    {
+                        await Clients.Caller.ReceiveError(GetRateLimitedMessage(PromptSecurityResult.Blocked(
+                            S["Rate limit exceeded. Please wait {0} second(s) before sending another message.", rateLimitResult.RetryAfterSeconds].Value,
+                            detectionRule: PromptSecurityResult.RateLimitDetectionRule)));
 
                         return;
                     }
@@ -578,6 +594,30 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         }
 
         await base.HandleSendMessageAsync(writer, services, profileId, prompt, sessionId, sessionProfileId, cancellationToken);
+    }
+
+    private async Task<RateLimitResult> EvaluateMessageRateLimitAsync(IServiceProvider services, AIProfile profile, string sessionId, CancellationToken cancellationToken)
+    {
+        var rateLimiter = services.GetService<IChatRateLimiter>();
+
+        if (rateLimiter is null)
+        {
+            return RateLimitResult.Allowed;
+        }
+
+        var visitorIdentity = services.GetService<IAIVisitorIdentityResolver>()?.Resolve() ?? new AIVisitorIdentity();
+
+        return await rateLimiter.EvaluateAsync(new PromptSecurityContext
+        {
+            SessionId = sessionId,
+            ProfileId = profile.ItemId,
+            Profile = profile,
+            User = Context.User,
+            ConnectionId = Context.ConnectionId,
+            VisitorId = visitorIdentity.VisitorId,
+            RemoteAddressHash = visitorIdentity.RemoteAddressHash,
+            RemoteAddress = visitorIdentity.RemoteAddress,
+        }, cancellationToken);
     }
 
     /// <summary>

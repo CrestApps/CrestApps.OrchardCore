@@ -44,7 +44,8 @@
 
     var hubLink = Html.SignalRHubUrl<AIChatHub>();
     var showHistory = part.TotalHistory.HasValue && part.TotalHistory.Value > 0;
-    var promptGeneratedProfiles = await ProfileCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt);
+    // Only the templates this visitor may use are named; the hub refuses the others anyway.
+    var promptGeneratedProfiles = await AIChatProfileAccessEvaluator.GetAccessibleProfilesAsync(User, await ProfileCatalog.GetByTypeAsync(AIProfileType.TemplatePrompt));
     var baseId = $"Widget_{contentItem.ContentItemId}";
     var chatAppHtmlId = $"{baseId}_ChatApp";
     var buttonHtmlId = $"{baseId}_SendButton";
