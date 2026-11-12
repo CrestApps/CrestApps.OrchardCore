@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Copilot.Services;
+﻿using CrestApps.Core.AI.Copilot.Services;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -90,12 +90,22 @@ public sealed class CopilotAuthController : Controller
     [HttpGet("copilot/OAuthCallback")]
     public async Task<IActionResult> OAuthCallback(string code, string state, string error)
     {
+        // The state must be the nonce this browser was given when it started the flow. Without the check, an attacker
+        // who has a code for their own GitHub account can have a signed-in user open this URL and link the user's
+        // account to the attacker's GitHub. The return URL comes from the protected state, never from the query.
+        if (!_oauthService.TryValidateCallbackState(state, out var returnUrl))
+        {
+            _logger.LogWarning("A GitHub OAuth callback was refused because its state did not match the flow this browser started.");
+
+            return BadRequest();
+        }
+
         if (!string.IsNullOrEmpty(error))
         {
             _logger.LogWarning("GitHub returned an OAuth error.");
             await _notifier.ErrorAsync(H["GitHub authentication failed: {0}", error]);
 
-            return HandleOAuthReturn(state, success: false, username: null);
+            return HandleOAuthReturn(returnUrl, success: false, username: null);
         }
 
         if (string.IsNullOrEmpty(code))
@@ -103,7 +113,7 @@ public sealed class CopilotAuthController : Controller
             _logger.LogWarning("No authorization code received from GitHub");
             await _notifier.ErrorAsync(H["No authorization code received from GitHub"]);
 
-            return HandleOAuthReturn(state, success: false, username: null);
+            return HandleOAuthReturn(returnUrl, success: false, username: null);
         }
 
         // Get current user
@@ -122,7 +132,7 @@ public sealed class CopilotAuthController : Controller
 
             await _notifier.SuccessAsync(H["Successfully connected to GitHub as {0}", credential.GitHubUsername]);
 
-            return HandleOAuthReturn(state, success: true, username: credential.GitHubUsername);
+            return HandleOAuthReturn(returnUrl, success: true, username: credential.GitHubUsername);
         }
         catch (Exception ex)
         {
@@ -130,18 +140,18 @@ public sealed class CopilotAuthController : Controller
             await _notifier.ErrorAsync(H["Failed to connect to GitHub. Please try again."]);
         }
 
-        return HandleOAuthReturn(state, success: false, username: null);
+        return HandleOAuthReturn(returnUrl, success: false, username: null);
     }
 
     /// <summary>
     /// Routes the OAuth callback to a popup close page or a standard redirect.
-    /// When the returnUrl/state is "__popup__", the callback was initiated from a popup window
+    /// When the validated return URL is "__popup__", the callback was initiated from a popup window
     /// (e.g., the AI Profile edit form), so we render a small page that sends the result back
     /// to the opener via <c>postMessage</c> and closes itself.
     /// </summary>
-    private IActionResult HandleOAuthReturn(string state, bool success, string username)
+    private IActionResult HandleOAuthReturn(string returnUrl, bool success, string username)
     {
-        if (string.Equals(state, "__popup__", StringComparison.Ordinal))
+        if (string.Equals(returnUrl, "__popup__", StringComparison.Ordinal))
         {
             var safeUsername = System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(username ?? string.Empty);
 
@@ -160,7 +170,7 @@ public sealed class CopilotAuthController : Controller
                 "text/html");
         }
 
-        return RedirectToLocal(state);
+        return RedirectToLocal(returnUrl);
     }
 
     /// <summary>
