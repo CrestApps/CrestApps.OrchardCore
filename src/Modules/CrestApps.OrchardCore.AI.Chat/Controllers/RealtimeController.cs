@@ -1,27 +1,33 @@
-using CrestApps.Core.AI.Capabilities;
+﻿using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Speech;
+using CrestApps.OrchardCore.AI.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CrestApps.OrchardCore.AI.Chat.Controllers;
 
 /// <summary>
 /// Serves the realtime (speech-to-speech) voice list consumed by the chat UI when a realtime-capable
-/// deployment is selected. Reachable from both the admin chat interaction editor and the front-end AI
-/// chat session via <c>~/CrestApps.OrchardCore.AI.Chat/Realtime/Voices</c>.
+/// deployment is selected, to signed-in users who may use AI profiles (the profile, persona and chat interaction
+/// editors), via <c>~/CrestApps.OrchardCore.AI.Chat/Realtime/Voices</c>.
 /// </summary>
+[Authorize]
 public sealed class RealtimeController : Controller
 {
+    private readonly IAuthorizationService _authorizationService;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly IRealtimeVoiceResolver _realtimeVoiceResolver;
 
     public RealtimeController(
+        IAuthorizationService authorizationService,
         IAIDeploymentManager deploymentManager,
         IAIDeploymentCapabilityService capabilityService,
         IRealtimeVoiceResolver realtimeVoiceResolver)
     {
+        _authorizationService = authorizationService;
         _deploymentManager = deploymentManager;
         _capabilityService = capabilityService;
         _realtimeVoiceResolver = realtimeVoiceResolver;
@@ -29,6 +35,12 @@ public sealed class RealtimeController : Controller
 
     public async Task<IActionResult> Voices(string deploymentName)
     {
+        // The list names the site's deployments and their voices, so only someone who may use AI profiles sees it.
+        if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.QueryAnyAIProfile))
+        {
+            return Forbid();
+        }
+
         // An empty deployment name means "use the site's default realtime deployment"; resolve it so the
         // voice list still populates for that default selection.
         var deployment = string.IsNullOrWhiteSpace(deploymentName)
