@@ -1,12 +1,9 @@
 using CrestApps.OrchardCore.Calendars.Core.Indexes;
 using CrestApps.OrchardCore.Calendars.Core.Services;
-using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Calendars.Migrations;
 
@@ -41,26 +38,9 @@ internal sealed class CalendarMigrations : DataMigration
     // one release, for a rollback.
     public int UpdateFrom3Async()
     {
-        ShellScope.AddDeferredTask(scope => BackfillFeedTokensAsync(scope.ServiceProvider));
+        ShellScope.AddDeferredTask(scope => ActivatorUtilities.CreateInstance<CalendarFeedTokenBackfill>(scope.ServiceProvider).RunAsync());
 
         return 4;
-    }
-
-    private static async Task BackfillFeedTokensAsync(IServiceProvider services)
-    {
-        var session = services.GetRequiredService<ISession>();
-        var protection = services.GetRequiredService<IDataProtectionProvider>();
-        var calendars = await session.Query<Calendar, CalendarIndex>(index => index.FeedToken != null, collection: CalendarsConstants.CollectionName).ListAsync();
-
-        foreach (var calendar in calendars)
-        {
-            if (CalendarFeedTokens.Backfill(calendar, protection))
-            {
-                await session.SaveAsync(calendar, checkConcurrency: false, collection: CalendarsConstants.CollectionName);
-            }
-        }
-
-        await session.SaveChangesAsync();
     }
 
     private Task<bool> CreateReportIndexAsync()
