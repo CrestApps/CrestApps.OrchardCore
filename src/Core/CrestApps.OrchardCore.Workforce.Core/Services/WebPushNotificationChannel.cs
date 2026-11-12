@@ -72,7 +72,7 @@ internal sealed class WebPushNotificationChannel : IWorkforceNotificationChannel
             Urgency = PushMessageUrgency.Normal,
         };
 
-        foreach (var subscription in subscriptions)
+        foreach (var subscription in _pushService.Deliverable(subscriptions))
         {
             var target = new PushSubscription { Endpoint = subscription.Endpoint };
 

@@ -238,6 +238,62 @@ public sealed class PortalTests
     }
 
     [Fact]
+    public async Task WebPush_ParallelSubscribes_StayWithinTheCap()
+    {
+        // Arrange: one worker fires many subscribes at once, each with its own endpoint.
+        await using var harness = await CreateAsync(distributedLock: new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance));
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        // Act
+        await Task.WhenAll(Enumerable.Range(1, 25).Select(i => Task.Run(
+            () => harness.RunAsync(services => services.GetRequiredService<IWebPushService>().SubscribeAsync(ana.ItemId, "https://push.example/parallel-" + i, p256dh, auth, "Test browser")),
+            TestContext.Current.CancellationToken)));
+
+        var devices = await harness.RunAsync(services => services.GetRequiredService<IWebPushService>().ListAsync(ana.ItemId), commit: false);
+
+        // Assert
+        Assert.Equal(10, devices.Count);
+    }
+
+    [Fact]
+    public async Task WebPush_ANotification_GoesToTheNewestDevicesUpToTheCap_AndOnlyToAllowedHosts()
+    {
+        // Arrange: devices stored before the cap existed, or before the allowed hosts were tightened, are still there.
+        var handler = new PushHandler();
+        var clock = new MovableClock();
+        await using var harness = await CreateAsync(handler: handler, clock: clock, configure: options => options.AllowedHosts = ["push.example"]);
+        var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
+        var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
+        var (p256dh, auth) = DeviceKeys();
+
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<WebPushSubscriptionStore>();
+
+            for (var i = 1; i <= 15; i++)
+            {
+                await store.CreateAsync(new WebPushSubscription
+                {
+                    ItemId = UniqueId.GenerateId(),
+                    WorkerId = ana.ItemId,
+                    Endpoint = (i == 15 ? "https://elsewhere.example/device-" : "https://push.example/device-") + i,
+                    P256dh = p256dh,
+                    Auth = auth,
+                    CreatedUtc = clock.UtcNow.AddMinutes(i),
+                });
+            }
+        });
+
+        // Act
+        await NotifyAsync(harness, ana, WorkforceNotificationKind.ShiftChanged, "Your shift moved");
+
+        // Assert: the ten newest, less the one whose host is no longer allowed.
+        Assert.Equal(9, handler.Requests.Count);
+    }
+
+    [Fact]
     public async Task WebPush_TheClientRefusesAHostOnTheSitesOwnNetwork_AtConnect()
     {
         var services = new ServiceCollection();
