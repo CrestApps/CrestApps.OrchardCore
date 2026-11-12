@@ -173,6 +173,9 @@ public sealed class CheckoutStartup : StartupBase
         // A subscription whose payment is overdue becomes past due.
         services.AddScoped<ITransactionEventHandler, SubscriptionOverdueTransactionHandler>();
 
+        // A subscription bought with a promise to pay starts once its first transaction is paid.
+        services.AddScoped<ITransactionEventHandler, SubscriptionFirstPaymentTransactionHandler>();
+
         services.AddDisplayDriver<CheckoutFlow, UserRegistrationCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<CheckoutFlow, ContentStepCheckoutFlowDisplayDriver>();
     }
