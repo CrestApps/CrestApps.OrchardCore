@@ -115,6 +115,12 @@ public sealed class AgentPlatform : CatalogItem, INameAwareModel, IModifiedUtcAw
     public int? AcpSignatureClockSkewSeconds { get; set; }
 
     /// <summary>
+    /// Gets or sets what the platform's ACP signatures cover: 1 or empty, the body only (platforms set up before versions
+    /// existed); 2, the timestamp, method and path with the body. New platforms use 2.
+    /// </summary>
+    public int? AcpSignatureVersion { get; set; }
+
+    /// <summary>
     /// Gets or sets when it was added.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

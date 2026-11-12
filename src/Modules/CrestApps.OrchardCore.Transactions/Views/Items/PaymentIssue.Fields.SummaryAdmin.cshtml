@@ -14,6 +14,7 @@
         PaymentIssueKinds.PaymentShortOfInvoice => T["A payment no longer covered its checkout"],
         PaymentIssueKinds.SuspectedCardTesting => T["Suspected card testing"],
         PaymentIssueKinds.DeclineSpike => T["Card declines across the store"],
+        PaymentIssueKinds.PaymentNotApplied => T["A payment was collected for a balance already paid"],
         _ => T["A payment operation failed"],
     };
 }

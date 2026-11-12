@@ -216,7 +216,16 @@ public sealed class DownloadService
 
         await using (locker)
         {
-            var current = (await _session.GetAsync<DownloadEntitlement>([entitlement.Id], Collection, cancellationToken)).FirstOrDefault() ?? entitlement;
+            // Read from the database, not this request's copy: the session hands back the entitlement it loaded before the
+            // lock, which can be from before another request counted the last download.
+            _session.Detach(entitlement, Collection);
+
+            var current = (await _session.GetAsync<DownloadEntitlement>([entitlement.Id], Collection, cancellationToken)).FirstOrDefault();
+
+            if (current is null)
+            {
+                return false;
+            }
 
             if (GetProblem(current, _clock.UtcNow) != DownloadProblem.None)
             {

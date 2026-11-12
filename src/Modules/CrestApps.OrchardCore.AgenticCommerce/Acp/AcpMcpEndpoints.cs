@@ -164,16 +164,24 @@ public static class AcpMcpEndpoints
         }
 
         // The payload is signed as the REST body is, so one signature serves both bindings.
+        // Version 2 binds the signature to the tool, as the method "MCP" and the tool's name as the path.
         var signatureError = AcpSignatureCheck.Check(
             request.Platform,
             AcpRequestSignature.GetSigningInput(call.Payload),
             call.Signature,
             call.Timestamp,
+            AcpSignatureCheck.McpMethod,
+            call.Tool,
             AcpRequestFilter.GetNow(httpContext));
 
         if (signatureError is not null)
         {
             return AcpError(id, AcpResults.ErrorBody(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, signatureError));
+        }
+
+        if (!await AcpSignatureCheck.TryUseAsync(httpContext, request.Platform, call.Signature, call.IdempotencyKey))
+        {
+            return AcpError(id, AcpResults.ErrorBody(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, "The signature was used before. Sign each request anew."));
         }
 
         var version = call.ApiVersion.Trim();

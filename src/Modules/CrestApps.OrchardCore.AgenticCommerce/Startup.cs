@@ -40,6 +40,7 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddSingleton<global::CrestApps.OrchardCore.AgenticCommerce.Core.Security.AgentSignatureReplayGuard>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(AgenticCommerceStorage.CollectionName));
 
         services

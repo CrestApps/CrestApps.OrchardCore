@@ -20,4 +20,13 @@ public static class PosPermissions
         "SellAtRegister",
         LocalizationSource.Create("Sell at a register", typeof(PosPermissions)),
         [ManageRegisters]);
+
+    /// <summary>
+    /// Refunds sales at the till and pays cash back out of the drawer, for sales of the register's own store (or any
+    /// order, for staff who also manage orders). Whoever manages registers may refund at them.
+    /// </summary>
+    public static readonly Permission RefundAtRegister = new(
+        "RefundAtRegister",
+        LocalizationSource.Create("Refund at a register", typeof(PosPermissions)),
+        [ManageRegisters]);
 }

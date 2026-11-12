@@ -238,8 +238,17 @@ public static class HttpMessageSignatures
             KeyId = keyId,
             Label = label,
             CoveredComponents = components,
+            Created = ReadTime(input.Parameters, "created"),
+            Expires = ReadTime(input.Parameters, "expires"),
+            Nonce = input.Parameters.TryGetValue("nonce", out var nonce) ? nonce as string : null,
         };
     }
+
+    // A signature parameter that is a time in Unix seconds (RFC 9421 created and expires).
+    private static DateTimeOffset? ReadTime(IReadOnlyDictionary<string, object> parameters, string name)
+        => parameters.TryGetValue(name, out var value) && value is not null && long.TryParse(Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var seconds)
+            ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+            : null;
 
     /// <summary>
     /// Returns the components a UCP request signature covers (UCP signatures specification): <c>@method</c>,

@@ -53,6 +53,24 @@ public sealed class DefaultCheckoutEngineTests
         Assert.Equal(1, attemptsAtProviderCall);
     }
 
+    [Fact]
+    public async Task BeginPaymentAsync_WithTheCallersIdempotencyKey_DerivesTheAttemptsKeyFromIt()
+    {
+        // Arrange
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var (engine, sessionStore) = CreateEngine(attemptStore, new RecordingProvider(ProviderKey));
+
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        // Act
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey, IdempotencyKey = "booking_balance_b1_1" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var attempt = Assert.Single(await attemptStore.GetBySessionAsync("session-1", TestContext.Current.CancellationToken));
+
+        Assert.StartsWith("booking_balance_b1_1_", attempt.IdempotencyKey, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// The provider's reference is the only way to find the remote resource again. Storing it immediately is
     /// what stops a later failure in the same checkout from orphaning a real charge.

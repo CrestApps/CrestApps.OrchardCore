@@ -5,9 +5,11 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -36,6 +38,11 @@ public interface IVendorPayoutProvider
 /// </summary>
 public sealed class MarketplaceService
 {
+    // How many of a vendor's latest payouts are looked through for one still pending.
+    private const int PendingPayoutLookback = 100;
+
+    private static readonly TimeSpan _payoutLockExpiration = TimeSpan.FromMinutes(10);
+
     private readonly IVendorStore _vendors;
     private readonly IVendorEarningStore _earnings;
     private readonly IVendorPayoutStore _payouts;
@@ -43,6 +50,8 @@ public sealed class MarketplaceService
     private readonly IOrderStore _orders;
     private readonly ISiteService _siteService;
     private readonly IEnumerable<IVendorPayoutProvider> _payoutProviders;
+    private readonly IDistributedLock _distributedLock;
+    private readonly global::YesSql.ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -56,6 +65,8 @@ public sealed class MarketplaceService
         IOrderStore orders,
         ISiteService siteService,
         IEnumerable<IVendorPayoutProvider> payoutProviders,
+        IDistributedLock distributedLock,
+        global::YesSql.ISession session,
         IClock clock,
         ILogger<MarketplaceService> logger,
         IStringLocalizer<MarketplaceService> stringLocalizer)
@@ -67,6 +78,8 @@ public sealed class MarketplaceService
         _orders = orders;
         _siteService = siteService;
         _payoutProviders = payoutProviders;
+        _distributedLock = distributedLock;
+        _session = session;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
@@ -241,14 +254,13 @@ public sealed class MarketplaceService
     }
 
     /// <summary>
-    /// Pays a vendor what's released, one transfer per order, from that order's payment. Returns how much was paid and
-    /// why anything wasn't.
+    /// Pays a vendor what's released, one transfer per order, from that order's payment. What a refund took back after
+    /// the order was paid out comes off the vendor's next transfers. Returns how much was paid and why anything wasn't.
     /// </summary>
     public async Task<(decimal Paid, IReadOnlyList<string> Failures)> PayOutAsync(Vendor vendor, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(vendor);
 
-        var failures = new List<string>();
         var settings = await _siteService.GetSettingsAsync<MarketplaceSettings>();
 
         if (SelectPayoutProvider(_payoutProviders, settings.PayoutProvider) is not { } provider)
@@ -263,43 +275,72 @@ public sealed class MarketplaceService
             return (0m, ["The vendor can't be paid out yet: it's suspended, or its payout account isn't set up."]);
         }
 
+        // One payout run per vendor at a time, on every node: two runs reading the same released earnings would pay
+        // them twice.
+        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"MARKETPLACE_PAYOUT_{vendor.ItemId}", _payoutLockExpiration);
+
+        if (!locked)
+        {
+            return (0m, [S["A payout of this vendor is already running. Try again when it's done."].Value]);
+        }
+
+        await using (locker)
+        {
+            return await PayOutLockedAsync(vendor, provider, cancellationToken);
+        }
+    }
+
+    private async Task<(decimal Paid, IReadOnlyList<string> Failures)> PayOutLockedAsync(Vendor vendor, IVendorPayoutProvider provider, CancellationToken cancellationToken)
+    {
+        var failures = new List<string>();
         var paid = 0m;
         var now = _clock.UtcNow;
 
-        foreach (var group in (await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken)).GroupBy(earning => (earning.OrderId, earning.Currency)))
+        // A payout recorded before its transfer and never marked paid (the run stopped in between) is sent again with
+        // the same key, so the provider answers with the transfer it already made instead of paying twice.
+        var pending = (await _payouts.ListByVendorAsync(vendor.ItemId, PendingPayoutLookback, cancellationToken))
+            .Where(payout => payout.Status == VendorPayoutStatus.Pending)
+            .ToList();
+
+        foreach (var batch in PlanPayouts(await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken)))
         {
-            var amount = Money.Round(group.Sum(earning => earning.Net), group.Key.Currency);
+            var order = await _orders.FindByIdAsync(batch.OrderId, cancellationToken);
+            var earningIds = batch.Earnings.Select(earning => earning.ItemId).ToList();
+            var existing = pending.FirstOrDefault(payout =>
+                payout.OrderId == batch.OrderId &&
+                payout.Amount == batch.Amount &&
+                payout.EarningIds.Order(StringComparer.Ordinal).SequenceEqual(earningIds.Order(StringComparer.Ordinal), StringComparer.Ordinal));
 
-            // A refund bigger than what's left of the order waits for later sales to make up for it.
-            if (amount <= 0m)
-            {
-                continue;
-            }
-
-            var order = await _orders.FindByIdAsync(group.Key.OrderId, cancellationToken);
-            var payout = new VendorPayout
+            var payout = existing ?? new VendorPayout
             {
                 ItemId = global::OrchardCore.IdGenerator.GenerateId(),
                 VendorId = vendor.ItemId,
-                OrderId = group.Key.OrderId,
-                OrderNumber = order?.OrderNumber ?? group.First().OrderNumber,
-                Amount = amount,
-                Currency = group.Key.Currency,
-                EarningIds = [.. group.Select(earning => earning.ItemId)],
+                OrderId = batch.OrderId,
+                OrderNumber = order?.OrderNumber ?? batch.Earnings[0].OrderNumber,
+                Amount = batch.Amount,
+                Currency = batch.Currency,
+                EarningIds = earningIds,
                 Provider = provider.Name,
+                Status = VendorPayoutStatus.Pending,
                 CreatedUtc = now,
+
+                // Stable for the same vendor, order and earnings, so a retry is answered with the same transfer.
+                IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, batch.OrderId, earningIds, batch.Earnings.Max(earning => earning.RefusedPayouts)),
             };
 
-            // Stable for the same vendor, order and earnings, so a retry after a transfer went through but its save
-            // failed is answered with the same transfer instead of paying the vendor twice.
-            payout.IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, group.Key.OrderId, payout.EarningIds, group.Max(earning => earning.RefusedPayouts));
+            if (existing is null)
+            {
+                // Committed before the transfer is asked for, so the key is on record whatever happens next.
+                await _payouts.CreateAsync(payout, cancellationToken);
+                await _session.SaveChangesAsync(cancellationToken);
+            }
 
             string transferId;
             string failure;
 
             try
             {
-                (transferId, failure) = await provider.PayAsync(vendor, order, amount, group.Key.Currency, payout.IdempotencyKey, cancellationToken);
+                (transferId, failure) = await provider.PayAsync(vendor, order, batch.Amount, batch.Currency, payout.IdempotencyKey, cancellationToken);
             }
             catch (Exception exception)
             {
@@ -310,45 +351,97 @@ public sealed class MarketplaceService
 
             MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
 
-            payout.TransferId = transferId;
-            payout.Failure = failure;
-            payout.Status = failure is null ? VendorPayoutStatus.Paid : VendorPayoutStatus.Failed;
+            // Read again: the commit above detached what was read before it, and saving a detached copy would add a row.
+            var stored = await _payouts.FindByIdAsync(payout.ItemId, cancellationToken) ?? payout;
 
-            await _payouts.CreateAsync(payout, cancellationToken);
+            stored.TransferId = transferId;
+            stored.Failure = failure;
+            stored.Status = failure is null ? VendorPayoutStatus.Paid : VendorPayoutStatus.Failed;
+
+            await _payouts.UpdateAsync(stored, cancellationToken);
 
             if (failure is not null)
             {
                 // The provider keeps its answer for a key, so the next try of these earnings needs a new key.
-                foreach (var earning in group)
+                foreach (var earningId in earningIds)
                 {
-                    earning.RefusedPayouts++;
+                    if (await _earnings.FindByIdAsync(earningId, cancellationToken) is { } earning)
+                    {
+                        earning.RefusedPayouts++;
 
-                    await _earnings.UpdateAsync(earning, cancellationToken);
+                        await _earnings.UpdateAsync(earning, cancellationToken);
+                    }
                 }
 
                 failures.Add(failure);
-                _logger.LogWarning("Order '{OrderNumber}' couldn't be paid out to vendor '{VendorId}': {Failure}", payout.OrderNumber, vendor.ItemId, failure);
+                _logger.LogWarning("Order '{OrderNumber}' couldn't be paid out to vendor '{VendorId}': {Failure}", stored.OrderNumber, vendor.ItemId, failure);
 
                 continue;
             }
 
-            // Read again, since the transfer may have committed what was read before it.
-            foreach (var earningId in payout.EarningIds)
+            foreach (var earningId in earningIds)
             {
                 if (await _earnings.FindByIdAsync(earningId, cancellationToken) is { } earning)
                 {
                     earning.Status = VendorEarningStatus.PaidOut;
-                    earning.PayoutId = payout.ItemId;
+                    earning.PayoutId = stored.ItemId;
 
                     await _earnings.UpdateAsync(earning, cancellationToken);
                 }
             }
 
-            paid += amount;
+            paid += batch.Amount;
         }
 
         return (paid, failures);
     }
+
+    /// <summary>
+    /// Groups a vendor's released earnings into transfers, one per order and currency. An order whose earnings come to
+    /// nothing or less (a refund after that order was paid out) is owed back: it comes off the next order that has
+    /// more than enough to cover it, and is marked paid out with that transfer, so the vendor never keeps both.
+    /// </summary>
+    /// <param name="earnings">The vendor's released earnings.</param>
+    internal static IReadOnlyList<PayoutBatch> PlanPayouts(IEnumerable<VendorEarning> earnings)
+    {
+        var batches = new List<PayoutBatch>();
+
+        foreach (var currency in earnings.GroupBy(earning => earning.Currency ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+        {
+            var orders = currency
+                .GroupBy(earning => earning.OrderId)
+                .Select(group => new PayoutBatch(group.Key, currency.Key, Money.Round(group.Sum(earning => earning.Net), currency.Key), [.. group]))
+                .OrderBy(batch => batch.Earnings.Min(earning => earning.CreatedUtc))
+                .ThenBy(batch => batch.OrderId, StringComparer.Ordinal)
+                .ToList();
+
+            // What's owed back, smallest first, so as much of it as possible is settled.
+            var owed = new Queue<PayoutBatch>(orders.Where(batch => batch.Amount <= 0m).OrderByDescending(batch => batch.Amount));
+
+            foreach (var batch in orders.Where(batch => batch.Amount > 0m))
+            {
+                var amount = batch.Amount;
+                var included = new List<VendorEarning>(batch.Earnings);
+
+                while (owed.Count > 0 && amount + owed.Peek().Amount > 0m)
+                {
+                    var debt = owed.Dequeue();
+
+                    amount = Money.Round(amount + debt.Amount, currency.Key);
+                    included.AddRange(debt.Earnings);
+                }
+
+                batches.Add(batch with { Amount = amount, Earnings = included });
+            }
+        }
+
+        return batches;
+    }
+
+    /// <summary>
+    /// One transfer a payout run makes: the order it's paid from, and every earning it settles.
+    /// </summary>
+    internal sealed record PayoutBatch(string OrderId, string Currency, decimal Amount, IReadOnlyList<VendorEarning> Earnings);
 
     /// <summary>
     /// Pays out every active vendor whose payouts are set up, for the automatic payouts.

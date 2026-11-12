@@ -873,6 +873,13 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             attempt = CreateAttempt(session, invoice, provider.Key, obligationId);
             attempt.CreatedUtc = _clock.UtcNow;
 
+            // A caller that charges the same thing from more than one checkout gives its own key, so the provider sees
+            // one charge whichever checkout gets there.
+            if (!string.IsNullOrWhiteSpace(options?.IdempotencyKey))
+            {
+                attempt.IdempotencyKey = $"{options.IdempotencyKey.Trim()}_{obligationId}";
+            }
+
             // A declined attempt is final, so a new one for the same obligation is a genuinely new charge. It
             // needs its own idempotency key: reusing the declined attempt's key would make the gateway replay the
             // decline instead of trying the payment method it is now given.
@@ -1325,6 +1332,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             CancelUrl = options.CancelUrl,
             ProviderData = providerData,
             ClientNetworkKey = options.ClientNetworkKey,
+            IdempotencyKey = options.IdempotencyKey,
         };
     }
 

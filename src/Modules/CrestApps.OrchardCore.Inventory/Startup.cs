@@ -115,6 +115,7 @@ public sealed class OrdersStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IOrderEventHandler, InventoryOrderEventHandler>();
+        services.AddScoped<global::CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentGate, InventoryPaymentGate>();
         services.AddSingleton<IBackgroundTask, ExpiredStockHoldsBackgroundTask>();
     }
 }

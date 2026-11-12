@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.AgenticCommerce.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
@@ -13,7 +14,8 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
 /// <summary>
 /// Signs a UCP request in and agrees its version and capabilities, before the endpoint runs: it reads the body once,
 /// finds the platform (API key, OAuth bearer token or an RFC 9421 signature with a key from the platform's profile),
-/// fetches the platform's profile named in <c>UCP-Agent</c>, and checks the version.
+/// fetches the platform's profile named in <c>UCP-Agent</c>, and checks the version. Nothing is fetched for a caller
+/// that isn't signed in, or whose signed request names a profile of a platform the store doesn't sell to.
 /// </summary>
 public sealed class UcpRequestFilter : IEndpointFilter
 {
@@ -52,6 +54,62 @@ public sealed class UcpRequestFilter : IEndpointFilter
                 : null;
         }
 
+        // The caller is authenticated before anything is fetched: an anonymous request must not make the store read
+        // (or cache) a profile address it chose. Only a signed-in platform's profile, or the profile of a signed request
+        // from a platform the store sells to, is read.
+        var authentication = await services.GetRequiredService<AgentPlatformAuthenticator>().AuthenticateAsync(httpContext, AgenticCommerceConstants.Protocols.Ucp);
+
+        if (!authentication.Succeeded && authentication.Error is not null)
+        {
+            return Fail(httpContext, body, authentication.StatusCode, authentication.StatusCode == StatusCodes.Status401Unauthorized ? "unauthorized" : "forbidden", authentication.Error);
+        }
+
+        var signed = !string.IsNullOrEmpty(request.Headers["Signature-Input"]);
+        AgentAuthentication signatureAuthentication = null;
+
+        if (authentication.Succeeded)
+        {
+            // A platform acts only for its own profile.
+            if (profileUrl is not null && !string.IsNullOrEmpty(authentication.Platform.ProfileUrl) && !string.Equals(profileUrl, authentication.Platform.ProfileUrl, StringComparison.Ordinal))
+            {
+                return Fail(httpContext, body, StatusCodes.Status403Forbidden, "forbidden", "The UCP-Agent profile isn't the platform's.");
+            }
+        }
+        else if (signed && profileUrl is not null)
+        {
+            var platform = await services.GetRequiredService<IAgentPlatformStore>().FindByProfileUrlAsync(profileUrl, httpContext.RequestAborted);
+
+            if (platform is null && (await services.GetRequiredService<ISiteService>().GetSettingsAsync<AgenticCommerceSettings>()).AllowUnregisteredUcpPlatforms)
+            {
+                platform = new AgentPlatform
+                {
+                    ItemId = UcpProfileClient.GetUnregisteredPlatformId(profileUrl),
+                    Name = profileUrl,
+                    Enabled = true,
+                    Protocols = [AgenticCommerceConstants.Protocols.Ucp],
+                    ProfileUrl = profileUrl,
+                };
+            }
+
+            if (platform is null)
+            {
+                return Fail(httpContext, body, StatusCodes.Status403Forbidden, "forbidden", "The platform isn't one this store sells to.");
+            }
+
+            signatureAuthentication = AgentPlatformAuthenticator.Check(platform, AgenticCommerceConstants.Protocols.Ucp, httpContext);
+
+            if (!signatureAuthentication.Succeeded)
+            {
+                return Fail(httpContext, body, signatureAuthentication.StatusCode, "forbidden", signatureAuthentication.Error);
+            }
+        }
+        else
+        {
+            httpContext.Response.Headers.WWWAuthenticate = "Bearer";
+
+            return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "unauthorized", "Sign in with the platform's API key or OAuth token, or sign the request.");
+        }
+
         var profiles = services.GetRequiredService<UcpProfileClient>();
         JsonObject platformProfile = null;
 
@@ -72,66 +130,19 @@ public sealed class UcpRequestFilter : IEndpointFilter
             platformProfile = fetched;
         }
 
-        var authentication = await services.GetRequiredService<AgentPlatformAuthenticator>().AuthenticateAsync(httpContext, AgenticCommerceConstants.Protocols.Ucp);
-
-        if (!authentication.Succeeded && authentication.Error is not null)
+        if (signed)
         {
-            return Fail(httpContext, body, authentication.StatusCode, authentication.StatusCode == StatusCodes.Status401Unauthorized ? "unauthorized" : "forbidden", authentication.Error);
-        }
-
-        if (!string.IsNullOrEmpty(request.Headers["Signature-Input"]))
-        {
-            var verified = Verify(httpContext, body, platformProfile);
+            var verified = await VerifyAsync(httpContext, body, platformProfile);
 
             if (verified is not null)
             {
                 return verified;
             }
 
-            if (!authentication.Succeeded)
-            {
-                var platform = await services.GetRequiredService<IAgentPlatformStore>().FindByProfileUrlAsync(profileUrl, httpContext.RequestAborted);
-
-                if (platform is null && (await services.GetRequiredService<ISiteService>().GetSettingsAsync<AgenticCommerceSettings>()).AllowUnregisteredUcpPlatforms)
-                {
-                    platform = new AgentPlatform
-                    {
-                        ItemId = UcpProfileClient.GetUnregisteredPlatformId(profileUrl),
-                        Name = profileUrl,
-                        Enabled = true,
-                        Protocols = [AgenticCommerceConstants.Protocols.Ucp],
-                        ProfileUrl = profileUrl,
-                    };
-                }
-
-                if (platform is null)
-                {
-                    return Fail(httpContext, body, StatusCodes.Status403Forbidden, "forbidden", "The platform isn't one this store sells to.");
-                }
-
-                authentication = AgentPlatformAuthenticator.Check(platform, AgenticCommerceConstants.Protocols.Ucp, httpContext);
-
-                if (!authentication.Succeeded)
-                {
-                    return Fail(httpContext, body, authentication.StatusCode, "forbidden", authentication.Error);
-                }
-            }
-        }
-
-        if (!authentication.Succeeded)
-        {
-            httpContext.Response.Headers.WWWAuthenticate = "Bearer";
-
-            return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "unauthorized", "Sign in with the platform's API key or OAuth token, or sign the request.");
+            authentication = authentication.Succeeded ? authentication : signatureAuthentication;
         }
 
         var signedIn = authentication.Platform;
-
-        // A platform acts only for its own profile.
-        if (profileUrl is not null && !string.IsNullOrEmpty(signedIn.ProfileUrl) && !string.Equals(profileUrl, signedIn.ProfileUrl, StringComparison.Ordinal))
-        {
-            return Fail(httpContext, body, StatusCodes.Status403Forbidden, "forbidden", "The UCP-Agent profile isn't the platform's.");
-        }
 
         if (platformProfile is null && !string.IsNullOrEmpty(signedIn.ProfileUrl))
         {
@@ -172,6 +183,14 @@ public sealed class UcpRequestFilter : IEndpointFilter
             },
         };
 
+        agentRequest.Context.PlatformProfile = platformProfile;
+
+        // A checkout made while AP2 is agreed keeps needing a mandate, whatever later requests negotiate.
+        if (agentRequest.Has(Ap2.Ap2ProfileContributor.GetName(negotiation.Version)))
+        {
+            agentRequest.Context.Properties[Ap2.Ap2CompletionGate.RequiredProperty] = "true";
+        }
+
         agentRequest.Context.Properties[UcpProfileClient.ProfileUrlProperty] = profileUrl;
         agentRequest.Context.Properties[UcpProfileClient.WebhookUrlProperty] = UcpProfileClient.GetOrderWebhookUrl(platformProfile) ?? signedIn.WebhookUrl;
         agentRequest.Set(httpContext);
@@ -180,8 +199,9 @@ public sealed class UcpRequestFilter : IEndpointFilter
         return await next(context);
     }
 
-    // A signed request is checked against the key it names in the platform's profile, and its body against its digest.
-    private static IResult Verify(HttpContext httpContext, byte[] body, JsonObject platformProfile)
+    // A signed request is checked against the key it names in the platform's profile, and its body against its digest;
+    // the signature must cover the request's target and body, be fresh, and not have been used before.
+    private static async Task<IResult> VerifyAsync(HttpContext httpContext, byte[] body, JsonObject platformProfile)
     {
         var request = httpContext.Request;
 
@@ -200,6 +220,19 @@ public sealed class UcpRequestFilter : IEndpointFilter
 
         if (verification.Succeeded)
         {
+            var now = new DateTimeOffset(DateTime.SpecifyKind(httpContext.RequestServices.GetRequiredService<IClock>().UtcNow, DateTimeKind.Utc));
+            var idempotencyKey = request.Headers["Idempotency-Key"].ToString();
+
+            if (UcpSignaturePolicy.Check(verification, body.Length > 0, idempotencyKey, now) is { } policyError)
+            {
+                return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", policyError);
+            }
+
+            if (!await httpContext.RequestServices.GetRequiredService<AgentSignatureReplayGuard>().TryUseAsync(request.Headers["Signature"].ToString(), idempotencyKey, UcpSignaturePolicy.ReplayWindow, httpContext.RequestAborted))
+            {
+                return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", "The signature was used before. Sign each request anew.");
+            }
+
             return null;
         }
 

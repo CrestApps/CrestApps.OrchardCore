@@ -359,14 +359,22 @@ internal static class PosApiEndpoints
             return ApiProblems.Validation("amount", "Give the amount to refund, or none to refund all of it.");
         }
 
+        // A refund pays money back, cash out of the drawer included, so selling at a register isn't enough.
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, PosPermissions.RefundAtRegister))
+        {
+            return ApiProblems.Forbidden("Refunding at a register takes the Refund at a register permission.");
+        }
+
         if (await registers.FindByIdAsync(request?.RegisterId, httpContext.RequestAborted) is not { } register || !await shifts.MaySellAtAsync(httpContext.User, register))
         {
             return ApiProblems.NotFound("There's no register with that id you may sell at.");
         }
 
-        // A till returns the store's register sales; an online order is returned there only by staff who manage orders.
+        // A till returns its own store's register sales; another store's sale, or an online order, is returned there
+        // only by staff who manage orders.
         if (await orders.FindByIdAsync(request.OrderId, httpContext.RequestAborted) is not { Status: OrderStatus.Paid } order ||
-            (!OrderChannels.IsCounterSale(order) && !await authorizationService.AuthorizeAsync(httpContext.User, OrderPermissions.ManageOrders)))
+            ((!OrderChannels.IsCounterSale(order) || !await IsSameStoreAsync(order, register, registers, httpContext.RequestAborted)) &&
+                !await authorizationService.AuthorizeAsync(httpContext.User, OrderPermissions.ManageOrders)))
         {
             return ApiProblems.NotFound("There's no paid order with that id you may return.");
         }
@@ -398,6 +406,16 @@ internal static class PosApiEndpoints
     }
 
     // The cash a sale was paid with that hasn't been given back yet.
+    // A counter sale belongs to the store its register is in.
+    private static async Task<bool> IsSameStoreAsync(Order order, Register register, IRegisterStore registers, CancellationToken cancellationToken)
+    {
+        var locationId = !string.IsNullOrEmpty(order.LocationId)
+            ? order.LocationId
+            : (await registers.FindByIdAsync(order.RegisterId, cancellationToken))?.LocationId;
+
+        return string.Equals(locationId ?? string.Empty, register.LocationId ?? string.Empty, StringComparison.Ordinal);
+    }
+
     private static async Task<decimal> GetCashHeldAsync(ICheckoutTenderLedger ledger, Order order, CancellationToken cancellationToken)
         => string.IsNullOrEmpty(order.CheckoutSessionId)
             ? 0m

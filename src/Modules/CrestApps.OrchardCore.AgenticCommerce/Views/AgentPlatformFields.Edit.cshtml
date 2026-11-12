@@ -130,6 +130,14 @@
                 <span class="hint">@T["A JSON Web Key or a PEM public key (-----BEGIN PUBLIC KEY-----) on P-256, from the platform. It isn't a secret: it's exported with the platform."]</span>
             </div>
         </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AcpSignatureVersion">
+            <label asp-for="AcpSignatureVersion" class="ocat-label">@T["What signatures cover"]</label>
+            <div class="ocat-end">
+                <select asp-for="AcpSignatureVersion" asp-items="Model.SignatureVersionOptions" class="form-select"></select>
+                <span asp-validation-for="AcpSignatureVersion" class="text-danger"></span>
+                <span class="hint">@T["Version 2 signs the Timestamp, the method and the path with the canonical JSON body (timestamp.METHOD.path.body), so a signed request can't be sent again later or to another address. Keep version 1 only for a platform that hasn't moved yet."]</span>
+            </div>
+        </div>
         <div class="ocat-wrapper" asp-validation-class-for="AcpSignatureClockSkewSeconds">
             <label asp-for="AcpSignatureClockSkewSeconds" class="ocat-label">@T["Allowed clock skew"]</label>
             <div class="ocat-end">

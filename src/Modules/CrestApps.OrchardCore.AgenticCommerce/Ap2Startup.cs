@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AgenticCommerce.Ap2;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Ucp;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -16,5 +17,7 @@ public sealed class Ap2Startup : StartupBase
     {
         services.AddScoped<IUcpProfileContributor, Ap2ProfileContributor>();
         services.AddScoped<IUcpCheckoutExtension, Ap2CheckoutExtension>();
+        services.AddScoped<Ap2CompletionGate>();
+        services.AddScoped<IAgentCheckoutCompletionGate>(serviceProvider => serviceProvider.GetRequiredService<Ap2CompletionGate>());
     }
 }

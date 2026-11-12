@@ -1,14 +1,14 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
 
 /// <summary>
 /// Fetches agent platforms' UCP profiles, through the egress guard (no hosts on the site's own network, no redirects),
-/// and keeps them as long as their cache headers allow.
+/// reads at most <c>MaxProfileLength</c> bytes of each, and keeps them in a bounded cache as long as their cache headers
+/// allow.
 /// </summary>
 public sealed class UcpProfileClient
 {
@@ -23,18 +23,18 @@ public sealed class UcpProfileClient
     private static readonly TimeSpan _maximumLifetime = TimeSpan.FromHours(1);
 
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IMemoryCache _cache;
+    private readonly UcpProfileCache _cache;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UcpProfileClient"/> class.
     /// </summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
-    /// <param name="cache">The memory cache.</param>
+    /// <param name="cache">The bounded profile cache.</param>
     /// <param name="logger">The logger.</param>
     public UcpProfileClient(
         IHttpClientFactory httpClientFactory,
-        IMemoryCache cache,
+        UcpProfileCache cache,
         ILogger<UcpProfileClient> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -55,9 +55,7 @@ public sealed class UcpProfileClient
             return (null, "invalid_profile_url");
         }
 
-        var cacheKey = "ucp-profile:" + uri.AbsoluteUri;
-
-        if (_cache.TryGetValue(cacheKey, out JsonObject cached))
+        if (_cache.Get(uri.AbsoluteUri) is { } cached)
         {
             return (cached, null);
         }
@@ -82,16 +80,17 @@ public sealed class UcpProfileClient
                 return (null, "profile_malformed");
             }
 
-            var body = await response.Content.ReadAsByteArrayAsync(timeout.Token);
+            // A chunked body has no length to check first, so the read itself stops past the limit.
+            var body = await ReadBoundedAsync(response.Content, timeout.Token);
 
-            if (body.Length > MaxProfileLength || JsonNode.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
+            if (body is null || JsonNode.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
             {
                 return (null, "profile_malformed");
             }
 
             var lifetime = response.Headers.CacheControl?.MaxAge ?? _minimumLifetime;
 
-            _cache.Set(cacheKey, profile, lifetime < _minimumLifetime ? _minimumLifetime : lifetime > _maximumLifetime ? _maximumLifetime : lifetime);
+            _cache.Set(uri.AbsoluteUri, profile, body.Length, lifetime < _minimumLifetime ? _minimumLifetime : lifetime > _maximumLifetime ? _maximumLifetime : lifetime);
 
             return (profile, null);
         }
@@ -105,6 +104,27 @@ public sealed class UcpProfileClient
 
             return (null, "profile_unreachable");
         }
+    }
+
+    // Reads at most MaxProfileLength bytes, or returns null for a longer body without reading the rest.
+    private static async Task<byte[]> ReadBoundedAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int read;
+
+        while ((read = await stream.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > MaxProfileLength)
+            {
+                return null;
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return buffer.ToArray();
     }
 
     /// <summary>

@@ -19,6 +19,11 @@ public sealed class PunchoutService
 {
     public const string CookieName = "punchout";
 
+    /// <summary>
+    /// The claim a punchout session carries, with the account's id, so the session can be recognized and limited.
+    /// </summary>
+    public const string ClaimType = "punchout";
+
     // A key is 32 random bytes, as base64url.
     private const int KeyBytes = 32;
 

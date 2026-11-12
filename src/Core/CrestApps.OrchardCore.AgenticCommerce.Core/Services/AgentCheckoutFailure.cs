@@ -34,4 +34,9 @@ public enum AgentCheckoutFailure
     /// The checkout waits for the result of the buyer's 3-D Secure authentication, which the request didn't carry.
     /// </summary>
     AuthenticationRequired,
+
+    /// <summary>
+    /// An <see cref="IAgentCheckoutCompletionGate"/> refused the completion; why is in the view's messages.
+    /// </summary>
+    Refused,
 }

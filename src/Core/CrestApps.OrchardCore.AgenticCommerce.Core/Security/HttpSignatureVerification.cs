@@ -35,6 +35,21 @@ public sealed class HttpSignatureVerification
     /// </summary>
     public string Label { get; init; }
 
+    /// <summary>
+    /// Gets when the signer says it signed (the <c>created</c> parameter), when it did.
+    /// </summary>
+    public DateTimeOffset? Created { get; init; }
+
+    /// <summary>
+    /// Gets when the signer says the signature stops being valid (the <c>expires</c> parameter), when it did.
+    /// </summary>
+    public DateTimeOffset? Expires { get; init; }
+
+    /// <summary>
+    /// Gets the signer's <c>nonce</c> parameter, when it sent one.
+    /// </summary>
+    public string Nonce { get; init; }
+
     internal static HttpSignatureVerification Fail(
         string errorCode,
         string errorMessage,

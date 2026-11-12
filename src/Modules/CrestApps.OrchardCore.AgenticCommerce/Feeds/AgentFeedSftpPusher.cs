@@ -68,6 +68,14 @@ public sealed partial class AgentFeedSftpPusher
                 return result;
             }
 
+            // Without the server's host key, any server answering for the host name would get the catalog and the login.
+            if (string.IsNullOrWhiteSpace(settings.HostKeyFingerprint))
+            {
+                result.Message = "The SFTP server's host key fingerprint isn't set. Enter it to push the feed.";
+
+                return result;
+            }
+
             var format = OpenAIProductFeedFormats.IsGzip(settings.Format) ? settings.Format : OpenAIProductFeedFormats.JsonLinesGzip;
             var feed = await _feeds.GetAsync(settings.Currency, fresh: true, cancellationToken);
             var shards = OpenAIProductFeedWriter.Shard(feed.Records, format);
@@ -79,7 +87,7 @@ public sealed partial class AgentFeedSftpPusher
             {
                 var expected = settings.HostKeyFingerprint?.Trim();
 
-                e.CanTrust = string.IsNullOrEmpty(expected) ||
+                e.CanTrust = !string.IsNullOrEmpty(expected) &&
                     string.Equals(NormalizeFingerprint(e.FingerPrintSHA256), NormalizeFingerprint(expected), StringComparison.Ordinal);
             };
 

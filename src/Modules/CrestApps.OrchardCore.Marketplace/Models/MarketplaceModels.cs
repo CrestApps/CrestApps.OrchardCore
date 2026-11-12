@@ -196,6 +196,12 @@ public enum VendorPayoutStatus
 {
     Paid = 0,
     Failed = 1,
+
+    /// <summary>
+    /// Recorded, with its idempotency key, before the transfer was asked for; not known to be paid yet. A payout run
+    /// that finds it sends the same earnings again with the same key, so the provider answers with the transfer it made.
+    /// </summary>
+    Pending = 2,
 }
 
 /// <summary>

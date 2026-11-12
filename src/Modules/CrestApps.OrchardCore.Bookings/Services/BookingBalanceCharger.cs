@@ -1,11 +1,13 @@
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Bookings.Services;
@@ -18,6 +20,8 @@ public sealed class BookingBalanceCharger
 {
     internal const int MaxAttempts = 3;
 
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
+
     private readonly IBookingBalanceStore _balances;
     private readonly IBookingStore _bookings;
     private readonly ITransactionManager _transactions;
@@ -25,6 +29,7 @@ public sealed class BookingBalanceCharger
     private readonly ICheckoutSessionStore _sessionStore;
     private readonly IPaymentAttemptStore _attemptStore;
     private readonly IEnumerable<ICheckoutSavedPaymentMethodProvider> _savedPaymentMethodProviders;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IEnumerable<IBookingPaymentHandler> _paymentHandlers;
@@ -39,6 +44,7 @@ public sealed class BookingBalanceCharger
         ICheckoutSessionStore sessionStore,
         IPaymentAttemptStore attemptStore,
         IEnumerable<ICheckoutSavedPaymentMethodProvider> savedPaymentMethodProviders,
+        IDistributedLock distributedLock,
         IClock clock,
         ILogger<BookingBalanceCharger> logger,
         IStringLocalizer<BookingBalanceCharger> stringLocalizer,
@@ -51,6 +57,7 @@ public sealed class BookingBalanceCharger
         _sessionStore = sessionStore;
         _attemptStore = attemptStore;
         _savedPaymentMethodProviders = savedPaymentMethodProviders;
+        _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
         _paymentHandlers = paymentHandlers;
@@ -64,6 +71,41 @@ public sealed class BookingBalanceCharger
     {
         ArgumentNullException.ThrowIfNull(balance);
 
+        // One charge of a balance at a time, on every node: two at once (a double click, or a click while the
+        // background task runs) would each start a checkout and charge the card twice.
+        var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync($"BOOKING_BALANCE_{balance.ItemId}", _lockExpiration);
+
+        if (!locked)
+        {
+            return S["The balance is being charged already. Check it again in a moment."];
+        }
+
+        await using (locker)
+        {
+            // Read again inside the lock: the copy the caller has may be from before another charge paid it.
+            if (await _balances.FindByIdAsync(balance.ItemId, cancellationToken) is { } stored && !ReferenceEquals(stored, balance))
+            {
+                if (stored.Status is BookingBalanceStatus.Paid or BookingBalanceStatus.Canceled)
+                {
+                    return null;
+                }
+
+                // The store's "Charge now" on a balance that failed for good starts it over.
+                if (balance.Status == BookingBalanceStatus.Scheduled && stored.Status == BookingBalanceStatus.Failed)
+                {
+                    stored.Status = BookingBalanceStatus.Scheduled;
+                    stored.Attempts = balance.Attempts;
+                }
+
+                balance = stored;
+            }
+
+            return await ChargeLockedAsync(balance, cancellationToken);
+        }
+    }
+
+    private async Task<string> ChargeLockedAsync(BookingBalance balance, CancellationToken cancellationToken)
+    {
         var now = _clock.UtcNow;
         var transaction = await _transactions.FindByIdAsync(balance.TransactionId, cancellationToken);
 
@@ -124,6 +166,9 @@ public sealed class BookingBalanceCharger
         {
             ProviderKey = paymentMethod.ProviderKey,
             ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(paymentMethod),
+
+            // The same balance and attempt is the same charge, whichever checkout asks for it.
+            IdempotencyKey = $"booking_balance_{balance.ItemId}_{balance.Attempts}",
         }, cancellationToken);
 
         if (outcome.Succeeded)

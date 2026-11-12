@@ -108,7 +108,7 @@ else
                         <td>@((await LocalAsync(payout.CreatedUtc)).ToString("d", culture))</td>
                         <td>@payout.OrderNumber</td>
                         <td class="text-end">@ProductPriceFormatter.Format(payout.Amount, payout.Currency)</td>
-                        <td>@(payout.Status == VendorPayoutStatus.Paid ? T["Sent to Stripe"] : T["Failed: {0}", payout.Failure])</td>
+                        <td>@(payout.Status == VendorPayoutStatus.Paid ? T["Sent to Stripe"] : payout.Status == VendorPayoutStatus.Pending ? T["Being sent"] : T["Failed: {0}", payout.Failure])</td>
                     </tr>
                 }
             </tbody>

@@ -38,4 +38,12 @@ public sealed class BeginPaymentOptions
     /// endpoints set it; a payment begun without a browser, such as a staff charge, leaves it empty.
     /// </summary>
     public string ClientNetworkKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets a stable key of the caller's own for this charge, such as a balance and its attempt number. When
+    /// set, the provider's idempotency key is derived from it instead of from the checkout, so two checkouts started
+    /// for the same charge (a double click, a click while a background task runs) collapse into one charge at the
+    /// provider.
+    /// </summary>
+    public string IdempotencyKey { get; set; }
 }

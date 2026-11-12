@@ -158,20 +158,23 @@ ACP lets a platform sign each request with a `Signature` header (a base64url det
 | Algorithm | `AcpSignatureAlgorithm` | `ES256` (ECDSA on P-256 with SHA-256), the only one. .NET 10 has no Ed25519 signature API of its own, so Ed25519 isn't offered. |
 | Platform's public key | `AcpSignaturePublicKey` | An EC JSON Web Key (`{"kty":"EC","crv":"P-256","x":...,"y":...}`) or a PEM `PUBLIC KEY` block, on P-256. A private key is refused when the platform is saved. The key isn't a secret: it travels in deployments and recipes. |
 | Allowed clock skew | `AcpSignatureClockSkewSeconds` | How far `Timestamp` may be from the store's clock, 1 to 3600 seconds; 300 when empty. |
+| What signatures cover | `AcpSignatureVersion` | `2` (new platforms): `timestamp.METHOD.path.` followed by the canonical body. `1` or empty (platforms saved before versions existed): the canonical body only. Move a platform to 2 once it signs that way. |
 
 How a request is verified (`AcpRequestSignature` in the Core project, applied by `AcpSignatureCheck`):
 
-- **Signed bytes:** the RFC 8785 (JCS) canonical JSON of the request body, or nothing for a request without a body. Key order, whitespace and number form don't change it; array order does. The timestamp isn't part of the signed bytes: no ACP source defines a `timestamp.body` form, so the store only checks `Timestamp` against the skew window.
+- **Signed bytes:** the RFC 8785 (JCS) canonical JSON of the request body, or nothing for a request without a body. Key order, whitespace and number form don't change it; array order does. With signature version 2 (`AcpRequestSignature.GetBoundSigningInput`) the bytes are the UTF-8 of `{Timestamp}.{METHOD}.{path}.` followed by that canonical JSON, so a captured signature can't be sent with another timestamp or to another path; over MCP the method is `MCP` and the path is the tool's name. With version 1 the timestamp is only checked against the skew window.
+- **Replays:** a signature that verified is remembered (`AgentSignatureReplayGuard`, in the distributed cache) for twice the clock skew. The same signature again is refused, unless it comes with the same `Idempotency-Key`, which the idempotency layer answers with its first response.
 - **Signature:** the 64-byte `r || s` form JOSE uses, base64url (padding is allowed). A DER signature is accepted too.
 - **When:** after the platform signs in and before any checkout work, including the idempotency replay.
 
 A platform that requires signed requests gets `401` with `type: invalid_request` and `code: invalid_signature` for a missing, stale or wrong signature. A platform that doesn't require them may still sign: when it has a public key, a signed request is verified and refused the same way if it doesn't match. Without a key, the headers are ignored.
 
 ```csharp
-// How an agent signs a request for this store.
-var input = AcpRequestSignature.GetSigningInput(JsonNode.Parse(body));
+// How an agent signs a request for this store (signature version 2).
+var timestamp = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+var input = AcpRequestSignature.GetBoundSigningInput(timestamp, "POST", "/acp/checkout_sessions", AcpRequestSignature.GetSigningInput(JsonNode.Parse(body)));
 request.Headers.Add("Signature", AcpRequestSignature.Sign(input, privateKey));
-request.Headers.Add("Timestamp", DateTimeOffset.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture));
+request.Headers.Add("Timestamp", timestamp);
 ```
 
 ## Idempotency
@@ -324,7 +327,8 @@ The **Agent Payments Protocol (Preview)** feature adds AP2's mandates extension 
 - Every checkout answer carries `ap2.merchant_authorization`: a JWS with detached content (`b64url(header)..b64url(signature)`, header `alg` and `kid`), ES256 with the store's current key, over the RFC 8785 canonical form of the checkout without its `ap2` member.
 - Completing the checkout needs `ap2.checkout_mandate`, the buyer's checkout mandate. The checkout is locked to mandates: there is no completing without one (`mandate_required`).
 - `Ap2MandateVerifier` verifies the mandate as AP2 v0.2 does: an SD-JWT delegation chain joined by `~~`, whose root is signed with a key from the platform's profile `keys`, each later hop signed with the previous hop's `cnf.jwk`, and the last hop a key binding JWT with the closed checkout mandate. A single SD-JWT with a key binding JWT is accepted too. Clock skew of 60 seconds is allowed. A platform whose profile has no keys gets `agent_missing_key`.
-- The mandate must be for the checkout as it stands: the same checkout id, the same items and quantities, and the same total in minor units. Otherwise the request gets `mandate_scope_mismatch`.
+- The mandate must be for the checkout as it stands: the same checkout id, the same items and quantities, the same total in minor units and currency, and the same fulfillment (the selected destination's address and the selected shipping option). Otherwise the request gets `mandate_scope_mismatch`.
+- The check runs inside `AgentCheckoutService.CompleteAsync` (`Ap2CompletionGate`, an `IAgentCheckoutCompletionGate`), after the checkout's final sync, so REST, MCP (`complete_checkout`) and A2A all pass it. A checkout created while AP2 was negotiated keeps needing a mandate (its `ap2.required` property) whatever later requests negotiate, and a complete request may not change its buyer, fulfillment or discount codes.
 - When the checkout completes, the mandate and a receipt the store signs are kept on the agent checkout, as the evidence for a dispute, and later answers carry `ap2.checkout_receipt`.
 
 A refused mandate is answered with the checkout, an `error` status and an unrecoverable message with the AP2 error code. ACP checkouts don't use AP2.
@@ -698,7 +702,7 @@ A field without a value is left out of a JSON line and empty in a CSV cell. In C
 
 ### The SFTP push
 
-When **Push the full feed over SFTP every day** is on, `AgentFeedPushBackgroundTask` (daily at 02:30) has `AgentFeedSftpPusher` write the whole catalog to the SFTP folder in shards of at most 500,000 items, ordered by item id, with stable names (`products-00001.jsonl.gz`, `products-00002.jsonl.gz`, …) that each push overwrites. Shards a smaller catalog no longer needs, and files of the other format, are deleted. The push signs in with the password, the private key (OpenSSH or PEM, with its passphrase), or both, all stored protected with the tenant's data protection keys, and checks the server's SHA-256 host key fingerprint when one is entered. The result is kept in the `AgentFeedStatusDocument`.
+When **Push the full feed over SFTP every day** is on, `AgentFeedPushBackgroundTask` (daily at 02:30) has `AgentFeedSftpPusher` write the whole catalog to the SFTP folder in shards of at most 500,000 items, ordered by item id, with stable names (`products-00001.jsonl.gz`, `products-00002.jsonl.gz`, …) that each push overwrites. Shards a smaller catalog no longer needs, and files of the other format, are deleted. The push signs in with the password, the private key (OpenSSH or PEM, with its passphrase), or both, all stored protected with the tenant's data protection keys, and only connects to a server whose SHA-256 host key fingerprint matches the one entered: without a fingerprint the push doesn't run. The result is kept in the `AgentFeedStatusDocument`.
 
 ### ACP feed APIs
 

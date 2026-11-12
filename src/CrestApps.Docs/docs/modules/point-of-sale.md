@@ -67,7 +67,7 @@ It commits that, then starts the order's checkout with `ICheckoutEngine.StartAsy
 
 ## API
 
-`PosApiEndpoints` maps these into the commerce JSON API at `api/commerce/v1`, under the tag **Point of Sale**. Each needs a signed-in caller who may sell at the register concerned (`PosShiftService.MaySellAtAsync`: the register is on, the caller has **Sell at a register**, and is in one of its roles or has **Manage registers and shifts**); another register answers `404`.
+`PosApiEndpoints` maps these into the commerce JSON API at `api/commerce/v1`, under the tag **Point of Sale**. Each needs a signed-in caller who may sell at the register concerned (`PosShiftService.MaySellAtAsync`: the register is on, the caller has **Sell at a register**, and is in one of its roles or has **Manage registers and shifts**); another register answers `404`. A return (`pos/returns`) also needs **Refund at a register** (`RefundAtRegister`, implied by **Manage registers and shifts**; `403` without it), and returns only a counter sale of the register's own store (the order's location, or its register's) unless the caller also has **Manage orders**.
 
 | Method | Path | What it does |
 | --- | --- | --- |

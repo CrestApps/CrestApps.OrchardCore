@@ -39,4 +39,10 @@ public static class PaymentIssueKinds
     /// applies for a while.
     /// </summary>
     public const string DeclineSpike = "DeclineSpike";
+
+    /// <summary>
+    /// A payment was collected for transactions that no longer owed it, such as a second tab of a pay link paid after
+    /// the first, so it was not applied to any of them and needs to be refunded or applied by hand.
+    /// </summary>
+    public const string PaymentNotApplied = "PaymentNotApplied";
 }
