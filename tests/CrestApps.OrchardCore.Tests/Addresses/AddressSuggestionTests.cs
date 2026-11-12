@@ -213,6 +213,17 @@ public sealed class AddressSuggestionTests
         harness.Provider.Verify(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public void TheAddressesFeature_RegistersTheSignedTokenService_TheEditorTokenNeeds()
+    {
+        // The editor view and both endpoints take it from the tenant's services.
+        var services = new ServiceCollection();
+
+        new Startup().ConfigureServices(services);
+
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(SignedTokenService));
+    }
+
     private sealed class SuggestionHarness
     {
         private readonly ServiceProvider _services;

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Addresses.Handlers;
 using CrestApps.OrchardCore.Addresses.Indexes;
 using CrestApps.OrchardCore.Addresses.Migrations;
 using CrestApps.OrchardCore.Addresses.Services;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Builder;
@@ -32,6 +33,9 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAddressesCore();
+
+        // The editor token is a signed, short-lived token.
+        services.AddSignedLinks();
 
         // The suggestion endpoints are throttled whether or not Orchard Core's Rate Limits feature is on: a minute per
         // network, and a day for the whole site that the tenant's configuration sets.
