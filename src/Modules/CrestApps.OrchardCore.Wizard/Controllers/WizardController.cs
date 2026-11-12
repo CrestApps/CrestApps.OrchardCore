@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Wizard.Core;
+﻿using CrestApps.OrchardCore.Wizard.Core;
 using CrestApps.OrchardCore.Wizard.Services;
 using CrestApps.OrchardCore.Wizard.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +8,7 @@ using OrchardCore;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Wizard.Controllers;
 
@@ -15,6 +16,7 @@ namespace CrestApps.OrchardCore.Wizard.Controllers;
 /// Handles the public, reusable wizard experience: starting or resuming a session, saving a step and
 /// advancing, displaying a saved step, and showing the confirmation of a completed session.
 /// </summary>
+[RateLimitGroup(WizardConstants.RateLimitGroups.Wizard)]
 public sealed class WizardController : Controller
 {
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -80,24 +82,16 @@ public sealed class WizardController : Controller
     {
         var definition = GetDefinition(wizardType);
 
-        if (definition == null)
+        if (definition == null || !await IsKnownDefinitionAsync(wizardType, definitionId))
         {
             return NotFound();
         }
 
-        if (definition.RequiresAuthenticatedUser && !User.Identity.IsAuthenticated)
-        {
-            return Challenge();
-        }
+        var denied = await AuthorizeStartAsync(definition, wizardType, definitionId);
 
-        if (!User.Identity.IsAuthenticated && await RequiresAuthenticatedUserAsync(wizardType, definitionId))
+        if (denied is not null)
         {
-            return Challenge();
-        }
-
-        if (!await _authorizationService.AuthorizeAsync(User, WizardPermissions.StartWizard))
-        {
-            return Forbid();
+            return denied;
         }
 
         var wizardKey = GetWizardKey(wizardType, definitionId);
@@ -109,9 +103,11 @@ public sealed class WizardController : Controller
             session = await _wizardSessionStore.GetAsync(existingSessionId, WizardSessionStatus.Pending);
         }
 
+        // A visitor who has no session yet sees the first step of a session that is neither stored nor started: the
+        // session is created on the first valid submission, so a page view alone writes nothing.
         var isNewSession = session == null;
 
-        session ??= await _wizardSessionStore.NewAsync(wizardType, definitionId);
+        session ??= await CreateUnsavedSessionAsync(wizardType, definitionId);
 
         var flow = await InitializeFlowAsync(session);
 
@@ -121,20 +117,16 @@ public sealed class WizardController : Controller
 
         await _wizardHandlers.InvokeAsync((handler, ctx) => handler.LoadedAsync(ctx), new WizardFlowLoadedContext(flow), _logger);
 
-        if (isNewSession)
+        if (!isNewSession)
         {
-            session.ModifiedUtc = _clock.UtcNow;
-
-            await _wizardSessionStore.SaveAsync(session);
+            _cookieManager.Append(wizardKey, session.SessionId);
         }
-
-        _cookieManager.Append(wizardKey, session.SessionId);
 
         return View(new WizardViewModel
         {
             WizardType = wizardType,
             DefinitionId = definitionId,
-            SessionId = session.SessionId,
+            SessionId = isNewSession ? null : session.SessionId,
             Step = session.CurrentStep,
             Content = content,
         });
@@ -181,7 +173,25 @@ public sealed class WizardController : Controller
 
         if (session == null)
         {
-            return NotFound();
+            if (!string.IsNullOrWhiteSpace(model.SessionId))
+            {
+                return NotFound();
+            }
+
+            // The first submission of a new visitor creates the session; it is stored only when the step is valid.
+            if (!await IsKnownDefinitionAsync(model.WizardType, model.DefinitionId))
+            {
+                return NotFound();
+            }
+
+            var denied = await AuthorizeStartAsync(definition, model.WizardType, model.DefinitionId);
+
+            if (denied is not null)
+            {
+                return denied;
+            }
+
+            session = await _wizardSessionStore.NewAsync(model.WizardType, model.DefinitionId);
         }
 
         var flow = await InitializeFlowAsync(session);
@@ -356,6 +366,72 @@ public sealed class WizardController : Controller
 
         return _wizardDefinitionProvider.GetDefinitions()
             .FirstOrDefault(definition => string.Equals(definition.WizardType, wizardType, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task<IActionResult> AuthorizeStartAsync(IWizardDefinition definition, string wizardType, string definitionId)
+    {
+        if (definition.RequiresAuthenticatedUser && !User.Identity.IsAuthenticated)
+        {
+            return Challenge();
+        }
+
+        if (!User.Identity.IsAuthenticated && await RequiresAuthenticatedUserAsync(wizardType, definitionId))
+        {
+            return Challenge();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, WizardPermissions.StartWizard))
+        {
+            return Forbid();
+        }
+
+        return null;
+    }
+
+    // A definition identifier must name an instance a policy recognizes; a wizard started without one needs no check.
+    private async Task<bool> IsKnownDefinitionAsync(string wizardType, string definitionId)
+    {
+        if (string.IsNullOrEmpty(definitionId))
+        {
+            return true;
+        }
+
+        var known = false;
+
+        foreach (var policy in _accessPolicies)
+        {
+            var answer = await policy.IsKnownDefinitionAsync(wizardType, definitionId);
+
+            if (answer == false)
+            {
+                return false;
+            }
+
+            known |= answer == true;
+        }
+
+        return known;
+    }
+
+    // Builds the first step of a session without storing it or raising its start, so a page view writes nothing. The
+    // activating handlers still run, since they lay out the steps.
+    private async Task<WizardSession> CreateUnsavedSessionAsync(string wizardType, string definitionId)
+    {
+        var now = _clock.UtcNow;
+        var session = new WizardSession
+        {
+            WizardType = wizardType,
+            DefinitionId = definitionId,
+            CreatedUtc = now,
+            ModifiedUtc = now,
+            Status = WizardSessionStatus.Pending,
+        };
+
+        await _wizardHandlers.InvokeAsync((handler, ctx) => handler.ActivatingAsync(ctx), new WizardFlowActivatingContext(session), _logger);
+
+        session.CurrentStep = new WizardFlow(session).GetFirstStep()?.Key;
+
+        return session;
     }
 
     private async Task<bool> RequiresAuthenticatedUserAsync(string wizardType, string definitionId)
