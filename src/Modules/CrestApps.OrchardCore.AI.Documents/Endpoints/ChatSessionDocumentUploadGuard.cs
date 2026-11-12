@@ -46,9 +46,10 @@ internal sealed class ChatSessionDocumentUploadGuard : IEndpointFilter
         var httpContext = context.HttpContext;
         var request = httpContext.Request;
 
+        // Documents are uploaded as a form; anything else is refused rather than let past the checks below.
         if (!request.HasFormContentType)
         {
-            return await next(context);
+            return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
         }
 
         var services = httpContext.RequestServices;

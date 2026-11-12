@@ -126,6 +126,26 @@ public sealed class ChatSessionDocumentUploadGuardTests
         Assert.Equal(StatusCodes.Status403Forbidden, status.StatusCode);
     }
 
+    [Fact]
+    public async Task InvokeAsync_WithoutAForm_RefusesInsteadOfSkippingTheChecks()
+    {
+        var (httpContext, _) = CreateContext(authorized: false, files: 1);
+        httpContext.Request.ContentType = "application/json";
+        httpContext.Features.Set<IFormFeature>(new FormFeature(httpContext.Request));
+        var called = false;
+
+        var result = await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
+        {
+            called = true;
+
+            return ValueTask.FromResult<object>(Results.Ok());
+        });
+
+        Assert.False(called);
+        var status = Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.Equal(StatusCodes.Status415UnsupportedMediaType, status.StatusCode);
+    }
+
     private static (DefaultHttpContext HttpContext, Mock<IAIChatSessionManager> SessionManager) CreateContext(bool authorized, int files, bool throttled = false, int? sessionDocuments = null, bool unknownSessionId = false)
     {
         var profile = new AIProfile { ItemId = "profile-1" };

@@ -166,10 +166,8 @@ public sealed class AdminController : Controller, IUpdateModel
             return Forbid();
         }
 
-        // Listing entries doesn't let a role remove them: removing needs the delete permission, as one entry's Delete does.
-        // The permission is checked whatever the action, so what the form posts never decides whether it's checked.
+        // Removing needs the delete permission, checked whatever the action so the posted action never decides that.
         var canDelete = await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.DeleteContentTransferEntries);
-
         if (options.BulkAction == ContentTransferEntryBulkAction.Remove && !canDelete)
         {
             return Forbid();
