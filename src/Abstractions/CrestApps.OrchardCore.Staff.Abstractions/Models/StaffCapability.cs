@@ -51,4 +51,11 @@ public sealed class StaffOptions
     /// the teams they manage). <see cref="StaffPermissions.ManageOwnStaff"/> always does.
     /// </summary>
     public List<Permission> ManageOwnPermissions { get; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether team memberships are in use. The Teams module turns it on when it is
+    /// enabled and adds the Teams card to the staff editor; while it is off, Staff leaves team data alone: no team
+    /// scoping, no main-team time zone and no team columns.
+    /// </summary>
+    public bool UsesTeams { get; set; }
 }

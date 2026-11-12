@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Dispatch.RealTime;
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Dispatch.ViewModels;
 using CrestApps.OrchardCore.Dispatch.Workflows;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Scheduling;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -183,5 +184,18 @@ public sealed class SchedulingStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<CrestApps.OrchardCore.Scheduling.Services.IAppointmentSlotFilter, Integrations.DispatchCapacitySlotFilter>();
+    }
+}
+
+/// <summary>
+/// Puts the field service KPIs in the Reports menu while the Reports module is on.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsMenuStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<FieldServiceReportsAdminMenu>();
     }
 }

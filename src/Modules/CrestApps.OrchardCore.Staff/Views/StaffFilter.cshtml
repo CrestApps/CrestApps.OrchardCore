@@ -3,6 +3,8 @@
 }
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+@if (filters.TeamOptions.Count > 0)
+{
 <div class="btn-group filter">
     <select name="teamId" form="staff-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Team"]" data-dropdown-align-right="auto" aria-label="@T["Team"]" onchange="this.form.submit()">
         <option value="">@T["All teams"]</option>
@@ -12,6 +14,7 @@
         }
     </select>
 </div>
+}
 <div class="btn-group filter">
     <select name="status" form="staff-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
         <option value="">@T["All statuses"]</option>

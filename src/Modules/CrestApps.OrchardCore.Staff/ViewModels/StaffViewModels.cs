@@ -97,8 +97,6 @@ public class StaffEditViewModel
 
     public decimal? ContractedHoursPerWeek { get; set; }
 
-    public IList<TeamMembershipRowViewModel> Memberships { get; set; } = [];
-
     public IList<string> Capabilities { get; set; } = [];
 
     [BindNever]
@@ -108,10 +106,10 @@ public class StaffEditViewModel
     public bool NameFromUser { get; set; }
 
     [BindNever]
-    public bool CanSeeSensitive { get; set; }
+    public bool UserLocked { get; set; }
 
     [BindNever]
-    public IList<SelectListItem> TeamOptions { get; set; } = [];
+    public bool CanSeeSensitive { get; set; }
 
     [BindNever]
     public IList<SelectListItem> EmploymentTypeOptions { get; set; } = [];
@@ -121,6 +119,11 @@ public class StaffEditViewModel
 
     [BindNever]
     public IList<SelectListItem> TimeZoneOptions { get; set; } = [];
+}
+
+public class StaffCapabilitiesEditViewModel
+{
+    public IList<string> Capabilities { get; set; } = [];
 
     [BindNever]
     public IList<StaffCapabilityOptionViewModel> CapabilityOptions { get; set; } = [];
@@ -135,17 +138,6 @@ public class StaffCapabilityOptionViewModel
     public string Description { get; set; }
 
     public bool Selected { get; set; }
-}
-
-public class TeamMembershipRowViewModel
-{
-    public string TeamId { get; set; }
-
-    public string Role { get; set; }
-
-    public DateOnly? EffectiveFrom { get; set; }
-
-    public DateOnly? EffectiveTo { get; set; }
 }
 
 public class UserStaffViewModel
@@ -191,23 +183,55 @@ public class StaffHomeViewModel
 
     public IList<string> Teams { get; set; } = [];
 
+    public bool UsesTeams { get; set; }
+
     public List<CrestApps.OrchardCore.Staff.Services.StaffHomeLink> Links { get; set; } = [];
 }
 
 public class StaffOrgChartViewModel
 {
-    public IList<StaffOrgChartNode> Roots { get; set; } = [];
+    public IList<StaffOrgChartNode> Nodes { get; set; } = [];
 
     public int Count { get; set; }
 }
 
+/// <summary>
+/// One person on the organization chart, linked to their manager by <see cref="ParentId"/>.
+/// </summary>
 public class StaffOrgChartNode
 {
-    public StaffMember StaffMember { get; set; }
+    public string Id { get; set; }
+
+    public string ParentId { get; set; }
+
+    public string Name { get; set; }
+
+    public string JobTitle { get; set; }
 
     public string TeamName { get; set; }
 
-    public IList<StaffOrgChartNode> Reports { get; set; } = [];
+    public string AvatarUrl { get; set; }
+
+    public string Initials { get; set; }
+
+    public string Url { get; set; }
+
+    /// <summary>
+    /// Gets the initials shown when a person has no picture: the first letters of the first and last words.
+    /// </summary>
+    /// <param name="name">The person's name.</param>
+    /// <returns>Up to two upper-case letters.</returns>
+    public static string InitialsOf(string name)
+    {
+        var words = (name ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return words.Length switch
+        {
+            0 => "?",
+            1 => words[0][..1].ToUpperInvariant(),
+            _ => string.Concat(words[0][..1], words[^1][..1]).ToUpperInvariant(),
+        };
+    }
 }
 
 public class StaffPickerViewModel

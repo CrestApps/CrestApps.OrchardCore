@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Core.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -42,12 +43,12 @@ public sealed class StaffDeploymentStep : DeploymentStep
 internal sealed class StaffDeploymentSource : DeploymentSourceBase<StaffDeploymentStep>
 {
     private readonly IStaffMemberManager _staffManager;
-    private readonly ITeamManager _teamManager;
+    private readonly StaffTeamReader _teamManager;
     private readonly IUserSearchService _userSearchService;
 
     public StaffDeploymentSource(
         IStaffMemberManager staffManager,
-        ITeamManager teamManager,
+        StaffTeamReader teamManager,
         IUserSearchService userSearchService)
     {
         _staffManager = staffManager;

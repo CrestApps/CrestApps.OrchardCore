@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Core.Services;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Staff.Drivers;
@@ -36,7 +37,7 @@ public sealed class StaffController : Controller
     private readonly IStaffDirectory _directory;
     private readonly IStaffHierarchy _hierarchy;
     private readonly IStaffHistoryService _historyService;
-    private readonly ITeamManager _teamManager;
+    private readonly StaffTeamReader _teamManager;
     private readonly IDisplayManager<StaffMember> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IUserSearchService _userSearchService;
@@ -54,7 +55,7 @@ public sealed class StaffController : Controller
         IStaffDirectory directory,
         IStaffHierarchy hierarchy,
         IStaffHistoryService historyService,
-        ITeamManager teamManager,
+        StaffTeamReader teamManager,
         IDisplayManager<StaffMember> displayManager,
         IUpdateModelAccessor updateModelAccessor,
         IUserSearchService userSearchService,
@@ -245,7 +246,7 @@ public sealed class StaffController : Controller
     }
 
     [Admin("staff/me", "StaffMe")]
-    public async Task<IActionResult> Me([FromServices] IEnumerable<IStaffHomeLinkProvider> linkProviders, [FromServices] ITeamManager teamManager)
+    public async Task<IActionResult> Me([FromServices] IEnumerable<IStaffHomeLinkProvider> linkProviders, [FromServices] StaffTeamReader teamManager)
     {
         if (!await _authorizationService.AuthorizeAsync(User, StaffPermissions.ViewOwnStaffProfile))
         {
@@ -253,7 +254,7 @@ public sealed class StaffController : Controller
         }
 
         var staff = await _directory.FindByUserIdAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted);
-        var model = new StaffHomeViewModel { StaffMember = staff };
+        var model = new StaffHomeViewModel { StaffMember = staff, UsesTeams = teamManager.UsesTeams };
 
         if (staff is not null)
         {
@@ -287,30 +288,36 @@ public sealed class StaffController : Controller
         var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
         var working = people.Where(person => person.IsEmployedOn(today)).ToList();
         var teams = (await _teamManager.ListTreeAsync(HttpContext.RequestAborted)).ToDictionary(item => item.Team.ItemId, item => item.Team.Name, StringComparer.Ordinal);
-        var nodes = working.ToDictionary(person => person.ItemId, person => new StaffOrgChartNode
-        {
-            StaffMember = person,
-            TeamName = person.PrimaryTeamId is { } team ? teams.GetValueOrDefault(team) : null,
-        }, StringComparer.Ordinal);
-        var roots = new List<StaffOrgChartNode>();
+        var shown = working.Select(person => person.ItemId).ToHashSet(StringComparer.Ordinal);
 
-        foreach (var node in nodes.Values.OrderBy(node => node.StaffMember.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+        // The pictures come from the user accounts, through Users, when a picture provider is on.
+        var avatars = (await _userSearchService.GetAsync(working.Select(person => person.UserId).Where(id => !string.IsNullOrEmpty(id)), HttpContext.RequestAborted))
+            .Where(user => !string.IsNullOrEmpty(user.AvatarUrl))
+            .ToDictionary(user => user.UserId, user => Url.Content(user.AvatarUrl), StringComparer.Ordinal);
+        var nodes = new List<StaffOrgChartNode>(working.Count);
+
+        foreach (var person in working.OrderBy(person => person.DisplayName, StringComparer.CurrentCultureIgnoreCase))
         {
-            if (!string.IsNullOrEmpty(node.StaffMember.ManagerId) && nodes.TryGetValue(node.StaffMember.ManagerId, out var manager))
+            nodes.Add(new StaffOrgChartNode
             {
-                manager.Reports.Add(node);
-            }
-            else
-            {
-                roots.Add(node);
-            }
+                Id = person.ItemId,
+
+                // A manager outside the chart (another team, or no longer working) puts the person at the top.
+                ParentId = !string.IsNullOrEmpty(person.ManagerId) && shown.Contains(person.ManagerId) ? person.ManagerId : null,
+                Name = person.DisplayName,
+                JobTitle = person.JobTitle,
+                TeamName = person.PrimaryTeamId is { } team ? teams.GetValueOrDefault(team) : null,
+                AvatarUrl = !string.IsNullOrEmpty(person.UserId) ? avatars.GetValueOrDefault(person.UserId) : null,
+                Initials = StaffOrgChartNode.InitialsOf(person.DisplayName),
+                Url = await _scopeService.CanManageAsync(User, person, HttpContext.RequestAborted) ? Url.Action(nameof(Edit), new { id = person.ItemId }) : null,
+            });
         }
 
         ViewData["TeamOptions"] = teams.Select(team => new SelectListItem(team.Value, team.Key, team.Key == teamId)).OrderBy(option => option.Text, StringComparer.CurrentCultureIgnoreCase).ToList();
 
         return View(new StaffOrgChartViewModel
         {
-            Roots = roots,
+            Nodes = nodes,
             Count = working.Count,
         });
     }
@@ -341,14 +348,32 @@ public sealed class StaffController : Controller
         var userIds = history.Select(entry => entry.ChangedByUserId).Where(userId => !string.IsNullOrEmpty(userId)).Distinct(StringComparer.Ordinal).ToArray();
         var users = (await _userSearchService.GetAsync(userIds, HttpContext.RequestAborted)).ToDictionary(user => user.UserId, user => string.IsNullOrEmpty(user.DisplayName) ? user.UserName : user.DisplayName, StringComparer.Ordinal);
         var people = await _directory.GetNamesAsync(history.Where(entry => entry.Field == StaffHistoryFields.Manager).SelectMany(entry => new[] { entry.From, entry.To }), HttpContext.RequestAborted);
+        var teamNames = history.Any(entry => entry.Field == StaffHistoryFields.Teams)
+            ? (await _teamManager.ListTreeAsync(HttpContext.RequestAborted)).ToDictionary(item => item.Team.ItemId, item => item.Team.Name, StringComparer.Ordinal)
+            : [];
+
+        string Show(string field, string value) => field switch
+        {
+            StaffHistoryFields.Manager => people.GetValueOrDefault(value ?? string.Empty, value),
+
+            // Team memberships are kept as "teamId Role from..to" parts; the team is shown by its name.
+            StaffHistoryFields.Teams when !string.IsNullOrEmpty(value) => string.Join("; ", value.Split("; ", StringSplitOptions.RemoveEmptyEntries).Select(part =>
+            {
+                var space = part.IndexOf(' ');
+                var teamId = space < 0 ? part : part[..space];
+
+                return teamNames.GetValueOrDefault(teamId, teamId) + (space < 0 ? string.Empty : part[space..]);
+            })),
+            _ => value,
+        };
 
         foreach (var entry in history)
         {
             model.History.Add(new StaffHistoryRowViewModel
             {
                 Field = entry.Field,
-                From = entry.Field == StaffHistoryFields.Manager ? people.GetValueOrDefault(entry.From ?? string.Empty, entry.From) : entry.From,
-                To = entry.Field == StaffHistoryFields.Manager ? people.GetValueOrDefault(entry.To ?? string.Empty, entry.To) : entry.To,
+                From = Show(entry.Field, entry.From),
+                To = Show(entry.Field, entry.To),
                 ChangedBy = entry.ChangedByUserId is { } userId ? users.GetValueOrDefault(userId, userId) : null,
                 ChangedLocal = (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(entry.ChangedUtc, DateTimeKind.Utc))).DateTime,
             });

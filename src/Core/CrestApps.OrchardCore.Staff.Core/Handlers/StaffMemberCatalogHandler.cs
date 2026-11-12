@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Staff.Core.Handlers;
@@ -32,6 +33,7 @@ internal sealed class StaffMemberCatalogHandler : CatalogEntryHandlerBase<StaffM
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly StaffOptions _options;
     private readonly Dictionary<string, StaffChangedContext> _pending = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<StaffHistoryEntry>> _pendingHistory = new(StringComparer.Ordinal);
 
@@ -46,8 +48,10 @@ internal sealed class StaffMemberCatalogHandler : CatalogEntryHandlerBase<StaffM
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<StaffMemberCatalogHandler> logger,
+        IOptions<StaffOptions> options,
         IStringLocalizer<StaffMemberCatalogHandler> stringLocalizer)
     {
+        _options = options.Value;
         _store = store;
         _historyStore = historyStore;
         _teamStore = teamStore;
@@ -98,6 +102,13 @@ internal sealed class StaffMemberCatalogHandler : CatalogEntryHandlerBase<StaffM
             context.Result.Fail(new ValidationResult(S["Another staff member has the employee number '{0}'.", staff.EmployeeNumber], [nameof(StaffMember.EmployeeNumber)]));
         }
 
+        if (staff.TryGet<StaffSavedState>(out var saved)
+            && !string.IsNullOrEmpty(saved.UserId)
+            && !string.Equals(saved.UserId, staff.UserId, StringComparison.Ordinal))
+        {
+            context.Result.Fail(new ValidationResult(S["A staff member's user account can't be changed or removed once linked, so their pay and history never move to someone else. Add a new staff member for the other account."], [nameof(StaffMember.UserId)]));
+        }
+
         if (!string.IsNullOrEmpty(staff.UserId) && await _store.FindByUserIdAsync(staff.UserId, cancellationToken) is { } linked && linked.ItemId != staff.ItemId)
         {
             context.Result.Fail(new ValidationResult(S["That user is already the staff member '{0}'.", linked.DisplayName], [nameof(StaffMember.UserId)]));
@@ -120,7 +131,7 @@ internal sealed class StaffMemberCatalogHandler : CatalogEntryHandlerBase<StaffM
 
         var teamIds = staff.TeamMemberships.Select(membership => membership.TeamId).Append(staff.PrimaryTeamId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
 
-        if (teamIds.Length > 0)
+        if (_options.UsesTeams && teamIds.Length > 0)
         {
             var known = (await _teamStore.GetAsync(teamIds, cancellationToken)).Select(team => team.ItemId).ToHashSet(StringComparer.Ordinal);
 

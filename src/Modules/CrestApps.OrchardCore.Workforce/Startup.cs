@@ -40,7 +40,6 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Team, WorkforceTeamRowDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, WorkforceTeamsAuthorizationHandler>());
         services.AddDisplayDriver<StaffMember, WorkforceStaffDisplayDriver>();
-        services.AddStaffHomeLinkProvider<Portal.WorkforceStaffHomeLinks>();
         services.AddDisplayDriver<ActivityCode, ActivityCodeRowDisplayDriver>();
         services.AddPermissionProvider<WorkforcePermissionsProvider>();
         services.AddNavigationProvider<WorkforceAdminMenu>();

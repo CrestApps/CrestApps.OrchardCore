@@ -23,7 +23,7 @@ internal sealed class UserStaffDisplayDriver : DisplayDriver<User>
     private readonly StaffAccounts _accounts;
     private readonly IStaffMemberManager _staffManager;
     private readonly IStaffScopeService _scopeService;
-    private readonly ITeamManager _teams;
+    private readonly StaffTeamReader _teams;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
@@ -32,7 +32,7 @@ internal sealed class UserStaffDisplayDriver : DisplayDriver<User>
         StaffAccounts accounts,
         IStaffMemberManager staffManager,
         IStaffScopeService scopeService,
-        ITeamManager teams,
+        StaffTeamReader teams,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<UserStaffDisplayDriver> stringLocalizer)
     {

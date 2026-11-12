@@ -18,7 +18,10 @@ else
                     <dl class="row mb-0">
                         <dt class="col-sm-4">@T["Job title"]</dt><dd class="col-sm-8">@(staff.JobTitle ?? "-")</dd>
                         <dt class="col-sm-4">@T["Employee number"]</dt><dd class="col-sm-8">@(staff.EmployeeNumber ?? "-")</dd>
-                        <dt class="col-sm-4">@T["Teams"]</dt><dd class="col-sm-8">@(Model.Teams.Count == 0 ? "-" : string.Join(", ", Model.Teams))</dd>
+                        @if (Model.UsesTeams)
+                        {
+                            <dt class="col-sm-4">@T["Teams"]</dt><dd class="col-sm-8">@(Model.Teams.Count == 0 ? "-" : string.Join(", ", Model.Teams))</dd>
+                        }
                         <dt class="col-sm-4">@T["Work location"]</dt><dd class="col-sm-8">@(staff.WorkLocation ?? "-")</dd>
                         <dt class="col-sm-4">@T["Hire date"]</dt><dd class="col-sm-8">@(staff.HireDate?.ToString("d") ?? "-")</dd>
                         <dt class="col-sm-4">@T["Reports to"]</dt>

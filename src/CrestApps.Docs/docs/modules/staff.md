@@ -8,10 +8,10 @@ The **Staff** module keeps one record for every person who works for the busines
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
-| `CrestApps.OrchardCore.Staff` | Staff | CrestApps Users, Teams, Roles |
+| `CrestApps.OrchardCore.Staff` | Staff | CrestApps Users, Roles |
 | `CrestApps.OrchardCore.Staff.Compensation` | Staff Compensation | Staff |
 | `CrestApps.OrchardCore.Staff.Badges` | Staff Badges | Staff |
-| `CrestApps.OrchardCore.Staff.OrgChart` | Staff Organization Chart | Staff |
+| `CrestApps.OrchardCore.Staff.OrgChart` | Staff Organization Chart | Staff, CrestApps Resources |
 
 Projects: `CrestApps.OrchardCore.Staff.Abstractions` (the `StaffMember` model and the contracts other modules use), `CrestApps.OrchardCore.Staff.Core` (the store, indexes and services), `CrestApps.OrchardCore.Staff` (the module).
 
@@ -19,7 +19,9 @@ Projects: `CrestApps.OrchardCore.Staff.Abstractions` (the `StaffMember` model an
 
 A **user** is a sign-in account: a user name, a password and roles. Customers, partners and administrators are users too. A **staff member** is the employment record of someone who works for the business: job title, manager, teams, dates, pay and capabilities. A staff member can be linked to one user account, or to none at all, for people who are scheduled, sent to jobs or paid but never sign in.
 
-The name and email have a single owner. For a linked staff member the user account owns them. The staff editor shows them as text with a **Change them on the user account** link instead of boxes, and the staff record keeps only a copy that stays in step with the account. Linking a user on a new staff record swaps the boxes for the account's name at once. Unlinking brings the boxes back with the last name and email filled in, and from then on the staff record owns them. A *team member* is something else: a staff member's dated row in a team.
+The name and email have a single owner. For a linked staff member the user account owns them. The staff editor shows them as text with a **Change them on the user account** link instead of boxes, and the staff record keeps only a copy that stays in step with the account. Picking a user on a new staff record swaps the boxes for the account's name at once. A *team member* is something else: a staff member's dated row in a team.
+
+A user account belongs to one staff member at most. The editor's user picker offers only accounts that aren't linked yet (the `StaffUnlinked` user audience), and saving refuses an account another staff member has. Once saved, the link is fixed: the editor shows the account as text, and changing or removing it is refused however the record is saved (editor, recipe or code), so pay, history and badges never move from one person to another. A staff member saved without an account can be linked once later. For another account, add a new staff member.
 
 ## The staff member
 
@@ -41,7 +43,25 @@ Each staff member is a YesSql document in the `Staff` collection, with `StaffMem
 
 ## Admin screens
 
-**Staff > All Staff** lists staff members on Orchard Core's admin list, with a search and filters for team, status and capability. The editor is built by display drivers: Staff's own cards (person, employment, teams, place, capabilities), then the cards other modules add, then the reporting line and the employment history. **Staff > My Profile** shows a person their own record and the pages other modules add for them. **Staff > Organization Chart** (Staff Organization Chart feature) draws the reporting line. **Configuration > Settings > Staff** turns on **Offer only staff where people are assigned work**.
+**Staff > All Staff** lists staff members on Orchard Core's admin list, with a search and filters for team (while Teams is on), status and capability. The editor is built by display drivers, one shape per card, so modules and themes can add, move, replace or hide any of them:
+
+| Card | Shape | Comes from |
+| --- | --- | --- |
+| Person, Employment, Place | `StaffMemberFields_Edit` | Staff |
+| Teams | `StaffTeams_Edit` | Teams, while it is on |
+| Capabilities | `StaffCapabilities_Edit` | Staff, listing what other modules register |
+| Pay, Badge | `StaffMemberPay_Edit`, `StaffMemberBadge_Edit` | the Staff Compensation and Staff Badges features |
+| Skills | `StaffMemberSkills_Edit` | Skills |
+| Phone | `PhoneStaff_Edit` | Telephony (the person's extension) |
+| Agent | `AgentStaff_Edit` | Contact Center |
+| Workforce shifts | `WorkforceStaffFields_Edit` | Workforce (hours, availability and shift rules) |
+| Preferred technicians, fleet driver | `WorkOrderTechnicians_Edit`, `AssetFleetDriver_Edit` | Work Orders and Assets, on their own editors |
+
+**Staff > My Profile** shows a person their own record and a **My work** list that other modules fill through `IStaffHomeLinkProvider`. **Staff > Organization Chart** (Staff Organization Chart feature) draws the reporting line as a chart you can zoom, pan, expand and collapse, with each person's picture (from the User Avatars feature, else their initials), job title and main team, using [d3-org-chart](https://github.com/bumbeishvili/org-chart). **Settings > Staff** turns on **Offer only staff where people are assigned work**.
+
+### Teams are optional
+
+Staff doesn't need the Teams module. When Teams is on, it sets `StaffOptions.UsesTeams` and adds the Teams card, and Staff then uses team memberships for manager scoping (managers and schedulers of a team manage its members), the main team's time zone, the team filter, report columns and recipes. While Teams is off, Staff leaves team data alone.
 
 The user editor gets a **Staff** card that makes the person a staff member, or edits their record in place, for anyone who may manage them.
 
@@ -67,7 +87,7 @@ Register the services with `services.AddStaffCore()`; it is safe to repeat. `Add
 | `DisplayDriver<StaffMember>` | Adding a card to the staff editor (Workforce scheduling, Contact Center agent, Telephony phone, Skills, Pay, Badge). |
 | `AddStaffCapability(name, displayName, description, position)` | Registering a kind of work, shown as a checkbox in the editor and usable as a picker and list filter. Built-in registrations: `Agent` (Contact Center), `Technician` (Dispatch), `Bookable` (Scheduling), `Cashier` (Point of Sale). |
 | `IStaffLifecycleObserver` (`AddStaffLifecycleObserver`) | Reacting after a person is saved: `StaffChangedContext` tells whether they were just created, `Activated`, `Terminated`, whether the manager, user or teams changed. On termination, Workforce removes their future shifts, Dispatch unassigns their future visits, Contact Center signs them out and Telephony frees their extension. |
-| `IStaffHomeLinkProvider` (`AddStaffHomeLinkProvider`) | Adding links to **My Profile**: Workforce adds My Work and the schedule, Time Tracker adds My time. |
+| `IStaffHomeLinkProvider` (`AddStaffHomeLinkProvider`) | Adding links to the **My work** list of **My Profile**. Register it in the startup of the feature that owns the pages, so a link never points at a page that is off: the Workforce Portal feature adds My Work and the schedule, Time Tracker adds My time. |
 | `AddStaffScopePermissions(manageEveryone, manageOwn)` | Letting holders of another module's permissions manage staff. |
 | `ICatalogEntryHandler<StaffMember>` | The manager's lifecycle, such as Workforce writing its settings back before a save. |
 | Index providers on `StaffMember` | Querying a module's own data on staff, in the `Staff` collection. |

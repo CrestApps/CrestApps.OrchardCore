@@ -22,6 +22,8 @@
             <div class="ocat-wrapper"><label asp-for="EmploymentType" class="ocat-label">@T["Employment"]</label><div class="ocat-end"><select asp-for="EmploymentType" asp-items="Model.EmploymentTypeOptions" class="form-select" style="max-width: 18rem"></select></div></div>
             <div class="ocat-wrapper"><label asp-for="Status" class="ocat-label">@T["Status"]</label><div class="ocat-end"><select asp-for="Status" asp-items="Model.StatusOptions" class="form-select" style="max-width: 18rem"></select></div></div>
             <div class="ocat-wrapper"><label asp-for="HireDate" class="ocat-label">@T["Hire date"]</label><div class="ocat-end"><input asp-for="HireDate" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+            @if (Model.TeamOptions.Count > 0)
+            {
             <div class="ocat-wrapper">
                 <label asp-for="PrimaryTeamId" class="ocat-label">@T["Main team"]</label>
                 <div class="ocat-end">
@@ -31,6 +33,7 @@
                     <span class="hint">@T["They join it from today when they aren't in it yet; the teams they are in stay."]</span>
                 </div>
             </div>
+            }
             <div class="ocat-wrapper"><label asp-for="ContractedHoursPerWeek" class="ocat-label">@T["Contracted hours a week"]</label><div class="ocat-end"><input asp-for="ContractedHoursPerWeek" type="number" step="0.25" min="0" class="form-control" style="max-width: 10rem" /></div></div>
         </div>
     </div>

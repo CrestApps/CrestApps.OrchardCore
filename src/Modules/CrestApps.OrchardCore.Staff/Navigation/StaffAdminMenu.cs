@@ -39,13 +39,12 @@ public sealed class StaffAdminMenu : AdminNavigationProvider
                 .Permission(StaffPermissions.ViewOwnStaffProfile)
                 .LocalNav()));
 
-        builder.Add(S["Configuration"], configuration => configuration
-            .Add(S["Settings"], settings => settings
-                .Add(S["Staff"], S["Staff"].PrefixPosition(), staff => staff
-                    .Id("staffSettings")
-                    .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", Drivers.StaffSettingsDisplayDriver.GroupId } })
-                    .Permission(StaffPermissions.ManageStaff)
-                    .LocalNav())));
+        builder.Add(S["Settings"], settings => settings
+            .Add(S["Staff"], S["Staff"].PrefixPosition(), staff => staff
+                .Id("staffSettings")
+                .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", Drivers.StaffSettingsDisplayDriver.GroupId } })
+                .Permission(StaffPermissions.ManageStaff)
+                .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

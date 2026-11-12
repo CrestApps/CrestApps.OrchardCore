@@ -46,8 +46,10 @@ public static class StaffCoreServiceCollectionExtensions
         services.TryAddScoped<IStaffAccountService>(sp => sp.GetRequiredService<StaffAccounts>());
         services.TryAddScoped<StaffRoles>();
         services.AddTeamMemberProvider<StaffTeamMemberProvider>();
+        services.TryAddScoped<StaffTeamReader>();
         services.AddStaffLifecycleObserver<StaffRoleLifecycleObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserAudienceProvider, StaffUserAudienceProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserAudienceProvider, StaffUnlinkedUserAudienceProvider>());
 
         return services;
     }

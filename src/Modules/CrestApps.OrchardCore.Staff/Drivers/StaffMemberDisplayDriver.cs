@@ -1,8 +1,9 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Staff.Core.Handlers;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Staff.ViewModels;
-using CrestApps.OrchardCore.Teams.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -17,18 +18,15 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Staff.Drivers;
 
 /// <summary>
-/// The staff editor's own cards: the person, their employment, teams, place and capabilities. Other modules add their
-/// cards with their own drivers on <see cref="StaffMember"/>.
+/// The staff editor's own cards: the person, their employment and place, and the capabilities other modules register.
+/// Other modules add their cards with their own drivers on <see cref="StaffMember"/>: Teams adds the team memberships,
+/// Telephony the phone extension, Scheduling the booking settings, and so on.
 /// </summary>
 internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
 {
-    private const int EmptyMembershipRows = 2;
-
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IStaffScopeService _scopeService;
     private readonly IStaffDirectory _directory;
-    private readonly ITeamManager _teamManager;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly IClock _clock;
     private readonly IStringLocalizerFactory _localizerFactory;
@@ -38,9 +36,7 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
     public StaffMemberDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        IStaffScopeService scopeService,
         IStaffDirectory directory,
-        ITeamManager teamManager,
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         IClock clock,
         IStringLocalizerFactory localizerFactory,
@@ -49,9 +45,7 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
         _localizerFactory = localizerFactory;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
-        _scopeService = scopeService;
         _directory = directory;
-        _teamManager = teamManager;
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _clock = clock;
         S = stringLocalizer;
@@ -103,13 +97,6 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
             HomeBase = staff.HomeBase?.Address,
             ContractedHoursPerWeek = staff.ContractedHoursPerWeek,
             Capabilities = staff.Capabilities.ToList(),
-            Memberships = staff.TeamMemberships.Select(membership => new TeamMembershipRowViewModel
-            {
-                TeamId = membership.TeamId,
-                Role = membership.Role.ToString(),
-                EffectiveFrom = membership.EffectiveFrom,
-                EffectiveTo = membership.EffectiveTo,
-            }).ToList(),
         };
 
         return await EditorAsync(staff, values);
@@ -121,33 +108,15 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var principal = _httpContextAccessor.HttpContext?.User;
-        var scope = await _scopeService.GetScopeAsync(principal);
-        var memberships = (model.Memberships ?? [])
-            .Where(row => !string.IsNullOrEmpty(row.TeamId))
-            .Select(row => new TeamMembership
-            {
-                TeamId = row.TeamId,
-                Role = Enum.TryParse<TeamMemberRole>(row.Role, out var role) ? role : TeamMemberRole.Member,
-                EffectiveFrom = row.EffectiveFrom,
-                EffectiveTo = row.EffectiveTo,
-            })
-            .ToList();
-
-        // A manager can only add people to the teams they manage; memberships already there stay as they are.
-        var existing = staff.TeamMemberships.Select(membership => membership.TeamId).ToHashSet(StringComparer.Ordinal);
-
-        var refused = !scope.All && memberships.Any(membership => !existing.Contains(membership.TeamId) && !scope.CoversTeam(membership.TeamId));
-
-        if (refused)
+        // A staff member keeps the user account it was linked to: pay, history and badges never move to another
+        // person. A record without one can be linked once.
+        if (string.IsNullOrEmpty(staff.UserId))
         {
-            context.Updater.ModelState.AddModelError(Key(nameof(StaffEditViewModel.Memberships)), S["You can only add people to the teams you manage."]);
+            staff.UserId = string.IsNullOrWhiteSpace(model.UserId) ? null : model.UserId.Trim();
         }
 
-        staff.UserId = model.UserId;
-
         // A person with an account takes their name and e-mail from it when saved.
-        if (string.IsNullOrEmpty(model.UserId))
+        if (string.IsNullOrEmpty(staff.UserId))
         {
             staff.DisplayName = model.DisplayName;
             staff.Email = model.Email;
@@ -176,12 +145,6 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
             Latitude = homeBaseMoved ? null : staff.HomeBase?.Latitude,
             Longitude = homeBaseMoved ? null : staff.HomeBase?.Longitude,
         };
-        if (!refused)
-        {
-            staff.TeamMemberships = memberships;
-            staff.PrimaryTeamId = memberships.FirstOrDefault()?.TeamId;
-        }
-
         // Only registered capabilities are edited here; ones a module set and doesn't show stay.
         var registered = _directory.GetCapabilities().Select(capability => capability.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var chosen = (model.Capabilities ?? []).Where(registered.Contains);
@@ -199,19 +162,7 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
     private async Task<IDisplayResult> EditorAsync(StaffMember staff, StaffEditViewModel values)
     {
         var canSeeSensitive = await CanSeeSensitiveAsync();
-        var scope = await _scopeService.GetScopeAsync(_httpContextAccessor.HttpContext?.User);
-        var existingTeams = staff.TeamMemberships.Select(membership => membership.TeamId).ToHashSet(StringComparer.Ordinal);
-        var teamOptions = (await _teamManager.ListTreeAsync())
-            .Where(item => scope.CoversTeam(item.Team.ItemId) || existingTeams.Contains(item.Team.ItemId))
-            .Select(item => new SelectListItem(new string(' ', item.Depth * 4) + item.Team.Name, item.Team.ItemId))
-            .ToList();
         var timeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(values.TimeZoneId);
-        var memberships = (values.Memberships ?? []).ToList();
-
-        while (memberships.Count(row => string.IsNullOrEmpty(row.TeamId)) < EmptyMembershipRows)
-        {
-            memberships.Add(new TeamMembershipRowViewModel { Role = nameof(TeamMemberRole.Member) });
-        }
 
         var selectedCapabilities = (values.Capabilities ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var capabilityOptions = _directory.GetCapabilities().Select(capability => new StaffCapabilityOptionViewModel
@@ -222,13 +173,14 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
             Selected = selectedCapabilities.Contains(capability.Name),
         }).ToList();
 
-        return Initialize<StaffEditViewModel>("StaffMemberFields_Edit", model =>
+        var fields = Initialize<StaffEditViewModel>("StaffMemberFields_Edit", model =>
         {
             model.StaffMemberId = staff.ItemId;
             model.DisplayName = string.IsNullOrEmpty(values.UserId) ? values.DisplayName : staff.DisplayName ?? values.DisplayName;
             model.UserId = values.UserId;
             model.Email = string.IsNullOrEmpty(values.UserId) ? values.Email : staff.Email ?? values.Email;
             model.NameFromUser = !string.IsNullOrEmpty(values.UserId);
+            model.UserLocked = staff.TryGet<StaffSavedState>(out var saved) && !string.IsNullOrEmpty(saved.UserId);
             model.Phone = values.Phone;
             model.EmployeeNumber = values.EmployeeNumber;
             model.ExternalId = values.ExternalId;
@@ -245,14 +197,24 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
             model.WorkLocation = values.WorkLocation;
             model.HomeBase = values.HomeBase;
             model.ContractedHoursPerWeek = values.ContractedHoursPerWeek;
-            model.Memberships = memberships;
-            model.Capabilities = values.Capabilities;
-            model.TeamOptions = teamOptions;
             model.EmploymentTypeOptions = StaffSelectLists.EmploymentTypes(S, values.EmploymentType);
             model.StatusOptions = StaffSelectLists.Statuses(S, values.Status);
             model.TimeZoneOptions = timeZoneOptions;
-            model.CapabilityOptions = capabilityOptions;
         }).Location("Content:1");
+
+        if (capabilityOptions.Count == 0)
+        {
+            return fields;
+        }
+
+        // Its own shape, so a theme or module can move, replace or hide the card.
+        var capabilities = Initialize<StaffCapabilitiesEditViewModel>("StaffCapabilities_Edit", model =>
+        {
+            model.Capabilities = values.Capabilities;
+            model.CapabilityOptions = capabilityOptions;
+        }).Location("Content:20");
+
+        return Combine(fields, capabilities);
     }
 
     private async Task<bool> CanSeeSensitiveAsync()
@@ -261,9 +223,6 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
 
         return principal is not null && await _authorizationService.AuthorizeAsync(principal, StaffPermissions.ViewSensitiveStaffData);
     }
-
-    private string Key(string name)
-        => string.IsNullOrEmpty(Prefix) ? name : $"{Prefix}.{name}";
 }
 
 /// <summary>

@@ -98,3 +98,7 @@ When Workforce is on, **Manage workforce teams** grants **Manage teams** too, so
 ## Upgrading from Workforce teams
 
 Before this module, Workforce kept its teams as `WorkforceTeam` documents in the `Workforce` collection. On an existing site, the Workforce feature's migration (`WorkforceMigrations.UpdateFrom1Async`) runs after the Teams migration and moves them: each old document is read as JSON, saved as a `Team` in the `Teams` collection with the **same id** (worker memberships and every other record that names a team keep working), and its Workforce fields go into the team's `WorkforceTeamSettings`. A team already in the `Teams` collection is left as it is. The old documents and the old `Workforce_TeamIndex` table are then removed. The move runs on the migration's own connection and transaction.
+
+## Staff
+
+When the [Staff](./staff.md) module is on, Teams adds the **Teams** card (the `StaffTeams_Edit` shape) to the staff editor, where a person's dated team memberships and roles are kept, and turns on `StaffOptions.UsesTeams`, so Staff uses teams for manager scoping, time zones, filters and reports. A manager can only add people to the teams they manage.

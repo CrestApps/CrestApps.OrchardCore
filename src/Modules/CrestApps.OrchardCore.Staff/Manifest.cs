@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.Staff;
-using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
@@ -14,12 +14,11 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = StaffConstants.Features.Staff,
     Name = "Staff",
-    Description = "One record for the people who work for the business, with or without a user account: employment details, the reporting line, dated team memberships, capabilities other modules register, a staff directory and picker, employment history and a Staff role for working staff. Workforce, Contact Center, field service, Point of Sale and other modules build on it.",
+    Description = "One record for the people who work for the business, with or without a user account: employment details, the reporting line, capabilities other modules register, dated team memberships when Teams is on, a staff directory and picker, employment history and a Staff role for working staff. Workforce, Contact Center, field service, Point of Sale and other modules build on it.",
     Category = "Organization",
     Dependencies =
     [
         UsersConstants.Feature.Area,
-        TeamsConstants.Features.Teams,
         OrchardCoreFeatureIds.Roles,
     ]
 )]
@@ -49,10 +48,11 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = StaffConstants.Features.OrgChart,
     Name = "Staff Organization Chart",
-    Description = "An organization chart drawn from the reporting line: who reports to whom, with job titles and teams.",
+    Description = "A visual organization chart drawn from the reporting line: who reports to whom, with pictures, job titles and teams, that you can zoom, pan, expand and collapse.",
     Category = "Organization",
     Dependencies =
     [
         StaffConstants.Features.Staff,
+        ResourcesConstants.Feature.Area,
     ]
 )]

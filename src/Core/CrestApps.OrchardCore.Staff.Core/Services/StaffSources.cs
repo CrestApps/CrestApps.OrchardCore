@@ -492,3 +492,28 @@ internal sealed class StaffUserAudienceProvider : IUserAudienceProvider
         return string.IsNullOrWhiteSpace(_options.Value.RoleName) ? [] : [_options.Value.RoleName];
     }
 }
+
+/// <summary>
+/// The users who can still become a staff member: every user except those already linked to one.
+/// </summary>
+internal sealed class StaffUnlinkedUserAudienceProvider : IUserAudienceProvider
+{
+    private readonly StaffMemberStore _store;
+
+    public StaffUnlinkedUserAudienceProvider(StaffMemberStore store)
+    {
+        _store = store;
+    }
+
+    public string Name => StaffConstants.UnlinkedUserAudience;
+
+    public Task<IReadOnlyCollection<string>> GetRoleNamesAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyCollection<string>>(null);
+
+    public async Task<IReadOnlyCollection<string>> GetExcludedUserIdsAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default)
+    {
+        var linked = await _store.GetByUserIdsAsync(userIds, cancellationToken);
+
+        return [.. linked.Select(staff => staff.UserId)];
+    }
+}

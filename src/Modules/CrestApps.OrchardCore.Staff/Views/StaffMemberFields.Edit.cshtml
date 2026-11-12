@@ -6,8 +6,19 @@
         <div class="ocat-wrapper">
             <label asp-for="UserId" class="ocat-label">@T["User account"]</label>
             <div class="ocat-end">
-                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", multiple = false, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false })
-                <span class="hint">@T["Optional. Someone with no account can still be scheduled, assigned and paid, but can't sign in."]</span>
+                @if (Model.UserLocked)
+                {
+                    <div class="form-control-plaintext">
+                        <i class="fa-solid fa-lock text-secondary me-1" aria-hidden="true"></i>
+                        <a asp-area="OrchardCore.Users" asp-controller="Admin" asp-action="Edit" asp-route-id="@Model.UserId">@Model.DisplayName</a>
+                    </div>
+                    <span class="hint">@T["Linked for good, so their pay, history and badge never move to someone else. For another account, add a new staff member."]</span>
+                }
+                else
+                {
+                    @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.UserId).ToString(), selectedValues = new[] { Model.UserId }, valueType = "userId", multiple = false, audience = CrestApps.OrchardCore.Staff.StaffConstants.UnlinkedUserAudience, buttonText = T["Choose a user"].Value, searchPlaceholder = T["Search users"].Value, smallButton = false })
+                    <span class="hint">@T["Optional, and fixed once saved. Only accounts that aren't another staff member's are offered. Someone with no account can still be scheduled, assigned and paid, but can't sign in."]</span>
+                }
             </div>
         </div>
         @* A linked user account owns the name and email: show them, with the way to change them, instead of boxes that look editable. *@
@@ -66,39 +77,6 @@
 </div>
 
 <div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Teams"]</div>
-    <div class="card-body">
-        <div class="row g-2 fw-semibold small mb-1"><div class="col-md-5">@T["Team"]</div><div class="col-md-3">@T["Role"]</div><div class="col-md-2">@T["From"]</div><div class="col-md-2">@T["Until"]</div></div>
-        @for (var i = 0; i < Model.Memberships.Count; i++)
-        {
-            var row = Model.Memberships[i];
-            <div class="row g-2 mb-2">
-                <div class="col-md-5">
-                    <select name="@Html.NameFor(m => m.Memberships[i].TeamId)" class="form-select" aria-label="@T["Team"]">
-                        <option value="">@T["(none)"]</option>
-                        @foreach (var option in Model.TeamOptions)
-                        {
-                            <option value="@option.Value" selected="@(option.Value == row.TeamId)">@option.Text</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select name="@Html.NameFor(m => m.Memberships[i].Role)" class="form-select" aria-label="@T["Role"]">
-                        <option value="Member" selected="@(row.Role == "Member")">@T["Member"]</option>
-                        <option value="Lead" selected="@(row.Role == "Lead")">@T["Lead"]</option>
-                        <option value="Scheduler" selected="@(row.Role == "Scheduler")">@T["Scheduler"]</option>
-                        <option value="Manager" selected="@(row.Role == "Manager")">@T["Manager"]</option>
-                    </select>
-                </div>
-                <div class="col-md-2"><input type="date" name="@Html.NameFor(m => m.Memberships[i].EffectiveFrom)" value="@row.EffectiveFrom?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["From"]" /></div>
-                <div class="col-md-2"><input type="date" name="@Html.NameFor(m => m.Memberships[i].EffectiveTo)" value="@row.EffectiveTo?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["Until"]" /></div>
-            </div>
-        }
-        <span class="hint">@T["The first team is the main team. Managers and schedulers of a team manage its members, and those of the teams under it. Save to get more empty rows."]</span>
-    </div>
-</div>
-
-<div class="card text-bg-theme mb-3">
     <div class="card-header">@T["Place"]</div>
     <div class="card-body">
         <div class="ocat-wrapper"><label asp-for="WorkLocation" class="ocat-label">@T["Work location"]</label><div class="ocat-end"><input asp-for="WorkLocation" class="form-control" /><span class="hint">@T["The office, store or depot they work at."]</span></div></div>
@@ -106,28 +84,6 @@
         <div class="ocat-wrapper"><label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label><div class="ocat-end"><select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select" style="max-width: 22rem"><option value="">@T["The main team's time zone"]</option></select></div></div>
     </div>
 </div>
-
-@if (Model.CapabilityOptions.Count > 0)
-{
-    <div class="card text-bg-theme mb-3">
-        <div class="card-header">@T["Capabilities"]</div>
-        <div class="card-body">
-            <p class="hint">@T["The kinds of work they do. Pickers in other modules offer only the people with the right capability."]</p>
-            @foreach (var option in Model.CapabilityOptions)
-            {
-                var id = "staff-capability-" + option.Name;
-                <div class="form-check mb-2">
-                    <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(m => m.Capabilities)" value="@option.Name" checked="@option.Selected" />
-                    <label class="form-check-label" for="@id">@option.DisplayName</label>
-                    @if (!string.IsNullOrEmpty(option.Description))
-                    {
-                        <span class="hint dashed">@option.Description</span>
-                    }
-                </div>
-            }
-        </div>
-    </div>
-}
 
 <script at="Foot">
     (() => {

@@ -59,6 +59,60 @@ public sealed class StaffServicesTests
     }
 
     [Fact]
+    public async Task Validation_RefusesChangingOrRemovingTheLinkedUser_ButLetsAStaffMemberWithoutOneBeLinked()
+    {
+        // Arrange
+        await using var harness = await WorkforceTests.CreateAsync();
+        var linked = await WorkforceTests.AddWorkerAsync(harness, "Lee", staff => staff.UserId = "lee");
+        var unlinked = await WorkforceTests.AddWorkerAsync(harness, "Dana");
+
+        // Act
+        var errors = await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IStaffMemberManager>();
+            var changed = await manager.FindByIdAsync(linked.ItemId);
+            var removed = await manager.FindByIdAsync(linked.ItemId);
+            var linkedLater = await manager.FindByIdAsync(unlinked.ItemId);
+
+            changed.UserId = "someone-else";
+            removed.UserId = null;
+            linkedLater.UserId = "dana";
+
+            return (
+                Changed: (await manager.ValidateAsync(changed)).Errors.Select(error => error.ErrorMessage).ToArray(),
+                Removed: (await manager.ValidateAsync(removed)).Errors.Select(error => error.ErrorMessage).ToArray(),
+                LinkedLater: (await manager.ValidateAsync(linkedLater)).Errors.Select(error => error.ErrorMessage).ToArray());
+        }, commit: false);
+
+        // Assert
+        Assert.Contains(errors.Changed, error => error.StartsWith("A staff member's user account can't be changed or removed", StringComparison.Ordinal));
+        Assert.Contains(errors.Removed, error => error.StartsWith("A staff member's user account can't be changed or removed", StringComparison.Ordinal));
+        Assert.Empty(errors.LinkedLater);
+    }
+
+    [Fact]
+    public async Task UnlinkedUserAudience_LeavesOutTheUsersAlreadyLinkedToAStaffMember()
+    {
+        // Arrange
+        await using var harness = await WorkforceTests.CreateAsync();
+        await WorkforceTests.AddWorkerAsync(harness, "Lee", staff => staff.UserId = "lee");
+
+        // Act
+        var excluded = await harness.RunAsync(async services =>
+        {
+            var audience = services.GetServices<CrestApps.OrchardCore.Users.IUserAudienceProvider>().Single(provider => provider.Name == StaffConstants.UnlinkedUserAudience);
+
+            return (
+                Roles: await audience.GetRoleNamesAsync(),
+                Excluded: await audience.GetExcludedUserIdsAsync(["lee", "sam"]));
+        }, commit: false);
+
+        // Assert
+        Assert.Null(excluded.Roles);
+        Assert.Equal(["lee"], excluded.Excluded);
+    }
+
+    [Fact]
     public async Task Hierarchy_WalksTheManagerChain_AndFindsDirectAndIndirectReports()
     {
         // Arrange

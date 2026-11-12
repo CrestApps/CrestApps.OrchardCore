@@ -32,6 +32,12 @@ public static class StaffConstants
     public const string UserAudience = "Staff";
 
     /// <summary>
+    /// The user audience of the accounts that can still be linked to a staff member: every user who isn't linked to
+    /// one yet. The staff editor's user picker asks for it, since a user account belongs to one staff member only.
+    /// </summary>
+    public const string UnlinkedUserAudience = "StaffUnlinked";
+
+    /// <summary>
     /// The source recorded when Staff grants its role, for <c>IRoleGrantService</c>.
     /// </summary>
     public const string RoleGrantSource = "Staff";

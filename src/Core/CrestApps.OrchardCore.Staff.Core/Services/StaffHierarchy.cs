@@ -189,7 +189,7 @@ internal sealed class StaffScopeService : IStaffScopeService
                     .ToArray();
                 var teamIds = new HashSet<string>(StringComparer.Ordinal);
 
-                if (managedTeams.Length > 0)
+                if (_options.UsesTeams && managedTeams.Length > 0)
                 {
                     var teams = await _teamStore.ListAsync(cancellationToken);
 
@@ -241,12 +241,15 @@ internal sealed class StaffTimeZoneResolver : IStaffTimeZoneResolver
     private readonly TeamStore _teamStore;
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
+    private readonly StaffOptions _options;
 
     public StaffTimeZoneResolver(
         TeamStore teamStore,
         ISiteService siteService,
-        IClock clock)
+        IClock clock,
+        IOptions<StaffOptions> options)
     {
+        _options = options.Value;
         _teamStore = teamStore;
         _siteService = siteService;
         _clock = clock;
@@ -269,6 +272,11 @@ internal sealed class StaffTimeZoneResolver : IStaffTimeZoneResolver
         if (staffMember is not null && CalendarTimeZones.IsValid(staffMember.TimeZoneId))
         {
             return staffMember.TimeZoneId;
+        }
+
+        if (!_options.UsesTeams)
+        {
+            return null;
         }
 
         var visited = new HashSet<string>(StringComparer.Ordinal);

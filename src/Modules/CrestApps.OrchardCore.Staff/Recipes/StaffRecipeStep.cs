@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Core.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -25,12 +26,12 @@ internal sealed class StaffRecipeStep : NamedRecipeStepHandler
     };
 
     private readonly IStaffMemberManager _staffManager;
-    private readonly ITeamManager _teamManager;
+    private readonly StaffTeamReader _teamManager;
     private readonly UserManager<IUser> _userManager;
 
     public StaffRecipeStep(
         IStaffMemberManager staffManager,
-        ITeamManager teamManager,
+        StaffTeamReader teamManager,
         UserManager<IUser> userManager)
         : base(StaffConstants.RecipeStepName)
     {
@@ -96,7 +97,8 @@ internal sealed class StaffRecipeStep : NamedRecipeStepHandler
                 staff.Capabilities = values.Capabilities;
             }
 
-            if (node["teams"] is JsonArray teamNodes)
+            // Team memberships are only read while the Teams module is on.
+            if (_teamManager.UsesTeams && node["teams"] is JsonArray teamNodes)
             {
                 staff.TeamMemberships = [];
 

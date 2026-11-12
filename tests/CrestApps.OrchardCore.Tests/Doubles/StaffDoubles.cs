@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -15,7 +16,8 @@ namespace CrestApps.OrchardCore.Tests.Doubles;
 public static class StaffDoubles
 {
     /// <summary>
-    /// Registers an in-memory user directory, role grants and role manager, and an HTTP context accessor.
+    /// Registers an in-memory user directory, role grants and role manager, an HTTP context accessor, and turns team
+    /// memberships on as the Teams module does.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The service collection.</returns>
@@ -26,6 +28,9 @@ public static class StaffDoubles
         services.TryAddSingleton<RecordingRoleGrantService>();
         services.TryAddSingleton<IRoleGrantService>(provider => provider.GetRequiredService<RecordingRoleGrantService>());
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+        // The tests stand in for a site with the Teams module on, which turns team memberships on for Staff.
+        services.Configure<StaffOptions>(options => options.UsesTeams = true);
         services.TryAddScoped(_ =>
         {
             var roleStore = new Mock<IRoleStore<IRole>>();

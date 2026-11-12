@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Core.Services;
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.OrchardCore.Staff.Models;
@@ -119,7 +120,7 @@ public sealed class FindStaffTool : StaffAIToolBase
     /// <inheritdoc />
     protected override async Task<object> InvokeAsync(AIFunctionArguments arguments, IServiceProvider services, ClaimsPrincipal user, CancellationToken cancellationToken)
     {
-        var teams = await services.GetRequiredService<ITeamManager>().GetAllAsync(cancellationToken);
+        var teams = await services.GetRequiredService<StaffTeamReader>().GetAllAsync(cancellationToken);
         var teamName = Read(arguments, "teamName");
         var team = teamName is null ? null : teams.FirstOrDefault(item => string.Equals(item.Name, teamName, StringComparison.OrdinalIgnoreCase));
 

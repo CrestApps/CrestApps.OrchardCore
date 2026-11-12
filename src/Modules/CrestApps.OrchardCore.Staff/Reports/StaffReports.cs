@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Teams.Core.Indexes;
 using CrestApps.OrchardCore.Teams;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DataSources;
 using OrchardCore.Localization;
 using YesSql;
@@ -67,6 +68,7 @@ public sealed class StaffMembersReportDataSet : IndexedReportDataSet<StaffMember
     /// </summary>
     public const string DataSetName = "StaffMembers";
 
+    private readonly StaffOptions _options;
     private Dictionary<string, string> _teams = new(StringComparer.Ordinal);
     private Dictionary<string, string> _people = new(StringComparer.Ordinal);
 
@@ -75,10 +77,12 @@ public sealed class StaffMembersReportDataSet : IndexedReportDataSet<StaffMember
     /// </summary>
     /// <param name="session">The session.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="options">The Staff options, which say whether teams are in use.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public StaffMembersReportDataSet(ISession session, IAuthorizationService authorizationService, IStringLocalizer<StaffMembersReportDataSet> stringLocalizer)
+    public StaffMembersReportDataSet(ISession session, IAuthorizationService authorizationService, IOptions<StaffOptions> options, IStringLocalizer<StaffMembersReportDataSet> stringLocalizer)
         : base(new DataSetDescriptor(DataSetName, stringLocalizer["Staff members"], stringLocalizer["One row per staff member: job title, main team, manager, employment, status, capabilities, and when they were hired and left."]), session, authorizationService, StaffConstants.CollectionName, StaffPermissions.ViewStaff)
     {
+        _options = options.Value;
         var S = stringLocalizer;
         var group = S["Staff"].Value;
 
@@ -116,7 +120,8 @@ public sealed class StaffMembersReportDataSet : IndexedReportDataSet<StaffMember
     /// <returns>No narrowing.</returns>
     protected override async Task<Func<IQueryIndex<StaffMemberIndex>, IQueryIndex<StaffMemberIndex>>> RestrictAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        _teams = (await Session.QueryIndex<TeamIndex>(collection: TeamsConstants.CollectionName).ListAsync(cancellationToken))
+        // The team tables belong to the Teams module and only exist while it is on.
+        _teams = !_options.UsesTeams ? new(StringComparer.Ordinal) : (await Session.QueryIndex<TeamIndex>(collection: TeamsConstants.CollectionName).ListAsync(cancellationToken))
             .GroupBy(index => index.ItemId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First().Name, StringComparer.Ordinal);
         _people = (await Session.QueryIndex<StaffMemberIndex>(collection: StaffConstants.CollectionName).ListAsync(cancellationToken))

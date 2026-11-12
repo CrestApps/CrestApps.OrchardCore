@@ -14,14 +14,19 @@ internal sealed class DefaultUserSearchService : IUserSearchService
     private readonly ISession _session;
     private readonly ILookupNormalizer _normalizer;
     private readonly IDisplayNameProvider _displayNameProvider;
+    private const int MaxAudiencePages = 10;
+
     private readonly IEnumerable<IUserAudienceProvider> _audienceProviders;
+    private readonly IEnumerable<IUserAvatarProvider> _avatarProviders;
 
     public DefaultUserSearchService(
         ISession session,
         ILookupNormalizer normalizer,
         IDisplayNameProvider displayNameProvider,
-        IEnumerable<IUserAudienceProvider> audienceProviders)
+        IEnumerable<IUserAudienceProvider> audienceProviders,
+        IEnumerable<IUserAvatarProvider> avatarProviders)
     {
+        _avatarProviders = avatarProviders;
         _session = session;
         _normalizer = normalizer;
         _displayNameProvider = displayNameProvider;
@@ -35,10 +40,13 @@ internal sealed class DefaultUserSearchService : IUserSearchService
         var search = _session.Query<User>();
 
         IEnumerable<string> requestedRoles = query.Roles ?? [];
+        IUserAudienceProvider audience = null;
 
         if (!string.IsNullOrWhiteSpace(query.Audience)
-            && _audienceProviders.FirstOrDefault(provider => string.Equals(provider.Name, query.Audience.Trim(), StringComparison.OrdinalIgnoreCase)) is { } audience)
+            && _audienceProviders.FirstOrDefault(provider => string.Equals(provider.Name, query.Audience.Trim(), StringComparison.OrdinalIgnoreCase)) is { } found)
         {
+            audience = found;
+
             // No roles at all means the audience isn't limited now; an empty list means it has no members.
             if (await audience.GetRoleNamesAsync(cancellationToken) is { } audienceRoles)
             {
@@ -87,12 +95,38 @@ internal sealed class DefaultUserSearchService : IUserSearchService
             }
         }
 
-        var found = await users
-            .OrderBy(index => index.NormalizedUserName)
-            .Take(Math.Max(1, query.MaxResults))
-            .ListAsync(cancellationToken);
+        var take = Math.Max(1, query.MaxResults);
+        var ordered = users.OrderBy(index => index.NormalizedUserName);
 
-        return await ToResultsAsync(found, cancellationToken);
+        if (audience is null)
+        {
+            return await ToResultsAsync(await ordered.Take(take).ListAsync(cancellationToken), cancellationToken);
+        }
+
+        // The audience may leave out some of the users found, so later pages are read until the list is full.
+        var kept = new List<User>();
+
+        for (var page = 0; page < MaxAudiencePages && kept.Count < take; page++)
+        {
+            var batch = (await ordered.Skip(page * take).Take(take).ListAsync(cancellationToken)).ToList();
+
+            if (batch.Count == 0)
+            {
+                break;
+            }
+
+            var excluded = await audience.GetExcludedUserIdsAsync([.. batch.Select(user => user.UserId)], cancellationToken);
+            var excludedIds = excluded is { Count: > 0 } ? excluded.ToHashSet(StringComparer.Ordinal) : null;
+
+            kept.AddRange(batch.Where(user => excludedIds is null || !excludedIds.Contains(user.UserId)).Take(take - kept.Count));
+
+            if (batch.Count < take)
+            {
+                break;
+            }
+        }
+
+        return await ToResultsAsync(kept, cancellationToken);
     }
 
     public async Task<IReadOnlyList<UserSearchResult>> GetAsync(IEnumerable<string> userIds, CancellationToken cancellationToken = default)
@@ -112,6 +146,19 @@ internal sealed class DefaultUserSearchService : IUserSearchService
         return await ToResultsAsync(users, cancellationToken);
     }
 
+    private async Task<string> GetAvatarUrlAsync(User user, CancellationToken cancellationToken)
+    {
+        foreach (var provider in _avatarProviders)
+        {
+            if (await provider.GetAvatarUrlAsync(user, cancellationToken) is { Length: > 0 } url)
+            {
+                return url;
+            }
+        }
+
+        return null;
+    }
+
     private async Task<IReadOnlyList<UserSearchResult>> ToResultsAsync(IEnumerable<User> users, CancellationToken cancellationToken)
     {
         var results = new List<UserSearchResult>();
@@ -126,6 +173,7 @@ internal sealed class DefaultUserSearchService : IUserSearchService
                 Email = user.Email,
                 DisplayName = await _displayNameProvider.GetAsync(user, cancellationToken),
                 IsEnabled = user.IsEnabled,
+                AvatarUrl = await GetAvatarUrlAsync(user, cancellationToken),
             });
         }
 

@@ -11,6 +11,8 @@ using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Staff.ViewModels;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
+using CrestApps.OrchardCore.Teams.Staff;
+using CrestApps.OrchardCore.Teams.ViewModels;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Workforce;
@@ -19,6 +21,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
@@ -35,7 +38,7 @@ namespace CrestApps.OrchardCore.Tests.Staff;
 public sealed class StaffEditorDriverTests
 {
     [Fact]
-    public async Task StaffDriver_FillsTheEditorFromTheRecord_WithEmptyTeamRows_AndHidesTheBirthDateFromThoseWhoCantSeeIt()
+    public async Task StaffDriver_FillsTheEditorFromTheRecord_AndHidesTheBirthDateFromThoseWhoCantSeeIt()
     {
         // Arrange
         await using var harness = await WorkforceTests.CreateAsync();
@@ -62,9 +65,6 @@ public sealed class StaffEditorDriverTests
         Assert.Equal("Lee Park", allowed.DisplayName);
         Assert.Equal("Plumber", allowed.JobTitle);
         Assert.Equal(nameof(StaffStatus.OnLeave), allowed.Status);
-        Assert.Equal([team.ItemId, null, null], allowed.Memberships.Select(row => row.TeamId));
-        Assert.Equal(nameof(TeamMemberRole.Lead), allowed.Memberships[0].Role);
-        Assert.Equal([team.ItemId], allowed.TeamOptions.Select(option => option.Value));
         Assert.True(allowed.CanSeeSensitive);
         Assert.Equal(new DateOnly(1990, 5, 1), allowed.DateOfBirth);
         Assert.False(denied.CanSeeSensitive);
@@ -76,7 +76,6 @@ public sealed class StaffEditorDriverTests
     {
         // Arrange
         await using var harness = await WorkforceTests.CreateAsync(services => services.AddStaffCapability("Technician", new("Technician")));
-        var team = await WorkforceTests.AddTeamAsync(harness, "Plumbers", TeamKind.Team);
         var staff = new StaffMember
         {
             DateOfBirth = new DateOnly(1990, 5, 1),
@@ -92,11 +91,6 @@ public sealed class StaffEditorDriverTests
             HomeBase = " 2 Main St ",
             WorkLocation = "Depot",
             Capabilities = ["Technician", "Made up"],
-            Memberships =
-            [
-                new TeamMembershipRowViewModel { TeamId = team.ItemId, Role = nameof(TeamMemberRole.Scheduler) },
-                new TeamMembershipRowViewModel(),
-            ],
         };
         var context = PostedFormUpdateModel.CreateContext(posted);
 
@@ -113,32 +107,90 @@ public sealed class StaffEditorDriverTests
         Assert.Null(staff.HomeBase.Latitude);
         Assert.Equal("Depot", staff.WorkLocation);
         Assert.Equal(["SetByAnotherModule", "Technician"], staff.Capabilities);
-        Assert.Equal(team.ItemId, Assert.Single(staff.TeamMemberships).TeamId);
-        Assert.Equal(TeamMemberRole.Scheduler, staff.TeamMemberships[0].Role);
-        Assert.Equal(team.ItemId, staff.PrimaryTeamId);
     }
 
     [Fact]
-    public async Task StaffDriver_RefusesTeamsTheManagerDoesntManage_UnderItsPrefix()
+    public async Task StaffDriver_KeepsTheLinkedUserOfASavedStaffMember_AndLinksOneToAStaffMemberWithoutOne()
+    {
+        // Arrange
+        await using var harness = await WorkforceTests.CreateAsync();
+        var linked = new StaffMember { DisplayName = "Lee Park", UserId = "lee" };
+        var unlinked = new StaffMember { DisplayName = "Dana Reyes" };
+        var linkedContext = PostedFormUpdateModel.CreateContext(new StaffEditViewModel { UserId = "someone-else" });
+        var unlinkedContext = PostedFormUpdateModel.CreateContext(new StaffEditViewModel { DisplayName = "Dana Reyes", UserId = " dana " });
+
+        // Act
+        await harness.RunAsync(async services =>
+        {
+            var driver = (IDisplayDriver<StaffMember>)CreateStaffDriver(services, Grants.All);
+
+            await driver.UpdateEditorAsync(linked, linkedContext);
+            await driver.UpdateEditorAsync(unlinked, unlinkedContext);
+        }, commit: false);
+
+        // Assert
+        Assert.Equal("lee", linked.UserId);
+        Assert.Equal("dana", unlinked.UserId);
+    }
+
+    [Fact]
+    public async Task TeamsDriver_FillsTheTeamRows_AndAppliesThePostedMemberships_UnderItsOwnPrefix()
+    {
+        // Arrange
+        await using var harness = await WorkforceTests.CreateAsync();
+        var team = await WorkforceTests.AddTeamAsync(harness, "Plumbers", TeamKind.Team);
+        var shown = new StaffMember { TeamMemberships = [new TeamMembership { TeamId = team.ItemId, Role = TeamMemberRole.Lead }] };
+        var saved = new StaffMember();
+        var context = PostedFormUpdateModel.CreateContext(new StaffTeamsEditViewModel
+        {
+            Memberships =
+            [
+                new StaffTeamMembershipRowViewModel { TeamId = team.ItemId, Role = nameof(TeamMemberRole.Scheduler) },
+                new StaffTeamMembershipRowViewModel(),
+            ],
+        });
+
+        // Act
+        var model = await harness.RunAsync(async services =>
+        {
+            var driver = (IDisplayDriver<StaffMember>)CreateTeamsDriver(services);
+            var result = await driver.BuildEditorAsync(shown, PostedFormUpdateModel.CreateContext(null));
+
+            await driver.UpdateEditorAsync(saved, context);
+
+            return Assert.Single(await DisplayResultModels.BuildAsync<StaffTeamsEditViewModel>(result));
+        }, commit: false);
+
+        // Assert
+        Assert.Equal([team.ItemId, null, null], model.Memberships.Select(row => row.TeamId));
+        Assert.Equal(nameof(TeamMemberRole.Lead), model.Memberships[0].Role);
+        Assert.Equal([team.ItemId], model.TeamOptions.Select(option => option.Value));
+        Assert.True(context.Updater.ModelState.IsValid);
+        Assert.Equal(TeamMemberRole.Scheduler, Assert.Single(saved.TeamMemberships).Role);
+        Assert.Equal(team.ItemId, saved.PrimaryTeamId);
+    }
+
+    [Fact]
+    public async Task TeamsDriver_RefusesTeamsTheManagerDoesntManage_UnderItsPrefix()
     {
         // Arrange
         await using var harness = await WorkforceTests.CreateAsync();
         var managed = await WorkforceTests.AddTeamAsync(harness, "Plumbers", TeamKind.Team);
         var other = await WorkforceTests.AddTeamAsync(harness, "Electricians", TeamKind.Team);
-        var posted = new StaffEditViewModel { DisplayName = "Lee Park", Memberships = [new TeamMembershipRowViewModel { TeamId = other.ItemId }] };
+        var posted = new StaffTeamsEditViewModel { Memberships = [new StaffTeamMembershipRowViewModel { TeamId = other.ItemId }] };
         var context = PostedFormUpdateModel.CreateContext(posted, isNew: true);
         var scope = new StaffScope(false, new HashSet<string>(StringComparer.Ordinal) { managed.ItemId }, new HashSet<string>(StringComparer.Ordinal));
 
         // Act
         var model = await harness.RunAsync(async services =>
         {
-            var result = await ((IDisplayDriver<StaffMember>)CreateStaffDriver(services, Grants.All, scope)).UpdateEditorAsync(new StaffMember(), context);
+            var result = await ((IDisplayDriver<StaffMember>)CreateTeamsDriver(services, scope)).UpdateEditorAsync(new StaffMember(), context);
 
-            return Assert.Single(await DisplayResultModels.BuildAsync<StaffEditViewModel>(result));
+            return Assert.Single(await DisplayResultModels.BuildAsync<StaffTeamsEditViewModel>(result));
         }, commit: false);
 
         // Assert
-        Assert.Equal(["You can only add people to the teams you manage."], context.Updater.ModelState["StaffMember.Memberships"].Errors.Select(error => error.ErrorMessage));
+        Assert.Equal(["You can only add people to the teams you manage."], context.Updater.ModelState["StaffTeams.Memberships"].Errors.Select(error => error.ErrorMessage));
         Assert.Equal([managed.ItemId], model.TeamOptions.Select(option => option.Value));
     }
 
@@ -152,9 +204,13 @@ public sealed class StaffEditorDriverTests
         new global::CrestApps.OrchardCore.Staff.Startup().ConfigureServices(services);
         new global::CrestApps.OrchardCore.Staff.SkillsStartup().ConfigureServices(services);
         new global::CrestApps.OrchardCore.Workforce.Startup().ConfigureServices(services);
+        new global::CrestApps.OrchardCore.Teams.StaffStartup().ConfigureServices(services);
 
         // Assert
         var drivers = services.Where(descriptor => descriptor.ServiceType == typeof(IDisplayDriver<StaffMember>)).Select(descriptor => descriptor.ImplementationType).ToList();
+
+        Assert.Contains(typeof(StaffTeamsDisplayDriver), drivers);
+        Assert.True(services.BuildServiceProvider().GetRequiredService<IOptions<StaffOptions>>().Value.UsesTeams);
 
         Assert.Contains(typeof(StaffMemberDisplayDriver), drivers);
         Assert.Contains(typeof(StaffSkillsDisplayDriver), drivers);
@@ -218,22 +274,27 @@ public sealed class StaffEditorDriverTests
         return Assert.Single(await DisplayResultModels.BuildAsync<StaffEditViewModel>(result));
     }
 
-    private static StaffMemberDisplayDriver CreateStaffDriver(IServiceProvider services, string[] grants, StaffScope scope = null)
+    private static StaffMemberDisplayDriver CreateStaffDriver(IServiceProvider services, string[] grants)
+        => new(
+            Authorization(grants),
+            CreateHttpContextAccessor(services),
+            services.GetRequiredService<IStaffDirectory>(),
+            Mock.Of<ITimeZoneSelectListProvider>(),
+            services.GetRequiredService<IClock>(),
+            new SourceTextLocalizerFactory(),
+            services.GetRequiredService<IStringLocalizer<StaffMemberDisplayDriver>>());
+
+    private static StaffTeamsDisplayDriver CreateTeamsDriver(IServiceProvider services, StaffScope scope = null)
     {
         var scopes = new Mock<IStaffScopeService>();
 
         scopes.Setup(service => service.GetScopeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>())).ReturnsAsync(scope ?? StaffScope.Everyone);
 
-        return new StaffMemberDisplayDriver(
-            Authorization(grants),
-            CreateHttpContextAccessor(services),
-            scopes.Object,
-            services.GetRequiredService<IStaffDirectory>(),
+        return new StaffTeamsDisplayDriver(
             services.GetRequiredService<ITeamManager>(),
-            Mock.Of<ITimeZoneSelectListProvider>(),
-            services.GetRequiredService<IClock>(),
-            new SourceTextLocalizerFactory(),
-            services.GetRequiredService<IStringLocalizer<StaffMemberDisplayDriver>>());
+            scopes.Object,
+            CreateHttpContextAccessor(services),
+            services.GetRequiredService<IStringLocalizer<StaffTeamsDisplayDriver>>());
     }
 
     private static StaffSkillsDisplayDriver CreateSkillsDriver(IServiceProvider services)

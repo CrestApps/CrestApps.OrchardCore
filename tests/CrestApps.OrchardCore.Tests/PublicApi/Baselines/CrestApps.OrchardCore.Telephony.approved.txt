@@ -481,7 +481,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     }
     public sealed class TelephonyExtensionsAdminMenu : OrchardCore.Navigation.AdminNavigationProvider
     {
-        public TelephonyExtensionsAdminMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.TelephonyExtensionsAdminMenu> stringLocalizer) { }
+        public TelephonyExtensionsAdminMenu(OrchardCore.Environment.Shell.IShellFeaturesManager shellFeaturesManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.TelephonyExtensionsAdminMenu> stringLocalizer) { }
         protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
     }
     public sealed class TelephonyInteractionSynchronizationService : CrestApps.OrchardCore.Telephony.ITelephonyInteractionSynchronizationService
