@@ -27,6 +27,8 @@ public static class ApiProblems
         public const string Unsupported = "unsupported";
 
         public const string IdempotencyInProgress = "idempotency-in-progress";
+
+        public const string PaymentInProgress = "payment-in-progress";
     }
 
     /// <summary>

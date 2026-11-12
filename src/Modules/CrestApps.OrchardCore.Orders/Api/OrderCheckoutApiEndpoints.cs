@@ -41,13 +41,15 @@ internal static class OrderCheckoutApiEndpoints
             .WithName("ApplyCheckoutGiftCard")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Puts a gift card toward the checkout, by its code.");
+            .WithSummary("Puts a gift card toward the checkout, by its code.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapDelete("checkout/{id}/gift-cards/{giftCardId}", RemoveGiftCardAsync)
             .AllowGuests()
             .WithName("RemoveCheckoutGiftCard")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Takes a gift card off the checkout. The gift card's id is the reference of its tender.");
+            .WithSummary("Takes a gift card off the checkout. The gift card's id is the reference of its tender.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         return routes;
     }

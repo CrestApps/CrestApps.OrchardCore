@@ -35,7 +35,7 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// </remarks>
 public sealed class DefaultCheckoutEngine : ICheckoutEngine
 {
-    private const string SessionLockPrefix = "CHECKOUT_SESSION_";
+    internal const string SessionLockPrefix = "CHECKOUT_SESSION_";
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);

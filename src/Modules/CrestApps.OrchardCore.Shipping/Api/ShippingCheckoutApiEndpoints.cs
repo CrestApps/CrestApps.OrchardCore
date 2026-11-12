@@ -38,7 +38,8 @@ internal static class ShippingCheckoutApiEndpoints
             .AllowGuests()
             .WithName("SaveCheckoutShipping")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Saves the Shipping step: a pickup location, or an address and one of its rates. With several rates and none chosen, the answer asks for rateId.");
+            .WithSummary("Saves the Shipping step: a pickup location, or an address and one of its rates. With several rates and none chosen, the answer asks for rateId.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         return routes;
     }

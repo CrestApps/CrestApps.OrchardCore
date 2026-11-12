@@ -37,13 +37,15 @@ internal static class CheckoutApiEndpoints
             .WithName("ApplyCheckoutCode")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Puts a discount code on the checkout.");
+            .WithSummary("Puts a discount code on the checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapDelete("checkout/{id}/codes/{code}", RemoveCodeAsync)
             .AllowGuests()
             .WithName("RemoveCheckoutCode")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Takes a discount code off the checkout.");
+            .WithSummary("Takes a discount code off the checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapGet("checkout/{id}/payment-methods", GetPaymentMethodsAsync)
             .AllowGuests()

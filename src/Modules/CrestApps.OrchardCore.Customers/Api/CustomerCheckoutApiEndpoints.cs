@@ -28,7 +28,8 @@ internal static class CustomerCheckoutApiEndpoints
             .AllowGuests()
             .WithName("SaveCheckoutContact")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Saves the Contact step: who the buyer is, and their billing address when the store asks for one.");
+            .WithSummary("Saves the Contact step: who the buyer is, and their billing address when the store asks for one.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         return routes;
     }
@@ -41,12 +42,14 @@ internal static class CustomerCheckoutApiEndpoints
             .WithName("ApplyCheckoutStoreCredit")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Puts the signed-in buyer's store credit toward the checkout.");
+            .WithSummary("Puts the signed-in buyer's store credit toward the checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapDelete("checkout/{id}/store-credit", RemoveStoreCreditAsync)
             .WithName("RemoveCheckoutStoreCredit")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Takes the buyer's store credit off the checkout.");
+            .WithSummary("Takes the buyer's store credit off the checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         return routes;
     }
@@ -59,12 +62,14 @@ internal static class CustomerCheckoutApiEndpoints
             .WithName("ApplyCheckoutPoints")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Spends the signed-in buyer's loyalty points on the checkout.");
+            .WithSummary("Spends the signed-in buyer's loyalty points on the checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapDelete("checkout/{id}/points", RemovePointsAsync)
             .WithName("RemoveCheckoutPoints")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Takes the buyer's points off the checkout.");
+            .WithSummary("Takes the buyer's points off the checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         return routes;
     }

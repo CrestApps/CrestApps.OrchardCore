@@ -63,6 +63,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<PaymentIssueIndexProvider>();
         services.AddScoped<ICheckoutReconciliationService, CheckoutReconciliationService>();
         services.AddScoped<ICheckoutEngine, DefaultCheckoutEngine>();
+
+        // An edit sets aside a payment begun for the old total, so the buyer pays the new one.
+        services.AddScoped<ICheckoutPaymentReleaseService, CheckoutPaymentReleaseService>();
         services.AddScoped<ICheckoutPaymentProviderResolver, CheckoutPaymentProviderResolver>();
         services.AddScoped<ICheckoutRecurringPaymentProviderResolver, CheckoutRecurringPaymentProviderResolver>();
 
