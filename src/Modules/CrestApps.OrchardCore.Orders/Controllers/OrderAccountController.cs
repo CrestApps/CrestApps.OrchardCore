@@ -27,7 +27,6 @@ public sealed class OrderAccountController : Controller
     private readonly IOrderStore _orderStore;
     private readonly OrderAccountClaims _claims;
     private readonly UserManager<IUser> _userManager;
-    private readonly SignInManager<IUser> _signInManager;
     private readonly IPaymentAttemptLimiter _limiter;
     private readonly INotifier _notifier;
     private readonly ICommerceEmailSender _emailSender;
@@ -40,7 +39,6 @@ public sealed class OrderAccountController : Controller
         IOrderStore orderStore,
         OrderAccountClaims claims,
         UserManager<IUser> userManager,
-        SignInManager<IUser> signInManager,
         IPaymentAttemptLimiter limiter,
         INotifier notifier,
         ICommerceEmailSender emailSender,
@@ -51,7 +49,6 @@ public sealed class OrderAccountController : Controller
         _orderStore = orderStore;
         _claims = claims;
         _userManager = userManager;
-        _signInManager = signInManager;
         _limiter = limiter;
         _notifier = notifier;
         _emailSender = emailSender;
@@ -99,7 +96,9 @@ public sealed class OrderAccountController : Controller
         }
 
         var registration = HttpContext.RequestServices.GetService<IOptions<RegistrationOptions>>()?.Value;
-        var mustConfirm = registration?.UsersMustValidateEmail == true;
+
+        // The address comes from the order, which anyone could have typed, so this account always confirms it before it is
+        // signed in, whatever the site's registration settings say (SEC-C17h).
         var user = new User
         {
             UserName = await NewUserNameAsync(email),
@@ -129,18 +128,10 @@ public sealed class OrderAccountController : Controller
             return LocalRedirect(back);
         }
 
-        if (mustConfirm)
-        {
-            await SendConfirmationAsync(user);
-            await _notifier.SuccessAsync(H["Your account was created. We sent a link to {0}; open it to confirm your email, then sign in.", email]);
+        await SendConfirmationAsync(user);
+        await _notifier.SuccessAsync(H["Your account was created. We sent a link to {0}; open it to confirm your email, then sign in.", email]);
 
-            return LocalRedirect(back);
-        }
-
-        await _signInManager.SignInAsync(user, isPersistent: false);
-        await _notifier.SuccessAsync(H["Your account was created, and this order is in it."]);
-
-        return RedirectToRoute("AccountOrder", new { orderId = order.ItemId });
+        return LocalRedirect(back);
     }
 
     // The account signs in with its email; its user name only has to be unique, and many sites allow letters and

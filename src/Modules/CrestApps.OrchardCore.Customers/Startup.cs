@@ -64,7 +64,6 @@ public sealed class Startup : StartupBase
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
         services.AddScoped<ILoginFormEvent, CustomerMergeLoginFormEvent>();
-        services.AddScoped<IRegistrationFormEvents, CustomerMergeRegistrationFormEvents>();
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
 
         services.AddScoped<CustomerAddressBook>();

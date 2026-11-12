@@ -31,6 +31,7 @@ public sealed class EmailSignInController : Controller
     private readonly IEmailService _emailService;
     private readonly ISiteService _siteService;
     private readonly IEnumerable<ILoginFormEvent> _loginFormEvents;
+    private readonly IClock _clock;
     private readonly EmailSignInOptions _options;
     private readonly ILogger _logger;
 
@@ -43,11 +44,13 @@ public sealed class EmailSignInController : Controller
         IEmailService emailService,
         ISiteService siteService,
         IEnumerable<ILoginFormEvent> loginFormEvents,
+        IClock clock,
         IOptions<EmailSignInOptions> options,
         ILogger<EmailSignInController> logger,
         IStringLocalizer<EmailSignInController> stringLocalizer)
     {
         _loginFormEvents = loginFormEvents;
+        _clock = clock;
         _options = options.Value;
         _userManager = userManager;
         _signInManager = signInManager;
@@ -148,10 +151,11 @@ public sealed class EmailSignInController : Controller
 
         await _userManager.ResetAccessFailedCountAsync(user);
 
-        // The code proves the email is theirs.
-        if (user is User account && !account.EmailConfirmed)
+        // The code proves the email is theirs, by a round trip, which is what lets a user claim what belongs to the address.
+        if (user is User account && (!account.EmailConfirmed || !UserEmailOwnership.IsVerified(account.Properties)))
         {
             account.EmailConfirmed = true;
+            UserEmailOwnership.MarkVerified(account.Properties, _clock.UtcNow);
             await _userManager.UpdateAsync(account);
         }
 

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Users;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking;
@@ -73,7 +74,7 @@ public sealed class CustomerMergeTests
         var second = AddGuest("g2", "PAT@example.test", Home());
         AddGuest("g3", "someone@example.test");
 
-        var merged = await CreateService(new User { UserId = "user-1", UserName = "pat", Email = "pat@example.test", EmailConfirmed = true })
+        var merged = await CreateService(VerifiedUser())
             .MergeVerifiedGuestsAsync("user-1", TestContext.Current.CancellationToken);
 
         var account = _store.Customers.Single(customer => customer.UserId == "user-1");
@@ -104,11 +105,37 @@ public sealed class CustomerMergeTests
         Assert.Empty(_handled);
     }
 
+    /// <summary>
+    /// SEC-C3: a site that doesn't ask users to confirm their email marks it confirmed at registration, so anyone who
+    /// registered with a guest buyer's address took over their orders. EmailConfirmed alone is no longer enough: the user
+    /// must have proved they control the mailbox by a round trip.
+    /// </summary>
+    [Fact]
+    public async Task AConfirmedEmailWithoutARoundTrip_MergesNothing()
+    {
+        var guest = AddGuest("g1", "pat@example.test");
+
+        var merged = await CreateService(new User { UserId = "user-1", UserName = "pat", Email = "pat@example.test", EmailConfirmed = true })
+            .MergeVerifiedGuestsAsync("user-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, merged);
+        Assert.Equal(CustomerStatus.Active, guest.Status);
+        Assert.Empty(_handled);
+    }
+
+    private static User VerifiedUser()
+    {
+        var user = new User { UserId = "user-1", UserName = "pat", Email = "pat@example.test", EmailConfirmed = true };
+        UserEmailOwnership.MarkVerified(user.Properties, _now);
+
+        return user;
+    }
+
     [Fact]
     public async Task AGuestIsMergedOnce()
     {
         AddGuest("g1", "pat@example.test");
-        var service = CreateService(new User { UserId = "user-1", UserName = "pat", Email = "pat@example.test", EmailConfirmed = true });
+        var service = CreateService(VerifiedUser());
 
         await service.MergeVerifiedGuestsAsync("user-1", TestContext.Current.CancellationToken);
         var again = await service.MergeVerifiedGuestsAsync("user-1", TestContext.Current.CancellationToken);
