@@ -160,6 +160,9 @@ internal static class OrderAdminApiEndpoints
 
         var result = await operations.RefundAsync(order, request?.Amount, request?.Reason, request?.Restock == true, GetActorName(httpContext), request?.AsStoreCredit == true, httpContext.RequestAborted);
 
+        // The refund reads the order again under its lock; the answer shows that copy, with the refund on it.
+        order = await orders.FindByIdAsync(orderId, httpContext.RequestAborted) ?? order;
+
         return await RespondAsync(result, order, operations, httpContext);
     }
 

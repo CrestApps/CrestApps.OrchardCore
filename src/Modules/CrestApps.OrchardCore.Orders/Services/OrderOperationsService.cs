@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Payments;
@@ -166,15 +167,21 @@ public sealed class OrderOperationsService : IOrderOperationsService
 
         await using (locker)
         {
-            // Read again inside the lock, so what's refundable includes a refund that finished just before.
+            // Read again inside the lock, from the database: the session hands back the order it loaded before the lock,
+            // which can be from before another request recorded its refund, so it is detached first. Without this, a double
+            // submit of "refund as store credit" credits the buyer twice.
+            var session = _serviceProvider.GetService<global::YesSql.ISession>();
+
+            session?.Detach(order, OrderConstants.CollectionName);
             order = await _orderStore.FindByIdAsync(order.ItemId, cancellationToken) ?? order;
 
             var refunded = await RefundLockedAsync(order, amount, reason, restock, actorName, asStoreCredit, cancellationToken);
 
-            // Committed before the lock is let go, so the next refund reads this one.
-            if (_serviceProvider.GetService<global::YesSql.ISession>() is { } session)
+            // Committed before the lock is let go, so the next refund reads this one. Not with the request's token: the
+            // money may have gone back at the provider already, and an aborted request must not drop the record of it.
+            if (session is not null)
             {
-                await session.SaveChangesAsync(cancellationToken);
+                await session.SaveChangesAsync(CancellationToken.None);
             }
 
             return refunded;
