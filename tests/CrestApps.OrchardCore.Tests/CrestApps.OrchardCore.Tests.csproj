@@ -208,6 +208,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.AzureAI\CrestApps.OrchardCore.Products.AzureAI.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.Elasticsearch\CrestApps.OrchardCore.Products.Elasticsearch.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Products.Lucene\CrestApps.OrchardCore.Products.Lucene.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.DncRegistry\CrestApps.OrchardCore.DncRegistry.csproj" />
   </ItemGroup>
 
   <ItemGroup>
