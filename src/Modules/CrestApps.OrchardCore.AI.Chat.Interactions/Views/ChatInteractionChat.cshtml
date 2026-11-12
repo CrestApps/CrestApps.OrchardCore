@@ -17,6 +17,11 @@
 @inject ISiteService SiteService
 @inject IAIDeploymentManager AIDeploymentManager
 @inject IAIDeploymentCapabilityService CapabilityService
+@inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
+@{
+    // Model output is rendered as Markdown here; images may load only from the site and the configured sources.
+    ChatImageContentSecurityPolicy.Apply(Context);
+}
 @{
     var baseId = Html.IdForModel();
     var chatAppHtmlId = $"{baseId}_ChatApp";

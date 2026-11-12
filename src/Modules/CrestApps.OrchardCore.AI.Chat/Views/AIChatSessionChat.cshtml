@@ -26,6 +26,11 @@
 @inject IAIChatSessionPromptStore PromptStore
 @inject IAIDeploymentManager AIDeploymentManager
 @inject CrestApps.OrchardCore.AI.Chat.Core.Services.AIChatProfileAccessEvaluator AIChatProfileAccessEvaluator
+@inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
+@{
+    // Model output is rendered as Markdown here; images may load only from the site and the configured sources.
+    ChatImageContentSecurityPolicy.Apply(Context);
+}
 
 @{
     var baseId = Html.IdForModel();

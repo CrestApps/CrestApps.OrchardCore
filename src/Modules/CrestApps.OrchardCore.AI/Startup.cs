@@ -99,6 +99,10 @@ public sealed class Startup : StartupBase
         services.Configure<AIEgressOptions>(_shellConfiguration.GetSection(AIEgressOptions.SectionName));
         services.AddScoped<IAIEndpointPolicy, AIEndpointPolicy>();
 
+        // Pages that render chat limit where images may load from, so model output can't send data out in an image URL.
+        services.Configure<ChatImageContentSecurityPolicyOptions>(_shellConfiguration.GetSection(ChatImageContentSecurityPolicyOptions.SectionName));
+        services.AddSingleton<ChatImageContentSecurityPolicy>();
+
         // Data migrations that skip records show the people who manage AI profiles a warning on admin pages until it is dismissed.
         services.AddMigrationSkipLog();
         services.Configure<MvcOptions>(options => options.Filters.Add<MigrationSkipNoticeFilter>(order: -1000));

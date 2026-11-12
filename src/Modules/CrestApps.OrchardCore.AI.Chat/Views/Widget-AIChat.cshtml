@@ -1,4 +1,4 @@
-@using CrestApps.Core
+﻿@using CrestApps.Core
 @using CrestApps.Core.AI.Chat.Realtime
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Documents.Models
@@ -20,6 +20,11 @@
 @inject AIChatProfileAccessEvaluator AIChatProfileAccessEvaluator
 @inject ShellSettings ShellSettings
 @inject IAIDeploymentManager AIDeploymentManager
+@inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
+@{
+    // Model output is rendered as Markdown here; images may load only from the site and the configured sources.
+    ChatImageContentSecurityPolicy.Apply(Context);
+}
 
 @{
     ContentItem contentItem = Model.ContentItem;
