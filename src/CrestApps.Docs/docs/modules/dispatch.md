@@ -34,7 +34,9 @@ It works with other features when they are on:
 
 ## Who is dispatched
 
-Dispatch sends technicians: [staff members](./staff.md) with the **Technician** capability, which Dispatch registers with `AddStaffCapability`. Tick it on the **Capabilities** card of a staff member's editor. The board, suggestions, the day optimizer, the visit list, territories, the API and the AI tools all list active technicians only (`DispatchResources.ListWorkersAsync`), and the work order technician pickers offer only them, so agents, cashiers and office staff never appear. On upgrade, the staff members who were Workforce workers (they carry Workforce settings) are given the capability, so everyone who was dispatched before still is; untick it for anyone who isn't a technician.
+Dispatch sends technicians: [staff members](./staff.md) with any of the capabilities **Settings > Dispatch > Dispatch staff with** names (`DispatchSettings.TechnicianCapabilities`, **Technician** by default, which Dispatch seeds). Tick a capability on the **Capabilities** card of a staff member's editor; capabilities are kept under **Staff > Capabilities**, where admins can add their own, such as Inspector. Suggestions, the day optimizer, the visit list, territories, the API, the AI tools and the work order **Technicians** card (preferred and never-send technicians, which Dispatch adds to the work order editor) all use that setting, through `DispatchResources.ListWorkersAsync`, so agents, cashiers and office staff never appear.
+
+The dispatch board starts from the setting and has a capability filter next to the team filter, so a dispatcher can show another pool for the day (`?capability=Inspector`, kept in the address); the optimizer works with the people the board shows. On upgrade, the staff members who were Workforce workers (they carry Workforce settings) are given the Technician capability, so everyone who was dispatched before still is; untick it for anyone who isn't a technician.
 
 ## Records
 

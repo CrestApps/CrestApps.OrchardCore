@@ -49,7 +49,7 @@ Each staff member is a YesSql document in the `Staff` collection, with `StaffMem
 | --- | --- | --- |
 | Person, Employment, Place | `StaffMemberFields_Edit` | Staff |
 | Teams | `StaffTeams_Edit` | Teams, while it is on |
-| Capabilities | `StaffCapabilities_Edit` | Staff, listing what other modules register |
+| Capabilities | `StaffMemberCapabilities_Edit` | Staff, listing what other modules register |
 | Pay, Badge | `StaffMemberPay_Edit`, `StaffMemberBadge_Edit` | the Staff Compensation and Staff Badges features |
 | Skills | `StaffMemberSkills_Edit` | Skills |
 | Phone | `PhoneStaff_Edit` | Telephony (the person's extension) |
@@ -58,6 +58,17 @@ Each staff member is a YesSql document in the `Staff` collection, with `StaffMem
 | Preferred technicians, fleet driver | `WorkOrderTechnicians_Edit`, `AssetFleetDriver_Edit` | Work Orders and Assets, on their own editors |
 
 **Staff > My Profile** shows a person their own record and a **My work** list that other modules fill through `IStaffHomeLinkProvider`. **Staff > Organization Chart** (Staff Organization Chart feature) draws the reporting line as a chart you can zoom, pan, expand and collapse, with each person's picture (from the User Avatars feature, else their initials), job title and main team, using [d3-org-chart](https://github.com/bumbeishvili/org-chart). **Settings > Staff** turns on **Offer only staff where people are assigned work**.
+
+### Capabilities
+
+Capabilities put people in pools: who the dispatch board offers, who can take calls, who can be booked, who runs a register. **Staff > Capabilities** (people with **Manage staff**) lists them on an admin list:
+
+- **Built in** ones are seeded by the modules whose code relies on them. Admins change their label, description and order, or turn them off (**Offered**); **Reset to defaults** drops those changes. They can't be deleted or renamed.
+- **Custom** ones are added by admins with a key (letters, digits, dots, dashes, underscores; fixed once saved), a name, a description and a position, and can be deleted. Staff members who had a deleted one keep it until they are saved again.
+
+A capability that is turned off isn't offered in the editor, filters, pickers or settings; staff members who have it keep it. `IStaffCapabilityService` lists the capabilities as they apply (`ListAsync`, `FindAsync`), saves (`SaveAsync`) and deletes or resets (`DeleteAsync`); the admin's records are kept in one document, `StaffCapabilitiesDocument`, and travel in the Staff recipe and deployment steps (`Capabilities`). `StaffQuery.Capabilities` finds staff with any of several, and the staff picker's `capability` argument takes several, comma-separated.
+
+How good someone is at something belongs in [Skills](./skills.md), which Dispatch and scheduling match on; capabilities only decide the pools.
 
 ### The staff profile
 
@@ -102,7 +113,7 @@ Register the services with `services.AddStaffCore()`; it is safe to repeat. `Add
 | Contract or helper | Use it for |
 | --- | --- |
 | `DisplayDriver<StaffMember>` | Adding a card to the staff editor (Workforce scheduling, Contact Center agent, Telephony phone, Skills, Pay, Badge). |
-| `AddStaffCapability(name, displayName, description, position)` | Registering a kind of work, shown as a checkbox in the editor and usable as a picker and list filter. Built-in registrations: `Agent` (Contact Center), `Technician` (Dispatch), `Bookable` (Scheduling), `Cashier` (Point of Sale). |
+| `AddStaffCapability(name, displayName, description, position)` | Seeding a built-in capability a module's code relies on: Contact Center seeds `Agent`, Dispatch `Technician`, Scheduling `Bookable`, Point of Sale `Cashier`. Admins can relabel, reorder or turn it off under **Staff > Capabilities**, but not delete or rename it. Screens read capabilities through `IStaffCapabilityService`, never the code registrations. |
 | `IStaffLifecycleObserver` (`AddStaffLifecycleObserver`) | Reacting after a person is saved: `StaffChangedContext` tells whether they were just created, `Activated`, `Terminated`, whether the manager, user or teams changed. On termination, Workforce removes their future shifts, Dispatch unassigns their future visits, Contact Center signs them out and Telephony frees their extension. |
 | `IStaffHomeLinkProvider` (`AddStaffHomeLinkProvider`) | Adding links to the **My work** list of **My Profile**. Register it in the startup of the feature that owns the pages, so a link never points at a page that is off: the Workforce Portal feature adds My Work and the schedule, Time Tracker adds My time. |
 | `AddStaffScopePermissions(manageEveryone, manageOwn)` | Letting holders of another module's permissions manage staff. |

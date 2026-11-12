@@ -1,11 +1,10 @@
-using CrestApps.OrchardCore.Staff.Core.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
-using CrestApps.OrchardCore.Teams.Services;
 using Json.Schema;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.Recipes.Models;
@@ -28,13 +27,16 @@ internal sealed class StaffRecipeStep : NamedRecipeStepHandler
     private readonly IStaffMemberManager _staffManager;
     private readonly StaffTeamReader _teamManager;
     private readonly UserManager<IUser> _userManager;
+    private readonly IStaffCapabilityService _capabilities;
 
     public StaffRecipeStep(
         IStaffMemberManager staffManager,
         StaffTeamReader teamManager,
-        UserManager<IUser> userManager)
+        UserManager<IUser> userManager,
+        IStaffCapabilityService capabilities)
         : base(StaffConstants.RecipeStepName)
     {
+        _capabilities = capabilities;
         _staffManager = staffManager;
         _teamManager = teamManager;
         _userManager = userManager;
@@ -42,6 +44,24 @@ internal sealed class StaffRecipeStep : NamedRecipeStepHandler
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
+        // The capabilities first, so the staff members below can carry the ones added here.
+        foreach (var node in (context.Step["Capabilities"] as JsonArray ?? []).OfType<JsonObject>())
+        {
+            var definition = node.Deserialize<StaffCapabilityDefinition>(JsonOptions);
+
+            if (definition is null || string.IsNullOrWhiteSpace(definition.Name))
+            {
+                continue;
+            }
+
+            var isNew = await _capabilities.FindAsync(definition.Name) is null;
+
+            foreach (var error in await _capabilities.SaveAsync(definition, isNew))
+            {
+                context.Errors.Add($"{StaffConstants.RecipeStepName}: {error}");
+            }
+        }
+
         var nodes = (context.Step["Staff"] as JsonArray ?? []).OfType<JsonObject>().ToArray();
         var teams = (await _teamManager.ListTreeAsync()).Select(item => item.Team).ToArray();
         var saved = new List<(StaffMember Staff, JsonObject Node)>();
@@ -202,6 +222,16 @@ internal sealed class StaffRecipeStepSchema : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(StaffConstants.RecipeStepName).Description("Recipe step discriminator. Must be 'Staff'.")),
+                ("Capabilities", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("name", Text("The key stored on staff members; letters, digits, dots, dashes and underscores.")),
+                        ("displayName", Text("The label.")),
+                        ("description", Text("What it means.")),
+                        ("position", new JsonSchemaBuilder().Type(SchemaValueType.Integer)),
+                        ("enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean)))
+                    .Required("name", "displayName")
+                    .AdditionalProperties(true)).Description("Capabilities to add, or changes to built-in ones (label, description, order, offered).")),
                 ("Staff", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(Member()).Description("The staff members to create, or update by id, employee number or user.")))
             .Required("name")
             .AdditionalProperties(true)
@@ -236,7 +266,7 @@ internal sealed class StaffRecipeStepSchema : IRecipeStep
                 ("timeZoneId", Text("The IANA time zone.")),
                 ("workLocation", Text("The place they work at.")),
                 ("contractedHoursPerWeek", new JsonSchemaBuilder().Type(SchemaValueType.Number)),
-                ("capabilities", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Capabilities modules registered, such as Technician.")),
+                ("capabilities", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Capability keys, such as Technician or one added under Staff > Capabilities.")),
                 ("teams", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder()
                     .Type(SchemaValueType.Object)
                     .Properties(

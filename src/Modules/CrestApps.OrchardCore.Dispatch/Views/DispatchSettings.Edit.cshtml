@@ -36,6 +36,13 @@
             </div>
         </div>
         <div class="ocat-wrapper">
+            <label asp-for="TechnicianCapabilities" class="ocat-label">@T["Dispatch staff with"]</label>
+            <div class="ocat-end">
+                <select asp-for="TechnicianCapabilities" asp-items="Model.CapabilityOptions" class="form-select" multiple size="4" style="max-width: 24rem"></select>
+                <span class="hint">@T["Staff members with any of these capabilities are the technicians on the board, in suggestions, the optimizer and the technician pickers. Dispatchers can show others on the board with its filter. Capabilities are kept under Staff > Capabilities."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
             <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
             <div class="ocat-end">
                 <input asp-for="TimeZoneId" class="form-control" placeholder="@T["The site's time zone"]" />

@@ -151,6 +151,15 @@ public sealed class StaffMemberStore : DocumentCatalog<StaffMember, StaffMemberI
             restrictTo = Intersect(restrictTo, rows.Select(row => row.StaffMemberId));
         }
 
+        var anyOf = query?.Capabilities?.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+
+        if (anyOf is { Length: > 0 })
+        {
+            var rows = await Session.QueryIndex<StaffCapabilityIndex>(index => index.Capability.IsIn(anyOf), collection: CollectionName).ListAsync(cancellationToken);
+
+            restrictTo = Intersect(restrictTo, rows.Select(row => row.StaffMemberId));
+        }
+
         if (restrictTo is not null)
         {
             if (restrictTo.Count == 0)

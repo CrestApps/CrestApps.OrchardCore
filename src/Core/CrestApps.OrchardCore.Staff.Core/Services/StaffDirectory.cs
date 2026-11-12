@@ -130,10 +130,12 @@ internal sealed class StaffDirectory : IStaffDirectory
     public async Task<IReadOnlyList<StaffMember>> SearchAsync(string text, string capability = null, bool requireUser = false, int take = 20, CancellationToken cancellationToken = default)
     {
         var today = DateOnly.FromDateTime(_clock.UtcNow);
+        // Several capabilities, comma-separated, match a person with any of them.
+        var capabilities = (capability ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var query = new StaffQuery
         {
             Search = text,
-            Capability = string.IsNullOrWhiteSpace(capability) ? null : capability,
+            Capabilities = capabilities.Length == 0 ? null : capabilities,
             HasUser = requireUser ? true : null,
         };
 

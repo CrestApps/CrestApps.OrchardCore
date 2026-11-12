@@ -278,10 +278,9 @@ public sealed class StaffEditorDriverTests
         => new(
             Authorization(grants),
             CreateHttpContextAccessor(services),
-            services.GetRequiredService<IStaffDirectory>(),
+            services.GetRequiredService<IStaffCapabilityService>(),
             Mock.Of<ITimeZoneSelectListProvider>(),
             services.GetRequiredService<IClock>(),
-            new SourceTextLocalizerFactory(),
             services.GetRequiredService<IStringLocalizer<StaffMemberDisplayDriver>>());
 
     private static StaffTeamsDisplayDriver CreateTeamsDriver(IServiceProvider services, StaffScope scope = null)

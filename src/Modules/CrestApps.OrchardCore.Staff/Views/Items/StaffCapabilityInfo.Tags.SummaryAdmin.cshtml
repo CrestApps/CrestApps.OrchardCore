@@ -1,0 +1,18 @@
+@model ShapeViewModel<StaffCapabilityInfo>
+
+@if (Model.Value.IsBuiltIn)
+{
+    <span class="badge ta-badge fw-normal" title="@T["A module relies on it"]"><i class="fa-solid fa-puzzle-piece me-1" aria-hidden="true"></i>@T["Built in"]</span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" title="@T["Added on this site"]"><i class="fa-solid fa-user-pen me-1" aria-hidden="true"></i>@T["Custom"]</span>
+}
+@if (Model.Value.IsCustomized)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Changed from the module's defaults"]"><i class="fa-solid fa-pen me-1" aria-hidden="true"></i>@T["Changed"]</span>
+}
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Not offered"]"><i class="fa-solid fa-eye-slash me-1" aria-hidden="true"></i>@T["Off"]</span>
+}

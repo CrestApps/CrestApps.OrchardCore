@@ -1,7 +1,5 @@
 @model ShapeViewModel<StaffMember>
-@using Microsoft.Extensions.Localization
-@inject Microsoft.Extensions.Options.IOptions<StaffOptions> StaffOptions
-@inject Microsoft.Extensions.Localization.IStringLocalizerFactory LocalizerFactory
+@inject CrestApps.OrchardCore.Staff.Services.IStaffCapabilityService CapabilityService
 
 @{
     var staff = Model.Value;
@@ -14,9 +12,8 @@
         EmploymentType.Contractor => T["Contractor"],
         _ => T["Subcontractor"],
     };
-    var capabilities = staff.Capabilities
-        .Select(name => StaffOptions.Value.Capabilities.TryGetValue(name, out var capability) && capability.DisplayName is { } title ? LocalizerFactory.Localize(title).Value : name)
-        .ToList();
+    var labels = (await CapabilityService.ListAsync(includeDisabled: true)).ToDictionary(capability => capability.Name, capability => capability.DisplayName, StringComparer.OrdinalIgnoreCase);
+    var capabilities = staff.Capabilities.Select(name => labels.GetValueOrDefault(name, name)).ToList();
 }
 
 <div class="card text-bg-theme mb-3">

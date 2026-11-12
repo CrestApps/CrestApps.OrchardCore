@@ -1,11 +1,10 @@
-using CrestApps.OrchardCore.Staff.Core.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Staff.Recipes;
 using CrestApps.OrchardCore.Staff.Services;
-using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Users;
 using Json.Schema;
 using OrchardCore.Deployment;
@@ -45,12 +44,15 @@ internal sealed class StaffDeploymentSource : DeploymentSourceBase<StaffDeployme
     private readonly IStaffMemberManager _staffManager;
     private readonly StaffTeamReader _teamManager;
     private readonly IUserSearchService _userSearchService;
+    private readonly IStaffCapabilityService _capabilities;
 
     public StaffDeploymentSource(
         IStaffMemberManager staffManager,
         StaffTeamReader teamManager,
-        IUserSearchService userSearchService)
+        IUserSearchService userSearchService,
+        IStaffCapabilityService capabilities)
     {
+        _capabilities = capabilities;
         _staffManager = staffManager;
         _teamManager = teamManager;
         _userSearchService = userSearchService;
@@ -79,6 +81,7 @@ internal sealed class StaffDeploymentSource : DeploymentSourceBase<StaffDeployme
         result.Steps.Add(new JsonObject
         {
             ["name"] = step.Name,
+            ["Capabilities"] = JsonSerializer.SerializeToNode(await _capabilities.GetDefinitionsAsync(), StaffRecipeStep.JsonOptions),
             ["Staff"] = new JsonArray([.. people.Select(person =>
             {
                 var node = JsonSerializer.SerializeToNode(person, StaffRecipeStep.JsonOptions).AsObject();

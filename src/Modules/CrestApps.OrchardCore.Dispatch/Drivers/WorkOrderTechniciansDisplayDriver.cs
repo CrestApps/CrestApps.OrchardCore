@@ -1,20 +1,30 @@
+using CrestApps.OrchardCore.Dispatch.Services;
+using CrestApps.OrchardCore.Dispatch.ViewModels;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
-namespace CrestApps.OrchardCore.WorkOrders.Drivers;
+namespace CrestApps.OrchardCore.Dispatch.Drivers;
 
 /// <summary>
-/// The technicians a job should go to, or must not go to, picked from staff. Dispatch reads them when it suggests who
-/// takes the job.
+/// The Technicians card of the work order editor: who dispatch suggests first for the job and who it never sends,
+/// picked among the staff the dispatch settings name as technicians.
 /// </summary>
 internal sealed class WorkOrderTechniciansDisplayDriver : DisplayDriver<WorkOrder>
 {
+    private readonly IDispatchSettingsProvider _settingsProvider;
+
+    public WorkOrderTechniciansDisplayDriver(IDispatchSettingsProvider settingsProvider)
+    {
+        _settingsProvider = settingsProvider;
+    }
+
     public override IDisplayResult Edit(WorkOrder workOrder, BuildEditorContext context)
-        => Initialize<WorkOrderTechniciansViewModel>("WorkOrderTechnicians_Edit", model =>
+        => Initialize<WorkOrderTechniciansViewModel>("WorkOrderTechnicians_Edit", async model =>
         {
             model.PreferredWorkerIds = [.. workOrder.PreferredWorkerIds ?? []];
             model.ExcludedWorkerIds = [.. workOrder.ExcludedWorkerIds ?? []];
+            model.Capabilities = string.Join(",", (await _settingsProvider.GetAsync()).GetTechnicianCapabilities());
         }).Location("Content:6");
 
     public override async Task<IDisplayResult> UpdateAsync(WorkOrder workOrder, UpdateEditorContext context)
@@ -35,20 +45,4 @@ internal sealed class WorkOrderTechniciansDisplayDriver : DisplayDriver<WorkOrde
 
     private static List<string> Clean(IEnumerable<string> ids)
         => [.. (ids ?? []).SelectMany(id => (id ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).Distinct(StringComparer.Ordinal)];
-}
-
-/// <summary>
-/// The values of the technicians card of the work order editor.
-/// </summary>
-public class WorkOrderTechniciansViewModel
-{
-    /// <summary>
-    /// Gets or sets the staff members the job should go to.
-    /// </summary>
-    public IList<string> PreferredWorkerIds { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the staff members the job must not go to.
-    /// </summary>
-    public IList<string> ExcludedWorkerIds { get; set; } = [];
 }

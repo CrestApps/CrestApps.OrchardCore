@@ -52,7 +52,8 @@ public interface IStaffDirectory
     /// Searches active staff for a picker, ordered by name.
     /// </summary>
     /// <param name="text">Text in the name, e-mail, job title or employee number, or empty for everyone.</param>
-    /// <param name="capability">A capability the person must have, or <see langword="null"/>.</param>
+    /// <param name="capability">A capability the person must have, several comma-separated (any of them), or
+    /// <see langword="null"/>.</param>
     /// <param name="requireUser">Whether only people with a user account are returned.</param>
     /// <param name="take">The most to return.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -60,7 +61,8 @@ public interface IStaffDirectory
     Task<IReadOnlyList<StaffMember>> SearchAsync(string text, string capability = null, bool requireUser = false, int take = 20, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the capabilities modules registered, ordered for display.
+    /// Gets the capabilities modules registered in code (the built-in ones), ordered. Screens that offer capabilities
+    /// read <see cref="IStaffCapabilityService"/>, which adds the admin's changes and the ones admins added.
     /// </summary>
     /// <returns>The capabilities.</returns>
     IReadOnlyList<StaffCapability> GetCapabilities();

@@ -48,6 +48,11 @@ public sealed class StaffAdminMenu : AdminNavigationProvider
                     all.Permission(permission);
                 }
             })
+            .Add(S["Capabilities"], S["Capabilities"].PrefixPosition("30"), capabilities => capabilities
+                .Id("staffCapabilities")
+                .Action("Index", "StaffCapabilities", StaffConstants.Features.Staff)
+                .Permission(StaffPermissions.ManageStaff)
+                .LocalNav())
             .Add(S["My Profile"], S["My Profile"].PrefixPosition("05"), me => me
                 .Id("staffMe")
                 .Action("Me", "Staff", StaffConstants.Features.Staff)

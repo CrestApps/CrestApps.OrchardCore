@@ -26,26 +26,23 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IStaffDirectory _directory;
+    private readonly IStaffCapabilityService _capabilities;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly IClock _clock;
-    private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
 
     public StaffMemberDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        IStaffDirectory directory,
+        IStaffCapabilityService capabilities,
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         IClock clock,
-        IStringLocalizerFactory localizerFactory,
         IStringLocalizer<StaffMemberDisplayDriver> stringLocalizer)
     {
-        _localizerFactory = localizerFactory;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
-        _directory = directory;
+        _capabilities = capabilities;
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _clock = clock;
         S = stringLocalizer;
@@ -145,8 +142,8 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
             Latitude = homeBaseMoved ? null : staff.HomeBase?.Latitude,
             Longitude = homeBaseMoved ? null : staff.HomeBase?.Longitude,
         };
-        // Only registered capabilities are edited here; ones a module set and doesn't show stay.
-        var registered = _directory.GetCapabilities().Select(capability => capability.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Only the capabilities offered here are edited; ones turned off, or that a module set and doesn't show, stay.
+        var registered = (await _capabilities.ListAsync()).Select(capability => capability.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var chosen = (model.Capabilities ?? []).Where(registered.Contains);
 
         staff.Capabilities = staff.Capabilities.Where(capability => !registered.Contains(capability)).Concat(chosen).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -165,11 +162,11 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
         var timeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(values.TimeZoneId);
 
         var selectedCapabilities = (values.Capabilities ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var capabilityOptions = _directory.GetCapabilities().Select(capability => new StaffCapabilityOptionViewModel
+        var capabilityOptions = (await _capabilities.ListAsync()).Select(capability => new StaffCapabilityOptionViewModel
         {
             Name = capability.Name,
-            DisplayName = capability.DisplayName is null ? capability.Name : _localizerFactory.Localize(capability.DisplayName).Value,
-            Description = capability.Description is null ? null : _localizerFactory.Localize(capability.Description).Value,
+            DisplayName = capability.DisplayName,
+            Description = capability.Description,
             Selected = selectedCapabilities.Contains(capability.Name),
         }).ToList();
 
@@ -208,7 +205,7 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
         }
 
         // Its own shape, so a theme or module can move, replace or hide the card.
-        var capabilities = Initialize<StaffCapabilitiesEditViewModel>("StaffCapabilities_Edit", model =>
+        var capabilities = Initialize<StaffCapabilitiesEditViewModel>("StaffMemberCapabilities_Edit", model =>
         {
             model.Capabilities = values.Capabilities;
             model.CapabilityOptions = capabilityOptions;

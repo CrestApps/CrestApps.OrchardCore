@@ -1,0 +1,6 @@
+@model ShapeViewModel<StaffCapabilityInfo>
+
+@if (!string.IsNullOrEmpty(Model.Value.Description))
+{
+    <div class="admin-list-secondary">@Model.Value.Description</div>
+}

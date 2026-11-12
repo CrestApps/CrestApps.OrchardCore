@@ -46,7 +46,6 @@ public sealed class StaffTechniciansStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddDisplayDriver<WorkOrder, Drivers.WorkOrderTechniciansDisplayDriver>();
     }
 }
 

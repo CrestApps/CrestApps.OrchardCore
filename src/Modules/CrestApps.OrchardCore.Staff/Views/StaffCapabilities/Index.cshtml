@@ -1,0 +1,26 @@
+@model StaffCapabilitiesListViewModel
+
+<zone Name="Title"><breadcrumb name="StaffCapabilities" title="@T["Capabilities"]" /></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">
+                <p class="hint mb-0">@T["The pools people are put in: who the dispatch board offers, who can take calls, who can be booked, who runs a register. Modules add the ones their code relies on; add your own for your own lists and filters. How good someone is at something belongs in Skills."]</p>
+            </div>
+            <div class="col-auto">
+                <a asp-action="Create" class="btn btn-secondary create">@T["Add capability"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="StaffCapabilities" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No capabilities yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Name"]" />
+        <admin-list-column name="Kind" position="30" title="@T["Kind"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

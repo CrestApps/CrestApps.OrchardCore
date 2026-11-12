@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Roles.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />

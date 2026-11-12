@@ -57,6 +57,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<VisitRow, VisitRowDisplayDriver>();
         services.AddDisplayDriver<WorkOrders.Models.WorkOrderPanels, WorkOrderVisitsDisplayDriver>();
         services.AddNavigationProvider<DispatchAdminMenu>();
+        services.AddDisplayDriver<WorkOrders.Models.WorkOrder, WorkOrderTechniciansDisplayDriver>();
         services.AddScoped<Geo.Services.ITerritoryMemberSource, WorkerTerritoryMemberSource>();
         services.AddScoped<Geo.Services.ITerritoryMemberSource, TeamTerritoryMemberSource>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, DispatchResourceConfiguration>();

@@ -97,9 +97,9 @@ public sealed class DispatchResources
         IDispatchSettingsProvider settingsProvider,
         IStaffTimeZoneResolver staffTimeZones)
     {
-        _settingsProvider = settingsProvider;
         _staffTimeZones = staffTimeZones;
         _workerManager = workerManager;
+        _settingsProvider = settingsProvider;
         _teamManager = teamManager;
         _shiftService = shiftService;
         _queryService = queryService;
@@ -114,14 +114,28 @@ public sealed class DispatchResources
     public bool MeasuresTravel => _geoServices.Any();
 
     /// <summary>
-    /// Lists the active technicians: the staff members with the Technician capability. Other staff (agents, cashiers,
-    /// office staff) are never dispatched.
+    /// Lists the active technicians: the staff members with any of the capabilities the dispatch settings name
+    /// (Technician by default). Other staff (agents, cashiers, office staff) are never dispatched.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The technicians.</returns>
-    public async Task<IReadOnlyList<StaffMember>> ListWorkersAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<StaffMember>> ListWorkersAsync(CancellationToken cancellationToken = default)
+        => ListWorkersAsync(null, cancellationToken);
+
+    /// <summary>
+    /// Lists the active staff members with any of some capabilities, such as the ones a dispatcher picks on the board.
+    /// </summary>
+    /// <param name="capabilities">The capabilities; <see langword="null"/> or empty for the dispatch settings' ones.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The staff members.</returns>
+    public async Task<IReadOnlyList<StaffMember>> ListWorkersAsync(IReadOnlyCollection<string> capabilities, CancellationToken cancellationToken = default)
     {
-        var (_, workers) = await _workerManager.SearchAsync(new StaffQuery { Status = StaffStatus.Active, Capability = DispatchConstants.TechnicianCapability }, 0, 1000, cancellationToken);
+        if (capabilities is not { Count: > 0 })
+        {
+            capabilities = (await _settingsProvider.GetAsync()).GetTechnicianCapabilities();
+        }
+
+        var (_, workers) = await _workerManager.SearchAsync(new StaffQuery { Status = StaffStatus.Active, Capabilities = capabilities }, 0, 1000, cancellationToken);
 
         return workers;
     }

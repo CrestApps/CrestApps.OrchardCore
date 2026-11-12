@@ -46,4 +46,9 @@ public sealed class StaffQuery
     /// Gets or sets staff member ids; only these match.
     /// </summary>
     public IReadOnlyCollection<string> Ids { get; set; }
+
+    /// <summary>
+    /// Gets or sets capabilities; a staff member with any of them matches. Used with <see cref="Capability"/>, both apply.
+    /// </summary>
+    public IReadOnlyCollection<string> Capabilities { get; set; }
 }

@@ -1,11 +1,10 @@
-using CrestApps.OrchardCore.Staff.Core.Services;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Core.Validation;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Staff.Drivers;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Staff.ViewModels;
-using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -133,8 +132,8 @@ public sealed class StaffController : Controller
             .Select(item => new SelectListItem(new string(' ', item.Depth * 4) + item.Team.Name, item.Team.ItemId, item.Team.ItemId == model.TeamId))
             .ToList();
         model.StatusOptions = StaffSelectLists.Statuses(S, model.Status);
-        model.CapabilityOptions = _directory.GetCapabilities()
-            .Select(capability => new SelectListItem(capability.DisplayName is null ? capability.Name : HttpContext.RequestServices.GetRequiredService<IStringLocalizerFactory>().Localize(capability.DisplayName).Value, capability.Name, string.Equals(capability.Name, model.Capability, StringComparison.OrdinalIgnoreCase)))
+        model.CapabilityOptions = (await HttpContext.RequestServices.GetRequiredService<IStaffCapabilityService>().ListAsync(includeDisabled: true, HttpContext.RequestAborted))
+            .Select(capability => new SelectListItem(capability.DisplayName, capability.Name, string.Equals(capability.Name, model.Capability, StringComparison.OrdinalIgnoreCase)))
             .ToList();
         model.CanCreate = !(await _scopeService.GetScopeAsync(User, HttpContext.RequestAborted)).IsEmpty;
 

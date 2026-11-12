@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Http;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
+using OrchardCore.Documents;
 using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.Tests.Doubles;
@@ -28,6 +30,12 @@ public static class StaffDoubles
         services.TryAddSingleton<RecordingRoleGrantService>();
         services.TryAddSingleton<IRoleGrantService>(provider => provider.GetRequiredService<RecordingRoleGrantService>());
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+        // Built-in capability labels are localized; the tests show the source text.
+        services.TryAddSingleton<Microsoft.Extensions.Localization.IStringLocalizerFactory, SourceTextLocalizerFactory>();
+
+        // Capability records live in a document; the tests keep it in memory.
+        services.TryAddSingleton<IDocumentManager<StaffCapabilitiesDocument>>(new CrestApps.OrchardCore.Tests.AgenticCommerce.InMemoryDocumentManager<StaffCapabilitiesDocument>());
 
         // The tests stand in for a site with the Teams module on, which turns team memberships on for Staff.
         services.Configure<StaffOptions>(options => options.UsesTeams = true);

@@ -1,0 +1,67 @@
+@model StaffCapabilityEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="StaffCapabilitiesEdit" title="@(Model.IsNew ? T["New Capability"] : T["Edit '{0}'", Model.DisplayName])">
+        <breadcrumb-item id="StaffCapabilities" action="Index" controller="StaffCapabilities" area="CrestApps.OrchardCore.Staff">@T["Capabilities"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" asp-action="@(Model.IsNew ? "Create" : "Edit")" asp-route-name="@(Model.IsNew ? null : Model.Name)" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card text-bg-theme mb-3">
+        <div class="card-header">@T["Capability"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label ocat-label-required">@T["Key"]</label>
+                <div class="ocat-end">
+                    @if (Model.IsNew)
+                    {
+                        <input asp-for="Name" class="form-control" style="max-width: 18rem" />
+                        <span class="hint">@T["Stored on staff members and used by filters and settings, such as Inspector. It can't be changed later."]</span>
+                    }
+                    else
+                    {
+                        <input class="form-control-plaintext" value="@Model.Name" readonly />
+                        @if (Model.IsBuiltIn)
+                        {
+                            <span class="hint">@T["Built in: a module relies on this key, so it can't be renamed or deleted. You can change how it is shown or turn it off."]</span>
+                        }
+                    }
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Name"]</label>
+                <div class="ocat-end"><input asp-for="DisplayName" class="form-control" /></div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Description" class="form-control" />
+                    <span class="hint">@T["Shown under the checkbox in the staff editor."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Position" type="number" class="form-control" style="max-width: 8rem" />
+                    <span class="hint">@T["Lower comes first in the editor and filters."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="Enabled" class="form-check-input" />
+                        <label asp-for="Enabled" class="form-check-label">@T["Offered"]</label>
+                        <span class="hint dashed">@T["Shown in the staff editor, filters, pickers and settings. Staff members who have it keep it while it is off."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

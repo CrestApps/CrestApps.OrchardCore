@@ -89,6 +89,10 @@
             url.searchParams.set('teamId', root.dataset.teamId);
         }
 
+        if (root.dataset.capability) {
+            url.searchParams.set('capability', root.dataset.capability);
+        }
+
         const response = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
 
         if (!response.ok) {
@@ -468,6 +472,7 @@
             const proposal = await post(root.dataset.optimizeUrl, {
                 day: root.dataset.day,
                 teamId: root.dataset.teamId || null,
+                capability: root.dataset.capability || null,
                 includeUnscheduled: includeUnscheduled ? includeUnscheduled.checked : true,
             });
 

@@ -27,4 +27,27 @@ public sealed class DispatchTechniciansTests
         Assert.DoesNotContain(DispatchConstants.TechnicianCapability, office.Capabilities);
         Assert.Equal([ana.ItemId], workers.Select(worker => worker.ItemId));
     }
+
+    [Fact]
+    public async Task TheSettingsChooseWhoIsDispatched_AndTheBoardFilterCanShowOthers()
+    {
+        // Arrange
+        await using var kit = await DispatchKit.CreateAsync();
+        var ana = await kit.AddTechnicianAsync("Ana Field");
+        var ivan = await PlanningKit.AddMemberAsync(kit.Harness, "Ivan Check", kit.Team, staff => staff.Capabilities.Add("Inspector"));
+
+        kit.Settings.TechnicianCapabilities = [DispatchConstants.TechnicianCapability, "Inspector"];
+
+        // Act
+        var (both, inspectorsOnly) = await kit.Harness.RunAsync(async services =>
+        {
+            var resources = services.GetRequiredService<DispatchResources>();
+
+            return (await resources.ListWorkersAsync(), await resources.ListWorkersAsync(["Inspector"]));
+        }, commit: false);
+
+        // Assert
+        Assert.Equal(new[] { ana.ItemId, ivan.ItemId }.Order(StringComparer.Ordinal), both.Select(worker => worker.ItemId).Order(StringComparer.Ordinal));
+        Assert.Equal([ivan.ItemId], inspectorsOnly.Select(worker => worker.ItemId));
+    }
 }

@@ -330,3 +330,28 @@ public class StaffPayProfileViewModel
 
     public IList<CrestApps.OrchardCore.Staff.Drivers.StaffPayRateRowViewModel> Rates { get; set; } = [];
 }
+
+public class StaffCapabilitiesListViewModel
+{
+    [BindNever]
+    public AdminListContext List { get; set; }
+}
+
+public class StaffCapabilityEditViewModel
+{
+    public string Name { get; set; }
+
+    public string DisplayName { get; set; }
+
+    public string Description { get; set; }
+
+    public int Position { get; set; }
+
+    public bool Enabled { get; set; }
+
+    [BindNever]
+    public bool IsNew { get; set; }
+
+    [BindNever]
+    public bool IsBuiltIn { get; set; }
+}

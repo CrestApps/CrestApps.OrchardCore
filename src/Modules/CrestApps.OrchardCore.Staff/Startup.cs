@@ -60,6 +60,7 @@ public sealed class Startup : StartupBase
         services.AddRoleGrants();
         services.AddDisplayDriver<StaffMember, StaffMemberDisplayDriver>();
         services.AddDisplayDriver<StaffMember, StaffProfileDisplayDriver>();
+        services.AddDisplayDriver<StaffCapabilityInfo, StaffCapabilityRowDisplayDriver>();
         services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.Overview, LocalizationSource.Create<Startup>("Overview"), "fa-solid fa-id-card", 0);
         services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.History, LocalizationSource.Create<Startup>("Employment history"), "fa-solid fa-clock-rotate-left", 1000);
         services.AddDisplayDriver<User, UserStaffDisplayDriver>();
