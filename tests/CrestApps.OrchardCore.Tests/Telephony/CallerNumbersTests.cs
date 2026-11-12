@@ -20,6 +20,17 @@ public sealed class CallerNumbersTests
         Assert.Equal(expected, CallerNumbers.Sanitize(raw));
     }
 
+    // A SIP address (an extension or a WebRTC credential calling) stays an address, so the code that recognizes one
+    // still does, but keeps none of the characters markup needs.
+    [Theory]
+    [InlineData("sip:gencred2@sip.telnyx.com", "sip:gencred2@sip.telnyx.com")]
+    [InlineData("sip:1001@pbx.example.com;transport=ws", "sip:1001@pbx.example.com;transport=ws")]
+    [InlineData("sip:\"><img src=x onerror=alert(1)>@x", "sip:imgsrc=xonerror=alert1@x")]
+    public void Sanitize_KeepsASipAddress_WithoutMarkup(string raw, string expected)
+    {
+        Assert.Equal(expected, CallerNumbers.Sanitize(raw));
+    }
+
     [Theory]
     [InlineData("anonymous")]
     [InlineData("Anonymous")]

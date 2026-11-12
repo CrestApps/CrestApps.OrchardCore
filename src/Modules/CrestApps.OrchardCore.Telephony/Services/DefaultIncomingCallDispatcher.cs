@@ -98,7 +98,9 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
                 CallId = call.CallId,
                 ProviderName = call.ProviderName,
                 UserId = userId,
-                From = call.From,
+
+                // The caller id is chosen by whoever places the call, and the recent calls list shows it.
+                From = CallerNumbers.Sanitize(call.From),
                 To = call.To,
                 Direction = call.Direction,
                 Outcome = CallOutcome.InProgress,
@@ -119,7 +121,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
             candidate =>
             {
                 candidate.ProviderName = call.ProviderName;
-                candidate.From = string.IsNullOrEmpty(call.From) ? candidate.From : call.From;
+                candidate.From = CallerNumbers.Sanitize(call.From) ?? candidate.From;
                 candidate.To = string.IsNullOrEmpty(call.To) ? candidate.To : call.To;
                 candidate.Direction = call.Direction;
 

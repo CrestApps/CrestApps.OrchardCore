@@ -44,7 +44,9 @@ internal static class AsteriskRealtimeVoiceEventMapper
 
         var occurredUtc = TryReadDateTime(root, "timestamp");
         var metadata = BuildMetadata(root, channel, eventType);
-        var callerNumber = ReadNestedString(channel, "caller", "number");
+
+        // The caller id is chosen by whoever places the call; only what a number or a SIP address can contain goes on.
+        var callerNumber = Telephony.CallerNumbers.Sanitize(ReadNestedString(channel, "caller", "number"));
         var dialedNumber = ReadNestedString(channel, "dialplan", "exten") ?? ReadNestedString(channel, "connected", "number");
         var interactionCorrelationId = ReadChannelVariable(root, channel, AsteriskConstants.InteractionChannelVariableName);
         var isStasisStart = string.Equals(eventType, "StasisStart", StringComparison.OrdinalIgnoreCase);
