@@ -32,6 +32,22 @@ describe('secret fields', () => {
         expect(filled).toEqual([]);
     });
 
+    // SEC-FE4 d: a secret typed into a type="text" field is shown while it is typed and kept in the browser's form
+    // history. A field bound to a property whose name ends in Key, Secret, Token or Password is either a password
+    // field or uses the shared secret-input tag helper (CrestApps.OrchardCore.Core), which renders one. Names that end
+    // that way but hold no secret are listed here.
+    const notSecret = new Set(['LivePublishableKey', 'TestPublishableKey', 'StickyKey', 'Treatment.CallbackDtmfKey']);
+
+    it('bound to a secret-named property are never plain text', () => {
+        const plain = views('src').flatMap(path =>
+            [...readFileSync(path, 'utf8').matchAll(/<input\b[^>]*\basp-for="([\w.]*(?:Key|Secret|Token|Password))"[^>]*>/gs)]
+                .filter(match => !notSecret.has(match[1]))
+                .filter(match => !/\btype="(password|hidden|checkbox)"/.test(match[0]) && !/\bsecret-input\b/.test(match[0]))
+                .map(match => `${path}: ${match[1]}`));
+
+        expect(plain).toEqual([]);
+    });
+
     // A new account's own password, marked data-account-password, is the one field a password manager should offer
     // to save; every other secret is the site's, such as an API key, and is kept away from them.
     it('are skipped by password managers', () => {
