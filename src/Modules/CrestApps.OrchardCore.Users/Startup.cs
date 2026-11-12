@@ -27,6 +27,7 @@ using OrchardCore.Contents.Drivers;
 using OrchardCore.Contents.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
@@ -204,9 +205,21 @@ public sealed class DisplayNameRecipesSchemaStartup : StartupBase
 [Feature(UsersConstants.Feature.EmailCodeSignIn)]
 public sealed class EmailCodeSignInStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailCodeSignInStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration.</param>
+    public EmailCodeSignInStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<EmailSignInCodes>();
         services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
+        services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
     }
 }

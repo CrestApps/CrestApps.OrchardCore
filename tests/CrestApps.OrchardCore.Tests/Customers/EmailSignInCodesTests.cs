@@ -1,9 +1,12 @@
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Customers;
@@ -14,7 +17,8 @@ namespace CrestApps.OrchardCore.Tests.Customers;
 /// </summary>
 public sealed class EmailSignInCodesTests
 {
-    private readonly IDistributedCache _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+    private readonly IDistributedCache _cache = new SlowCache(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())));
+    private readonly IDistributedLock _lock = new LocalLock(NullLogger<LocalLock>.Instance);
     private DateTime _now = DateTime.UtcNow;
 
     [Fact]
@@ -119,11 +123,94 @@ public sealed class EmailSignInCodesTests
         Assert.True(await codes.TryCountSendAsync("another@example.test", "10.0.0.2", TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// SEC-P1: the attempt count was read, compared and written with no lock, so parallel guesses all saw fewer than five
+    /// attempts and a six-digit code could be brute-forced. A hundred parallel wrong guesses now use the code up.
+    /// </summary>
+    [Fact]
+    public async Task ParallelWrongGuesses_UseTheCodeUp()
+    {
+        var codes = Create();
+        var code = await codes.IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+        var wrong = code == "000000" ? "111111" : "000000";
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 100)
+            .Select(_ => Task.Run(() => codes.VerifyAsync("jordan@example.test", wrong, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken)));
+
+        Assert.DoesNotContain(true, results);
+        Assert.False(await codes.VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    /// SEC-P1: parallel sends can't get past the per-email limit either.
+    /// </summary>
+    [Fact]
+    public async Task ParallelSends_StayWithinTheLimit()
+    {
+        var codes = Create();
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 30)
+            .Select(i => Task.Run(() => codes.TryCountSendAsync("jordan@example.test", "10.0.1." + i, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken)));
+
+        Assert.Equal(3, results.Count(allowed => allowed));
+    }
+
+    /// <summary>
+    /// SEC-P1: when the lock can't be taken, the guess is refused rather than counted without it.
+    /// </summary>
+    [Fact]
+    public async Task WhenTheLockCantBeTaken_TheGuessIsRefused()
+    {
+        var code = await Create().IssueAsync("jordan@example.test", TestContext.Current.CancellationToken);
+
+        var busy = new Mock<IDistributedLock>();
+        busy.Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((Mock.Of<ILocker>(), false));
+
+        var clock = new Mock<IClock>();
+        clock.Setup(c => c.UtcNow).Returns(() => _now);
+        var codes = new EmailSignInCodes(_cache, new ShellSettings { Name = "Default" }, clock.Object, busy.Object);
+
+        Assert.False(await codes.VerifyAsync("jordan@example.test", code, TestContext.Current.CancellationToken));
+    }
+
     private EmailSignInCodes Create(string tenant = "Default")
     {
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(() => _now);
 
-        return new EmailSignInCodes(_cache, new ShellSettings { Name = tenant }, clock.Object);
+        return new EmailSignInCodes(_cache, new ShellSettings { Name = tenant }, clock.Object, _lock);
+    }
+
+    // A cache that yields on every read, so concurrent callers interleave between the read and the write the way they do
+    // against a real distributed cache.
+    private sealed class SlowCache : IDistributedCache
+    {
+        private readonly IDistributedCache _inner;
+
+        public SlowCache(IDistributedCache inner)
+            => _inner = inner;
+
+        public byte[] Get(string key) => _inner.Get(key);
+
+        public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
+        {
+            await Task.Delay(2, token);
+
+            return await _inner.GetAsync(key, token);
+        }
+
+        public void Refresh(string key) => _inner.Refresh(key);
+
+        public Task RefreshAsync(string key, CancellationToken token = default) => _inner.RefreshAsync(key, token);
+
+        public void Remove(string key) => _inner.Remove(key);
+
+        public Task RemoveAsync(string key, CancellationToken token = default) => _inner.RemoveAsync(key, token);
+
+        public void Set(string key, byte[] value, DistributedCacheEntryOptions options) => _inner.Set(key, value, options);
+
+        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
+            => _inner.SetAsync(key, value, options, token);
     }
 }

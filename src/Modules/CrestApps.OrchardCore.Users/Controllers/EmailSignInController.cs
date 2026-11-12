@@ -5,9 +5,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Email;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 using OrchardCore.Users;
+using OrchardCore.Users.Events;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Users.Controllers;
@@ -17,6 +20,7 @@ namespace CrestApps.OrchardCore.Users.Controllers;
 /// whether or not an account has the email, so they never tell who has one.
 /// </summary>
 [AllowAnonymous]
+[Feature(UsersConstants.Feature.EmailCodeSignIn)]
 public sealed class EmailSignInController : Controller
 {
     private static readonly System.ComponentModel.DataAnnotations.EmailAddressAttribute _emailAddress = new();
@@ -26,6 +30,8 @@ public sealed class EmailSignInController : Controller
     private readonly EmailSignInCodes _codes;
     private readonly IEmailService _emailService;
     private readonly ISiteService _siteService;
+    private readonly IEnumerable<ILoginFormEvent> _loginFormEvents;
+    private readonly EmailSignInOptions _options;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -36,9 +42,13 @@ public sealed class EmailSignInController : Controller
         EmailSignInCodes codes,
         IEmailService emailService,
         ISiteService siteService,
+        IEnumerable<ILoginFormEvent> loginFormEvents,
+        IOptions<EmailSignInOptions> options,
         ILogger<EmailSignInController> logger,
         IStringLocalizer<EmailSignInController> stringLocalizer)
     {
+        _loginFormEvents = loginFormEvents;
+        _options = options.Value;
         _userManager = userManager;
         _signInManager = signInManager;
         _codes = codes;
@@ -90,15 +100,53 @@ public sealed class EmailSignInController : Controller
     public async Task<IActionResult> Code(EmailSignInViewModel model)
     {
         var email = model.Email?.Trim();
+
+        // The same events a password sign-in raises, so reCAPTCHA, audit, lockout and any other hook sees this sign-in.
+        foreach (var loginFormEvent in _loginFormEvents)
+        {
+            await loginFormEvent.LoggingInAsync(email, (key, message) => ModelState.AddModelError(key, message));
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
         var user = string.IsNullOrEmpty(email) ? null : await FindUserAsync(email);
 
         // A wrong code and no account read the same.
-        if (user is null || !await _codes.VerifyAsync(email, model.Code, HttpContext.RequestAborted))
+        if (user is null)
         {
-            ModelState.AddModelError(nameof(model.Code), S["That code isn't right or has expired. Check the latest email, or ask for a new code."]);
+            await _loginFormEvents.InvokeAsync((handler, userName) => handler.LoggingInFailedAsync(userName), email, _logger);
 
-            return View(model);
+            return CodeRefused(model);
         }
+
+        if (!await _codes.VerifyAsync(email, model.Code, HttpContext.RequestAborted))
+        {
+            // A wrong code counts toward the account's lockout, as a wrong password does, so guessing stops for good once
+            // the lockout threshold is reached instead of resuming with every new code.
+            await _userManager.AccessFailedAsync(user);
+
+            if (await _userManager.IsLockedOutAsync(user))
+            {
+                await _loginFormEvents.InvokeAsync((handler, lockedOut) => handler.IsLockedOutAsync(lockedOut), user, _logger);
+            }
+
+            await _loginFormEvents.InvokeAsync((handler, failed) => handler.LoggingInFailedAsync(failed), user, _logger);
+
+            return CodeRefused(model);
+        }
+
+        foreach (var loginFormEvent in _loginFormEvents)
+        {
+            if (await loginFormEvent.ValidatingLoginAsync(user) is { } refusal)
+            {
+                return refusal;
+            }
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(user);
 
         // The code proves the email is theirs.
         if (user is User account && !account.EmailConfirmed)
@@ -109,13 +157,22 @@ public sealed class EmailSignInController : Controller
 
         await _signInManager.SignInAsync(user, isPersistent: false);
 
+        await _loginFormEvents.InvokeAsync((handler, signedIn) => handler.LoggedInAsync(signedIn), user, _logger);
+
         return !string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
             ? LocalRedirect(model.ReturnUrl)
             : LocalRedirect(Url.Content("~/"));
     }
 
-    // An account that can sign in with a code: enabled, not locked out, and not using two-factor sign-in, which a
-    // code would get around.
+    private ViewResult CodeRefused(EmailSignInViewModel model)
+    {
+        ModelState.AddModelError(nameof(model.Code), S["That code isn't right or has expired. Check the latest email, or ask for a new code."]);
+
+        return View(model);
+    }
+
+    // An account that can sign in with a code: enabled, not locked out, not using two-factor sign-in, which a code would
+    // get around, and not in a role kept to password sign-in (Administrator by default).
     private async Task<IUser> FindUserAsync(string email)
     {
         var user = await _userManager.FindByEmailAsync(email);
@@ -123,12 +180,26 @@ public sealed class EmailSignInController : Controller
         if (user is null ||
             (user is User account && !account.IsEnabled) ||
             await _userManager.IsLockedOutAsync(user) ||
-            await _userManager.GetTwoFactorEnabledAsync(user))
+            await _userManager.GetTwoFactorEnabledAsync(user) ||
+            await IsInExcludedRoleAsync(user))
         {
             return null;
         }
 
         return user;
+    }
+
+    private async Task<bool> IsInExcludedRoleAsync(IUser user)
+    {
+        foreach (var role in _options.ExcludedRoles ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(role) && await _userManager.IsInRoleAsync(user, role))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task SendCodeAsync(IUser user, string email)

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Users.Services;
@@ -20,15 +21,20 @@ public sealed class EmailSignInCodes
     private const int MaxSendsPerEmail = 3;
     private const int MaxSendsPerAddress = 10;
 
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
+
     private readonly IDistributedCache _cache;
     private readonly ShellSettings _shellSettings;
     private readonly IClock _clock;
+    private readonly IDistributedLock _distributedLock;
 
-    public EmailSignInCodes(IDistributedCache cache, ShellSettings shellSettings, IClock clock)
+    public EmailSignInCodes(IDistributedCache cache, ShellSettings shellSettings, IClock clock, IDistributedLock distributedLock)
     {
         _cache = cache;
         _shellSettings = shellSettings;
         _clock = clock;
+        _distributedLock = distributedLock;
     }
 
     /// <summary>
@@ -60,56 +66,80 @@ public sealed class EmailSignInCodes
     public async Task<bool> VerifyAsync(string email, string code, CancellationToken cancellationToken = default)
     {
         var key = Key("code:" + Normalize(email));
-        var json = await _cache.GetStringAsync(key, cancellationToken);
 
-        if (string.IsNullOrEmpty(json) || JsonSerializer.Deserialize<CodeEntry>(json) is not { } entry || entry.ExpiresUtc <= _clock.UtcNow || entry.Attempts >= MaxAttempts)
+        // The read, the count and the write happen under one lock per tenant and email, and the attempt is counted before
+        // the code is compared. Without both, parallel guesses all saw fewer than five attempts and a six-digit code could
+        // be brute-forced. A lock that can't be taken refuses the guess rather than counting it without one.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key + ":lock", _lockTimeout, _lockExpiration);
+
+        if (!locked)
         {
             return false;
         }
 
-        var digits = new string([.. (code ?? string.Empty).Where(char.IsAsciiDigit)]);
-        var match = digits.Length == 6 && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(entry.Hash), Encoding.ASCII.GetBytes(Hash(email, digits)));
-
-        if (match)
+        await using (locker)
         {
-            await _cache.RemoveAsync(key, cancellationToken);
+            var json = await _cache.GetStringAsync(key, cancellationToken);
 
-            return true;
+            if (string.IsNullOrEmpty(json) || JsonSerializer.Deserialize<CodeEntry>(json) is not { } entry || entry.ExpiresUtc <= _clock.UtcNow || entry.Attempts >= MaxAttempts)
+            {
+                return false;
+            }
+
+            await _cache.SetStringAsync(key, JsonSerializer.Serialize(entry with { Attempts = entry.Attempts + 1 }), new DistributedCacheEntryOptions
+            {
+                AbsoluteExpiration = entry.ExpiresUtc,
+            }, cancellationToken);
+
+            var digits = new string([.. (code ?? string.Empty).Where(char.IsAsciiDigit)]);
+            var match = digits.Length == 6 && CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(entry.Hash), Encoding.ASCII.GetBytes(Hash(email, digits)));
+
+            if (match)
+            {
+                await _cache.RemoveAsync(key, cancellationToken);
+            }
+
+            return match;
         }
-
-        await _cache.SetStringAsync(key, JsonSerializer.Serialize(entry with { Attempts = entry.Attempts + 1 }), new DistributedCacheEntryOptions
-        {
-            AbsoluteExpiration = entry.ExpiresUtc,
-        }, cancellationToken);
-
-        return false;
     }
 
     private async Task<bool> CountAsync(string name, int limit, CancellationToken cancellationToken)
     {
         var key = Key("sends:" + name);
-        var json = await _cache.GetStringAsync(key, cancellationToken);
-        var now = _clock.UtcNow;
-        var window = string.IsNullOrEmpty(json) ? null : JsonSerializer.Deserialize<SendWindow>(json);
 
-        if (window is null || window.EndsUtc <= now)
-        {
-            window = new SendWindow(now + _sendWindow, 0);
-        }
+        // Counted under a lock, like the guesses, so parallel requests can't each see room for one more send.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(key + ":lock", _lockTimeout, _lockExpiration);
 
-        if (window.Count >= limit)
+        if (!locked)
         {
             return false;
         }
 
-        window = window with { Count = window.Count + 1 };
-
-        await _cache.SetStringAsync(key, JsonSerializer.Serialize(window), new DistributedCacheEntryOptions
+        await using (locker)
         {
-            AbsoluteExpiration = window.EndsUtc,
-        }, cancellationToken);
+            var json = await _cache.GetStringAsync(key, cancellationToken);
+            var now = _clock.UtcNow;
+            var window = string.IsNullOrEmpty(json) ? null : JsonSerializer.Deserialize<SendWindow>(json);
 
-        return true;
+            if (window is null || window.EndsUtc <= now)
+            {
+                window = new SendWindow(now + _sendWindow, 0);
+            }
+
+            if (window.Count >= limit)
+            {
+                return false;
+            }
+
+            window = window with { Count = window.Count + 1 };
+
+            await _cache.SetStringAsync(key, JsonSerializer.Serialize(window), new DistributedCacheEntryOptions
+            {
+                AbsoluteExpiration = window.EndsUtc,
+            }, cancellationToken);
+
+            return true;
+        }
     }
 
     private string Key(string name)
