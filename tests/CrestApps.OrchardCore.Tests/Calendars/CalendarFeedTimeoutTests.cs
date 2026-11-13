@@ -91,7 +91,13 @@ public sealed class CalendarFeedTimeoutTests
         {
             if (request.RequestUri.AbsolutePath.Contains("slow", StringComparison.Ordinal))
             {
-                await Task.Delay(Timeout.Infinite, cancellationToken);
+                // Never answers; only the request's cancellation (the feed timeout) ends the wait.
+                var never = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                await using (cancellationToken.Register(() => never.TrySetCanceled(cancellationToken)))
+                {
+                    await never.Task;
+                }
             }
 
             return new HttpResponseMessage(HttpStatusCode.OK)
