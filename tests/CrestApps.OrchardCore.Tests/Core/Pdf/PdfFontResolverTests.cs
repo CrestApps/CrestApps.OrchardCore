@@ -1,14 +1,14 @@
-using CrestApps.OrchardCore.Reports.Pdf.Services;
+using CrestApps.OrchardCore.Pdf;
 
-namespace CrestApps.OrchardCore.Tests.Modules.Reports.Pdf.Services;
+namespace CrestApps.OrchardCore.Tests.Core.Pdf;
 
-public sealed class ReportPdfFontResolverTests
+public sealed class PdfFontResolverTests
 {
     [Fact]
     public void Resolve_WhenWindowsFontsAreInstalled_ShouldReadTheirShortStyleSuffixes()
     {
         // Arrange
-        var resolver = ReportPdfFontResolver.FromFiles(
+        var resolver = PdfFontResolver.FromFiles(
         [
             "C:/Windows/Fonts/arial.ttf",
             "C:/Windows/Fonts/arialbd.ttf",
@@ -34,7 +34,7 @@ public sealed class ReportPdfFontResolverTests
     public void Resolve_WhenArialIsNotInstalled_ShouldUseLiberationSans()
     {
         // Arrange
-        var resolver = ReportPdfFontResolver.FromFiles(
+        var resolver = PdfFontResolver.FromFiles(
         [
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -54,7 +54,7 @@ public sealed class ReportPdfFontResolverTests
     public void Resolve_WhenTheFontHasNoBoldFace_ShouldAskForBoldToBeSimulated()
     {
         // Arrange
-        var resolver = ReportPdfFontResolver.FromFiles(["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]);
+        var resolver = PdfFontResolver.FromFiles(["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]);
 
         // Act
         var bold = resolver.Resolve("Arial", isBold: true);
@@ -68,7 +68,7 @@ public sealed class ReportPdfFontResolverTests
     public void Resolve_WhenTheFontHasAnItalicFaceButNoBoldFace_ShouldOutlineTheRegularFace()
     {
         // Arrange
-        var resolver = ReportPdfFontResolver.FromFiles(
+        var resolver = PdfFontResolver.FromFiles(
         [
             "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -87,7 +87,7 @@ public sealed class ReportPdfFontResolverTests
     {
         // Arrange
         // "Credit" is not an italic "Cred", since no "Cred" font is installed.
-        var resolver = ReportPdfFontResolver.FromFiles(["/fonts/Credit.ttf"]);
+        var resolver = PdfFontResolver.FromFiles(["/fonts/Credit.ttf"]);
 
         // Act
         var regular = resolver.Resolve("Credit", isBold: false);
@@ -100,7 +100,7 @@ public sealed class ReportPdfFontResolverTests
     public void FromFiles_WhenNoFontIsInstalled_ShouldReturnNull()
     {
         // Act
-        var resolver = ReportPdfFontResolver.FromFiles([]);
+        var resolver = PdfFontResolver.FromFiles([]);
 
         // Assert
         Assert.Null(resolver);

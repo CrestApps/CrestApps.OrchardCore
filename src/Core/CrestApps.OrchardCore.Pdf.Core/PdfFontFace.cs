@@ -7,11 +7,11 @@ using UglyToad.PdfPig.Fonts.TrueType;
 using UglyToad.PdfPig.Fonts.TrueType.Parser;
 using UglyToad.PdfPig.Writer;
 
-namespace CrestApps.OrchardCore.Reports.Pdf.Services;
+namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// One face of the font of a report PDF, measured and written with PdfPig: an installed TrueType font, embedded as a
-/// subset of the characters the report uses, or Helvetica, one of the fonts every PDF reader has, when the host has
+/// One face of the font of a PDF document, measured and written with PdfPig: an installed TrueType font, embedded as a
+/// subset of the characters the document uses, or Helvetica, one of the fonts every PDF reader has, when the host has
 /// no usable font.
 /// </summary>
 /// <remarks>
@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 /// accent. A PdfPig TrueType font holds up to 255 different characters, so the font is embedded again for the next
 /// 255.
 /// </remarks>
-internal sealed class ReportPdfFont
+public sealed class PdfFontFace
 {
     private const int CharactersPerFont = 255;
 
@@ -40,7 +40,7 @@ internal sealed class ReportPdfFont
     private readonly Dictionary<char, double> _widths = [];
     private readonly List<EmbeddedFont> _embedded = [];
 
-    private ReportPdfFont(
+    private PdfFontFace(
         PdfDocumentBuilder builder,
         byte[] file,
         TrueTypeFont trueType,
@@ -63,7 +63,7 @@ internal sealed class ReportPdfFont
         }
     }
 
-    private ReportPdfFont(
+    private PdfFontFace(
         PdfDocumentBuilder builder,
         Standard14Font standardFont)
     {
@@ -120,13 +120,13 @@ internal sealed class ReportPdfFont
     /// The face, or <see langword="null"/> when the font cannot be read; <see cref="CanUse"/> checks that PdfPig can
     /// write with it.
     /// </returns>
-    public static ReportPdfFont FromTrueType(PdfDocumentBuilder builder, byte[] file, bool simulatesBold)
+    public static PdfFontFace FromTrueType(PdfDocumentBuilder builder, byte[] file, bool simulatesBold)
     {
         var trueType = Parse(file);
 
         return trueType is null
             ? null
-            : new ReportPdfFont(builder, file, trueType, simulatesBold);
+            : new PdfFontFace(builder, file, trueType, simulatesBold);
     }
 
     /// <summary>
@@ -135,9 +135,9 @@ internal sealed class ReportPdfFont
     /// <param name="builder">The document the face writes in.</param>
     /// <param name="font">The font.</param>
     /// <returns>The face.</returns>
-    public static ReportPdfFont FromStandard(PdfDocumentBuilder builder, Standard14Font font)
+    public static PdfFontFace FromStandard(PdfDocumentBuilder builder, Standard14Font font)
     {
-        return new ReportPdfFont(builder, font);
+        return new PdfFontFace(builder, font);
     }
 
     /// <summary>
@@ -147,7 +147,43 @@ internal sealed class ReportPdfFont
     /// <returns><see langword="true"/> when the font can be used.</returns>
     public static bool CanUse(byte[] file)
     {
-        if (Parse(file) is null)
+        return CanEmbed(file, RequiredCharacters, requireText: true);
+    }
+
+    /// <summary>
+    /// Creates a face from a TrueType font file that holds symbols or digits and not the letters of plain text, such
+    /// as the font of the line at the bottom of a check. Write only the characters <see cref="Supports"/> accepts.
+    /// </summary>
+    /// <param name="builder">The document the face writes in.</param>
+    /// <param name="file">The TrueType file.</param>
+    /// <returns>The face, or <see langword="null"/> when the font cannot be read.</returns>
+    public static PdfFontFace FromSymbolFont(PdfDocumentBuilder builder, byte[] file)
+    {
+        var trueType = Parse(file, requireText: false);
+
+        return trueType is null
+            ? null
+            : new PdfFontFace(builder, file, trueType, simulatesBold: false);
+    }
+
+    /// <summary>
+    /// Checks that PdfPig can write the given characters with a TrueType font file that holds symbols or digits.
+    /// </summary>
+    /// <param name="file">The TrueType file.</param>
+    /// <param name="characters">The characters the font must write.</param>
+    /// <returns><see langword="true"/> when the font has the characters and can be embedded.</returns>
+    public static bool CanUseSymbols(byte[] file, string characters)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(characters);
+
+        return CanEmbed(file, characters, requireText: false);
+    }
+
+    private static bool CanEmbed(byte[] file, string characters, bool requireText)
+    {
+        var parsed = Parse(file, requireText);
+
+        if (parsed is null || !characters.All(character => GetTrueTypeWidth(parsed, character) is not null))
         {
             return false;
         }
@@ -159,7 +195,7 @@ internal sealed class ReportPdfFont
             using var builder = new PdfDocumentBuilder();
             var font = builder.AddTrueTypeFont(file);
 
-            builder.AddPage(PageSize.Letter).AddText(RequiredCharacters, 10, new PdfPoint(0, 0), font);
+            builder.AddPage(PageSize.Letter).AddText(characters, 10, new PdfPoint(0, 0), font);
             builder.Build();
 
             return true;
@@ -179,7 +215,7 @@ internal sealed class ReportPdfFont
     /// <returns>The text the font can write.</returns>
     public string Prepare(string value)
     {
-        var text = ReportPdfText.Clean(value);
+        var text = PdfText.Clean(value);
 
         if (string.IsNullOrEmpty(text))
         {
@@ -422,7 +458,7 @@ internal sealed class ReportPdfFont
         }
     }
 
-    private static TrueTypeFont Parse(byte[] file)
+    private static TrueTypeFont Parse(byte[] file, bool requireText = true)
     {
         if (file is not { Length: > 0 })
         {
@@ -448,13 +484,13 @@ internal sealed class ReportPdfFont
                 return null;
             }
 
-            return RequiredCharacters.All(character => GetTrueTypeWidth(font, character) is not null)
+            return !requireText || RequiredCharacters.All(character => GetTrueTypeWidth(font, character) is not null)
                 ? font
                 : null;
         }
         catch (Exception)
         {
-            // A font PdfPig cannot read is not used; another font, or Helvetica, writes the report.
+            // A font PdfPig cannot read is not used; another font, or Helvetica, writes the document.
             return null;
         }
     }

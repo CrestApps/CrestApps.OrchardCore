@@ -1,11 +1,11 @@
 using System.Text;
 
-namespace CrestApps.OrchardCore.Reports.Pdf.Services;
+namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// Cleans and wraps the text of a report PDF.
+/// Cleans and wraps the text of a PDF document.
 /// </summary>
-internal static class ReportPdfText
+public static class PdfText
 {
     /// <summary>
     /// Keeps the line breaks of a value and turns the other control characters, which a font has no glyph for, into
@@ -52,12 +52,12 @@ internal static class ReportPdfText
     /// Breaks prepared text into the lines that fit a width: at its line breaks, between its words, and inside a word
     /// that is wider than the line, such as a URL.
     /// </summary>
-    /// <param name="text">The text, from <see cref="ReportPdfFont.Prepare"/>.</param>
+    /// <param name="text">The text, from <see cref="PdfFontFace.Prepare"/>.</param>
     /// <param name="font">The font of the text.</param>
     /// <param name="size">The font size, in points.</param>
     /// <param name="width">The width of a line, in points.</param>
     /// <returns>The lines; none when there is no text.</returns>
-    public static List<string> Wrap(string text, ReportPdfFont font, double size, double width)
+    public static List<string> Wrap(string text, PdfFontFace font, double size, double width)
     {
         var lines = new List<string>();
 
@@ -77,12 +77,12 @@ internal static class ReportPdfText
     /// <summary>
     /// Shortens prepared text, without line breaks, to a width, ending it with an ellipsis when it is cut.
     /// </summary>
-    /// <param name="text">The text, from <see cref="ReportPdfFont.Prepare"/>.</param>
+    /// <param name="text">The text, from <see cref="PdfFontFace.Prepare"/>.</param>
     /// <param name="font">The font of the text.</param>
     /// <param name="size">The font size, in points.</param>
     /// <param name="width">The width, in points.</param>
     /// <returns>The text, whole when it fits.</returns>
-    public static string Fit(string text, ReportPdfFont font, double size, double width)
+    public static string Fit(string text, PdfFontFace font, double size, double width)
     {
         if (string.IsNullOrEmpty(text) || font.Measure(text, size) <= width)
         {
@@ -110,7 +110,7 @@ internal static class ReportPdfText
         return text.Substring(0, length).TrimEnd() + ellipsis;
     }
 
-    private static void WrapParagraph(string paragraph, ReportPdfFont font, double size, double width, List<string> lines)
+    private static void WrapParagraph(string paragraph, PdfFontFace font, double size, double width, List<string> lines)
     {
         if (font.Measure(paragraph, size) <= width)
         {

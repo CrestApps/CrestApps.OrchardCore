@@ -489,3 +489,10 @@ What is built, slice by slice, and where it differs from the plan above.
 - `Money.Allocate` is in `Payments.Abstractions`. The two existing "copies" were not moved onto it: the Checkout discount allocator also caps each line by the room it has left and spreads the overflow, and Marketplace's `GetRefundShare` is one proportion, not a split. Neither is the same operation.
 - `INumberSequence` gained `SetNextAsync` and `GetLastAsync` (a screen shows the next check number). It still lists the series records on each call: reading one record needs an index and a migration, and a site has tens of series, not thousands.
 - The field protector is `ISensitiveValueProtector` with `ProtectedValue` and `SensitiveMask` in `CrestApps.OrchardCore.Abstractions` (`SensitiveData`), implemented by `DataProtectionSensitiveValueProtector` in `CrestApps.OrchardCore.Core` and registered with `AddSensitiveValueProtector()`. The hint never holds more than half of a value. The keyed hash ("is this number used twice") waits for the slice that needs it (P4), and each consumer writes its own Audit Trail event for a reveal.
+
+### F2 as built
+
+- One library, `CrestApps.OrchardCore.Pdf.Core` (namespace `CrestApps.OrchardCore.Pdf`), and no `Pdf.Abstractions`: there is no contract to implement another way, consumers call the library.
+- Moved out of `Reports.Pdf` and made public: `PdfCanvas` (was `ReportPdfPage`), `PdfFontFace`, `PdfFontSet` (`GetInstalled(family)`), `PdfText`, `PdfColor`; `PdfFontResolver` stays internal. The report writers (flow, tables, charts, theme) stay in `Reports.Pdf`.
+- Added: `PdfDocumentWriter` and `PdfPageSize` (the entry point for documents that place their own content), `PdfCanvas.DrawTextOnBaseline`, `DrawTextRight`, `DrawRectangle` and `DrawImage` (PNG and JPEG), and symbol fonts (`AddSymbolFont`, for a font with digits and symbols only, such as the check line font).
+- Not built: `AddPdfFont` and a font catalog. A module that ships a font reads its own embedded resource and calls `AddSymbolFont` or `AddFont`.
