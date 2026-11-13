@@ -180,9 +180,12 @@ public static class AcpMcpEndpoints
             return AcpError(id, AcpResults.ErrorBody(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, signatureError));
         }
 
-        if (!await AcpSignatureCheck.TryUseAsync(httpContext, request.Platform, verified, call.IdempotencyKey))
+        // Only a call that changes a checkout runs through the idempotency layer, so only its key may let a signature again.
+        if (await AcpSignatureCheck.UseAsync(httpContext, request.Platform, verified, call.IsMutating ? call.IdempotencyKey : null) is not AgentSignatureUse.Accepted and var use)
         {
-            return AcpError(id, AcpResults.ErrorBody(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, "The signature was used before. Sign each request anew."));
+            var refused = AcpSignatureCheck.RefusedUse(httpContext, use);
+
+            return AcpError(id, refused.Body);
         }
 
         var version = call.ApiVersion.Trim();

@@ -78,7 +78,7 @@ public static class AIEgress
                 var allowPrivateNetwork = serviceProvider.GetService<IOptions<AIEgressOptions>>()?.Value.AllowPrivateNetwork == true;
 
                 // Crawled sites commonly redirect (sitemap.xml to sitemap_index.xml); every hop is checked at connect.
-                return EgressNetwork.CreateHandler(isDevelopment, allowPrivateNetwork, allowRedirects: true);
+                return EgressNetwork.CreateHandler(isDevelopment, allowPrivateNetwork, allowRedirects: true, EgressNetwork.GetProxy(serviceProvider));
             });
         }
 

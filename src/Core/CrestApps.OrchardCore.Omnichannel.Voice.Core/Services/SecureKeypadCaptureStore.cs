@@ -6,10 +6,12 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -56,10 +58,17 @@ public interface ISecureKeypadCaptureStore
 /// <see cref="SecureCaptureWindow"/> is kept on the call's activity, which every node reads, and keys that find no entry
 /// this node can use while the window is open are dropped. A node with its own memory cache, a restart in the middle of
 /// an entry, an evicted entry or one this node cannot decrypt all end there, never in the caller's turn.
+/// <para>
+/// The window is opened in a scope of its own and committed at once, on a fresh read of the activity, and tried again
+/// when another write wins. On a live call the entry is asked for from the call's scope, which holds the copy of the
+/// activity it read when the call began; a second entry saved onto that copy lost to the keypad event that closed the
+/// first one, and the call swallowed the conflict, so the second entry had no window.
+/// </para>
 /// </remarks>
 internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCaptureStore
 {
     private const string ProtectorPurpose = "CrestApps.OrchardCore.Omnichannel.Voice.SecureKeypadCapture";
+    private const int WindowWriteAttempts = 3;
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(10);
@@ -68,6 +77,7 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
     private readonly IOmnichannelActivityStore _activityStore;
     private readonly IDistributedLock _distributedLock;
     private readonly IDataProtector _protector;
+    private readonly Func<Func<IServiceProvider, Task>, Task> _inScopeOfItsOwn;
     private readonly ShellSettings _shellSettings;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -77,6 +87,23 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
         IOmnichannelActivityStore activityStore,
         IDistributedLock distributedLock,
         IDataProtectionProvider dataProtectionProvider,
+        IShellHost shellHost,
+        ShellSettings shellSettings,
+        IClock clock,
+        ILogger<DistributedSecureKeypadCaptureStore> logger)
+        : this(cache, activityStore, distributedLock, dataProtectionProvider, InShellScope(shellHost, shellSettings), shellSettings, clock, logger)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance with the way a write of its own gets a scope, for tests.
+    /// </summary>
+    internal DistributedSecureKeypadCaptureStore(
+        IDistributedCache cache,
+        IOmnichannelActivityStore activityStore,
+        IDistributedLock distributedLock,
+        IDataProtectionProvider dataProtectionProvider,
+        Func<Func<IServiceProvider, Task>, Task> inScopeOfItsOwn,
         ShellSettings shellSettings,
         IClock clock,
         ILogger<DistributedSecureKeypadCaptureStore> logger)
@@ -85,6 +112,7 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
         _activityStore = activityStore;
         _distributedLock = distributedLock;
         _protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
+        _inScopeOfItsOwn = inScopeOfItsOwn;
         _shellSettings = shellSettings;
         _clock = clock;
         _logger = logger;
@@ -97,8 +125,9 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
 
         var now = _clock.UtcNow;
 
-        // The window goes on the activity first: once it is there no node hands the keys on, whatever its cache holds.
-        await SetWindowAsync(activityId, new SecureCaptureWindow { Field = field, UntilUtc = now + SecureKeypadCaptures.Expiry }, cancellationToken);
+        // The window goes on the activity first, committed: once it is there no node hands the keys on, whatever its
+        // cache holds.
+        await OpenWindowAsync(activityId, new SecureCaptureWindow { Field = field, UntilUtc = now + SecureKeypadCaptures.Expiry }, cancellationToken);
         await WriteAsync(activityId, new Capture { Field = field, StartedUtc = now }, cancellationToken);
     }
 
@@ -259,8 +288,42 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
             window.UntilUtc > _clock.UtcNow;
     }
 
-    // Opens the window, or closes it when the window is null. The activity is saved with the scope: the webhook
-    // request's, or on a live call the call's, which commits when the response that asked for the entry completes.
+    // Opens the window on a fresh read of the activity in a scope of its own, committed before the caller is asked to
+    // type, so it doesn't depend on the scope that asked: a live call's scope holds an old copy of the activity, and its
+    // commit of that copy loses to any write since. A write that loses a race is tried again in a new scope, since a
+    // session that lost one can't be used again; one that keeps losing fails the entry rather than leave it unguarded.
+    private async Task OpenWindowAsync(string activityId, SecureCaptureWindow window, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await _inScopeOfItsOwn(async services =>
+                {
+                    var activityStore = services.GetRequiredService<IOmnichannelActivityStore>();
+                    var activity = await activityStore.FindByIdAsync(activityId, cancellationToken);
+
+                    if (activity is null)
+                    {
+                        return;
+                    }
+
+                    activity.Put(window);
+                    await activityStore.UpdateAsync(activity, cancellationToken);
+                    await services.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
+                });
+
+                return;
+            }
+            catch (ConcurrencyException) when (attempt < WindowWriteAttempts)
+            {
+                // Another write won; the next attempt reads what it wrote.
+            }
+        }
+    }
+
+    // Closes the window, through the scope that finished the entry: the keypad event's request, which commits when it
+    // ends. A window that can't be closed only keeps later keys out of the conversation until it expires.
     private async Task SetWindowAsync(string activityId, SecureCaptureWindow window, CancellationToken cancellationToken)
     {
         var activity = await _activityStore.FindByIdAsync(activityId, cancellationToken);
@@ -281,6 +344,15 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
 
         await _activityStore.UpdateAsync(activity, cancellationToken);
     }
+
+    // A tenant scope of its own, which outlives the request or the call that asks for it.
+    private static Func<Func<IServiceProvider, Task>, Task> InShellScope(IShellHost shellHost, ShellSettings shellSettings)
+        => async work =>
+        {
+            var scope = await shellHost.GetScopeAsync(shellSettings);
+
+            await scope.UsingAsync(childScope => work(childScope.ServiceProvider));
+        };
 
     private string GetCacheKey(string activityId)
         => $"{_shellSettings.Name}:SecureKeypadCapture:{activityId}";

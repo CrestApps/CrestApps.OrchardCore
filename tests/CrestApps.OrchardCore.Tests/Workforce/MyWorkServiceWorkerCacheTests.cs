@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Controllers;
 using CrestApps.OrchardCore.Workforce.Portal;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Configuration;
@@ -63,33 +64,114 @@ public sealed class MyWorkServiceWorkerCacheTests
         Assert.Contains(response.Headers.SetCookie, cookie => cookie.StartsWith(MyWorkSignOut.DeviceCookieName + "=1", StringComparison.Ordinal) && cookie.Contains("httponly", StringComparison.OrdinalIgnoreCase));
     }
 
-    [Fact]
-    public async Task SigningOut_OnADeviceThatKeptMyWorkPages_ClearsTheSitesCachesAndStorage()
+    // SEC-FE4 e, second review: Clear-Site-Data clears the whole origin, so with tenants on paths of one host a sign-out
+    // from one tenant wiped every tenant's storage, service workers and push registrations.
+    [Theory]
+    [InlineData("/t1/", "/t1/")]
+    [InlineData("/t1/Admin/my-work", "/t1/Admin/my-work")]
+    [InlineData("https://elsewhere.example/", "/t1/")]
+    [InlineData("//elsewhere.example/", "/t1/")]
+    public async Task SigningOut_OnADeviceThatRegisteredMyWork_GoesThroughThePageThatClearsOnlyMyWork(string redirect, string next)
     {
-        // Arrange
-        var httpContext = new DefaultHttpContext();
+        // Arrange: the sign-out of a tenant on a path, as Orchard's LogOff runs it: the handler, then the redirect.
+        var (httpContext, response) = SignOutContext();
         httpContext.Request.Headers.Cookie = $"{MyWorkSignOut.DeviceCookieName}=1";
-        var signOut = new MyWorkSignOut(new HttpContextAccessor { HttpContext = httpContext });
+        var signOut = SignOut(httpContext);
 
         // Act
         await signOut.LoggedOutAsync(Mock.Of<IUser>(), TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal("\"cache\", \"storage\"", httpContext.Response.Headers["Clear-Site-Data"].ToString());
-    }
-
-    [Fact]
-    public async Task SigningOut_OnADeviceThatNeverOpenedMyWork_LeavesItsStorageAlone()
-    {
-        // Arrange
-        var httpContext = new DefaultHttpContext();
-        var signOut = new MyWorkSignOut(new HttpContextAccessor { HttpContext = httpContext });
-
-        // Act
-        await signOut.LoggedOutAsync(Mock.Of<IUser>(), TestContext.Current.CancellationToken);
+        httpContext.Response.Redirect(redirect);
+        await response.StartAsync();
 
         // Assert
         Assert.False(httpContext.Response.Headers.ContainsKey("Clear-Site-Data"));
+        Assert.Equal($"/t1{MyWorkSignedOutEndpoints.PagePath}?next={Uri.EscapeDataString(next)}&u={MyWorkController.GetServiceWorkerUserKey("worker-1", "Tenant1")}", httpContext.Response.Headers.Location.ToString());
+    }
+
+    [Fact]
+    public async Task SigningOut_OnADeviceThatNeverOpenedMyWork_GoesWhereItWasGoing()
+    {
+        // Arrange
+        var (httpContext, response) = SignOutContext();
+        var signOut = SignOut(httpContext);
+
+        // Act
+        await signOut.LoggedOutAsync(Mock.Of<IUser>(), TestContext.Current.CancellationToken);
+        httpContext.Response.Redirect("/t1/");
+        await response.StartAsync();
+
+        // Assert
+        Assert.False(httpContext.Response.Headers.ContainsKey("Clear-Site-Data"));
+        Assert.Equal("/t1/", httpContext.Response.Headers.Location.ToString());
+    }
+
+    [Fact]
+    public async Task TheSignedOutPage_DeletesOnlyTheMyWorkCaches_AndThisTenantsServiceWorker_ThenGoesOnLocally()
+    {
+        // Arrange
+        var httpContext = new DefaultHttpContext { RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider() };
+        httpContext.Request.PathBase = "/t1";
+        var scriptContext = new DefaultHttpContext { RequestServices = httpContext.RequestServices };
+
+        // Act
+        var key = MyWorkController.GetServiceWorkerUserKey("worker-1", "Tenant1");
+        var page = await RenderAsync(MyWorkSignedOutEndpoints.Page(httpContext, "https://elsewhere.example/", key), httpContext);
+        var script = await RenderAsync(MyWorkSignedOutEndpoints.ScriptResult(scriptContext), scriptContext);
+
+        // Assert
+        Assert.Contains("src=\"/t1/my-work/signed-out.js\"", page, StringComparison.Ordinal);
+        Assert.Contains("data-scope=\"/t1/Admin/my-work\"", page, StringComparison.Ordinal);
+        Assert.Contains("data-next=\"/t1/\"", page, StringComparison.Ordinal);
+        Assert.Contains($"data-user=\"{key}\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("elsewhere", page, StringComparison.Ordinal);
+        Assert.Contains("key.startsWith('my-work-') && key.endsWith('-' + user)", script, StringComparison.Ordinal);
+        Assert.Contains("registration.unregister()", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("localStorage", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("indexedDB", script, StringComparison.Ordinal);
+    }
+
+    private static (DefaultHttpContext HttpContext, StartingResponseFeature Response) SignOutContext()
+    {
+        var response = new StartingResponseFeature();
+        var httpContext = new DefaultHttpContext
+        {
+            User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "worker-1")], "test")),
+        };
+
+        httpContext.Features.Set<IHttpResponseFeature>(response);
+        httpContext.Request.PathBase = "/t1";
+
+        return (httpContext, response);
+    }
+
+    private static MyWorkSignOut SignOut(HttpContext httpContext)
+        => new(new HttpContextAccessor { HttpContext = httpContext }, new global::OrchardCore.Environment.Shell.ShellSettings { Name = "Tenant1" });
+
+    private static async Task<string> RenderAsync(IResult result, DefaultHttpContext httpContext)
+    {
+        using var body = new MemoryStream();
+
+        httpContext.Response.Body = body;
+        await result.ExecuteAsync(httpContext);
+
+        return System.Text.Encoding.UTF8.GetString(body.ToArray());
+    }
+
+    // A response that runs what was registered to happen as it starts, as the server does before it sends the headers.
+    private sealed class StartingResponseFeature : HttpResponseFeature
+    {
+        private readonly List<(Func<object, Task> Callback, object State)> _starting = [];
+
+        public override void OnStarting(Func<object, Task> callback, object state)
+            => _starting.Add((callback, state));
+
+        public async Task StartAsync()
+        {
+            foreach (var (callback, state) in Enumerable.Reverse(_starting))
+            {
+                await callback(state);
+            }
+        }
     }
 
     [Fact]

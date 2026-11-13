@@ -12,8 +12,11 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 /// Only a signature bound to a time is remembered: one without a time would be valid again once forgotten, so it is
 /// refused before it gets here or, for legacy ACP signatures, not guarded at all. The same signature is accepted again
 /// only for the same idempotent request (the same <c>Idempotency-Key</c>), which the idempotency layer answers with its
-/// first response. Each check takes a lock on the signature, so parallel copies can't all pass; with a shared cache and
-/// lock (Redis), every node knows what another accepted, and otherwise each node keeps its own.
+/// first response; callers pass the key only for an endpoint that has that layer. Each check takes a lock on the
+/// signature, so parallel copies can't all pass; a lock that can't be taken is <see cref="AgentSignatureUse.Unavailable"/>,
+/// not a replay. With a shared cache and lock (Redis), every node knows what another accepted, and otherwise each node
+/// keeps its own. A signature is remembered a little longer than it could be valid, so a copy that arrives as the window
+/// closes, or on a node whose clock is slightly behind, is still known.
 /// </summary>
 public sealed class AgentSignatureReplayGuard
 {
@@ -21,6 +24,7 @@ public sealed class AgentSignatureReplayGuard
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan _margin = TimeSpan.FromSeconds(30);
 
     private readonly IDistributedCache _cache;
     private readonly IDistributedLock _distributedLock;
@@ -44,8 +48,11 @@ public sealed class AgentSignatureReplayGuard
     /// <param name="idempotencyKey">The request's idempotency key, or <see langword="null"/>.</param>
     /// <param name="window">How long the signature could be valid for.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns><see langword="false"/> when it was used before, by a request that isn't the same idempotent one.</returns>
-    public async Task<bool> TryUseAsync(string signer, byte[] signedInput, string idempotencyKey, TimeSpan window, CancellationToken cancellationToken = default)
+    /// <returns>
+    /// <see cref="AgentSignatureUse.Replayed"/> when it was used before, by a request that isn't the same idempotent one;
+    /// <see cref="AgentSignatureUse.Unavailable"/> when its lock couldn't be taken.
+    /// </returns>
+    public async Task<AgentSignatureUse> UseAsync(string signer, byte[] signedInput, string idempotencyKey, TimeSpan window, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(signedInput);
 
@@ -60,7 +67,7 @@ public sealed class AgentSignatureReplayGuard
 
         if (!locked)
         {
-            return false;
+            return AgentSignatureUse.Unavailable;
         }
 
         await using (locker)
@@ -69,15 +76,17 @@ public sealed class AgentSignatureReplayGuard
 
             if (seen is not null)
             {
-                return !string.IsNullOrEmpty(idempotencyKey) && string.Equals(seen, idempotencyKey, StringComparison.Ordinal);
+                return !string.IsNullOrEmpty(idempotencyKey) && string.Equals(seen, idempotencyKey, StringComparison.Ordinal)
+                    ? AgentSignatureUse.Accepted
+                    : AgentSignatureUse.Replayed;
             }
 
             await _cache.SetStringAsync(key, idempotencyKey ?? string.Empty, new DistributedCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = window > TimeSpan.Zero ? window : TimeSpan.FromMinutes(10),
+                AbsoluteExpirationRelativeToNow = (window > TimeSpan.Zero ? window : TimeSpan.FromMinutes(10)) + _margin,
             }, cancellationToken);
 
-            return true;
+            return AgentSignatureUse.Accepted;
         }
     }
 }

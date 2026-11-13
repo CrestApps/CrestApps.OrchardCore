@@ -32,7 +32,9 @@ internal sealed class PortalMigrations : DataMigration
     }
 
     // Feed secrets are stored hashed and protected: the workers whose secret is from before get both. The plain secret
-    // stays one release, for a rollback. It runs after the workers moved to the Staff collection.
+    // stays one release, for a rollback. On an upgrade from before Staff this runs on the start that turns Staff on,
+    // before the workers move, and finds none: the move upgrades each worker it moves, and showing a worker's feed
+    // address upgrades any secret both missed.
     public static int UpdateFrom3Async()
     {
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<WorkerFeedTokenBackfill>().RunAsync());

@@ -302,6 +302,17 @@ public sealed class SecureKeypadCaptureTests
         return store.Object;
     }
 
+    // A scope of its own reads and saves the same activities; its session commits what was saved.
+    private async Task InScopeOfItsOwnAsync(Func<IServiceProvider, Task> work)
+    {
+        await using var services = new ServiceCollection()
+            .AddSingleton(CreateActivityStore())
+            .AddSingleton(Mock.Of<global::YesSql.ISession>())
+            .BuildServiceProvider();
+
+        await work(services);
+    }
+
     private DistributedSecureKeypadCaptureStore CreateNode(IDataProtectionProvider keys = null, IDistributedCache cache = null)
     {
         var clock = new Mock<IClock>();
@@ -312,6 +323,7 @@ public sealed class SecureKeypadCaptureTests
             CreateActivityStore(),
             _lock,
             keys ?? _keys,
+            InScopeOfItsOwnAsync,
             new ShellSettings { Name = "Default" },
             clock.Object,
             NullLogger<DistributedSecureKeypadCaptureStore>.Instance);

@@ -534,7 +534,9 @@ public sealed class TimeOffController : Controller
             return NotFound();
         }
 
-        if (!await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted))
+        // A manager doesn't add hours to their own balance on the strength of managing their own team.
+        if (!await _scopeService.ManagesWorkerAsync(User, worker, HttpContext.RequestAborted) ||
+            !await _scopeService.CanDecideForWorkerAsync(User, worker.ItemId, HttpContext.RequestAborted))
         {
             return Forbid();
         }
@@ -588,6 +590,11 @@ public sealed class TimeOffController : Controller
             return NotFound();
         }
 
+        if (!await _scopeService.CanDecideForWorkerAsync(User, worker.ItemId, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
         policy.Assignments.Add(new TimeOffPolicyAssignment { WorkerId = worker.ItemId, EffectiveFrom = model.EffectiveFrom, EffectiveTo = model.EffectiveTo });
 
         await SavePolicyAsync(policy, H["{0} now has the '{1}' policy.", worker.DisplayName, policy.Name]);
@@ -615,6 +622,11 @@ public sealed class TimeOffController : Controller
         if (policy is null)
         {
             return NotFound();
+        }
+
+        if (!await _scopeService.CanDecideForWorkerAsync(User, workerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
         }
 
         foreach (var assignment in policy.Assignments.Where(assignment => assignment.WorkerId == workerId).ToArray())

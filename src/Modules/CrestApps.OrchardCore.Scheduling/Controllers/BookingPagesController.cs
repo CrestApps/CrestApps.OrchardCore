@@ -109,17 +109,6 @@ public sealed class BookingPagesController : Controller
             return NotFound();
         }
 
-        // Each network gets a few bookings an hour, whether or not Orchard Core's Rate Limits feature is on: every booking
-        // takes locks, a slot and the booking workflows.
-        var attempt = await _limiter.AcquireAsync(SchedulingConstants.AttemptPolicies.BookingNetwork, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted);
-
-        if (!attempt.Allowed)
-        {
-            await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(HttpContext, attempt.RetryAfter, HttpContext.RequestAborted);
-
-            return new EmptyResult();
-        }
-
         var reCaptcha = ReCaptcha();
         var emailService = type.RequireEmailConfirmation ? HttpContext.RequestServices.GetService<IEmailService>() : null;
 
@@ -140,6 +129,18 @@ public sealed class BookingPagesController : Controller
         }
         else if (DateTimeOffset.TryParse(model.Start, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var start))
         {
+            // Each network gets a few bookings an hour, whether or not Orchard Core's Rate Limits feature is on: every
+            // booking takes locks, a slot and the booking workflows. Counted once the form and the reCAPTCHA pass, so posts
+            // that fail them don't use up the network's bookings.
+            var attempt = await _limiter.AcquireAsync(SchedulingConstants.AttemptPolicies.BookingNetwork, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted);
+
+            if (!attempt.Allowed)
+            {
+                await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(HttpContext, attempt.RetryAfter, HttpContext.RequestAborted);
+
+                return new EmptyResult();
+            }
+
             var result = await _appointmentService.BookAsync(new AppointmentRequest
             {
                 AppointmentTypeId = type.ItemId,
@@ -158,13 +159,17 @@ public sealed class BookingPagesController : Controller
 
             if (result.Succeeded && result.Appointment.Status == AppointmentStatus.Held && type.RequireEmailConfirmation)
             {
-                // The manage link is only sent by e-mail: the time stays held until the customer opens it.
-                await SendConfirmationAsync(emailService, type, result.Appointment);
+                // The manage link is only sent by e-mail: the time stays held until the customer opens it. A message that
+                // can't be sent releases the time at once, rather than hold it for nobody until the hold expires.
+                if (await SendConfirmationAsync(emailService, type, result.Appointment))
+                {
+                    return View("CheckEmail", new BookingConfirmationViewModel { AppointmentType = type, Appointment = result.Appointment });
+                }
 
-                return View("CheckEmail", new BookingConfirmationViewModel { AppointmentType = type, Appointment = result.Appointment });
+                await _appointmentService.CancelAsync(result.Appointment, "The confirmation e-mail could not be sent.", model.CustomerEmail, cancellationToken: HttpContext.RequestAborted);
+                model.Errors.Add(S["We couldn't send the confirmation email, so the time wasn't booked. Try again later."]);
             }
-
-            if (result.Succeeded)
+            else if (result.Succeeded)
             {
                 return RedirectToRoute("SchedulingManage", new { id = result.Appointment.ItemId, token = result.Appointment.ManageToken });
             }
@@ -304,18 +309,20 @@ public sealed class BookingPagesController : Controller
         return type is null ? (null, null) : (appointment, type);
     }
 
-    private async Task SendConfirmationAsync(IEmailService emailService, AppointmentType type, Appointment appointment)
+    private async Task<bool> SendConfirmationAsync(IEmailService emailService, AppointmentType type, Appointment appointment)
     {
         var lifetime = TimeSpan.FromMinutes(Math.Max(1, type.HoldMinutes));
         var link = Url.RouteUrl("SchedulingConfirmBooking", new { id = appointment.ItemId, token = _tokens.Protect(ConfirmationPurpose, appointment.ItemId, lifetime) }, Request.Scheme);
         var name = WebUtility.HtmlEncode(type.Name);
 
-        await emailService.SendAsync(new MailMessage
+        var sent = await emailService.SendAsync(new MailMessage
         {
             To = appointment.CustomerEmail,
             Subject = S["Confirm your booking: {0}", type.Name],
             HtmlBody = $"<p>{WebUtility.HtmlEncode(S["Confirm your booking of {0} within {1} minutes, or the time is released.", type.Name, Math.Max(1, type.HoldMinutes)])}</p><p><a href=\"{WebUtility.HtmlEncode(link)}\">{name}</a></p>",
         }, cancellationToken: HttpContext.RequestAborted);
+
+        return sent?.Succeeded == true;
     }
 
     // The reCAPTCHA feature's service, when the feature is on and set up.

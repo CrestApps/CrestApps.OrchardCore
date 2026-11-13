@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.AgenticCommerce.Services;
+using CrestApps.OrchardCore.Commerce.Api;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -64,10 +65,17 @@ public sealed class AcpRequestFilter : IEndpointFilter
             return AcpResults.Error(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, signatureError);
         }
 
-        // A verified signature is accepted once in its window; again only for the same idempotent request.
-        if (!await AcpSignatureCheck.TryUseAsync(httpContext, agentRequest.Platform, verified, request.Headers["Idempotency-Key"].ToString()))
+        // A verified signature is accepted once in its window; again only for the same idempotent request, which only an
+        // endpoint with the idempotency layer answers with its first result.
+        var idempotencyKey = httpContext.GetEndpoint()?.Metadata.GetMetadata<IdempotencyPolicy>() is not null
+            ? request.Headers["Idempotency-Key"].ToString()
+            : null;
+
+        if (await AcpSignatureCheck.UseAsync(httpContext, agentRequest.Platform, verified, idempotencyKey) is not AgentSignatureUse.Accepted and var use)
         {
-            return AcpResults.Error(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, "The signature was used before. Sign each request anew.");
+            var refused = AcpSignatureCheck.RefusedUse(httpContext, use);
+
+            return Results.Json(refused.Body, statusCode: refused.StatusCode);
         }
 
         agentRequest.Set(httpContext);

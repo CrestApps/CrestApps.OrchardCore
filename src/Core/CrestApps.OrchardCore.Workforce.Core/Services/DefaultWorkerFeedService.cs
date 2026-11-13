@@ -53,6 +53,13 @@ internal sealed class DefaultWorkerFeedService : IWorkerFeedService
 
         if (!renew && Read(settings) is { } existing)
         {
+            // A secret given before secrets were hashed gets its hash and protected copy the first time it is shown, so
+            // it doesn't depend on the one-time backfill having reached this worker.
+            if (WorkerFeedTokenBackfill.Upgrade(worker, _dataProtectionProvider))
+            {
+                await _workerStore.UpdateAsync(worker, cancellationToken);
+            }
+
             return existing;
         }
 

@@ -191,7 +191,7 @@ public sealed class Startup : StartupBase
             .ConfigurePrimaryHttpMessageHandler(serviceProvider => EgressNetwork.CreateHandler(
                 serviceProvider.GetService<IHostEnvironment>()?.IsDevelopment() == true,
                 allowPrivateNetwork: false,
-                allowRedirects: true));
+                allowRedirects: true, EgressNetwork.GetProxy(serviceProvider)));
 
         // Resolve the CRM contact behind a contact address, through the address's own channel. The contact content
         // types are read from the content definitions, so contact search works without the Omnichannel Management
