@@ -7,8 +7,8 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 public interface ITenantFeatureProfileCatalog
 {
     /// <summary>
-    /// Returns the ids of the feature profiles on the host, or <see langword="null"/> when they can't be read because the
-    /// Feature Profiles feature is off.
+    /// Returns the names Orchard Core resolves the host's feature profiles by (the profiles document's keys), or
+    /// <see langword="null"/> when they can't be read because the Feature Profiles feature is off.
     /// </summary>
     Task<IReadOnlyCollection<string>> GetProfileIdsAsync(CancellationToken cancellationToken = default);
 }
