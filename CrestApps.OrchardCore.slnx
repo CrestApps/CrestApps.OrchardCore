@@ -49,6 +49,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Receipts.Abstractions/CrestApps.OrchardCore.Receipts.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.BusinessDocuments.Abstractions/CrestApps.OrchardCore.BusinessDocuments.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Invoicing.Abstractions/CrestApps.OrchardCore.Invoicing.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Subscriptions.Abstractions/CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/CrestApps.OrchardCore.Taxation.Abstractions.csproj" />
@@ -103,6 +104,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Pdf.Core/CrestApps.OrchardCore.Pdf.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Receipts.Core/CrestApps.OrchardCore.Receipts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.BusinessDocuments.Core/CrestApps.OrchardCore.BusinessDocuments.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Invoicing.Core/CrestApps.OrchardCore.Invoicing.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Roles.Core/CrestApps.OrchardCore.Roles.Core.csproj" />
