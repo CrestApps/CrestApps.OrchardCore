@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.PageSections;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
@@ -145,6 +146,7 @@ public sealed class PartiesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartySource, StaffPartySource>());
+        services.AddUserPartySource<StaffUserPartySource>();
     }
 }
 

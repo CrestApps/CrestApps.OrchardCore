@@ -227,6 +227,12 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Workforce.Intraday` | Workforce Intraday | [Workforce for Contact Center](./modules/workforce-contact-center#intraday) |
 | `CrestApps.OrchardCore.Workforce.Adherence` | Workforce Adherence | [Workforce for Contact Center](./modules/workforce-contact-center#adherence) |
 
+## Finance
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Banking` | Banking | [Banking](./modules/banking) |
+
 ## Geo
 
 | Feature ID | Name | Docs |

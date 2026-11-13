@@ -186,6 +186,14 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Finance and Payroll',
+            className: icon('list-checks'),
+            items: [
+                'user-manual/finance/bank-accounts',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Geo',
             className: icon('compass'),
             items: [
@@ -462,6 +470,14 @@ const sidebars = {
                 'modules/skills',
                 'modules/staff',
                 'modules/teams',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Finance and Payroll',
+            className: icon('list-checks'),
+            items: [
+                'modules/banking',
             ],
         },
         {

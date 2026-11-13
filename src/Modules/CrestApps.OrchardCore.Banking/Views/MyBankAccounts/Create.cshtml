@@ -1,0 +1,17 @@
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="MyBankAccountsCreate" title="@T["New bank account"]">
+        <breadcrumb-item id="MyBankAccounts" action="Index" controller="MyBankAccounts" area="CrestApps.OrchardCore.Banking" permission="@BankingPermissions.ManageOwnBankAccounts.Name">@T["My bank accounts"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit" autocomplete="off">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>
