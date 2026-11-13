@@ -11,10 +11,12 @@ using CrestApps.OrchardCore.AI.Agent.Roles;
 using CrestApps.OrchardCore.AI.Agent.Services;
 using CrestApps.OrchardCore.AI.Agent.System;
 using CrestApps.OrchardCore.AI.Agent.Tenants;
+using CrestApps.OrchardCore.AI.Agent.ThemeDesign;
 using CrestApps.OrchardCore.AI.Agent.Users;
 using CrestApps.OrchardCore.AI.Agent.Workflows;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.ThemeDesigner;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -702,6 +704,126 @@ public sealed class ChatAnalyticsToolsStartup : StartupBase
             .WithTitle(S["Query Chat Session Metrics"])
             .WithDescription(S["Queries aggregated chat session analytics metrics with optional date range and profile filters. Returns statistics for generating charts and reports."])
             .WithCategory(S["AI Analytics"])
+            .Selectable();
+    }
+}
+
+/// <summary>
+/// Registers the theme design tools, which design the front-end and admin themes in the signed-in user's theme draft,
+/// when the Theme Designer feature is on.
+/// </summary>
+[RequireFeatures(ThemeDesignerConstants.Features.ThemeDesigner)]
+public sealed class ThemeDesignToolsStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ThemeDesignToolsStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ThemeDesignToolsStartup(IStringLocalizer<ThemeDesignToolsStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCoreAITool<GetThemeDesignOverviewTool>(GetThemeDesignOverviewTool.TheName)
+            .WithTitle(S["Get Theme Design Overview"])
+            .WithDescription(S["Returns the active themes, what the user may change, the changes in their theme draft and how templates and site resources work."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<ListThemeShapesTool>(ListThemeShapesTool.TheName)
+            .WithTitle(S["List Theme Shapes"])
+            .WithDescription(S["Lists the shapes the active front-end or admin theme renders, which templates can replace."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<GetThemeShapeSourceTool>(GetThemeShapeSourceTool.TheName)
+            .WithTitle(S["Get Theme Shape Source"])
+            .WithDescription(S["Reads the template the active theme renders a shape with."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<ListShapeTemplatesTool>(ListShapeTemplatesTool.TheName)
+            .WithTitle(S["List Shape Templates"])
+            .WithDescription(S["Lists the published and drafted front-end or admin templates."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<GetShapeTemplateTool>(GetShapeTemplateTool.TheName)
+            .WithTitle(S["Get Shape Template"])
+            .WithDescription(S["Reads a template as it is published and as the theme draft has it."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<SaveShapeTemplateTool>(SaveShapeTemplateTool.TheName)
+            .WithTitle(S["Save Shape Template to Draft"])
+            .WithDescription(S["Adds or changes a Liquid template in the user's theme draft, after checking it parses."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<RemoveShapeTemplateTool>(RemoveShapeTemplateTool.TheName)
+            .WithTitle(S["Remove Shape Template in Draft"])
+            .WithDescription(S["Removes a template in the user's theme draft."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<ListSiteResourcesTool>(ListSiteResourcesTool.TheName)
+            .WithTitle(S["List Site Resources"])
+            .WithDescription(S["Lists the published and drafted site stylesheets and scripts."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<GetSiteResourceTool>(GetSiteResourceTool.TheName)
+            .WithTitle(S["Get Site Resource"])
+            .WithDescription(S["Reads a site stylesheet or script as it is published and as the theme draft has it."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<SaveSiteResourceTool>(SaveSiteResourceTool.TheName)
+            .WithTitle(S["Save Site Resource to Draft"])
+            .WithDescription(S["Adds or changes a stylesheet or script in the user's theme draft, minified."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<RemoveSiteResourceTool>(RemoveSiteResourceTool.TheName)
+            .WithTitle(S["Remove Site Resource in Draft"])
+            .WithDescription(S["Removes a stylesheet or script in the user's theme draft."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<PreviewThemeDraftPageTool>(PreviewThemeDraftPageTool.TheName)
+            .WithTitle(S["Preview Page with Theme Draft"])
+            .WithDescription(S["Renders a page as the user sees it with their theme draft: status, errors, stylesheets, scripts and markup."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<RevertThemeDesignChangeTool>(RevertThemeDesignChangeTool.TheName)
+            .WithTitle(S["Drop Theme Draft Change"])
+            .WithDescription(S["Drops one change from the user's theme draft."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<SetThemeDesignPreviewTool>(SetThemeDesignPreviewTool.TheName)
+            .WithTitle(S["Preview Theme Draft"])
+            .WithDescription(S["Turns on or off whether the user sees their theme draft while browsing."])
+            .WithCategory(S["Theme Design"])
+            .Selectable();
+
+        services.AddCoreAITool<PublishThemeDesignTool>(PublishThemeDesignTool.TheName)
+            .WithTitle(S["Publish Theme Draft"])
+            .WithDescription(S["Publishes every change in the user's theme draft for everyone."])
+            .WithCategory(S["Theme Design"])
+            .RequireApproval()
+            .Selectable();
+
+        services.AddCoreAITool<DiscardThemeDesignTool>(DiscardThemeDesignTool.TheName)
+            .WithTitle(S["Discard Theme Draft"])
+            .WithDescription(S["Deletes the user's theme draft without publishing it."])
+            .WithCategory(S["Theme Design"])
+            .RequireApproval()
             .Selectable();
     }
 }

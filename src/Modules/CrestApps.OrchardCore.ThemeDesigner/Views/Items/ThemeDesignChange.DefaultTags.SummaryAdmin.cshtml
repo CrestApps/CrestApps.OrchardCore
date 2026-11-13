@@ -1,0 +1,35 @@
+@model ShapeViewModel<ThemeDesignChange>
+
+@{
+    var change = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["What it is"]">
+    @switch (change.Kind)
+    {
+        case ThemeDesignChangeKind.AdminTemplate:
+            <i class="fa-solid fa-gauge text-secondary me-1" aria-hidden="true"></i>@T["Admin template"]
+            break;
+        case ThemeDesignChangeKind.SiteResource:
+            <i class="fa-solid fa-file-code text-secondary me-1" aria-hidden="true"></i>@T["Site resource"]
+            break;
+        default:
+            <i class="fa-solid fa-palette text-secondary me-1" aria-hidden="true"></i>@T["Front-end template"]
+            break;
+    }
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["What publishing does"]">
+    @switch (change.Status)
+    {
+        case ThemeDesignChangeStatus.Added:
+            <i class="fa-solid fa-plus text-success me-1" aria-hidden="true"></i>@T["Adds it"]
+            break;
+        case ThemeDesignChangeStatus.Removed:
+            <i class="fa-solid fa-trash text-danger me-1" aria-hidden="true"></i>@T["Removes it"]
+            break;
+        default:
+            <i class="fa-solid fa-pen text-warning me-1" aria-hidden="true"></i>@T["Replaces it"]
+            break;
+    }
+</span>
