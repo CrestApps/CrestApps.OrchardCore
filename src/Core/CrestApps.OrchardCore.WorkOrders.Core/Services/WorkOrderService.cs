@@ -1,6 +1,10 @@
 using CrestApps.OrchardCore.Skills.Models;
 using System.Globalization;
 using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Timeline.Models;
+using CrestApps.OrchardCore.Timeline.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -45,6 +49,7 @@ public sealed class WorkOrderService
     private readonly WorkOrderSettingManager<ChecklistTemplate> _checklists;
     private readonly WorkOrderSettingManager<WorkOrderSubStatus> _subStatuses;
     private readonly WorkOrderServiceLevels _serviceLevels;
+    private readonly ITimelineService _timeline;
     private readonly IEnumerable<IWorkOrderHandler> _handlers;
     private readonly IEnumerable<IWorkOrderObserver> _observers;
     private readonly IEnumerable<IWorkOrderPartsService> _parts;
@@ -63,6 +68,7 @@ public sealed class WorkOrderService
     /// <param name="checklists">The checklist templates.</param>
     /// <param name="subStatuses">The sub-statuses.</param>
     /// <param name="serviceLevels">The work order's service level timers.</param>
+    /// <param name="timeline">The timeline its notes and history are kept on.</param>
     /// <param name="handlers">The work order handlers.</param>
     /// <param name="observers">The work order observers.</param>
     /// <param name="parts">The parts service, when Inventory is on.</param>
@@ -77,6 +83,7 @@ public sealed class WorkOrderService
         WorkOrderSettingManager<ChecklistTemplate> checklists,
         WorkOrderSettingManager<WorkOrderSubStatus> subStatuses,
         WorkOrderServiceLevels serviceLevels,
+        ITimelineService timeline,
         IEnumerable<IWorkOrderHandler> handlers,
         IEnumerable<IWorkOrderObserver> observers,
         IEnumerable<IWorkOrderPartsService> parts,
@@ -91,6 +98,7 @@ public sealed class WorkOrderService
         _checklists = checklists;
         _subStatuses = subStatuses;
         _serviceLevels = serviceLevels;
+        _timeline = timeline;
         _handlers = handlers;
         _observers = observers;
         _parts = parts;
@@ -183,7 +191,7 @@ public sealed class WorkOrderService
             await handler.CreatingAsync(workOrder, cancellationToken);
         }
 
-        Note(workOrder, actor, S["Created."]);
+        await NoteAsync(workOrder, actor, S["Created."]);
         await _store.CreateAsync(workOrder, cancellationToken);
         await NotifyAsync(workOrder, WorkOrdersConstants.Events.Created, null, cancellationToken);
 
@@ -214,7 +222,7 @@ public sealed class WorkOrderService
         }
 
         await _serviceLevels.UpdatedAsync(workOrder, cancellationToken);
-        Note(workOrder, actor, S["Details changed."]);
+        await NoteAsync(workOrder, actor, S["Details changed."]);
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -282,7 +290,7 @@ public sealed class WorkOrderService
             workOrder.ClosedBy = actor;
         }
 
-        Note(workOrder, actor, string.IsNullOrWhiteSpace(note) ? S["{0} to {1}.", previous.Text(), Label(status, subStatus)] : S["{0} to {1}: {2}", previous.Text(), Label(status, subStatus), note.Trim()]);
+        await NoteAsync(workOrder, actor, string.IsNullOrWhiteSpace(note) ? S["{0} to {1}.", previous.Text(), Label(status, subStatus)] : S["{0} to {1}: {2}", previous.Text(), Label(status, subStatus), note.Trim()]);
         await _store.UpdateAsync(workOrder, cancellationToken);
         await NotifyAsync(workOrder, WorkOrdersConstants.Events.StatusChanged, new Dictionary<string, object> { ["PreviousStatus"] = previous.ToString() }, cancellationToken);
 
@@ -338,7 +346,7 @@ public sealed class WorkOrderService
         }
 
         line.QuantityUsed += quantity;
-        Note(workOrder, actor, S["Used {0} × {1}.", quantity.ToString("0.##", CultureInfo.CurrentCulture), line.Description]);
+        await NoteAsync(workOrder, actor, S["Used {0} × {1}.", quantity.ToString("0.##", CultureInfo.CurrentCulture), line.Description]);
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -424,7 +432,7 @@ public sealed class WorkOrderService
         }
 
         workOrder.Signatures.Add(new WorkOrderSignature { Name = name.Trim(), ImagePath = string.IsNullOrWhiteSpace(imagePath) ? null : imagePath.Trim(), Utc = _clock.UtcNow });
-        Note(workOrder, actor, S["Signed by {0}.", name.Trim()]);
+        await NoteAsync(workOrder, actor, S["Signed by {0}.", name.Trim()]);
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -455,7 +463,7 @@ public sealed class WorkOrderService
         if (!workOrder.Attachments.Contains(path.Trim(), StringComparer.OrdinalIgnoreCase))
         {
             workOrder.Attachments.Add(path.Trim());
-            Note(workOrder, actor, S["Added {0}.", Path.GetFileName(path.Trim())]);
+            await NoteAsync(workOrder, actor, S["Added {0}.", Path.GetFileName(path.Trim())]);
             await _store.UpdateAsync(workOrder, cancellationToken);
         }
 
@@ -479,7 +487,7 @@ public sealed class WorkOrderService
             return WorkOrderResult.Fail(S["Write the note."]);
         }
 
-        Note(workOrder, actor, text.Trim());
+        await NoteAsync(workOrder, actor, text.Trim(), TimelineConstants.Kinds.Note);
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -554,11 +562,38 @@ public sealed class WorkOrderService
             }
         }
 
-        Note(workOrder, actor, S["Completed."]);
+        await NoteAsync(workOrder, actor, S["Completed."]);
         await _store.UpdateAsync(workOrder, cancellationToken);
         await NotifyAsync(workOrder, WorkOrdersConstants.Events.Completed, null, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
+    }
+
+    /// <summary>
+    /// Gets the newest notes and history of a work order, oldest first, as the field app and the AI tools read them.
+    /// </summary>
+    /// <param name="workOrderId">The work order.</param>
+    /// <param name="take">How many entries, at most.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The notes.</returns>
+    public async Task<IReadOnlyList<WorkOrderNote>> GetNotesAsync(string workOrderId, int take = 50, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(workOrderId))
+        {
+            return [];
+        }
+
+        var page = await _timeline.ListAsync(new TimelineQuery
+        {
+            Subject = new RecordRef(WorkOrdersConstants.RecordKind, workOrderId),
+            IncludeInternal = true,
+            Take = take,
+        }, cancellationToken);
+
+        return [.. page.Entries
+            .Where(entry => !string.IsNullOrEmpty(entry.Body))
+            .Reverse()
+            .Select(entry => new WorkOrderNote { Utc = entry.CreatedUtc, By = entry.AuthorName, Text = entry.Body })];
     }
 
     /// <summary>
@@ -744,8 +779,20 @@ public sealed class WorkOrderService
         }
     }
 
-    private void Note(WorkOrder workOrder, string actor, string text)
-        => workOrder.Notes.Add(new WorkOrderNote { Utc = _clock.UtcNow, By = actor, Text = text });
+    // Notes and history are entries on the work order's timeline: what someone wrote is a note, what happened is an
+    // event. The actor is the name of who did it, as the callers pass it.
+    private async Task NoteAsync(WorkOrder workOrder, string actor, string text, string kind = TimelineConstants.Kinds.Event)
+    {
+        await _timeline.AddAsync(new TimelineEntry
+        {
+            Subject = WorkOrderServiceLevels.SubjectOf(workOrder),
+            Kind = kind,
+            Visibility = TimelineVisibility.Internal,
+            AuthorName = actor,
+            Body = text,
+            CreatedUtc = _clock.UtcNow,
+        });
+    }
 
     private static string Label(WorkOrderStatus status, WorkOrderSubStatus subStatus)
         => subStatus is null ? status.Text() : $"{status.Text()} ({subStatus.Name})";

@@ -179,7 +179,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
                 ArrivalStartUtc = visit.ArrivalStartUtc,
                 ArrivalEndUtc = visit.ArrivalEndUtc,
                 IsLead = visit.LeadWorkerId == workerId,
-                WorkOrder = ToField(workOrder, types.GetValueOrDefault(workOrder.TypeId ?? string.Empty)),
+                WorkOrder = ToField(workOrder, types.GetValueOrDefault(workOrder.TypeId ?? string.Empty), await _workOrderService.GetNotesAsync(workOrder.ItemId, cancellationToken: cancellationToken)),
             });
         }
 
@@ -486,7 +486,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
             : (await _workOrderService.AttachAsync(workOrder.ItemId, path, actor, cancellationToken)).Errors;
     }
 
-    private static FieldWorkOrder ToField(WorkOrder workOrder, WorkOrderType type)
+    private static FieldWorkOrder ToField(WorkOrder workOrder, WorkOrderType type, IReadOnlyList<WorkOrderNote> notes)
     {
         var address = workOrder.ServiceAddress;
 
@@ -515,7 +515,7 @@ public sealed partial class FieldSyncService : IFieldSyncService
                 StockItemId = line.Kind == WorkOrderLineKind.Product ? line.StockItemId : null,
             })],
             Checklists = workOrder.Checklists,
-            Notes = workOrder.Notes,
+            Notes = [.. notes],
             SignedBy = [.. workOrder.Signatures.Select(signature => signature.Name)],
             Photos = workOrder.Attachments.Count,
             RequiresSignature = type?.RequiresSignature == true,

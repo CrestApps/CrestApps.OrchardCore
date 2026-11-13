@@ -30,6 +30,7 @@ using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security.Permissions;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Timeline;
 using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.Accounts;
@@ -69,6 +70,7 @@ public sealed class Startup : StartupBase
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Opportunities, LocalizationSource.Create<Startup>("Opportunities"), "fa-solid fa-handshake", AccountPageTabs.GetPosition(AccountPageTabs.Opportunities));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Leads, LocalizationSource.Create<Startup>("Leads"), "fa-solid fa-user-plus", AccountPageTabs.GetPosition(AccountPageTabs.Leads));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Activities, LocalizationSource.Create<Startup>("Activities"), "fa-solid fa-list-check", AccountPageTabs.GetPosition(AccountPageTabs.Activities));
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Notes, LocalizationSource.Create<Startup>("Notes"), "fa-regular fa-note-sticky", AccountPageTabs.GetPosition(AccountPageTabs.Notes));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Orders, LocalizationSource.Create<Startup>("Orders"), "fa-solid fa-bag-shopping", AccountPageTabs.GetPosition(AccountPageTabs.Orders));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Business, LocalizationSource.Create<Startup>("Business buying"), "fa-solid fa-briefcase", AccountPageTabs.GetPosition(AccountPageTabs.Business));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Invoices, LocalizationSource.Create<Startup>("Invoices"), "fa-solid fa-file-invoice-dollar", AccountPageTabs.GetPosition(AccountPageTabs.Invoices));
@@ -116,6 +118,20 @@ public sealed class TeamStartup : StartupBase
             .UseDisplayDriver<AccountTeamPartDisplayDriver>();
 
         services.AddDataMigration<AccountTeamMigrations>();
+    }
+}
+
+/// <summary>
+/// Adds the Notes tab to the account page: the account's timeline.
+/// </summary>
+[RequireFeatures(TimelineConstants.Features.Timeline)]
+public sealed class TimelineStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<AccountPart>()
+            .UseDisplayDriver<AccountNotesDisplayDriver>();
     }
 }
 

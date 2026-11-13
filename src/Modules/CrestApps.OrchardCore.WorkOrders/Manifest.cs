@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.ServiceLevels;
+using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.WorkOrders;
 using OrchardCore.Modules.Manifest;
 
@@ -18,6 +19,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ServiceLevelsConstants.Features.ServiceLevels,
+        TimelineConstants.Features.Timeline,
     ]
 )]
 

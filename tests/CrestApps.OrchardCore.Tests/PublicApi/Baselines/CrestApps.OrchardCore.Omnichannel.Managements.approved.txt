@@ -223,6 +223,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
         public Startup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Startup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Timeline"})]
+    public sealed class TimelineStartup : OrchardCore.Modules.StartupBase
+    {
+        public TimelineStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks
 {

@@ -49,6 +49,7 @@ using CrestApps.OrchardCore.Orders.Workflows;
 using CrestApps.OrchardCore.Orders.Reports;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Transactions.Services;
+using CrestApps.OrchardCore.Timeline;
 
 namespace CrestApps.OrchardCore.Orders;
 
@@ -65,6 +66,8 @@ public sealed class Startup : StartupBase
         services.AddRecordSource<OrderRecordSource>();
         services.AddNumberSequence();
         services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<OrderNotesUpgrade>();
+        services.AddTimelineAccessProvider<OrderTimelineAccess>();
         services.AddScoped<IStoreSetupStep, TestOrderSetupStep>();
 
         // Unpaid orders whose checkout ended without them hearing of it are canceled.

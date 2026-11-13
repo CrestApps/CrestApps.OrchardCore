@@ -266,6 +266,9 @@ internal sealed class DispatchKit : IAsyncDisposable
     public Task<WorkOrder> WorkOrderAsync(string id)
         => Harness.RunAsync(async services => await services.GetRequiredService<WorkOrderService>().FindAsync(id), commit: false);
 
+    public Task<IReadOnlyList<WorkOrderNote>> WorkOrderNotesAsync(string id)
+        => Harness.RunAsync(services => services.GetRequiredService<WorkOrderService>().GetNotesAsync(id), commit: false);
+
     public async Task<IReadOnlyList<CalendarEvent>> JobEventsAsync()
     {
         var calendarId = await Harness.RunAsync(async services => (await services.GetRequiredService<CrestApps.OrchardCore.Teams.Services.ITeamManager>().FindByIdAsync(Team.ItemId)).GetWorkforceSettings().CalendarId, commit: false);

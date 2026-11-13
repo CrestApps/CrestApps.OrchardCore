@@ -2,6 +2,9 @@ using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.ServiceLevels.Core;
 using CrestApps.OrchardCore.ServiceLevels.Core.Indexes;
+using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Timeline.Core;
+using CrestApps.OrchardCore.Timeline.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,15 +14,15 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Tests.WorkOrders;
 
 /// <summary>
-/// What a test store needs for work orders: their tables and those of the shared service levels they keep their
-/// timers in, and the services of both.
+/// What a test store needs for work orders: their tables and those of the shared service levels and timeline they keep
+/// their timers and notes in, and the services of all three.
 /// </summary>
 internal static class WorkOrderTestStores
 {
     /// <summary>
     /// Gets the collections work orders and service levels are stored in.
     /// </summary>
-    public static string[] Collections => [WorkOrdersConstants.CollectionName, ServiceLevelsConstants.CollectionName];
+    public static string[] Collections => [WorkOrdersConstants.CollectionName, ServiceLevelsConstants.CollectionName, TimelineConstants.CollectionName];
 
     /// <summary>
     /// Gets the index providers of work orders and service levels.
@@ -32,6 +35,7 @@ internal static class WorkOrderTestStores
         new WorkOrderSubStatusIndexProvider(),
         new ServiceLevelPolicyIndexProvider(),
         new ServiceLevelTimerIndexProvider(),
+        new TimelineEntryIndexProvider(),
     ];
 
     /// <summary>
@@ -43,6 +47,7 @@ internal static class WorkOrderTestStores
     {
         await WorkOrdersIndexSchema.CreateAsync(schemaBuilder);
         await ServiceLevelsIndexSchema.CreateAsync(schemaBuilder);
+        await TimelineIndexSchema.CreateAsync(schemaBuilder);
     }
 
     /// <summary>
@@ -55,6 +60,7 @@ internal static class WorkOrderTestStores
         services.AddWorkOrdersCore();
         services.AddOpenHours();
         services.AddServiceLevelsCore();
+        services.AddTimelineCore();
 
         return services;
     }

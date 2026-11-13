@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Resources;
+using CrestApps.OrchardCore.Timeline;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -23,6 +24,9 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Area,
         CartConstants.Features.Carts,
         CheckoutConstants.Features.Area,
+
+        // The order notes and history are its timeline.
+        TimelineConstants.Features.Timeline,
 
         // The item selector the coupon editor picks products and categories with.
         ResourcesConstants.Feature.Area,

@@ -477,19 +477,4 @@
     </div>
 </div>
 
-<div class="card mb-3"><div class="card-body">
-    <h2 class="h6">@T["Notes and history"]</h2>
-    @if (Model.CanManage)
-    {
-        <form asp-action="Note" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-2 mb-3">
-            <input name="text" class="form-control form-control-sm" placeholder="@T["Add a note"]" aria-label="@T["Add a note"]" required />
-            <button type="submit" class="btn btn-secondary btn-sm">@T["Add"]</button>
-        </form>
-    }
-    <ul class="list-unstyled small mb-0">
-        @foreach (var note in workOrder.Notes.AsEnumerable().Reverse())
-        {
-            <li class="mb-1"><span class="text-muted">@await DisplayAsync(await New.DateTime(Utc: note.Utc, Format: "g"))@(string.IsNullOrEmpty(note.By) ? null : $" · {note.By}")</span> @note.Text</li>
-        }
-    </ul>
-</div></div>
+@await Component.InvokeAsync("Timeline", new { subject = $"{WorkOrdersConstants.RecordKind}:{workOrder.ItemId}", title = T["Notes and history"].Value })

@@ -56,6 +56,11 @@ public static class AccountPageTabs
     public const string Activities = "Activities";
 
     /// <summary>
+    /// The notes the team keeps on the account: its timeline.
+    /// </summary>
+    public const string Notes = "Notes";
+
+    /// <summary>
     /// The orders placed for the account.
     /// </summary>
     public const string Orders = "Orders";
@@ -89,6 +94,7 @@ public static class AccountPageTabs
         [Opportunities] = 20,
         [Leads] = 30,
         [Activities] = 40,
+        [Notes] = 45,
         [Orders] = 50,
         [Business] = 60,
         [Invoices] = 70,

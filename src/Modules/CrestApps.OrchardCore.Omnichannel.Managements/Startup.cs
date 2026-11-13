@@ -40,8 +40,22 @@ using OrchardCore.Navigation;
 using YesSql.Filters.Query;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Timeline;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
+
+/// <summary>
+/// Adds the Notes card to contact and lead pages: their timelines.
+/// </summary>
+[RequireFeatures(TimelineConstants.Features.Timeline)]
+public sealed class TimelineStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDisplayDriver, ContactTimelineDisplayDriver>();
+    }
+}
 
 /// <summary>
 /// Registers services and configuration for this feature.

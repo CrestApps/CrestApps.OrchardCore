@@ -30,6 +30,7 @@ public static class WorkOrdersServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<WorkOrderSubStatus>, WorkOrderSubStatusHandler>());
         services.TryAddScoped<WorkOrderServiceLevels>();
         services.TryAddScoped<WorkOrderServiceLevelUpgrade>();
+        services.TryAddScoped<WorkOrderNotesUpgrade>();
         services.AddServiceLevelScope<WorkOrderServiceLevelScope>();
         services.AddServiceLevelObserver<WorkOrderServiceLevelObserver>();
         services.AddNumberSequence();

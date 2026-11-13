@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Scheduling;
 using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.ServiceLevels.Models;
+using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Skills;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
@@ -63,6 +64,7 @@ public sealed class Startup : StartupBase
 
         // Service levels are the shared ones: the feature depends on Service Levels, which keeps the policies and timers.
         services.AddServiceLevelPolicyUsage<WorkOrderTypeServiceLevelPolicyUsage>();
+        services.AddTimelineAccessProvider<WorkOrderTimelineAccess>();
         services.AddDisplayDriver<ServiceLevelPolicy, WorkOrderServiceLevelPolicyDisplayDriver>();
         services.AddPermissionProvider<WorkOrdersPermissionsProvider>();
         services

@@ -216,7 +216,7 @@ public sealed class WorkOrderSignature
 }
 
 /// <summary>
-/// A note on a work order.
+/// A note on a work order as the field app and the AI tools read it: an entry of its timeline.
 /// </summary>
 public sealed class WorkOrderNote
 {
@@ -376,8 +376,10 @@ public sealed class WorkOrder : CatalogItem
     public List<WorkOrderSignature> Signatures { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the notes, oldest first.
+    /// Gets or sets the notes stored on the work order before they moved to its timeline. Only the upgrade reads them;
+    /// read and write notes through the timeline (<see cref="WorkOrdersConstants.RecordKind"/> records).
     /// </summary>
+    [Obsolete("Notes and history are on the work order's timeline. Only the upgrade that moves the stored ones reads this.")]
     public List<WorkOrderNote> Notes { get; set; } = [];
 
     /// <summary>

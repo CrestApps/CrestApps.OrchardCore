@@ -5,6 +5,10 @@ using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Telemetry;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Timeline.Models;
+using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -73,6 +77,7 @@ public sealed class OrderService : IOrderService
 
     private const int OrderCodeLength = 6;
 
+    private readonly ITimelineService _timeline;
     private readonly IOrderStore _store;
     private readonly IEnumerable<IOrderEventHandler> _handlers;
     private readonly IClock _clock;
@@ -83,10 +88,12 @@ public sealed class OrderService : IOrderService
         IOrderStore store,
         IEnumerable<IOrderEventHandler> handlers,
         INumberSequence numberSequence,
+        ITimelineService timeline,
         IClock clock,
         ILogger<OrderService> logger)
     {
         _store = store;
+        _timeline = timeline;
         _numberSequence = numberSequence;
         _handlers = handlers;
         _clock = clock;
@@ -273,18 +280,19 @@ public sealed class OrderService : IOrderService
             return;
         }
 
-        var now = _clock.UtcNow;
-
-        order.Notes ??= [];
-        order.Notes.Add(new OrderNote
+        // The notes and history of an order are entries on its timeline, seen only by the store.
+        await _timeline.AddAsync(new TimelineEntry
         {
-            Id = UniqueId.GenerateId(),
-            Text = text.Trim(),
-            Kind = kind,
+            Subject = new RecordRef(OrderConstants.RecordKind, order.ItemId),
+            Kind = kind == OrderNoteKind.Event ? TimelineConstants.Kinds.Event : TimelineConstants.Kinds.Note,
+            Visibility = TimelineVisibility.Internal,
             AuthorName = string.IsNullOrWhiteSpace(authorName) ? null : authorName.Trim(),
-            CreatedUtc = now,
-        });
-        order.ModifiedUtc = now;
+            Body = text.Trim(),
+            CreatedUtc = _clock.UtcNow,
+        }, cancellationToken);
+
+        // Callers rely on the note saving the order they changed with it.
+        order.ModifiedUtc = _clock.UtcNow;
 
         await _store.UpdateAsync(order, cancellationToken);
     }

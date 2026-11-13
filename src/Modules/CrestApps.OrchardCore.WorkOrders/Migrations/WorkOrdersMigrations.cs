@@ -11,10 +11,12 @@ namespace CrestApps.OrchardCore.WorkOrders.Migrations;
 internal sealed class WorkOrdersMigrations : DataMigration
 {
     private readonly WorkOrderServiceLevelUpgrade _upgrade;
+    private readonly WorkOrderNotesUpgrade _notesUpgrade;
 
-    public WorkOrdersMigrations(WorkOrderServiceLevelUpgrade upgrade)
+    public WorkOrdersMigrations(WorkOrderServiceLevelUpgrade upgrade, WorkOrderNotesUpgrade notesUpgrade)
     {
         _upgrade = upgrade;
+        _notesUpgrade = notesUpgrade;
     }
 
     /// <summary>
@@ -25,7 +27,7 @@ internal sealed class WorkOrdersMigrations : DataMigration
     {
         await WorkOrdersIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -53,5 +55,16 @@ internal sealed class WorkOrdersMigrations : DataMigration
         await _upgrade.RunAsync();
 
         return 3;
+    }
+
+    /// <summary>
+    /// Moves the notes stored on work orders to their timelines, which this feature depends on.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await _notesUpgrade.RunAsync();
+
+        return 4;
     }
 }

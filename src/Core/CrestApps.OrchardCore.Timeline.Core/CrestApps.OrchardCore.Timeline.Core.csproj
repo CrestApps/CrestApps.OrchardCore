@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Timeline Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for the timeline: the YesSql store and index of timeline entries, the timeline service and the
+      access service that asks each record kind's provider who may read and write its timeline.
+    </Description>
+    <PackageTags>$(PackageTags) Timeline Comments Notes History Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Timeline.Abstractions\CrestApps.OrchardCore.Timeline.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

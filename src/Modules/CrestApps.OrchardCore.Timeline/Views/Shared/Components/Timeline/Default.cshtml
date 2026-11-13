@@ -1,0 +1,105 @@
+@using CrestApps.OrchardCore.Timeline
+@using CrestApps.OrchardCore.Timeline.Models
+@using CrestApps.OrchardCore.Timeline.ViewModels
+
+@model TimelineViewModel
+
+@{
+    var formId = "timeline-" + Model.Subject.Replace(':', '-');
+}
+
+<div class="card mb-3 crestapps-timeline">
+    <div class="card-header d-flex align-items-center">
+        <span>@(string.IsNullOrEmpty(Model.Title) ? T["Notes"].Value : Model.Title)</span>
+        @if (Model.Total > 0)
+        {
+            <span class="badge ta-badge fw-normal ms-2" title="@T["Entries on this timeline"]">@Model.Total</span>
+        }
+    </div>
+    <div class="card-body">
+        @if (Model.CanAddNote || Model.CanAddComment)
+        {
+            <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Add" method="post" class="mb-3" id="@formId">
+                <input type="hidden" name="subject" value="@Model.Subject" />
+                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                <label class="form-label visually-hidden" for="@formId-body">@T["Text"]</label>
+                <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" required placeholder="@T["Write a note"]"></textarea>
+                <div class="d-flex gap-2">
+                    @if (Model.CanAddNote)
+                    {
+                        <button type="submit" name="isPublic" value="false" class="btn btn-sm btn-primary">@T["Add note"]</button>
+                    }
+                    @if (Model.CanAddComment)
+                    {
+                        <button type="submit" name="isPublic" value="true" class="btn btn-sm btn-outline-primary">@T["Add comment"]</button>
+                    }
+                </div>
+                @if (Model.CanAddNote && Model.CanAddComment)
+                {
+                    <span class="hint">@T["A note is seen only by the people who work on the record; a comment is seen by everyone who may read it."]</span>
+                }
+            </form>
+        }
+
+        @if (Model.Entries.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["Nothing here yet."]</p>
+        }
+        else
+        {
+            <ul class="list-unstyled mb-0">
+                @foreach (var item in Model.Entries)
+                {
+                    var entry = item.Entry;
+                    var icon = entry.Kind switch
+                    {
+                        TimelineConstants.Kinds.Event => "fa-solid fa-bolt",
+                        TimelineConstants.Kinds.Comment => "fa-regular fa-comment",
+                        _ => "fa-regular fa-note-sticky",
+                    };
+
+                    <li class="border-top pt-2 mt-2">
+                        <div class="small text-muted d-flex flex-wrap align-items-center gap-1">
+                            <i class="@icon" aria-hidden="true"></i>
+                            @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(entry.CreatedUtc, DateTimeKind.Utc), Format: "g"))
+                            <span>·</span>
+                            <span>@(string.IsNullOrEmpty(item.AuthorName) ? T["The site"].Value : item.AuthorName)</span>
+                            @if (entry.Visibility == TimelineVisibility.Internal)
+                            {
+                                <span class="badge ta-badge fw-normal" title="@T["Seen only by the people who work on the record"]"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Internal"]</span>
+                            }
+                            @if (!string.IsNullOrEmpty(entry.Channel))
+                            {
+                                <span class="badge ta-badge fw-normal" title="@T["The channel it came in or went out on"]">@entry.Channel</span>
+                            }
+                            @if (Model.CanRedact && entry.RedactedUtc is null && !string.IsNullOrEmpty(entry.Body))
+                            {
+                                <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Redact" asp-route-id="@entry.ItemId" method="post" class="ms-auto">
+                                    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                                    <button type="submit" class="btn btn-link btn-sm p-0 text-danger" data-title="@T["Redact"]" data-message="@T["Remove the text of this entry? This can't be undone."]">@T["Redact"]</button>
+                                </form>
+                            }
+                        </div>
+                        @if (entry.RedactedUtc is not null)
+                        {
+                            <div class="fst-italic text-muted">@T["The text was redacted."]</div>
+                        }
+                        else if (!string.IsNullOrEmpty(entry.Body))
+                        {
+                            <div style="white-space: pre-line">@entry.Body</div>
+                        }
+                        @if (entry.Changes.Count > 0)
+                        {
+                            <ul class="small mb-0 ps-3">
+                                @foreach (var change in entry.Changes)
+                                {
+                                    <li>@T["{0}: {1} → {2}", change.Field, string.IsNullOrEmpty(change.From) ? T["(empty)"].Value : change.From, string.IsNullOrEmpty(change.To) ? T["(empty)"].Value : change.To]</li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.Accounts
         public const string Leads = "Leads";
         public const string Locations = "Locations";
         public const string Members = "Members";
+        public const string Notes = "Notes";
         public const string Opportunities = "Opportunities";
         public const string Orders = "Orders";
         public const string Overview = "Overview";

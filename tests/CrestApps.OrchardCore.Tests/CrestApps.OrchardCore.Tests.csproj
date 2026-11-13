@@ -56,6 +56,7 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Skills.Core/CrestApps.OrchardCore.Skills.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Teams.Core/CrestApps.OrchardCore.Teams.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.ServiceLevels.Core/CrestApps.OrchardCore.ServiceLevels.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Timeline.Core/CrestApps.OrchardCore.Timeline.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Assets.Core/CrestApps.OrchardCore.Assets.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Geo.Core/CrestApps.OrchardCore.Geo.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Workforce.Core/CrestApps.OrchardCore.Workforce.Core.csproj" />
@@ -195,6 +196,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Skills\CrestApps.OrchardCore.Skills.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Teams\CrestApps.OrchardCore.Teams.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Assets\CrestApps.OrchardCore.Assets.csproj" />

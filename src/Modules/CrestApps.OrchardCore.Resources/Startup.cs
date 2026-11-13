@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Resources.Endpoints;
+using CrestApps.OrchardCore.Resources.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,5 +26,18 @@ public sealed class Startup : StartupBase
     {
         routes.AddRecordSearchEndpoint();
         routes.AddPartySearchEndpoint();
+    }
+}
+
+/// <summary>
+/// Makes content items a record kind, so modules can link to them.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Contents)]
+public sealed class ContentsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecordSource<ContentItemRecordSource>();
     }
 }

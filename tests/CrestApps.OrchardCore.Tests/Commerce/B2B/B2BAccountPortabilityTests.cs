@@ -144,7 +144,7 @@ public sealed class B2BAccountPortabilityTests
                     collection: OrderConstants.CollectionName);
 
                 // Act
-                await new OrderMigrations { SchemaBuilder = schemaBuilder }.UpdateFrom2Async();
+                await new OrderMigrations(notesUpgrade: null) { SchemaBuilder = schemaBuilder }.UpdateFrom2Async();
                 await transaction.CommitAsync(TestContext.Current.CancellationToken);
             }
 

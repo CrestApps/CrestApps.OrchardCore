@@ -58,6 +58,8 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.WorkOrders.Core\CrestApps.OrchardCore.WorkOrders.Core.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ServiceLevels.Abstractions\CrestApps.OrchardCore.ServiceLevels.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Timeline.Abstractions\CrestApps.OrchardCore.Timeline.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" />
   </ItemGroup>
 
 </Project>
