@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Checks.Core.Services;
 using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Services;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.SourceAccess;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -34,7 +35,7 @@ public static class ChecksCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<CheckRecord>, CheckRecordHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<CheckLayout>, CheckLayoutHandler>());
         services.TryAddScoped<ICheckService, CheckService>();
-        services.TryAddScoped<ICheckAccessService, CheckAccessService>();
+        services.AddSourceAccessService();
         services.AddBankAccountUsage<CheckBankAccountUsage>();
         services.TryAddScoped<ICheckPrinter, CheckPrinter>();
         services.AddCheckMicrFormat<UnitedStatesCheckMicrFormat>();

@@ -26,22 +26,6 @@ public static class ChecksServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers who may see and act on the checks of one source kind.
-    /// </summary>
-    /// <typeparam name="TAccess">The source access.</typeparam>
-    /// <param name="services">The services.</param>
-    /// <returns>The services.</returns>
-    public static IServiceCollection AddCheckSourceAccess<TAccess>(this IServiceCollection services)
-        where TAccess : class, ICheckSourceAccess
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICheckSourceAccess, TAccess>());
-
-        return services;
-    }
-
-    /// <summary>
     /// Registers an observer of check changes.
     /// </summary>
     /// <typeparam name="TObserver">The observer.</typeparam>

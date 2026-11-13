@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Services;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
+using CrestApps.OrchardCore.SourceAccess;
+using CrestApps.OrchardCore.YesSql.Core.SourceAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
@@ -22,7 +24,7 @@ public sealed class CheckRegisterReportDataSet : IndexedReportDataSet<CheckRecor
     /// </summary>
     public const string DataSetName = "CheckRegister";
 
-    private readonly ICheckAccessService _access;
+    private readonly ISourceAccessService _access;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CheckRegisterReportDataSet"/> class.
@@ -31,7 +33,7 @@ public sealed class CheckRegisterReportDataSet : IndexedReportDataSet<CheckRecor
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="access">Who may see the checks of each source.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public CheckRegisterReportDataSet(ISession session, IAuthorizationService authorizationService, ICheckAccessService access, IStringLocalizer<CheckRegisterReportDataSet> stringLocalizer)
+    public CheckRegisterReportDataSet(ISession session, IAuthorizationService authorizationService, ISourceAccessService access, IStringLocalizer<CheckRegisterReportDataSet> stringLocalizer)
         : base(
             new DataSetDescriptor(DataSetName, stringLocalizer["Check register"], stringLocalizer["One row per check: bank account, number, payee, amount, check date and status, for reports and the bank's positive pay file."]),
             session,
@@ -89,9 +91,9 @@ public sealed class CheckRegisterReportDataSet : IndexedReportDataSet<CheckRecor
     /// <inheritdoc />
     protected override async Task<Func<IQueryIndex<CheckRecordIndex>, IQueryIndex<CheckRecordIndex>>> RestrictAsync(DataSourceContext context, CancellationToken cancellationToken)
     {
-        var filter = await _access.GetFilterAsync(context?.User, CheckAccessLevel.View, cancellationToken);
+        var filter = await _access.GetFilterAsync(context?.User, SourceAccessLevel.View, cancellationToken);
 
-        if (CheckAccessExpressions.Restrict(filter) is not { } restrict)
+        if (SourceAccessExpressions.Restrict<CheckRecordIndex>(filter) is not { } restrict)
         {
             return rows => rows;
         }

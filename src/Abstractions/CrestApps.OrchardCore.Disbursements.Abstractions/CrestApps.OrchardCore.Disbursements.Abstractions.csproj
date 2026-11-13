@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Disbursements</RootNamespace>
+    <Title>CrestApps OrchardCore Disbursements Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for money the business sends out: disbursements with a stable idempotency key, batches,
+      providers by name (bank file, check, manual), returns and change notices, and the observers of changes.
+    </Description>
+    <PackageTags>$(PackageTags) Disbursements Payouts ACH Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Banking.Abstractions\CrestApps.OrchardCore.Banking.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Parties.Abstractions\CrestApps.OrchardCore.Parties.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

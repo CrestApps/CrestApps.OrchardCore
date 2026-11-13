@@ -1,0 +1,27 @@
+@model ShapeViewModel<Disbursement>
+
+@{
+    var disbursement = Model.Value;
+    var (status, icon) = disbursement.Status switch
+    {
+        DisbursementStatus.Batched => (T["Batched"], "fa-solid fa-layer-group text-info"),
+        DisbursementStatus.Submitted => (T["Submitted"], "fa-solid fa-paper-plane text-info"),
+        DisbursementStatus.Settled => (T["Settled"], "fa-solid fa-circle-check text-success"),
+        DisbursementStatus.Returned => (T["Returned"], "fa-solid fa-rotate-left text-danger"),
+        DisbursementStatus.Failed => (T["Failed"], "fa-solid fa-triangle-exclamation text-danger"),
+        DisbursementStatus.Canceled => (T["Cancelled"], "fa-solid fa-ban text-secondary"),
+        DisbursementStatus.Reversed => (T["Reversed"], "fa-solid fa-arrow-rotate-left text-secondary"),
+        _ => (T["Pending"], "fa-solid fa-hourglass-half text-warning"),
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="@icon me-1" aria-hidden="true"></i>@status</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Sent by"]"><i class="fa-solid fa-money-bill-transfer text-secondary me-1" aria-hidden="true"></i>@disbursement.Method</span>
+@if (disbursement.IsHistorical)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Imported from another system: it is history."]"><i class="fa-solid fa-box-archive text-secondary me-1" aria-hidden="true"></i>@T["History"]</span>
+}
+@if (!string.IsNullOrEmpty(disbursement.SourceKind))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pays"]"><i class="fa-solid fa-link text-secondary me-1" aria-hidden="true"></i>@disbursement.SourceKind</span>
+}

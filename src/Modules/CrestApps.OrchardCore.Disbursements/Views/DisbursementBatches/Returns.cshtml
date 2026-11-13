@@ -1,0 +1,48 @@
+@model DisbursementReturnsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="DisbursementBatchesReturns" title="@T["Import a return file"]">
+        <breadcrumb-item id="DisbursementBatches" action="Index" controller="DisbursementBatches" area="CrestApps.OrchardCore.Disbursements" permission="@DisbursementsPermissions.ManageDisbursements.Name">@T["Disbursement batches"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (Model.Result is { } result)
+{
+    <div class="alert @(result.Problems.Count > 0 ? "alert-warning" : "alert-success")">
+        <p class="mb-1">@T["{0} disbursements marked returned, {1} bank accounts corrected.", result.Returned, result.Corrected]</p>
+        @if (result.Corrected > 0)
+        {
+            <p class="mb-1">@T["Corrected accounts are unverified again: check them before money goes to them."]</p>
+        }
+        @if (result.Problems.Count > 0)
+        {
+            <ul class="mb-0">
+                @foreach (var problem in result.Problems)
+                {
+                    <li>@problem</li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <div class="card mb-3">
+        <div class="card-header">@T["Return and change file"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label for="file" class="ocat-label ocat-label-required">@T["File"]</label>
+                <div class="ocat-end">
+                    <input type="file" id="file" name="file" class="form-control" accept=".txt,.ach,text/plain" />
+                    <span class="hint">@T["The file your bank sends with returned entries and notices of change, in the Nacha format. Each return marks its disbursement returned; each notice of change corrects the payee's bank account, which then waits to be verified again."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Import"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

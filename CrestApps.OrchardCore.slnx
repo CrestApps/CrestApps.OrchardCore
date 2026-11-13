@@ -30,6 +30,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.BusinessHours.Abstractions/CrestApps.OrchardCore.BusinessHours.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Disbursements.Abstractions/CrestApps.OrchardCore.Disbursements.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Parties.Abstractions/CrestApps.OrchardCore.Parties.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions/CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Skills.Abstractions/CrestApps.OrchardCore.Skills.Abstractions.csproj" />
@@ -78,6 +79,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Commerce.Core/CrestApps.OrchardCore.Commerce.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Consent.Core/CrestApps.OrchardCore.Consent.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Disbursements.Core/CrestApps.OrchardCore.Disbursements.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Webhooks.Core/CrestApps.OrchardCore.Webhooks.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
@@ -131,6 +133,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Assets/CrestApps.OrchardCore.Assets.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Banking/CrestApps.OrchardCore.Banking.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Checks/CrestApps.OrchardCore.Checks.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Disbursements/CrestApps.OrchardCore.Disbursements.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Dispatch/CrestApps.OrchardCore.Dispatch.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.OrTools/CrestApps.OrchardCore.OrTools.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Outreach/CrestApps.OrchardCore.Outreach.csproj" />

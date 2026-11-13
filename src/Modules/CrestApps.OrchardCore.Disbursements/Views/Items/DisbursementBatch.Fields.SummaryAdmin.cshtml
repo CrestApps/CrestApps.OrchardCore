@@ -1,0 +1,4 @@
+@model ShapeViewModel<DisbursementBatch>
+
+<span class="fw-semibold">@(Model.Value.SourceBankAccountName ?? T["No bank account"].Value)</span>
+<span class="text-secondary ms-1">@T["{0} disbursements", Model.Value.Count]</span>

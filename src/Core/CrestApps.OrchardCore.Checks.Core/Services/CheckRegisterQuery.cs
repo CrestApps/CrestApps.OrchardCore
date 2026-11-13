@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checks.Models;
+using CrestApps.OrchardCore.SourceAccess;
 
 namespace CrestApps.OrchardCore.Checks.Core.Services;
 
@@ -30,5 +31,5 @@ public sealed class CheckRegisterQuery
     /// <summary>
     /// Gets or sets the checks the reader may see.
     /// </summary>
-    public CheckAccessFilter Access { get; set; } = CheckAccessFilter.Unrestricted;
+    public SourceAccessFilter Access { get; set; } = SourceAccessFilter.Unrestricted;
 }

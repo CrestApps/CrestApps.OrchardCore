@@ -30,8 +30,10 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Staff\CrestApps.OrchardCore.Staff.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Banking.Abstractions/CrestApps.OrchardCore.Banking.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Checks.Abstractions/CrestApps.OrchardCore.Checks.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Disbursements.Abstractions/CrestApps.OrchardCore.Disbursements.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Banking.Core/CrestApps.OrchardCore.Banking.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Checks.Core/CrestApps.OrchardCore.Checks.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Disbursements.Core/CrestApps.OrchardCore.Disbursements.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Staff.Core/CrestApps.OrchardCore.Staff.Core.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Staff.Abstractions/CrestApps.OrchardCore.Staff.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
@@ -77,6 +79,7 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Consent.Core/CrestApps.OrchardCore.Consent.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Banking/CrestApps.OrchardCore.Banking.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Checks/CrestApps.OrchardCore.Checks.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Disbursements/CrestApps.OrchardCore.Disbursements.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PayLater/CrestApps.OrchardCore.PayLater.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Transactions/CrestApps.OrchardCore.Transactions.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" />

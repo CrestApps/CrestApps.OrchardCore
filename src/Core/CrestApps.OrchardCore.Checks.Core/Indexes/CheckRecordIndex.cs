@@ -1,4 +1,5 @@
 using CrestApps.Core.Data.YesSql.Indexes;
+using CrestApps.OrchardCore.SourceAccess;
 
 namespace CrestApps.OrchardCore.Checks.Core.Indexes;
 
@@ -58,7 +59,7 @@ public sealed class CheckRecordIndex : CatalogItemIndex
     public DateTime IssuedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the source kind and access scope (<see cref="Models.CheckAccessFilter.KeyOf"/>), so the register
+    /// Gets or sets the source kind and access scope (<see cref="SourceAccessFilter.KeyOf"/>), so the register
     /// reads only the checks a person may see.
     /// </summary>
     public string AccessKey { get; set; }

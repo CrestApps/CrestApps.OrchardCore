@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Disbursements.Workflows
+
+@model SettleDisbursementBatchesTaskViewModel
+
+<div class="mb-3" asp-validation-class-for="AgeInDays">
+    <label asp-for="AgeInDays" class="form-label">@T["Days after release"]</label>
+    <input asp-for="AgeInDays" type="number" min="1" max="60" step="1" class="form-control" />
+    <span asp-validation-for="AgeInDays" class="text-danger"></span>
+    <span class="hint">@T["A released batch older than this settles: its disbursements the bank did not return are recorded as paid, and a test entry that settles verifies its bank account. Run the workflow from a Timer Event once a day. The number settled is written to the workflow output SettledDisbursements."]</span>
+</div>

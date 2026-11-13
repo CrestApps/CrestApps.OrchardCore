@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Checks.Deployments;
 using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Recipes;
 using CrestApps.OrchardCore.Checks.Reports;
+using CrestApps.OrchardCore.Core.SourceAccess;
+using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Authorization;
 using Moq;
@@ -82,7 +84,7 @@ public sealed class ChecksRecipeAndDeploymentTests
         // Arrange
         var path = Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Checks", "Recipes", "checks-positive-pay.recipe.json");
         var recipe = JsonNode.Parse(File.ReadAllText(path))!;
-        var dataSet = new CheckRegisterReportDataSet(Mock.Of<ISession>(), Mock.Of<IAuthorizationService>(), new CheckAccessService([]), RecipeRoundTrip.Localizer<CheckRegisterReportDataSet>());
+        var dataSet = new CheckRegisterReportDataSet(Mock.Of<ISession>(), Mock.Of<IAuthorizationService>(), new SourceAccessService([]), RecipeRoundTrip.Localizer<CheckRegisterReportDataSet>());
         var fields = dataSet.Fields.Select(field => field.Name).ToHashSet(StringComparer.Ordinal);
 
         // Act

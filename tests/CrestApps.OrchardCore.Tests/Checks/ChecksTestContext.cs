@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Checks.Core.Services;
 using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Services;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Banking;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Http;
@@ -33,7 +34,8 @@ internal sealed class ChecksTestContext
         Observer = new RecordingCheckObserver();
         LocalClock = new FixedOffsetLocalClock(() => Banking.Now, TimeSpan.Zero);
         Manager = new CheckManager(Store, [new CheckRecordHandler(clock.Object)], NullLogger<CatalogManager<CheckRecord>>.Instance);
-        Service = new CheckService(Manager, Banking.Manager, Numbers, [Observer], new HttpContextAccessor(), clock.Object, LocalClock, RecipeRoundTrip.Localizer<CheckService>());
+        Observers = [Observer];
+        Service = new CheckService(Manager, Banking.Manager, Numbers, Observers, new HttpContextAccessor(), clock.Object, LocalClock, RecipeRoundTrip.Localizer<CheckService>());
         Banking.Usages.Add(new CheckBankAccountUsage(Store, RecipeRoundTrip.Localizer<CheckBankAccountUsage>()));
     }
 
@@ -51,6 +53,11 @@ internal sealed class ChecksTestContext
     public InMemoryNumberSequence Numbers { get; }
 
     public RecordingCheckObserver Observer { get; }
+
+    /// <summary>
+    /// Gets the observers the check service tells; tests add to it.
+    /// </summary>
+    public List<ICheckObserver> Observers { get; }
 
     public CheckManager Manager { get; }
 
@@ -107,9 +114,9 @@ internal sealed class InMemoryCheckRecordStore : InMemoryCatalog<CheckRecord>, I
     public Task<(int Count, IReadOnlyList<CheckRecord> Checks)> ListPageAsync(CheckRegisterQuery query, int skip, int take, CancellationToken cancellationToken = default)
     {
         // The database runs CheckAccessExpressions; CheckRegisterStoreTests proves it agrees with this rule on SQLite.
-        var access = query.Access ?? CheckAccessFilter.Unrestricted;
+        var access = query.Access ?? SourceAccessFilter.Unrestricted;
         var matching = Entries
-            .Where(access.Allows)
+            .Where(entry => access.Allows(entry.SourceKind, entry.AccessScope))
             .Where(entry => string.IsNullOrEmpty(query.BankAccountId) || entry.BankAccountId == query.BankAccountId)
             .Where(entry => query.Status is null || entry.Status == query.Status)
             .ToList();
@@ -132,11 +139,11 @@ internal sealed class InMemoryCheckRecordStore : InMemoryCatalog<CheckRecord>, I
 /// <summary>
 /// A source access that lets each user see the access scopes it lists for them.
 /// </summary>
-internal sealed class FixedCheckSourceAccess : ICheckSourceAccess
+internal sealed class FixedSourceAccess : ISourceAccess
 {
-    private readonly Dictionary<string, CheckSourceScope> _scopes;
+    private readonly Dictionary<string, SourceAccessScope> _scopes;
 
-    public FixedCheckSourceAccess(string sourceKind, Dictionary<string, CheckSourceScope> scopesByUserName)
+    public FixedSourceAccess(string sourceKind, Dictionary<string, SourceAccessScope> scopesByUserName)
     {
         SourceKind = sourceKind;
         _scopes = scopesByUserName;
@@ -144,8 +151,8 @@ internal sealed class FixedCheckSourceAccess : ICheckSourceAccess
 
     public string SourceKind { get; }
 
-    public Task<CheckSourceScope> GetScopeAsync(System.Security.Claims.ClaimsPrincipal user, CheckAccessLevel level, CancellationToken cancellationToken = default)
-        => Task.FromResult(_scopes.GetValueOrDefault(user?.Identity?.Name ?? string.Empty) ?? CheckSourceScope.None);
+    public Task<SourceAccessScope> GetScopeAsync(System.Security.Claims.ClaimsPrincipal user, SourceAccessLevel level, CancellationToken cancellationToken = default)
+        => Task.FromResult(_scopes.GetValueOrDefault(user?.Identity?.Name ?? string.Empty) ?? SourceAccessScope.None);
 }
 
 /// <summary>

@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.Checks;
 using CrestApps.OrchardCore.Checks.Core.Indexes;
 using CrestApps.OrchardCore.Checks.Core.Services;
+using CrestApps.OrchardCore.Core.SourceAccess;
 using CrestApps.OrchardCore.Checks.Indexes;
 using CrestApps.OrchardCore.Checks.Migrations;
 using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Reports;
+using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -74,7 +76,7 @@ public sealed class CheckRegisterStoreTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var store = new CheckRecordStore(session);
-        var filter = await Access().GetFilterAsync(TestSecurity.User(userName), CheckAccessLevel.View, TestContext.Current.CancellationToken);
+        var filter = await Access().GetFilterAsync(TestSecurity.User(userName), SourceAccessLevel.View, TestContext.Current.CancellationToken);
 
         // Act
         var (count, checks) = await store.ListPageAsync(new CheckRegisterQuery { Access = filter, OldestFirst = true }, 0, 50, TestContext.Current.CancellationToken);
@@ -148,11 +150,11 @@ public sealed class CheckRegisterStoreTests : IAsyncLifetime
         Assert.Null(Assert.Single(rows, row => row.ItemId == "manual").AccessKey);
     }
 
-    private static CheckAccessService Access()
-        => new([new FixedCheckSourceAccess(Paychecks, new Dictionary<string, CheckSourceScope>
+    private static SourceAccessService Access()
+        => new([new FixedSourceAccess(Paychecks, new Dictionary<string, SourceAccessScope>
         {
-            ["pat"] = CheckSourceScope.Of(["groupA"]),
-            ["ann"] = CheckSourceScope.All,
+            ["pat"] = SourceAccessScope.Of(["groupA"]),
+            ["ann"] = SourceAccessScope.All,
         })]);
 
     private static CheckRecord Check(string id, long number, string sourceKind, string scope, DateOnly checkDate, CheckStatus status)

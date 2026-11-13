@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Checks.Core.Services;
 using CrestApps.OrchardCore.Checks.Deployments;
 using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.ViewModels;
+using CrestApps.OrchardCore.Core.SourceAccess;
+using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -34,8 +36,8 @@ public sealed class ChecksAuthorizationTests
         var access = Access();
 
         // Act
-        var (patCount, pat) = await context.Store.ListPageAsync(new CheckRegisterQuery { Access = await access.GetFilterAsync(TestSecurity.User("pat"), CheckAccessLevel.View, TestContext.Current.CancellationToken) }, 0, 50, TestContext.Current.CancellationToken);
-        var (leeCount, lee) = await context.Store.ListPageAsync(new CheckRegisterQuery { Access = await access.GetFilterAsync(TestSecurity.User("lee"), CheckAccessLevel.View, TestContext.Current.CancellationToken) }, 0, 50, TestContext.Current.CancellationToken);
+        var (patCount, pat) = await context.Store.ListPageAsync(new CheckRegisterQuery { Access = await access.GetFilterAsync(TestSecurity.User("pat"), SourceAccessLevel.View, TestContext.Current.CancellationToken) }, 0, 50, TestContext.Current.CancellationToken);
+        var (leeCount, lee) = await context.Store.ListPageAsync(new CheckRegisterQuery { Access = await access.GetFilterAsync(TestSecurity.User("lee"), SourceAccessLevel.View, TestContext.Current.CancellationToken) }, 0, 50, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, patCount);
@@ -49,10 +51,10 @@ public sealed class ChecksAuthorizationTests
     {
         // Arrange
         var (context, _) = await RegisterAsync();
-        var access = new CheckAccessService([]);
+        var access = new SourceAccessService([]);
 
         // Act
-        var filter = await access.GetFilterAsync(TestSecurity.User("lee"), CheckAccessLevel.View, TestContext.Current.CancellationToken);
+        var filter = await access.GetFilterAsync(TestSecurity.User("lee"), SourceAccessLevel.View, TestContext.Current.CancellationToken);
         var (count, _) = await context.Store.ListPageAsync(new CheckRegisterQuery { Access = filter }, 0, 50, TestContext.Current.CancellationToken);
 
         // Assert
@@ -66,6 +68,27 @@ public sealed class ChecksAuthorizationTests
         // Arrange
         var (context, checks) = await RegisterAsync();
         var source = ExportSource(context, "lee", new RecordingNotifier(), ChecksPermissions.ViewCheckRegister);
+
+        // Act
+        var step = await RecipeRoundTrip.ExportAsync(source, new CheckRegisterDeploymentStep());
+
+        // Assert
+        var exported = step["Checks"]!.AsArray().Select(node => node!["number"]!.GetValue<long>()).ToList();
+        Assert.Equal([checks.Manual.Number], exported);
+    }
+
+    [Fact]
+    public async Task Export_RunWithoutASignedInPerson_WritesOnlyTheChecksNoSourceRestricts()
+    {
+        // Arrange: a remote deployment, with no request, of a step anyone who may view the register can save.
+        var (context, checks) = await RegisterAsync();
+        var source = new CheckRegisterDeploymentSource(
+            context.Store,
+            Access(),
+            new HttpContextAccessor(),
+            TestSecurity.Granting(),
+            new RecordingNotifier(),
+            new EchoHtmlLocalizer<CheckRegisterDeploymentSource>());
 
         // Act
         var step = await RecipeRoundTrip.ExportAsync(source, new CheckRegisterDeploymentStep());
@@ -206,8 +229,8 @@ public sealed class ChecksAuthorizationTests
     }
 
     // Pat runs payroll for group A; Lee sees no paycheck.
-    private static CheckAccessService Access()
-        => new([new FixedCheckSourceAccess(Paychecks, new Dictionary<string, CheckSourceScope> { ["pat"] = CheckSourceScope.Of(["groupA"]) })]);
+    private static SourceAccessService Access()
+        => new([new FixedSourceAccess(Paychecks, new Dictionary<string, SourceAccessScope> { ["pat"] = SourceAccessScope.Of(["groupA"]) })]);
 
     private static CheckRegisterDeploymentSource ExportSource(ChecksTestContext context, string userName, RecordingNotifier notifier, params Permission[] grants)
         => new(

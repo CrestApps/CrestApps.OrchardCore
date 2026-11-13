@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Services;
 using CrestApps.OrchardCore.Checks.ViewModels;
 using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.SourceAccess;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -38,7 +39,7 @@ public sealed class ChecksController : Controller
     private readonly INamedCatalogManager<CheckLayout> _layouts;
     private readonly IBankAccountManager _bankAccounts;
     private readonly ICheckRecordStore _store;
-    private readonly ICheckAccessService _access;
+    private readonly ISourceAccessService _access;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<CheckRecord> _displayManager;
@@ -55,7 +56,7 @@ public sealed class ChecksController : Controller
         INamedCatalogManager<CheckLayout> layouts,
         IBankAccountManager bankAccounts,
         ICheckRecordStore store,
-        ICheckAccessService access,
+        ISourceAccessService access,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<CheckRecord> displayManager,
@@ -99,7 +100,7 @@ public sealed class ChecksController : Controller
                 BankAccountId = filter.BankAccountId,
                 Status = Enum.TryParse<CheckStatus>(filter.Status, out var status) ? status : null,
                 Search = filter.Search,
-                Access = await _access.GetFilterAsync(User, CheckAccessLevel.View, HttpContext.RequestAborted),
+                Access = await _access.GetFilterAsync(User, SourceAccessLevel.View, HttpContext.RequestAborted),
             },
             pager.GetStartIndex(),
             pager.PageSize,
@@ -497,14 +498,14 @@ public sealed class ChecksController : Controller
             return null;
         }
 
-        return await _access.CanAccessAsync(User, check, CheckAccessLevel.Manage, HttpContext.RequestAborted) ? check : null;
+        return await _access.CanAccessAsync(User, check.SourceKind, check.AccessScope, SourceAccessLevel.Manage, HttpContext.RequestAborted) ? check : null;
     }
 
     private async Task<bool> CanManageAllAsync(IEnumerable<CheckRecord> checks)
     {
-        var filter = await _access.GetFilterAsync(User, CheckAccessLevel.Manage, HttpContext.RequestAborted);
+        var filter = await _access.GetFilterAsync(User, SourceAccessLevel.Manage, HttpContext.RequestAborted);
 
-        return checks.All(filter.Allows);
+        return checks.All(check => filter.Allows(check.SourceKind, check.AccessScope));
     }
 
     private async Task<DateOnly> GetLocalTodayAsync()

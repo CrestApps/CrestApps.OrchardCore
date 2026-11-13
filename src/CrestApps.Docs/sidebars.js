@@ -191,6 +191,7 @@ const sidebars = {
             items: [
                 'user-manual/finance/bank-accounts',
                 'user-manual/finance/checks',
+                'user-manual/finance/disbursements',
             ],
         },
         {
@@ -480,6 +481,7 @@ const sidebars = {
             items: [
                 'modules/banking',
                 'modules/checks',
+                'modules/disbursements',
             ],
         },
         {

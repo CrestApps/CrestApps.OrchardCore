@@ -1,0 +1,15 @@
+@model ShapeViewModel<DisbursementBatch>
+
+@{
+    var batch = Model.Value;
+    var (status, icon) = batch.Status switch
+    {
+        DisbursementBatchStatus.Released => (T["Released"], "fa-solid fa-paper-plane text-info"),
+        DisbursementBatchStatus.Settled => (T["Settled"], "fa-solid fa-circle-check text-success"),
+        DisbursementBatchStatus.Canceled => (T["Cancelled"], "fa-solid fa-ban text-secondary"),
+        _ => (T["Open"], "fa-solid fa-folder-open text-warning"),
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="@icon me-1" aria-hidden="true"></i>@status</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Sent by"]"><i class="fa-solid fa-money-bill-transfer text-secondary me-1" aria-hidden="true"></i>@batch.Provider</span>

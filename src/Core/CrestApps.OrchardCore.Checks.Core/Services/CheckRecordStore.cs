@@ -1,7 +1,9 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Checks.Core.Indexes;
 using CrestApps.OrchardCore.Checks.Models;
+using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.YesSql.Core.Services;
+using CrestApps.OrchardCore.YesSql.Core.SourceAccess;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Checks.Core.Services;
@@ -62,7 +64,7 @@ public sealed class CheckRecordStore : DocumentCatalog<CheckRecord, CheckRecordI
 
         var checks = Session.Query<CheckRecord, CheckRecordIndex>(collection: ChecksConstants.CollectionName);
 
-        if (CheckAccessExpressions.Restrict(query.Access ?? CheckAccessFilter.Unrestricted) is { } restrict)
+        if (SourceAccessExpressions.Restrict<CheckRecordIndex>(query.Access ?? SourceAccessFilter.Unrestricted) is { } restrict)
         {
             checks = checks.Where(restrict);
         }

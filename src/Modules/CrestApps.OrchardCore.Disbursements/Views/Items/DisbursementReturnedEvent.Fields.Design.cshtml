@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Disbursements.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<DisbursementReturnedEvent>
+
+<header><h4><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Disbursement Returned"])</h4></header>
+<p class="hint">@T["Starts when the bank returns a disbursement, such as for a closed account. FailureCode holds the return code. Input: DisbursementId, PayeeName, Amount, Currency, Method, Status, Change, SourceKind, SourceId, BatchId, TraceNumber, FailureCode, FailureReason, IsPrenote and Actor."]</p>
