@@ -36,6 +36,11 @@ internal sealed class LearningMigrations : DataMigration
     }
 
     /// <summary>
+    /// The path of a course page: <c>courses/</c> and the slug of its title.
+    /// </summary>
+    public const string CoursePathPattern = "courses/{{ ContentItem.DisplayText | slugify }}";
+
+    /// <summary>
     /// Creates the index tables, the parts and the content types.
     /// </summary>
     /// <returns>The version.</returns>
@@ -49,7 +54,19 @@ internal sealed class LearningMigrations : DataMigration
         await DefineLessonsAsync();
         await _courseListSynchronizer.SynchronizeAsync();
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Fixes the course path pattern, which slugified the slash of <c>courses/</c> into a dash.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(LearningConstants.ContentTypes.Course, type => type
+            .WithPart(nameof(AutoroutePart), part => part.MergeSettings<AutoroutePartSettings>(settings => settings.Pattern = CoursePathPattern)));
+
+        return 2;
     }
 
     private async Task DefinePartsAsync()
@@ -111,7 +128,7 @@ internal sealed class LearningMigrations : DataMigration
                 .WithSettings(new AutoroutePartSettings
                 {
                     AllowCustomPath = true,
-                    Pattern = "{{ 'courses/' | append: ContentItem.DisplayText | slugify }}",
+                    Pattern = CoursePathPattern,
                 }))
             .WithPart(nameof(HtmlBodyPart), part => part.WithPosition("3").WithEditor("Wysiwyg"))
             .WithPart(LearningConstants.ContentTypes.Course, part => part.WithPosition("4"))
