@@ -27,6 +27,7 @@ public sealed class MessageTemplateIndexProvider : IndexProvider<MessageTemplate
             {
                 ItemId = template.ItemId,
                 Name = template.Name,
+                Scope = string.IsNullOrEmpty(template.Scope) ? null : template.Scope,
             });
     }
 }

@@ -252,7 +252,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Drivers
 {
     public sealed class MessageTemplateDisplayDriver : OrchardCore.DisplayManagement.Handlers.DisplayDriver<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate>
     {
-        public MessageTemplateDisplayDriver() { }
+        public MessageTemplateDisplayDriver(Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplateScopeOptions> scopeOptions, Microsoft.Extensions.Localization.IStringLocalizerFactory localizerFactory) { }
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Display(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate template, OrchardCore.DisplayManagement.Handlers.BuildDisplayContext context) { }
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate template, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate template, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
@@ -449,6 +449,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
                     CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver,
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager,
                     CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessageTemplateManager templateManager,
+                    CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessageTemplateRenderer templateRenderer,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentEntitlementPolicy entitlementPolicy,
                     CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingAvailabilityService availabilityService,
@@ -621,6 +622,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
         public MessageTemplateViewModel() { }
         public string Body { get; set; }
         public string Name { get; set; }
+        public string Scope { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<System.Collections.Generic.KeyValuePair<string, string>> Scopes { get; set; }
     }
     public class MessagingEntryPointViewModel
     {

@@ -39,6 +39,7 @@ public sealed partial class MessagingWorkspaceBuilder
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IMessageTemplateManager _templateManager;
+    private readonly IMessageTemplateRenderer _templateRenderer;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IAgentEntitlementPolicy _entitlementPolicy;
     private readonly IMessagingAvailabilityService _availabilityService;
@@ -61,6 +62,7 @@ public sealed partial class MessagingWorkspaceBuilder
         IMessagingChannelResolver channelResolver,
         IOmnichannelChannelEndpointManager endpointManager,
         IMessageTemplateManager templateManager,
+        IMessageTemplateRenderer templateRenderer,
         IAgentProfileManager agentProfileManager,
         IAgentEntitlementPolicy entitlementPolicy,
         IMessagingAvailabilityService availabilityService,
@@ -82,6 +84,7 @@ public sealed partial class MessagingWorkspaceBuilder
         _channelResolver = channelResolver;
         _endpointManager = endpointManager;
         _templateManager = templateManager;
+        _templateRenderer = templateRenderer;
         _agentProfileManager = agentProfileManager;
         _entitlementPolicy = entitlementPolicy;
         _availabilityService = availabilityService;
@@ -387,6 +390,37 @@ public sealed partial class MessagingWorkspaceBuilder
     }
 
     /// <summary>
+    /// Returns the workspace's reply templates (those without a scope), with their placeholders filled in for the
+    /// conversation's contact.
+    /// </summary>
+    private async Task<MessageTemplate[]> GetTemplatesAsync(string contactName, CancellationToken cancellationToken)
+    {
+        var models = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["Contact"] = new { DisplayName = contactName ?? string.Empty },
+        };
+
+        var templates = new List<MessageTemplate>();
+
+        foreach (var template in await _templateManager.GetAllAsync(cancellationToken))
+        {
+            if (!string.IsNullOrEmpty(template.Scope))
+            {
+                continue;
+            }
+
+            templates.Add(new MessageTemplate
+            {
+                ItemId = template.ItemId,
+                Name = template.Name,
+                Body = await _templateRenderer.RenderAsync(template, models, cancellationToken),
+            });
+        }
+
+        return [.. templates];
+    }
+
+    /// <summary>
     /// Builds the open conversation, its channel tabs and its composer.
     /// </summary>
     public async Task<ThreadViewModel> BuildThreadAsync(
@@ -441,7 +475,7 @@ public sealed partial class MessagingWorkspaceBuilder
             Attachments = channel?.Capabilities.Attachments ?? MessagingAttachmentCapabilities.None,
             Messages = messages,
             Events = ThreadTimeline.ForPage(conversation.History, messages, beforeUtc, hasEarlierMessages),
-            Templates = (await _templateManager.GetAllAsync(cancellationToken)).ToArray(),
+            Templates = await GetTemplatesAsync(titleContact?.DisplayName, cancellationToken),
             ContactDisplayText = titleContact?.DisplayName,
             Contacts = contacts,
             AgentNames = await ResolveAgentNamesAsync(messages),

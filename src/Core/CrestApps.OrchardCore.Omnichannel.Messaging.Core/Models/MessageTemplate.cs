@@ -4,8 +4,9 @@ using CrestApps.Core.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 
 /// <summary>
-/// A reusable canned response (template) an agent can drop into the composer. Kept deliberately simple: a
-/// named body of text.
+/// A reusable reply (canned response) an agent drops into a composer: a named body of text, with Liquid placeholders
+/// such as <c>{{ Contact.DisplayName }}</c> filled in by <see cref="Services.IMessageTemplateRenderer"/>, offered where
+/// its scope is answered.
 /// </summary>
 public sealed class MessageTemplate : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
 {
@@ -18,6 +19,12 @@ public sealed class MessageTemplate : CatalogItem, INameAwareModel, IModifiedUtc
     /// Gets or sets the template body inserted into the composer.
     /// </summary>
     public string Body { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of work the template is for, such as <c>Tickets</c>, one of
+    /// <see cref="MessageTemplateScopeOptions.Scopes"/>; empty for the messaging workspace.
+    /// </summary>
+    public string Scope { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the template was created.

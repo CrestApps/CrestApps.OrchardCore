@@ -38,12 +38,31 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(6, version);
+            Assert.Equal(7, version);
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));
             Assert.Equal(_ownerAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.OwnerAttentionIndexName));
             Assert.Equal(_activityColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.ActivityIndexName));
             Assert.Equal(_firstResponseDueColumns, await IndexColumnsAsync(schemaBuilder, FirstResponseDueIndexName));
             Assert.Equal(_contactColumns, await IndexColumnsAsync(schemaBuilder, ContactIndexName));
+        });
+    }
+
+    // A reply template can be written for another kind of work, such as tickets; existing templates stay the workspace's.
+    [Fact]
+    public async Task UpdateFrom6Async_OnAVersion6Table_AddsTheTemplateScope()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            // What version 6 released: the template table without the scope column.
+            var templates = schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(MessageTemplateIndex), MessagingStorage.CollectionName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {templates} DROP COLUMN Scope");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {templates} (DocumentId, ItemId, Name) VALUES (1, 't1', 'Thanks')");
+
+            Assert.Equal(7, await migration.UpdateFrom6Async());
+            Assert.Equal("1", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {templates} WHERE ItemId = 't1' AND Scope IS NULL"));
         });
     }
 

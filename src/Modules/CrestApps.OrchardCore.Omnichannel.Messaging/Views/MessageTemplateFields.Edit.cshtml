@@ -10,4 +10,20 @@
     <label asp-for="Body" class="form-label ocat-label-required">@T["Body"]</label>
     <textarea asp-for="Body" class="form-control" rows="3"></textarea>
     <span asp-validation-for="Body" class="text-danger"></span>
+    <span class="hint">@T["Placeholders in Liquid are filled in when the template is used, such as {0} for the contact's name.", "{{ Contact.DisplayName }}"]</span>
 </div>
+
+@if (Model.Scopes.Count > 0)
+{
+    <div class="mb-3">
+        <label asp-for="Scope" class="form-label">@T["Used for"]</label>
+        <select asp-for="Scope" class="form-select">
+            <option value="">@T["Messaging"]</option>
+            @foreach (var scope in Model.Scopes)
+            {
+                <option value="@scope.Key" selected="@(string.Equals(scope.Key, Model.Scope, StringComparison.Ordinal))">@scope.Value</option>
+            }
+        </select>
+        <span class="hint">@T["Where the template is offered: the messaging workspace, or another kind of work."]</span>
+    </div>
+}

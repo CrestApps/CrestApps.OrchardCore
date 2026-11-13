@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -626,6 +627,7 @@ public sealed class SmsPortalAdminControllerTests
             channels,
             Mock.Of<IOmnichannelChannelEndpointManager>(),
             Mock.Of<IMessageTemplateManager>(),
+            new LiquidMessageTemplateRenderer(new ServiceCollection().BuildServiceProvider(), NullLogger<LiquidMessageTemplateRenderer>.Instance),
             agentProfileManager.Object,
             new PermissiveAgentEntitlementPolicy(),
             availabilityService.Object,
