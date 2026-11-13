@@ -439,6 +439,15 @@ The main extension points are:
 
 An `ITaxDeterminationProvider` whose `CanHandle` returns `true` takes over the entire calculation, which is how third-party tax services can be layered on top of the same abstractions; [TaxJar](#taxjar) is one. Providers are asked by their `Order`, lowest first, and the first that can handle the context determines it. The engine checks that every item is in the context's currency before asking any provider.
 
+### Tax profile of a party
+
+A document billed to a [party](parties.md) (an account, a customer, a user or a CRM contact), such as an invoice, has no checkout to read the buyer from. `IPartyTaxProfileService.GetAsync(party)` (Taxation.Abstractions) builds its `CustomerTaxProfile` instead: it starts from a person with no tax number and no exemption, and every `IPartyTaxProfileProvider.BuildAsync(profile, party)` adds what it knows. Each provider fills what is missing and keeps what another set, so their order doesn't change the result.
+
+- The default provider, `BillingProfilePartyTaxProfileProvider` (Taxation.Core), reads the party's billing profile: an `Account` is a business (`B2B`) taxed at its billing address as its `BusinessAddress`; another party's billing address is its `ResidenceAddress`. The billing profile's tax id fills `TaxRegistrationNumber` and `VatNumber` (`CustomerTaxProfile.SetTaxNumber`), and an exempt party is exempt. A `Customer` party's id is the profile's `CustomerId`.
+- Customers adds `CustomerPartyTaxProfileProvider`: a business customer is a business, and the customer's exemption certificates are listed.
+
+`services.AddTaxationCore()` registers the service and the default provider; a feature that taxes documents without the Taxation feature calls `services.AddPartyTaxProfiles()` (Taxation.Core), and a module adds a provider with `services.AddPartyTaxProfileProvider<T>()`.
+
 ## TaxJar
 
 The **TaxJar** feature (`CrestApps.OrchardCore.Taxation.TaxJar`, it needs Taxation) works out tax with TaxJar for orders to the countries it's set up for, in place of the store's rules. The settings screen is described in the [User Manual](../user-manual/commerce/taxes.md#taxjar).

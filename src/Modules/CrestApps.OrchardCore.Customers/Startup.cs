@@ -25,6 +25,7 @@ using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
 using CrestApps.OrchardCore.PersonalData.Core;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -60,6 +61,15 @@ public sealed class Startup : StartupBase
 
         // Customers are parties: pickers and lists in any module find and name them by their customer record id.
         services.AddPartySource<CustomerPartySource>();
+
+        // A customer is billed from their record: contact, default addresses, tax id and exemption. The user the record
+        // belongs to acts for it.
+        services.AddPartyBillingProfileSource<CustomerBillingProfileSource>();
+        services.AddPartyMemberSource<CustomerPartyMemberSource>();
+
+        // A customer party's tax profile gets the customer record's type, exemption and certificates, by the rules
+        // checkout tax uses. The profile service itself comes with Taxation, or with the feature that taxes a document.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartyTaxProfileProvider, CustomerPartyTaxProfileProvider>());
 
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
