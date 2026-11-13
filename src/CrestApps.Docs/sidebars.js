@@ -186,6 +186,16 @@ const sidebars = {
         },
         {
             type: 'category',
+            label: 'Learning',
+            className: icon('book-a'),
+            items: [
+                'user-manual/learning/courses',
+                'user-manual/learning/enrollments',
+                'user-manual/learning/learner-pages',
+            ],
+        },
+        {
+            type: 'category',
             label: 'Geo',
             className: icon('compass'),
             items: [
@@ -462,6 +472,14 @@ const sidebars = {
                 'modules/skills',
                 'modules/staff',
                 'modules/teams',
+            ],
+        },
+        {
+            type: 'category',
+            label: 'Learning',
+            className: icon('book-a'),
+            items: [
+                'modules/learning',
             ],
         },
         {

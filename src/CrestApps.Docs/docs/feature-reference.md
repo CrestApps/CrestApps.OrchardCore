@@ -247,6 +247,14 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.WorkOrders` | Work Orders | [Work Orders](./modules/work-orders) |
 | `CrestApps.OrchardCore.WorkOrders.Agreements` | Service Agreements | [Work Orders](./modules/work-orders#service-agreements) |
 
+## Learning
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Learning` | Learning | [Learning](./modules/learning) |
+| `CrestApps.OrchardCore.Learning.LearnerPages` | Learner Pages | [Learning](./modules/learning#learner-pages) |
+| `CrestApps.OrchardCore.Learning.SelfEnrollment` | Self Enrollment | [Learning](./modules/learning#learner-pages) |
+
 ## Data connectors
 
 | Feature ID | Name | Docs |

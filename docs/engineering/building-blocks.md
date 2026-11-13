@@ -89,6 +89,12 @@ Rules that follow from the table:
 | Visits and routes | **Dispatch** | `IDispatchOptimizer`, `IDispatchCandidateFinder`, `IVisitObserver` | Write another route optimizer; plug one in like OrTools |
 | Equipment and fleet | **Assets** | `Asset`, `IAssetOwnerSource` | Keep equipment lists elsewhere |
 
+### Learning
+
+| Concept | Owner (feature) | Reuse it through | Do not |
+| --- | --- | --- | --- |
+| Courses, lessons, enrollments, progress and completion | **Learning** (`Learning.Abstractions`/`.Core`) | `IEnrollmentService` (grants with a source: `AddEnrollmentSource`), `ILearnerProgressService`, `ICourseAccessService`, `AddCourseItemKind<TPart>`, `AddCourseItemReleaseRule<T>`, `AddCourseCompletionCriterion<T>`, `IEnrollmentObserver`, `ICourseItemHandler` | Gate content another way; add an enrollment, seat or course-access record of your own (an order or a subscription grants access through an enrollment source) |
+
 ### Communication
 
 | Concept | Owner (feature) | Reuse it through | Do not |
