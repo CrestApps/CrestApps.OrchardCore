@@ -42,6 +42,43 @@ public sealed class LearningUpkeepTests
         Assert.DoesNotContain(observer.Events, name => name == "Inactive:" + ending.ItemId);
     }
 
+    [Fact]
+    public async Task RunAsync_RaisesDueSoonAndOverdueOnce_ForOpenEnrollmentsOnly()
+    {
+        // Arrange
+        var (harness, courses, observer) = await LearningTestHarness.CreateAsync();
+        await using var _ = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "lesson");
+        var soon = await EnrollAsync(harness, "soon", LearningTestHarness.Now.AddDays(60), LearningTestHarness.Now.AddDays(2));
+        var late = await EnrollAsync(harness, "late", LearningTestHarness.Now.AddDays(60), LearningTestHarness.Now.AddDays(-1));
+        var far = await EnrollAsync(harness, "far", LearningTestHarness.Now.AddDays(60), LearningTestHarness.Now.AddDays(20));
+
+        // Act
+        await harness.RunAsync(services => services.GetRequiredService<LearningUpkeep>().RunAsync());
+        await harness.RunAsync(services => services.GetRequiredService<LearningUpkeep>().RunAsync());
+
+        // Assert
+        Assert.Single(observer.Events, name => name == "DueSoon:" + soon.ItemId);
+        Assert.Single(observer.Events, name => name == "Overdue:" + late.ItemId);
+        Assert.DoesNotContain(observer.Events, name => name.EndsWith(far.ItemId, StringComparison.Ordinal) && !name.StartsWith("Enrolled", StringComparison.Ordinal));
+    }
+
+    private static async Task<Enrollment> EnrollAsync(CalendarTestHarness harness, string userId, DateTime accessEndsUtc, DateTime? dueUtc)
+    {
+        var result = await harness.RunAsync(services => services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest
+        {
+            UserId = userId,
+            CourseId = "course1",
+            Source = LearningConstants.EnrollmentSources.Manual,
+            SourceId = "m-" + userId,
+            AccessEndsUtc = accessEndsUtc,
+            DueUtc = dueUtc,
+        }));
+
+        return result.Enrollment;
+    }
+
     private static async Task<Enrollment> EnrollAsync(CalendarTestHarness harness, string userId, DateTime accessEndsUtc)
     {
         var result = await harness.RunAsync(services => services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest

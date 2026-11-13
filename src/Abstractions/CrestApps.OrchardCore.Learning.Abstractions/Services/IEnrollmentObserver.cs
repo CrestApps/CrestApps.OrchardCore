@@ -93,4 +93,22 @@ public interface IEnrollmentObserver
     /// <returns>A task.</returns>
     Task InactiveAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// An open enrollment is due within the notice period. Raised once per due date.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task DueSoonAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// An open enrollment passed its due date before completion. Raised once per due date.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task OverdueAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

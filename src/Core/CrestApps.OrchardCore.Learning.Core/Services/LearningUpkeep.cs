@@ -24,6 +24,16 @@ public sealed class LearningUpkeep
     /// </summary>
     public const string InactiveMarker = "LearningInactiveRaised";
 
+    /// <summary>
+    /// The enrollment property that records the due date a due-soon notice was raised for.
+    /// </summary>
+    public const string DueSoonMarker = "LearningDueSoonRaised";
+
+    /// <summary>
+    /// The enrollment property that records the due date an overdue notice was raised for.
+    /// </summary>
+    public const string OverdueMarker = "LearningOverdueRaised";
+
     private const int PageSize = 100;
 
     private readonly IEnrollmentService _enrollmentService;
@@ -86,6 +96,19 @@ public sealed class LearningUpkeep
             }
         }
 
+        if (_options.DueSoonDays > 0)
+        {
+            foreach (var enrollment in await _enrollmentStore.ListDueAsync(now, now.AddDays(_options.DueSoonDays), PageSize, cancellationToken))
+            {
+                await RaiseOnceAsync(enrollment, DueSoonMarker, enrollment.DueUtc, observer => observer.DueSoonAsync(enrollment, cancellationToken), cancellationToken);
+            }
+        }
+
+        foreach (var enrollment in await _enrollmentStore.ListDueAsync(DateTime.MinValue, now, PageSize, cancellationToken))
+        {
+            await RaiseOnceAsync(enrollment, OverdueMarker, enrollment.DueUtc, observer => observer.OverdueAsync(enrollment, cancellationToken), cancellationToken);
+        }
+
         if (_options.InactiveDays > 0)
         {
             foreach (var enrollment in await _enrollmentStore.ListInactiveAsync(now.AddDays(-_options.InactiveDays), PageSize, cancellationToken))
@@ -102,6 +125,20 @@ public sealed class LearningUpkeep
                 await NotifyAsync(observer => observer.InactiveAsync(enrollment, cancellationToken));
             }
         }
+    }
+
+    private async Task RaiseOnceAsync(Enrollment enrollment, string markerName, DateTime? value, Func<IEnrollmentObserver, Task> notify, CancellationToken cancellationToken)
+    {
+        var marker = value?.ToString("O", CultureInfo.InvariantCulture);
+
+        if (Equals(enrollment.Properties.TryGetValue(markerName, out var raised) ? raised?.ToString() : null, marker))
+        {
+            return;
+        }
+
+        enrollment.Properties[markerName] = marker;
+        await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+        await NotifyAsync(notify);
     }
 
     private async Task NotifyAsync(Func<IEnrollmentObserver, Task> notify)

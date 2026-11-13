@@ -232,6 +232,25 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
     }
 
     /// <summary>
+    /// Lists active enrollments due within a window, soonest first.
+    /// </summary>
+    /// <param name="fromUtc">The start of the window, in UTC, excluded.</param>
+    /// <param name="toUtc">The end of the window, in UTC, included.</param>
+    /// <param name="take">The page size.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The enrollments.</returns>
+    public async Task<IReadOnlyList<Enrollment>> ListDueAsync(DateTime fromUtc, DateTime toUtc, int take, CancellationToken cancellationToken = default)
+    {
+        return (await Session.Query<Enrollment, EnrollmentIndex>(
+                index => index.IsOpen && index.Status == EnrollmentStatus.Active && index.DueUtc != null && index.DueUtc > fromUtc && index.DueUtc <= toUtc,
+                collection: CollectionName)
+            .OrderBy(index => index.DueUtc)
+            .ThenBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <summary>
     /// Saves an enrollment.
     /// </summary>
     /// <param name="enrollment">The enrollment.</param>

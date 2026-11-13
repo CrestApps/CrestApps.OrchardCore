@@ -14,4 +14,9 @@ public sealed class LearningUpkeepOptions
     /// Gets or sets after how many days without activity a learner counts as inactive. Zero turns it off.
     /// </summary>
     public int InactiveDays { get; set; } = 14;
+
+    /// <summary>
+    /// Gets or sets how many days before the due date the due-soon notice is raised. Zero turns it off.
+    /// </summary>
+    public int DueSoonDays { get; set; } = 3;
 }
