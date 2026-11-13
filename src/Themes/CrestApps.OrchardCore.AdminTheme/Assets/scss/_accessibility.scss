@@ -1,0 +1,78 @@
+// ---------------------------------------------------------------------------
+// Accessibility (WCAG 2.2 AA) beyond color, which _schemes.scss checks.
+// ---------------------------------------------------------------------------
+
+@use "tokens" as *;
+
+// 2.4.1 Bypass blocks: the first stop of the keyboard skips the menu and the top bar.
+.ca-skip-link {
+    position: fixed;
+    top: 0.5rem;
+    inset-inline-start: 0.5rem;
+    z-index: calc(var(--ca-sidebar-zindex) + 10);
+    padding: 0.625rem 1rem;
+    border-radius: var(--bs-border-radius);
+    background-color: var(--ca-surface);
+    color: var(--ca-link);
+    font-weight: 700;
+    box-shadow: var(--ca-shadow-lg);
+
+    &:focus-visible {
+        outline: 2px solid var(--ca-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// The main region receives the focus of the skip link without drawing a ring around the whole page.
+.ca-admin .ta-content:focus {
+    outline: none;
+}
+
+// 2.4.11 Focus not obscured: a field reached with the keyboard is scrolled clear of the fixed top bar, and of the
+// sticky action bar at the bottom of forms.
+html:has(body.ca-admin) {
+    scroll-padding-top: calc(var(--oc-top-nav-height) + 1rem);
+}
+
+html:has(.action-bar-bottom) {
+    scroll-padding-bottom: 5.5rem;
+}
+
+// 2.1.1 / 2.4.3: the closed drawer, off screen below the medium breakpoint, takes no keyboard focus. It is hidden
+// once its slide out is over, and shown as soon as it starts sliding in.
+@include mobile {
+    .ca-admin #ta-left-sidebar {
+        visibility: hidden;
+        transition: left 0.2s ease-in-out, visibility 0s linear 0.2s;
+    }
+
+    .ca-admin.ta-sidebar-open #ta-left-sidebar {
+        visibility: visible;
+        transition: left 0.2s ease-in-out, visibility 0s linear 0s;
+    }
+}
+
+// 2.3.3 / user preference: no transitions for people who ask for less motion.
+@media (prefers-reduced-motion: reduce) {
+    .ca-admin *,
+    .ca-admin *::before,
+    .ca-admin *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+// Windows contrast themes (forced colors) drop backgrounds and shadows: the current page of the menu and the
+// chosen scheme are outlined instead, and the swatches keep their own colors.
+@media (forced-colors: active) {
+    .ca-admin #left-nav li.current > figure > figcaption,
+    .ca-scheme-option.active {
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+    }
+
+    .ca-scheme-swatch {
+        forced-color-adjust: none;
+    }
+}

@@ -1,0 +1,421 @@
+@use "tokens" as *;
+
+// ---------------------------------------------------------------------------
+// The admin menu.
+//
+// TheAdmin's menu markup, script and three layouts are kept. The menu is drawn
+// on a navy gradient in both color modes, every row is a rounded pill, and the
+// current page is a filled pill of the brand blue.
+//
+// TheAdmin computes its hover and active washes from its accent on ':root', so
+// they are restated here rather than derived: a custom property declared on
+// ':root' is not recomputed when the property it reads is redefined lower down.
+// ---------------------------------------------------------------------------
+
+.ca-admin #ta-left-sidebar {
+    --oc-admin-accent-rgb: var(--ca-menu-strong-rgb);
+    --oc-admin-accent-color: var(--ca-menu-strong);
+    --oc-admin-accent-strong-color: var(--ca-menu-accent);
+    --oc-admin-menu-bg-color: var(--ca-menu-bg);
+    --oc-admin-menu-border-color: var(--ca-menu-border);
+    --oc-scrollbar-color: rgba(var(--ca-menu-strong-rgb), 0.22);
+    --oc-admin-menu-font-color: var(--ca-menu-color);
+    --oc-admin-menu-font-color-hover: var(--ca-menu-strong);
+    --oc-admin-menu-item-bg-color: transparent;
+    --oc-admin-menu-item-font-color: var(--ca-menu-color);
+    --oc-admin-menu-item-font-color-active: var(--ca-menu-strong);
+    --oc-admin-menu-group-font-color: rgba(var(--ca-menu-strong-rgb), 0.86);
+    --oc-admin-menu-item-hover-bg-color: var(--ca-menu-hover-bg);
+    --oc-admin-menu-item-active-bg-color: var(--ca-menu-active-bg);
+    --oc-admin-menu-separator-color: var(--ca-menu-border);
+    --oc-admin-menu-flyout-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+    --oc-selected-indicator-color: transparent;
+    --ca-menu-pill-inset: 0.75rem;
+
+    top: 0;
+    z-index: var(--ca-sidebar-zindex);
+    border-right: none;
+    background-color: var(--ca-menu-bg);
+    background-image: var(--ca-menu-gradient);
+    color: var(--ca-menu-color);
+    // The flyouts of the compact rail are positioned by TheAdmin's script against the viewport, the
+    // gradient is not clipped by them.
+    box-shadow: 1px 0 0 rgba(8, 27, 38, 0.08);
+}
+
+// Branding
+// --------
+.ca-sidebar-brand {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    height: var(--oc-top-nav-height);
+    padding: 0 1.25rem;
+    overflow: hidden;
+    border-bottom: var(--bs-border-width) solid var(--ca-menu-border);
+
+    .ta-navbar-brand {
+        display: block;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        color: var(--ca-menu-strong);
+
+        &:hover,
+        &:focus-visible {
+            color: var(--ca-menu-strong);
+        }
+
+        img {
+            height: 34px;
+            width: auto;
+            border-radius: 0.5rem;
+        }
+
+        span {
+            overflow: hidden;
+            font-size: 1.0625rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            text-overflow: ellipsis;
+        }
+    }
+}
+
+.ca-topbar-brand .ta-navbar-brand,
+.ca-sidebar-brand .ta-navbar-brand {
+    > div {
+        min-width: 0;
+        flex-wrap: nowrap;
+    }
+}
+
+// The menu filter
+// ---------------
+.ca-admin .nav-filter {
+    margin: 0.875rem var(--ca-menu-pill-inset) 0.25rem;
+    border: var(--bs-border-width) solid var(--ca-menu-border);
+    border-radius: 0.625rem;
+    background-color: rgba(var(--ca-menu-strong-rgb), 0.06);
+
+    .nav-filter-icon {
+        color: var(--ca-menu-muted);
+    }
+
+    #filter,
+    #filter:focus {
+        height: 38px;
+        color: var(--ca-menu-strong);
+    }
+
+    #filter::placeholder {
+        color: var(--ca-menu-muted);
+    }
+
+    &:focus-within {
+        border-color: rgba(var(--ca-menu-accent-rgb), 0.6);
+        background-color: rgba(var(--ca-menu-strong-rgb), 0.1);
+    }
+}
+
+// Rows
+// ----
+.ca-admin #left-nav {
+    padding-top: 0.5rem;
+    padding-bottom: 1rem;
+    // Windows draws a classic scrollbar, arrows included, once 'scrollbar-color' is set. It is
+    // hidden until the menu is pointed at or focused.
+    scrollbar-width: none;
+
+    &:hover,
+    &:focus-within {
+        scrollbar-width: thin;
+    }
+}
+
+.ca-admin #left-nav .nav-item-row {
+    margin: 2px var(--ca-menu-pill-inset);
+    border-radius: 0.625rem;
+}
+
+.ca-admin #left-nav .item-label {
+    border-radius: 0.625rem;
+    padding-inline: 0.5rem 0.625rem;
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+
+    // The icons are Font Awesome solid glyphs, set by each module. They are drawn smaller and
+    // dimmer than the label so that they guide the eye without outweighing the text.
+    > .icon {
+        font-size: 1.0625rem;
+        opacity: 0.72;
+
+        svg {
+            width: 1.0625rem;
+        }
+    }
+
+    > .title {
+        font-size: 0.90625rem;
+        font-weight: 400;
+    }
+
+    &:hover > .icon,
+    &:focus-visible > .icon {
+        opacity: 1;
+    }
+}
+
+// A row made of a link and the toggle of its children shares one pill.
+.ca-admin #left-nav .nav-item-row:has(> .nav-toggle) {
+    > .item-label {
+        border-start-end-radius: 0;
+        border-end-end-radius: 0;
+    }
+
+    > .nav-toggle {
+        border-start-end-radius: 0.625rem;
+        border-end-end-radius: 0.625rem;
+    }
+}
+
+// Lato has no semibold: a weight of 600 renders bold, so the groups keep the regular weight
+// of the items and only the current page is bold.
+.ca-admin #left-nav .nav-group-label {
+    font-size: 0.90625rem;
+    font-weight: 400;
+    color: var(--ca-menu-color);
+}
+
+.ca-admin #left-nav > ul > li.has-items > figure > figcaption,
+.ca-admin #left-nav > ul > li.has-items:first-child > figure > figcaption {
+    margin-top: 2px;
+}
+
+// The children of a group hang under it, along a hairline.
+.ca-admin #left-nav .nav-group-items {
+    position: relative;
+    padding: 0.125rem 0 0.375rem;
+
+    &::after {
+        content: "";
+        position: absolute;
+        top: 0.25rem;
+        bottom: 0.5rem;
+        inset-inline-start: calc(var(--ca-menu-pill-inset) + 0.75rem);
+        border-inline-start: 1px solid var(--ca-menu-border);
+        pointer-events: none;
+    }
+
+    // Each level is indented a little past its parent, so the depth reads at a glance. The rows of a group are a
+    // little tighter than the groups, so a group still reads as one.
+    .nav-item-row {
+        margin-block: 1px;
+    }
+
+    .nav-toggle {
+        min-height: 2.125rem;
+    }
+
+    .item-label {
+        min-height: 2.125rem;
+        padding-block: 0.25rem;
+        padding-inline-start: 1.875rem;
+
+        > .icon,
+        > .collapse-icon {
+            min-height: 1.625rem;
+        }
+
+        > .icon {
+            width: 1.5rem;
+            font-size: 0.9375rem;
+
+            svg {
+                width: 0.9375rem;
+            }
+        }
+
+        > .title {
+            font-size: 0.875rem;
+        }
+    }
+}
+
+.ca-admin #left-nav ul ul ul {
+    background-color: transparent;
+}
+
+// Deeper levels step in again. '.nav-group-items' is repeated so these outweigh the second level's rule above.
+.ca-admin #left-nav .nav-group-items ul .item-label {
+    padding-inline-start: 3rem;
+}
+
+.ca-admin #left-nav .nav-group-items ul ul .item-label {
+    padding-inline-start: 4.125rem;
+}
+
+// The current page.
+.ca-admin #left-nav li.current > figure > figcaption {
+    background-color: var(--ca-menu-active-bg);
+
+    > .item-label,
+    > .nav-toggle {
+        background-color: transparent;
+        color: var(--ca-menu-active-color);
+    }
+
+    > .item-label > .title {
+        font-weight: 700;
+    }
+
+    > .item-label::before {
+        display: none;
+    }
+
+    > .item-label > .icon {
+        opacity: 1;
+    }
+}
+
+// The groups holding the current page.
+.ca-admin #left-nav li.active:not(.current) > figure > figcaption > .item-label {
+    color: var(--ca-menu-strong);
+}
+
+// Icon tiles
+// ----------
+// The icon of each first level row sits on a quiet rounded tile, a wash of the menu's own text color, so the icons
+// stand out without adding colors. On the current page the tile is a wash of the row's text color.
+.ca-admin #left-nav > ul > li {
+    --ca-icon-bg: rgba(var(--ca-menu-strong-rgb), 0.08);
+    --ca-icon-fg: var(--ca-menu-strong);
+}
+
+.ca-admin #left-nav > ul > li > figure > figcaption > .item-label > .icon {
+    align-self: center;
+    width: 2rem;
+    height: 2rem;
+    min-height: 2rem;
+    border-radius: 0.5rem;
+    background-color: var(--ca-icon-bg);
+    color: var(--ca-icon-fg);
+    font-size: 0.9375rem;
+    opacity: 1;
+
+    svg {
+        width: 0.9375rem;
+    }
+
+    &:empty {
+        background-color: transparent;
+    }
+}
+
+.ca-admin #left-nav > ul > li.current > figure > figcaption > .item-label > .icon {
+    background-color: color-mix(in srgb, var(--ca-menu-active-color) 18%, transparent);
+    color: var(--ca-menu-active-color);
+}
+
+// Footer
+// ------
+.ca-admin #ta-left-sidebar .footer {
+    border-top-color: var(--ca-menu-border);
+    background-color: transparent;
+}
+
+.ca-admin .leftbar-compactor {
+    width: 100%;
+    height: 44px;
+    color: var(--ca-menu-muted);
+    font-size: 16px;
+    text-align: end;
+    padding-inline-end: 1.75rem;
+
+    &:hover {
+        color: var(--ca-menu-strong);
+    }
+}
+
+// Layout 2 : the compact rail.
+// ----------------------------
+@include desktop {
+    .ca-admin.left-sidebar-compact {
+        .ca-sidebar-brand {
+            justify-content: center;
+            padding: 0;
+
+            .ta-navbar-brand img {
+                padding-inline-end: 0 !important;
+            }
+        }
+
+        .leftbar-compactor {
+            padding: 0;
+            text-align: center;
+        }
+
+        #left-nav > ul > li > figure > figcaption {
+            margin: 2px 0.75rem;
+        }
+
+        #left-nav > ul > li > figure > figcaption > .item-label {
+            min-height: 3rem;
+            padding: 0.5rem 0;
+
+            // The icon is all a row shows here, so its tile and glyph are drawn larger than in the expanded menu.
+            > .icon {
+                width: 2.75rem;
+                height: 2.75rem;
+                min-height: 2.75rem;
+                border-radius: 0.75rem;
+                font-size: 1.375rem;
+
+                svg {
+                    width: 1.375rem;
+                }
+            }
+        }
+
+        // The flyout of a group.
+        #left-nav > ul > li > figure > ul {
+            padding: 0.375rem 0 0.5rem;
+            border-radius: var(--ca-radius);
+            background-color: var(--ca-menu-bg);
+            background-image: linear-gradient(180deg, rgba(var(--ca-menu-strong-rgb), 0.04), rgba(var(--ca-menu-strong-rgb), 0));
+
+            &::before {
+                margin-bottom: 0.25rem;
+                padding: 0.5rem 1.25rem 0.625rem;
+                font-size: 0.875rem;
+                font-weight: 700;
+                color: var(--ca-menu-strong);
+            }
+
+            &::after {
+                display: none;
+            }
+
+            .item-label {
+                padding-inline-start: 0.5rem;
+            }
+        }
+    }
+}
+
+// Layout 3 : the drawer.
+// ----------------------
+@include mobile {
+    .ca-admin #ta-left-sidebar {
+        top: 0;
+    }
+
+    .ca-admin.ta-sidebar-open #ta-left-sidebar {
+        box-shadow: var(--ca-shadow-lg);
+    }
+
+    .ca-admin .ta-sidebar-backdrop {
+        top: 0;
+        z-index: var(--ca-backdrop-zindex);
+        background-color: rgba(8, 27, 38, 0.55);
+    }
+}

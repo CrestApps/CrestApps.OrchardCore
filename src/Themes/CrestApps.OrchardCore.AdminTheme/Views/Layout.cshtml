@@ -1,0 +1,121 @@
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+@using OrchardCore.Themes.Services
+
+@inject ThemeTogglerService ThemeTogglerService
+@inject CrestApps.OrchardCore.AdminTheme.Services.AdminColorSchemeService ColorSchemes
+@inject IOptions<AdminOptions> AdminOptions
+@inject IOptionsMonitor<AdminListOptions> AdminListOptions
+@inject IDisplayManager<Navbar> DisplayManager
+@inject IUpdateModelAccessor UpdateModelAccessor
+
+@*
+    TheAdmin's layout, rearranged: the menu runs the whole height of the window with the branding at its top, and the
+    top bar starts where the menu ends. The ids and classes TheAdmin's script and stylesheets rely on are all kept
+    (ta-wrapper, ta-navbar-top, ta-sidebar-toggler, ta-left-sidebar, leftbar-compactor, ta-sidebar-backdrop,
+    ta-content), so the menu still collapses to icons, still opens as a drawer on small screens, and every admin page
+    renders as it does in TheAdmin.
+*@
+
+@{
+    var adminSettings = Site.GetOrCreate<AdminSettings>();
+    var actionsLayout = AdminListOptions.CurrentValue.DefaultActionsLayout == AdminListActionsLayout.Menu ? "menu" : "buttons";
+
+    // Branding and Navbar are pre-rendered to allow resource injection. The branding is shown twice, in the menu and
+    // in the top bar for the drawer layout, from the one rendering, so that what it injects is injected once.
+    // A rendered shape can only be written once, so it is written to a string that both places output.
+    using var brandingWriter = new System.IO.StringWriter();
+    IShape brandingShape = await New.AdminBranding();
+    Microsoft.AspNetCore.Html.IHtmlContent brandingContent = await DisplayAsync(brandingShape);
+    brandingContent.WriteTo(brandingWriter, System.Text.Encodings.Web.HtmlEncoder.Default);
+    var brandingHtml = new Microsoft.AspNetCore.Html.HtmlString(brandingWriter.ToString());
+    var navbar = await DisplayAsync(await DisplayManager.BuildDisplayAsync(UpdateModelAccessor.ModelUpdater, "DetailAdmin"));
+}
+<!DOCTYPE html>
+<html lang="@Orchard.CultureName()" dir="@Orchard.CultureDir()" data-bs-theme="@await ThemeTogglerService.CurrentTheme()" data-tenant="@ThemeTogglerService.CurrentTenant" data-ca-scheme="@(await ColorSchemes.GetSchemeAttributeAsync())" data-admin-prefix="@Url.Content("~/" + AdminOptions.Value.AdminUrlPrefix)">
+<head>
+    <title>@RenderTitleSegments(Site.SiteName, "before")</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <!-- This script can't wait till the footer -->
+    <script asp-name="admin-main" version="1" at="Head"></script>
+
+    <style asp-name="TheAdminLayout" asp-src="~/TheAdmin/css/admin-layout.min.css" debug-src="~/TheAdmin/css/admin-layout.css" at="Head"></style>
+
+    @if (Orchard.IsRightToLeft())
+    {
+        <style asp-name="bootstrap-rtl" version="5" at="Head"></style>
+        <style media="all" asp-name="the-admin" version="1" depends-on="bootstrap-rtl,TheAdminLayout" at="Head"></style>
+    }
+    else
+    {
+        <style asp-name="bootstrap" version="5" at="Head"></style>
+        <style media="all" asp-name="the-admin" version="1" depends-on="bootstrap,TheAdminLayout" at="Head"></style>
+    }
+    <style asp-name="font-awesome" at="Head" version="7"></style>
+    <style asp-name="crestapps-admin-theme" at="Head"></style>
+    <script asp-name="the-admin" version="1" at="Foot"></script>
+
+    <resources type="Header" />
+
+    @await RenderSectionAsync("HeadMeta", required: false)
+</head>
+<body class="preload ca-admin" data-actions-layout="@actionsLayout" data-more-actions-label="@T["More actions"]">
+    <a class="ca-skip-link visually-hidden-focusable" href="#ca-main">@T["Skip to content"]</a>
+    <div class="ta-wrapper">
+        <div id="ta-left-sidebar" class="d-flex flex-column align-items-stretch">
+            <div class="ca-sidebar-brand">
+                @brandingHtml
+            </div>
+            @await RenderSectionAsync("Navigation", required: false)
+            <div class="footer">
+                <button type="button" class="leftbar-compactor" title="@T["Collapse / expand menu"]">
+                    <span class="d-none">@T["Collapse / expand menu"]</span>
+                </button>
+            </div>
+        </div>
+
+        <header class="ta-navbar-top navbar fixed-top">
+            <div class="container-fluid">
+                <div class="ca-topbar-start">
+                    <button type="button" class="ta-sidebar-toggler" aria-controls="ta-left-sidebar" aria-expanded="false" aria-label="@T["Show / hide menu"]">
+                        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+                    </button>
+
+                    <div class="ca-topbar-brand">
+                        @brandingHtml
+                    </div>
+
+                    @if (adminSettings.DisplayTitlesInTopbar)
+                    {
+                        <div class="brand-wrapper-title">
+                            @await RenderSectionAsync("Title", required: false)
+                        </div>
+                    }
+                </div>
+                @navbar
+            </div>
+        </header>
+
+        <div class="ta-sidebar-backdrop"></div>
+
+        <main id="ca-main" class="ta-content" tabindex="-1" style="--oc-notify-offset-top: var(--oc-top-nav-height);">
+            @await RenderSectionAsync("Header", required: false)
+            @await RenderSectionAsync("Messages", required: false)
+            @await RenderSectionAsync("Breadcrumbs", required: false)
+            @if (!adminSettings.DisplayTitlesInTopbar)
+            {
+                @await RenderSectionAsync("Title", required: false)
+            }
+            @await RenderBodyAsync()
+        </main>
+
+        @await RenderSectionAsync("Footer", required: false)
+
+    </div>
+    <div id="confirmRemoveModalMetadata" data-title="@T["Delete"]" data-message="@T["Are you sure you want to remove this element?"]" data-ok-text="@T["Ok"]" data-cancel-text="@T["Cancel"]" data-ok-class="btn-danger" data-cancel-class="btn-secondary"></div>
+    <resources type="Footer" />
+</body>
+</html>

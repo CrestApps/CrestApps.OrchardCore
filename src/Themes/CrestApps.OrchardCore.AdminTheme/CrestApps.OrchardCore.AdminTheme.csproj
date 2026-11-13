@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Admin Theme</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      A modern admin theme built on Orchard Core's TheAdmin: a full height branded menu that still collapses to an
+      icon rail and becomes a drawer on small screens, a lighter top bar, and softer cards, lists, forms and tabs.
+      Every admin page keeps working because it stays on Bootstrap 5.3 and TheAdmin's shapes.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Theme Admin</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Theme.Targets" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="TheAdmin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+  </ItemGroup>
+
+</Project>

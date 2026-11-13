@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AdminTheme
+@using Microsoft.Extensions.Localization
+@model CrestApps.OrchardCore.AdminTheme.ViewModels.AdminThemeSettingsViewModel
+@inject IStringLocalizer<CrestApps.OrchardCore.AdminTheme.Services.AdminColorSchemeService> S
+
+@*
+    The site's default color scheme, on the Settings → Admin page. Each scheme is a radio button with the swatch the
+    top bar's picker shows for it.
+*@
+
+<fieldset class="ocat-wrapper" asp-validation-class-for="DefaultColorScheme" aria-describedby="@Html.IdFor(m => m.DefaultColorScheme)_Hint">
+    <legend class="ocat-label">@T["Default color scheme"]</legend>
+    <div class="ocat-end">
+        <div class="ca-scheme-choices">
+            @foreach (var scheme in AdminColorSchemes.All)
+            {
+                var id = Html.IdFor(m => m.DefaultColorScheme) + "_" + scheme;
+                <div class="form-check ca-scheme-choice">
+                    <input type="radio" class="form-check-input" id="@id" name="@Html.NameFor(m => m.DefaultColorScheme)" value="@scheme" checked="@(Model.DefaultColorScheme == scheme)" />
+                    <label class="form-check-label" for="@id">
+                        <span>@AdminColorSchemes.GetDisplayName(scheme, S)</span>
+                        <span class="ca-scheme-swatch" data-scheme="@scheme" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                    </label>
+                </div>
+            }
+        </div>
+        <span asp-validation-for="DefaultColorScheme"></span>
+        <span class="hint" id="@Html.IdFor(m => m.DefaultColorScheme)_Hint">@T["The colors of the admin for users who have not picked their own scheme from the top bar."]</span>
+    </div>
+</fieldset>

@@ -1,0 +1,352 @@
+// ---------------------------------------------------------------------------
+// Color schemes.
+//
+// A scheme is four colors and a hue:
+//  - primary: actions, links and the current page;
+//  - deep   : headings and the top of the menu;
+//  - ink    : the bottom of the menu, the darkest surface;
+//  - accent : links and highlights on dark surfaces;
+//  - hue and saturation: the tint of the page, the borders and the dark mode surfaces, so that every surface
+//    belongs to the scheme instead of being a neutral gray (or black, in dark mode).
+//
+// Every '--ca-*' color token, and through them Bootstrap's own variables, is derived from those, for the light
+// and the dark mode. The scheme a user picks is rendered on <html> as 'data-ca-scheme'; the default scheme is the
+// one ':root' carries. The ids must match AdminColorSchemes.cs, which lists them for the pickers.
+// ---------------------------------------------------------------------------
+
+@use "sass:color";
+@use "sass:map";
+@use "sass:math";
+@use "sass:list";
+@use "sass:string";
+
+$default-scheme: "gray";
+
+$schemes: (
+    // The look of Orchard Core's TheAdmin: Bootstrap's blue on a white page, with a light gray menu and a gray tint.
+    "gray": (primary: #0d6efd, deep: #212529, ink: #212529, accent: #6ea8fe, hue: 210, saturation: 0.12, menu: light, page: #fff,
+        tint: #495057, tint-dark: #adb5bd, toolbar: #495057, swatch: (#f1f3f5, #dee2e6, #0d6efd, #212529)),
+    "blue": (primary: #2a81bb, deep: #144c71, ink: #081b26, accent: #5aa4ef, hue: 209, saturation: 1),
+    "ocean": (primary: #12868b, deep: #0d4a52, ink: #062227, accent: #4fd1c5, hue: 187, saturation: 0.9),
+    "forest": (primary: #2f855a, deep: #1c4a36, ink: #0b2018, accent: #68d391, hue: 150, saturation: 0.7),
+    "plum": (primary: #7b4fc0, deep: #3d2a66, ink: #170f2b, accent: #b794f4, hue: 262, saturation: 0.7),
+    "sunset": (primary: #c2551f, deep: #5c2a1c, ink: #24100b, accent: #f6ad55, hue: 18, saturation: 0.6),
+    "graphite": (primary: #4b6584, deep: #2d3540, ink: #121519, accent: #94a8bf, hue: 213, saturation: 0.2),
+    // CrestApps: gold on charcoal. White text on the gold would be about 2:1, so its buttons and current page take the
+    // charcoal ('on-primary') instead, and keep the real gold.
+    "gold": (primary: #eaa52c, deep: #1e1e1e, ink: #09080b, accent: #eaa52c, hue: 240, saturation: 0.08, on-primary: #1e1e1e,
+        swatch: (#09080b, #1e1e1e, #eaa52c, #e6e6e6)),
+);
+
+// The value of an optional key of a scheme.
+@function option($scheme, $key, $default) {
+    @if map.has-key($scheme, $key) {
+        @return map.get($scheme, $key);
+    }
+
+    @return $default;
+}
+
+@function rgb-triplet($color) {
+    @return math.round(color.channel($color, "red", $space: rgb)) + ", " +
+        math.round(color.channel($color, "green", $space: rgb)) + ", " +
+        math.round(color.channel($color, "blue", $space: rgb));
+}
+
+@function tone($hue, $saturation, $lightness) {
+    @return color.to-space(hsl($hue, $saturation, $lightness), rgb);
+}
+
+// WCAG 2 contrast
+// ---------------
+// Every color that text or a control is drawn in is checked against the surfaces it is drawn on, and moved toward a
+// darker (or, in dark mode, lighter) tone until it passes: 4.5:1 for text, 3:1 for the boundaries of controls and for
+// focus indicators (WCAG 2.2 AA, 1.4.3 and 1.4.11). A small margin covers rounding in the browsers.
+$text-contrast: 4.6;
+$ui-contrast: 3.1;
+
+@function channel-luminance($value) {
+    $v: math.div($value, 255);
+
+    @if $v <= 0.03928 {
+        @return math.div($v, 12.92);
+    }
+
+    @return math.pow(math.div($v + 0.055, 1.055), 2.4);
+}
+
+@function luminance($color) {
+    $c: color.to-space($color, rgb);
+
+    @return 0.2126 * channel-luminance(color.channel($c, "red", $space: rgb)) +
+        0.7152 * channel-luminance(color.channel($c, "green", $space: rgb)) +
+        0.0722 * channel-luminance(color.channel($c, "blue", $space: rgb));
+}
+
+@function contrast($a, $b) {
+    $la: luminance($a);
+    $lb: luminance($b);
+
+    @return math.div(math.max($la, $lb) + 0.05, math.min($la, $lb) + 0.05);
+}
+
+@function min-contrast($color, $backgrounds) {
+    $lowest: 21;
+
+    @each $background in $backgrounds {
+        $lowest: math.min($lowest, contrast($color, $background));
+    }
+
+    @return $lowest;
+}
+
+// Mixes $color with $target, 2% at a time, until it reaches $min against every background.
+@function ensure-contrast($color, $backgrounds, $min, $target) {
+    $result: $color;
+    $step: 0;
+
+    @while min-contrast($result, $backgrounds) < $min and $step < 50 {
+        $step: $step + 1;
+        $result: color.mix($target, $color, $step * 2%);
+    }
+
+    @return color.to-space($result, rgb);
+}
+
+// The color of text and marks drawn on the primary (buttons, the current page, checked boxes): white, or the
+// scheme's 'on-primary'.
+@function on-primary($scheme) {
+    @return option($scheme, on-primary, #fff);
+}
+
+// Hovering and pressing move the primary away from its text color: darker under white text, lighter under dark text,
+// so the text keeps its contrast.
+@function press($primary, $scheme, $toward-dark, $amount) {
+    @if luminance(on-primary($scheme)) > 0.5 {
+        @return color.mix($toward-dark, $primary, $amount);
+    }
+
+    @return color.mix(#fff, $primary, $amount);
+}
+
+@function if-light-text($scheme, $when-light, $when-dark) {
+    @if luminance(on-primary($scheme)) > 0.5 {
+        @return $when-light;
+    }
+
+    @return $when-dark;
+}
+
+@function svg-color($color) {
+    @return "%23" + string.slice("#{color.to-space($color, rgb)}", 2);
+}
+
+@mixin on-primary-tokens($scheme) {
+    $on: on-primary($scheme);
+    $c: svg-color($on);
+
+    --ca-on-primary: #{$on};
+    --ca-check-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='#{$c}' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+    --ca-indeterminate-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='#{$c}' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10h8'/%3e%3c/svg%3e");
+    --ca-radio-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='2' fill='#{$c}'/%3e%3c/svg%3e");
+    --ca-switch-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='#{$c}'/%3e%3c/svg%3e");
+}
+
+// The menu: dark with light text, or (a scheme with 'menu: light') light gray with dark text, like TheAdmin's.
+@mixin menu-dark($scheme, $primary) {
+    --ca-menu-strong: #fff;
+    --ca-menu-strong-rgb: 255, 255, 255;
+    --ca-menu-color: rgba(255, 255, 255, 0.78);
+    --ca-menu-muted: rgba(255, 255, 255, 0.72);
+    --ca-menu-hover-bg: rgba(255, 255, 255, 0.08);
+    --ca-menu-border: rgba(255, 255, 255, 0.08);
+    --ca-menu-active-bg: #{$primary};
+    --ca-menu-active-color: #{on-primary($scheme)};
+    --ca-menu-accent: #{map.get($scheme, accent)};
+    --ca-menu-accent-rgb: #{rgb-triplet(map.get($scheme, accent))};
+}
+
+@mixin menu-light($primary) {
+    $menu: #f1f3f5;
+
+    --ca-menu-strong: #212529;
+    --ca-menu-strong-rgb: 33, 37, 41;
+    --ca-menu-color: #495057;
+    --ca-menu-muted: #5c636a;
+    --ca-menu-hover-bg: rgba(73, 80, 87, 0.08);
+    --ca-menu-border: #dee2e6;
+    --ca-menu-active-bg: #{color.mix(#495057, $menu, 14%)};
+    --ca-menu-active-color: #212529;
+    --ca-menu-accent: #{ensure-contrast($primary, ($menu,), $ui-contrast, #000)};
+    --ca-menu-accent-rgb: #{rgb-triplet(ensure-contrast($primary, ($menu,), $ui-contrast, #000))};
+    --ca-menu-bg: #{$menu};
+    --ca-menu-gradient: linear-gradient(180deg, #{$menu} 0%, #{$menu} 100%);
+}
+
+// Light mode, and the tokens both modes share.
+@mixin scheme-light($scheme) {
+    $deep: map.get($scheme, deep);
+    $ink: map.get($scheme, ink);
+    // White text on the buttons and on the current page of the menu.
+    $primary: ensure-contrast(map.get($scheme, primary), (on-primary($scheme),), $text-contrast, $ink);
+    $accent: map.get($scheme, accent);
+    $hue: map.get($scheme, hue);
+    $k: map.get($scheme, saturation);
+    $primary-hover: press($primary, $scheme, $deep, 22%);
+    $primary-active: press($primary, $scheme, $deep, 34%);
+    $page: option($scheme, page, tone($hue, 50% * $k, 97%));
+    $surface-muted: tone($hue, 60% * $k, 98.2%);
+    // The page is a soft gradient from a hint of the primary to a hint of the accent (a scheme with a 'tint' uses it
+    // for both ends); text is checked against both ends too.
+    $tint-start: color.mix(option($scheme, tint, $primary), $page, 7%);
+    $tint-end: color.mix(option($scheme, tint, $accent), $page, 9%);
+    // The two header layers of a list: its toolbar, a bar in the scheme's primary (or its 'toolbar') with the text
+    // color of the primary on it, and its column headers, a light shade between the page and the white records.
+    $toolbar: ensure-contrast(option($scheme, toolbar, $primary), (on-primary($scheme),), $text-contrast, $ink);
+    $list-header: tone($hue, 14% * $k, 97.5%);
+    $surfaces: ($page, #fff, $surface-muted, $tint-start, $tint-end, $list-header);
+    $border: tone($hue, 38% * $k, 92%);
+    $menu-middle: color.mix($deep, $ink, 50%);
+    $link: ensure-contrast($primary, $surfaces, $text-contrast, $ink);
+
+    --ca-primary: #{$primary};
+    --ca-primary-rgb: #{rgb-triplet($primary)};
+    --ca-primary-hover: #{$primary-hover};
+    --ca-primary-active: #{$primary-active};
+    --ca-primary-subtle: #{color.mix($primary, #fff, 20%)};
+    --ca-primary-border-subtle: #{color.mix($primary, #fff, 40%)};
+    --ca-primary-emphasis: #{color.mix($primary, #000, 40%)};
+    --ca-navy: #{$deep};
+    --ca-navy-rgb: #{rgb-triplet($deep)};
+    --ca-ink: #{$ink};
+    --ca-sky: #{$accent};
+    --ca-sky-rgb: #{rgb-triplet($accent)};
+    --ca-tint: #{color.mix($primary, #fff, 9%)};
+    --ca-link: #{$link};
+    --ca-link-rgb: #{rgb-triplet($link)};
+    --ca-focus-color: #{$link};
+    --ca-link-hover: #{$deep};
+    --ca-link-hover-rgb: #{rgb-triplet($deep)};
+    --ca-page-bg: #{$page};
+    --ca-surface: #ffffff;
+    --ca-surface-rgb: 255, 255, 255;
+    --ca-surface-muted: #{$surface-muted};
+    --ca-toolbar-bg: #{$toolbar};
+    --ca-toolbar-fg: #{on-primary($scheme)};
+    --ca-toolbar-fg-rgb: #{rgb-triplet(on-primary($scheme))};
+    // Hovering a control on the bar moves it away from the text color: darker under white text, lighter under dark.
+    --ca-toolbar-hover-bg: #{if-light-text($scheme, rgba(#000, 0.16), rgba(#fff, 0.3))};
+    --ca-list-header-bg: #{$list-header};
+    --ca-border: #{$border};
+    // The outline of fields, selects and check boxes, which is what shows they are there.
+    --ca-control-border: #{ensure-contrast($border, $surfaces, $ui-contrast, $deep)};
+    --ca-control-checked-border: #{ensure-contrast($primary, $surfaces, $ui-contrast, $ink)};
+
+    @include on-primary-tokens($scheme);
+    --ca-muted: #{ensure-contrast(#6d7384, $surfaces, $text-contrast, #000)};
+    --ca-heading: #{$deep};
+    --ca-label: #{tone($hue, 32% * $k, 35%)};
+    --ca-topbar-color: #{tone($hue, 28% * $k, 28%)};
+    --ca-page-gradient: linear-gradient(135deg, #{$tint-start} 0%, #{$page} 48%, #{$tint-end} 100%);
+
+    @if map.get($scheme, menu) == light {
+        @include menu-light($primary);
+    } @else {
+        @include menu-dark($scheme, $primary);
+        --ca-menu-bg: #{$menu-middle};
+        --ca-menu-gradient: linear-gradient(180deg, #{$deep} 0%, #{$menu-middle} 48%, #{$ink} 100%);
+    }
+}
+
+// Dark mode: the surfaces stay in the hue of the scheme, they never turn black.
+@mixin scheme-dark($scheme) {
+    $ink: map.get($scheme, ink);
+    $primary: ensure-contrast(map.get($scheme, primary), (on-primary($scheme),), $text-contrast, $ink);
+    $accent: map.get($scheme, accent);
+    $hue: map.get($scheme, hue);
+    $k: map.get($scheme, saturation);
+    $page: tone($hue, 57% * $k, 13.5%);
+    $surface: tone($hue, 57% * $k, 18.5%);
+    $surface-muted: tone($hue, 56% * $k, 21.6%);
+    $tint-start: color.mix(option($scheme, tint-dark, $accent), $page, 8%);
+    $tint-end: color.mix(option($scheme, tint-dark, $primary), $page, 12%);
+    $list-header: tone($hue, 50% * $k, 21%);
+    $surfaces: ($page, $surface, $surface-muted, $tint-start, $tint-end, $list-header);
+    $border: tone($hue, 49% * $k, 28%);
+    $body-color: tone($hue, 35% * $k, 92%);
+    $link: ensure-contrast($accent, $surfaces, $text-contrast, #fff);
+
+    // Hovering and pressing darken the buttons in both modes, so their white text keeps its contrast.
+    --ca-primary-hover: #{press($primary, $scheme, $ink, 14%)};
+    --ca-primary-active: #{press($primary, $scheme, $ink, 24%)};
+    --ca-primary-subtle: #{color.mix($primary, tone($hue, 57% * $k, 12%), 22%)};
+    --ca-primary-border-subtle: #{color.mix($primary, tone($hue, 57% * $k, 12%), 50%)};
+    --ca-primary-emphasis: #{color.mix($accent, #fff, 60%)};
+    --ca-link: #{$link};
+    --ca-link-rgb: #{rgb-triplet($link)};
+    --ca-link-hover: #{color.mix($link, #fff, 70%)};
+    --ca-link-hover-rgb: #{rgb-triplet(color.mix($link, #fff, 70%))};
+    --ca-focus-color: #{$link};
+    --ca-heading: #{tone($hue, 45% * $k, 94%)};
+    --ca-page-bg: #{$page};
+    --ca-surface: #{$surface};
+    --ca-surface-rgb: #{rgb-triplet($surface)};
+    --ca-surface-muted: #{$surface-muted};
+    --ca-list-header-bg: #{$list-header};
+    --ca-secondary-bg: #{tone($hue, 55% * $k, 23.3%)};
+    --ca-border: #{$border};
+    --ca-control-border: #{ensure-contrast($border, $surfaces, $ui-contrast, #fff)};
+    // A checked box keeps the primary fill under its white mark, outlined in the accent so it stands out.
+    --ca-control-checked-border: #{ensure-contrast($accent, $surfaces, $ui-contrast, #fff)};
+    --ca-muted: #{ensure-contrast(tone($hue, 29% * $k, 70%), $surfaces, $text-contrast, #fff)};
+    --ca-label: #{tone($hue, 33% * $k, 79%)};
+    --ca-body-color: #{$body-color};
+    --ca-body-color-rgb: #{rgb-triplet($body-color)};
+    --ca-topbar-bg: #{tone($hue, 56% * $k, 17%)};
+    --ca-topbar-color: #{tone($hue, 30% * $k, 83%)};
+    --ca-menu-bg: #{tone($hue, 70% * $k, 17%)};
+    --ca-menu-gradient: linear-gradient(180deg, #{tone($hue, 68% * $k, 23.5%)} 0%, #{tone($hue, 70% * $k, 18%)} 55%, #{tone($hue, 71% * $k, 14.7%)} 100%);
+    --ca-page-gradient: linear-gradient(135deg, #{$tint-start} 0%, #{$page} 48%, #{$tint-end} 100%);
+
+    // The menu is dark in dark mode, in every scheme.
+    @include menu-dark($scheme, $primary);
+}
+
+// The default scheme on ':root', each other scheme on its attribute. Both selectors weigh the same as the dark mode
+// ones below them, so the order decides: light first, then dark.
+:root {
+    @include scheme-light(map.get($schemes, $default-scheme));
+}
+
+@each $name, $scheme in $schemes {
+    @if $name != $default-scheme {
+        [data-ca-scheme="#{$name}"] {
+            @include scheme-light($scheme);
+        }
+    }
+}
+
+:root[data-bs-theme="dark"] {
+    @include scheme-dark(map.get($schemes, $default-scheme));
+}
+
+@each $name, $scheme in $schemes {
+    @if $name != $default-scheme {
+        [data-bs-theme="dark"][data-ca-scheme="#{$name}"] {
+            @include scheme-dark($scheme);
+        }
+    }
+}
+
+// The swatches of the picker: ink, deep, primary and accent.
+@each $name, $scheme in $schemes {
+    $swatch: option($scheme, swatch, (map.get($scheme, ink), map.get($scheme, deep), map.get($scheme, primary), map.get($scheme, accent)));
+
+    .ca-scheme-swatch[data-scheme="#{$name}"] {
+        @for $i from 1 through 4 {
+            > span:nth-child(#{$i}) {
+                background-color: list.nth($swatch, $i);
+            }
+        }
+    }
+}

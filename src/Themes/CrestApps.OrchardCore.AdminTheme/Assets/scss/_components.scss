@@ -1,0 +1,467 @@
+// ---------------------------------------------------------------------------
+// Admin page components.
+//
+// Only looks change here: the markup every admin view renders is TheAdmin's and
+// Bootstrap's, so no view has to be redesigned.
+// ---------------------------------------------------------------------------
+
+// Cards
+// -----
+.ca-admin .card {
+    --bs-card-border-color: var(--ca-border);
+    --bs-card-border-radius: var(--ca-radius);
+    --bs-card-inner-border-radius: calc(var(--ca-radius) - 1px);
+    --bs-card-cap-bg: transparent;
+    --bs-card-cap-padding-y: 0.875rem;
+    --bs-card-cap-padding-x: 1.25rem;
+    --bs-card-spacer-x: 1.25rem;
+    --bs-card-spacer-y: 1.125rem;
+    background-color: var(--ca-surface);
+    box-shadow: var(--ca-shadow);
+}
+
+.ca-admin .card-header {
+    font-weight: 700;
+    color: var(--ca-heading);
+}
+
+.ca-admin .card .card {
+    box-shadow: none;
+}
+
+// Lists
+// -----
+// TheAdmin paints its toolbars and cards ('.text-bg-theme') in Bootstrap's light gray: they take the white surface
+// here. The header rows of a list (its toolbar, in either layout, and its column headers) take the toolbar shade, so
+// a list looks the same in both layouts and its header reads apart from its records.
+.ca-admin .text-bg-theme {
+    background-color: var(--ca-surface) !important;
+    color: var(--bs-body-color) !important;
+}
+
+// The toolbar of a list is a bar in the scheme's primary. Everything on it takes the one text color that passes on
+// it ('--ca-toolbar-fg'): the count, its muted part, the filters, even with nothing picked, the check box and the
+// layout switch, whose active button would otherwise be the color of the bar.
+.ca-admin .admin-list > .text-bg-theme,
+.ca-admin .admin-list .admin-list-toolbar {
+    --ca-focus-color: var(--ca-toolbar-fg);
+    background-color: var(--ca-toolbar-bg) !important;
+    color: var(--ca-toolbar-fg) !important;
+
+    .text-muted,
+    .text-secondary,
+    .text-body-secondary,
+    label {
+        color: inherit !important;
+    }
+
+    .bootstrap-select > .dropdown-toggle,
+    .bootstrap-select > .dropdown-toggle.bs-placeholder {
+        color: var(--ca-toolbar-fg);
+
+        &:hover,
+        &:focus-visible,
+        &.show {
+            background-color: var(--ca-toolbar-hover-bg);
+            color: var(--ca-toolbar-fg);
+        }
+    }
+
+    // A check box on the bar: a light box, and once checked an outline with the mark in the bar's text color.
+    .form-check-input {
+        border-color: var(--ca-toolbar-fg);
+    }
+
+    .form-check-input:checked,
+    .form-check-input[type="checkbox"]:indeterminate {
+        background-color: transparent;
+        border-color: var(--ca-toolbar-fg);
+    }
+
+    .admin-list-layout-selector .btn {
+        --bs-btn-color: var(--ca-toolbar-fg);
+        --bs-btn-bg: transparent;
+        --bs-btn-border-color: rgba(var(--ca-toolbar-fg-rgb), 0.6);
+        --bs-btn-hover-color: var(--ca-toolbar-fg);
+        --bs-btn-hover-bg: var(--ca-toolbar-hover-bg);
+        --bs-btn-hover-border-color: var(--ca-toolbar-fg);
+        --bs-btn-active-color: var(--ca-toolbar-bg);
+        --bs-btn-active-bg: var(--ca-toolbar-fg);
+        --bs-btn-active-border-color: var(--ca-toolbar-fg);
+        box-shadow: none;
+    }
+
+    // Menus opened from the bar keep the colors of a menu.
+    .dropdown-menu {
+        --ca-focus-color: var(--ca-link);
+        color: var(--bs-body-color);
+    }
+}
+
+// A toolbar's rounded top follows the list's card.
+.ca-admin .admin-list-list > .text-bg-theme:first-child {
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+}
+
+// The 'List' layout of the AdminList shape is drawn as a card. Other list groups are left as they are: some, such
+// as the tree of a menu, nest list groups and boxes of their own.
+.ca-admin .admin-list .list-group:not(.list-group-flush):not(.list-group-horizontal) {
+    border-radius: var(--ca-radius);
+    box-shadow: var(--ca-shadow);
+}
+
+.ca-admin .list-group {
+    --bs-list-group-border-color: var(--ca-border);
+    --bs-list-group-border-radius: var(--ca-radius);
+    --bs-list-group-bg: var(--ca-surface);
+    --bs-list-group-action-hover-bg: rgba(var(--ca-primary-rgb), 0.04);
+    --bs-list-group-item-padding-y: 0.875rem;
+    --bs-list-group-item-padding-x: 1.25rem;
+}
+
+.ca-admin .list-group-item {
+    transition: background-color 0.15s ease-in-out;
+}
+
+.ca-admin .admin-list .list-group > .list-group-item:not(.active):hover {
+    background-color: var(--bs-list-group-action-hover-bg);
+}
+
+// The 'Grid' layout of the AdminList shape.
+.ca-admin .admin-list-grid {
+    --oc-admin-list-cell-padding-y: 0.75rem;
+    --oc-admin-list-cell-padding-x: 1rem;
+    border-color: var(--ca-border);
+    border-radius: var(--ca-radius);
+    background-color: var(--ca-surface);
+    box-shadow: var(--ca-shadow);
+
+    .admin-list-toolbar {
+        background-color: var(--ca-toolbar-bg);
+        border-bottom-color: var(--ca-border);
+        border-radius: var(--ca-radius) var(--ca-radius) 0 0;
+    }
+
+    // The second header layer. TheAdmin sets the column headers in capitals; they are kept in sentence case here.
+    .admin-list-grid-header {
+        background-color: var(--ca-list-header-bg);
+    }
+
+    .admin-list-grid-header .admin-list-grid-cell {
+        letter-spacing: normal;
+        text-transform: none;
+    }
+
+    .admin-list-grid-row {
+        transition: background-color 0.15s ease-in-out;
+
+        &:hover {
+            background-color: rgba(var(--ca-primary-rgb), 0.04);
+        }
+    }
+}
+
+// The filters of a list's toolbar read alike: bootstrap-select greys out a filter with nothing picked yet
+// ('.bs-placeholder'), which made it look disabled beside filters that always hold a value (Show, Sort).
+.ca-admin .admin-list .bootstrap-select > .dropdown-toggle.bs-placeholder {
+    color: var(--bs-body-color);
+}
+
+// Tables
+// ------
+.ca-admin .ta-content .table {
+    --bs-table-bg: var(--ca-surface);
+    --bs-table-border-color: var(--ca-border);
+    --bs-table-hover-bg: rgba(var(--ca-primary-rgb), 0.04);
+
+    > thead th {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--ca-muted);
+        background-color: var(--ca-list-header-bg);
+    }
+}
+
+// Tabs
+// ----
+// TheAdmin draws tabs as gray blocks over a framed pane. They are drawn as an underlined strip here, the
+// pane keeping its frame as a card.
+.ca-admin .nav-tabs {
+    gap: 0.25rem;
+    margin: 0;
+    border-bottom: var(--bs-border-width) solid var(--ca-border);
+
+    .nav-link {
+        margin-bottom: -1px;
+        padding: 0.625rem 1rem;
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        background-color: transparent;
+        color: var(--ca-muted);
+        font-weight: 600;
+
+        &:hover {
+            border-bottom-color: rgba(var(--ca-primary-rgb), 0.35);
+            background-color: transparent;
+            color: var(--ca-heading);
+        }
+
+        &.active,
+        &.active:hover {
+            border: none;
+            border-bottom: 2px solid var(--ca-primary);
+            background-color: transparent;
+            color: var(--ca-link);
+        }
+    }
+}
+
+[data-bs-theme="dark"] .ca-admin .nav-tabs .nav-link.active {
+    border-bottom-color: var(--ca-sky);
+    color: var(--ca-sky);
+}
+
+.ca-admin .tab-content > .tab-pane {
+    margin-top: 1rem;
+    padding: 1.25rem;
+    border: var(--bs-border-width) solid var(--ca-border);
+    border-radius: var(--ca-radius);
+    background-color: var(--ca-surface);
+    box-shadow: var(--ca-shadow-sm);
+}
+
+// Pills read as a segmented control.
+.ca-admin .nav-pills .nav-link {
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+// Breadcrumbs
+// -----------
+.ca-admin .oc-breadcrumb .breadcrumb {
+    margin-bottom: 0.375rem;
+
+    a {
+        color: var(--ca-muted);
+        text-decoration: none;
+
+        &:hover {
+            color: var(--ca-link);
+        }
+    }
+}
+
+// Action bars
+// -----------
+.ca-admin .action-bar-bottom {
+    padding-inline: var(--ca-content-padding-x);
+    border-top-color: var(--ca-border);
+    background-color: var(--ca-topbar-bg);
+    box-shadow: var(--ca-bottombar-shadow);
+}
+
+// The HTML editor (Trumbowyg)
+// ---------------------------
+// Its toolbar is drawn on the surface of the field rather than on Trumbowyg's gray, with the theme's hover state.
+.ca-admin .trumbowyg-box .trumbowyg-button-pane {
+    background-color: var(--ca-surface);
+    border-bottom-color: var(--ca-border);
+
+    &::after {
+        background-color: var(--ca-border);
+    }
+
+    button {
+        border-radius: var(--bs-border-radius-sm);
+        color: var(--ca-muted);
+
+        svg {
+            fill: currentColor;
+            color: inherit;
+        }
+
+        &:not(.trumbowyg-disable):hover,
+        &:not(.trumbowyg-disable):focus,
+        &.trumbowyg-active {
+            background-color: rgba(var(--ca-primary-rgb), 0.08);
+            color: var(--ca-link);
+        }
+    }
+}
+
+[data-bs-theme="dark"] .ca-admin .trumbowyg-box .trumbowyg-button-pane button {
+    &:not(.trumbowyg-disable):hover,
+    &:not(.trumbowyg-disable):focus,
+    &.trumbowyg-active {
+        color: var(--ca-sky);
+    }
+}
+
+.ca-admin .trumbowyg-box,
+.ca-admin .trumbowyg-box .trumbowyg-editor-box {
+    border-color: var(--ca-control-border);
+}
+
+// The box is rounded, but the toolbar and the text area inside it are square and opaque, so they would paint over
+// the curve of its border: their outer corners follow it.
+.ca-admin .trumbowyg-box {
+    --ca-editor-inner-radius: calc(var(--bs-border-radius) - var(--bs-border-width));
+
+    .trumbowyg-button-pane {
+        border-start-start-radius: var(--ca-editor-inner-radius);
+        border-start-end-radius: var(--ca-editor-inner-radius);
+    }
+
+    .trumbowyg-editor-box,
+    .trumbowyg-textarea {
+        border-end-start-radius: var(--ca-editor-inner-radius);
+        border-end-end-radius: var(--ca-editor-inner-radius);
+    }
+}
+
+// The menu editor
+// ---------------
+// Each item of the tree is a row of its own on the page, nested items indented under their parent (by the
+// editor's script). The rows are given a surface, so they read apart from the page, and a hover state, as they
+// are dragged to reorder them.
+.ca-admin #menu {
+    > li,
+    li {
+        background-color: transparent;
+    }
+
+    .menu-item-title {
+        min-height: 3rem;
+        border-color: var(--ca-border) !important;
+        border-radius: var(--bs-border-radius) !important;
+        background-color: var(--ca-surface);
+        box-shadow: var(--ca-shadow-sm);
+        transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+
+        &:hover {
+            border-color: rgba(var(--ca-primary-rgb), 0.45) !important;
+            background-color: var(--ca-surface-muted);
+        }
+    }
+
+    li li .menu-item-title,
+    li[data-depth]:not([data-depth="0"]) .menu-item-title {
+        background-color: var(--ca-surface-muted);
+    }
+}
+
+// Forms
+// -----
+// Labels (Orchard Core's '.ocat-label' and Bootstrap's) are set apart from the values by their color alone, at the
+// regular weight; the text of a check box keeps the body color, as it reads as a sentence.
+.ca-admin .ocat-label,
+.ca-admin .form-label,
+.ca-admin .col-form-label {
+    font-size: 0.9375rem;
+    font-weight: 400;
+    color: var(--ca-label);
+}
+
+.ca-admin .form-control,
+.ca-admin .form-select,
+.ca-admin .form-check-input {
+    border-color: var(--ca-control-border);
+}
+
+.ca-admin .form-control:focus,
+.ca-admin .form-select:focus,
+.ca-admin .form-check-input:focus {
+    border-color: var(--ca-focus-color);
+}
+
+.ca-admin .form-check-input:checked {
+    border-color: var(--ca-control-checked-border);
+}
+
+.ca-admin .input-group-text {
+    border-color: var(--ca-control-border);
+    background-color: var(--ca-surface-muted);
+    color: var(--ca-muted);
+}
+
+.ca-admin .form-text {
+    color: var(--ca-muted);
+}
+
+// A group of radio buttons or check boxes is a fieldset, labelled by its legend, which reads as a label.
+.ca-admin legend.ocat-label {
+    float: none;
+    width: auto;
+    margin-bottom: 0;
+    padding: 0;
+    line-height: inherit;
+}
+
+// TheAdmin pins hints to Bootstrap's secondary gray with '!important', too dark on the navy surfaces.
+.ca-admin .hint {
+    color: var(--ca-muted) !important;
+}
+
+// The code editor (CodeMirror)
+// -----------------------------
+// Drawn like the other fields: rounded, on the field's surface (TheAdmin paints the line numbers' gutter in
+// Bootstrap's gray), with the focus ring of an input. 'html' matches the weight of TheAdmin's own rules.
+html .ca-admin .CodeMirror {
+    border-color: var(--ca-control-border);
+    border-radius: var(--bs-border-radius);
+    background-color: var(--ca-surface);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+html .ca-admin .CodeMirror-focused {
+    border-color: var(--ca-focus-color);
+    box-shadow: 0 0 0 1px var(--ca-focus-color);
+}
+
+html .ca-admin .CodeMirror-gutters {
+    border-right-color: var(--ca-border);
+    background-color: var(--ca-surface);
+}
+
+html .ca-admin .CodeMirror-linenumber {
+    color: var(--ca-muted);
+    opacity: 0.8;
+}
+
+html .ca-admin .CodeMirror-lines {
+    padding-block: 0.375rem;
+}
+
+// Alerts and badges
+// -----------------
+.ca-admin .alert {
+    border-radius: var(--ca-radius);
+}
+
+.ca-admin .badge {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+// The neutral metadata badges of the admin lists (type, status, date, author) sit on the theme's muted
+// surface instead of Bootstrap's light or dark gray.
+.ca-admin .ta-badge:not(.text-bg-primary, .text-bg-secondary, .text-bg-success, .text-bg-danger, .text-bg-warning, .text-bg-info, .text-bg-light, .text-bg-dark) {
+    background-color: var(--ca-surface-muted);
+    color: var(--ca-muted);
+}
+
+// Pager
+// -----
+.ca-admin .pager .page-link,
+.ca-admin .pagination .page-link {
+    margin-inline: 0.125rem;
+    border-radius: var(--bs-border-radius) !important;
+}
+
+// Scrollbars of the content
+// -------------------------
+.ca-admin {
+    scrollbar-color: rgba(var(--ca-navy-rgb), 0.3) transparent;
+}

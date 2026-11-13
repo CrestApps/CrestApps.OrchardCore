@@ -1,0 +1,41 @@
+// ---------------------------------------------------------------------------
+// Depth in the backgrounds.
+//
+// Very light touches that only shift the shade of a background, never draw a figure on it:
+//  - a soft diagonal gradient across the page, from a hint of the scheme's primary to a hint of its accent
+//    ('--ca-page-gradient'); cards, lists and fields keep their solid surface on top of it;
+//  - wide diagonal bands of a slightly different shade across the menu (and the sign-in backdrop, login.scss).
+// Both take their colors from the scheme's tokens, so they follow every scheme and both modes. _schemes.scss checks
+// text against both ends of the gradient.
+// ---------------------------------------------------------------------------
+
+// The diagonal bands: two lighter bands across a dark menu, two darker ones across a light menu, at a few percent.
+$bands: linear-gradient(
+    118deg,
+    transparent 0 26%,
+    rgba(var(--ca-menu-strong-rgb), 0.035) 26% 44%,
+    transparent 44% 58%,
+    rgba(var(--ca-menu-strong-rgb), 0.025) 58% 72%,
+    transparent 72%
+);
+
+body.ca-admin {
+    background-color: var(--ca-page-bg);
+    background-image: var(--ca-page-gradient);
+    background-attachment: fixed;
+}
+
+.ca-admin #ta-left-sidebar {
+    background-image: $bands, var(--ca-menu-gradient);
+}
+
+// Contrast themes and print get plain backgrounds.
+@media (forced-colors: active), print {
+    body.ca-admin {
+        background-image: none;
+    }
+
+    .ca-admin #ta-left-sidebar {
+        background-image: none;
+    }
+}

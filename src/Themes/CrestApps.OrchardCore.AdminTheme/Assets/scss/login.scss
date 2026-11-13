@@ -1,0 +1,92 @@
+// The log in, registration and password pages: the branding above a card, on a navy backdrop.
+
+@use "tokens";
+@use "schemes";
+@use "fonts";
+@use "bootstrap";
+
+body.ca-auth {
+    min-height: 100%;
+    background-color: var(--ca-ink);
+    // The diagonal bands of the menu (_backdrop.scss), over the gradient of a dark menu, whatever the scheme's menu is.
+    background-image:
+        linear-gradient(118deg, transparent 0 26%, rgba(255, 255, 255, 0.035) 26% 44%, transparent 44% 58%, rgba(255, 255, 255, 0.025) 58% 72%, transparent 72%),
+        linear-gradient(180deg, var(--ca-navy) 0%, var(--ca-ink) 100%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.ca-auth-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+}
+
+.ca-auth-brand .ta-navbar-brand {
+    margin: 0;
+    color: #fff;
+    text-decoration: none;
+
+    img {
+        height: 44px;
+        border-radius: 0.625rem;
+    }
+
+    span {
+        font-size: 1.375rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+}
+
+.ca-auth-page > .alert,
+.ca-auth-page > .message {
+    width: 100%;
+    max-width: 800px;
+}
+
+.ca-auth-card {
+    width: 100%;
+    max-width: 800px;
+    margin: 0;
+    padding: 2rem;
+    border: var(--bs-border-width) solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--ca-radius-lg);
+    background-color: var(--ca-surface);
+    box-shadow: var(--ca-shadow-lg);
+
+    @media (min-width: 576px) {
+        padding: 2.5rem;
+    }
+
+    h1 {
+        font-weight: 700;
+        color: var(--ca-heading);
+    }
+
+    hr {
+        border-color: var(--ca-border);
+        opacity: 1;
+    }
+
+    .btn {
+        padding-block: 0.5625rem;
+    }
+}
+
+// A page holding one form in a centered column (the log in page without external providers) gets a narrow
+// card, the column filling it.
+.ca-auth-card:has(> .row > .offset-md-3:only-child),
+.ca-auth-card:has(> .row > .col-12:first-child + .offset-md-3:last-child) {
+    max-width: 460px;
+
+    > .row > .offset-md-3 {
+        width: 100%;
+        margin-inline-start: 0;
+    }
+}
