@@ -102,9 +102,11 @@
         color: var(--ca-menu-muted);
     }
 
+    // The input follows the rounded box it sits in, so its focus outline (drawn along its corners) has the same shape.
     #filter,
     #filter:focus {
         height: 38px;
+        border-radius: calc(0.625rem - var(--bs-border-width));
         color: var(--ca-menu-strong);
     }
 

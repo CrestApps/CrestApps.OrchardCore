@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AdminTheme.Models;
+using CrestApps.OrchardCore.AdminTheme.Services;
 using CrestApps.OrchardCore.AdminTheme.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -23,16 +24,18 @@ public sealed class AdminThemeSettingsDisplayDriver : SiteDisplayDriver<AdminThe
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly AdminColorSchemeService _colorSchemes;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminThemeSettingsDisplayDriver"/> class.
     /// </summary>
-    public AdminThemeSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, IStringLocalizer<AdminThemeSettingsDisplayDriver> stringLocalizer)
+    public AdminThemeSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, AdminColorSchemeService colorSchemes, IStringLocalizer<AdminThemeSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _colorSchemes = colorSchemes;
         S = stringLocalizer;
     }
 
@@ -41,9 +44,10 @@ public sealed class AdminThemeSettingsDisplayDriver : SiteDisplayDriver<AdminThe
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, AdminThemeSettings settings, BuildEditorContext context)
-        => Initialize<AdminThemeSettingsViewModel>("AdminThemeSettings_Edit", model =>
+        => Initialize<AdminThemeSettingsViewModel>("AdminThemeSettings_Edit", async model =>
         {
-            model.DefaultColorScheme = AdminColorSchemes.Find(settings.DefaultColorScheme) ?? AdminColorSchemes.BuiltIn;
+            model.DefaultColorScheme = await _colorSchemes.FindAsync(settings.DefaultColorScheme) ?? await _colorSchemes.GetSiteSchemeAsync();
+            model.Schemes = await _colorSchemes.ListAsync();
         }).Location("Content:4")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AdminPermissions.ManageAdminSettings))
         .OnGroup(SettingsGroupId);
@@ -59,7 +63,7 @@ public sealed class AdminThemeSettingsDisplayDriver : SiteDisplayDriver<AdminThe
         var model = new AdminThemeSettingsViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var scheme = AdminColorSchemes.Find(model.DefaultColorScheme);
+        var scheme = await _colorSchemes.FindAsync(model.DefaultColorScheme);
 
         if (scheme is null)
         {

@@ -9,10 +9,10 @@ const applyScheme = (list, choice) => {
     const root = document.documentElement;
     const scheme = choice || list.dataset.siteScheme;
 
-    if (scheme === list.dataset.builtinScheme) {
-        root.removeAttribute("data-ca-scheme");
-    } else {
+    if (scheme) {
         root.setAttribute("data-ca-scheme", scheme);
+    } else {
+        root.removeAttribute("data-ca-scheme");
     }
 
     list.querySelectorAll("[data-ca-scheme-value]").forEach((option) => {

@@ -1,9 +1,7 @@
 @using CrestApps.OrchardCore.AdminTheme
 @using CrestApps.OrchardCore.AdminTheme.Services
-@using Microsoft.Extensions.Localization
 
 @inject AdminColorSchemeService ColorSchemes
-@inject IStringLocalizer<AdminColorSchemeService> S
 
 @*
     TheAdmin's light / dark toggle, with the color schemes of the theme under it. The mode buttons keep TheAdmin's
@@ -13,8 +11,9 @@
 *@
 
 @{
-    var userScheme = ColorSchemes.GetUserScheme();
+    var userScheme = await ColorSchemes.GetUserSchemeAsync();
     var siteScheme = await ColorSchemes.GetSiteSchemeAsync();
+    var schemes = await ColorSchemes.ListAsync();
 }
 
 <script asp-name="crestapps-admin-theme-scheme" at="Foot"></script>
@@ -49,17 +48,17 @@
 
             <div class="dropdown-divider"></div>
             <h6 class="dropdown-header">@T["Color scheme"]</h6>
-            <div class="ca-scheme-list" role="group" aria-label="@T["Color scheme"]" data-cookie-name="@ColorSchemes.CookieName" data-site-scheme="@siteScheme" data-builtin-scheme="@AdminColorSchemes.BuiltIn">
+            <div class="ca-scheme-list" role="group" aria-label="@T["Color scheme"]" data-cookie-name="@ColorSchemes.CookieName" data-site-scheme="@siteScheme">
                 <button type="button" class="dropdown-item ca-scheme-option@(userScheme is null ? " active" : string.Empty)" data-ca-scheme-value="" aria-pressed="@(userScheme is null ? "true" : "false")">
                     <span class="ca-scheme-name">@T["Site default"]</span>
                     <span class="ca-scheme-swatch" data-scheme="@siteScheme" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
                 </button>
-                @foreach (var scheme in AdminColorSchemes.All)
+                @foreach (var scheme in schemes)
                 {
-                    var isPicked = scheme == userScheme;
-                    <button type="button" class="dropdown-item ca-scheme-option@(isPicked ? " active" : string.Empty)" data-ca-scheme-value="@scheme" aria-pressed="@(isPicked ? "true" : "false")">
-                        <span class="ca-scheme-name">@AdminColorSchemes.GetDisplayName(scheme, S)</span>
-                        <span class="ca-scheme-swatch" data-scheme="@scheme" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                    var isPicked = scheme.Id == userScheme;
+                    <button type="button" class="dropdown-item ca-scheme-option@(isPicked ? " active" : string.Empty)" data-ca-scheme-value="@scheme.Id" aria-pressed="@(isPicked ? "true" : "false")">
+                        <span class="ca-scheme-name">@scheme.Name</span>
+                        <span class="ca-scheme-swatch" data-scheme="@scheme.Id" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
                     </button>
                 }
             </div>

@@ -1,57 +1,43 @@
-using Microsoft.Extensions.Localization;
+using CrestApps.OrchardCore.AdminTheme.Models;
 
 namespace CrestApps.OrchardCore.AdminTheme;
 
 /// <summary>
-/// The color schemes of the admin. Their colors live in Assets/scss/_schemes.scss; the ids here must match the keys of
-/// its '$schemes' map, and <see cref="BuiltIn"/> its '$default-scheme'.
+/// The color schemes the theme seeds when it is first enabled. They are ordinary records from then on: admins edit or
+/// delete them, and add their own, on Design > Color schemes.
 /// </summary>
 public static class AdminColorSchemes
 {
     /// <summary>
-    /// The scheme the stylesheet applies when the page names none.
+    /// The scheme used when the site names no default: also the look of the stylesheet's own fallback, so the admin
+    /// keeps its colors even with no scheme at all.
     /// </summary>
-    public const string BuiltIn = "gray";
+    public const string DefaultId = "gray";
 
     /// <summary>
-    /// Every scheme, in the order of the pickers.
+    /// The schemes to seed, in the order of the pickers.
     /// </summary>
-    public static readonly IReadOnlyList<string> All = [BuiltIn, "blue", "ocean", "forest", "plum", "sunset", "graphite", "gold"];
-
-    /// <summary>
-    /// Returns the scheme with the given id, or <see langword="null"/> when there is none.
-    /// </summary>
-    public static string Find(string id)
-    {
-        if (string.IsNullOrEmpty(id))
-        {
-            return null;
-        }
-
-        foreach (var scheme in All)
-        {
-            if (string.Equals(scheme, id, StringComparison.Ordinal))
+    public static IReadOnlyList<AdminColorScheme> CreateDefaults()
+        =>
+        [
+            // The look of Orchard Core's TheAdmin: Bootstrap's blue on a white page, with a light gray menu.
+            new()
             {
-                return scheme;
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// The name of the scheme shown to people.
-    /// </summary>
-    public static LocalizedString GetDisplayName(string id, IStringLocalizer S)
-        => id switch
-        {
-            "blue" => S["Blue"],
-            "ocean" => S["Ocean"],
-            "forest" => S["Forest"],
-            "plum" => S["Plum"],
-            "sunset" => S["Sunset"],
-            "graphite" => S["Graphite"],
-            "gold" => S["Gold"],
-            _ => S["Gray"],
-        };
+                Id = DefaultId, Name = "Gray", Position = 0,
+                Primary = "#0d6efd", Deep = "#212529", Ink = "#212529", Accent = "#6ea8fe",
+                LightMenu = true, Hue = 210, Saturation = 0.12, Page = "#ffffff", Toolbar = "#495057", Tint = "#495057", TintDark = "#adb5bd",
+            },
+            new() { Id = "blue", Name = "Blue", Position = 1, Primary = "#2a81bb", Deep = "#144c71", Ink = "#081b26", Accent = "#5aa4ef", Hue = 209, Saturation = 1 },
+            new() { Id = "ocean", Name = "Ocean", Position = 2, Primary = "#12868b", Deep = "#0d4a52", Ink = "#062227", Accent = "#4fd1c5", Hue = 187, Saturation = 0.9 },
+            new() { Id = "forest", Name = "Forest", Position = 3, Primary = "#2f855a", Deep = "#1c4a36", Ink = "#0b2018", Accent = "#68d391", Hue = 150, Saturation = 0.7 },
+            new() { Id = "plum", Name = "Plum", Position = 4, Primary = "#7b4fc0", Deep = "#3d2a66", Ink = "#170f2b", Accent = "#b794f4", Hue = 262, Saturation = 0.7 },
+            new() { Id = "sunset", Name = "Sunset", Position = 5, Primary = "#c2551f", Deep = "#5c2a1c", Ink = "#24100b", Accent = "#f6ad55", Hue = 18, Saturation = 0.6 },
+            new() { Id = "graphite", Name = "Graphite", Position = 6, Primary = "#4b6584", Deep = "#2d3540", Ink = "#121519", Accent = "#94a8bf", Hue = 213, Saturation = 0.2 },
+            // Gold on charcoal; the gold is too light for white text, so its buttons and current page take the charcoal.
+            new()
+            {
+                Id = "gold", Name = "Gold", Position = 7,
+                Primary = "#eaa52c", Deep = "#1e1e1e", Ink = "#09080b", Accent = "#eaa52c", Hue = 240, Saturation = 0.08, OnPrimary = "#1e1e1e",
+            },
+        ];
 }

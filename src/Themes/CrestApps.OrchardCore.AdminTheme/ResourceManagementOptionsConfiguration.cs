@@ -28,6 +28,13 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("crestapps-admin-theme-scheme-editor")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.AdminTheme/scripts/color-scheme-editor.min.js",
+                "~/CrestApps.OrchardCore.AdminTheme/scripts/color-scheme-editor.js")
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineStyle("crestapps-admin-theme-login")
             .SetUrl(
                 "~/CrestApps.OrchardCore.AdminTheme/styles/login.min.css",

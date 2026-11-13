@@ -18,6 +18,12 @@
     "dest": "wwwroot/scripts/color-scheme.js"
   },
   {
+    "action": "vite",
+    "name": "crestapps-admin-theme-scheme-editor.js",
+    "source": "Assets/js/color-scheme-editor.js",
+    "dest": "wwwroot/scripts/color-scheme-editor.js"
+  },
+  {
     "action": "copy",
     "name": "crestapps-admin-theme-lato",
     "source": [

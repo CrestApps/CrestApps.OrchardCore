@@ -1,0 +1,32 @@
+@model CrestApps.OrchardCore.AdminTheme.ViewModels.AdminColorSchemesIndexViewModel
+
+@*
+    The color schemes admins added. A site has a handful of them at most, so the list has no search, paging or bulk
+    actions, and needs no list script.
+*@
+
+<zone Name="Title">
+    <breadcrumb name="AdminColorSchemes" title="@T["Color schemes"]" />
+</zone>
+
+<p class="hint">@T["The color schemes users can pick for the admin. Each is made of four colors; every other color, light and dark, is derived from them and adjusted to meet WCAG 2.2 AA contrast. The theme adds its default schemes once; edit or delete them like any other."]</p>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 justify-content-end">
+            <div class="col-auto">
+                <a asp-action="Create" class="btn btn-secondary create">@T["Add color scheme"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="AdminColorSchemes" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No color scheme was added yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Name"]" />
+        <admin-list-column name="Colors" position="30" title="@T["Colors"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

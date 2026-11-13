@@ -39,6 +39,14 @@
     <style asp-name="crestapps-admin-theme-login" at="Head"></style>
 
     <resources type="Header" />
+    @{
+        // The schemes admins added, after every other stylesheet so their rules apply over the built-in ones.
+        var customSchemesUrl = await ColorSchemes.GetStylesheetUrlAsync(Url);
+    }
+    @if (customSchemesUrl is not null)
+    {
+        <link rel="stylesheet" href="@customSchemesUrl" />
+    }
     @await RenderSectionAsync("HeadMeta", required: false)
 </head>
 <body class="ca-auth">

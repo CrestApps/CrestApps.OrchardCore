@@ -240,16 +240,31 @@
 
 // Breadcrumbs
 // -----------
+// The pages above the current one are links, in the link color and underlined, the current page is plain muted
+// text, and the chevrons between them are large enough to read as separators.
 .ca-admin .oc-breadcrumb .breadcrumb {
-    margin-bottom: 0.375rem;
+    --bs-breadcrumb-divider-color: var(--ca-muted);
+    --bs-breadcrumb-item-padding-x: 0.5rem;
+    --bs-breadcrumb-item-active-color: var(--ca-muted);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
 
     a {
-        color: var(--ca-muted);
-        text-decoration: none;
+        color: var(--ca-link);
+        text-decoration: underline;
+        text-decoration-color: rgba(var(--ca-link-rgb), 0.4);
+        text-decoration-thickness: 1px;
+        text-underline-offset: 0.2em;
 
         &:hover {
-            color: var(--ca-link);
+            color: var(--ca-link-hover);
+            text-decoration-color: currentColor;
         }
+    }
+
+    .breadcrumb-item + .breadcrumb-item::before {
+        font-size: 1.25em;
+        line-height: 1;
     }
 }
 

@@ -18,6 +18,6 @@ internal sealed class AdminThemeSettingsSchema : SiteSettingsSchemaBase
             .Properties(
                 (nameof(AdminThemeSettings.DefaultColorScheme), new JsonSchemaBuilder()
                     .Type(SchemaValueType.String | SchemaValueType.Null)
-                    .Description($"The color scheme of the admin for users who have not picked their own: one of {string.Join(", ", AdminColorSchemes.All)}. Defaults to {AdminColorSchemes.BuiltIn}.")))
+                    .Description($"The id of the color scheme of the admin for users who have not picked their own (see the AdminColorSchemes step). Defaults to '{AdminColorSchemes.DefaultId}'.")))
             .AdditionalProperties(true);
 }

@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.AdminTheme.Models
+@model ShapeViewModel<AdminColorScheme>
+
+@* The scheme's colors, from the stylesheet of the added schemes. *@
+<span class="ca-scheme-swatch" data-scheme="@Model.Value.Id" role="img" aria-label="@T["Colors of {0}", Model.Value.Name]"><span></span><span></span><span></span><span></span></span>

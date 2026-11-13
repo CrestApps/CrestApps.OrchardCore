@@ -59,6 +59,14 @@
     <script asp-name="the-admin" version="1" at="Foot"></script>
 
     <resources type="Header" />
+    @{
+        // The schemes admins added, after every other stylesheet so their rules apply over the built-in ones.
+        var customSchemesUrl = await ColorSchemes.GetStylesheetUrlAsync(Url);
+    }
+    @if (customSchemesUrl is not null)
+    {
+        <link rel="stylesheet" href="@customSchemesUrl" />
+    }
 
     @await RenderSectionAsync("HeadMeta", required: false)
 </head>

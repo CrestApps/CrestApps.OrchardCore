@@ -10,32 +10,25 @@
 //    belongs to the scheme instead of being a neutral gray (or black, in dark mode).
 //
 // Every '--ca-*' color token, and through them Bootstrap's own variables, is derived from those, for the light
-// and the dark mode. The scheme a user picks is rendered on <html> as 'data-ca-scheme'; the default scheme is the
-// one ':root' carries. The ids must match AdminColorSchemes.cs, which lists them for the pickers.
+// and the dark mode. The scheme a user picks is rendered on <html> as 'data-ca-scheme'. This file derives the
+// stylesheet's fallback (':root'); AdminColorSchemeCssBuilder.cs derives the same tokens for every scheme record, and
+// a parity test keeps both in step.
 // ---------------------------------------------------------------------------
 
 @use "sass:color";
 @use "sass:map";
 @use "sass:math";
-@use "sass:list";
 @use "sass:string";
 
 $default-scheme: "gray";
 
+// The stylesheet's fallback: Gray, the look of Orchard Core's TheAdmin. Every scheme a site uses, Gray included, is a
+// record its admins edit (Design > Color schemes); the server writes their rules with the same derivation, in C#
+// (AdminColorSchemeCssBuilder), in a stylesheet of their own loaded after this one. These rules only apply when a
+// site has no scheme at all, or before its schemes are seeded.
 $schemes: (
-    // The look of Orchard Core's TheAdmin: Bootstrap's blue on a white page, with a light gray menu and a gray tint.
     "gray": (primary: #0d6efd, deep: #212529, ink: #212529, accent: #6ea8fe, hue: 210, saturation: 0.12, menu: light, page: #fff,
-        tint: #495057, tint-dark: #adb5bd, toolbar: #495057, swatch: (#f1f3f5, #dee2e6, #0d6efd, #212529)),
-    "blue": (primary: #2a81bb, deep: #144c71, ink: #081b26, accent: #5aa4ef, hue: 209, saturation: 1),
-    "ocean": (primary: #12868b, deep: #0d4a52, ink: #062227, accent: #4fd1c5, hue: 187, saturation: 0.9),
-    "forest": (primary: #2f855a, deep: #1c4a36, ink: #0b2018, accent: #68d391, hue: 150, saturation: 0.7),
-    "plum": (primary: #7b4fc0, deep: #3d2a66, ink: #170f2b, accent: #b794f4, hue: 262, saturation: 0.7),
-    "sunset": (primary: #c2551f, deep: #5c2a1c, ink: #24100b, accent: #f6ad55, hue: 18, saturation: 0.6),
-    "graphite": (primary: #4b6584, deep: #2d3540, ink: #121519, accent: #94a8bf, hue: 213, saturation: 0.2),
-    // CrestApps: gold on charcoal. White text on the gold would be about 2:1, so its buttons and current page take the
-    // charcoal ('on-primary') instead, and keep the real gold.
-    "gold": (primary: #eaa52c, deep: #1e1e1e, ink: #09080b, accent: #eaa52c, hue: 240, saturation: 0.08, on-primary: #1e1e1e,
-        swatch: (#09080b, #1e1e1e, #eaa52c, #e6e6e6)),
+        tint: #495057, tint-dark: #adb5bd, toolbar: #495057),
 );
 
 // The value of an optional key of a scheme.
@@ -312,41 +305,10 @@ $ui-contrast: 3.1;
     @include menu-dark($scheme, $primary);
 }
 
-// The default scheme on ':root', each other scheme on its attribute. Both selectors weigh the same as the dark mode
-// ones below them, so the order decides: light first, then dark.
 :root {
     @include scheme-light(map.get($schemes, $default-scheme));
 }
 
-@each $name, $scheme in $schemes {
-    @if $name != $default-scheme {
-        [data-ca-scheme="#{$name}"] {
-            @include scheme-light($scheme);
-        }
-    }
-}
-
 :root[data-bs-theme="dark"] {
     @include scheme-dark(map.get($schemes, $default-scheme));
-}
-
-@each $name, $scheme in $schemes {
-    @if $name != $default-scheme {
-        [data-bs-theme="dark"][data-ca-scheme="#{$name}"] {
-            @include scheme-dark($scheme);
-        }
-    }
-}
-
-// The swatches of the picker: ink, deep, primary and accent.
-@each $name, $scheme in $schemes {
-    $swatch: option($scheme, swatch, (map.get($scheme, ink), map.get($scheme, deep), map.get($scheme, primary), map.get($scheme, accent)));
-
-    .ca-scheme-swatch[data-scheme="#{$name}"] {
-        @for $i from 1 through 4 {
-            > span:nth-child(#{$i}) {
-                background-color: list.nth($swatch, $i);
-            }
-        }
-    }
 }
