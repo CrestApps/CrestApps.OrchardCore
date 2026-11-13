@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.SiteResources</RootNamespace>
+    <Title>CrestApps OrchardCore Site Resources Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for site resources: stylesheets and scripts kept in the site, minified, and added to every page
+      of the front end or the admin, or only to the pages whose templates ask for them by name.
+    </Description>
+    <PackageTags>$(PackageTags) Resources Stylesheets Scripts CSS JavaScript Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -346,6 +346,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Recipes` | CrestApps Recipes | [Recipes](./modules/recipes) |
 | `CrestApps.OrchardCore.TimeZones` | Time Zones | [Time Zones](./modules/time-zones) |
 | `CrestApps.OrchardCore.Resources` | CrestApps Resources | [Resources](./modules/resources) |
+| `CrestApps.OrchardCore.SiteResources` | Site Resources | [Site Resources](./modules/site-resources) |
 | `CrestApps.OrchardCore.Roles` | Enhanced Roles | [Roles](./modules/roles) |
 | `CrestApps.OrchardCore.WebSockets` | WebSockets (dependency only) | [WebSockets](./modules/websockets) |
 

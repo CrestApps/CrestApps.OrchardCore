@@ -1,0 +1,184 @@
+@model SiteResourceViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The resource"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="@SiteResourceNames.MaxLength" autocomplete="off" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["Letters, digits, dots, dashes and underscores, such as <code>site-colors</code>. Templates ask for an on-demand resource by this name."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Description">
+            <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+            <div class="ocat-end">
+                <input asp-for="Description" class="form-control" />
+                <span class="hint">@T["What the resource is for."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Type">
+            <label class="ocat-label ocat-label-required">@T["Type"]</label>
+            <div class="ocat-end">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" asp-for="Type" value="@SiteResourceType.Stylesheet" id="@Html.IdFor(m => m.Type)-stylesheet" data-site-resource-type />
+                    <label class="form-check-label" for="@Html.IdFor(m => m.Type)-stylesheet">@T["Stylesheet (CSS)"]</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" asp-for="Type" value="@SiteResourceType.Script" id="@Html.IdFor(m => m.Type)-script" data-site-resource-type />
+                    <label class="form-check-label" for="@Html.IdFor(m => m.Type)-script">@T["Script (JavaScript)"]</label>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Content">
+            <label asp-for="Content" class="ocat-label ocat-label-required">@T["Content"]</label>
+            <div class="ocat-end">
+                <div id="@Html.IdFor(m => m.Content)_editor" hidden style="min-height: 420px; border: 1px solid var(--bs-border-color);"></div>
+                <textarea asp-for="Content" class="form-control font-monospace" rows="18" spellcheck="false" data-site-resource-content></textarea>
+                <span asp-validation-for="Content" class="text-danger"></span>
+                @if (!string.IsNullOrEmpty(Model.Url))
+                {
+                    <span class="hint">@T["Served from <a href=\"{0}\" target=\"_blank\" rel=\"noopener\">{0}</a> ({1:N0} characters).", Model.Url, Model.ServedLength]</span>
+                }
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Minify">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Minify" class="form-check-input" />
+                    <label asp-for="Minify" class="form-check-label">@T["Minify"]</label>
+                    <span class="hint dashed">@T["Serve it without comments and extra spaces. When it can't be minified, it is served as written."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Enabled">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Enabled" class="form-check-input" />
+                    <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+                    <span class="hint dashed">@T["Turn it off to take it off every page without removing it."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Where it goes"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Target">
+            <label asp-for="Target" class="ocat-label">@T["Pages"]</label>
+            <div class="ocat-end">
+                <select asp-for="Target" asp-items="Model.TargetOptions" class="form-select"></select>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Themes">
+            <label class="ocat-label">@T["Themes"]</label>
+            <div class="ocat-end">
+                <div>
+                    @foreach (var option in Model.ThemeOptions)
+                    {
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Themes)" value="@option.Value" id="@Html.IdFor(m => m.Themes)-@option.Value" checked="@option.Selected" />
+                            <label class="form-check-label" for="@Html.IdFor(m => m.Themes)-@option.Value">@option.Text</label>
+                        </div>
+                    }
+                </div>
+                <span class="hint">@T["Only pages rendered by one of these themes get the resource, so a stylesheet can restyle one theme and stay out of the others. Tick none for every theme."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Placement">
+            <label asp-for="Placement" class="ocat-label">@T["Added to"]</label>
+            <div class="ocat-end">
+                <select asp-for="Placement" asp-items="Model.PlacementOptions" class="form-select"></select>
+                <span class="hint">@T["An on-demand resource is added only where a template asks for it, such as <code>{{% script name: \"{0}\" %}}</code> or <code>{{% style name: \"{0}\" %}}</code> in Liquid, or <code>&lt;script asp-name=\"{0}\"&gt;</code> in Razor.", string.IsNullOrEmpty(Model.Name) ? "my-resource" : Model.Name]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Location" data-site-resource-script-only>
+            <label asp-for="Location" class="ocat-label">@T["Location"]</label>
+            <div class="ocat-end">
+                <select asp-for="Location" asp-items="Model.LocationOptions" class="form-select"></select>
+                <span class="hint">@T["Where the script goes. Stylesheets always go in the head."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Dependencies">
+            <label asp-for="Dependencies" class="ocat-label">@T["Depends on"]</label>
+            <div class="ocat-end">
+                <input asp-for="Dependencies" class="form-control" autocomplete="off" />
+                <span asp-validation-for="Dependencies" class="text-danger"></span>
+                <span class="hint">@T["The names of the resources that must be on the page first, separated by commas, such as <code>jQuery</code>, <code>bootstrap</code> or another site resource."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Position">
+            <label asp-for="Position" class="ocat-label">@T["Order"]</label>
+            <div class="ocat-end">
+                <input asp-for="Position" class="form-control" type="number" step="1" />
+                <span class="hint">@T["Resources added to every page are added smallest first."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style asp-name="monaco"></style>
+<script asp-name="monaco" at="Foot"></script>
+<script at="Foot" asp-name="site-resource-editor" depends-on="monaco">
+    document.addEventListener('DOMContentLoaded', function () {
+        var textArea = document.getElementById('@Html.IdFor(m => m.Content)');
+        var editorElement = document.getElementById('@Html.IdFor(m => m.Content)_editor');
+        var typeInputs = document.querySelectorAll('[data-site-resource-type]');
+        var scriptOnly = document.querySelectorAll('[data-site-resource-script-only]');
+
+        function isScript() {
+            var checked = document.querySelector('[data-site-resource-type]:checked');
+            return checked && checked.value === '@SiteResourceType.Script';
+        }
+
+        function showScriptOnly() {
+            scriptOnly.forEach(function (element) {
+                element.hidden = !isScript();
+            });
+        }
+
+        typeInputs.forEach(function (input) {
+            input.addEventListener('change', showScriptOnly);
+        });
+        showScriptOnly();
+
+        if (!window.__orchardCoreMonacoReady) {
+            return;
+        }
+
+        window.__orchardCoreMonacoReady.then(function (monaco) {
+            var html = document.documentElement;
+
+            function setTheme() {
+                monaco.editor.setTheme(html.dataset.bsTheme === 'dark' ? 'vs-dark' : 'vs');
+            }
+
+            new MutationObserver(setTheme).observe(html, { attributes: true });
+            setTheme();
+
+            textArea.hidden = true;
+            editorElement.hidden = false;
+
+            var editor = monaco.editor.create(editorElement, {
+                value: textArea.value,
+                language: isScript() ? 'javascript' : 'css',
+                automaticLayout: true,
+                minimap: { enabled: false },
+                tabSize: 4
+            });
+
+            typeInputs.forEach(function (input) {
+                input.addEventListener('change', function () {
+                    monaco.editor.setModelLanguage(editor.getModel(), isScript() ? 'javascript' : 'css');
+                });
+            });
+
+            editor.getModel().onDidChangeContent(function () {
+                textArea.value = editor.getValue();
+            });
+        });
+    });
+</script>

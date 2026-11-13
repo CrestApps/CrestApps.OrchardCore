@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.SiteResources</RootNamespace>
+    <Title>CrestApps OrchardCore Site Resources Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for site resources: the document catalog of stylesheets and scripts, their minification and
+      versioned addresses, the validation every editor shares, and the resources a page gets.
+    </Description>
+    <PackageTags>$(PackageTags) Resources Stylesheets Scripts CSS JavaScript Minification Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.SiteResources" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core" />
+    <PackageReference Include="NUglify" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.ResourceManagement.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.SiteResources.Abstractions\CrestApps.OrchardCore.SiteResources.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+  </ItemGroup>
+
+</Project>
