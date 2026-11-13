@@ -31,6 +31,36 @@ public sealed class RegisterIndexProvider : IndexProvider<Register>
             });
 }
 
+public sealed class PosDepartmentIndex : CatalogItemIndex
+{
+    public string Name { get; set; }
+
+    public string Number { get; set; }
+
+    public int Position { get; set; }
+
+    public bool IsEnabled { get; set; }
+}
+
+public sealed class PosDepartmentIndexProvider : IndexProvider<PosDepartment>
+{
+    public PosDepartmentIndexProvider()
+    {
+        CollectionName = PosConstants.CollectionName;
+    }
+
+    public override void Describe(DescribeContext<PosDepartment> context)
+        => context.For<PosDepartmentIndex>()
+            .Map(department => new PosDepartmentIndex
+            {
+                ItemId = department.ItemId,
+                Name = department.Name?.Length > 255 ? department.Name[..255] : department.Name,
+                Number = department.Number?.Length > 50 ? department.Number[..50] : department.Number,
+                Position = department.Position,
+                IsEnabled = department.IsEnabled,
+            });
+}
+
 public sealed class RegisterShiftIndex : CatalogItemIndex
 {
     public string RegisterId { get; set; }

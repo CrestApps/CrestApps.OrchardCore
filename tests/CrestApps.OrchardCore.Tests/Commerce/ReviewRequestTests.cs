@@ -9,6 +9,8 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Moq;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Email;
 using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
@@ -38,6 +40,9 @@ public sealed class ReviewRequestTests
     {
         var yes = Order("yes", "sam@example.com");
         var no = Order("no", "kim@example.com");
+
+        // An amount rung up in a register department has no product page to review.
+        yes.Lines.Add(new OrderLine { ContentItemId = "candy-department", ContentType = "PosDepartment", Title = "Candy", Quantity = 1 });
         var recent = Order("yes", "sam@example.com", paidDaysAgo: 3);
 
         var orders = new Mock<IOrderStore>();
@@ -61,13 +66,14 @@ public sealed class ReviewRequestTests
         links.Setup(value => value.GetPathByAddress(It.IsAny<RouteValuesAddress>(), It.IsAny<RouteValueDictionary>(), It.IsAny<PathString>(), It.IsAny<FragmentString>(), It.IsAny<LinkOptions>()))
             .Returns((RouteValuesAddress _, RouteValueDictionary values, PathString _, FragmentString _, LinkOptions _) => $"/Contents/ContentItems/{values["contentItemId"]}");
 
-        var service = new ReviewRequestService(orders.Object, customers.Object, CommerceEmailSenders.Create(email.Object), SiteService(), clock.Object, new PassThroughStringLocalizer<ReviewRequestService>(), links.Object);
+        var service = new ReviewRequestService(orders.Object, customers.Object, CommerceEmailSenders.Create(email.Object), SiteService(), clock.Object, new PassThroughStringLocalizer<ReviewRequestService>(), links.Object, ContentDefinitions("Product"));
 
         Assert.Equal(1, await service.SendDueAsync(TestContext.Current.CancellationToken));
 
         var message = Assert.Single(sent);
         Assert.Equal("sam@example.com", message.To);
         Assert.Contains("/Contents/ContentItems/hat#reviews", message.HtmlBody);
+        Assert.DoesNotContain("candy-department", message.HtmlBody);
 
         // Both due orders are marked, so neither is asked again; the recent one waits.
         Assert.Equal(_now, yes.ReviewRequestSentUtc);
@@ -87,6 +93,15 @@ public sealed class ReviewRequestTests
             CreatedUtc = _now.AddDays(-paidDaysAgo),
             Lines = [new OrderLine { ContentItemId = "hat", Title = "Hat", Quantity = 1 }],
         };
+
+    private static IContentDefinitionManager ContentDefinitions(params string[] types)
+    {
+        var definitions = new Mock<IContentDefinitionManager>();
+        definitions.Setup(manager => manager.ListTypeDefinitionsAsync())
+            .ReturnsAsync(types.Select(type => new ContentTypeDefinition(type, type)).ToArray());
+
+        return definitions.Object;
+    }
 
     private static ISiteService SiteService()
     {
