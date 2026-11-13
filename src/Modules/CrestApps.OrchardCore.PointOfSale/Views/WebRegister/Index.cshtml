@@ -1,0 +1,36 @@
+@model WebRegisterIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PosWebRegisterIndex" title="@T["Web register"]" />
+</zone>
+
+@if (Model.Registers.Count == 0)
+{
+    <div class="alert alert-info">@T["There's no register you may sell at yet. A manager adds registers under Commerce › Point of sale › Registers, and can limit each to some roles."]</div>
+}
+else
+{
+    <p class="text-body-secondary">@T["Pick the register you're selling at."]</p>
+}
+
+<div class="row g-3">
+    @foreach (var choice in Model.Registers)
+    {
+        <div class="col-sm-6 col-lg-4">
+            <a class="card h-100 text-decoration-none" asp-action="Till" asp-route-registerId="@choice.Register.ItemId">
+                <div class="card-body">
+                    <h5 class="card-title mb-1"><i class="fa-solid fa-cash-register me-2 text-secondary" aria-hidden="true"></i>@choice.Register.Name</h5>
+                    <p class="card-text text-body-secondary small mb-2">@string.Join(", ", new[] { choice.Register.Address?.AddressLine1, choice.Register.Address?.City }.Where(part => !string.IsNullOrEmpty(part)))</p>
+                    @if (choice.OpenShift is { } shift)
+                    {
+                        <span class="badge bg-success-subtle text-success-emphasis fw-normal">@T["Open, by {0}", shift.OpenedByName]</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary-subtle text-secondary-emphasis fw-normal">@T["Closed"]</span>
+                    }
+                </div>
+            </a>
+        </div>
+    }
+</div>

@@ -9,71 +9,148 @@
 <form asp-action="@(Model.IsNew ? "Create" : "Edit")" asp-route-itemId="@Model.ItemId" method="post" class="no-multisubmit">
     <div asp-validation-summary="ModelOnly"></div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="Name">
-        <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
-        <div class="ocat-end">
-            <input asp-for="Name" class="form-control" />
-            <span asp-validation-for="Name"></span>
-            <span class="hint">@T["What staff see when they pick a register, such as Downtown till 1."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" asp-validation-class-for="LocationId">
-        <label asp-for="LocationId" class="ocat-label ocat-label-required">@T["Store location"]</label>
-        <div class="ocat-end">
-            <select asp-for="LocationId" asp-items="Model.Locations" class="form-select"><option value="">@T["Choose a location"]</option></select>
-            <span asp-validation-for="LocationId"></span>
-            <span class="hint">@T["The inventory location its sales take stock from. Add locations under Settings › Commerce › Inventory."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" asp-validation-class-for="AddressLine1">
-        <span class="ocat-label ocat-label-required">@T["Store address"]</span>
-        <div class="ocat-end">
-            <span asp-validation-for="AddressLine1"></span>
-            <div class="row g-2">
-                <div class="col-12"><input asp-for="AddressLine1" class="form-control" placeholder="@T["Street address"]" /></div>
-                <div class="col-12"><input asp-for="AddressLine2" class="form-control" placeholder="@T["Address line 2"]" /></div>
-                <div class="col-md-4"><input asp-for="City" class="form-control" placeholder="@T["City"]" /></div>
-                <div class="col-md-3"><input asp-for="Region" class="form-control" placeholder="@T["State or province"]" /></div>
-                <div class="col-md-3"><input asp-for="PostalCode" class="form-control" placeholder="@T["Postal code"]" /></div>
-                <div class="col-md-2"><input asp-for="Country" class="form-control" placeholder="@T["Country"]" maxlength="2" /></div>
-            </div>
-            <span class="hint">@T["Sales at the register are taxed by this address, and its receipts show it. The country is its two-letter code, such as US."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
-        <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
-        <div class="ocat-limited">
-            <input asp-for="Currency" class="form-control" maxlength="3" placeholder="USD" />
-            <span asp-validation-for="Currency"></span>
-            <span class="hint">@T["The currency its drawer holds; blank sells in the products' own currency."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" role="group" aria-labelledby="register-roles-label">
-        <span class="ocat-label" id="register-roles-label">@T["Who may sell here"]</span>
-        <div class="ocat-end">
-            @foreach (var role in Model.AvailableRoles)
-            {
-                var id = "role-" + role.Replace(' ', '-');
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" name="Roles" value="@role" id="@id" checked="@Model.Roles.Contains(role, StringComparer.OrdinalIgnoreCase)" />
-                    <label class="form-check-label" for="@id">@role</label>
+    <div class="card mb-3">
+        <div class="card-header">@T["Register"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Name">
+                <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name"></span>
+                    <span class="hint">@T["What staff see when they pick a register, such as Downtown till 1."]</span>
                 </div>
-            }
-            <span class="hint">@T["None ticked lets anyone with the Sell at a register permission."]</span>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="LocationId">
+                <label asp-for="LocationId" class="ocat-label ocat-label-required">@T["Store location"]</label>
+                <div class="ocat-end">
+                    <select asp-for="LocationId" asp-items="Model.Locations" class="form-select"><option value="">@T["Choose a location"]</option></select>
+                    <span asp-validation-for="LocationId"></span>
+                    <span class="hint">@T["The inventory location its sales take stock from. Add locations under Settings › Commerce › Inventory."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="AddressLine1">
+                <span class="ocat-label ocat-label-required">@T["Store address"]</span>
+                <div class="ocat-end">
+                    <span asp-validation-for="AddressLine1"></span>
+                    <div class="row g-2">
+                        <div class="col-12"><input asp-for="AddressLine1" class="form-control" placeholder="@T["Street address"]" /></div>
+                        <div class="col-12"><input asp-for="AddressLine2" class="form-control" placeholder="@T["Address line 2"]" /></div>
+                        <div class="col-md-4"><input asp-for="City" class="form-control" placeholder="@T["City"]" /></div>
+                        <div class="col-md-3"><input asp-for="Region" class="form-control" placeholder="@T["State or province"]" /></div>
+                        <div class="col-md-3"><input asp-for="PostalCode" class="form-control" placeholder="@T["Postal code"]" /></div>
+                        <div class="col-md-2"><input asp-for="Country" class="form-control" placeholder="@T["Country"]" maxlength="2" /></div>
+                    </div>
+                    <span class="hint">@T["Sales at the register are taxed by this address, and its receipts show it. The country is its two-letter code, such as US."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+                <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="Currency" class="form-control" maxlength="3" placeholder="USD" />
+                    <span asp-validation-for="Currency"></span>
+                    <span class="hint">@T["The currency its drawer holds; blank sells in the products' own currency."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" role="group" aria-labelledby="register-roles-label">
+                <span class="ocat-label" id="register-roles-label">@T["Who may sell here"]</span>
+                <div class="ocat-end">
+                    @foreach (var role in Model.AvailableRoles)
+                    {
+                        var id = "role-" + role.Replace(' ', '-');
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="Roles" value="@role" id="@id" checked="@Model.Roles.Contains(role, StringComparer.OrdinalIgnoreCase)" />
+                            <label class="form-check-label" for="@id">@role</label>
+                        </div>
+                    }
+                    <span class="hint">@T["None ticked lets anyone with the Sell at a register permission."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check form-switch">
+                        <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+                        <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
+                    </div>
+                    <span class="hint dashed">@T["A register that's off can't open a shift or ring up a sale."]</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <div class="form-check form-switch">
-                <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
-                <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
-            </div>
-            <span class="hint dashed">@T["A register that's off can't open a shift or ring up a sale."]</span>
+    <div class="card mb-3">
+        <div class="card-header">@T["Department keys"]</div>
+        <div class="card-body">
+            <p class="text-body-secondary">@T["The keys on the register's keypad that ring an amount up in a department: staff key in the amount, then press the key. With no keys here, the register shows a key for every department that's on, in their order."]</p>
+            <span asp-validation-for="Keys"></span>
+            @if (Model.Departments.Count == 0)
+            {
+                <p class="mb-0">@T["There are no departments yet."] <a asp-action="Create" asp-controller="PosDepartmentsAdmin">@T["Add a department"]</a></p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-2">
+                        <thead>
+                            <tr>
+                                <th scope="col">@T["Department"]</th>
+                                <th scope="col">@T["Key reads"]</th>
+                                <th scope="col">@T["Preset amount"]</th>
+                                <th scope="col"><span class="visually-hidden">@T["Actions"]</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="register-keys" data-next-index="@Model.Keys.Count">
+                            @for (var i = 0; i < Model.Keys.Count; i++)
+                            {
+                                var key = Model.Keys[i];
+                                <tr data-key-row>
+                                    <td>
+                                        <select name="Keys[@i].DepartmentId" class="form-select" aria-label="@T["Department"]">
+                                            <option value="">@T["Choose a department"]</option>
+                                            @foreach (var department in Model.Departments)
+                                            {
+                                                <option value="@department.ItemId" selected="@(department.ItemId == key.DepartmentId)">@if (department.IsEnabled) { @department.Name } else { @T["{0} (off)", department.Name] }</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td><input name="Keys[@i].Label" value="@key.Label" class="form-control" maxlength="40" placeholder="@T["The department's name"]" aria-label="@T["Key reads"]" /></td>
+                                    <td><input name="Keys[@i].PresetAmount" value="@key.PresetAmount" type="number" min="0.01" step="0.01" class="form-control" placeholder="@T["Keyed in"]" aria-label="@T["Preset amount"]" /></td>
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-key-up title="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i><span class="visually-hidden">@T["Move up"]</span></button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-key-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Remove"]</span></button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-sm btn-secondary" id="register-key-add"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add key"]</button>
+                <span class="hint d-block mt-2">@T["A preset amount rings up when nothing is keyed in, such as 1.00 for a coffee; blank needs an amount keyed in. Keys show in this order."]</span>
+
+                <template id="register-key-template">
+                    <tr data-key-row>
+                        <td>
+                            <select name="Keys[__index__].DepartmentId" class="form-select" aria-label="@T["Department"]">
+                                <option value="">@T["Choose a department"]</option>
+                                @foreach (var department in Model.Departments.Where(department => department.IsEnabled))
+                                {
+                                    <option value="@department.ItemId">@department.Name</option>
+                                }
+                            </select>
+                        </td>
+                        <td><input name="Keys[__index__].Label" class="form-control" maxlength="40" placeholder="@T["The department's name"]" aria-label="@T["Key reads"]" /></td>
+                        <td><input name="Keys[__index__].PresetAmount" type="number" min="0.01" step="0.01" class="form-control" placeholder="@T["Keyed in"]" aria-label="@T["Preset amount"]" /></td>
+                        <td class="text-end text-nowrap">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-key-up title="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i><span class="visually-hidden">@T["Move up"]</span></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-key-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Remove"]</span></button>
+                        </td>
+                    </tr>
+                </template>
+            }
         </div>
     </div>
 
@@ -82,3 +159,44 @@
         <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
     </div>
 </form>
+
+<script at="Foot">
+    (() => {
+        const body = document.getElementById('register-keys');
+        const template = document.getElementById('register-key-template');
+        const add = document.getElementById('register-key-add');
+
+        if (!body || !template || !add) {
+            return;
+        }
+
+        // Rows are posted in table order, so their indexes are renumbered after every change.
+        const renumber = () => body.querySelectorAll('[data-key-row]').forEach((row, index) => {
+            row.querySelectorAll('[name^="Keys["]').forEach(field => {
+                field.name = field.name.replace(/^Keys\[[^\]]*\]/, `Keys[${index}]`);
+            });
+        });
+
+        add.addEventListener('click', () => {
+            body.appendChild(template.content.cloneNode(true));
+            renumber();
+            body.lastElementChild.querySelector('select').focus();
+        });
+
+        body.addEventListener('click', event => {
+            const row = event.target.closest('[data-key-row]');
+
+            if (!row) {
+                return;
+            }
+
+            if (event.target.closest('[data-key-remove]')) {
+                row.remove();
+                renumber();
+            } else if (event.target.closest('[data-key-up]') && row.previousElementSibling) {
+                body.insertBefore(row, row.previousElementSibling);
+                renumber();
+            }
+        });
+    })();
+</script>

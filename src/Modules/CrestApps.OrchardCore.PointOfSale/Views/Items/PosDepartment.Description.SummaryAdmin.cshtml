@@ -1,0 +1,34 @@
+@model ShapeViewModel<PosDepartment>
+@using System.Globalization
+@{
+    var department = Model.Value;
+    var parts = new List<Microsoft.AspNetCore.Html.IHtmlContent>();
+
+    if (!string.IsNullOrEmpty(department.TaxCategoryCode))
+    {
+        parts.Add(T["Taxed as {0}", department.TaxCategoryCode]);
+    }
+
+    if (department.MinimumAmount is { } minimum)
+    {
+        parts.Add(T["At least {0}", minimum.ToString("0.00", CultureInfo.CurrentCulture)]);
+    }
+
+    if (department.MaximumAmount is { } maximum)
+    {
+        parts.Add(T["At most {0}", maximum.ToString("0.00", CultureInfo.CurrentCulture)]);
+    }
+}
+@if (parts.Count > 0)
+{
+    <div class="admin-list-secondary">
+        @for (var i = 0; i < parts.Count; i++)
+        {
+            @if (i > 0)
+            {
+                <text> · </text>
+            }
+            @parts[i]
+        }
+    </div>
+}

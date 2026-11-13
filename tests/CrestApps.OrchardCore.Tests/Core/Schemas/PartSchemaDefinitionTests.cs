@@ -368,7 +368,7 @@ public sealed class PartSchemaDefinitionTests
         Assert.Contains("IsPurchasable", partJson);
 
         // A listed product whose price is not shown has no price, so the price may be null.
-        var priceTypes = JsonDocument.Parse(partJson).RootElement
+        var priceTypes = JsonElement.Parse(partJson)
             .GetProperty("properties").GetProperty("Price").GetProperty("type")
             .EnumerateArray().Select(type => type.GetString()).ToArray();
         Assert.Contains("number", priceTypes);

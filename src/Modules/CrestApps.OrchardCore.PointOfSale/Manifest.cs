@@ -16,7 +16,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = PosConstants.Feature,
     Name = "Point of Sale",
-    Description = "Sells at your stores' counters from a phone or tablet app over the commerce API: registers at each location, shifts with their cash, sales paid in cash, by card, gift card or a mix, receipts, and returns at the till. Each sale is an order of its store, so its stock comes off that store and reports show sales by store and channel.",
+    Description = "Sells at your stores' counters over the commerce API, from a till app or the web register: registers at each location, shifts with their cash, sales of products and of amounts by department, paid in cash, by card, gift card or a mix, receipts, and returns at the till. Each sale is an order of its store, so its stock comes off that store and reports show sales by store and channel.",
     Category = "Commerce",
     Dependencies =
     [
@@ -24,5 +24,16 @@ using OrchardCore.Modules.Manifest;
         OrderConstants.Features.Orders,
         InventoryConstants.Features.Inventory,
         CheckoutConstants.Features.Api,
+    ]
+)]
+
+[assembly: Feature(
+    Id = PosConstants.WebRegisterFeature,
+    Name = "Point of Sale Web Register",
+    Description = "Rings up sales in the browser at your stores' registers, with no till app: department keys for amounts sold without an item to track, products by SKU or barcode scanner, cash and card on the counter terminal, receipts, and opening, counting and closing the shift.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        PosConstants.Feature,
     ]
 )]

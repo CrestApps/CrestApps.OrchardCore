@@ -271,7 +271,7 @@ public sealed class VoiceAgentMediaProviderTests
         Assert.Contains("15552223333", handler.Requests[0].Body, StringComparison.Ordinal);
         Assert.Contains("answering_machine_detection", handler.Requests[0].Body, StringComparison.Ordinal);
 
-        var clientState = JsonDocument.Parse(handler.Requests[0].Body).RootElement.GetProperty("client_state").GetString();
+        var clientState = JsonElement.Parse(handler.Requests[0].Body).GetProperty("client_state").GetString();
         var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(clientState));
         Assert.True(TelnyxOutboundBridgeState.TryParse(decoded, out var state));
         Assert.Equal(TelnyxOutboundBridgeState.AiTransferLegIntent, state.Intent);

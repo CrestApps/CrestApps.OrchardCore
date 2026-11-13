@@ -26,6 +26,7 @@
                     <dt class="col-7">@T["Card"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Card)</dd>
                     <dt class="col-7">@T["Gift cards and balances"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Other)</dd>
                     <dt class="col-7">@T["Refunded"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Refunded)</dd>
+                    <dt class="col-7">@T["Tax collected"]</dt><dd class="col-5 text-end">@Money(Model.Summary.Tax)</dd>
                 </dl>
             </div>
         </div>
@@ -45,6 +46,39 @@
                     }
                 </dl>
             </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">@T["Departments"]</div>
+            @if (Model.Summary.Departments is { Count: > 0 } departments)
+            {
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">@T["Department"]</th>
+                                <th scope="col" class="text-end">@T["Count"]</th>
+                                <th scope="col" class="text-end">@T["Before tax"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var department in departments)
+                            {
+                                <tr>
+                                    <td>@department.Name</td>
+                                    <td class="text-end">@department.Quantity</td>
+                                    <td class="text-end">@Money(department.Total)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="card-body"><p class="mb-0 text-body-secondary">@T["Nothing was rung up in a department in this shift."]</p></div>
+            }
         </div>
     </div>
     <div class="col-12">

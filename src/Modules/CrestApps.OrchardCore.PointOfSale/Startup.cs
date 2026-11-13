@@ -39,8 +39,10 @@ public sealed class Startup : StartupBase
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(PosConstants.CollectionName));
         services.AddDataMigration<PosMigrations>()
             .AddIndexProvider<RegisterIndexProvider>()
-            .AddIndexProvider<RegisterShiftIndexProvider>();
+            .AddIndexProvider<RegisterShiftIndexProvider>()
+            .AddIndexProvider<PosDepartmentIndexProvider>();
         services.AddScoped<IRegisterStore, RegisterStore>();
+        services.AddScoped<IPosDepartmentStore, PosDepartmentStore>();
         services.AddScoped<IRegisterShiftStore, RegisterShiftStore>();
         services.AddPersonalDataContributor<RegisterShiftPersonalDataContributor>();
         services.AddScoped<PosShiftService>();
@@ -58,6 +60,13 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<PosAdminMenu>();
         services.AddDisplayDriver<Register, RegisterDisplayDriver>();
         services.AddDisplayDriver<RegisterShift, RegisterShiftDisplayDriver>();
+        services.AddDisplayDriver<PosDepartment, PosDepartmentDisplayDriver>();
+
+        // Departments come before registers, whose keys name them.
+        services.AddRecipeExecutionStep<PosDepartmentsStep>();
+        services.AddScoped<IRecipeStep, PosDepartmentsRecipeStepSchema>();
+        services.AddDeployment<PosDepartmentsDeploymentSource, PosDepartmentsDeploymentStep, SummaryDeploymentStepDisplayDriver<PosDepartmentsDeploymentStep>>();
+        services.AddDeploymentStepSchema<PosDepartmentsDeploymentStepSchema>();
 
         services.AddRecipeExecutionStep<RegistersStep>();
         services.AddScoped<IRecipeStep, RegistersRecipeStepSchema>();

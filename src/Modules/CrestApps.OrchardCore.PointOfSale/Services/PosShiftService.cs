@@ -163,6 +163,7 @@ public sealed class PosShiftService
         ArgumentNullException.ThrowIfNull(shift);
 
         var summary = new RegisterShiftSummary();
+        var departments = new Dictionary<string, RegisterShiftDepartmentTotal>(StringComparer.Ordinal);
 
         for (var skip = 0; ; skip += PageSize)
         {
@@ -184,6 +185,23 @@ public sealed class PosShiftService
                 summary.Other += other;
                 summary.Card += Math.Max(0m, total - cash - other);
                 summary.Refunded += order.RefundedAmount;
+                summary.Tax += order.TaxAmount ?? 0m;
+
+                foreach (var line in order.Lines ?? [])
+                {
+                    if (!PosDepartmentLines.IsDepartmentLine(line))
+                    {
+                        continue;
+                    }
+
+                    if (!departments.TryGetValue(line.ContentItemId, out var department))
+                    {
+                        departments[line.ContentItemId] = department = new RegisterShiftDepartmentTotal { DepartmentId = line.ContentItemId, Name = line.Title };
+                    }
+
+                    department.Quantity += line.Quantity;
+                    department.Total += line.LineTotal;
+                }
             }
 
             if (page.Count < PageSize)
@@ -191,6 +209,10 @@ public sealed class PosShiftService
                 break;
             }
         }
+
+        summary.Departments = [.. departments.Values
+            .OrderByDescending(department => department.Total)
+            .ThenBy(department => department.Name, StringComparer.OrdinalIgnoreCase)];
 
         return summary;
     }

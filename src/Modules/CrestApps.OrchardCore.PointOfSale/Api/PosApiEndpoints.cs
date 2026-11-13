@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.PointOfSale.Api;
 
@@ -37,6 +38,11 @@ internal static class PosApiEndpoints
         group.MapGet("pos/registers", ListRegistersAsync)
             .WithName("ListPosRegisters")
             .WithSummary("Lists the registers the caller may sell at, each with its open shift.");
+
+        group.MapGet("pos/registers/{registerId}/keys", ListKeysAsync)
+            .WithName("ListPosRegisterKeys")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .WithSummary("Lists a register's department keys, in order: an amount keyed in and a key pressed rings the amount up in its department, as a sale line with departmentId and amount.");
 
         group.MapPost("pos/registers/{registerId}/shifts", OpenShiftAsync)
             .WithIdempotency()
@@ -68,7 +74,7 @@ internal static class PosApiEndpoints
             .WithName("StartPosSale")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Rings up products at a register in its open shift, for a known customer or a walk-in buyer. Codes and gift cards go on the sale's checkout with the checkout endpoints.");
+            .WithSummary("Rings up products, and amounts in departments, at a register in its open shift, for a known customer or a walk-in buyer. A line is a product (productId) or an amount in a department (departmentId and amount, each, with a quantity). Codes and gift cards go on the sale's checkout with the checkout endpoints.");
 
         group.MapPost("pos/sales/{checkoutId}/pay", PayAsync)
             .WithIdempotency()
@@ -112,6 +118,36 @@ internal static class PosApiEndpoints
         }
 
         return TypedResults.Ok<IReadOnlyList<ApiRegister>>(registers);
+    }
+
+    private static async Task<Results<Ok<IReadOnlyList<ApiRegisterKey>>, ProblemHttpResult>> ListKeysAsync(
+        string registerId,
+        HttpContext httpContext,
+        IRegisterStore registers,
+        IRegisterShiftStore shiftStore,
+        IPosDepartmentStore departments,
+        PosShiftService shifts,
+        ISiteService siteService)
+    {
+        if (await registers.FindByIdAsync(registerId, httpContext.RequestAborted) is not { } register || !await shifts.MaySellAtAsync(httpContext.User, register))
+        {
+            return ApiProblems.NotFound();
+        }
+
+        // Amounts are in the register's drawer currency: its own, or the store's.
+        var currency = register.Currency ??
+            (await shiftStore.FindOpenAsync(register.ItemId, httpContext.RequestAborted))?.Currency ??
+            (await siteService.GetSettingsAsync<Checkout.Models.CheckoutSettings>()).Currency;
+
+        return TypedResults.Ok<IReadOnlyList<ApiRegisterKey>>([.. PosDepartments.GetKeys(register, await departments.ListOrderedAsync(httpContext.RequestAborted))
+            .Select(key => new ApiRegisterKey(
+                key.Department.ItemId,
+                key.Label,
+                key.Department.Number,
+                key.Department.Color,
+                ApiMoney.From(key.PresetAmount, currency),
+                ApiMoney.From(key.Department.MinimumAmount, currency),
+                ApiMoney.From(key.Department.MaximumAmount, currency)))]);
     }
 
     private static async Task<Results<Created<ApiShift>, ProblemHttpResult>> OpenShiftAsync(
@@ -195,7 +231,7 @@ internal static class PosApiEndpoints
     {
         if (request?.Lines is not { Count: > 0 })
         {
-            return ApiProblems.Validation("lines", "Ring up at least one product.");
+            return ApiProblems.Validation("lines", "Ring up at least one product or department.");
         }
 
         if (await registers.FindByIdAsync(request.RegisterId, httpContext.RequestAborted) is not { } register || !await shifts.MaySellAtAsync(httpContext.User, register))
@@ -499,7 +535,9 @@ internal static class PosApiEndpoints
             shift.OpenedByName,
             shift.OpenedUtc,
             shift.ClosedByName,
-            shift.ClosedUtc);
+            shift.ClosedUtc,
+            ApiMoney.From(summary.Tax, currency),
+            [.. (summary.Departments ?? []).Select(department => new ApiShiftDepartment(department.DepartmentId, department.Name, department.Quantity, ApiMoney.From(department.Total, currency)))]);
     }
 }
 
