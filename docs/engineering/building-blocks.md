@@ -135,6 +135,7 @@ Rules that follow from the table:
 | Structured data (Schema.org) | **Seo** | `IStructuredDataManager`, `IStructuredDataProvider` | Write JSON-LD in a view |
 | AI tools, prompts, profiles | **AI** | `AddCoreAITool`, `Templates/Prompts/*.md` with `ITemplateService` | Hard-code prompts in C# |
 | Search indexes for AI | CrestApps.Core search packages | Core's Azure AI Search and Elasticsearch services | Fork Core's search services into a module |
+| Site-wide, theme-specific or on-demand CSS and JavaScript kept in the site | **Site Resources** | `SiteResource` (named document catalog), `ISiteResourceService` (a page's resources for its admin side and theme, addresses, minify and version), `ISiteResourcesHandler` to change what a page gets, `SiteResourceValidator`, `SiteResourceResponses` for another endpoint that serves resources | Inject `<style>`/`<script>` from a filter, keep CSS in a setting, or write another minifier or versioned asset endpoint |
 
 ### Platform infrastructure
 

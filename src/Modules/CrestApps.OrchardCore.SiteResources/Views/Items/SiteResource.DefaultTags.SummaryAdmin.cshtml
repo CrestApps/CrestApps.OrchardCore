@@ -1,0 +1,50 @@
+@model ShapeViewModel<SiteResource>
+
+@{
+    var resource = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Type"]">
+    @if (resource.Type == SiteResourceType.Script)
+    {
+        <i class="fa-brands fa-js text-secondary me-1" aria-hidden="true"></i>@T["Script"]
+    }
+    else
+    {
+        <i class="fa-brands fa-css3-alt text-secondary me-1" aria-hidden="true"></i>@T["Stylesheet"]
+    }
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pages"]">
+    <i class="fa-solid fa-display text-secondary me-1" aria-hidden="true"></i>@(resource.Target switch
+    {
+        SiteResourceTarget.Admin => T["Admin"],
+        SiteResourceTarget.Everywhere => T["Front end and admin"],
+        _ => T["Front end"],
+    })
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Added to"]">
+    @if (resource.Placement == SiteResourcePlacement.OnDemand)
+    {
+        <i class="fa-solid fa-hand-pointer text-secondary me-1" aria-hidden="true"></i>@T["On demand"]
+    }
+    else
+    {
+        <i class="fa-solid fa-globe text-secondary me-1" aria-hidden="true"></i>@T["Every page"]
+    }
+</span>
+
+@if (resource.Themes is { Count: > 0 })
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Themes"]">
+        <i class="fa-solid fa-palette text-secondary me-1" aria-hidden="true"></i>@string.Join(", ", resource.Themes)
+    </span>
+}
+
+@if (!resource.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

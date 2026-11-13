@@ -25,6 +25,7 @@
     <PackageVersion Include="NLog.Web.AspNetCore" Version="6.2.2" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="NuGet.Versioning" Version="7.9.0" />
+    <PackageVersion Include="NUglify" Version="1.23.7" />
     <PackageVersion Include="OllamaSharp" Version="5.5.0" />
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="Stripe.net" Version="53.1.0" />
@@ -96,6 +97,7 @@
     <PackageVersion Include="OrchardCore.Redis" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Redis.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ResourceManagement" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.ResourceManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Roles.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.AzureAI.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />

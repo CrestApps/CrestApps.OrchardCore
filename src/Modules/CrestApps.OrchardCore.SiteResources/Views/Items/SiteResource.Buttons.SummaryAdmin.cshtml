@@ -1,0 +1,11 @@
+@model ShapeViewModel<SiteResource>
+
+<a asp-action="Edit"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-action="Delete"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-danger btn-sm"
+   data-title="@T["Delete"]"
+   data-message="@T["Are you sure you want to remove this resource? Pages stop loading it, and templates that ask for it by name get nothing."]"
+   data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
