@@ -11,7 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.FileProviders;
 using Moq;
+using OrchardCore.Deployment;
 using OrchardCore.Environment.Shell;
 using OrchardCore.FileStorage;
 using OrchardCore.Json;
@@ -59,6 +61,54 @@ public sealed class RecipeToolScopeTests
         var result = await new CreateOrUpdateContentTypeDefinitionsTool().InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
         Assert.Equal("Recipe was successfully imported", Assert.IsType<string>(result));
+    }
+
+    /// <summary>
+    /// Orchard's recipe executor evaluates a <c>[js: ...]</c> (or <c>[file: ...]</c>) directive in every string of a step
+    /// before the step's handler runs, and the scripts can read the shell configuration and create, change or delete
+    /// content. A step the tool may run must not carry one, or EditContentTypes would read the SMTP password into a display
+    /// name.
+    /// </summary>
+    [Theory]
+    [InlineData("""{"steps":[{"name":"ContentDefinition","ContentTypes":[{"Name":"Leak","DisplayName":"[js: configuration('OrchardCore_Email_Smtp:Password','')]"}]}]}""")]
+    [InlineData("""{"variables":{"secret":"[js: configuration('OrchardCore_Email_Smtp:Password')]"},"steps":[{"name":"ContentDefinition","ContentTypes":[{"Name":"Leak","DisplayName":"[js:variables('secret')]"}]}]}""")]
+    [InlineData("""{"steps":[{"name":"ContentDefinition","ContentTypes":[{"Name":"Leak","Settings":{"Notes":["[file:text('../appsettings.json')]"]}}]}]}""")]
+    public async Task ContentTypeTool_RefusesAScriptDirectiveInAnAllowedStep(string recipe)
+    {
+        var handler = new Mock<IDeploymentTargetHandler>();
+        var services = CreateRecipeServices(handler.Object);
+        var arguments = new AIFunctionArguments(new Dictionary<string, object>
+        {
+            ["recipe"] = recipe,
+        })
+        {
+            Services = services,
+        };
+
+        var result = await new CreateOrUpdateContentTypeDefinitionsTool().InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        var text = Assert.IsType<string>(result);
+        Assert.StartsWith("This tool can't import a recipe with a script or file directive", text, StringComparison.Ordinal);
+        handler.Verify(target => target.ImportFromFileAsync(It.IsAny<IFileProvider>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ContentTypeTool_ImportsTextInBracketsThatIsNotADirective()
+    {
+        var handler = new Mock<IDeploymentTargetHandler>();
+        var services = CreateRecipeServices(handler.Object);
+        var arguments = new AIFunctionArguments(new Dictionary<string, object>
+        {
+            ["recipe"] = """{"steps":[{"name":"ContentDefinition","ContentTypes":[{"Name":"Note","DisplayName":"[Draft] notes","Description":"[10 to 12]"}]}]}""",
+        })
+        {
+            Services = services,
+        };
+
+        var result = await new CreateOrUpdateContentTypeDefinitionsTool().InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Recipe was successfully imported", Assert.IsType<string>(result));
+        handler.Verify(target => target.ImportFromFileAsync(It.IsAny<IFileProvider>()), Times.Once);
     }
 
     [Fact]
@@ -111,7 +161,7 @@ public sealed class RecipeToolScopeTests
         shellHost.VerifyNoOtherCalls();
     }
 
-    private static ServiceProvider CreateRecipeServices()
+    private static ServiceProvider CreateRecipeServices(params IDeploymentTargetHandler[] targetHandlers)
     {
         IRecipeStep[] steps = [CreateStep("ContentDefinition"), CreateStep("Roles"), CreateStep("WorkflowType"), CreateStep("Settings")];
         var tempDirectoryProvider = new Mock<ITempDirectoryProvider>();
@@ -121,7 +171,7 @@ public sealed class RecipeToolScopeTests
 
         return new ServiceCollection()
             .AddSingleton(new RecipeSchemaService(steps))
-            .AddSingleton(new RecipeExecutionService([], Options.Create(new DocumentJsonSerializerOptions()), tempDirectoryProvider.Object, NullLogger<RecipeExecutionService>.Instance))
+            .AddSingleton(new RecipeExecutionService(targetHandlers, Options.Create(new DocumentJsonSerializerOptions()), tempDirectoryProvider.Object, NullLogger<RecipeExecutionService>.Instance))
             .AddSingleton<ILogger<CreateOrUpdateContentTypeDefinitionsTool>>(NullLogger<CreateOrUpdateContentTypeDefinitionsTool>.Instance)
             .AddSingleton<ILogger<CreateOrUpdateWorkflowTool>>(NullLogger<CreateOrUpdateWorkflowTool>.Instance)
             .AddAuthorizedCaller()
