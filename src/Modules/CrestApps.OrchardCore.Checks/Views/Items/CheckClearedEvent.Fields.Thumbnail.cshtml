@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Checks.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CheckClearedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> @T["Check Cleared"]</h4>
+<p>@T["Starts when the bank paid a check."]</p>

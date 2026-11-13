@@ -190,6 +190,7 @@ const sidebars = {
             className: icon('list-checks'),
             items: [
                 'user-manual/finance/bank-accounts',
+                'user-manual/finance/checks',
             ],
         },
         {
@@ -478,6 +479,7 @@ const sidebars = {
             className: icon('list-checks'),
             items: [
                 'modules/banking',
+                'modules/checks',
             ],
         },
         {

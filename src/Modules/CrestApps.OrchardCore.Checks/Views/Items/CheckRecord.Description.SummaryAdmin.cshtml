@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Currencies
+@model ShapeViewModel<CheckRecord>
+
+@{
+    var check = Model.Value;
+}
+
+<div class="admin-list-secondary">
+    @check.PayeeName · @CurrencyScale.Format(check.Amount, check.Currency) · @check.CheckDate.ToString("d")
+    @if (!string.IsNullOrEmpty(check.Memo))
+    {
+        <span> · @check.Memo</span>
+    }
+</div>

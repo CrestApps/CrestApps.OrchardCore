@@ -1,0 +1,87 @@
+{
+  "name": "ChecksPositivePay",
+  "displayName": "Checks: positive pay file",
+  "description": "Adds a draft data pipeline that writes the bank's positive pay file: every check issued, printed, voided, stopped or reissued since the last run, as CSV. Publish it under Tools > Data Pipelines, add the bank's delivery step (SFTP or web API), and schedule it with a workflow timer.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "finance"
+  ],
+  "tags": [
+    "checks",
+    "positive pay",
+    "data pipelines"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Checks",
+        "OrchardCore.DataPipelines"
+      ]
+    },
+    {
+      "name": "DataPipelines",
+      "Pipelines": [
+        {
+          "PipelineId": "checkspositivepayfile00001",
+          "Name": "Positive pay file",
+          "Description": "Every check issued, printed, voided, stopped or reissued since the last successful run, for the bank's positive pay service. A check whose Void column is true must be refused by the bank.",
+          "IsEnabled": true,
+          "Definition": {
+            "Steps": [
+              {
+                "StepId": "register",
+                "Type": "DataSource",
+                "Title": "Check register",
+                "X": 180,
+                "Y": 320,
+                "Properties": {
+                  "DataSourceStepSettings": {
+                    "Source": "Checks",
+                    "DataSet": "CheckRegister",
+                    "Fields": [
+                      "BankAccountName",
+                      "Number",
+                      "CheckDate",
+                      "Amount",
+                      "PayeeName",
+                      "IsVoid",
+                      "Status",
+                      "ModifiedUtc"
+                    ],
+                    "IncrementalField": "ModifiedUtc"
+                  }
+                }
+              },
+              {
+                "StepId": "file",
+                "Type": "CreateFile",
+                "Title": "Positive pay CSV",
+                "X": 480,
+                "Y": 320,
+                "Properties": {
+                  "CreateFileStepSettings": {
+                    "Format": "csv",
+                    "FileName": "positive-pay-{Date:yyyyMMdd-HHmmss}",
+                    "UseDisplayNames": false
+                  }
+                }
+              }
+            ],
+            "Connections": [
+              {
+                "SourceStepId": "register",
+                "SourcePort": "Output",
+                "TargetStepId": "file",
+                "TargetPort": "Input"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
+@model ShapeViewModel<CheckRecord>
+
+@{
+    var check = Model.Value;
+    var canManage = !check.IsHistorical && await AuthorizationService.AuthorizeAsync(User, ChecksPermissions.ManageChecks);
+}
+
+@if (canManage)
+{
+    @if (CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.Reissued))
+    {
+        <a asp-action="Reissue" asp-route-id="@check.ItemId" class="dropdown-item" data-title="@T["Reissue"]" data-message="@T["Replace check {0} with a new check with the next number, such as for a spoiled sheet or a lost check? Check {0} is kept as reissued.", check.Number]" data-url-af="UnsafeUrl">@T["Reissue"]</a>
+    }
+    @if (CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.Cleared))
+    {
+        <a asp-action="Cleared" asp-route-id="@check.ItemId" class="dropdown-item" data-title="@T["Mark cleared"]" data-message="@T["Record that the bank paid check {0} today?", check.Number]" data-url-af="UnsafeUrl">@T["Mark cleared"]</a>
+    }
+    @if (CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.StopPayment))
+    {
+        <a asp-action="Stop" asp-route-id="@check.ItemId" class="dropdown-item text-danger" data-title="@T["Stop payment"]" data-message="@T["Record a stop payment on check {0}? Ask the bank to stop it too.", check.Number]" data-url-af="UnsafeUrl">@T["Stop payment"]</a>
+    }
+    @if (CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.Voided))
+    {
+        <a asp-action="Void" asp-route-id="@check.ItemId" class="dropdown-item text-danger" data-title="@T["Void"]" data-message="@T["Void check {0}? It keeps its number and can't be paid or printed again.", check.Number]" data-url-af="RemoveUrl UnsafeUrl">@T["Void"]</a>
+    }
+}
+else
+{
+    <span class="dropdown-item-text text-secondary">@T["No action"]</span>
+}

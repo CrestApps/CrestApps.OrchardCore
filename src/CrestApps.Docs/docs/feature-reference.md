@@ -232,6 +232,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Banking` | Banking | [Banking](./modules/banking) |
+| `CrestApps.OrchardCore.Checks` | Checks | [Checks](./modules/checks) |
 
 ## Geo
 

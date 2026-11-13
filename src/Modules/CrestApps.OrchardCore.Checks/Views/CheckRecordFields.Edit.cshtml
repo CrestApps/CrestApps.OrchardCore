@@ -1,0 +1,59 @@
+@model CheckRecordViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The check"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="BankAccountId">
+            <label asp-for="BankAccountId" class="ocat-label ocat-label-required">@T["Bank account"]</label>
+            <div class="ocat-end">
+                <select asp-for="BankAccountId" asp-items="Model.BankAccountOptions" class="form-select"></select>
+                <span asp-validation-for="BankAccountId" class="text-danger"></span>
+                <span class="hint">@T["One of the business's own accounts. The check gets the account's next number."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="PayeeName">
+            <label asp-for="PayeeName" class="ocat-label ocat-label-required">@T["Pay to the order of"]</label>
+            <div class="ocat-end">
+                <input asp-for="PayeeName" class="form-control" maxlength="255" />
+                <span asp-validation-for="PayeeName" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Amount">
+            <label asp-for="Amount" class="ocat-label ocat-label-required">@T["Amount"]</label>
+            <div class="ocat-end">
+                <input asp-for="Amount" class="form-control" inputmode="decimal" />
+                <span asp-validation-for="Amount" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="CheckDate">
+            <label asp-for="CheckDate" class="ocat-label ocat-label-required">@T["Date"]</label>
+            <div class="ocat-end">
+                <input asp-for="CheckDate" class="form-control" type="date" />
+                <span asp-validation-for="CheckDate" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Memo">
+            <label asp-for="Memo" class="ocat-label">@T["Memo"]</label>
+            <div class="ocat-end">
+                <input asp-for="Memo" class="form-control" maxlength="255" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Payee's address"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="PayeeAddressLine1" class="ocat-label">@T["Address"]</label>
+            <div class="ocat-end">
+                <input asp-for="PayeeAddressLine1" class="form-control mb-1" maxlength="255" placeholder="@T["Street"]" />
+                <input asp-for="PayeeAddressLine2" class="form-control mb-1" maxlength="255" placeholder="@T["Suite or unit"]" />
+                <input asp-for="PayeeCity" class="form-control mb-1" maxlength="100" placeholder="@T["City"]" />
+                <input asp-for="PayeeRegion" class="form-control mb-1" maxlength="100" placeholder="@T["State"]" />
+                <input asp-for="PayeePostalCode" class="form-control" maxlength="20" placeholder="@T["Postal code"]" />
+                <span class="hint">@T["Optional. It prints for a window envelope."]</span>
+            </div>
+        </div>
+    </div>
+</div>
