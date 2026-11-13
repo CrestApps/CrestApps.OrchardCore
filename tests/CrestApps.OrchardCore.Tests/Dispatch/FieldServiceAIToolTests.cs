@@ -33,13 +33,13 @@ public sealed class FieldServiceAIToolTests
             ["street"] = "1 Main St",
             ["city"] = "Boston",
         });
-        var number = JsonDocument.Parse(created).RootElement.GetProperty("number").GetString();
+        var number = JsonElement.Parse(created).GetProperty("number").GetString();
         var status = await InvokeAsync<WorkOrderStatusTool>(kit, CalendarTestHarness.User("agent", WorkOrdersPermissions.ViewWorkOrders.Name), new() { ["number"] = number });
 
         Assert.Equal("You can't create work orders.", refused);
         Assert.StartsWith("WO-", number, StringComparison.Ordinal);
-        Assert.Equal("Urgent", JsonDocument.Parse(status).RootElement.GetProperty("priority").GetString());
-        Assert.Single(JsonDocument.Parse(status).RootElement.GetProperty("visits").EnumerateArray());
+        Assert.Equal("Urgent", JsonElement.Parse(status).GetProperty("priority").GetString());
+        Assert.Single(JsonElement.Parse(status).GetProperty("visits").EnumerateArray());
     }
 
     [Fact]
@@ -58,9 +58,9 @@ public sealed class FieldServiceAIToolTests
         var tooLate = await InvokeAsync<DispatchRescheduleVisitTool>(kit, dispatcher, new() { ["number"] = visit.Number, ["start"] = "2026-11-09T21:00" });
         var after = Assert.Single(await kit.VisitsOfAsync(workOrder.ItemId));
 
-        Assert.Equal("Ana Field", JsonDocument.Parse(candidates).RootElement.GetProperty("candidates")[0].GetProperty("name").GetString());
-        Assert.Equal("2026-11-09T10:00", JsonDocument.Parse(moved).RootElement.GetProperty("start").GetString());
-        Assert.True(JsonDocument.Parse(tooLate).RootElement.TryGetProperty("refused", out _));
+        Assert.Equal("Ana Field", JsonElement.Parse(candidates).GetProperty("candidates")[0].GetProperty("name").GetString());
+        Assert.Equal("2026-11-09T10:00", JsonElement.Parse(moved).GetProperty("start").GetString());
+        Assert.True(JsonElement.Parse(tooLate).TryGetProperty("refused", out _));
         Assert.Equal(DispatchKit.Monday(10), after.StartUtc);
         Assert.Equal([ana.ItemId], after.WorkerIds);
     }
@@ -80,9 +80,9 @@ public sealed class FieldServiceAIToolTests
         var untouched = Assert.Single(await kit.VisitsOfAsync(workOrder.ItemId));
         var applied = await InvokeAsync<DispatchOptimizeTool>(kit, dispatcher, new() { ["date"] = "2026-11-09", ["includeUnscheduled"] = true, ["apply"] = new[] { visit.Number } });
 
-        Assert.Equal("Ana Field", JsonDocument.Parse(proposal).RootElement.GetProperty("moves")[0].GetProperty("to").GetString());
+        Assert.Equal("Ana Field", JsonElement.Parse(proposal).GetProperty("moves")[0].GetProperty("to").GetString());
         Assert.Equal(VisitStatus.Unscheduled, untouched.Status);
-        Assert.Equal([visit.ItemId], JsonDocument.Parse(applied).RootElement.GetProperty("applied").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal([visit.ItemId], JsonElement.Parse(applied).GetProperty("applied").EnumerateArray().Select(item => item.GetString()));
         Assert.Equal(VisitStatus.Scheduled, Assert.Single(await kit.VisitsOfAsync(workOrder.ItemId)).Status);
     }
 
@@ -100,7 +100,7 @@ public sealed class FieldServiceAIToolTests
 
         var caller = await InvokeAsync<WhereIsMyTechnicianTool>(kit, new ClaimsPrincipal(), new() { ["phone"] = "5550100123" });
         var stranger = await InvokeAsync<WhereIsMyTechnicianTool>(kit, new ClaimsPrincipal(), new() { ["phone"] = "5550199999" });
-        var found = JsonDocument.Parse(caller).RootElement.GetProperty("visits")[0];
+        var found = JsonElement.Parse(caller).GetProperty("visits")[0];
 
         Assert.Equal("Ana", found.GetProperty("technician").GetString());
         Assert.Equal("Scheduled", found.GetProperty("status").GetString());
