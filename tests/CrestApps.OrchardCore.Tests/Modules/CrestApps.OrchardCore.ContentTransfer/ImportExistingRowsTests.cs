@@ -65,6 +65,23 @@ public sealed class ImportExistingRowsTests
         Assert.Equal(1, progress.ImportedCount);
     }
 
+    [Fact]
+    public async Task ARowNamingAnItemWhoseLatestVersionIsADraft_UpdatesThatDraft_AndCreatesNothing()
+    {
+        // An import without "publish" leaves its items as drafts. Importing the same file again must update them, not
+        // create a second item with the same id and the uploader as its owner.
+        var article = new ContentItem { ContentItemId = "4xarticle00000000000000000", ContentType = "Article", Published = false, Latest = true, Owner = "owner", Author = "owner" };
+        var site = new FakeContentSite(article);
+        var progress = new ImportFileProcessStatsPart();
+
+        await ImportAsync(site, progress, article.ContentItemId);
+
+        Assert.Empty(site.Created);
+        Assert.Equal([article.ContentItemId], site.Saved);
+        Assert.Equal(("owner", "owner"), (article.Owner, article.Author));
+        Assert.Equal(1, progress.ImportedCount);
+    }
+
     private static Task ImportAsync(FakeContentSite site, ImportFileProcessStatsPart progress, string rowId)
     {
         var dataTable = new DataTable();
@@ -97,7 +114,7 @@ public sealed class ImportExistingRowsTests
     /// <summary>
     /// A content manager that loads items the way Orchard Core's does: ids are matched ignoring case, as on a
     /// case-insensitive collation, and asking for <see cref="VersionOptions.DraftRequired"/> turns the published
-    /// version of a type that is not versionable into a draft.
+    /// version of a type that is not versionable into a draft and leaves out an item whose latest version is a draft.
     /// </summary>
     private sealed class FakeContentSite
     {
@@ -110,20 +127,7 @@ public sealed class ImportExistingRowsTests
             var manager = new Mock<IContentManager>();
 
             manager.Setup(x => x.GetAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<VersionOptions>()))
-                .ReturnsAsync((IEnumerable<string> ids, VersionOptions options) =>
-                {
-                    var found = _items.Where(item => ids.Contains(item.ContentItemId, StringComparer.OrdinalIgnoreCase)).ToList();
-
-                    if (options?.IsDraftRequired == true)
-                    {
-                        foreach (var item in found)
-                        {
-                            item.Published = false;
-                        }
-                    }
-
-                    return found;
-                });
+                .ReturnsAsync((IEnumerable<string> ids, VersionOptions options) => Get(ids, options ?? VersionOptions.Published));
 
             manager.Setup(x => x.NewAsync(It.IsAny<string>()))
                 .ReturnsAsync((string contentType) => new ContentItem { ContentItemId = "4xnew0000000000000000000000", ContentType = contentType });
@@ -145,5 +149,36 @@ public sealed class ImportExistingRowsTests
         public List<string> Created { get; } = [];
 
         public List<string> Saved { get; } = [];
+
+        // DefaultContentManager.GetAsync(ids, options) of the pinned Orchard Core 4.0 preview: Latest and DraftRequired read
+        // the latest versions, Published the published ones. DraftRequired then returns only the items that were
+        // published, each made a draft (a type that is not versionable is unpublished in place); an item whose latest
+        // version is already a draft is left out of the result.
+        private List<ContentItem> Get(IEnumerable<string> ids, VersionOptions options)
+        {
+            var named = _items.Where(item => ids.Contains(item.ContentItemId, StringComparer.OrdinalIgnoreCase));
+
+            if (options.IsPublished && !options.IsLatest && !options.IsDraft && !options.IsDraftRequired)
+            {
+                return [.. named.Where(item => item.Published)];
+            }
+
+            var latest = named.Where(item => item.Latest).ToList();
+
+            if (!options.IsDraftRequired)
+            {
+                return options.IsDraft ? [.. latest.Where(item => !item.Published)] : latest;
+            }
+
+            var drafts = new List<ContentItem>();
+
+            foreach (var item in latest.Where(item => item.Published))
+            {
+                item.Published = false;
+                drafts.Add(item);
+            }
+
+            return drafts;
+        }
     }
 }
