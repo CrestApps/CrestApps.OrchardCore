@@ -104,6 +104,7 @@ namespace CrestApps.OrchardCore.Payments
     {
         protected PaymentEventContextBase() { }
         public System.Collections.Generic.Dictionary<string, object> Data { get; }
+        public string EventId { get; set; }
         public string GatewayId { get; set; }
         public CrestApps.OrchardCore.Payments.GatewayMode GatewayMode { get; set; }
     }

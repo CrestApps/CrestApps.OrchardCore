@@ -146,6 +146,8 @@ public sealed class Startup : StartupBase
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer, 5, TimeSpan.FromHours(1), blockDuration: TimeSpan.FromHours(1))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineStore, 30, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(30))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineAttempt, 3, TimeSpan.FromHours(24), blockDuration: TimeSpan.FromHours(24))
+            // Stripe redelivers an event for up to three days.
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineEvent, 1, TimeSpan.FromDays(3))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentStatus, 120, TimeSpan.FromMinutes(5))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, 60, TimeSpan.FromHours(1))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CouponCode, 10, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(10))

@@ -23,7 +23,7 @@ namespace CrestApps.OrchardCore.Stripe.Services;
 /// authoritative API rather than trusting a cached webhook so an obligation is never marked paid when the
 /// gateway actually failed.
 /// </summary>
-public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, ICheckoutPaymentRefundProvider, ICheckoutSavedPaymentMethodProvider
+public sealed partial class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, ICheckoutPaymentRefundProvider, ICheckoutSavedPaymentMethodProvider
 {
     private readonly IStripePaymentIntentService _paymentIntentService;
     private readonly IStripePaymentMethodService _paymentMethodService;
@@ -424,13 +424,18 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
             return PaymentCancelResult.Success();
         }
 
-        if (IsSubscriptionReference(attempt.ProviderReference))
+        if (IsSubscriptionReference(attempt.ProviderReference) && !context.OnlyIfUnpaid)
         {
             return await CancelSubscriptionAsync(attempt);
         }
 
         try
         {
+            if (context.OnlyIfUnpaid)
+            {
+                return await CancelUnpaidAsync(attempt);
+            }
+
             var intent = await _paymentIntentService.RetrieveAsync(new RetrievePaymentIntentRequest
             {
                 PaymentIntentId = attempt.ProviderReference,
@@ -871,28 +876,6 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     // Rolls back a recurring agreement. Unlike a single charge there is nothing to void, so the agreement is
     // ended immediately: the checkout it belonged to is not completing, so the customer never gets what the
     // future cycles would have paid for.
-    private async Task<PaymentCancelResult> CancelSubscriptionAsync(PaymentAttempt attempt)
-    {
-        try
-        {
-            await _subscriptionService.CancelAsync(new CancelSubscriptionRequest
-            {
-                SubscriptionId = attempt.ProviderReference,
-                AtPeriodEnd = false,
-                Reason = "The checkout this subscription belonged to was rolled back.",
-                IdempotencyKey = "cancel_" + attempt.ItemId,
-            });
-
-            return PaymentCancelResult.Success();
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(exception, "Failed to cancel Stripe subscription '{SubscriptionId}' for checkout attempt '{AttemptId}'.", attempt.ProviderReference, attempt.ItemId);
-
-            return PaymentCancelResult.Failure(exception.Message);
-        }
-    }
-
     // Refunds a charge that already succeeded for an attempt the checkout is rolling back, and records that
     // refund in the durable refund ledger. Writing the ledger entry is not bookkeeping niceness: without it the
     // gateway's own 'charge.refunded' notification finds no local request, and the reconciliation service has to

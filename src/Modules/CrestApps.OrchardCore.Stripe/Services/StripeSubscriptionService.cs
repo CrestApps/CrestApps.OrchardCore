@@ -186,8 +186,16 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
             new SubscriptionCancelOptions
             {
                 CancellationDetails = new SubscriptionCancellationDetailsOptions { Comment = model.Reason },
+                Expand = model.VoidOpenInvoice ? ["latest_invoice"] : null,
             },
             model.ToRequestOptions());
+
+        // A canceled subscription's open invoice is no longer collected but can still be paid; voiding it cancels its
+        // PaymentIntent. Voiding an invoice twice fails, so only an open one is voided.
+        if (model.VoidOpenInvoice && canceled.LatestInvoice is { Status: "open" } openInvoice)
+        {
+            await new InvoiceService(_stripeClient).VoidInvoiceAsync(openInvoice.Id);
+        }
 
         return ToDetails(canceled);
     }

@@ -54,7 +54,7 @@ public sealed partial class ExceptionHandlingRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Marketplace/Controllers/VendorPortalController.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Handlers/SmsOmnichannelEventHandler.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Reports/Designer/Recipes/ReportDesignsRecipeStep.cs"] = 1,
-        ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeCheckoutPaymentProvider.cs"] = 7,
+        ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeCheckoutPaymentProvider.cs"] = 6,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeRecurringPaymentProvider.cs"] = 4,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeTerminalPaymentProvider.cs"] = 1,
     };

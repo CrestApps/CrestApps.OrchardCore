@@ -352,9 +352,8 @@ public static class CreateWebhookEndpoint
         }
     }
 
-    // Dispatches the event to every payment handler directly (rather than the swallow-and-log
-    // InvokeAsync helper) so that a handler failure surfaces to the caller and triggers a Stripe retry. It is the
-    // one path of both the inline webhook and the inbox, so the handlers' time is measured here.
+    // Calls every payment handler directly, not through the swallow-and-log InvokeAsync helper, so a handler failure
+    // makes Stripe retry. The inline webhook and the inbox both come through here, so the handlers' time is measured here.
     internal static async Task DispatchAsync(Event stripeEvent, IEnumerable<IPaymentEvent> paymentEvents, CancellationToken cancellationToken = default)
     {
         using var telemetry = StripeTelemetry.StartWebhookDispatch(GetEventTypeTag(stripeEvent.Type), stripeEvent.Id);
@@ -443,9 +442,7 @@ public static class CreateWebhookEndpoint
                     break;
                 }
 
-                // Only a renewal of an existing subscription is reported here. A failed first payment is not a
-                // subscription at risk: the checkout simply never completes, and the existing payment-failure
-                // path already covers it.
+                // Any subscription invoice: a renewal starts dunning, a declined first invoice counts for card testing.
                 var failedSubscriptionDetails = failedInvoice.Parent?.SubscriptionDetails;
                 var failedSubscriptionId = failedSubscriptionDetails?.SubscriptionId ?? failedSubscriptionDetails?.Subscription?.Id;
 
@@ -462,6 +459,7 @@ public static class CreateWebhookEndpoint
                     Currency = failedInvoice.Currency,
                     GatewayMode = failedInvoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
                     GatewayId = StripeConstants.ProcessorKey,
+                    EventId = stripeEvent.Id,
                     AttemptCount = (int?)failedInvoice.AttemptCount,
                     NextAttemptUtc = failedInvoice.NextPaymentAttempt?.ToUniversalTime(),
                 };
@@ -592,6 +590,7 @@ public static class CreateWebhookEndpoint
                     TransactionId = failedIntent.Id,
                     GatewayMode = failedIntent.Livemode ? GatewayMode.Live : GatewayMode.Testing,
                     GatewayId = StripeConstants.ProcessorKey,
+                    EventId = stripeEvent.Id,
                     Currency = failedIntent.Currency,
                     Amount = StripeCurrency.FromMinorUnits(failedIntent.Amount, failedIntent.Currency),
                     FailureCode = failedIntent.LastPaymentError?.Code,

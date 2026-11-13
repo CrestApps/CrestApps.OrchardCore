@@ -46,6 +46,7 @@ namespace CrestApps.OrchardCore.Checkout
             public const string PaymentBeginNetwork = "payment-begin-network";
             public const string PaymentDeclineAttempt = "payment-decline-attempt";
             public const string PaymentDeclineCustomer = "payment-decline-customer";
+            public const string PaymentDeclineEvent = "payment-decline-event";
             public const string PaymentDeclineNetwork = "payment-decline-network";
             public const string PaymentDeclineStore = "payment-decline-store";
             public const string PaymentStatus = "payment-status";
@@ -790,6 +791,7 @@ namespace CrestApps.OrchardCore.Checkout.Services
     {
         public CancelPaymentContext() { }
         public CrestApps.OrchardCore.Transactions.Models.PaymentAttempt Attempt { get; set; }
+        public bool OnlyIfUnpaid { get; set; }
         public string Reason { get; set; }
         public CrestApps.OrchardCore.Checkout.CheckoutSession Session { get; set; }
     }
