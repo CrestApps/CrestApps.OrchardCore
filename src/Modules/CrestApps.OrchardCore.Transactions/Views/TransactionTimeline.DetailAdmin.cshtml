@@ -1,9 +1,18 @@
+@using CrestApps.OrchardCore.Currencies
 @using CrestApps.OrchardCore.Transactions.Core.Services
 @model TransactionDetailViewModel
 @inject TransactionDisplayText DisplayText
 
 @{
     var transaction = Model.Transaction;
+    var entriesById = transaction.Events
+        .Where(entry => !string.IsNullOrEmpty(entry.Id))
+        .GroupBy(entry => entry.Id, StringComparer.Ordinal)
+        .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+    var reversalsById = transaction.Events
+        .Where(entry => entry.Type == TransactionEventType.Reversed && !string.IsNullOrEmpty(entry.ReversesEventId))
+        .GroupBy(entry => entry.ReversesEventId, StringComparer.Ordinal)
+        .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
 }
 
 <div class="card">
@@ -13,12 +22,48 @@
         {
             @foreach (var evt in transaction.Events.OrderByDescending(x => x.CreatedUtc))
             {
+                var takenBack = !string.IsNullOrEmpty(evt.Id) && reversalsById.ContainsKey(evt.Id);
+                var canTakeBack = Model.CanManage &&
+                    !takenBack &&
+                    !(evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.PaymentAttemptId)) &&
+                    TransactionStateMachine.CanReverse(transaction, evt);
+
                 <li class="list-group-item">
                     <div class="d-flex justify-content-between">
-                        <strong>@DisplayText.EventTypeName(evt.Type)</strong>
+                        <strong>
+                            @DisplayText.EventTypeName(evt.Type)
+                            @if (takenBack)
+                            {
+                                <span class="badge ta-badge fw-normal ms-1" data-bs-toggle="tooltip" title="@T["This entry was taken back by a later entry."]"><i class="fa-solid fa-arrow-rotate-left text-warning me-1" aria-hidden="true"></i>@T["Taken back"]</span>
+                            }
+                        </strong>
                         <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: evt.CreatedUtc, Format: "g"))</span>
                     </div>
                     <div>@evt.Message</div>
+                    @if (!string.IsNullOrEmpty(evt.DocumentNumber))
+                    {
+                        <div class="text-muted small">@T["Document: {0} {1}", evt.DocumentKind, evt.DocumentNumber]</div>
+                    }
+                    @if (evt.Type == TransactionEventType.PaymentRecorded && (!string.IsNullOrEmpty(evt.PaymentMethod) || evt.ReceivedUtc.HasValue))
+                    {
+                        <div class="text-muted small">
+                            @if (!string.IsNullOrEmpty(evt.PaymentMethod))
+                            {
+                                @T["Paid by {0}.", evt.PaymentMethod]
+                            }
+                            @if (evt.ReceivedUtc.HasValue)
+                            {
+                                @T["Received"] @await DisplayAsync(await New.DateTime(Utc: evt.ReceivedUtc.Value, Format: "g"))
+                            }
+                        </div>
+                    }
+                    @if (evt.Type == TransactionEventType.Reversed && !string.IsNullOrEmpty(evt.ReversesEventId) && entriesById.TryGetValue(evt.ReversesEventId, out var reversed))
+                    {
+                        <div class="text-muted small">
+                            @T["Takes back the {0} of {1} {2} recorded on", DisplayText.EventTypeName(reversed.Type), transaction.Currency, CurrencyScale.Format(reversed.Amount ?? 0m, transaction.Currency)]
+                            @await DisplayAsync(await New.DateTime(Utc: reversed.CreatedUtc, Format: "g"))
+                        </div>
+                    }
                     @if (Model.ShowReceipts && evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id))
                     {
                         <a class="small" asp-action="Index" asp-controller="TransactionReceipt" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@evt.Id">@T["View receipt"]</a>
@@ -26,6 +71,20 @@
                     @if (!string.IsNullOrEmpty(evt.ActorName))
                     {
                         <div class="text-muted small">@T["By {0}", evt.ActorName]</div>
+                    }
+                    @if (canTakeBack)
+                    {
+                        <form asp-action="Reverse" asp-controller="Admin" asp-area="CrestApps.OrchardCore.Transactions" method="post" class="mt-2">
+                            <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                            <input type="hidden" name="eventId" value="@evt.Id" />
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" name="reason" required maxlength="500" placeholder="@T["Why it is taken back (required)"]" aria-label="@T["Why it is taken back"]" />
+                                <button type="submit" class="btn btn-outline-warning"
+                                        data-url-af="RemoveUrl" data-title="@T["Take back"]" data-message="@T["Take back this entry? What it paid or took off is owed again. Both entries stay on the timeline."]" data-ok-text="@T["Take back"]" data-cancel-text="@T["Cancel"]">
+                                    @T["Take back"]
+                                </button>
+                            </div>
+                        </form>
                     }
                 </li>
             }

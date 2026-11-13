@@ -25,5 +25,6 @@ public sealed class WebhooksStartup : StartupBase
         services.AddWebhookEvent(TransactionsConstants.WebhookEvents.Overdue, "Transaction overdue", "Transactions");
         services.AddWebhookEvent(TransactionsConstants.WebhookEvents.Canceled, "Transaction canceled", "Transactions");
         services.AddWebhookEvent(TransactionsConstants.WebhookEvents.Refunded, "Transaction refunded", "Transactions");
+        services.AddWebhookEvent(TransactionsConstants.WebhookEvents.EntryReversed, "Transaction entry taken back", "Transactions");
     }
 }

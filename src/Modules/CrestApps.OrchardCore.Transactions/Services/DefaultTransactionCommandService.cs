@@ -455,7 +455,8 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
             result.Event = reversal;
 
-            return null;
+            // Told after the save, so a workflow or webhook never hears of a reversal that was not kept.
+            return () => _serviceProvider.GetServices<ITransactionEventHandler>().ReversedAsync(transaction, reversal, entry, _logger, cancellationToken);
         }, saveOnFailure: false, save: true, cancellationToken);
     }
 

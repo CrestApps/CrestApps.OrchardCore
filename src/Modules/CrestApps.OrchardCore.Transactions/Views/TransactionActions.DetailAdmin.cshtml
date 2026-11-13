@@ -3,9 +3,11 @@
 @using CrestApps.OrchardCore.Payments
 @using CrestApps.OrchardCore.Transactions.Core
 @model TransactionDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
 
 @{
     var transaction = Model.Transaction;
+    var localNow = (await LocalClock.GetLocalNowAsync()).DateTime.ToString("yyyy-MM-ddTHH:mm", System.Globalization.CultureInfo.InvariantCulture);
 
     // The same rules the actions apply, so a button is only offered when pressing it would work.
     var canRecordPayment = TransactionStateMachine.CanRecordPayment(transaction);
@@ -65,12 +67,21 @@
                     <input type="number" step="@amountStep" min="0" class="form-control" id="Amount" name="Amount" value="@CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency).ToString(System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canRecordPayment)" />
                 </div>
                 <div class="mb-2">
+                    <label class="form-label" for="PaymentMethod">@T["Payment method"]</label>
+                    <input type="text" class="form-control" id="PaymentMethod" name="PaymentMethod" maxlength="100" placeholder="@T["Bank transfer, check, cash (optional)"]" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label" for="ReceivedAt">@T["Received"]</label>
+                    <input type="datetime-local" class="form-control" id="ReceivedAt" name="ReceivedAt" value="@localNow" />
+                    <div class="form-text">@T["When the money arrived, in the site's time zone."]</div>
+                </div>
+                <div class="mb-2">
                     <label class="form-label" for="Reference">@T["Reference"]</label>
                     <input type="text" class="form-control" id="Reference" name="Reference" placeholder="@T["Check number or transfer reference (optional)"]" />
                 </div>
                 <div class="mb-2">
                     <label class="form-label" for="Note">@T["Note"]</label>
-                    <input type="text" class="form-control" id="Note" name="Note" placeholder="@T["How the payment was received"]" />
+                    <input type="text" class="form-control" id="Note" name="Note" placeholder="@T["Anything else about the payment (optional)"]" />
                 </div>
                 <button type="submit" class="btn btn-success" disabled="@(!canRecordPayment)"
                         data-url-af="RemoveUrl" data-title="@T["Record payment"]" data-message="@T["Record this payment against the transaction? It counts as received."]" data-ok-text="@T["Record payment"]" data-cancel-text="@T["Cancel"]">

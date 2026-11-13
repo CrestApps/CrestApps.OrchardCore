@@ -25,6 +25,7 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<TransactionOverdueEvent, TransactionEventActivityDisplayDriver<TransactionOverdueEvent>>();
         services.AddActivity<TransactionCanceledEvent, TransactionEventActivityDisplayDriver<TransactionCanceledEvent>>();
         services.AddActivity<TransactionRefundedEvent, TransactionEventActivityDisplayDriver<TransactionRefundedEvent>>();
+        services.AddActivity<TransactionEntryReversedEvent, TransactionEventActivityDisplayDriver<TransactionEntryReversedEvent>>();
 
         services.AddActivity<RecordTransactionPaymentTask, TransactionTaskDisplayDriver<RecordTransactionPaymentTask>>();
         services.AddActivity<CancelTransactionTask, TransactionTaskDisplayDriver<CancelTransactionTask>>();

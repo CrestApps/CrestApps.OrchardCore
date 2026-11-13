@@ -24,6 +24,17 @@ public class RecordPaymentViewModel
     public string Reference { get; set; }
 
     /// <summary>
+    /// Gets or sets how the payment was made, such as a bank transfer or a check.
+    /// </summary>
+    public string PaymentMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the payment was received, as a wall-clock time in the site's time zone; <see langword="null"/>
+    /// for now.
+    /// </summary>
+    public DateTime? ReceivedAt { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional note describing how the payment was received.
     /// </summary>
     public string Note { get; set; }

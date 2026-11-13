@@ -74,6 +74,7 @@ The transaction's page has a **Summary** card and a **Timeline** on the left, an
 | Field | What it shows |
 | --- | --- |
 | **Owner** | The customer who owes the money. |
+| **Payer** | Who owes the money, such as a business account whose members may pay it, with its e-mail address. |
 | **Source** | Where the transaction came from. |
 | **Reference** | What the transaction is for, such as the order or plan it belongs to. |
 | **Total** | The full amount. |
@@ -81,6 +82,9 @@ The transaction's page has a **Summary** card and a **Timeline** on the left, an
 | **Paid** | How much has been paid so far. |
 | **Refunded** | How much has been given back, once anything has. |
 | **Outstanding** | How much is still owed: the total, less what was adjusted and what was paid. |
+| **Tax** | The tax by name and rate, when the transaction was recorded with a breakdown. |
+| **Exchange rate** | What one unit of the transaction's currency was worth in your reporting currency, when it was recorded with a rate. |
+| **Part payments** | Whether the customer may pay part of the balance online, and the smallest amount they may pay. |
 | **Created** | When the transaction was recorded. |
 | **Due** | When the payment is due, if it has a due date. |
 | **Invoice** | The invoice number, such as *INV-1001*, once the customer has been sent an invoice. With the **Receipts** feature on, it opens the [printable invoice](invoices-and-receipts.md#print-an-invoice). |
@@ -97,15 +101,26 @@ Use this when the customer paid by cash, check or bank transfer.
 
 1. Open the transaction from **Commerce > Transactions**.
 2. In **Record an offline payment**, check the **Amount**. It starts at the full outstanding balance; change it for a part payment.
-3. Optionally, type the check number or transfer reference in **Reference**. It is recorded with the payment.
-4. Optionally, describe how the payment was received in **Note**.
-5. Click **Record payment**, then click **Record payment** again in the confirmation box.
+3. Optionally, type how the customer paid in **Payment method**, such as *Bank transfer*, and change **Received** to when the money arrived. **Received** starts at now, in your site's time zone.
+4. Optionally, type the check number or transfer reference in **Reference**. It is recorded with the payment.
+5. Optionally, add anything else about the payment in **Note**.
+6. Click **Record payment**, then click **Record payment** again in the confirmation box.
 
 If the payment covers the balance, the transaction becomes **Paid**. If it covers part of it, the transaction becomes **Partially paid**. An amount larger than the balance is recorded as the balance, so the customer never owes a negative amount. With the **Send Payment Receipts** feature on, the customer is sent a receipt.
 
 :::note[The customer sees the note]
 The note you type on a recorded payment becomes part of the payment's entry in the customer's history. Write it for the customer, for example *Paid by bank transfer*. For something only staff should read, use **Add a note** instead.
 :::
+
+### Take back a payment or an adjustment
+
+Use this when a payment you recorded did not arrive after all (a check bounced) or was recorded on the wrong transaction, or when an adjustment should not have been made. Nothing is deleted: the entry stays on the timeline, a **Taken back** entry is added, and what it paid or took off is owed again.
+
+1. Open the transaction and find the entry in the **Timeline**.
+2. Type why it is taken back in the box under the entry. A reason is required.
+3. Click **Take back**, then click **Take back** in the confirmation box.
+
+The entry is marked **Taken back**, and the transaction is **Outstanding** or **Partially paid** again when it was **Paid**. **Take back** is offered only on a payment recorded by hand and on an adjustment that was not taken back already. A payment the customer made online cannot be taken back; refund it instead.
 
 ### Mark a transaction as paid
 

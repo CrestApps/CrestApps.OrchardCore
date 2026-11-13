@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.BusinessDocuments;
+using CrestApps.OrchardCore.BusinessDocuments.Core;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Receipts.Core;
@@ -33,6 +34,10 @@ public sealed class Startup : StartupBase
         services.AddStoreLocations();
         services.AddScoped<IStoreSetupStep, StoreDetailsSetupStep>();
         services.AddMoneyFormatter();
+
+        // The business document services a receipt is rendered with, registered here too so a site that had Receipts on
+        // before it depended on Business Documents prints receipts before that feature is recorded as enabled.
+        services.AddBusinessDocumentsCore();
         services.AddScoped<ReceiptBusinessDocumentMapper>();
         services.AddScoped<IReceiptHtmlRenderer, DefaultReceiptHtmlRenderer>();
         services.AddBusinessDocumentKind(ReceiptsConstants.BusinessDocumentKind, _receiptKindTitle);

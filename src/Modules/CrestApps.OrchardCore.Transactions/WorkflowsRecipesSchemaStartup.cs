@@ -21,6 +21,7 @@ public sealed class WorkflowsRecipesSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<TransactionOverdueEventSchema>()
             .AddWorkflowActivitySchema<TransactionCanceledEventSchema>()
             .AddWorkflowActivitySchema<TransactionRefundedEventSchema>()
+            .AddWorkflowActivitySchema<TransactionEntryReversedEventSchema>()
             .AddWorkflowActivitySchema<RecordTransactionPaymentTaskSchema>()
             .AddWorkflowActivitySchema<CancelTransactionTaskSchema>()
             .AddWorkflowActivitySchema<AdjustTransactionTaskSchema>();

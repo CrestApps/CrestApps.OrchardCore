@@ -285,6 +285,68 @@ public sealed class TransactionLedgerCommandsTests
             UpdatedUtc = _now.AddDays(-10),
         };
 
+    /// <summary>
+    /// A system that mirrors payments must learn that one was withdrawn: the handlers are told once, after the save.
+    /// </summary>
+    [Fact]
+    public async Task ReverseAsync_TellsTheEventHandlersWhatWasTakenBack()
+    {
+        // Arrange
+        var context = new LedgerContext(CreateOutstanding());
+        var payment = await context.Service.RecordPaymentAsync("transaction-1", new TransactionPaymentRequest { Amount = 40m }, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await context.Service.ReverseAsync("transaction-1", payment.Event.Id, "Check bounced", TestContext.Current.CancellationToken);
+        await context.Service.ReverseAsync("transaction-1", payment.Event.Id, "Again", TestContext.Current.CancellationToken);
+
+        // Assert
+        var reversed = Assert.Single(context.Events.Reversed);
+        Assert.Equal(result.Event.Id, reversed.ReversalId);
+        Assert.Equal(payment.Event.Id, reversed.ReversedId);
+    }
+
+    /// <summary>
+    /// The newer events have default implementations, so a handler written against the first four still compiles and
+    /// is not called for them.
+    /// </summary>
+    [Fact]
+    public async Task AHandlerWrittenBeforeTheNewerEvents_IsLeftAlone()
+    {
+        // Arrange
+        ITransactionEventHandler handler = new OlderHandler();
+
+        // Act
+        await handler.RefundedAsync(CreateOutstanding(), new TransactionEvent(), TestContext.Current.CancellationToken);
+        await handler.ReversedAsync(CreateOutstanding(), new TransactionEvent(), new TransactionEvent(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, ((OlderHandler)handler).Calls);
+    }
+
+    private sealed class OlderHandler : ITransactionEventHandler
+    {
+        public int Calls { get; private set; }
+
+        public Task CreatedAsync(Transaction transaction, CancellationToken cancellationToken = default)
+            => Count();
+
+        public Task StatusChangedAsync(Transaction transaction, TransactionStatus previous, TransactionStatus current, CancellationToken cancellationToken = default)
+            => Count();
+
+        public Task CanceledAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
+            => Count();
+
+        public Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default)
+            => Count();
+
+        private Task Count()
+        {
+            Calls++;
+
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class LedgerContext
     {
         public LedgerContext(params Transaction[] transactions)
@@ -294,9 +356,12 @@ public sealed class TransactionLedgerCommandsTests
             var services = new ServiceCollection();
 
             services.AddSingleton(Mock.Of<ITransactionPaymentHandler>());
+            services.AddSingleton<ITransactionEventHandler>(Events);
 
             Service = TransactionCommandServiceFactory.Create(manager, new TestClock(_now), services.BuildServiceProvider());
         }
+
+        public RecordingTransactionEventHandler Events { get; } = new();
 
         public DefaultTransactionCommandService Service { get; }
     }

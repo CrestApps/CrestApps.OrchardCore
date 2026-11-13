@@ -7,6 +7,7 @@
 
 @{
     var transaction = Model.Transaction;
+    var payer = transaction.GetPayer();
 }
 
 <div class="card">
@@ -18,6 +19,19 @@
         <dl class="row mb-0">
             <dt class="col-sm-4">@T["Owner"]</dt>
             <dd class="col-sm-8">@(Model.OwnerName ?? T["Unknown"].Value)</dd>
+
+            @if (!payer.IsEmpty)
+            {
+                <dt class="col-sm-4">@T["Payer"]</dt>
+                <dd class="col-sm-8">
+                    @(Model.PayerName ?? payer.Id)
+                    <span class="badge ta-badge fw-normal ms-1" data-bs-toggle="tooltip" title="@T["The kind of party that owes the money"]">@payer.Kind</span>
+                    @if (!string.IsNullOrEmpty(transaction.PayerContact?.Email))
+                    {
+                        <div class="text-body-secondary small">@transaction.PayerContact.Email</div>
+                    }
+                </dd>
+            }
 
             <dt class="col-sm-4">@T["Source"]</dt>
             <dd class="col-sm-8">@(DisplayText.SourceName(transaction.Source) ?? T["None"].Value)</dd>
@@ -61,6 +75,39 @@
 
             <dt class="col-sm-4">@T["Outstanding"]</dt>
             <dd class="col-sm-8"><strong>@transaction.Currency @CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)</strong></dd>
+
+            @if (transaction.TaxLines is { Count: > 0 })
+            {
+                <dt class="col-sm-4">@T["Tax"]</dt>
+                <dd class="col-sm-8">
+                    @foreach (var taxLine in transaction.TaxLines)
+                    {
+                        <div>@(taxLine.TaxName ?? taxLine.TaxCode) @((taxLine.Rate * 100m).ToString("0.####"))%: @transaction.Currency @CurrencyScale.Format(taxLine.TaxAmount, transaction.Currency)</div>
+                    }
+                </dd>
+            }
+
+            @if (transaction.ExchangeRate is { } rate && !string.IsNullOrEmpty(transaction.BaseCurrency))
+            {
+                <dt class="col-sm-4">@T["Exchange rate"]</dt>
+                <dd class="col-sm-8">@T["1 {0} = {1} {2}", transaction.Currency, rate.ToString("0.######"), transaction.BaseCurrency]</dd>
+            }
+
+            <dt class="col-sm-4">@T["Part payments"]</dt>
+            <dd class="col-sm-8">
+                @if (!transaction.AllowPartialPayment)
+                {
+                    @T["Not accepted online"]
+                }
+                else if (transaction.MinimumPayment is > 0m)
+                {
+                    @T["Accepted online, at least {0} {1}", transaction.Currency, CurrencyScale.Format(transaction.MinimumPayment.Value, transaction.Currency)]
+                }
+                else
+                {
+                    @T["Accepted online"]
+                }
+            </dd>
 
             <dt class="col-sm-4">@T["Created"]</dt>
             <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: transaction.CreatedUtc, Format: "g"))</dd>

@@ -87,6 +87,34 @@ public sealed class TransactionWorkflowsTests
         Assert.Equal("duplicate", triggered[0].Input["Reason"]);
     }
 
+    [Fact]
+    public async Task Reversed_StartsTheEntryTakenBackEvent_AndPublishesItsWebhook()
+    {
+        // Arrange
+        var (handler, triggered) = CreateWorkflowHandler();
+        var published = new List<(string Name, string EventId)>();
+        var publisher = new Mock<IWebhookPublisher>();
+        publisher
+            .Setup(candidate => candidate.PublishAsync(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((string name, object _, string eventId, CancellationToken _) => published.Add((name, eventId)))
+            .Returns(Task.CompletedTask);
+
+        var transaction = CreateTransaction();
+        var payment = new TransactionEvent { Id = "evt-1", Type = TransactionEventType.PaymentRecorded, Amount = 50m };
+        var reversal = new TransactionEvent { Id = "evt-2", Type = TransactionEventType.Reversed, Amount = 50m, Reason = "Check bounced", ReversesEventId = "evt-1" };
+
+        // Act
+        await handler.ReversedAsync(transaction, reversal, payment, TestContext.Current.CancellationToken);
+        await new TransactionWebhookEventHandler(publisher.Object).ReversedAsync(transaction, reversal, payment, TestContext.Current.CancellationToken);
+
+        // Assert
+        var (name, input, _) = Assert.Single(triggered);
+        Assert.Equal(nameof(TransactionEntryReversedEvent), name);
+        Assert.Equal("Check bounced", input["Reason"]);
+        Assert.Equal("evt-1", input["ReversedEventId"]);
+        Assert.Equal((TransactionsConstants.WebhookEvents.EntryReversed, "evt_transaction-reversed_tx-1_evt-2"), Assert.Single(published));
+    }
+
     [Theory]
     [InlineData(null, null, "PayLater", "Invoice", true)]
     [InlineData("paylater, bank", null, "PayLater", "Invoice", true)]

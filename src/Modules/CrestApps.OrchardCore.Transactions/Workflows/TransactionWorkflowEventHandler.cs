@@ -43,6 +43,16 @@ internal sealed class TransactionWorkflowEventHandler : TransactionEventHandlerB
     public override Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default)
         => TriggerAsync(nameof(TransactionRefundedEvent), transaction, TransactionWorkflowInput.ToDictionary(transaction, refund));
 
+    public override Task ReversedAsync(Transaction transaction, TransactionEvent reversal, TransactionEvent reversed, CancellationToken cancellationToken = default)
+    {
+        var input = TransactionWorkflowInput.ToDictionary(transaction, reversal);
+        input["Reason"] = reversal?.Reason;
+        input["ReversedEventId"] = reversed?.Id;
+        input["ReversedEventType"] = reversed?.Type.ToString();
+
+        return TriggerAsync(nameof(TransactionEntryReversedEvent), transaction, input);
+    }
+
     public Task PaymentRecordedAsync(TransactionPaymentRecordedContext context, CancellationToken cancellationToken = default)
         => TriggerAsync(nameof(TransactionPaymentRecordedEvent), context.Transaction, TransactionWorkflowInput.ToDictionary(context.Transaction, context.Payment));
 

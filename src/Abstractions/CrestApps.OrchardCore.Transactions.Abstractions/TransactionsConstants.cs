@@ -176,6 +176,11 @@ public static class TransactionsConstants
         /// Money was given back on a transaction.
         /// </summary>
         public const string Refunded = "transaction.refunded";
+
+        /// <summary>
+        /// A payment recorded by hand or an adjustment was taken back with a reversing entry, so it is owed again.
+        /// </summary>
+        public const string EntryReversed = "transaction.entry-reversed";
     }
 
     /// <summary>

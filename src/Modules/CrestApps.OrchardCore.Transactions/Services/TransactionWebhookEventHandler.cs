@@ -17,26 +17,29 @@ internal sealed class TransactionWebhookEventHandler : TransactionEventHandlerBa
     }
 
     public override Task CreatedAsync(Transaction transaction, CancellationToken cancellationToken = default)
-        => PublishAsync(TransactionsConstants.WebhookEvents.Created, transaction, entry: null, $"evt_transaction-created_{transaction.ItemId}", cancellationToken);
+        => PublishAsync(TransactionsConstants.WebhookEvents.Created, transaction, entry: null, reversed: null, $"evt_transaction-created_{transaction.ItemId}", cancellationToken);
 
     public override Task StatusChangedAsync(Transaction transaction, TransactionStatus previous, TransactionStatus current, CancellationToken cancellationToken = default)
         => current == TransactionStatus.Paid
-            ? PublishAsync(TransactionsConstants.WebhookEvents.Settled, transaction, entry: null, $"evt_transaction-settled_{transaction.ItemId}_{transaction.UpdatedUtc.Ticks}", cancellationToken)
+            ? PublishAsync(TransactionsConstants.WebhookEvents.Settled, transaction, entry: null, reversed: null, $"evt_transaction-settled_{transaction.ItemId}_{transaction.UpdatedUtc.Ticks}", cancellationToken)
             : Task.CompletedTask;
 
     public override Task CanceledAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
-        => PublishAsync(TransactionsConstants.WebhookEvents.Canceled, transaction, entry: null, $"evt_transaction-canceled_{transaction.ItemId}", cancellationToken);
+        => PublishAsync(TransactionsConstants.WebhookEvents.Canceled, transaction, entry: null, reversed: null, $"evt_transaction-canceled_{transaction.ItemId}", cancellationToken);
 
     public override Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default)
-        => PublishAsync(TransactionsConstants.WebhookEvents.Overdue, transaction, entry: null, $"evt_transaction-overdue_{transaction.ItemId}", cancellationToken);
+        => PublishAsync(TransactionsConstants.WebhookEvents.Overdue, transaction, entry: null, reversed: null, $"evt_transaction-overdue_{transaction.ItemId}", cancellationToken);
 
     public override Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default)
-        => PublishAsync(TransactionsConstants.WebhookEvents.Refunded, transaction, refund, $"evt_transaction-refunded_{transaction.ItemId}_{refund?.Id}", cancellationToken);
+        => PublishAsync(TransactionsConstants.WebhookEvents.Refunded, transaction, refund, reversed: null, $"evt_transaction-refunded_{transaction.ItemId}_{refund?.Id}", cancellationToken);
+
+    public override Task ReversedAsync(Transaction transaction, TransactionEvent reversal, TransactionEvent reversed, CancellationToken cancellationToken = default)
+        => PublishAsync(TransactionsConstants.WebhookEvents.EntryReversed, transaction, reversal, reversed, $"evt_transaction-reversed_{transaction.ItemId}_{reversal?.Id}", cancellationToken);
 
     public Task PaymentRecordedAsync(TransactionPaymentRecordedContext context, CancellationToken cancellationToken = default)
-        => PublishAsync(TransactionsConstants.WebhookEvents.PaymentRecorded, context.Transaction, context.Payment, $"evt_transaction-payment_{context.Transaction.ItemId}_{context.Payment.Id}", cancellationToken);
+        => PublishAsync(TransactionsConstants.WebhookEvents.PaymentRecorded, context.Transaction, context.Payment, reversed: null, $"evt_transaction-payment_{context.Transaction.ItemId}_{context.Payment.Id}", cancellationToken);
 
-    private Task PublishAsync(string eventName, Transaction transaction, TransactionEvent entry, string eventId, CancellationToken cancellationToken)
+    private Task PublishAsync(string eventName, Transaction transaction, TransactionEvent entry, TransactionEvent reversed, string eventId, CancellationToken cancellationToken)
     {
         var payer = transaction.GetPayer();
 
@@ -73,7 +76,19 @@ internal sealed class TransactionWebhookEventHandler : TransactionEventHandlerBa
                     method = entry.Method,
                     paymentMethod = entry.PaymentMethod,
                     reference = entry.Reference,
+                    reason = entry.Reason,
+                    documentNumber = entry.DocumentNumber,
+                    reversesEventId = entry.ReversesEventId,
                     createdUtc = entry.CreatedUtc,
+                },
+            reversedEntry = reversed is null
+                ? null
+                : new
+                {
+                    id = reversed.Id,
+                    type = reversed.Type.ToString(),
+                    amount = reversed.Amount,
+                    createdUtc = reversed.CreatedUtc,
                 },
         }, eventId, cancellationToken);
     }

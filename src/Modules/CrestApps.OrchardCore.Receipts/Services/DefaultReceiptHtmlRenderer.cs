@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.BusinessDocuments.Services;
 using CrestApps.OrchardCore.Receipts.Core.Services;
 using CrestApps.OrchardCore.Receipts.Models;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Receipts.Services;
 
@@ -14,6 +15,7 @@ public sealed class DefaultReceiptHtmlRenderer : IReceiptHtmlRenderer
     private readonly ReceiptBusinessDocumentMapper _mapper;
     private readonly IBusinessDocumentTemplateManager _templateManager;
     private readonly IBusinessDocumentHtmlRenderer _renderer;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultReceiptHtmlRenderer"/> class.
@@ -21,14 +23,17 @@ public sealed class DefaultReceiptHtmlRenderer : IReceiptHtmlRenderer
     /// <param name="mapper">The mapper that turns a receipt into a business document.</param>
     /// <param name="templateManager">The manager of the document templates.</param>
     /// <param name="renderer">The business document HTML renderer.</param>
+    /// <param name="logger">The logger.</param>
     public DefaultReceiptHtmlRenderer(
         ReceiptBusinessDocumentMapper mapper,
         IBusinessDocumentTemplateManager templateManager,
-        IBusinessDocumentHtmlRenderer renderer)
+        IBusinessDocumentHtmlRenderer renderer,
+        ILogger<DefaultReceiptHtmlRenderer> logger)
     {
         _mapper = mapper;
         _templateManager = templateManager;
         _renderer = renderer;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -58,7 +63,16 @@ public sealed class DefaultReceiptHtmlRenderer : IReceiptHtmlRenderer
 
         var document = _mapper.Map(receipt);
 
-        await _templateManager.ApplyAsync(document, cancellationToken: cancellationToken);
+        try
+        {
+            await _templateManager.ApplyAsync(document, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A site upgraded before Business Documents is recorded as enabled has no template table yet. The receipt is
+            // still printed and sent, with its own logo, footer and colors.
+            _logger.LogWarning(ex, "The document template of a receipt could not be read; the receipt is rendered with its own look.");
+        }
 
         return await _renderer.RenderAsync(document, cancellationToken);
     }

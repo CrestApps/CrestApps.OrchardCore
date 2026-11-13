@@ -104,6 +104,15 @@ internal sealed class TransactionRefundedEventSchema : TransactionEventActivityS
     protected override string Description => "Starts when money is given back on a transaction";
 }
 
+internal sealed class TransactionEntryReversedEventSchema : TransactionEventActivitySchemaBase
+{
+    public override string Name => "TransactionEntryReversedEvent";
+
+    protected override string DisplayText => "Transaction Entry Taken Back";
+
+    protected override string Description => "Starts when a payment recorded by hand or an adjustment is taken back with a reversing entry, so it is owed again";
+}
+
 internal sealed class RecordTransactionPaymentTaskSchema : TransactionTaskActivitySchemaBase
 {
     public override string Name => "RecordTransactionPaymentTask";

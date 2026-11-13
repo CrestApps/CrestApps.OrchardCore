@@ -18,6 +18,12 @@ public class TransactionDetailViewModel
     public string OwnerName { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the party that owes the transaction (an account, a customer, a user), when it could be
+    /// resolved.
+    /// </summary>
+    public string PayerName { get; set; }
+
+    /// <summary>
     /// Gets or sets what the transaction paid for, such as an order, as its module names and links it, or
     /// <see langword="null"/> when no module describes it.
     /// </summary>

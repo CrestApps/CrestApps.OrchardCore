@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
@@ -51,6 +52,7 @@ public sealed class AdminController : Controller
     private readonly IStringLocalizerFactory _localizerFactory;
     private readonly IDisplayManager<Transaction> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly ILocalClock _localClock;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -68,6 +70,7 @@ public sealed class AdminController : Controller
     /// <param name="sourceOptions">The registered transaction sources used to build the source filter.</param>
     /// <param name="displayManager">The display manager that builds the detail page from the display drivers of a transaction.</param>
     /// <param name="updateModelAccessor">The accessor of the model updater the display drivers are given.</param>
+    /// <param name="localClock">The clock that converts a time entered in the site's time zone to UTC.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="localizerFactory">The localizer factory that translates the registered transaction sources' names.</param>
@@ -83,6 +86,7 @@ public sealed class AdminController : Controller
         IOptions<TransactionSourceOptions> sourceOptions,
         IDisplayManager<Transaction> displayManager,
         IUpdateModelAccessor updateModelAccessor,
+        ILocalClock localClock,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer,
         IStringLocalizerFactory localizerFactory,
@@ -100,6 +104,7 @@ public sealed class AdminController : Controller
         _localizerFactory = localizerFactory;
         _displayManager = displayManager;
         _updateModelAccessor = updateModelAccessor;
+        _localClock = localClock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -301,9 +306,41 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var result = await _commandService.RecordOfflinePaymentAsync(model.TransactionId, model.Amount, model.Reference, model.Note);
+        // The received time is entered in the site's time zone and stored in UTC.
+        var receivedUtc = model.ReceivedAt.HasValue
+            ? await _localClock.ToUtcLenientAsync(model.ReceivedAt.Value)
+            : (DateTime?)null;
+
+        var result = await _commandService.RecordPaymentAsync(model.TransactionId, new TransactionPaymentRequest
+        {
+            Amount = model.Amount,
+            PaymentMethod = string.IsNullOrWhiteSpace(model.PaymentMethod) ? null : model.PaymentMethod.Trim(),
+            ReceivedUtc = receivedUtc,
+            Reference = model.Reference,
+            Note = model.Note,
+        });
 
         return await CompleteAsync(result, model.TransactionId, H["The payment was recorded."]);
+    }
+
+    /// <summary>
+    /// Takes back a payment recorded by hand or an adjustment with a reversing entry, so it is owed again. Neither entry is
+    /// removed from the timeline.
+    /// </summary>
+    /// <param name="itemId">The transaction identifier.</param>
+    /// <param name="eventId">The id of the timeline entry to take back.</param>
+    /// <param name="reason">Why the entry is taken back; required.</param>
+    [HttpPost]
+    public async Task<IActionResult> Reverse(string itemId, string eventId, string reason)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
+        }
+
+        var result = await _commandService.ReverseAsync(itemId, eventId, reason);
+
+        return await CompleteAsync(result, itemId, H["The entry was taken back. What it paid or took off is owed again."]);
     }
 
     /// <summary>

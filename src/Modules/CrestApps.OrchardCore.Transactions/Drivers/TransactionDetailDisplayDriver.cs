@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
@@ -56,11 +57,19 @@ public sealed class TransactionDetailDisplayDriver : DisplayDriver<Transaction>
         var reference = await DescribeReferenceAsync(transaction);
         var canSendReminder = _serviceProvider.GetService<ITransactionReminderService>() is not null;
         var showReceipts = _serviceProvider.GetService<ITransactionReceiptBuilder>() is not null;
+        var payer = transaction.GetPayer();
+        var payerName = transaction.PayerContact?.Name;
+
+        if (string.IsNullOrEmpty(payerName) && !payer.IsEmpty && _serviceProvider.GetService<IPartyDirectory>() is { } parties)
+        {
+            payerName = await parties.GetNameAsync(payer);
+        }
 
         void Fill(TransactionDetailViewModel model)
         {
             model.Transaction = transaction;
             model.OwnerName = ownerName;
+            model.PayerName = payerName;
             model.Reference = reference;
             model.CanManage = true;
             model.CanSendReminder = canSendReminder;

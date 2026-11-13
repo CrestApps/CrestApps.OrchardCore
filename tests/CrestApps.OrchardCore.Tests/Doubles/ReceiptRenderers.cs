@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Receipts.Core.Services;
 using CrestApps.OrchardCore.Receipts.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Doubles;
 
@@ -28,5 +29,6 @@ internal static class ReceiptRenderers
         => new(
             CreateMapper(),
             (templates ?? new InMemoryBusinessDocumentTemplateStore()).CreateManager(),
-            new BusinessDocumentHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<BusinessDocumentHtmlRenderer>()));
+            new BusinessDocumentHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<BusinessDocumentHtmlRenderer>()),
+            NullLogger<DefaultReceiptHtmlRenderer>.Instance);
 }

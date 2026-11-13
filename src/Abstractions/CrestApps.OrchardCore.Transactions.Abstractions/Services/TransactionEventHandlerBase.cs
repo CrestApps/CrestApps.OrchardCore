@@ -27,4 +27,8 @@ public abstract class TransactionEventHandlerBase : ITransactionEventHandler
     /// <inheritdoc/>
     public virtual Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public virtual Task ReversedAsync(Transaction transaction, TransactionEvent reversal, TransactionEvent reversed, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

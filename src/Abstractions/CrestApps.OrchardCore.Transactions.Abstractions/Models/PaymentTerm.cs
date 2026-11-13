@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Models;
 
 namespace CrestApps.OrchardCore.Transactions.Models;
 
@@ -9,7 +10,7 @@ namespace CrestApps.OrchardCore.Transactions.Models;
 /// invoices, account terms, pay-later purchases and work orders read, so a term is never typed as a bare number of days.
 /// <see cref="Services.IPaymentTermCalculator"/> turns it into dates.
 /// </summary>
-public sealed class PaymentTerm : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
+public sealed class PaymentTerm : CatalogItem, INameAwareModel, IAuditedModel
 {
     /// <summary>
     /// Gets or sets the name shown to staff and printed on documents, such as <c>Net 30</c>.
@@ -65,4 +66,14 @@ public sealed class PaymentTerm : CatalogItem, INameAwareModel, IModifiedUtcAwar
     /// Gets or sets the UTC time the term was last changed.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the id of the user who created the term.
+    /// </summary>
+    public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the user who created the term, as it was then.
+    /// </summary>
+    public string Author { get; set; }
 }

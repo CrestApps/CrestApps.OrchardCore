@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Transactions.Handlers;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Recipes;
 using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.AspNetCore.Http;
 using Moq;
 using OrchardCore.Deployment;
 using OrchardCore.Recipes.Models;
@@ -33,7 +34,7 @@ public sealed class PaymentTermsRecipeTests
     public async Task Validating_ChecksTheTerm(string name, PaymentTermKind kind, int days, int dayOfMonth, int? percent, int? discountDays, bool valid)
     {
         // Arrange
-        var handler = new PaymentTermHandler(new TestClock(new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc)), new PassThroughStringLocalizer<PaymentTermHandler>());
+        var handler = new PaymentTermHandler(new HttpContextAccessor(), new TestClock(new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc)), new PassThroughStringLocalizer<PaymentTermHandler>());
         var term = new PaymentTerm
         {
             Name = name,
@@ -51,6 +52,24 @@ public sealed class PaymentTermsRecipeTests
 
         // Assert
         Assert.Equal(valid, context.Result.Succeeded);
+    }
+
+    [Fact]
+    public async Task Handler_StampsWhenTheTermWasCreatedAndChanged_TheAuditedCatalogWay()
+    {
+        // Arrange
+        var now = new DateTime(2026, 11, 1, 9, 30, 0, DateTimeKind.Utc);
+        var handler = new PaymentTermHandler(new HttpContextAccessor(), new TestClock(now), new PassThroughStringLocalizer<PaymentTermHandler>());
+        var term = new PaymentTerm { Name = "Net 30", Kind = PaymentTermKind.NetDays, Days = 30 };
+
+        // Act
+        await handler.InitializedAsync(new InitializedContext<PaymentTerm>(term), TestContext.Current.CancellationToken);
+        await handler.UpdatingAsync(new UpdatingContext<PaymentTerm>(term, new JsonObject { ["Days"] = 45 }), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(now, term.CreatedUtc);
+        Assert.Equal(now, term.ModifiedUtc);
+        Assert.Equal(45, term.Days);
     }
 
     [Fact]

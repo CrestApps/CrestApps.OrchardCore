@@ -57,5 +57,20 @@ public interface ITransactionEventHandler
     /// <param name="transaction">The transaction, as saved with the refund.</param>
     /// <param name="refund">The <see cref="TransactionEventType.Refunded"/> entry on its timeline, whose amount is what this transaction gave back.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default);
+    /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
+    Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Called once after an entry on the timeline (a payment recorded by hand or an adjustment) was taken back with a
+    /// reversing entry, so what it paid or took off is owed again. A system that mirrors the payments learns here that
+    /// one was withdrawn.
+    /// </summary>
+    /// <param name="transaction">The transaction, as saved with the reversal.</param>
+    /// <param name="reversal">The <see cref="TransactionEventType.Reversed"/> entry, with the reason and the amount taken back.</param>
+    /// <param name="reversed">The entry that was taken back.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
+    Task ReversedAsync(Transaction transaction, TransactionEvent reversal, TransactionEvent reversed, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

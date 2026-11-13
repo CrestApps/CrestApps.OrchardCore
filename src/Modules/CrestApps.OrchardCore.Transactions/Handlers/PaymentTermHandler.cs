@@ -1,42 +1,29 @@
 using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Transactions.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Transactions.Handlers;
 
 /// <summary>
-/// Stamps the times of a payment term and checks it before it is saved, whether it comes from the admin, a recipe or
-/// code.
+/// Stamps who created and changed a payment term and when, reads it from recipes, and checks it before it is saved,
+/// whether it comes from the admin, a recipe or code.
 /// </summary>
-internal sealed class PaymentTermHandler : CatalogEntryHandlerBase<PaymentTerm>
+internal sealed class PaymentTermHandler : AuditedCatalogEntryHandlerBase<PaymentTerm>
 {
-    private readonly IClock _clock;
-
     internal readonly IStringLocalizer S;
 
     public PaymentTermHandler(
+        IHttpContextAccessor httpContextAccessor,
         IClock clock,
         IStringLocalizer<PaymentTermHandler> stringLocalizer)
+        : base(httpContextAccessor, clock)
     {
-        _clock = clock;
         S = stringLocalizer;
-    }
-
-    public override Task InitializingAsync(InitializingContext<PaymentTerm> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        return Task.CompletedTask;
-    }
-
-    public override Task UpdatingAsync(UpdatingContext<PaymentTerm> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.ModifiedUtc = _clock.UtcNow;
-
-        return Task.CompletedTask;
     }
 
     public override Task ValidatingAsync(ValidatingContext<PaymentTerm> context, CancellationToken cancellationToken = default)
