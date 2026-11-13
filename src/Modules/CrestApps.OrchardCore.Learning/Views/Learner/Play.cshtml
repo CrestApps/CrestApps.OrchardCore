@@ -4,7 +4,6 @@
     var course = Model.Outline.Course;
     var current = Model.Current;
     var courseId = course.ContentItemId;
-    ViewData["Title"] = current is null ? course.DisplayText : current.Item.DisplayText + " · " + course.DisplayText;
     var enrollment = Model.Enrollment;
     var itemId = current?.Item.ContentItemId;
     var completed = Model.CurrentProgress?.State == CourseItemState.Completed;
@@ -30,7 +29,7 @@
             }
             @if (Model.Outline.Entries.Count > 0)
             {
-                <partial name="_LearnerOutline" model="(Model.Outline, Model.Progress, Model.KindIcons, itemId, Model.Access is CourseItemAccessReason.Enrolled or CourseItemAccessReason.Staff or CourseItemAccessReason.NotReleased)" />
+                <partial name="_LearnerOutline" model="(Model.Outline, Model.Progress, Model.KindIcons, itemId, Model.Access is CourseItemAccessReason.Staff || enrollment is { Status: EnrollmentStatus.Active or EnrollmentStatus.Completed })" />
             }
         </aside>
 

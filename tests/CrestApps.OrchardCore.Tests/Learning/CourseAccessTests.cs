@@ -53,6 +53,26 @@ public sealed class CourseAccessTests
     }
 
     [Fact]
+    public async Task GetItemAccessAsync_OnAFreePreview_TreatsAnEnrolledLearnerAsEnrolled_SoProgressCounts()
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        var preview = courses.AddItem("course1", "preview", configure: part => part.FreePreview = true);
+        var enrollment = await EnrollAsync(harness, "learner", "course1");
+
+        // Act
+        var access = await harness.RunAsync(services => services.GetRequiredService<ICourseAccessService>().GetItemAccessAsync(CalendarTestHarness.User("learner"), preview), commit: false);
+        var stranger = await harness.RunAsync(services => services.GetRequiredService<ICourseAccessService>().GetItemAccessAsync(CalendarTestHarness.User("stranger"), preview), commit: false);
+
+        // Assert
+        Assert.Equal(CourseItemAccessReason.Enrolled, access.Reason);
+        Assert.Equal(enrollment.ItemId, access.Enrollment.ItemId);
+        Assert.Equal(CourseItemAccessReason.FreePreview, stranger.Reason);
+    }
+
+    [Fact]
     public async Task GetItemAccessAsync_IgnoresContentThatIsNotACourseItem()
     {
         // Arrange

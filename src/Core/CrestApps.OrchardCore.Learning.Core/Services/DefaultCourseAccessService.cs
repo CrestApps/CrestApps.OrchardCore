@@ -50,6 +50,22 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
     /// <inheritdoc />
     public async Task<CourseItemAccess> GetItemAccessAsync(ClaimsPrincipal user, ContentItem item)
     {
+        var access = await DecideAsync(user, item);
+
+        // A free preview opens for anyone, but a learner with access is still a learner there, so their progress counts.
+        if (access.Reason is not (CourseItemAccessReason.NotACourseItem or CourseItemAccessReason.Staff or CourseItemAccessReason.Enrolled)
+            && item.Get<CourseItemPart>(nameof(CourseItemPart))?.FreePreview == true)
+        {
+            access.Reason = CourseItemAccessReason.FreePreview;
+            access.LockedReason = null;
+            access.AvailableFromUtc = null;
+        }
+
+        return access;
+    }
+
+    private async Task<CourseItemAccess> DecideAsync(ClaimsPrincipal user, ContentItem item)
+    {
         var part = item?.Get<CourseItemPart>(nameof(CourseItemPart));
         var courseId = part is null ? null : _courseStructure.GetCourseId(item);
 
@@ -70,13 +86,6 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
 
                 return access;
             }
-        }
-
-        if (part.FreePreview)
-        {
-            access.Reason = CourseItemAccessReason.FreePreview;
-
-            return access;
         }
 
         if (string.IsNullOrEmpty(userId))
