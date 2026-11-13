@@ -52,6 +52,14 @@ internal sealed class LearningInactiveLearnersReport : IReport
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        if (_options.InactiveDays <= 0)
+        {
+            return new ReportDocument().Add(ReportSection.ForMetrics(S["Summary"].Value,
+            [
+                new ReportMetric(S["Inactive learners"].Value, ReportFormat.Number(0), S["The inactive period is turned off in the Learning upkeep settings."].Value),
+            ]));
+        }
+
         var now = _clock.UtcNow;
         var enrollments = (await _enrollmentStore.ListInactiveAsync(now.AddDays(-_options.InactiveDays), LearningReportText.MaxRows, cancellationToken))
             .OrderBy(enrollment => enrollment.LastActivityUtc ?? enrollment.CreatedUtc)

@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps Learning configuration",
+  "description": "The settings of the Learning module read from appsettings.json, in the OrchardCore section of the host or a tenant.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps": {
+          "type": "object",
+          "properties": {
+            "Learning": {
+              "type": "object",
+              "properties": {
+                "Upkeep": {
+                  "type": "object",
+                  "description": "The daily Learning upkeep: reminders and inactive learners.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "AccessEndingNoticeDays": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 7,
+                      "description": "How many days before access ends the access-ending notice is raised. Zero turns it off."
+                    },
+                    "InactiveDays": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 14,
+                      "description": "After how many days without activity a learner counts as inactive. Zero turns it off."
+                    },
+                    "DueSoonDays": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 3,
+                      "description": "How many days before the due date the due-soon notice is raised. Zero turns it off."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
