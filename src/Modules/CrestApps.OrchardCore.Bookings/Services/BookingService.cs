@@ -417,9 +417,10 @@ public sealed class BookingService
 
             refunded = done;
 
-            // A refund commits what it changed, which detaches what was read before it: the booking is read again, so
-            // it's updated rather than stored twice.
+            // A refund commits what it changed, which detaches what was read before it: the booking and the order are read
+            // again, so they're updated rather than stored twice, and the order keeps the refund and its note.
             booking = await _bookings.FindByIdAsync(booking.ItemId, cancellationToken) ?? booking;
+            order = await _orders.FindByIdAsync(booking.OrderId, cancellationToken) ?? order;
         }
 
         // What's still owed on it isn't any more.
