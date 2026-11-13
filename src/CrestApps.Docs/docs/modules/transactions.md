@@ -6,6 +6,7 @@ description: A provider-agnostic ledger that tracks, reports, and settles outsta
 user_manual:
   - user-manual/commerce/transactions
   - user-manual/commerce/invoices-and-receipts
+  - user-manual/commerce/payment-terms
 ---
 
 | | |
@@ -476,6 +477,45 @@ OrchardCore__CrestApps__Transactions__CustomerPages__LinkTarget=Site
 
 A module can also set it in code with `services.Configure<TransactionCustomerPagesOptions>(options => options.LinkTarget = TransactionCustomerLinkTarget.Site)` (`CrestApps.OrchardCore.Transactions.Core`). See also [Configuration](../configuration.md#transaction-customer-pages).
 
+## Payment terms
+
+The **Payment Terms** feature (`CrestApps.OrchardCore.Transactions.PaymentTerms`) keeps the store's payment terms, a small catalog that invoices, account terms, pay-later purchases and work orders read instead of storing a bare number of days. Staff keep it under **Commerce > Payment terms** (permission **Manage payment terms**).
+
+A `PaymentTerm` (`CrestApps.OrchardCore.Transactions.Abstractions`, namespace `CrestApps.OrchardCore.Transactions.Models`) has a `Name`, a `Kind` and its numbers, an optional early-payment discount and `Enabled`:
+
+| `Kind` | Due on |
+| --- | --- |
+| `DueOnReceipt` | The issue date. |
+| `NetDays` | The issue date plus `Days`. |
+| `EndOfMonth` | The last day of the issue month plus `Days`. |
+| `DayOfNextMonth` | Day `DayOfMonth` of the month after the issue month, or its last day when the month is shorter. |
+
+`DiscountPercent` with `DiscountDays` offers a discount for paying within that many days of the issue date, the last day included.
+
+Read the terms through `IPaymentTermManager` (a catalog manager with `GetEnabledAsync`) and turn one into dates with `IPaymentTermCalculator`:
+
+```csharp
+var term = await paymentTermManager.FindByIdAsync(termId);
+var dueDate = paymentTermCalculator.GetDueDate(term, issueDate);
+var discount = paymentTermCalculator.GetEarlyPaymentDiscount(term, issueDate, total, currency);
+```
+
+Both work on `DateOnly` local dates in the site's time zone; convert the due date to a UTC time only when storing it on the ledger (`Transaction.DueUtc` is the end of the due date in the site's zone). The discount is rounded to the currency with `CurrencyScale`. A due date is never before the issue date.
+
+The terms travel with recipes and deployment plans: the step is `PaymentTerms`, with the terms under `Terms`, matched by `ItemId`:
+
+```json
+{
+  "name": "PaymentTerms",
+  "Terms": [
+    { "ItemId": "4paymentterm00000000000001", "Name": "Net 30", "Kind": "NetDays", "Days": 30, "Enabled": true },
+    { "ItemId": "4paymentterm00000000000002", "Name": "2/10 net 30", "Kind": "NetDays", "Days": 30, "DiscountPercent": 2, "DiscountDays": 10, "Enabled": true }
+  ]
+}
+```
+
+The recipe step and the deployment step have schemas for the CrestApps Recipes feature.
+
 ## Registering a transaction source
 
 The `Source` stored on a transaction is a technical key. To have it appear with a friendly, localizable name in the report table and its **source** filter dropdown, register the source from a module's `Startup` using `AddTransactionSource`:
@@ -610,6 +650,7 @@ The outstanding transactions are those with the status `Outstanding` or `Partial
 | **Manage transaction settings** | Configure the transaction reminder settings. |
 | **View own transactions** | View and pay your own transactions. |
 | **Manage payments and refunds** | View the payment and refund ledgers and issue a refund. It is deliberately separate from managing transactions, because giving money back is the one action in the suite that cannot be undone and should not come free with the ability to read the outstanding report. |
+| **Manage payment terms** | Create, change and delete the payment terms (Payment Terms feature). |
 
 ## Enabling the feature
 

@@ -1,6 +1,8 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
+using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -34,6 +36,23 @@ public static class TransactionsServiceCollectionExtensions
 
         services.TryAddScoped<IFinancialDocumentNumberGenerator, SequentialFinancialDocumentNumberGenerator>();
         services.TryAddScoped<ITransactionInvoiceService, TransactionInvoiceService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the payment terms catalog: <see cref="IPaymentTermManager"/>, its store, and
+    /// <see cref="IPaymentTermCalculator"/>. The host also registers <c>PaymentTermIndexProvider</c> and creates its index
+    /// table.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The same service collection so calls can be chained.</returns>
+    public static IServiceCollection AddPaymentTermsCore(this IServiceCollection services)
+    {
+        services.TryAddScoped<IPaymentTermStore, PaymentTermStore>();
+        services.TryAddScoped<IPaymentTermManager, PaymentTermManager>();
+        services.TryAddScoped<ICatalogManager<PaymentTerm>>(serviceProvider => serviceProvider.GetRequiredService<IPaymentTermManager>());
+        services.TryAddSingleton<IPaymentTermCalculator, PaymentTermCalculator>();
 
         return services;
     }

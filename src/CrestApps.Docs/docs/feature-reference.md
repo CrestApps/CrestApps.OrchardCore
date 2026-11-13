@@ -296,6 +296,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Receipts` | Send Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
+| `CrestApps.OrchardCore.Transactions.PaymentTerms` | Payment Terms | [Transactions](./modules/transactions#payment-terms) |
 
 ## Payment Providers
 

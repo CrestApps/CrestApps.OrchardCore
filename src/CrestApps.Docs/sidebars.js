@@ -241,6 +241,7 @@ const sidebars = {
                 'user-manual/commerce/installment-plans',
                 'user-manual/commerce/transactions',
                 'user-manual/commerce/invoices-and-receipts',
+                'user-manual/commerce/payment-terms',
                 'user-manual/commerce/payments-and-refunds',
             ],
         },

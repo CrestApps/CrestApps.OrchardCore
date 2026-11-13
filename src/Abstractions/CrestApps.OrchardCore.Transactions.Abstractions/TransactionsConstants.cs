@@ -45,6 +45,12 @@ public static class TransactionsConstants
         public const string Notification = "CrestApps.OrchardCore.Transactions.Notification";
 
         public const string Receipts = "CrestApps.OrchardCore.Transactions.Receipts";
+
+        /// <summary>
+        /// The catalog of payment terms (net days, due on receipt, end of month, a day of the next month, and an
+        /// early-payment discount) that invoices, account terms, pay-later purchases and work orders read.
+        /// </summary>
+        public const string PaymentTerms = "CrestApps.OrchardCore.Transactions.PaymentTerms";
     }
 
     /// <summary>

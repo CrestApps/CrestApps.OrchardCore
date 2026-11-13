@@ -39,6 +39,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Name = "Payment Terms",
+    Id = TransactionsConstants.Features.PaymentTerms,
+    Description = "Keeps the store's payment terms (net days, due on receipt, end of month, a day of the next month, and an early-payment discount) that invoices, account terms and pay-later purchases use to set due dates.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        TransactionsConstants.Features.Area,
+    ]
+)]
+
+[assembly: Feature(
     Name = "Send Payment Receipts",
     Id = TransactionsConstants.Features.Receipts,
     Description = "Sends the customer a numbered receipt after every payment applied to a transaction, however it was paid, and a notice after every refund. Printable receipts and invoices are available whenever Transactions and Receipts are both enabled.",

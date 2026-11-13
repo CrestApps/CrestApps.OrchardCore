@@ -33,6 +33,8 @@
     <PackageReference Include="OrchardCore.Settings" />
     <PackageReference Include="OrchardCore.Notifications.Abstractions" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.Deployment.Abstractions" />
+    <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Core" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />

@@ -17,6 +17,9 @@ show it to the customer, remind them, let them settle it online, and report on w
   customer statement, and the payments and refunds screens.
 - **Transaction Reminders** (`...Notification`) — chases unpaid balances on a configured cadence through
   each user's preferred notification channel.
+- **Payment Terms** (`...PaymentTerms`) — the catalog of payment terms (net days, due on receipt, end of month,
+  a day of the next month, an early-payment discount) under **Commerce > Payment terms**, read through
+  `IPaymentTermManager` and turned into local due dates by `IPaymentTermCalculator`.
 
 ## What a transaction records
 
@@ -69,7 +72,7 @@ command returns a result with errors and runs under a lock on the transaction.
 
 Implement `ITransactionEventHandler` (or derive from `TransactionEventHandlerBase`) to hear about every change:
 `CreatedAsync`, `StatusChangedAsync` with the previous and current status, `CanceledAsync` with the reason, and
-`BecameOverdueAsync`, raised once per transaction by the reminder sweep. They run after the save, and a handler
+`BecameOverdueAsync`, raised once per transaction by the reminder sweep, and `RefundedAsync`. They run after the save, and a handler
 that fails is logged without undoing the change. `ITransactionPaymentHandler` and `IPaymentRefundHandler` report
 each payment and refund.
 
