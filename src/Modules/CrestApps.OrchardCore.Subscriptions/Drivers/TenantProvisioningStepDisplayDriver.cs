@@ -81,7 +81,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
         {
             // Where the site answers is the operator's choice unless they let buyers choose.
             model.AllowCustomPrefix = onboarding.AllowCustomPrefix;
-            model.AllowCustomDomains = onboarding.AllowCustomDomains;
+            model.AllowCustomDomains = onboarding.AllowCustomDomains && onboarding.HasReservedHosts();
 
             model.TenantName = saved?.TenantName;
             model.TenantTitle = saved?.TenantTitle;

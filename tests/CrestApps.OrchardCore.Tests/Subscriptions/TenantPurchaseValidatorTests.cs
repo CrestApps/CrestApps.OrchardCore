@@ -274,7 +274,7 @@ public sealed class SubscriptionOnboardingUpgradeTests
     [Fact]
     public void Apply_ACompletedSiteWithDomains_KeepsCustomDomainsOn()
     {
-        var settings = new SubscriptionOnboardingSettings();
+        var settings = new SubscriptionOnboardingSettings { ReservedHosts = ["operator.com"] };
 
         var changed = SubscriptionOnboardingUpgrade.Apply(settings,
         [
@@ -284,6 +284,46 @@ public sealed class SubscriptionOnboardingUpgradeTests
         Assert.True(changed);
         Assert.True(settings.AllowCustomDomains);
         Assert.False(settings.AllowCustomPrefix);
+    }
+
+    /// <summary>
+    /// SEC-C2: the settings editor refuses custom domains while no reserved host is listed, because the default tenant
+    /// normally has no host names and the operator's other aliases are known only from that list. The upgrade turned them
+    /// on regardless.
+    /// </summary>
+    [Fact]
+    public void Apply_ACompletedSiteWithDomains_LeavesCustomDomainsOff_WhileNoReservedHostIsListed()
+    {
+        var settings = new SubscriptionOnboardingSettings();
+
+        SubscriptionOnboardingUpgrade.Apply(settings,
+        [
+            new() { TenantName = "Shop1", Prefix = "", Domains = ["shop1.example.net"], Status = TenantProvisioningStatus.Succeeded },
+        ]);
+
+        Assert.False(settings.AllowCustomDomains);
+    }
+
+    /// <summary>
+    /// SEC-C2's scenario: the store answers on operator.com and on its platform host name, and Base URL is unset or names
+    /// the first. A buyer who checks out through operator.com and enters the platform host name matched no reserved host,
+    /// and the new tenant took it. Custom domains set on (by a recipe, an import, or the upgrade) with no reserved host
+    /// listed are refused at run time.
+    /// </summary>
+    [Fact]
+    public void Validate_ACustomDomain_IsRefused_WhileNoReservedHostIsListed()
+    {
+        var settings = new SubscriptionOnboardingSettings { AllowCustomDomains = true };
+        var rules = settings.ToRules("Blog", "Admin", ["operator.com"]);
+        rules.KnownFeatureProfiles = ["sold-tenant"];
+
+        var request = TenantPurchaseValidator.Normalize(
+            new TenantPurchaseRequest { TenantName = "Shop1", Domains = ["platform-host.example.net"], RecipeName = "Blog", FeatureProfile = "sold-tenant" },
+            rules);
+
+        var error = Assert.Single(TenantPurchaseValidator.Validate(request, rules, []));
+
+        Assert.Equal(TenantPurchaseErrorCode.CustomDomainsNotAllowed, error.Code);
     }
 
     [Fact]

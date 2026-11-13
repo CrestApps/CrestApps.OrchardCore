@@ -62,6 +62,13 @@ public sealed class SubscriptionOnboardingSettings
         => string.IsNullOrWhiteSpace(DatabaseProvider) ? DefaultDatabaseProvider : DatabaseProvider.Trim();
 
     /// <summary>
+    /// Whether the operator listed any of their own host names in <see cref="ReservedHosts"/>. Buyers may use domains of
+    /// their own only when they did.
+    /// </summary>
+    public bool HasReservedHosts()
+        => (ReservedHosts ?? []).Any(host => !string.IsNullOrWhiteSpace(host));
+
+    /// <summary>
     /// Builds the rules a purchase of a plan is held to.
     /// </summary>
     /// <param name="planRecipeName">The recipe the plan names.</param>
@@ -73,7 +80,11 @@ public sealed class SubscriptionOnboardingSettings
         {
             PlanRecipeName = planRecipeName,
             AllowCustomPrefix = AllowCustomPrefix,
-            AllowCustomDomains = AllowCustomDomains,
+
+            // The default tenant normally has no host names, so the operator's other aliases are known only from the
+            // reserved list. With it empty a buyer who checks out through one alias could take another, so custom domains
+            // are refused at run time too, however they were turned on (a recipe, an import, the upgrade).
+            AllowCustomDomains = AllowCustomDomains && HasReservedHosts(),
             ReservedPrefixes = ReservedPrefixes ?? DefaultReservedPrefixes,
             ReservedHosts = (ReservedHosts ?? []).Concat(hostNames ?? []).ToArray(),
             BaseDomain = BaseDomain,

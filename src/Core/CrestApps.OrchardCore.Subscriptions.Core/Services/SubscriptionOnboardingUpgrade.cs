@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 /// <summary>
 /// Keeps an existing store working when the onboarding rules arrive. Buyers used to be able to choose any prefix and
 /// any domain; new sites now default to neither. A store that already sold sites with domains of their own, or with a
-/// prefix other than the site's name, keeps offering them.
+/// prefix other than the site's name, keeps offering them; domains only once the store lists its own host names.
 /// </summary>
 public static class SubscriptionOnboardingUpgrade
 {
@@ -24,7 +24,10 @@ public static class SubscriptionOnboardingUpgrade
 
         foreach (var job in (jobs ?? []).Where(job => job.Status == TenantProvisioningStatus.Succeeded))
         {
-            if (!settings.AllowCustomDomains && job.Domains is { Length: > 0 })
+            // Custom domains need the operator's own host names listed first, as the settings editor requires: the default
+            // tenant normally has none, so a buyer could otherwise take an alias of the store. They stay off until the list
+            // is filled in.
+            if (!settings.AllowCustomDomains && job.Domains is { Length: > 0 } && settings.HasReservedHosts())
             {
                 settings.AllowCustomDomains = true;
                 changed = true;
