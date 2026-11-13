@@ -1,0 +1,67 @@
+using OrchardCore.ContentManagement;
+
+namespace CrestApps.OrchardCore.Learning.Models;
+
+/// <summary>
+/// Marks a content type as a course: its code, enrollment settings, completion criteria, prerequisites, pass mark and
+/// staff. The outline is in <see cref="CourseOutlinePart"/>; the title, body, cover and categories are Orchard parts and
+/// fields. The language comes from Orchard's localization part.
+/// </summary>
+public sealed class CoursePart : ContentPart
+{
+    /// <summary>
+    /// Gets or sets the course code, such as <c>SAFE-101</c>.
+    /// </summary>
+    public string Code { get; set; }
+
+    /// <summary>
+    /// Gets or sets a short summary shown in the catalog.
+    /// </summary>
+    public string Summary { get; set; }
+
+    /// <summary>
+    /// Gets or sets the level, an open string such as <c>Beginner</c>.
+    /// </summary>
+    public string Level { get; set; }
+
+    /// <summary>
+    /// Gets or sets the estimated effort, in minutes.
+    /// </summary>
+    public int? EstimatedMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets how a learner gets into the course on their own.
+    /// </summary>
+    public EnrollmentMode EnrollmentMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the hash of the enrollment key, when <see cref="EnrollmentMode"/> is <see cref="EnrollmentMode.Key"/>.
+    /// The key itself is never stored.
+    /// </summary>
+    public string EnrollmentKeyHash { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many days a self enrollment gives access, or <see langword="null"/> for no end.
+    /// </summary>
+    public int? AccessDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the course pass mark as a percentage, or <see langword="null"/> when the course has no grade.
+    /// </summary>
+    public decimal? PassMark { get; set; }
+
+    /// <summary>
+    /// Gets or sets what a learner must hold before enrolling.
+    /// </summary>
+    public IList<CoursePrerequisite> Prerequisites { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the completion criteria beyond "all required items". All of them must be met.
+    /// </summary>
+    public IList<LearningRuleSettings> CompletionCriteria { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the staff of the course.
+    /// </summary>
+    public IList<CourseStaffMember> Staff { get; set; } = [];
+}
