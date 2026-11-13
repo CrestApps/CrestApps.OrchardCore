@@ -23,6 +23,7 @@ public sealed class PdfFlow
     private readonly double _pageWidth;
     private readonly double _pageHeight;
     private readonly List<PdfPage> _pages = [];
+    private readonly Action<PdfPage> _pageStarted;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PdfFlow"/> class, with its first page.
@@ -38,10 +39,32 @@ public sealed class PdfFlow
         double pageHeight,
         PdfFont regular,
         PdfFont bold)
+        : this(builder, pageWidth, pageHeight, regular, bold, pageStarted: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PdfFlow"/> class, with its first page.
+    /// </summary>
+    /// <param name="builder">The document.</param>
+    /// <param name="pageWidth">The width of a page, in points.</param>
+    /// <param name="pageHeight">The height of a page, in points.</param>
+    /// <param name="regular">The regular face.</param>
+    /// <param name="bold">The bold face.</param>
+    /// <param name="pageStarted">Draws on each page as it starts, before its content, such as a watermark behind the
+    /// content; <see langword="null"/> to draw nothing.</param>
+    public PdfFlow(
+        PdfDocumentBuilder builder,
+        double pageWidth,
+        double pageHeight,
+        PdfFont regular,
+        PdfFont bold,
+        Action<PdfPage> pageStarted)
     {
         _builder = builder;
         _pageWidth = pageWidth;
         _pageHeight = pageHeight;
+        _pageStarted = pageStarted;
         Regular = regular;
         Bold = bold;
 
@@ -79,6 +102,21 @@ public sealed class PdfFlow
     public double PageContentHeight => _pageHeight - Margin - BottomMargin;
 
     /// <summary>
+    /// Gets the width of a page, in points.
+    /// </summary>
+    public double PageWidth => _pageWidth;
+
+    /// <summary>
+    /// Gets the height of a page, in points.
+    /// </summary>
+    public double PageHeight => _pageHeight;
+
+    /// <summary>
+    /// Gets the number of pages started so far.
+    /// </summary>
+    public int PageCount => _pages.Count;
+
+    /// <summary>
     /// Gets the position the next block starts at, in points from the top of the page.
     /// </summary>
     public double Top { get; private set; }
@@ -99,6 +137,7 @@ public sealed class PdfFlow
         Page = new PdfPage(_builder.AddPage(_pageWidth, _pageHeight), _pageHeight);
         _pages.Add(Page);
         Top = Margin;
+        _pageStarted?.Invoke(Page);
     }
 
     /// <summary>

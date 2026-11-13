@@ -202,6 +202,35 @@ public sealed class PdfPage
         }
     }
 
+    /// <summary>
+    /// Draws an image, scaled to a rectangle.
+    /// </summary>
+    /// <param name="image">The image.</param>
+    /// <param name="x">The left of the image.</param>
+    /// <param name="top">The top of the image.</param>
+    /// <param name="width">The width the image is drawn at.</param>
+    /// <param name="height">The height the image is drawn at.</param>
+    public void DrawImage(PdfImage image, double x, double top, double width, double height)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var placement = new PdfRectangle(x, _height - top - height, x + width, _height - top);
+
+        if (image.Format == PdfImageFormat.Png)
+        {
+            _page.AddPng(image.Data, placement);
+        }
+        else
+        {
+            _page.AddJpeg(image.Data, placement);
+        }
+    }
+
     private void SetFillColor(PdfColor color)
     {
         Operations.Add(new SetNonStrokeColorDeviceRgb(color.R / 255d, color.G / 255d, color.B / 255d));
