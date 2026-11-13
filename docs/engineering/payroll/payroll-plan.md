@@ -479,3 +479,13 @@ Decided 2026-11-13: the option in bold in every row.
 | 7 | Pull requests | **Three (blocks, Payroll, compliance), a commit per slice.** Or one |
 | 8 | Countries | **United States pack first, neutral core.** |
 | 9 | The export to an outside payroll system | **A data set and a ready-made Data Pipeline; Workforce's export page, column settings and `IPayrollExportProvider` are removed (section 3).** Or keep the page as a thin screen over the same data set. Or move the export code to Payroll unchanged (it then repeats what Data Pipelines does) |
+
+## 13. Progress
+
+What is built, slice by slice, and where it differs from the plan above.
+
+### F1 as built
+
+- `Money.Allocate` is in `Payments.Abstractions`. The two existing "copies" were not moved onto it: the Checkout discount allocator also caps each line by the room it has left and spreads the overflow, and Marketplace's `GetRefundShare` is one proportion, not a split. Neither is the same operation.
+- `INumberSequence` gained `SetNextAsync` and `GetLastAsync` (a screen shows the next check number). It still lists the series records on each call: reading one record needs an index and a migration, and a site has tens of series, not thousands.
+- The field protector is `ISensitiveValueProtector` with `ProtectedValue` and `SensitiveMask` in `CrestApps.OrchardCore.Abstractions` (`SensitiveData`), implemented by `DataProtectionSensitiveValueProtector` in `CrestApps.OrchardCore.Core` and registered with `AddSensitiveValueProtector()`. The hint never holds more than half of a value. The keyed hash ("is this number used twice") waits for the slice that needs it (P4), and each consumer writes its own Audit Trail event for a reveal.

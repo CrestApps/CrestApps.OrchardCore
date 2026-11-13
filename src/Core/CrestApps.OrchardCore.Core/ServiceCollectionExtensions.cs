@@ -1,5 +1,7 @@
 ﻿using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.SensitiveData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -33,6 +35,18 @@ public static class ServiceCollectionExtensions
     {
         services.TryAddSingleton<SignedTokenService>();
         services.TryAddScoped<SiteUrlGenerator>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the <see cref="ISensitiveValueProtector"/>, which protects the sensitive values records store, such as
+    /// bank account numbers and tax numbers, with the tenant's data protection keys.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddSensitiveValueProtector(this IServiceCollection services)
+    {
+        services.TryAddSingleton<ISensitiveValueProtector, DataProtectionSensitiveValueProtector>();
 
         return services;
     }
