@@ -123,7 +123,7 @@ internal sealed class BankAccountDisplayDriver : DisplayDriver<BankAccount>
         }
         else
         {
-            UpdateOwner(account, model, context);
+            await UpdateOwnerAsync(account, model, context);
         }
 
         var numberErrors = _bankAccountService.ApplyNumbers(account, model.RoutingNumber, model.AccountNumber);
@@ -148,7 +148,7 @@ internal sealed class BankAccountDisplayDriver : DisplayDriver<BankAccount>
         return await EditAsync(account, context);
     }
 
-    private void UpdateOwner(BankAccount account, BankAccountViewModel model, UpdateEditorContext context)
+    private async Task UpdateOwnerAsync(BankAccount account, BankAccountViewModel model, UpdateEditorContext context)
     {
         if (string.IsNullOrWhiteSpace(model.Owner))
         {
@@ -157,7 +157,10 @@ internal sealed class BankAccountDisplayDriver : DisplayDriver<BankAccount>
             return;
         }
 
-        if (!PartyRef.TryParse(model.Owner.Trim(), out var owner))
+        // The owner must be a kind of party a module provides, and a party that exists.
+        if (!PartyRef.TryParse(model.Owner.Trim(), out var owner)
+            || !_partyDirectory.Kinds.Contains(owner.Kind, StringComparer.Ordinal)
+            || string.IsNullOrEmpty(await _partyDirectory.GetNameAsync(owner)))
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Owner), S["Choose who owns the account."]);
 

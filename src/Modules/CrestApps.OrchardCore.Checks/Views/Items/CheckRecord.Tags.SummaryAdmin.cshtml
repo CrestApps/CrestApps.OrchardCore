@@ -15,6 +15,10 @@
 }
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="@icon me-1" aria-hidden="true"></i>@status</span>
+@if (check.Status == CheckStatus.Cleared && !string.IsNullOrEmpty(check.ReissuedById))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The bank paid this check after it was replaced: check whether the replacement was paid too."]"><i class="fa-solid fa-triangle-exclamation text-danger me-1" aria-hidden="true"></i>@T["Paid after reissue"]</span>
+}
 @if (check.IsHistorical)
 {
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Imported from another system: it is history."]"><i class="fa-solid fa-box-archive text-secondary me-1" aria-hidden="true"></i>@T["History"]</span>

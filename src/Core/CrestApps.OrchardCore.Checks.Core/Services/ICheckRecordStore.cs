@@ -33,4 +33,24 @@ public interface ICheckRecordStore : ICatalog<CheckRecord>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The checks.</returns>
     Task<IReadOnlyList<CheckRecord>> ListBySourceAsync(string sourceKind, string sourceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads a page of the check register: only the checks the query's access filter allows, newest first unless the
+    /// query asks for the oldest.
+    /// </summary>
+    /// <param name="query">What the page shows.</param>
+    /// <param name="skip">How many checks to skip.</param>
+    /// <param name="take">How many checks to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The number of matching checks and the page.</returns>
+    Task<(int Count, IReadOnlyList<CheckRecord> Checks)> ListPageAsync(CheckRegisterQuery query, int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists printed checks dated before a date, oldest first, such as the checks that became stale.
+    /// </summary>
+    /// <param name="checkDateBefore">The first check date not listed.</param>
+    /// <param name="take">How many checks to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The checks.</returns>
+    Task<IReadOnlyList<CheckRecord>> ListPrintedBeforeAsync(DateOnly checkDateBefore, int take, CancellationToken cancellationToken = default);
 }

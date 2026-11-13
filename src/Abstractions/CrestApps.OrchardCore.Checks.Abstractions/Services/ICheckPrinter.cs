@@ -12,7 +12,8 @@ public interface ICheckPrinter
     /// </summary>
     /// <param name="layout">The layout.</param>
     /// <param name="checks">The checks, in the order they print.</param>
+    /// <param name="printRunId">The print run, named in the Audit Trail entry of each bank account number read.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The PDF, or why the checks could not print.</returns>
-    Task<CheckPrintResult> PrintAsync(CheckLayout layout, IReadOnlyList<CheckRecord> checks, CancellationToken cancellationToken = default);
+    Task<CheckPrintResult> PrintAsync(CheckLayout layout, IReadOnlyList<CheckRecord> checks, string printRunId, CancellationToken cancellationToken = default);
 }

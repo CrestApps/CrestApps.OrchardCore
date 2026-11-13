@@ -98,6 +98,21 @@ public sealed class BankAccountsController : CatalogAdminController<BankAccount>
     public Task<IActionResult> Delete(string id)
         => DeleteAsync(id);
 
+    /// <inheritdoc />
+    protected override async Task<bool> CanDeleteAsync(BankAccount model)
+    {
+        var usages = await _bankAccountService.GetUsagesAsync(model, HttpContext.RequestAborted);
+
+        if (usages.Count == 0)
+        {
+            return true;
+        }
+
+        await Notifier.ErrorAsync(H["{0} is in use and can't be deleted: {1} Close it instead, from its edit page.", model.Name, string.Join(" ", usages)]);
+
+        return false;
+    }
+
     /// <summary>
     /// Shows the full account number once, to a user who may reveal it, and writes the reveal to the Audit Trail.
     /// </summary>

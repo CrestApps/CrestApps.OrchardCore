@@ -22,6 +22,14 @@ public sealed class CheckRecordHandler : CatalogEntryHandlerBase<CheckRecord>
     }
 
     /// <inheritdoc />
+    public override Task CreatingAsync(CreatingContext<CheckRecord> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public override Task UpdatingAsync(UpdatingContext<CheckRecord> context, CancellationToken cancellationToken = default)
     {
         context.Model.ModifiedUtc = _clock.UtcNow;

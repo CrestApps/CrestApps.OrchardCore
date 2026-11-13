@@ -72,6 +72,12 @@ public sealed class CheckRecord : CatalogItem, IModifiedUtcAwareModel
     public string SourceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the access scope within the source kind, such as the pay group of a paycheck: the
+    /// <see cref="Services.ICheckSourceAccess"/> of the source kind decides who sees the checks of each scope.
+    /// </summary>
+    public string AccessScope { get; set; }
+
+    /// <summary>
     /// Gets or sets the status.
     /// </summary>
     public CheckStatus Status { get; set; }

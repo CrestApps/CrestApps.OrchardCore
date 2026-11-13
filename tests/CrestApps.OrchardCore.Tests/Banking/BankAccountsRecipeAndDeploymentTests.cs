@@ -6,9 +6,8 @@ using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Recipes;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Moq;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Tests.Banking;
 
@@ -140,13 +139,12 @@ public sealed class BankAccountsRecipeAndDeploymentTests
         Assert.Empty(target.Store.Entries);
     }
 
-    private static BankAccountsDeploymentSource Source(BankingTestContext context, bool mayReveal)
-    {
-        var authorization = new Mock<IAuthorizationService>();
+    private static BankAccountsDeploymentSource Source(BankingTestContext context, bool mayReveal, RecordingNotifier notifier = null)
+        => Source(context, notifier, mayReveal ? [BankingPermissions.ManageBankAccounts, BankingPermissions.RevealBankAccountNumbers] : [BankingPermissions.ManageBankAccounts]);
 
-        authorization
-            .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
-            .ReturnsAsync(mayReveal ? AuthorizationResult.Success() : AuthorizationResult.Failed());
+    private static BankAccountsDeploymentSource Source(BankingTestContext context, RecordingNotifier notifier, Permission[] grants)
+    {
+        var authorization = TestSecurity.Granting(grants);
 
         var accessor = new HttpContextAccessor
         {
@@ -156,6 +154,13 @@ public sealed class BankAccountsRecipeAndDeploymentTests
             },
         };
 
-        return new BankAccountsDeploymentSource(context.Manager, context.Service, accessor, authorization.Object);
+        return new BankAccountsDeploymentSource(
+            context.Manager,
+            context.Service,
+            accessor,
+            authorization,
+            notifier ?? new RecordingNotifier(),
+            new EchoHtmlLocalizer<BankAccountsDeploymentSource>(),
+            RecipeRoundTrip.Localizer<BankAccountsDeploymentSource>());
     }
 }

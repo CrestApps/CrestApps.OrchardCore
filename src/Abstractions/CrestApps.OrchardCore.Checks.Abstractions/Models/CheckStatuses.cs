@@ -7,10 +7,7 @@ namespace CrestApps.OrchardCore.Checks.Models;
 /// </summary>
 public static class CheckStatuses
 {
-    /// <summary>
-    /// Gets the allowed moves. Voided, Cleared and Reissued are final.
-    /// </summary>
-    public static TransitionTable<CheckStatus> Transitions { get; } = new(new Dictionary<CheckStatus, CheckStatus[]>
+    private static readonly TransitionTable<CheckStatus> _transitions = new(new Dictionary<CheckStatus, CheckStatus[]>
     {
         [CheckStatus.Issued] = [CheckStatus.Printed, CheckStatus.Voided, CheckStatus.Reissued],
         [CheckStatus.Printed] = [CheckStatus.Voided, CheckStatus.StopPayment, CheckStatus.Cleared, CheckStatus.Reissued, CheckStatus.Stale],
@@ -18,6 +15,13 @@ public static class CheckStatuses
         [CheckStatus.Stale] = [CheckStatus.Voided, CheckStatus.Reissued, CheckStatus.Cleared],
         [CheckStatus.Voided] = [],
         [CheckStatus.Cleared] = [],
-        [CheckStatus.Reissued] = [],
+        // A replaced check the bank paid anyway: recorded so the register flags it.
+        [CheckStatus.Reissued] = [CheckStatus.Cleared],
     });
+
+    /// <summary>
+    /// Gets the allowed moves. Voided and Cleared are final; a reissued check can still clear.
+    /// </summary>
+    public static TransitionTable<CheckStatus> Transitions
+        => _transitions;
 }

@@ -31,9 +31,16 @@ internal sealed class ChecksTestContext
         Files = new InMemoryCheckFileStore();
         Numbers = new InMemoryNumberSequence();
         Observer = new RecordingCheckObserver();
+        LocalClock = new FixedOffsetLocalClock(() => Banking.Now, TimeSpan.Zero);
         Manager = new CheckManager(Store, [new CheckRecordHandler(clock.Object)], NullLogger<CatalogManager<CheckRecord>>.Instance);
-        Service = new CheckService(Manager, Banking.Manager, Numbers, [Observer], new HttpContextAccessor(), clock.Object, RecipeRoundTrip.Localizer<CheckService>());
+        Service = new CheckService(Manager, Banking.Manager, Numbers, [Observer], new HttpContextAccessor(), clock.Object, LocalClock, RecipeRoundTrip.Localizer<CheckService>());
+        Banking.Usages.Add(new CheckBankAccountUsage(Store, RecipeRoundTrip.Localizer<CheckBankAccountUsage>()));
     }
+
+    /// <summary>
+    /// Gets the site's local clock, at UTC unless a test moves it.
+    /// </summary>
+    public FixedOffsetLocalClock LocalClock { get; }
 
     public BankingTestContext Banking { get; }
 
@@ -96,6 +103,49 @@ internal sealed class InMemoryCheckRecordStore : InMemoryCatalog<CheckRecord>, I
 
     public Task<IReadOnlyList<CheckRecord>> ListBySourceAsync(string sourceKind, string sourceId, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<CheckRecord>>(Entries.Where(entry => entry.SourceKind == sourceKind && entry.SourceId == sourceId).ToList());
+
+    public Task<(int Count, IReadOnlyList<CheckRecord> Checks)> ListPageAsync(CheckRegisterQuery query, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        // The database runs CheckAccessExpressions; CheckRegisterStoreTests proves it agrees with this rule on SQLite.
+        var access = query.Access ?? CheckAccessFilter.Unrestricted;
+        var matching = Entries
+            .Where(access.Allows)
+            .Where(entry => string.IsNullOrEmpty(query.BankAccountId) || entry.BankAccountId == query.BankAccountId)
+            .Where(entry => query.Status is null || entry.Status == query.Status)
+            .ToList();
+        var ordered = query.OldestFirst
+            ? matching.OrderBy(entry => entry.IssuedUtc).ThenBy(entry => entry.Number)
+            : matching.OrderByDescending(entry => entry.IssuedUtc).ThenByDescending(entry => entry.Number);
+
+        return Task.FromResult<(int, IReadOnlyList<CheckRecord>)>((matching.Count, ordered.Skip(skip).Take(take).ToList()));
+    }
+
+    public Task<IReadOnlyList<CheckRecord>> ListPrintedBeforeAsync(DateOnly checkDateBefore, int take, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<CheckRecord>>(Entries
+            .Where(entry => entry.Status == CheckStatus.Printed && entry.CheckDate < checkDateBefore)
+            .OrderBy(entry => entry.CheckDate)
+            .ThenBy(entry => entry.Number)
+            .Take(take)
+            .ToList());
+}
+
+/// <summary>
+/// A source access that lets each user see the access scopes it lists for them.
+/// </summary>
+internal sealed class FixedCheckSourceAccess : ICheckSourceAccess
+{
+    private readonly Dictionary<string, CheckSourceScope> _scopes;
+
+    public FixedCheckSourceAccess(string sourceKind, Dictionary<string, CheckSourceScope> scopesByUserName)
+    {
+        SourceKind = sourceKind;
+        _scopes = scopesByUserName;
+    }
+
+    public string SourceKind { get; }
+
+    public Task<CheckSourceScope> GetScopeAsync(System.Security.Claims.ClaimsPrincipal user, CheckAccessLevel level, CancellationToken cancellationToken = default)
+        => Task.FromResult(_scopes.GetValueOrDefault(user?.Identity?.Name ?? string.Empty) ?? CheckSourceScope.None);
 }
 
 /// <summary>

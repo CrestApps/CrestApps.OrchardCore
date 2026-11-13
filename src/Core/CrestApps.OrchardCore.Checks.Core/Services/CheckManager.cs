@@ -46,6 +46,10 @@ public sealed class CheckManager : CatalogManager<CheckRecord>, ICheckManager
     }
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<CheckRecord>> ListPrintedBeforeAsync(DateOnly checkDateBefore, int take, CancellationToken cancellationToken = default)
+        => _store.ListPrintedBeforeAsync(checkDateBefore, take, cancellationToken);
+
+    /// <inheritdoc />
     public Task<long?> GetHighestNumberAsync(string bankAccountId, CancellationToken cancellationToken = default)
         => _store.GetHighestNumberAsync(bankAccountId, cancellationToken);
 }

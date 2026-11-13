@@ -37,7 +37,7 @@
                     {
                         id = Html.IdFor(m => m.Owner) + "-picker",
                         inputName = Html.NameFor(m => m.Owner).ToString(),
-                        endpoint = Url.Content("~/Admin/api/banking/owners/search"),
+                        endpoint = Url.RouteUrl("CrestApps.Banking.OwnerSearch"),
                         initialItemsJson = Model.OwnerInitialItemsJson,
                         multiple = false,
                         enableSearch = true,

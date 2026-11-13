@@ -17,7 +17,7 @@ internal sealed class ChecksWorkflowObserver : ICheckObserver
         var name = change.Kind switch
         {
             CheckChangeKind.Issued => nameof(CheckIssuedEvent),
-            CheckChangeKind.Printed => nameof(CheckPrintedEvent),
+            CheckChangeKind.Printed or CheckChangeKind.Reprinted => nameof(CheckPrintedEvent),
             CheckChangeKind.Cleared => nameof(CheckClearedEvent),
             CheckChangeKind.Voided or CheckChangeKind.StopPayment or CheckChangeKind.Reissued => nameof(CheckVoidedEvent),
             _ => null,

@@ -11,6 +11,7 @@ using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Checks.Drivers;
 
@@ -21,11 +22,13 @@ namespace CrestApps.OrchardCore.Checks.Drivers;
 internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
 {
     private readonly IBankAccountManager _bankAccounts;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
-    public CheckRecordDisplayDriver(IBankAccountManager bankAccounts, IStringLocalizer<CheckRecordDisplayDriver> stringLocalizer)
+    public CheckRecordDisplayDriver(IBankAccountManager bankAccounts, ILocalClock localClock, IStringLocalizer<CheckRecordDisplayDriver> stringLocalizer)
     {
+        _localClock = localClock;
         _bankAccounts = bankAccounts;
         S = stringLocalizer;
     }
@@ -62,6 +65,9 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
     {
         var accounts = await BusinessAccountsAsync();
 
+        // A new check is dated today in the site's time zone, never the UTC date.
+        var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+
         return Initialize<CheckRecordViewModel>("CheckRecordFields_Edit", model =>
         {
             model.BankAccountId = check.BankAccountId;
@@ -72,7 +78,7 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
             model.PayeeRegion = check.PayeeAddress?.Region;
             model.PayeePostalCode = check.PayeeAddress?.PostalCode;
             model.Amount = check.Amount > 0 ? check.Amount.ToString(CultureInfo.InvariantCulture) : null;
-            model.CheckDate = check.CheckDate == default ? null : check.CheckDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            model.CheckDate = (check.CheckDate == default ? today : check.CheckDate).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             model.Memo = check.Memo;
             model.BankAccountOptions = accounts
                 .Select(account => new SelectListItem($"{account.Name} ({BankAccountNumbers.Masked(account)})", account.ItemId, account.ItemId == check.BankAccountId))

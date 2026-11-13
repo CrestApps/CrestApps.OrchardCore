@@ -51,7 +51,11 @@ Changing the routing number or the account number always takes the account back 
 
 ## See a full account number
 
-People with **Reveal bank account numbers** see **Show the full number** at the bottom of the account page. The number opens on a page of its own, and every time someone opens it, it is recorded in the Audit Trail with who and when.
+People with **Reveal bank account numbers** see **Show the full number** at the bottom of the account page. The number opens on a page of its own, and every time someone opens it, it is recorded in the Audit Trail with who and when. Ask your administrator to keep the Audit Trail on: the site also writes each opening to its log, but the Audit Trail is where you can look it up.
+
+## Remove an account
+
+**Delete** in an account's menu removes an account nothing uses. An account that checks or payments were made from or to can't be deleted, since they still name it: the page says why. Close it instead: set **Status** to **Closed**.
 
 ## Your own bank accounts
 
@@ -59,4 +63,4 @@ People with **Reveal bank account numbers** see **Show the full number** at the 
 
 ## Move accounts to another site
 
-Accounts move between sites with **Configuration > Import/Export**: add the **Bank accounts** step to a deployment plan. The account numbers are left out unless you tick **Include the account numbers**, which only people allowed to see full numbers can do. Keep such a file safe and delete it after the import.
+Accounts move between sites with **Configuration > Import/Export**: people who manage bank accounts can add the **Bank accounts** step to a deployment plan. The account numbers are left out unless you tick **Include the account numbers**, which only people allowed to see full numbers can do. Keep such a file safe and delete it after the import.

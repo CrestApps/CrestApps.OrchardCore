@@ -7,11 +7,7 @@ namespace CrestApps.OrchardCore.Banking.Models;
 /// </summary>
 public static class BankAccountStatuses
 {
-    /// <summary>
-    /// Gets the allowed moves. A changed number always takes an account back to
-    /// <see cref="BankAccountStatus.Unverified"/>; <see cref="BankAccountStatus.Closed"/> is final.
-    /// </summary>
-    public static TransitionTable<BankAccountStatus> Transitions { get; } = new(new Dictionary<BankAccountStatus, BankAccountStatus[]>
+    private static readonly TransitionTable<BankAccountStatus> _transitions = new(new Dictionary<BankAccountStatus, BankAccountStatus[]>
     {
         [BankAccountStatus.Unverified] = [BankAccountStatus.VerificationSent, BankAccountStatus.Verified, BankAccountStatus.Failed, BankAccountStatus.Closed],
         [BankAccountStatus.VerificationSent] = [BankAccountStatus.Unverified, BankAccountStatus.Verified, BankAccountStatus.Failed, BankAccountStatus.Closed],
@@ -19,4 +15,11 @@ public static class BankAccountStatuses
         [BankAccountStatus.Failed] = [BankAccountStatus.Unverified, BankAccountStatus.VerificationSent, BankAccountStatus.Verified, BankAccountStatus.Closed],
         [BankAccountStatus.Closed] = [],
     });
+
+    /// <summary>
+    /// Gets the allowed moves. A changed number always takes an account back to
+    /// <see cref="BankAccountStatus.Unverified"/>; <see cref="BankAccountStatus.Closed"/> is final.
+    /// </summary>
+    public static TransitionTable<BankAccountStatus> Transitions
+        => _transitions;
 }

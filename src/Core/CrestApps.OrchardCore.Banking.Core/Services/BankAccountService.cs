@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
 using CrestApps.OrchardCore.SensitiveData;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Banking.Core.Services;
@@ -17,8 +19,10 @@ public sealed class BankAccountService : IBankAccountService
     private readonly IBankAccountManager _manager;
     private readonly BankAccountChangeTracker _tracker;
     private readonly IEnumerable<IBankAccountObserver> _observers;
+    private readonly IEnumerable<IBankAccountUsage> _usages;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -31,8 +35,10 @@ public sealed class BankAccountService : IBankAccountService
     /// <param name="manager">The account manager.</param>
     /// <param name="tracker">The changes of this request.</param>
     /// <param name="observers">The observers of account changes.</param>
+    /// <param name="usages">The modules whose records point to accounts.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, for who made a change.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="logger">The logger, which records every account number read.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BankAccountService(
         ISensitiveValueProtector protector,
@@ -41,8 +47,10 @@ public sealed class BankAccountService : IBankAccountService
         IBankAccountManager manager,
         BankAccountChangeTracker tracker,
         IEnumerable<IBankAccountObserver> observers,
+        IEnumerable<IBankAccountUsage> usages,
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
+        ILogger<BankAccountService> logger,
         IStringLocalizer<BankAccountService> stringLocalizer)
     {
         _protector = protector;
@@ -51,8 +59,10 @@ public sealed class BankAccountService : IBankAccountService
         _manager = manager;
         _tracker = tracker;
         _observers = observers;
+        _usages = usages;
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
+        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -220,13 +230,26 @@ public sealed class BankAccountService : IBankAccountService
             return null;
         }
 
+        var user = _httpContextAccessor.HttpContext?.User;
         var change = new BankAccountChange
         {
             Account = account,
             Kinds = [BankAccountChangeKind.NumberRevealed],
-            Actor = _httpContextAccessor.HttpContext?.User?.Identity?.Name,
+            Actor = user?.Identity?.Name,
+            ActorId = user?.Identity?.IsAuthenticated == true ? user.FindFirstValue(ClaimTypes.NameIdentifier) : null,
             Reason = reason,
         };
+
+        // Written whether or not the Audit Trail is on, so every read leaves a trace. Never the number.
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The account number of bank account {BankAccountId} was read by {Actor} ({ActorId}): {Reason}",
+                account.ItemId,
+                change.Actor ?? "the system",
+                change.ActorId,
+                reason);
+        }
 
         foreach (var observer in _observers)
         {
@@ -234,6 +257,14 @@ public sealed class BankAccountService : IBankAccountService
         }
 
         return clearText;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> GetUsagesAsync(BankAccount account, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+
+        return await BankAccountUsages.GetReasonsAsync(_usages, account, cancellationToken);
     }
 
     private void Move(BankAccount account, BankAccountStatus status, string reason, string verificationMethod)

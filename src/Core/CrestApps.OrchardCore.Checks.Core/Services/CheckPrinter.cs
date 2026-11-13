@@ -64,10 +64,11 @@ public sealed class CheckPrinter : ICheckPrinter
     }
 
     /// <inheritdoc />
-    public async Task<CheckPrintResult> PrintAsync(CheckLayout layout, IReadOnlyList<CheckRecord> checks, CancellationToken cancellationToken = default)
+    public async Task<CheckPrintResult> PrintAsync(CheckLayout layout, IReadOnlyList<CheckRecord> checks, string printRunId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(checks);
+        ArgumentException.ThrowIfNullOrEmpty(printRunId);
 
         var errors = new List<string>();
 
@@ -125,6 +126,53 @@ public sealed class CheckPrinter : ICheckPrinter
             return new CheckPrintResult { Errors = errors };
         }
 
+        // Every check line is laid out before anything is drawn, so a number the line can't hold stops the run with
+        // the bank account's name, and each account number is read once for the run.
+        var micrLines = new Dictionary<CheckRecord, MicrLine>(ReferenceEqualityComparer.Instance);
+
+        if (layout.PrintMicr)
+        {
+            foreach (var group in checks.GroupBy(check => check.BankAccountId, StringComparer.Ordinal))
+            {
+                var account = accounts[group.Key];
+                var numbers = group.Select(check => check.Number).ToList();
+                var accountNumber = await _bankAccountService.RevealAccountNumberAsync(
+                    account,
+                    S["Printed checks {0} to {1} in print run {2}", numbers.Min(), numbers.Max(), printRunId],
+                    cancellationToken);
+
+                if (string.IsNullOrEmpty(accountNumber))
+                {
+                    errors.Add(S["The account number of {0} can't be read on this site. Enter it again on the bank account.", account.Name]);
+
+                    continue;
+                }
+
+                try
+                {
+                    foreach (var check in group)
+                    {
+                        micrLines[check] = micrFormat.Format(new MicrLineRequest
+                        {
+                            RoutingNumber = account.RoutingNumber,
+                            AccountNumber = accountNumber,
+                            CheckNumber = check.Number,
+                            UseAuxiliaryOnUs = layout.UseAuxiliaryOnUs,
+                        });
+                    }
+                }
+                catch (ArgumentException)
+                {
+                    errors.Add(S["The routing or account number of {0} doesn't fit the check line. Check the numbers on the bank account.", account.Name]);
+                }
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            return new CheckPrintResult { Errors = errors };
+        }
+
         var signature = layout.HasSignature ? await _files.ReadAsync(layout.ItemId, ChecksConstants.LayoutFiles.Signature, cancellationToken) : null;
         var secondSignature = layout.HasSecondSignature ? await _files.ReadAsync(layout.ItemId, ChecksConstants.LayoutFiles.SecondSignature, cancellationToken) : null;
         var amountWriter = _amountWriters.FirstOrDefault(writer => string.Equals(writer.Language, CultureInfo.CurrentUICulture.TwoLetterISOLanguageName, StringComparison.OrdinalIgnoreCase))
@@ -169,22 +217,7 @@ public sealed class CheckPrinter : ICheckPrinter
 
             if (micr is not null)
             {
-                var accountNumber = await _bankAccountService.RevealAccountNumberAsync(account, $"Printed on check {check.Number}", cancellationToken);
-
-                if (string.IsNullOrEmpty(accountNumber))
-                {
-                    return new CheckPrintResult { Errors = [S["The account number of {0} can't be read on this site. Enter it again on the bank account.", account.Name]] };
-                }
-
-                var line = micrFormat.Format(new MicrLineRequest
-                {
-                    RoutingNumber = account.RoutingNumber,
-                    AccountNumber = accountNumber,
-                    CheckNumber = check.Number,
-                    UseAuxiliaryOnUs = layout.UseAuxiliaryOnUs,
-                });
-
-                DrawMicr(context, line, micr);
+                DrawMicr(context, micrLines[check], micr);
             }
 
             foreach (var voucherTop in voucherTops)
@@ -221,7 +254,7 @@ public sealed class CheckPrinter : ICheckPrinter
 
         if (amountWriter is not null)
         {
-            context.Text(CheckFieldNames.AmountInWords, amountWriter.Write(check.Amount, CurrencyScale.GetDecimalPlaces(check.Currency)) + " " + check.Currency + " ***");
+            context.Text(CheckFieldNames.AmountInWords, amountWriter.Write(check.Amount, CurrencyScale.GetDecimalPlaces(check.Currency), check.Currency) + " ***");
         }
 
         context.Lines(CheckFieldNames.PayeeAddress, [check.PayeeName, .. await AddressLinesAsync(check.PayeeAddress)]);

@@ -43,7 +43,11 @@ internal sealed class BankAccountsDeploymentStepDisplayDriver : DisplayDriver<De
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (model.IncludeSensitiveData && !await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, BankingPermissions.RevealBankAccountNumbers))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, BankingPermissions.ManageBankAccounts))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, S["Only a user who may manage bank accounts can export them."]);
+        }
+        else if (model.IncludeSensitiveData && !await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, BankingPermissions.RevealBankAccountNumbers))
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.IncludeSensitiveData), S["Only a user who may reveal bank account numbers can export them."]);
         }

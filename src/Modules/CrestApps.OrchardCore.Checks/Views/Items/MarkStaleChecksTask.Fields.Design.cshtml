@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Checks.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<MarkStaleChecksTask>
+
+<header><h4><i class="fa-solid fa-hourglass-end" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Mark Stale Checks"])</h4></header>
+<p class="hint">@T["Marks stale the printed checks older than {0} days.", Model.Activity.AgeInDays]</p>

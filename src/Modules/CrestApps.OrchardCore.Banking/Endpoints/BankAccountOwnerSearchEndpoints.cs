@@ -13,13 +13,19 @@ namespace CrestApps.OrchardCore.Banking.Endpoints;
 /// </summary>
 internal static class BankAccountOwnerSearchEndpoints
 {
+    /// <summary>
+    /// The endpoint's route name, which views build its URL from.
+    /// </summary>
+    public const string RouteName = "CrestApps.Banking.OwnerSearch";
+
     private const int PerKind = 10;
 
-    public static IEndpointRouteBuilder AddBankAccountOwnerSearchEndpoint(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder AddBankAccountOwnerSearchEndpoint(this IEndpointRouteBuilder builder, string adminUrlPrefix)
     {
-        builder.MapGet("Admin/api/banking/owners/search", HandleAsync)
+        // Under the site's admin prefix, so a site that moves the admin moves the picker with it.
+        builder.MapGet((string.IsNullOrWhiteSpace(adminUrlPrefix) ? "Admin" : adminUrlPrefix.Trim('/')) + "/api/banking/owners/search", HandleAsync)
             .RequireAuthorization()
-            .WithName("CrestApps.Banking.OwnerSearch");
+            .WithName(RouteName);
 
         return builder;
     }

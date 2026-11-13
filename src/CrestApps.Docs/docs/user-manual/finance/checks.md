@@ -54,7 +54,10 @@ The check gets the account's next number. Checks that other features write, such
 1. In **Banking > Checks**, tick the checks to print.
 2. Choose **Print with** and the layout. The checks open as one PDF, and they are marked **Printed**.
 
-If a sheet jams or prints badly, open the check's menu and choose **Reissue**: a new check with the next number replaces it, and the old one is kept as **Reissued**.
+A check that is already printed can't be printed again from the list. If a sheet jams or prints badly:
+
+- Choose **Reprint** in the check's menu, pick the layout and say why, such as "Printer jam". The same check, with the same number, prints again, and the reprint is recorded with your reason.
+- Or choose **Reissue**: a new check with the next number replaces it, and the old one is kept as **Reissued**. Use it when the printed check left the office, such as a lost check.
 
 ## Load new check stock
 
@@ -69,8 +72,12 @@ When you load a new box of pre-printed checks, choose **Next numbers**, pick the
 | **Cleared** | The bank paid it. Choose **Mark cleared** in its menu. |
 | **Voided** | Cancelled. It keeps its number. |
 | **Stop payment** | You asked the bank not to pay it. Record it with **Stop payment**, and ask the bank too. |
-| **Reissued** | Replaced by another check. |
-| **Stale** | Too old for the bank to pay. |
+| **Reissued** | Replaced by another check. If the bank pays it anyway, choose **Mark cleared**: the register flags it **Paid after reissue**, so you can check whether the replacement was paid too. |
+| **Stale** | Too old for the bank to pay. Your administrator can mark old checks stale every day with the **Mark Stale Checks** workflow task. |
+
+## Who sees which checks
+
+Checks written by another feature can be limited to the people who look after them: paychecks, for example, are seen only by people who run that payroll. Checks you write by hand are seen by everyone who may view the register.
 
 ## Positive pay
 

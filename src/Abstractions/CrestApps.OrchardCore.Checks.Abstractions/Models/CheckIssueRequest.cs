@@ -57,4 +57,9 @@ public sealed class CheckIssueRequest
     /// Gets or sets the id of the record the check pays.
     /// </summary>
     public string SourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the access scope within the source kind, such as the pay group of a paycheck.
+    /// </summary>
+    public string AccessScope { get; set; }
 }

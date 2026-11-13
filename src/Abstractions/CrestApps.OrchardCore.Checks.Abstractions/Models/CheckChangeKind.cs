@@ -39,4 +39,9 @@ public enum CheckChangeKind
     /// It became too old to pay.
     /// </summary>
     Stale,
+
+    /// <summary>
+    /// A printed check was printed again, with a reason, such as after a printer jam.
+    /// </summary>
+    Reprinted,
 }

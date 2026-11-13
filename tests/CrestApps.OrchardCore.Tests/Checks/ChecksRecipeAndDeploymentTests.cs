@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Checks.Core.Services;
 using CrestApps.OrchardCore.Checks.Deployments;
 using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Recipes;
@@ -81,7 +82,7 @@ public sealed class ChecksRecipeAndDeploymentTests
         // Arrange
         var path = Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Checks", "Recipes", "checks-positive-pay.recipe.json");
         var recipe = JsonNode.Parse(File.ReadAllText(path))!;
-        var dataSet = new CheckRegisterReportDataSet(Mock.Of<ISession>(), Mock.Of<IAuthorizationService>(), RecipeRoundTrip.Localizer<CheckRegisterReportDataSet>());
+        var dataSet = new CheckRegisterReportDataSet(Mock.Of<ISession>(), Mock.Of<IAuthorizationService>(), new CheckAccessService([]), RecipeRoundTrip.Localizer<CheckRegisterReportDataSet>());
         var fields = dataSet.Fields.Select(field => field.Name).ToHashSet(StringComparer.Ordinal);
 
         // Act

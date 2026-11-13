@@ -1,11 +1,13 @@
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Checks.Core.Indexes;
 using CrestApps.OrchardCore.Checks.Models;
+using CrestApps.OrchardCore.Checks.Services;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
+using YesSql;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Checks.Reports;
@@ -20,13 +22,16 @@ public sealed class CheckRegisterReportDataSet : IndexedReportDataSet<CheckRecor
     /// </summary>
     public const string DataSetName = "CheckRegister";
 
+    private readonly ICheckAccessService _access;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CheckRegisterReportDataSet"/> class.
     /// </summary>
     /// <param name="session">The session.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="access">Who may see the checks of each source.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public CheckRegisterReportDataSet(ISession session, IAuthorizationService authorizationService, IStringLocalizer<CheckRegisterReportDataSet> stringLocalizer)
+    public CheckRegisterReportDataSet(ISession session, IAuthorizationService authorizationService, ICheckAccessService access, IStringLocalizer<CheckRegisterReportDataSet> stringLocalizer)
         : base(
             new DataSetDescriptor(DataSetName, stringLocalizer["Check register"], stringLocalizer["One row per check: bank account, number, payee, amount, check date and status, for reports and the bank's positive pay file."]),
             session,
@@ -34,6 +39,8 @@ public sealed class CheckRegisterReportDataSet : IndexedReportDataSet<CheckRecor
             ChecksConstants.CollectionName,
             ChecksPermissions.ViewCheckRegister)
     {
+        _access = access;
+
         var S = stringLocalizer;
         var group = S["Check"].Value;
         var dates = S["Dates"].Value;
@@ -55,14 +62,14 @@ public sealed class CheckRegisterReportDataSet : IndexedReportDataSet<CheckRecor
         AddField("PrintedUtc", S["Printed"], DataFieldType.DateTime, record => record.PrintedUtc, dates);
         AddField("ClosedUtc", S["Voided or stopped"], DataFieldType.DateTime, record => record.ClosedUtc, dates);
         AddField("ClearedOn", S["Cleared"], DataFieldType.Date, record => record.ClearedOn?.ToDateTime(TimeOnly.MinValue), dates);
-        AddField("ModifiedUtc", S["Changed"], DataFieldType.DateTime, record => record.ModifiedUtc ?? record.IssuedUtc, dates);
+        AddField("ModifiedUtc", S["Changed"], DataFieldType.DateTime, record => record.ModifiedUtc ?? record.IssuedUtc, dates).Description = S["When the check last changed: what the positive pay file reads new rows by."].Value;
 
         CompleteDescription();
     }
 
     /// <inheritdoc />
     protected override (string Field, Expression<Func<CheckRecordIndex, DateTime>> Column)? DateColumn
-        => ("IssuedUtc", index => index.IssuedUtc);
+        => ("ModifiedUtc", index => index.ModifiedUtc);
 
     /// <inheritdoc />
     protected override IReadOnlyDictionary<string, Expression<Func<CheckRecordIndex, string>>> KeyColumns =>
@@ -77,5 +84,18 @@ public sealed class CheckRegisterReportDataSet : IndexedReportDataSet<CheckRecor
     protected override void DescribeColumns(ReportIndexConditions<CheckRecordIndex> columns)
     {
         columns.Text("Status", nameof(CheckRecordIndex.Status));
+    }
+
+    /// <inheritdoc />
+    protected override async Task<Func<IQueryIndex<CheckRecordIndex>, IQueryIndex<CheckRecordIndex>>> RestrictAsync(DataSourceContext context, CancellationToken cancellationToken)
+    {
+        var filter = await _access.GetFilterAsync(context?.User, CheckAccessLevel.View, cancellationToken);
+
+        if (CheckAccessExpressions.Restrict(filter) is not { } restrict)
+        {
+            return rows => rows;
+        }
+
+        return rows => rows.Where(restrict);
     }
 }

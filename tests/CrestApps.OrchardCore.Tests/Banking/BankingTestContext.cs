@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
@@ -29,7 +30,7 @@ internal sealed class BankingTestContext
 
         clock.SetupGet(entry => entry.UtcNow).Returns(() => Now);
 
-        Store = new InMemoryBankAccountStore();
+        Store = new InMemoryBankAccountStore(Usages);
         Tracker = new BankAccountChangeTracker();
         Observer = new RecordingBankAccountObserver();
         Protector = new DataProtectionSensitiveValueProtector(new EphemeralDataProtectionProvider());
@@ -45,10 +46,22 @@ internal sealed class BankingTestContext
             Manager,
             Tracker,
             [Observer],
+            Usages,
             HttpContextAccessor,
             clock.Object,
+            Logger,
             RecipeRoundTrip.Localizer<BankAccountService>());
     }
+
+    /// <summary>
+    /// Gets the modules whose records point to accounts; tests add to it.
+    /// </summary>
+    public List<IBankAccountUsage> Usages { get; } = [];
+
+    /// <summary>
+    /// Gets the log of the bank account service.
+    /// </summary>
+    public RecordingLogger<BankAccountService> Logger { get; } = new();
 
     public DateTime Now { get; set; } = new(2026, 11, 13, 15, 0, 0, DateTimeKind.Utc);
 
@@ -90,14 +103,71 @@ internal sealed class BankingTestContext
 /// <summary>
 /// Bank accounts held in memory.
 /// </summary>
-internal sealed class InMemoryBankAccountStore : InMemoryCatalog<BankAccount>, IBankAccountStore
+internal sealed class InMemoryBankAccountStore : InMemoryCatalog<BankAccount>, IBankAccountStore, ICatalog<BankAccount>
 {
+    private readonly IEnumerable<IBankAccountUsage> _usages;
+
+    public InMemoryBankAccountStore(IEnumerable<IBankAccountUsage> usages = null)
+    {
+        _usages = usages ?? [];
+    }
+
+    // As the YesSql store does: an account records point to is never deleted.
+    public new async ValueTask<bool> DeleteAsync(BankAccount entry, CancellationToken cancellationToken = default)
+    {
+        var reasons = await BankAccountUsages.GetReasonsAsync(_usages, entry, cancellationToken);
+
+        if (reasons.Count > 0)
+        {
+            throw new InvalidOperationException("The bank account is in use: " + string.Join(" ", reasons));
+        }
+
+        return await base.DeleteAsync(entry, cancellationToken);
+    }
+
     public Task<IReadOnlyList<BankAccount>> ListByOwnersAsync(IEnumerable<PartyRef> owners, CancellationToken cancellationToken = default)
     {
         var wanted = owners.ToHashSet();
 
         return Task.FromResult<IReadOnlyList<BankAccount>>(Entries.Where(entry => wanted.Contains(entry.Owner)).ToList());
     }
+}
+
+/// <summary>
+/// Keeps the messages written to it.
+/// </summary>
+/// <typeparam name="T">The category.</typeparam>
+internal sealed class RecordingLogger<T> : ILogger<T>
+{
+    public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+    public IDisposable BeginScope<TState>(TState state)
+        where TState : notnull
+        => null;
+
+    public bool IsEnabled(LogLevel logLevel)
+        => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        => Entries.Add((logLevel, formatter(state, exception)));
+}
+
+/// <summary>
+/// A module whose records point to the accounts it lists.
+/// </summary>
+internal sealed class FixedBankAccountUsage : IBankAccountUsage
+{
+    private readonly HashSet<string> _accountIds;
+    private readonly string _reason;
+
+    public FixedBankAccountUsage(string reason, params string[] accountIds)
+    {
+        _reason = reason;
+        _accountIds = new HashSet<string>(accountIds, StringComparer.Ordinal);
+    }
+
+    public Task<string> GetUsageAsync(BankAccount account, CancellationToken cancellationToken = default)
+        => Task.FromResult(_accountIds.Contains(account.ItemId) ? _reason : null);
 }
 
 /// <summary>

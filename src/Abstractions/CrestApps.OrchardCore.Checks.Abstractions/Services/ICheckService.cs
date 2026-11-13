@@ -35,13 +35,24 @@ public interface ICheckService
     Task<bool> SetNextNumberAsync(string bankAccountId, long next, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Records that checks were printed in one run.
+    /// Records that issued checks were printed in one run. A printed check is printed again only by
+    /// <see cref="MarkReprintedAsync"/>.
     /// </summary>
     /// <param name="checks">The checks.</param>
     /// <param name="printRunId">The print run.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task that completes when the checks are saved.</returns>
     Task MarkPrintedAsync(IEnumerable<CheckRecord> checks, string printRunId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that a printed check was printed again, such as after a printer jam, with the reason.
+    /// </summary>
+    /// <param name="check">The check.</param>
+    /// <param name="printRunId">The print run.</param>
+    /// <param name="reason">Why it was printed again.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="false"/> when the check is not printed or is history.</returns>
+    Task<bool> MarkReprintedAsync(CheckRecord check, string printRunId, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Voids a check. It keeps its number.
@@ -87,4 +98,13 @@ public interface ICheckService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns><see langword="false"/> when the move is not allowed.</returns>
     Task<bool> MarkStaleAsync(CheckRecord check, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Marks stale every printed check whose check date is more than a number of days before today, in the site's time
+    /// zone, such as from a workflow on a timer.
+    /// </summary>
+    /// <param name="ageInDays">How many days old a check must be, 1 or more.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many checks became stale.</returns>
+    Task<int> MarkStaleChecksAsync(int ageInDays, CancellationToken cancellationToken = default);
 }

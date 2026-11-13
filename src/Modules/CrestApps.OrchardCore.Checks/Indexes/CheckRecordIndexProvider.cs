@@ -28,6 +28,8 @@ internal sealed class CheckRecordIndexProvider : IndexProvider<CheckRecord>
                 SourceKind = check.SourceKind,
                 SourceId = check.SourceId,
                 IssuedUtc = check.IssuedUtc,
+                AccessKey = CheckAccessFilter.KeyOf(check.SourceKind, check.AccessScope),
+                ModifiedUtc = check.ModifiedUtc ?? check.IssuedUtc,
             });
     }
 }

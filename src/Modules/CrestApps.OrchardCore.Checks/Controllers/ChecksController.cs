@@ -2,7 +2,7 @@ using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
-using CrestApps.OrchardCore.Checks.Core.Indexes;
+using CrestApps.OrchardCore.Checks.Core.Services;
 using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Services;
 using CrestApps.OrchardCore.Checks.ViewModels;
@@ -22,8 +22,6 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Checks.Controllers;
 
@@ -39,12 +37,13 @@ public sealed class ChecksController : Controller
     private readonly ICheckPrinter _printer;
     private readonly INamedCatalogManager<CheckLayout> _layouts;
     private readonly IBankAccountManager _bankAccounts;
-    private readonly ISession _session;
+    private readonly ICheckRecordStore _store;
+    private readonly ICheckAccessService _access;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<CheckRecord> _displayManager;
     private readonly INotifier _notifier;
-    private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -55,12 +54,13 @@ public sealed class ChecksController : Controller
         ICheckPrinter printer,
         INamedCatalogManager<CheckLayout> layouts,
         IBankAccountManager bankAccounts,
-        ISession session,
+        ICheckRecordStore store,
+        ICheckAccessService access,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<CheckRecord> displayManager,
         INotifier notifier,
-        IClock clock,
+        ILocalClock localClock,
         IHtmlLocalizer<ChecksController> htmlLocalizer,
         IStringLocalizer<ChecksController> stringLocalizer)
     {
@@ -69,12 +69,13 @@ public sealed class ChecksController : Controller
         _printer = printer;
         _layouts = layouts;
         _bankAccounts = bankAccounts;
-        _session = session;
+        _store = store;
+        _access = access;
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
         _notifier = notifier;
-        _clock = clock;
+        _localClock = localClock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -92,39 +93,17 @@ public sealed class ChecksController : Controller
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
-        var query = _session.Query<CheckRecord, CheckRecordIndex>(collection: ChecksConstants.CollectionName);
-
-        if (!string.IsNullOrEmpty(filter.BankAccountId))
-        {
-            var bankAccountId = filter.BankAccountId;
-            query = query.Where(index => index.BankAccountId == bankAccountId);
-        }
-
-        if (Enum.TryParse<CheckStatus>(filter.Status, out var status))
-        {
-            var statusName = status.ToString();
-            query = query.Where(index => index.Status == statusName);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter.Search))
-        {
-            var search = filter.Search.Trim();
-
-            if (long.TryParse(search, NumberStyles.None, CultureInfo.InvariantCulture, out var number))
+        var (count, checks) = await _store.ListPageAsync(
+            new CheckRegisterQuery
             {
-                query = query.Where(index => index.Number == number);
-            }
-            else
-            {
-                query = query.Where(index => index.PayeeName.Contains(search));
-            }
-        }
-
-        var count = await query.CountAsync();
-        var checks = (await query.OrderByDescending(index => index.IssuedUtc).ThenByDescending(index => index.Number)
-            .Skip(pager.GetStartIndex())
-            .Take(pager.PageSize)
-            .ListAsync()).ToList();
+                BankAccountId = filter.BankAccountId,
+                Status = Enum.TryParse<CheckStatus>(filter.Status, out var status) ? status : null,
+                Search = filter.Search,
+                Access = await _access.GetFilterAsync(User, CheckAccessLevel.View, HttpContext.RequestAborted),
+            },
+            pager.GetStartIndex(),
+            pager.PageSize,
+            HttpContext.RequestAborted);
 
         var routeData = new RouteData();
 
@@ -273,7 +252,24 @@ public sealed class ChecksController : Controller
         }
 
         var checks = await _manager.ListAsync(itemIds ?? []);
-        var result = await _printer.PrintAsync(layout, checks);
+
+        if (checks.Count != (itemIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Count() || !await CanManageAllAsync(checks))
+        {
+            return NotFound();
+        }
+
+        var printed = checks.Where(check => check.Status == CheckStatus.Printed).ToList();
+
+        if (printed.Count > 0)
+        {
+            await _notifier.ErrorAsync(H["Check {0} is already printed. To print it again, choose Reprint in its menu and say why.", string.Join(", ", printed.Select(check => check.Number))]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // The run's id is known before printing, so the Audit Trail entry of each account number read names it.
+        var printRunId = IdGenerator.GenerateId();
+        var result = await _printer.PrintAsync(layout, checks, printRunId, HttpContext.RequestAborted);
 
         if (!result.Succeeded)
         {
@@ -285,13 +281,93 @@ public sealed class ChecksController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var printRunId = IdGenerator.GenerateId();
-
         await _checkService.MarkPrintedAsync(checks, printRunId);
 
         Response.Headers.CacheControl = "no-store";
 
         return File(result.Pdf, "application/pdf", $"checks-{checks[0].Number}-{checks[checks.Count - 1].Number}.pdf");
+    }
+
+    /// <summary>
+    /// Asks which layout to print a printed check again with, and why.
+    /// </summary>
+    /// <param name="id">The check.</param>
+    [Admin("banking/checks/reprint/{id}", "ChecksReprint")]
+    public async Task<IActionResult> Reprint(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ChecksPermissions.ManageChecks))
+        {
+            return Forbid();
+        }
+
+        if (await FindManagedAsync(id) is not { } check)
+        {
+            return NotFound();
+        }
+
+        return View(await ReprintViewModelAsync(new CheckReprintViewModel(), check));
+    }
+
+    /// <summary>
+    /// Prints a printed check again, with the reason, and records the reprint.
+    /// </summary>
+    /// <param name="id">The check.</param>
+    /// <param name="model">The layout and the reason.</param>
+    [HttpPost]
+    [ActionName(nameof(Reprint))]
+    [Admin("banking/checks/reprint/{id}", "ChecksReprint")]
+    public async Task<IActionResult> ReprintPost(string id, CheckReprintViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ChecksPermissions.ManageChecks))
+        {
+            return Forbid();
+        }
+
+        if (await FindManagedAsync(id) is not { } check)
+        {
+            return NotFound();
+        }
+
+        var layout = string.IsNullOrEmpty(model.LayoutId) ? null : await _layouts.FindByIdAsync(model.LayoutId);
+
+        if (layout is null)
+        {
+            ModelState.AddModelError(nameof(model.LayoutId), S["Choose the check layout to print with."]);
+        }
+
+        if (string.IsNullOrWhiteSpace(model.Reason))
+        {
+            ModelState.AddModelError(nameof(model.Reason), S["Say why the check is printed again, such as a printer jam."]);
+        }
+
+        if (check.Status != CheckStatus.Printed || check.IsHistorical)
+        {
+            ModelState.AddModelError(string.Empty, S["Only a printed check can be printed again."]);
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(await ReprintViewModelAsync(model, check));
+        }
+
+        var printRunId = IdGenerator.GenerateId();
+        var result = await _printer.PrintAsync(layout, [check], printRunId, HttpContext.RequestAborted);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error);
+            }
+
+            return View(await ReprintViewModelAsync(model, check));
+        }
+
+        await _checkService.MarkReprintedAsync(check, printRunId, model.Reason);
+
+        Response.Headers.CacheControl = "no-store";
+
+        return File(result.Pdf, "application/pdf", $"check-{check.Number}-reprint.pdf");
     }
 
     [HttpPost]
@@ -309,7 +385,7 @@ public sealed class ChecksController : Controller
     public Task<IActionResult> Cleared(string id, string clearedOn)
         => ChangeAsync(
             id,
-            check => _checkService.MarkClearedAsync(check, DateOnly.TryParseExact(clearedOn, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : DateOnly.FromDateTime(_clock.UtcNow)),
+            async check => await _checkService.MarkClearedAsync(check, DateOnly.TryParseExact(clearedOn, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : await GetLocalTodayAsync()),
             H["The check is recorded as paid by the bank."]);
 
     [HttpPost]
@@ -321,7 +397,7 @@ public sealed class ChecksController : Controller
             return Forbid();
         }
 
-        if (string.IsNullOrEmpty(id) || await _manager.FindByIdAsync(id) is not { } check)
+        if (await FindManagedAsync(id) is not { } check)
         {
             return NotFound();
         }
@@ -394,7 +470,7 @@ public sealed class ChecksController : Controller
             return Forbid();
         }
 
-        if (string.IsNullOrEmpty(id) || await _manager.FindByIdAsync(id) is not { } check)
+        if (await FindManagedAsync(id) is not { } check)
         {
             return NotFound();
         }
@@ -409,6 +485,40 @@ public sealed class ChecksController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Finds a check the user may act on; a check of a source the user may not see is not found.
+    /// </summary>
+    private async Task<CheckRecord> FindManagedAsync(string id)
+    {
+        if (string.IsNullOrEmpty(id) || await _manager.FindByIdAsync(id) is not { } check)
+        {
+            return null;
+        }
+
+        return await _access.CanAccessAsync(User, check, CheckAccessLevel.Manage, HttpContext.RequestAborted) ? check : null;
+    }
+
+    private async Task<bool> CanManageAllAsync(IEnumerable<CheckRecord> checks)
+    {
+        var filter = await _access.GetFilterAsync(User, CheckAccessLevel.Manage, HttpContext.RequestAborted);
+
+        return checks.All(filter.Allows);
+    }
+
+    private async Task<DateOnly> GetLocalTodayAsync()
+        => DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+
+    private async Task<CheckReprintViewModel> ReprintViewModelAsync(CheckReprintViewModel model, CheckRecord check)
+    {
+        model.Check = check;
+        model.LayoutOptions = (await _layouts.GetAllAsync())
+            .OrderBy(layout => layout.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(layout => new SelectListItem(layout.Name, layout.ItemId, layout.ItemId == model.LayoutId))
+            .ToList();
+
+        return model;
     }
 
     private async Task<CheckNextNumberViewModel> NextNumberViewModelAsync(CheckNextNumberViewModel model)

@@ -27,6 +27,11 @@ public sealed class BankAccountChange
     public string Actor { get; set; }
 
     /// <summary>
+    /// Gets or sets the user id of who made the change, when a signed-in person made it.
+    /// </summary>
+    public string ActorId { get; set; }
+
+    /// <summary>
     /// Gets or sets why, when someone said.
     /// </summary>
     public string Reason { get; set; }

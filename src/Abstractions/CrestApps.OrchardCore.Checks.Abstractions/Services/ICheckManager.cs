@@ -42,4 +42,13 @@ public interface ICheckManager : ICatalogManager<CheckRecord>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The checks found, in check number order.</returns>
     Task<IReadOnlyList<CheckRecord>> ListAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists printed checks dated before a date, oldest first, such as the checks that became stale.
+    /// </summary>
+    /// <param name="checkDateBefore">The first check date not listed.</param>
+    /// <param name="take">How many checks to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The checks.</returns>
+    Task<IReadOnlyList<CheckRecord>> ListPrintedBeforeAsync(DateOnly checkDateBefore, int take, CancellationToken cancellationToken = default);
 }

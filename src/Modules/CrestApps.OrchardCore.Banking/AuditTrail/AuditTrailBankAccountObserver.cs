@@ -38,7 +38,7 @@ internal sealed class AuditTrailBankAccountObserver : IBankAccountObserver
                 name,
                 BankingAuditTrailEvents.CategoryName,
                 account.ItemId,
-                userId: null,
+                userId: change.ActorId,
                 userName: change.Actor,
                 data));
         }

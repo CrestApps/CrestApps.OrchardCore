@@ -56,4 +56,15 @@ public sealed class CheckRecordIndex : CatalogItemIndex
     /// Gets or sets when the check was issued.
     /// </summary>
     public DateTime IssuedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source kind and access scope (<see cref="Models.CheckAccessFilter.KeyOf"/>), so the register
+    /// reads only the checks a person may see.
+    /// </summary>
+    public string AccessKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the check last changed, or was issued, so the positive pay file reads only changed checks.
+    /// </summary>
+    public DateTime ModifiedUtc { get; set; }
 }

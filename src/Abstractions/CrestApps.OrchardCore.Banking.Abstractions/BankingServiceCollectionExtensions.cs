@@ -26,6 +26,22 @@ public static class BankingServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers how a module tells that its records point to a bank account, so the account can't be deleted.
+    /// </summary>
+    /// <typeparam name="TUsage">The usage.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddBankAccountUsage<TUsage>(this IServiceCollection services)
+        where TUsage : class, IBankAccountUsage
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IBankAccountUsage, TUsage>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers a way to check bank accounts.
     /// </summary>
     /// <typeparam name="TVerifier">The verifier.</typeparam>

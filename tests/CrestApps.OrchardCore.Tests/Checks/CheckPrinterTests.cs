@@ -20,7 +20,7 @@ public sealed class CheckPrinterTests
         var layout = new CheckLayout { ItemId = "layout1", Name = "Blank", PrintMicr = true };
 
         // Act
-        var result = await context.Printer().PrintAsync(layout, [check], TestContext.Current.CancellationToken);
+        var result = await context.Printer().PrintAsync(layout, [check], "run1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Succeeded);
@@ -45,7 +45,7 @@ public sealed class CheckPrinterTests
         var layout = new CheckLayout { ItemId = "layout1", Name = "Pre-printed", Stock = CheckStock.PrePrinted, Form = form };
 
         // Act
-        var result = await context.Printer().PrintAsync(layout, checks, TestContext.Current.CancellationToken);
+        var result = await context.Printer().PrintAsync(layout, checks, "run1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded, string.Join(" ", result.Errors));
@@ -74,7 +74,7 @@ public sealed class CheckPrinterTests
         var layout = new CheckLayout { ItemId = "layout1", Name = "Pre-printed", Stock = CheckStock.PrePrinted };
 
         // Act
-        var printed = await context.Printer(new TestVoucherSource()).PrintAsync(layout, [result.Check], TestContext.Current.CancellationToken);
+        var printed = await context.Printer(new TestVoucherSource()).PrintAsync(layout, [result.Check], "run1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(printed.Succeeded, string.Join(" ", printed.Errors));
@@ -99,7 +99,7 @@ public sealed class CheckPrinterTests
         context.Banking.Observer.Changes.Clear();
 
         // Act
-        var result = await context.Printer().PrintAsync(layout, [check], TestContext.Current.CancellationToken);
+        var result = await context.Printer().PrintAsync(layout, [check], "run1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.Succeeded, string.Join(" ", result.Errors));

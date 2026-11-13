@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Banking.Core.Services;
@@ -136,6 +137,7 @@ public sealed class BankAccountHandler : CatalogEntryHandlerBase<BankAccount>
             Kinds = kinds,
             PreviousStatus = previous,
             Actor = _httpContextAccessor.HttpContext?.User?.Identity?.Name,
+            ActorId = _httpContextAccessor.HttpContext?.User is { Identity.IsAuthenticated: true } user ? user.FindFirstValue(ClaimTypes.NameIdentifier) : null,
             Reason = reason,
         };
 

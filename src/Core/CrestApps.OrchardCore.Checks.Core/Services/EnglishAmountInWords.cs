@@ -25,11 +25,33 @@ public sealed class EnglishAmountInWords : IAmountInWords
         (1_000m, "thousand"),
     ];
 
+    private static readonly Dictionary<string, string> _currencyNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["USD"] = "Dollars",
+        ["CAD"] = "Dollars",
+        ["AUD"] = "Dollars",
+        ["NZD"] = "Dollars",
+        ["EUR"] = "Euros",
+        ["GBP"] = "Pounds",
+        ["MXN"] = "Pesos",
+        ["JPY"] = "Yen",
+        ["CHF"] = "Francs",
+    };
+
     /// <inheritdoc />
     public string Language => "en";
 
     /// <inheritdoc />
-    public string Write(decimal amount, int decimals = 2)
+    public string Write(decimal amount, int decimals = 2, string currency = null)
+    {
+        var words = WriteNumber(amount, decimals);
+
+        return string.IsNullOrEmpty(currency)
+            ? words
+            : words + " " + _currencyNames.GetValueOrDefault(currency, currency.ToUpperInvariant());
+    }
+
+    private static string WriteNumber(decimal amount, int decimals)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(amount);
         ArgumentOutOfRangeException.ThrowIfNegative(decimals);

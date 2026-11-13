@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Checks.Workflows
+
+@model MarkStaleChecksTaskViewModel
+
+<div class="mb-3" asp-validation-class-for="AgeInDays">
+    <label asp-for="AgeInDays" class="form-label">@T["Days until a check is stale"]</label>
+    <input asp-for="AgeInDays" type="number" min="1" max="3650" step="1" class="form-control" />
+    <span asp-validation-for="AgeInDays" class="text-danger"></span>
+    <span class="hint">@T["A printed check whose check date is more than this many days before today becomes stale. Most banks in the United States refuse checks older than six months (180 days). Run the workflow from a Timer Event once a day. The number of checks marked is written to the workflow output StaleChecks."]</span>
+</div>

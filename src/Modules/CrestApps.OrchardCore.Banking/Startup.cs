@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -54,7 +55,7 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddBankAccountOwnerSearchEndpoint();
+        routes.AddBankAccountOwnerSearchEndpoint(serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value.AdminUrlPrefix);
     }
 }
 

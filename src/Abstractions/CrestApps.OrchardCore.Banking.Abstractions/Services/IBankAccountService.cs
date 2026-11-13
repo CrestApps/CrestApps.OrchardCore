@@ -56,8 +56,8 @@ public interface IBankAccountService
     Task<BankAccountVerificationResult> StartVerificationAsync(BankAccount account, string verifierName, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Reads the full account number of an account and tells the observers that it was shown, so the Audit Trail
-    /// records who saw it. Call it only for a user who holds <see cref="BankingPermissions.RevealBankAccountNumbers"/>,
+    /// Reads the full account number of an account, writes a log entry (the account and who read it, never the number)
+    /// and tells the observers that it was shown, so the Audit Trail records who saw it. Call it only for a user who holds <see cref="BankingPermissions.RevealBankAccountNumbers"/>,
     /// or for a file a payment needs.
     /// </summary>
     /// <param name="account">The account.</param>
@@ -65,4 +65,13 @@ public interface IBankAccountService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The account number, or <see langword="null"/> when none is stored or it can't be read with the tenant's keys.</returns>
     Task<string> RevealAccountNumberAsync(BankAccount account, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns why records of other modules point to an account, such as checks drawn on it. An account in use can't
+    /// be deleted: close it instead.
+    /// </summary>
+    /// <param name="account">The account.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The reasons; empty when nothing points to the account.</returns>
+    Task<IReadOnlyList<string>> GetUsagesAsync(BankAccount account, CancellationToken cancellationToken = default);
 }

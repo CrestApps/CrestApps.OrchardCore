@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
 using CrestApps.OrchardCore.Checks.Models;
@@ -20,12 +21,15 @@ public sealed class CheckService : ICheckService
     /// </summary>
     public const long DefaultFirstNumber = 1001;
 
+    private const int StaleBatchSize = 200;
+
     private readonly ICheckManager _manager;
     private readonly IBankAccountManager _bankAccounts;
     private readonly INumberSequence _numbers;
     private readonly IEnumerable<ICheckObserver> _observers;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -38,6 +42,7 @@ public sealed class CheckService : ICheckService
     /// <param name="observers">The observers of check changes.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, for who made a change.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="localClock">The site's local clock, for the dates printed on checks.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CheckService(
         ICheckManager manager,
@@ -46,6 +51,7 @@ public sealed class CheckService : ICheckService
         IEnumerable<ICheckObserver> observers,
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
+        ILocalClock localClock,
         IStringLocalizer<CheckService> stringLocalizer)
     {
         _manager = manager;
@@ -54,6 +60,7 @@ public sealed class CheckService : ICheckService
         _observers = observers;
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -133,6 +140,7 @@ public sealed class CheckService : ICheckService
         check.Memo = string.IsNullOrWhiteSpace(request.Memo) ? null : request.Memo.Trim();
         check.SourceKind = request.SourceKind;
         check.SourceId = request.SourceId;
+        check.AccessScope = string.IsNullOrEmpty(request.SourceKind) ? null : request.AccessScope;
         check.Status = CheckStatus.Issued;
         check.IssuedUtc = _clock.UtcNow;
 
@@ -183,7 +191,8 @@ public sealed class CheckService : ICheckService
 
         foreach (var check in checks)
         {
-            if (check.IsHistorical || check.Status is not (CheckStatus.Issued or CheckStatus.Printed))
+            // A printed check prints again only as a reprint, with a reason.
+            if (check.IsHistorical || check.Status is not CheckStatus.Issued)
             {
                 continue;
             }
@@ -197,6 +206,26 @@ public sealed class CheckService : ICheckService
             await _manager.UpdateAsync(check, cancellationToken: cancellationToken);
             await NotifyAsync(check, CheckChangeKind.Printed, previous, null, null, cancellationToken);
         }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> MarkReprintedAsync(CheckRecord check, string printRunId, string reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(check);
+
+        if (check.IsHistorical || check.Status is not CheckStatus.Printed || string.IsNullOrWhiteSpace(reason))
+        {
+            return false;
+        }
+
+        check.PrintedUtc = _clock.UtcNow;
+        check.PrintRunId = printRunId;
+        check.StatusReason = reason.Trim();
+
+        await _manager.UpdateAsync(check, cancellationToken: cancellationToken);
+        await NotifyAsync(check, CheckChangeKind.Reprinted, CheckStatus.Printed, check.StatusReason, null, cancellationToken);
+
+        return true;
     }
 
     /// <inheritdoc />
@@ -221,10 +250,11 @@ public sealed class CheckService : ICheckService
             PayeeAddress = check.PayeeAddress,
             Amount = check.Amount,
             Currency = check.Currency,
-            CheckDate = DateOnly.FromDateTime(_clock.UtcNow),
+            CheckDate = await GetLocalTodayAsync(),
             Memo = check.Memo,
             SourceKind = check.SourceKind,
             SourceId = check.SourceId,
+            AccessScope = check.AccessScope,
         }, cancellationToken);
 
         if (!result.Succeeded)
@@ -253,35 +283,58 @@ public sealed class CheckService : ICheckService
         => MoveAsync(check, CheckStatus.StopPayment, CheckChangeKind.StopPayment, reason, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<bool> MarkClearedAsync(CheckRecord check, DateOnly clearedOn, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(check);
-
-        if (!CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.Cleared))
-        {
-            return false;
-        }
-
-        check.ClearedOn = clearedOn;
-
-        return await MoveAsync(check, CheckStatus.Cleared, CheckChangeKind.Cleared, null, cancellationToken);
-    }
+    public Task<bool> MarkClearedAsync(CheckRecord check, DateOnly clearedOn, CancellationToken cancellationToken = default)
+        => MoveAsync(check, CheckStatus.Cleared, CheckChangeKind.Cleared, null, cancellationToken, moved => moved.ClearedOn = clearedOn);
 
     /// <inheritdoc />
     public Task<bool> MarkStaleAsync(CheckRecord check, CancellationToken cancellationToken = default)
         => MoveAsync(check, CheckStatus.Stale, CheckChangeKind.Stale, null, cancellationToken);
 
-    private async Task<bool> MoveAsync(CheckRecord check, CheckStatus status, CheckChangeKind kind, string reason, CancellationToken cancellationToken)
+    /// <inheritdoc />
+    public async Task<int> MarkStaleChecksAsync(int ageInDays, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(ageInDays, 1);
+
+        var before = (await GetLocalTodayAsync()).AddDays(-ageInDays);
+        var reason = S["Not cashed within {0} days.", ageInDays].Value;
+        var count = 0;
+
+        while (true)
+        {
+            var batch = await _manager.ListPrintedBeforeAsync(before, StaleBatchSize, cancellationToken);
+            var moved = 0;
+
+            foreach (var check in batch)
+            {
+                if (await MoveAsync(check, CheckStatus.Stale, CheckChangeKind.Stale, reason, cancellationToken))
+                {
+                    moved++;
+                }
+            }
+
+            count += moved;
+
+            // A batch that moved nothing would be read again: stop.
+            if (batch.Count < StaleBatchSize || moved == 0)
+            {
+                return count;
+            }
+        }
+    }
+
+    private async Task<bool> MoveAsync(CheckRecord check, CheckStatus status, CheckChangeKind kind, string reason, CancellationToken cancellationToken, Action<CheckRecord> apply = null)
     {
         ArgumentNullException.ThrowIfNull(check);
 
-        if (check.IsHistorical || !CheckStatuses.Transitions.CanMove(check.Status, status))
+        // History keeps its record of what happened at the bank; only printing and reissuing it are refused.
+        if (!CheckStatuses.Transitions.CanMove(check.Status, status))
         {
             return false;
         }
 
         var previous = check.Status;
 
+        apply?.Invoke(check);
         check.Status = status;
         check.StatusReason = reason ?? check.StatusReason;
 
@@ -299,6 +352,9 @@ public sealed class CheckService : ICheckService
     private Task<long?> GetHighestNumberAsync(string bankAccountId, CancellationToken cancellationToken)
         => _manager.GetHighestNumberAsync(bankAccountId, cancellationToken);
 
+    private async Task<DateOnly> GetLocalTodayAsync()
+        => DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+
     private async Task NotifyAsync(CheckRecord check, CheckChangeKind kind, CheckStatus? previous, string reason, CheckRecord replacedBy, CancellationToken cancellationToken)
     {
         var change = new CheckChange
@@ -308,6 +364,7 @@ public sealed class CheckService : ICheckService
             PreviousStatus = previous,
             ReplacedBy = replacedBy,
             Actor = _httpContextAccessor.HttpContext?.User?.Identity?.Name,
+            ActorId = _httpContextAccessor.HttpContext?.User is { Identity.IsAuthenticated: true } user ? user.FindFirstValue(ClaimTypes.NameIdentifier) : null,
             Reason = reason,
         };
 

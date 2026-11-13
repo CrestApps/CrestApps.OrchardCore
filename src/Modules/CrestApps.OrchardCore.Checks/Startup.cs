@@ -70,6 +70,7 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<CheckPrintedEvent, CheckEventActivityDisplayDriver<CheckPrintedEvent>>();
         services.AddActivity<CheckVoidedEvent, CheckEventActivityDisplayDriver<CheckVoidedEvent>>();
         services.AddActivity<CheckClearedEvent, CheckEventActivityDisplayDriver<CheckClearedEvent>>();
+        services.AddActivity<MarkStaleChecksTask, MarkStaleChecksTaskDisplayDriver>();
         services.AddCheckObserver<ChecksWorkflowObserver>();
     }
 }
@@ -87,7 +88,8 @@ public sealed class WorkflowsRecipeSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<CheckIssuedEventSchema>()
             .AddWorkflowActivitySchema<CheckPrintedEventSchema>()
             .AddWorkflowActivitySchema<CheckVoidedEventSchema>()
-            .AddWorkflowActivitySchema<CheckClearedEventSchema>();
+            .AddWorkflowActivitySchema<CheckClearedEventSchema>()
+            .AddWorkflowActivitySchema<MarkStaleChecksTaskSchema>();
     }
 }
 
@@ -115,7 +117,7 @@ public sealed class DeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<CheckLayoutsDeploymentSource, CheckLayoutsDeploymentStep>();
-        services.AddDeployment<CheckRegisterDeploymentSource, CheckRegisterDeploymentStep>();
+        services.AddDeployment<CheckRegisterDeploymentSource, CheckRegisterDeploymentStep, CheckRegisterDeploymentStepDisplayDriver>();
     }
 }
 

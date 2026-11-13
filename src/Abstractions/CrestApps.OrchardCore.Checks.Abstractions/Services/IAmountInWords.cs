@@ -12,10 +12,12 @@ public interface IAmountInWords
     string Language { get; }
 
     /// <summary>
-    /// Writes an amount, with the fraction in figures, such as "One thousand two hundred thirty-four and 56/100".
+    /// Writes an amount, with the fraction in figures, such as "One thousand two hundred thirty-four and 56/100", and
+    /// the currency's name when one is given, such as "... and 56/100 Dollars".
     /// </summary>
     /// <param name="amount">The amount; zero or more.</param>
     /// <param name="decimals">The number of decimals of the currency, from <c>CurrencyScale</c>.</param>
+    /// <param name="currency">The ISO currency code, or <see langword="null"/> to write no currency.</param>
     /// <returns>The words.</returns>
-    string Write(decimal amount, int decimals = 2);
+    string Write(decimal amount, int decimals = 2, string currency = null);
 }
