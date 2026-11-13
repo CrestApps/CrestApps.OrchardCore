@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps egress guard configuration",
+  "description": "How the egress-guarded HTTP clients (webhook deliveries, web push, calendar feeds, MCP, A2A, the web crawler, OAuth2 token requests, OSRM, UCP, agent feeds and recording downloads) reach the internet, read from appsettings.json in the OrchardCore section of the host or a tenant. See the Outbound calls through a proxy section of the Webhooks and Configuration pages of the docs.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps": {
+          "type": "object",
+          "properties": {
+            "Egress": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "UseSystemProxy": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether the guarded clients go through the system proxy (HTTPS_PROXY, HTTP_PROXY and NO_PROXY, or the system's settings on Windows). The proxy is connected to whatever its address, and each destination's own DNS answer is checked before the proxy is asked to reach it. Off by default: the clients connect directly and check the address they connect to."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

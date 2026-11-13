@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http.Resilience;
+using OrchardCore.Environment.Shell.Configuration;
 using Polly;
 
 namespace CrestApps.OrchardCore.Core.Http;
@@ -17,8 +18,11 @@ namespace CrestApps.OrchardCore.Core.Http;
 /// <remarks>
 /// An address is checked when it is saved, but a host name can resolve to anything when it is called, so the guarded
 /// handler checks the addresses a host resolves to at connection time and refuses the connection when every one of them
-/// is internal. A client that follows redirects has every hop checked the same way. The handler never goes through a
-/// proxy: through one, the connection would be checked against the proxy's address rather than the destination's.
+/// is internal. A client that follows redirects has every hop checked the same way. By default the handler never goes
+/// through a proxy: through one, the connection would be checked against the proxy's address rather than the
+/// destination's. A host whose only way out is a proxy sets <see cref="UseSystemProxyKey"/>: the handler then goes
+/// through the system proxy, connects to the proxy whatever its address, and checks each destination's own DNS answer
+/// before the proxy is asked to reach it.
 /// </remarks>
 public static class EgressNetwork
 {
@@ -26,6 +30,13 @@ public static class EgressNetwork
     /// The message of the exception thrown when a connection to the site's own network is refused.
     /// </summary>
     public const string RefusedMessage = "is on the site's own network";
+
+    /// <summary>
+    /// The configuration key (<c>true</c> or <c>false</c>, read from the tenant's configuration) that lets the guarded
+    /// clients go through the system proxy (<see cref="HttpClient.DefaultProxy"/>: the <c>HTTPS_PROXY</c>,
+    /// <c>HTTP_PROXY</c> and <c>NO_PROXY</c> environment variables, or the system's settings on Windows). Off by default.
+    /// </summary>
+    public const string UseSystemProxyKey = "CrestApps:Egress:UseSystemProxy";
 
     /// <summary>
     /// Returns whether an address is on the site's own network: loopback, private, link-local, shared (carrier-grade
@@ -170,14 +181,52 @@ public static class EgressNetwork
     /// even then.</param>
     /// <param name="allowRedirects">Whether redirects are followed. Each hop is checked at connect.</param>
     public static SocketsHttpHandler CreateHandler(bool allowLoopback, bool allowPrivateNetwork, bool allowRedirects)
-        => new()
+        => CreateHandler(allowLoopback, allowPrivateNetwork, allowRedirects, proxy: null);
+
+    /// <summary>
+    /// Creates a handler that checks every address it connects to, redirects included, and goes through a proxy when one
+    /// is given. Through the proxy, the proxy is connected to whatever its address (it is the host's), and each
+    /// destination is checked by its own DNS answer before the proxy is asked to reach it; every request opens its own
+    /// connection, so one proxy connection never carries an unchecked destination. The proxy resolves the name again, so
+    /// it must keep its own egress rules against a name that answers differently each time.
+    /// </summary>
+    /// <param name="allowLoopback">Whether loopback addresses are allowed (development only).</param>
+    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed (never link-local).</param>
+    /// <param name="allowRedirects">Whether redirects are followed. Each hop is checked.</param>
+    /// <param name="proxy">The proxy to go through, such as <see cref="GetProxy(IServiceProvider)"/>, or
+    /// <see langword="null"/> for none.</param>
+    public static SocketsHttpHandler CreateHandler(bool allowLoopback, bool allowPrivateNetwork, bool allowRedirects, IWebProxy proxy)
+    {
+        var handler = new SocketsHttpHandler
         {
-            // Through a proxy the connect callback would see the proxy's address, not the destination's.
-            UseProxy = false,
+            // Through a proxy the connect callback sees the proxy's address, not the destination's: ConnectAsync checks the
+            // destination on its own then.
+            UseProxy = proxy is not null,
+            Proxy = proxy,
             AllowAutoRedirect = allowRedirects,
             AutomaticDecompression = DecompressionMethods.All,
-            ConnectCallback = (context, cancellationToken) => ConnectAsync(context, allowLoopback, allowPrivateNetwork, cancellationToken),
+            ConnectCallback = (context, cancellationToken) => ConnectAsync(context, allowLoopback, allowPrivateNetwork, proxy, cancellationToken),
         };
+
+        if (proxy is not null)
+        {
+            // A plain-http connection to a proxy carries requests for any destination; not reusing it makes every request
+            // connect, so every destination, each redirect hop included, is checked.
+            handler.PooledConnectionLifetime = TimeSpan.Zero;
+        }
+
+        return handler;
+    }
+
+    /// <summary>
+    /// Returns the system proxy when the tenant's configuration sets <see cref="UseSystemProxyKey"/> to <c>true</c>, and
+    /// otherwise <see langword="null"/>: the guarded clients connect directly.
+    /// </summary>
+    /// <param name="serviceProvider">The tenant's services.</param>
+    public static IWebProxy GetProxy(IServiceProvider serviceProvider)
+        => bool.TryParse(serviceProvider?.GetService<IShellConfiguration>()?[UseSystemProxyKey], out var useProxy) && useProxy
+            ? HttpClient.DefaultProxy
+            : null;
 
     /// <summary>
     /// Whether a connection to the address is refused.
@@ -299,7 +348,8 @@ public static class EgressNetwork
         return builder.ConfigurePrimaryHttpMessageHandler(serviceProvider => CreateHandler(
             serviceProvider.GetService<IHostEnvironment>()?.IsDevelopment() == true,
             allowPrivateNetwork?.Invoke(serviceProvider) == true,
-            allowRedirects));
+            allowRedirects,
+            GetProxy(serviceProvider)));
     }
 
     private static bool IsRefusal(Exception exception)
@@ -338,30 +388,71 @@ public static class EgressNetwork
         return false;
     }
 
-    private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, bool allowLoopback, bool allowPrivateNetwork, CancellationToken cancellationToken)
+    private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, bool allowLoopback, bool allowPrivateNetwork, IWebProxy proxy, CancellationToken cancellationToken)
     {
-        var host = context.DnsEndPoint.Host.Trim('[', ']');
-        var addresses = IPAddress.TryParse(host, out var literal)
-            ? [literal]
-            : await Dns.GetHostAddressesAsync(host, cancellationToken);
-        var allowed = addresses.Where(candidate => !IsRefused(candidate, allowLoopback, allowPrivateNetwork)).ToList();
+        var destination = context.InitialRequestMessage?.RequestUri;
 
-        if (allowed.Count == 0)
+        if (proxy is not null && destination is not null && IsProxyConnection(context.DnsEndPoint, destination, proxy))
         {
-            throw new HttpRequestException($"The host '{context.DnsEndPoint.Host}' {RefusedMessage}.");
+            // The proxy is the host's, so it is connected to whatever its address; the destination is checked first.
+            await ResolveAllowedAsync(destination.IdnHost, allowLoopback, allowPrivateNetwork, cancellationToken);
+
+            return await ConnectAnyAsync(await ResolveAsync(context.DnsEndPoint.Host, cancellationToken), context.DnsEndPoint.Port, cancellationToken);
         }
 
-        // Every allowed address is tried in turn, as the default handler does: a host with both an IPv6 and an IPv4
-        // address may only answer on one of them. Each address was checked above, so none of them is internal.
+        var allowed = await ResolveAllowedAsync(context.DnsEndPoint.Host, allowLoopback, allowPrivateNetwork, cancellationToken);
+
+        return await ConnectAnyAsync(allowed, context.DnsEndPoint.Port, cancellationToken);
+    }
+
+    // Whether this connection goes to the proxy the request is sent through, rather than to its destination.
+    private static bool IsProxyConnection(DnsEndPoint endPoint, Uri destination, IWebProxy proxy)
+    {
+        if (proxy.IsBypassed(destination) || proxy.GetProxy(destination) is not { } proxyUri)
+        {
+            return false;
+        }
+
+        return string.Equals(proxyUri.IdnHost.Trim('[', ']'), endPoint.Host.Trim('[', ']'), StringComparison.OrdinalIgnoreCase) &&
+            proxyUri.Port == endPoint.Port;
+    }
+
+    private static async Task<IPAddress[]> ResolveAsync(string host, CancellationToken cancellationToken)
+    {
+        host = host.Trim('[', ']');
+
+        return IPAddress.TryParse(host, out var literal)
+            ? [literal]
+            : await Dns.GetHostAddressesAsync(host, cancellationToken);
+    }
+
+    private static async Task<IPAddress[]> ResolveAllowedAsync(string host, bool allowLoopback, bool allowPrivateNetwork, CancellationToken cancellationToken)
+    {
+        var allowed = (await ResolveAsync(host, cancellationToken))
+            .Where(candidate => !IsRefused(candidate, allowLoopback, allowPrivateNetwork))
+            .ToArray();
+
+        if (allowed.Length == 0)
+        {
+            throw new HttpRequestException($"The host '{host}' {RefusedMessage}.");
+        }
+
+        return allowed;
+    }
+
+    // Every address is tried in turn, as the default handler does: a host with both an IPv6 and an IPv4 address may only
+    // answer on one of them.
+    private static async Task<Stream> ConnectAnyAsync(IPAddress[] addresses, int port, CancellationToken cancellationToken)
+    {
         Exception lastError = null;
 
-        foreach (var address in allowed)
+        foreach (var address in addresses)
         {
             var socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
 
             try
             {
-                await socket.ConnectAsync(new IPEndPoint(address, context.DnsEndPoint.Port), cancellationToken);
+                await socket.ConnectAsync(new IPEndPoint(address, port), cancellationToken);
 
                 return new NetworkStream(socket, ownsSocket: true);
             }
