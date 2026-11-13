@@ -18,6 +18,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Users.Services;
 using Xunit;
@@ -331,6 +333,7 @@ public sealed class TransactionLifecycleEventsTests
             manager,
             services.BuildServiceProvider(),
             new TestClock(_now),
+            NullLogger<TransactionRefundHandler>.Instance,
             new PassThroughStringLocalizer<TransactionRefundHandler>());
     }
 
@@ -353,6 +356,8 @@ public sealed class TransactionLifecycleEventsTests
             new TestClock(_now),
             Mock.Of<INotifier>(),
             Options.Create(new TransactionSourceOptions()),
+            Mock.Of<IDisplayManager<Transaction>>(),
+            Mock.Of<IUpdateModelAccessor>(),
             new PassThroughHtmlLocalizer<AdminController>(),
             new PassThroughStringLocalizer<AdminController>(),
             new SourceTextLocalizerFactory());

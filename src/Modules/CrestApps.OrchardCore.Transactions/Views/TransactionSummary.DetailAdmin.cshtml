@@ -1,0 +1,99 @@
+@using CrestApps.OrchardCore.Currencies
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Transactions.Core.Services
+@model TransactionDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@inject TransactionDisplayText DisplayText
+
+@{
+    var transaction = Model.Transaction;
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>@T["Summary"]</span>
+        <partial name="_TransactionStatusBadge" model="transaction.Status" />
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">@T["Owner"]</dt>
+            <dd class="col-sm-8">@(Model.OwnerName ?? T["Unknown"].Value)</dd>
+
+            <dt class="col-sm-4">@T["Source"]</dt>
+            <dd class="col-sm-8">@(DisplayText.SourceName(transaction.Source) ?? T["None"].Value)</dd>
+
+            <dt class="col-sm-4">@T["Reference"]</dt>
+            <dd class="col-sm-8">
+                @if (Model.Reference is { } reference)
+                {
+                    @if (string.IsNullOrEmpty(reference.Url))
+                    {
+                        @reference.Text
+                    }
+                    else
+                    {
+                        <a href="@reference.Url">@reference.Text</a>
+                    }
+                }
+                else
+                {
+                    @transaction.ReferenceType @(string.IsNullOrEmpty(transaction.ReferenceId) ? "" : $"({transaction.ReferenceId})")
+                }
+            </dd>
+
+            <dt class="col-sm-4">@T["Total"]</dt>
+            <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.TotalAmount, transaction.Currency)</dd>
+
+            @if (transaction.AmountAdjusted > 0m)
+            {
+                <dt class="col-sm-4">@T["Adjusted"]</dt>
+                <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountAdjusted, transaction.Currency)</dd>
+            }
+
+            <dt class="col-sm-4">@T["Paid"]</dt>
+            <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountPaid, transaction.Currency)</dd>
+
+            @if (transaction.AmountRefunded > 0m)
+            {
+                <dt class="col-sm-4">@T["Refunded"]</dt>
+                <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountRefunded, transaction.Currency)</dd>
+            }
+
+            <dt class="col-sm-4">@T["Outstanding"]</dt>
+            <dd class="col-sm-8"><strong>@transaction.Currency @CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)</strong></dd>
+
+            <dt class="col-sm-4">@T["Created"]</dt>
+            <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: transaction.CreatedUtc, Format: "g"))</dd>
+
+            @if (transaction.DueUtc.HasValue)
+            {
+                <dt class="col-sm-4">@T["Due"]</dt>
+                <dd class="col-sm-8">@((await DocumentDates.ToSiteDueDateAsync(LocalClock, transaction.DueUtc.Value)).ToString("d"))</dd>
+            }
+
+            @if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
+            {
+                <dt class="col-sm-4">@T["Invoice"]</dt>
+                <dd class="col-sm-8">
+                    @if (Model.ShowReceipts)
+                    {
+                        <a asp-action="Index" asp-controller="TransactionInvoice" asp-route-itemId="@transaction.ItemId">@transaction.InvoiceNumber</a>
+                    }
+                    else
+                    {
+                        @transaction.InvoiceNumber
+                    }
+                </dd>
+            }
+
+            @if (transaction.SettledUtc.HasValue)
+            {
+                <dt class="col-sm-4">@T["Settled"]</dt>
+                <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: transaction.SettledUtc.Value, Format: "g")) (@DisplayText.SettlementMethodName(transaction.SettlementMethod))</dd>
+            }
+
+            <dt class="col-sm-4">@T["Reminders sent"]</dt>
+            <dd class="col-sm-8">@transaction.ReminderCount</dd>
+        </dl>
+    </div>
+</div>

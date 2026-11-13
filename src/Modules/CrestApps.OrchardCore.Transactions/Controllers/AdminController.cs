@@ -19,6 +19,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -48,6 +49,8 @@ public sealed class AdminController : Controller
     private readonly INotifier _notifier;
     private readonly TransactionSourceOptions _sourceOptions;
     private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly IDisplayManager<Transaction> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -63,6 +66,8 @@ public sealed class AdminController : Controller
     /// <param name="clock">The clock used to timestamp notes.</param>
     /// <param name="notifier">The notifier used to surface confirmation messages.</param>
     /// <param name="sourceOptions">The registered transaction sources used to build the source filter.</param>
+    /// <param name="displayManager">The display manager that builds the detail page from the display drivers of a transaction.</param>
+    /// <param name="updateModelAccessor">The accessor of the model updater the display drivers are given.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="localizerFactory">The localizer factory that translates the registered transaction sources' names.</param>
@@ -76,6 +81,8 @@ public sealed class AdminController : Controller
         IClock clock,
         INotifier notifier,
         IOptions<TransactionSourceOptions> sourceOptions,
+        IDisplayManager<Transaction> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer,
         IStringLocalizerFactory localizerFactory,
@@ -91,6 +98,8 @@ public sealed class AdminController : Controller
         _notifier = notifier;
         _sourceOptions = sourceOptions.Value;
         _localizerFactory = localizerFactory;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -221,17 +230,13 @@ public sealed class AdminController : Controller
             return NotFound();
         }
 
-        var model = new TransactionDetailViewModel
+        // The page is built by the display drivers of Transaction, so another module can add a card to it.
+
+        return View(new TransactionDetailPageViewModel
         {
             Transaction = transaction,
-            OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId) ?? TransactionOwnerNames.GuestName(transaction, S["{0} (guest)"].Value),
-            Reference = await DescribeReferenceAsync(transaction),
-            CanManage = true,
-            CanSendReminder = _reminderService is not null,
-            ShowReceipts = HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not null,
-        };
-
-        return View(model);
+            Shape = await _displayManager.BuildDisplayAsync(transaction, _updateModelAccessor.ModelUpdater, TransactionsConstants.DisplayTypes.DetailAdmin),
+        });
     }
 
     /// <summary>
@@ -491,25 +496,6 @@ public sealed class AdminController : Controller
         }
 
         return items;
-    }
-
-    // What the transaction paid for, such as an order, named and linked by the module that owns it.
-    private async Task<CheckoutReferenceDescription> DescribeReferenceAsync(Transaction transaction)
-    {
-        if (string.IsNullOrEmpty(transaction.ReferenceType) || string.IsNullOrEmpty(transaction.ReferenceId))
-        {
-            return null;
-        }
-
-        foreach (var describer in HttpContext.RequestServices.GetServices<ICheckoutReferenceDescriber>())
-        {
-            if (await describer.DescribeAsync(transaction.ReferenceType, transaction.ReferenceId, HttpContext.RequestAborted) is { Text.Length: > 0 } description)
-            {
-                return description;
-            }
-        }
-
-        return null;
     }
 
     private async Task<string> ResolveOwnerNameAsync(string ownerId)

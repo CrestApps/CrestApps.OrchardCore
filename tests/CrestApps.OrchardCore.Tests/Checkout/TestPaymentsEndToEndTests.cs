@@ -171,6 +171,7 @@ public sealed class TestPaymentsEndToEndTests
                 manager,
                 sp,
                 Clock,
+                NullLogger<TransactionRefundHandler>.Instance,
                 new PassThroughStringLocalizer<TransactionRefundHandler>()));
 
             var serviceProvider = services.BuildServiceProvider();

@@ -74,6 +74,22 @@ public static class TransactionEventHandlerExtensions
         => InvokeAsync(handlers, transaction, (handler, ct) => handler.BecameOverdueAsync(transaction, ct), nameof(ITransactionEventHandler.BecameOverdueAsync), logger, cancellationToken);
 
     /// <summary>
+    /// Tells every handler that money was given back on the transaction.
+    /// </summary>
+    /// <param name="handlers">The registered handlers.</param>
+    /// <param name="transaction">The transaction, as saved with the refund.</param>
+    /// <param name="refund">The refund entry on its timeline.</param>
+    /// <param name="logger">The logger for handler failures.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public static Task RefundedAsync(
+        this IEnumerable<ITransactionEventHandler> handlers,
+        Transaction transaction,
+        TransactionEvent refund,
+        ILogger logger,
+        CancellationToken cancellationToken = default)
+        => InvokeAsync(handlers, transaction, (handler, ct) => handler.RefundedAsync(transaction, refund, ct), nameof(ITransactionEventHandler.RefundedAsync), logger, cancellationToken);
+
+    /// <summary>
     /// Returns the <see cref="TransactionEvent.Reason"/> recorded by the newest <see cref="TransactionEventType.Canceled"/>
     /// event on the timeline of the transaction, or <see langword="null"/> when no reason was given.
     /// </summary>

@@ -48,4 +48,14 @@ public interface ITransactionEventHandler
     /// <param name="transaction">The overdue transaction, as saved.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Called once per refund after money was given back on a transaction and the refund was recorded on its timeline.
+    /// A refund of everything paid is also reported by <see cref="StatusChangedAsync"/> as the change to
+    /// <see cref="TransactionStatus.Refunded"/>.
+    /// </summary>
+    /// <param name="transaction">The transaction, as saved with the refund.</param>
+    /// <param name="refund">The <see cref="TransactionEventType.Refunded"/> entry on its timeline, whose amount is what this transaction gave back.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default);
 }

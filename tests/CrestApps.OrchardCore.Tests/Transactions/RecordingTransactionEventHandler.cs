@@ -17,8 +17,17 @@ internal sealed class RecordingTransactionEventHandler : ITransactionEventHandle
 
     public List<string> Overdue { get; } = [];
 
+    public List<(string TransactionId, string EventId, decimal? Amount)> Refunded { get; } = [];
+
     public int Count
-        => Created.Count + StatusChanges.Count + Canceled.Count + Overdue.Count;
+        => Created.Count + StatusChanges.Count + Canceled.Count + Overdue.Count + Refunded.Count;
+
+    public Task RefundedAsync(Transaction transaction, TransactionEvent refund, CancellationToken cancellationToken = default)
+    {
+        Refunded.Add((transaction.ItemId, refund.Id, refund.Amount));
+
+        return Task.CompletedTask;
+    }
 
     public Task CreatedAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {

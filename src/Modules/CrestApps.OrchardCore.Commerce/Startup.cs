@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Drivers;
 using CrestApps.OrchardCore.Commerce.Navigation;
-using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Commerce.Services;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.PersonalData.Core;
@@ -30,7 +29,6 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<CommerceAdminMenu>();
         services.AddNavigationProvider<CommerceAccountMenu>();
         services.AddDisplayDriver<UserMenu, CommerceAccountUserMenuDisplayDriver>();
-        services.AddScoped<IFinancialDocumentPolicy, ReceiptsOnlyFinancialDocumentPolicy>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CommerceResourceManagementOptionsConfiguration>();
         services.AddScoped<IAuthorizationHandler, CustomerAdminPageAuthorizationHandler>();
         services.AddShapeTableProvider<AdminListFiltersShapeTableProvider>();

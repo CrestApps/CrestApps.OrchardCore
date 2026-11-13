@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TransactionOverdueEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-clock" aria-hidden="true"></i>
+    @T["Transaction Overdue"]
+</h4>
+<p>@T["Starts the first time a transaction is found unpaid after its due date."]</p>

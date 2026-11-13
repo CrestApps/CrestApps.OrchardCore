@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Transactions.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TransactionPaymentRecordedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i>
+    @T["Transaction Payment Recorded"]
+</h4>
+<p>@T["Starts when a payment is applied to a transaction, online or recorded by staff."]</p>

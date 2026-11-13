@@ -21,7 +21,7 @@ Every transaction shows its status as a colored badge.
 | **Paid** | Paid in full. |
 | **Canceled** | Canceled before it was paid. Nothing more is collected for it. |
 | **Failed** | An attempt to collect the payment failed. |
-| **Abandoned** | Left unpaid past the time it could be collected. |
+| **Abandoned** | Left unpaid past the time it could be collected. The site does not set this status itself; older records may show it. |
 | **Refunded** | Paid and later refunded. |
 
 A transaction can still take a payment, be marked paid or be canceled while it is **Pending**, **Outstanding**, **Partially paid** or **Failed**. Once it is **Paid**, **Canceled**, **Abandoned** or **Refunded**, it is final.
@@ -46,7 +46,7 @@ The report lists every transaction on the site, newest first.
 2. Type part of the transaction's title in **Search by title** and press Enter.
 3. To narrow the list, pick a status in the **Any status** list in the list header, or a source in the **Any source** list. The list updates as soon as you pick.
 
-The status list offers **Outstanding** as well as each status: it shows everything that still has a balance, which is both **Outstanding** and **Partially paid** transactions. The source list shows where transactions come from on your site, for example **Pay Later** or **Installment plan**, depending on which features are turned on.
+The status list offers **Outstanding** as well as each status except **Abandoned**: it shows everything that still has a balance, which is both **Outstanding** and **Partially paid** transactions. The source list shows where transactions come from on your site, for example **Pay Later** or **Installment plan**, depending on which features are turned on.
 
 The header shows how many transactions are on this page and how many match in total. Use the pager under the list to move between pages, and **Items per page** to show more or fewer rows.
 
@@ -147,7 +147,7 @@ The **Send the invoice** card appears when the **Transaction Reminders** feature
 1. Open the transaction.
 2. In **Send the invoice**, click **Send invoice**, then click **Send invoice** in the confirmation box, which names the amount still owed.
 
-The transaction gets its invoice number, such as *INV-1001*, if it has none yet, and the customer is sent a notice titled *Invoice INV-1001* with a link that pays it. It is not worded as a reminder. It counts as the first notice: it adds to **Reminders sent**, and the next scheduled reminder waits a full interval after it. If you see *The invoice could not be sent. The owner may not have a notification channel configured.*, contact the customer another way; the invoice number is kept for the next try.
+The transaction gets its invoice number, such as *INV-1001*, if it has none yet, and the customer is sent a notice titled *Invoice INV-1001* with a link that pays it. It is not worded as a reminder, and it uses its own e-mail template (**Payment request**), which an administrator can change under **Settings > Commerce > Emails** without changing the reminder. It counts as the first notice: it adds to **Reminders sent**, and the next scheduled reminder waits a full interval after it. If you see *The invoice could not be sent. The owner may not have a notification channel configured.*, contact the customer another way; the invoice number is kept for the next try.
 
 ### Send a reminder now
 

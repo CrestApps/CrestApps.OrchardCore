@@ -125,6 +125,54 @@ public static class TransactionsConstants
     }
 
     /// <summary>
+    /// The display types of a transaction other modules add shapes to.
+    /// </summary>
+    public static class DisplayTypes
+    {
+        /// <summary>
+        /// The administration detail page of one transaction. Its zones are <c>Content</c> (the main column) and
+        /// <c>Actions</c> (the side column).
+        /// </summary>
+        public const string DetailAdmin = "DetailAdmin";
+    }
+
+    /// <summary>
+    /// The names of the events the ledger publishes to webhooks when the Commerce Webhooks feature is on.
+    /// </summary>
+    public static class WebhookEvents
+    {
+        /// <summary>
+        /// A transaction was recorded.
+        /// </summary>
+        public const string Created = "transaction.created";
+
+        /// <summary>
+        /// A payment was applied to a transaction, online or recorded by staff.
+        /// </summary>
+        public const string PaymentRecorded = "transaction.payment-recorded";
+
+        /// <summary>
+        /// Nothing more is owed on a transaction.
+        /// </summary>
+        public const string Settled = "transaction.settled";
+
+        /// <summary>
+        /// A transaction was found unpaid after its due date, for the first time.
+        /// </summary>
+        public const string Overdue = "transaction.overdue";
+
+        /// <summary>
+        /// A transaction was canceled.
+        /// </summary>
+        public const string Canceled = "transaction.canceled";
+
+        /// <summary>
+        /// Money was given back on a transaction.
+        /// </summary>
+        public const string Refunded = "transaction.refunded";
+    }
+
+    /// <summary>
     /// The well-known settlement methods recorded on a settled transaction.
     /// </summary>
     public static class SettlementMethods

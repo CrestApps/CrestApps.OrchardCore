@@ -276,6 +276,7 @@ The command spends a card without its owner present, so only server code may cal
 | `StatusChangedAsync(transaction, previous, current)` | After `ITransactionManager.UpdateAsync` saved a status different from the one the transaction was loaded with (or last saved with). Once per such save; a save that leaves the status as it was raises nothing, so reminders, notes and invoice numbers never raise it. |
 | `CanceledAsync(transaction, reason)` | Right after `StatusChangedAsync` reported a change to `Canceled`. The reason is the `TransactionEvent.Reason` of the newest `Canceled` timeline event, or `null` when none was given. |
 | `BecameOverdueAsync(transaction)` | Once per transaction, by the reminder sweep, the first time it finds the transaction `Outstanding` or `PartiallyPaid` with money owed after the day it was due (a payment due today is not overdue yet). `Transaction.BecameOverdueUtc` records that it was raised, so it is never raised twice. |
+| `RefundedAsync(transaction, refund)` | Once per refund, after the refund was recorded on the timeline (`refund` is that `Refunded` entry, with the amount this transaction gave back). A refund reported twice by the provider raises it once. |
 
 Every place a transaction changes goes through the manager, so the events cover the console (**Cancel**, **Mark paid**, **Record payment**), an online settlement, a refund that brings what was kept to zero (`Refunded`), an installment charge that was declined (`Failed`, then `Outstanding` once no retries are left, or `Paid` when a retry goes through), and a canceled installment plan. The manager diffs the status itself, so a consumer no longer needs a catalog handler that re-reads every save.
 
@@ -298,6 +299,48 @@ public sealed class RegistrationPaymentStatusHandler : TransactionEventHandlerBa
 }
 
 services.AddScoped<ITransactionEventHandler, RegistrationPaymentStatusHandler>();
+```
+
+### Message templates
+
+Every message about a transaction has a kind, so a store writes its own template of each one under **Settings → Commerce → Emails** without changing the others. Each template reads the transaction as `{{ Transaction }}` and these values:
+
+| Kind | Sent when | Feature |
+| --- | --- | --- |
+| `payment-request` | The first request to pay a debt: **Send invoice** on the transaction, or `ITransactionCommandService.SendInvoiceAsync`. | Transaction Reminders |
+| `payment-reminder` | A reminder before, on or after the due date, from the sweep or sent by hand. | Transaction Reminders |
+| `payment-receipt` | After every payment. | Send Payment Receipts |
+| `payment-refund` | After every refund. | Send Payment Receipts |
+
+The request and the reminders pass `{{ PayUrl }}` (the link that pays it without signing in, when one could be made), `{{ DocumentUrl }}` (the printable invoice, when the payer can open one), `{{ DocumentNumber }}`, `{{ AmountDue }}` (formatted with its currency) and `{{ DueDate }}` (a short date in the site's time zone). The names are constants on `TransactionEmailKinds`. Before this release the request used the reminder template.
+
+### Workflows
+
+With **Workflows** on, the ledger starts these events, all in the **Transactions** category: **Transaction Created**, **Transaction Payment Recorded**, **Transaction Settled** (nothing more is owed), **Transaction Overdue**, **Transaction Canceled** and **Transaction Refunded**. Each can be limited to some sources and some reference types (comma-separated, without regard to case). The workflow input holds `TransactionId`, `Title`, `Source`, `Status`, `Currency`, `TotalAmount`, `AmountPaid`, `AmountAdjusted`, `AmountRefunded`, `OutstandingAmount`, `OwnerId`, `PayerKind`, `PayerId`, `ReferenceType`, `ReferenceId`, `InvoiceNumber` and `DueUtc`; a payment or a refund also gives `EventId`, `Amount`, `Method` and `Reference`, and a cancellation `Reason`. The events start after the request's work is saved, so a workflow that runs a command on the same transaction never waits on the lock of the command that raised the event.
+
+Three tasks run ledger commands: **Record Transaction Payment** (amount, payment method, reference, note), **Cancel Transaction** (reason) and **Adjust Transaction** (amount, kind `Discount`, `Waiver`, `Credit` or `WriteOff`, reason). Their fields are Liquid. Each ends with `Done`, `NotFound` or `Failed`, and writes the transaction and the command's `Errors` to the output named `Transaction` (or the name you give). The tasks have schemas for the CrestApps Recipes feature.
+
+### Webhooks
+
+With **Commerce Webhooks** on, the ledger publishes `transaction.created`, `transaction.payment-recorded`, `transaction.settled`, `transaction.overdue`, `transaction.canceled` and `transaction.refunded` (`TransactionsConstants.WebhookEvents`). The payload holds `transaction` (its id, title, source, status, currency, amounts, payer, reference, invoice number and dates) and, for a payment or a refund, `entry` (the timeline entry). Each delivery has a stable event id built from the transaction and the entry, so a receiver can drop a repeat.
+
+### Adding a card to the transaction page
+
+The administration page of a transaction is built by the display drivers of `Transaction` for the display type `TransactionsConstants.DisplayTypes.DetailAdmin` (`DetailAdmin`). The Transactions module places the summary (`Content:5`), the timeline (`Content:20`) and the actions (`Actions:5`). Another module adds a card with its own driver, such as the document a transaction was posted for:
+
+```csharp
+public sealed class InvoiceTransactionDisplayDriver : DisplayDriver<Transaction>
+{
+    public override IDisplayResult Display(Transaction transaction, BuildDisplayContext context)
+    {
+        if (context.DisplayType != TransactionsConstants.DisplayTypes.DetailAdmin || transaction.ReferenceType != "Invoice")
+        {
+            return null;
+        }
+
+        return View("InvoiceTransactionCard_DetailAdmin", transaction).Location(TransactionsConstants.DisplayTypes.DetailAdmin, "Content:10");
+    }
+}
 ```
 
 ## Using the module

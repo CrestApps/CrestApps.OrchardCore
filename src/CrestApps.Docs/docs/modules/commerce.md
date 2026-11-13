@@ -178,21 +178,13 @@ public sealed class MySubscriptionsController : Controller
 }
 ```
 
-### The financial-document policy
+### Financial document numbers
 
-Money events (a settled payment, a partial payment, a refund, a chargeback or a write-off) may need different financial documents depending on the business: a receipt, or a persisted, numbered invoice or credit note. The modules that move money must not hard-code that decision, so the contracts live in `CrestApps.OrchardCore.Transactions.Abstractions` (namespace `CrestApps.OrchardCore.Transactions.FinancialDocuments`):
+Receipts, invoices, credit notes and refund documents take their numbers from **`IFinancialDocumentNumberGenerator`** (`CrestApps.OrchardCore.Transactions.Abstractions`, namespace `CrestApps.OrchardCore.Transactions.FinancialDocuments`): it issues a `FinancialDocumentNumber` for a `FinancialDocumentNumberRequest` (a `FinancialDocumentKind` and an optional series). The Transactions feature registers `SequentialFinancialDocumentNumberGenerator`, an adapter over the shared number series (`INumberSeries`): each kind is a registered series (`FinancialDocumentSeries`: `Financial.Receipt`, `Financial.Invoice`, `Financial.CreditNote` and `Financial.RefundDocument`) with a format a site can change, by default `R-{seq}`, `INV-{seq}`, `CN-{seq}` and `RF-{seq}` from 1001. A series used for the first time carries on after the numbers the earlier generator issued, so no number repeats.
 
-- **`IFinancialDocumentPolicy`** decides, for a `FinancialDocumentContext` (the documented record's reference, the currency, and the `FinancialDocumentReason`), which documents to issue, and whether each is persisted as an immutable copy and needs a formal number. It returns an immutable `FinancialDocumentPolicyResult`.
-- **`IFinancialDocumentNumberGenerator`** issues a `FinancialDocumentNumber` for a `FinancialDocumentNumberRequest` (a `FinancialDocumentKind` and an optional series).
+The series takes its next number under a lock held until the caller's unit of work is saved, so two nodes or two requests never issue the same number. A number taken by work that then fails is not reused, so a failed payment can leave a gap.
 
-The defaults are:
-
-| Service | Default | Registered by |
-| --- | --- | --- |
-| `IFinancialDocumentPolicy` | `ReceiptsOnlyFinancialDocumentPolicy`: a receipt only, never persisted as a legal document. | Commerce |
-| `IFinancialDocumentNumberGenerator` | `SequentialFinancialDocumentNumberGenerator`: short sequential numbers per site and series, starting at 1001 (`R-1001` for receipts, `INV-1001` for invoices). | Transactions |
-
-The sequential generator keeps the last number of each series in one document, read and saved in the caller's own unit of work, under a distributed lock held until that unit of work is saved. So two nodes or two requests never issue the same number. A number taken by work that then fails is not reused, so a failed payment can leave a gap. Replace the service to use your own numbering, for example a series per year.
+Before this release an `IFinancialDocumentPolicy` seam with a receipts-only default was registered but never asked; it is removed.
 
 ### Personal data requests
 

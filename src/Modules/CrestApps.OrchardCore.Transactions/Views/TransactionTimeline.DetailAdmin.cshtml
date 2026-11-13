@@ -1,0 +1,38 @@
+@using CrestApps.OrchardCore.Transactions.Core.Services
+@model TransactionDetailViewModel
+@inject TransactionDisplayText DisplayText
+
+@{
+    var transaction = Model.Transaction;
+}
+
+<div class="card">
+    <div class="card-header">@T["Timeline"]</div>
+    <ul class="list-group list-group-flush">
+        @if (transaction.Events.Count > 0)
+        {
+            @foreach (var evt in transaction.Events.OrderByDescending(x => x.CreatedUtc))
+            {
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>@DisplayText.EventTypeName(evt.Type)</strong>
+                        <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: evt.CreatedUtc, Format: "g"))</span>
+                    </div>
+                    <div>@evt.Message</div>
+                    @if (Model.ShowReceipts && evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id))
+                    {
+                        <a class="small" asp-action="Index" asp-controller="TransactionReceipt" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@evt.Id">@T["View receipt"]</a>
+                    }
+                    @if (!string.IsNullOrEmpty(evt.ActorName))
+                    {
+                        <div class="text-muted small">@T["By {0}", evt.ActorName]</div>
+                    }
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item text-muted">@T["No events recorded yet."]</li>
+        }
+    </ul>
+</div>

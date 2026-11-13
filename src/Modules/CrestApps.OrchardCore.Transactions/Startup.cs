@@ -67,6 +67,7 @@ public sealed class Startup : StartupBase
         // The rows of the transactions report and of the customer's own statement.
         services
             .AddDisplayDriver<Transaction, TransactionDisplayDriver>()
+            .AddDisplayDriver<Transaction, TransactionDetailDisplayDriver>()
             .AddDisplayDriver<CustomerTransaction, CustomerTransactionDisplayDriver>();
         services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
 
@@ -111,7 +112,8 @@ public sealed class NotificationStartup : StartupBase
     {
         services.AddScoped<ITransactionReminderService, DefaultTransactionReminderService>();
         services.AddCommerceEmailSender()
-            .AddCommerceEmailKind(TransactionEmailKinds.PaymentReminder, LocalizationSource.Create<NotificationStartup>("Payment reminder"), LocalizationSource.Create<NotificationStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}."));
+            .AddCommerceEmailKind(TransactionEmailKinds.PaymentReminder, LocalizationSource.Create<NotificationStartup>("Payment reminder"), LocalizationSource.Create<NotificationStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}; {{ PayUrl }}, {{ DocumentUrl }}, {{ DocumentNumber }}, {{ AmountDue }} and {{ DueDate }}."))
+            .AddCommerceEmailKind(TransactionEmailKinds.PaymentRequest, LocalizationSource.Create<NotificationStartup>("Payment request (the first notice of a debt)"), LocalizationSource.Create<NotificationStartup>("{{ Transaction }}: the transaction, such as {{ Transaction.Title }}; {{ PayUrl }}, {{ DocumentUrl }}, {{ DocumentNumber }}, {{ AmountDue }} and {{ DueDate }}."));
 
         services
             .AddSiteDisplayDriver<TransactionReminderSettingsDisplayDriver>()
