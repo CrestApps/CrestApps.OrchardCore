@@ -112,6 +112,22 @@ If the payment covers the balance, the transaction becomes **Paid**. If it cover
 The note you type on a recorded payment becomes part of the payment's entry in the customer's history. Write it for the customer, for example *Paid by bank transfer*. For something only staff should read, use **Add a note** instead.
 :::
 
+### When the customer paid more than they owe
+
+With the **Store Credit** feature on, and a customer with an account, **Record an offline payment** has the checkbox **Keep anything above what is owed as customer credit**. Check it before you record a payment larger than the balance: the balance is paid, and the rest is added to the customer's store credit, which they can spend at checkout or you can apply to another transaction. Without the checkbox, only the balance is recorded and a message reminds you to give the rest back.
+
+A payment that kept some credit and is then taken back takes that credit back too. If the customer has already spent it, the payment can't be taken back; refund it instead.
+
+### Pay with the customer's credit
+
+When the customer has store credit in the transaction's currency, the transaction page shows **Apply customer credit** with their balance.
+
+1. Check the **Amount**. It starts at the smaller of the credit and what is still owed.
+2. Optionally, add a **Note**.
+3. Click **Apply credit**, then click **Apply credit** again in the confirmation box.
+
+The credit is taken from the customer's balance and recorded as a payment, with a receipt like any other. If you take that payment back, the credit is given back.
+
 ### Take back a payment or an adjustment
 
 Use this when a payment you recorded did not arrive after all (a check bounced) or was recorded on the wrong transaction, or when an adjustment should not have been made. Nothing is deleted: the entry stays on the timeline, a **Taken back** entry is added, and what it paid or took off is owed again.

@@ -45,6 +45,12 @@ public sealed class TransactionCommandResult
     public decimal UnappliedAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets the money added to the payer's customer credit by the command: the part of a payment above what was
+    /// owed, when the payment asked for it (<see cref="TransactionPaymentRequest.CreditExcess"/>).
+    /// </summary>
+    public decimal CreditedAmount { get; set; }
+
+    /// <summary>
     /// Gets the reasons the command was refused or did not fully succeed, ready to show to the person who asked.
     /// </summary>
     public IList<string> Errors { get; } = [];

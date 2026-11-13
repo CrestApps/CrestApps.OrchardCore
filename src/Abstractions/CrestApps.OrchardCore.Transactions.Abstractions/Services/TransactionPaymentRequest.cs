@@ -32,4 +32,12 @@ public sealed class TransactionPaymentRequest
     /// Gets or sets a note recorded with the payment.
     /// </summary>
     public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether money received above what is owed is added to the payer's customer credit
+    /// (<c>ICustomerCreditService</c>, the Customers Store Credit feature) instead of being returned in
+    /// <see cref="TransactionCommandResult.UnappliedAmount"/>. The payment is refused when the payer can't hold credit or
+    /// the feature is off, so no money is left unaccounted.
+    /// </summary>
+    public bool CreditExcess { get; set; }
 }

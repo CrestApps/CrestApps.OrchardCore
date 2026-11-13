@@ -118,4 +118,11 @@ public sealed class TransactionEvent
     /// everything that happened.
     /// </summary>
     public string ReversesEventId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the money received above what was owed that was added to the payer's customer credit, when a payment
+    /// recorded by hand paid more than the balance and the rest was kept as credit. Taking the payment back takes that
+    /// credit back too.
+    /// </summary>
+    public decimal? CreditedAmount { get; set; }
 }

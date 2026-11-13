@@ -152,4 +152,104 @@ public sealed class StoreCreditService
             return account;
         }
     }
+
+    /// <summary>
+    /// Adds <paramref name="amount"/> to the customer's store credit in <paramref name="currency"/>, or spends it when it's
+    /// negative, only when the credit covers it, and only once for a <paramref name="reference"/>: making the same change
+    /// again finds it already made. The change is saved before it returns.
+    /// </summary>
+    /// <param name="customerId">The customer record's id.</param>
+    /// <param name="currency">The ISO 4217 currency code.</param>
+    /// <param name="amount">The amount to add, or a negative amount to spend.</param>
+    /// <param name="reason">Why the credit changes.</param>
+    /// <param name="actor">Who makes the change, if a person does.</param>
+    /// <param name="reference">What the change is made for, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public async Task<CustomerCreditResult> TryChangeAsync(string customerId, string currency, decimal amount, string reason, string actor, string reference, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(customerId);
+
+        if (amount == 0m || string.IsNullOrWhiteSpace(currency))
+        {
+            return CustomerCreditResult.Refused(CustomerCreditError.InvalidAmount);
+        }
+
+        currency = currency.Trim().ToUpperInvariant();
+
+        var account = await _store.FindAsync(customerId, currency, cancellationToken);
+
+        if (account is null)
+        {
+            if (amount < 0m)
+            {
+                return CustomerCreditResult.Refused(CustomerCreditError.InsufficientBalance);
+            }
+
+            // A first credit makes the account, under the customer's lock, so two credits at once make one account.
+            var (creating, created) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, "new-" + customerId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
+
+            if (!created)
+            {
+                return CustomerCreditResult.Refused(CustomerCreditError.Busy);
+            }
+
+            await using (creating)
+            {
+                account = await _store.FindAsync(customerId, currency, cancellationToken);
+
+                if (account is null)
+                {
+                    account = new StoreCreditAccount
+                    {
+                        ItemId = IdGenerator.GenerateId(),
+                        CustomerId = customerId,
+                        Currency = currency,
+                    };
+
+                    Change(account, amount, reason, actor, reference);
+
+                    await _store.CreateAsync(account, cancellationToken);
+                    await _session.SaveChangesAsync(cancellationToken);
+
+                    return new CustomerCreditResult { Succeeded = true, Balance = account.Balance };
+                }
+            }
+        }
+
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutTenderLocks.GetKey(TenderKey, account.ItemId), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
+
+        if (!locked)
+        {
+            return CustomerCreditResult.Refused(CustomerCreditError.Busy, account.Balance);
+        }
+
+        await using (locker)
+        {
+            account = await _store.FindByIdAsync(account.ItemId, cancellationToken);
+
+            if (!string.IsNullOrEmpty(reference) &&
+                (account.Activity ?? []).Any(entry => string.Equals(entry.Reference, reference, StringComparison.Ordinal)))
+            {
+                return new CustomerCreditResult { Succeeded = true, AlreadyApplied = true, Balance = account.Balance };
+            }
+
+            if (amount < 0m && account.Balance < -amount)
+            {
+                return CustomerCreditResult.Refused(CustomerCreditError.InsufficientBalance, account.Balance);
+            }
+
+            Change(account, amount, reason, actor, reference);
+
+            await _store.UpdateAsync(account, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return new CustomerCreditResult { Succeeded = true, Balance = account.Balance };
+        }
+    }
+
+    private void Change(StoreCreditAccount account, decimal amount, string reason, string actor, string reference)
+    {
+        account.ChangeBalance(amount, reason, _clock.UtcNow, actor: actor);
+        account.Activity[^1].Reference = reference;
+    }
 }

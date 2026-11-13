@@ -91,6 +91,16 @@
                     <label class="form-label" for="Note">@T["Note"]</label>
                     <input type="text" class="form-control" id="Note" name="Note" placeholder="@T["Anything else about the payment (optional)"]" />
                 </div>
+                @if (Model.CanHoldCredit)
+                {
+                    <div class="mb-2">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="CreditExcess" name="CreditExcess" value="true" />
+                            <label class="form-check-label" for="CreditExcess">@T["Keep anything above what is owed as customer credit"]</label>
+                            <span class="hint dashed">@T["When more is received than the {0} {1} owed, the rest is added to the customer's credit. Otherwise only what is owed is recorded.", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]</span>
+                        </div>
+                    </div>
+                }
                 <button type="submit" class="btn btn-success" disabled="@(!canRecordPayment)"
                         data-url-af="RemoveUrl" data-title="@T["Record payment"]" data-message="@T["Record this payment against the transaction? It counts as received."]" data-ok-text="@T["Record payment"]" data-cancel-text="@T["Cancel"]">
                     @T["Record payment"]
@@ -98,6 +108,33 @@
             </form>
         </div>
     </div>
+
+    @if (Model.CanHoldCredit && Model.CreditBalance > 0m)
+    {
+        var creditToApply = CurrencyScale.Round(Math.Min(Model.CreditBalance, transaction.OutstandingAmount), transaction.Currency);
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Apply customer credit"]</div>
+            <div class="card-body">
+                <p class="text-muted">@T["The customer has {0} {1} of credit. Applying it pays toward this transaction like any other payment.", transaction.Currency, CurrencyScale.Format(Model.CreditBalance, transaction.Currency)]</p>
+                <form asp-action="ApplyCredit" method="post">
+                    <input type="hidden" name="TransactionId" value="@transaction.ItemId" />
+                    <div class="mb-2">
+                        <label class="form-label ocat-label-required" for="CreditAmount">@T["Amount"]</label>
+                        <input type="number" step="@amountStep" min="0" class="form-control" id="CreditAmount" name="Amount" value="@creditToApply.ToString(System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canRecordPayment)" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" for="CreditNote">@T["Note"]</label>
+                        <input type="text" class="form-control" id="CreditNote" name="Note" placeholder="@T["Anything else about the payment (optional)"]" disabled="@(!canRecordPayment)" />
+                    </div>
+                    <button type="submit" class="btn btn-success" disabled="@(!canRecordPayment)"
+                            data-url-af="RemoveUrl" data-title="@T["Apply credit"]" data-message="@T["Pay toward this transaction with the customer's credit?"]" data-ok-text="@T["Apply credit"]" data-cancel-text="@T["Cancel"]">
+                        @T["Apply credit"]
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
 
     <div class="card mb-3">
         <div class="card-header">@T["Adjust or waive"]</div>

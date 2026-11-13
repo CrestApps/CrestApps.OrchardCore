@@ -38,4 +38,6 @@ public class RecordPaymentViewModel
     /// Gets or sets an optional note describing how the payment was received.
     /// </summary>
     public string Note { get; set; }
+
+    public bool CreditExcess { get; set; }
 }

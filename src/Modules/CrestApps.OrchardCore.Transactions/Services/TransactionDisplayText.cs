@@ -111,6 +111,11 @@ public sealed class TransactionDisplayText
             return S["Nothing left to pay after an adjustment"];
         }
 
+        if (string.Equals(method, TransactionsConstants.SettlementMethods.CustomerCredit, StringComparison.OrdinalIgnoreCase))
+        {
+            return S["Paid with customer credit"];
+        }
+
         return method;
     }
 

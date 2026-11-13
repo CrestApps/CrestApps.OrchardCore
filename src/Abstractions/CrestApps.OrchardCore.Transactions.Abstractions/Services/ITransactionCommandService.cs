@@ -41,6 +41,19 @@ public interface ITransactionCommandService
     Task<TransactionCommandResult> RecordPaymentAsync(string transactionId, TransactionPaymentRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Pays toward the transaction with its payer's customer credit (<c>ICustomerCreditService</c>, the Customers Store
+    /// Credit feature): spends <paramref name="amount"/>, or what is still owed when that is less, from the credit and
+    /// records it as a payment, so the receipts and the payment handlers see it like any other. It is refused when the
+    /// credit is less than the amount, the payer can't hold credit, or the feature is off. Taking the payment back gives
+    /// the credit back.
+    /// </summary>
+    /// <param name="transactionId">The transaction identifier.</param>
+    /// <param name="amount">The amount of credit to apply, in the transaction's currency. It must be greater than zero.</param>
+    /// <param name="note">An optional note recorded with the payment.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> ApplyCreditAsync(string transactionId, decimal amount, string note, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Settles whatever is still owed on the transaction as paid offline, and tells the payment handlers about that
     /// payment.
     /// </summary>

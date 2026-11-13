@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Transactions.Core;
@@ -318,9 +319,35 @@ public sealed class AdminController : Controller
             ReceivedUtc = receivedUtc,
             Reference = model.Reference,
             Note = model.Note,
+            CreditExcess = model.CreditExcess,
         });
 
-        return await CompleteAsync(result, model.TransactionId, H["The payment was recorded."]);
+        if (result.Succeeded && result.UnappliedAmount > 0m)
+        {
+            // Nothing above the balance is recorded unless it was kept as credit, so say what is left to give back.
+            await _notifier.WarningAsync(H["{0} {1} was more than was owed and was not recorded. Give it back, or record the payment again keeping the rest as customer credit.", CurrencyScale.Format(result.UnappliedAmount, result.Transaction.Currency), result.Transaction.Currency]);
+        }
+
+        return await CompleteAsync(result, model.TransactionId, result.CreditedAmount > 0m
+            ? H["The payment was recorded, and {0} {1} above what was owed was added to the customer's credit.", CurrencyScale.Format(result.CreditedAmount, result.Transaction.Currency), result.Transaction.Currency]
+            : H["The payment was recorded."]);
+    }
+
+    /// <summary>
+    /// Pays toward a transaction with its payer's customer credit.
+    /// </summary>
+    /// <param name="model">The credit to apply.</param>
+    [HttpPost]
+    public async Task<IActionResult> ApplyCredit(ApplyCreditViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
+        }
+
+        var result = await _commandService.ApplyCreditAsync(model.TransactionId, model.Amount, model.Note);
+
+        return await CompleteAsync(result, model.TransactionId, H["The customer's credit was applied."]);
     }
 
     /// <summary>

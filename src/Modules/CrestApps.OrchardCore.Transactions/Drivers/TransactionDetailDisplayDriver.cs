@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -65,6 +66,13 @@ public sealed class TransactionDetailDisplayDriver : DisplayDriver<Transaction>
             payerName = await parties.GetNameAsync(payer);
         }
 
+        // Customer credit is offered only when the Store Credit feature keeps it and the payer can hold it.
+        var credit = _serviceProvider.GetService<ICustomerCreditService>();
+        var canHoldCredit = credit is not null && credit.CanHold(payer);
+        var creditBalance = canHoldCredit
+            ? await credit.GetBalanceAsync(payer, transaction.Currency)
+            : 0m;
+
         void Fill(TransactionDetailViewModel model)
         {
             model.Transaction = transaction;
@@ -74,6 +82,8 @@ public sealed class TransactionDetailDisplayDriver : DisplayDriver<Transaction>
             model.CanManage = true;
             model.CanSendReminder = canSendReminder;
             model.ShowReceipts = showReceipts;
+            model.CanHoldCredit = canHoldCredit;
+            model.CreditBalance = creditBalance;
         }
 
         return Combine(

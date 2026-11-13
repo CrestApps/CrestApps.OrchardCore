@@ -36,4 +36,10 @@ public class BalanceLedgerEntry
     /// Gets or sets who made the change, if a person did.
     /// </summary>
     public string Actor { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the change was made for, such as a transaction's payment, if anything. A change with a
+    /// reference is made only once: repeating it finds the entry already there.
+    /// </summary>
+    public string Reference { get; set; }
 }

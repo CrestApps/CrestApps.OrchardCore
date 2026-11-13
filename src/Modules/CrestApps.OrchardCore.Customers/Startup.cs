@@ -163,6 +163,7 @@ public sealed class StoreCreditStartup : StartupBase
             .AddIndexProvider<Indexes.StoreCreditAccountIndexProvider>();
         services.AddScoped<IStoreCreditStore, StoreCreditStore>();
         services.AddScoped<StoreCreditService>();
+        services.AddScoped<ICustomerCreditService, StoreCreditCustomerCreditService>();
         services.AddScoped<StoreCreditTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
         services.AddScoped<Orders.Core.Services.IOrderStoreCreditRefunder>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());

@@ -202,6 +202,11 @@ public static class TransactionsConstants
         /// Nothing more was owed once an adjustment (a discount, waiver, credit or write-off) was recorded.
         /// </summary>
         public const string Adjusted = "adjusted";
+
+        /// <summary>
+        /// The payer's customer credit paid toward the transaction.
+        /// </summary>
+        public const string CustomerCredit = "customer-credit";
     }
 
     /// <summary>
