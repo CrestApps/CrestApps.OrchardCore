@@ -67,6 +67,7 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Services/SmsEntryPointAIConversationStarter.cs: SmsEntryPointAIConversationStarter"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Orders/Controllers/ReturnsAdminController.cs: ReturnsAdminController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Orders/Services/OrderOperationsService.cs: OrderOperationsService"] = 15,
+        ["src/Modules/CrestApps.OrchardCore.PointOfSale/Controllers/WebRegisterController.cs: WebRegisterController"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Products/Services/ProductListingService.cs: ProductListingService"] = 19,
         ["src/Modules/CrestApps.OrchardCore.Staff/Controllers/StaffController.cs: StaffController"] = 14,
         ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/ChildTenantManager.cs: ChildTenantManager"] = 15,

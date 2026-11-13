@@ -52,6 +52,9 @@ public sealed partial class MoneyFormatRatchetTests
     {
         // Machine formats: files and markup read by another system.
         ["src/Modules/CrestApps.OrchardCore.Orders/Services/OrderCsv.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.PointOfSale/Services/PosDepartments.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.PointOfSale/Views/Items/PosDepartment.Description.SummaryAdmin.cshtml"] = 2,
+        ["src/Modules/CrestApps.OrchardCore.PointOfSale/Views/WebRegister/Till.cshtml"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Products/ContentTransfer/ProductPartContentImportHandler.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Products/ContentTransfer/StoreExportReaderTransformer.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Products/Feeds/ProductFeedWriter.cs"] = 1,

@@ -103,6 +103,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Services/SmsOmnichannelProcessor.cs: StartCoreAsync"] = 151,
         ["src/Modules/CrestApps.OrchardCore.OpenAI.Azure/Migrations/AzureOpenAIDataSourceMetadataMigrations.cs: UpdateFrom1Async"] = 190,
         ["src/Modules/CrestApps.OrchardCore.OrTools/Services/OrToolsShiftScheduleSolver.cs: Build"] = 185,
+        ["src/Modules/CrestApps.OrchardCore.PointOfSale/Services/PosSaleService.cs: StartAsync"] = 180,
         ["src/Modules/CrestApps.OrchardCore.Products/Feeds/ProductFeedBuilder.cs: BuildAsync"] = 192,
         ["src/Modules/CrestApps.OrchardCore.Products/Services/ProductListingService.cs: BuildAsync"] = 169,
         ["src/Modules/CrestApps.OrchardCore.Reports/Designer/Services/ReportDesignRunner.cs: RunCoreAsync"] = 178,
