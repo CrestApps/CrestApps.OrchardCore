@@ -552,13 +552,24 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
             return SupervisorEngagementResult.Failure("You are not allowed to intervene in calls.");
         }
 
-        if (!PhoneCallKey.TryParse(key, out _, out var callId))
+        if (!PhoneCallKey.TryParse(key, out var monitoredUserId, out var callId))
+        {
+            return SupervisorEngagementResult.Failure("The call could not be found.");
+        }
+
+        var engagements = await _engagements.ListAsync(callId, cancellationToken);
+
+        // The key is authorized on its user segment, so the call it names must be that user's: their current call, or one
+        // an engagement was opened on for them. An AI call's key was authorized on the call itself.
+        if (!string.Equals(monitoredUserId, AICallUserMarker, StringComparison.Ordinal) &&
+            !engagements.Any(engagement => string.Equals(engagement.MonitoredUserId, monitoredUserId, StringComparison.Ordinal)) &&
+            await FindCallAsync(monitoredUserId, callId, cancellationToken) is null)
         {
             return SupervisorEngagementResult.Failure("The call could not be found.");
         }
 
         // A call a supervisor took over is no longer the agent's: its other party is the one left to hang up.
-        var takenOver = (await _engagements.ListAsync(callId, cancellationToken)).FirstOrDefault(engagement => engagement.TookOver);
+        var takenOver = engagements.FirstOrDefault(engagement => engagement.TookOver);
         var legId = takenOver?.OtherPartyLegId ?? callId;
 
         TelephonyResult hangup;
