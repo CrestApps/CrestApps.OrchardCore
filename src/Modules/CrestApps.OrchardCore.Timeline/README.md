@@ -15,7 +15,7 @@ Comments, internal notes and events on any record (a work order, an order, an ac
 3. Write entries with `ITimelineService.AddAsync` (a `RecordRef` subject, a kind such as `Note` or `Event`, a visibility, an author `PartyRef`).
 4. Show the timeline on your record page: `@await Component.InvokeAsync("Timeline", new { subject = "Kind:Id" })`.
 
-Content items are the record kind `Content`; their timelines follow the item's View and Edit permissions.
+Content items are the record kind `Content`: internal entries are for people who may edit the item, public ones for signed-in people who may view it, and a visitor who isn't signed in reads nothing.
 
 ## Recipe step
 

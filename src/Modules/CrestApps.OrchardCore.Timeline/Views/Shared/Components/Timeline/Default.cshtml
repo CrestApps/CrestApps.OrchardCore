@@ -19,11 +19,20 @@
     <div class="card-body">
         @if (Model.CanAddNote || Model.CanAddComment)
         {
-            <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Add" method="post" class="mb-3" id="@formId">
+            <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Add" method="post" class="mb-3" id="@formId" enctype="@(Model.CanAttach ? "multipart/form-data" : "application/x-www-form-urlencoded")">
                 <input type="hidden" name="subject" value="@Model.Subject" />
                 <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
                 <label class="form-label visually-hidden" for="@formId-body">@T["Text"]</label>
-                <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" required placeholder="@T["Write a note"]"></textarea>
+                @if (Model.CanAttach)
+                {
+                    <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" placeholder="@T["Write a note"]"></textarea>
+                    <label class="form-label visually-hidden" for="@formId-files">@T["Files"]</label>
+                    <input id="@formId-files" name="files" type="file" multiple class="form-control form-control-sm mb-2" title="@T["Attach files"]" />
+                }
+                else
+                {
+                    <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" required placeholder="@T["Write a note"]"></textarea>
+                }
                 <div class="d-flex gap-2">
                     @if (Model.CanAddNote)
                     {
@@ -72,21 +81,37 @@
                             {
                                 <span class="badge ta-badge fw-normal" title="@T["The channel it came in or went out on"]">@entry.Channel</span>
                             }
-                            @if (Model.CanRedact && entry.RedactedUtc is null && !string.IsNullOrEmpty(entry.Body))
+                            @if (Model.CanRedact && entry.RedactedUtc is null && (!string.IsNullOrEmpty(entry.Body) || item.Attachments.Count > 0))
                             {
                                 <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Redact" asp-route-id="@entry.ItemId" method="post" class="ms-auto">
                                     <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                                    <button type="submit" class="btn btn-link btn-sm p-0 text-danger" data-title="@T["Redact"]" data-message="@T["Remove the text of this entry? This can't be undone."]">@T["Redact"]</button>
+                                    <button type="submit" class="btn btn-link btn-sm p-0 text-danger" data-title="@T["Redact"]" data-message="@T["Remove the text and files of this entry? This can't be undone."]">@T["Redact"]</button>
                                 </form>
                             }
                         </div>
                         @if (entry.RedactedUtc is not null)
                         {
-                            <div class="fst-italic text-muted">@T["The text was redacted."]</div>
+                            <div class="fst-italic text-muted">@T["The entry was redacted."]</div>
                         }
                         else if (!string.IsNullOrEmpty(entry.Body))
                         {
                             <div style="white-space: pre-line">@entry.Body</div>
+                        }
+                        @if (item.Attachments.Count > 0)
+                        {
+                            <ul class="list-inline small mb-0 mt-1">
+                                @foreach (var file in item.Attachments)
+                                {
+                                    var fileUrl = Url.Content("~/attachments/" + Uri.EscapeDataString(file.Id));
+
+                                    <li class="list-inline-item">
+                                        <a href="@fileUrl" target="_blank" rel="noopener">
+                                            <i class="@(file.IsImage ? "fa-regular fa-image" : "fa-solid fa-paperclip") me-1" aria-hidden="true"></i>@file.FileName
+                                        </a>
+                                        <span class="text-muted">(@(file.Length < 1024 * 1024 ? T.GetString("{0} KB", Math.Max(1, file.Length / 1024)).Value : T.GetString("{0:0.#} MB", file.Length / 1048576d).Value))</span>
+                                    </li>
+                                }
+                            </ul>
                         }
                         @if (entry.Changes.Count > 0)
                         {

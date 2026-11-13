@@ -31,7 +31,7 @@ user_manual: user-manual/administration/timeline
 | `Channel` | Where it came in or went out, such as `Email` or `Portal`; empty for the admin |
 | `RedactedUtc`, `RedactedBy` | Set when the body was redacted |
 
-Entries are kept as written. A body can only be redacted (`ITimelineService.RedactAsync`), which keeps the entry, its changes and its attachments.
+Entries are kept as written. A body can only be redacted (`ITimelineService.RedactAsync`), which keeps the entry and its changes; the timeline card's **Redact** also deletes the entry's files.
 
 ## Writing to a timeline
 
@@ -64,6 +64,8 @@ public sealed class WorkOrderTimelineAccess : ITimelineAccessProvider
 
 services.AddTimelineAccessProvider<WorkOrderTimelineAccess>();
 ```
+
+Content items (the record kind `Content`, such as accounts, contacts and leads) come with a provider: internal entries are for people who may edit the item, public ones for signed-in people who may view it, and a visitor who isn't signed in reads nothing, even on a site where anyone may view content.
 
 `RedactTimelineEntries` (**Redact timeline entries**) lets a user redact an entry on any record they may read; administrators have it by default.
 

@@ -34,4 +34,4 @@ Each entry shows when it was written (in your time zone), who wrote it (or **The
 
 ## Redact text
 
-When a note holds something that must not be kept, such as a card number, select **Redact** on it and confirm. The text is removed for good; the entry stays and shows that its text was redacted. You need the **Redact timeline entries** permission.
+When a note holds something that must not be kept, such as a card number, select **Redact** on it and confirm. The text and any attached files are removed for good; the entry stays and shows that it was redacted. You need the **Redact timeline entries** permission.

@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Attachments.Models;
+using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline.Models;
@@ -5,6 +7,7 @@ using CrestApps.OrchardCore.Timeline.Services;
 using CrestApps.OrchardCore.Timeline.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Timeline.ViewComponents;
 
@@ -81,14 +84,32 @@ public sealed class TimelineViewComponent : ViewComponent
 
         var names = await _partyDirectory.GetNamesAsync(entries.Where(entry => !entry.Author.IsEmpty).Select(entry => entry.Author).Distinct(), cancellationToken);
 
+        // Attachments are optional: without the feature, entries show no files and the composer takes none.
+        var attachmentService = HttpContext.RequestServices.GetService<IAttachmentService>();
+        var files = new Dictionary<string, Attachment>(StringComparer.Ordinal);
+
+        if (attachmentService is not null)
+        {
+            var ids = entries.Where(entry => entry.RedactedUtc is null).SelectMany(entry => entry.AttachmentIds).ToList();
+
+            foreach (var attachment in await attachmentService.GetAsync(ids, cancellationToken))
+            {
+                files[attachment.ItemId] = attachment;
+            }
+        }
+
+        var canAddNote = await _accessService.CanAddAsync(user, record, TimelineConstants.Kinds.Note, TimelineVisibility.Internal, cancellationToken);
+        var canAddComment = await _accessService.CanAddAsync(user, record, TimelineConstants.Kinds.Comment, TimelineVisibility.Public, cancellationToken);
+
         return View(new TimelineViewModel
         {
             Subject = record.ToString(),
             Title = title,
             ReturnUrl = string.IsNullOrEmpty(returnUrl) ? HttpContext.Request.Path + HttpContext.Request.QueryString : returnUrl,
             Total = page.Total,
-            CanAddNote = await _accessService.CanAddAsync(user, record, TimelineConstants.Kinds.Note, TimelineVisibility.Internal, cancellationToken),
-            CanAddComment = await _accessService.CanAddAsync(user, record, TimelineConstants.Kinds.Comment, TimelineVisibility.Public, cancellationToken),
+            CanAddNote = canAddNote,
+            CanAddComment = canAddComment,
+            CanAttach = attachmentService is not null && (canAddNote || canAddComment),
             CanRedact = await _authorizationService.AuthorizeAsync(user, TimelinePermissions.RedactTimelineEntries),
             Entries = [.. entries.Select(entry => new TimelineEntryViewModel
             {
@@ -96,6 +117,16 @@ public sealed class TimelineViewComponent : ViewComponent
                 AuthorName = !entry.Author.IsEmpty && names.TryGetValue(entry.Author, out var name) && !string.IsNullOrEmpty(name)
                     ? name
                     : entry.AuthorName,
+                Attachments = [.. entry.AttachmentIds
+                    .Where(files.ContainsKey)
+                    .Select(id => files[id])
+                    .Select(file => new TimelineAttachmentViewModel
+                    {
+                        Id = file.ItemId,
+                        FileName = file.FileName,
+                        Length = file.Length,
+                        IsImage = file.IsImage,
+                    })],
             })],
         });
     }

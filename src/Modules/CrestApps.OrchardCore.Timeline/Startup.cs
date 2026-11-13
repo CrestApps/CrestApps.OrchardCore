@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Attachments;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Timeline.Core;
 using CrestApps.OrchardCore.Timeline.Core.Indexes;
@@ -63,6 +64,19 @@ public sealed class ContentsStartup : StartupBase
 /// <summary>
 /// Registers the recipe step that imports timeline entries.
 /// </summary>
+/// <summary>
+/// Lets the timeline card take files when the Attachments feature is on: the files belong to their entry.
+/// </summary>
+[RequireFeatures(AttachmentsConstants.Features.Attachments)]
+public sealed class AttachmentsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAttachmentAccessProvider<TimelineEntryAttachmentAccess>();
+    }
+}
+
 [RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {

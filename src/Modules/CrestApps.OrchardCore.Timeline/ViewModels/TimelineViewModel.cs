@@ -44,4 +44,9 @@ public class TimelineViewModel
     /// Gets or sets the entries, newest first.
     /// </summary>
     public IList<TimelineEntryViewModel> Entries { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether files can be attached to a new entry.
+    /// </summary>
+    public bool CanAttach { get; set; }
 }

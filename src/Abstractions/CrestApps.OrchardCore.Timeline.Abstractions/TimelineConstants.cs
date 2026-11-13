@@ -27,6 +27,12 @@ public static class TimelineConstants
     public const string ContentItemKind = "Content";
 
     /// <summary>
+    /// The owner kind of the files attached to a timeline entry; the owner id is the entry's id, so the files are as
+    /// visible as the entry.
+    /// </summary>
+    public const string AttachmentOwnerKind = "TimelineEntry";
+
+    /// <summary>
     /// The feature identifiers of the Timeline module.
     /// </summary>
     public static class Features

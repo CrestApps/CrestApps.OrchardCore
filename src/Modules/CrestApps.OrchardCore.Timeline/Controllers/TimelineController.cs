@@ -1,10 +1,15 @@
 using System.Security.Claims;
+using CrestApps.Core;
+using CrestApps.OrchardCore.Attachments.Models;
+using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
@@ -53,26 +58,29 @@ public sealed class TimelineController : Controller
     /// <param name="body">The text.</param>
     /// <param name="isPublic">Whether it is a public comment rather than an internal note.</param>
     /// <param name="returnUrl">The page to go back to.</param>
+    /// <param name="files">The files to attach, when the Attachments feature is enabled.</param>
     /// <returns>A redirect to the page.</returns>
     [HttpPost]
     [Admin("timeline/add", "TimelineAdd")]
-    public async Task<IActionResult> Add(string subject, string body, bool isPublic, string returnUrl)
+    public async Task<IActionResult> Add(string subject, string body, bool isPublic, string returnUrl, List<IFormFile> files)
     {
         if (!RecordRef.TryParse(subject, out var record))
         {
             return BadRequest();
         }
 
+        var cancellationToken = HttpContext.RequestAborted;
         var kind = isPublic ? TimelineConstants.Kinds.Comment : TimelineConstants.Kinds.Note;
         var visibility = isPublic ? TimelineVisibility.Public : TimelineVisibility.Internal;
 
-        if (!await _accessService.CanAddAsync(User, record, kind, visibility, HttpContext.RequestAborted))
+        if (!await _accessService.CanAddAsync(User, record, kind, visibility, cancellationToken))
         {
             return Forbid();
         }
 
-        var result = await _timelineService.AddAsync(new TimelineEntry
+        var entry = new TimelineEntry
         {
+            ItemId = UniqueId.GenerateId(),
             Subject = record,
             Kind = kind,
             Visibility = visibility,
@@ -81,7 +89,40 @@ public sealed class TimelineController : Controller
             // The name stays readable on a site where no party source knows its users.
             AuthorName = User.Identity?.Name,
             Body = body,
-        }, HttpContext.RequestAborted);
+        };
+
+        // The files belong to the entry, so they are exactly as visible as the entry.
+        var attachments = HttpContext.RequestServices.GetService<IAttachmentService>();
+        var uploads = files?.Where(file => file is { Length: > 0 }).ToList() ?? [];
+        var attached = new List<string>();
+
+        if (uploads.Count > 0)
+        {
+            if (attachments is null)
+            {
+                await _notifier.ErrorAsync(H["Files can't be attached here."]);
+
+                return Back(returnUrl);
+            }
+
+            var owner = new RecordRef(TimelineConstants.AttachmentOwnerKind, entry.ItemId);
+            var stored = await attachments.AddAsync(await ReadAsync(uploads, owner, entry.Author, cancellationToken), cancellationToken);
+
+            if (!stored.Succeeded)
+            {
+                foreach (var error in stored.Errors)
+                {
+                    await _notifier.ErrorAsync(H["{0}", error]);
+                }
+
+                return Back(returnUrl);
+            }
+
+            attached.AddRange(stored.Attachments.Select(attachment => attachment.ItemId));
+            entry.AttachmentIds = [.. attached];
+        }
+
+        var result = await _timelineService.AddAsync(entry, cancellationToken);
 
         if (result.Succeeded)
         {
@@ -89,6 +130,11 @@ public sealed class TimelineController : Controller
         }
         else
         {
+            foreach (var id in attached)
+            {
+                await attachments.DeleteAsync(id, cancellationToken);
+            }
+
             foreach (var error in result.Errors)
             {
                 await _notifier.ErrorAsync(H["{0}", error]);
@@ -127,9 +173,42 @@ public sealed class TimelineController : Controller
         }
 
         await _timelineService.RedactAsync(id, CurrentUser(), HttpContext.RequestAborted);
-        await _notifier.SuccessAsync(H["The text of the entry was redacted."]);
+
+        // A redacted entry keeps no files either: what was written and what was attached go together.
+        if (entry.AttachmentIds.Count > 0 && HttpContext.RequestServices.GetService<IAttachmentService>() is { } attachments)
+        {
+            foreach (var attachmentId in entry.AttachmentIds)
+            {
+                await attachments.DeleteAsync(attachmentId, HttpContext.RequestAborted);
+            }
+        }
+
+        await _notifier.SuccessAsync(H["The entry was redacted."]);
 
         return Back(returnUrl);
+    }
+
+    private static async Task<List<AttachmentUpload>> ReadAsync(List<IFormFile> files, RecordRef owner, PartyRef uploadedBy, CancellationToken cancellationToken)
+    {
+        var uploads = new List<AttachmentUpload>(files.Count);
+
+        foreach (var file in files)
+        {
+            using var buffer = new MemoryStream();
+
+            await file.CopyToAsync(buffer, cancellationToken);
+
+            uploads.Add(new AttachmentUpload
+            {
+                Owner = owner,
+                FileName = file.FileName,
+                DeclaredContentType = file.ContentType,
+                Content = buffer.ToArray(),
+                UploadedBy = uploadedBy,
+            });
+        }
+
+        return uploads;
     }
 
     private PartyRef CurrentUser()

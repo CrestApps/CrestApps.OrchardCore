@@ -35,39 +35,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments
         public static int GetSkippedAttachmentCount(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message) { }
         public static void SetAttachments(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingAttachment> attachments) { }
     }
-    public sealed class MessagingFileFormat
-    {
-        public MessagingFileFormat(string name, string contentType, System.Collections.Generic.IReadOnlyList<string> extensions, bool isImage = false, bool canShrink = false, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileSignature signature = null) { }
-        public bool CanShrink { get; }
-        public string ContentType { get; }
-        public System.Collections.Generic.IReadOnlyList<string> Extensions { get; }
-        public bool HasSignature { get; }
-        public bool IsImage { get; }
-        public string Name { get; }
-        public string PreferredExtension { get; }
-        public bool MatchesExtension(string fileName) { }
-        public bool MatchesSignature(System.ReadOnlySpan<byte> content) { }
-    }
-    public static class MessagingFileFormats
-    {
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Csv;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Excel;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Gif;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Jpeg;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Pdf;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Png;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat PowerPoint;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Text;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat VCard;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat WebP;
-        public static readonly CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Word;
-        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> All { get; }
-        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> Documents { get; }
-        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> Images { get; }
-        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat Detect(System.ReadOnlySpan<byte> content, string fileName, string declaredContentType, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> allowed) { }
-        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat FindByContentType(string contentType) { }
-    }
-    public delegate bool MessagingFileSignature(System.ReadOnlySpan<byte> content);
     public sealed class MessagingInboundMediaIngestor : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingInboundMediaIngestor
     {
         public const string HttpClientName = "CrestApps.Omnichannel.Messaging.InboundMedia";
@@ -115,7 +82,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
     public sealed class MessagingAttachmentCapabilities
     {
         public MessagingAttachmentCapabilities() { }
-        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingFileFormat> Formats { get; init; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Attachments.Models.FileFormat> Formats { get; init; }
         public bool ImagesOnly { get; }
         public bool IsSupported { get; }
         public int MaxCount { get; init; }

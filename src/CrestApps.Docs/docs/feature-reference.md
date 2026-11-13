@@ -221,6 +221,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.BusinessHours` | Business Hours | [Business Hours](./modules/business-hours#the-business-hours-feature) |
 | `CrestApps.OrchardCore.ServiceLevels` | Service Levels | [Service Levels](./modules/service-levels) |
 | `CrestApps.OrchardCore.Timeline` | Timeline | [Timeline](./modules/timeline) |
+| `CrestApps.OrchardCore.Attachments` | Attachments | [Attachments](./modules/attachments) |
 | `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | [Workforce](./modules/workforce#shift-planning) |
 | `CrestApps.OrchardCore.Workforce.ContactCenter` | Workforce for Contact Center | [Workforce for Contact Center](./modules/workforce-contact-center) |
