@@ -41,9 +41,51 @@ public sealed class EasyPostTrackingOrderTests
         Assert.Equal("Delivered", shipment.TrackingEvents[0].Message);
     }
 
-    private static EasyPostTrackingUpdater CreateUpdater(Shipment shipment)
+    [Fact]
+    public async Task ApplyAsync_TheSameUpdateSentAgain_ChangesNothing()
     {
+        // Arrange
+        var shipment = new Shipment { ItemId = "s1", TrackingNumber = "9400", Status = ShipmentStatus.Shipped };
         var store = new Mock<IShipmentStore>();
+        var updater = CreateUpdater(shipment, store);
+
+        await updater.ApplyAsync(JsonNode.Parse(InTransit) as JsonObject, TestContext.Current.CancellationToken);
+
+        // Act: EasyPost retries the same signed body.
+        var applied = await updater.ApplyAsync(JsonNode.Parse(InTransit) as JsonObject, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(applied);
+        store.Verify(value => value.UpdateAsync(shipment, It.IsAny<CancellationToken>()), Times.Once());
+    }
+
+    [Fact]
+    public async Task ApplyAsync_ADetailWithNoTime_IsLeftOut_SoAReplayOfItChangesNothing()
+    {
+        // Arrange
+        const string Undated = """
+            {"description":"tracker.updated","result":{"tracking_code":"9400","status":"in_transit","tracking_details":[
+              {"datetime":"2026-10-17T08:00:00Z","message":"In transit","status":"in_transit"},
+              {"message":"Arrived at facility","status":"in_transit"}]}}
+            """;
+
+        var shipment = new Shipment { ItemId = "s1", TrackingNumber = "9400", Status = ShipmentStatus.Shipped };
+        var store = new Mock<IShipmentStore>();
+        var updater = CreateUpdater(shipment, store);
+
+        await updater.ApplyAsync(JsonNode.Parse(Undated) as JsonObject, TestContext.Current.CancellationToken);
+
+        // Act
+        var applied = await updater.ApplyAsync(JsonNode.Parse(Undated) as JsonObject, TestContext.Current.CancellationToken);
+
+        // Assert: the detail with no time isn't stamped with the time it arrived.
+        Assert.False(applied);
+        Assert.Equal("In transit", Assert.Single(shipment.TrackingEvents).Message);
+    }
+
+    private static EasyPostTrackingUpdater CreateUpdater(Shipment shipment, Mock<IShipmentStore> store = null)
+    {
+        store ??= new Mock<IShipmentStore>();
         store.Setup(value => value.FindByTrackingNumberAsync("9400", It.IsAny<CancellationToken>())).ReturnsAsync(shipment);
 
         var clock = new Mock<IClock>();
