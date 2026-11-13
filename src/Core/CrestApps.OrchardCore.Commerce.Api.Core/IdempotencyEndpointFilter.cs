@@ -249,7 +249,9 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         }
         catch (Exception exception) when (exception is NotSupportedException or JsonException or InvalidOperationException)
         {
-            return null;
+            // A request whose arguments can't be compared matches no other request, so its key never replays another
+            // request's answer; a retry of it is refused instead of done twice.
+            return "unfingerprinted:" + Guid.NewGuid().ToString("N");
         }
     }
 
@@ -268,7 +270,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         // The same key with another request is a mistake the caller must fix, not a retry.
         if (checkFingerprint && !string.Equals(response.Fingerprint, fingerprint, StringComparison.Ordinal))
         {
-            return policy?.Conflict?.Invoke(httpContext) ?? ApiProblems.Conflict(ApiProblems.Codes.IdempotencyInProgress, "This idempotency key was used for another request.");
+            return policy?.Conflict?.Invoke(httpContext) ?? ApiProblems.Conflict(ApiProblems.Codes.IdempotencyKeyReused, "This idempotency key was used for another request. Send this request with a new key.");
         }
 
         if (!string.IsNullOrEmpty(policy?.ReplayedHeader))
