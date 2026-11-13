@@ -738,6 +738,20 @@
 				}
 			});
 		}
+		var narrowingForm = workspace.querySelector("[data-inbox-narrowing-form]");
+		if (narrowingForm) {
+			narrowingForm.addEventListener("submit", function() {
+				Array.prototype.forEach.call(narrowingForm.elements, function(field) {
+					if (field.name && !field.value) field.disabled = true;
+				});
+			});
+			narrowingForm.querySelectorAll("[data-inbox-narrowing]").forEach(function(select) {
+				select.addEventListener("change", function() {
+					if (typeof narrowingForm.requestSubmit === "function") narrowingForm.requestSubmit();
+					else narrowingForm.submit();
+				});
+			});
+		}
 		var toggle = workspace.querySelector("[data-availability-toggle]");
 		if (toggle && availabilityUrl) toggle.addEventListener("change", function() {
 			fetch(availabilityUrl + "?available=" + (toggle.checked ? "true" : "false"), {

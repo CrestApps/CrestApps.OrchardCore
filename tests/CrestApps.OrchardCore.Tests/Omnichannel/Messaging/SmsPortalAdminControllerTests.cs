@@ -632,6 +632,7 @@ public sealed class SmsPortalAdminControllerTests
             Mock.Of<IMessagingAgentNameProvider>(),
             new MessagingFavoritesService(Mock.Of<IAgentProfileManager>(), Mock.Of<IClock>()),
             queueManagers,
+            [],
             Mock.Of<IContentManager>(),
             authorizationService,
             new MessagingQuietHoursGuard(

@@ -58,7 +58,8 @@ internal sealed class MessagingMigrations : DataMigration
             .Column<DateTime>("LastActivityUtc", column => column.Nullable())
             .Column<int>("UnreadCount", column => column.NotNull().WithDefault(0))
             .Column<DateTime>("AssignedUtc", column => column.Nullable())
-            .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable()),
+            .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable())
+            .Column<string>("CampaignId", column => column.Nullable().WithLength(26)),
             collection: MessagingStorage.CollectionName
         );
 
@@ -165,8 +166,9 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateAttentionIndexesAsync();
         await CreateActivityIndexAsync();
         await CreateLookupIndexesAsync();
+        await CreateCampaignIndexAsync();
 
-        return 6;
+        return 7;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -281,6 +283,31 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateLookupIndexesAsync();
 
         return 6;
+    }
+
+    /// <summary>
+    /// Adds the campaign a thread was handed off from, so the workspace can list one campaign's conversations. Threads
+    /// handed off before this have no campaign recorded, so no campaign filter lists them.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(table => table
+            .AddColumn<string>("CampaignId", column => column.Nullable().WithLength(26)),
+            collection: MessagingStorage.CollectionName);
+
+        await CreateCampaignIndexAsync();
+
+        return 7;
+    }
+
+    private Task<bool> CreateCampaignIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_Campaign",
+            MessagingStorage.CollectionName,
+            "CampaignId", "DocumentId");
     }
 
     private async Task CreateLookupIndexesAsync()

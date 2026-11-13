@@ -16,6 +16,20 @@
             MessagingInboxFilter.Unassigned => T["Unassigned"],
             _ => T["All conversations"],
         };
+
+    var showNarrowing = inbox.HasNarrowingOptions && !inbox.ShowFavorites;
+    var agentFilterName = inbox.AgentFilter is null ? null : inbox.Agents.FirstOrDefault(option => option.Value == inbox.AgentFilter)?.Text ?? inbox.AgentFilter;
+    var queueFilterName = inbox.QueueFilter is null ? null : inbox.Queues.FirstOrDefault(option => option.Value == inbox.QueueFilter)?.Text ?? inbox.QueueFilter;
+    var campaignFilterName = inbox.CampaignFilter is null ? null : inbox.Campaigns.FirstOrDefault(option => option.Value == inbox.CampaignFilter)?.Text ?? inbox.CampaignFilter;
+
+    // The route values that keep every filter but one, for the button that removes that one.
+    IDictionary<string, string> Without(string key)
+    {
+        var values = inbox.NarrowingRouteValues();
+        values.Remove(key);
+
+        return values;
+    }
 }
 
 <zone Name="Title">
@@ -25,7 +39,7 @@
 <div class="messaging-workspace d-flex gap-3"
      data-messaging-workspace
      data-hub-url="@(Html.SignalRHubUrl<MessagingHub>())"
-     data-inbox-url="@Url.Action("InboxList", new { show, channel = inbox.ChannelFilter, unread, page = inbox.Page, selected = inbox.SelectedCustomerKey })"
+     data-inbox-url="@Url.Action("InboxList", new { show, channel = inbox.ChannelFilter, agent = inbox.AgentFilter, queue = inbox.QueueFilter, campaign = inbox.CampaignFilter, unread, page = inbox.Page, selected = inbox.SelectedCustomerKey })"
      data-conversation-url="@Url.Action("Conversation", new { id = "__ID__" })"
      data-availability-url="@Url.Action("SetAvailability")"
      data-attention-url="@Url.Action("Attention")"
@@ -52,12 +66,12 @@
                     <input class="form-control form-control-sm" data-inbox-search placeholder="@T["Search"]" type="search" autocomplete="off" />
                 </div>
                 <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@filterLabel">
+                    <button class="btn btn-sm @(inbox.IsNarrowed ? "btn-primary" : "btn-outline-secondary")" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@filterLabel">
                         <i class="fa-solid fa-filter" aria-hidden="true"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.All && !inbox.ShowFavorites ? "active" : string.Empty)" asp-route-action="Index" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread">
+                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.All && !inbox.ShowFavorites ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread">
                                 <span>@T["All conversations"]</span>
                                 <span class="badge rounded-pill text-bg-secondary">@inbox.AllCount</span>
                             </a>
@@ -65,7 +79,7 @@
                         @if (inbox.HasAgentProfile)
                         {
                             <li>
-                                <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Mine && !inbox.ShowFavorites ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="mine" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread">
+                                <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Mine && !inbox.ShowFavorites ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="mine" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread">
                                     <span>@T["My conversations"]</span>
                                     <span class="badge rounded-pill text-bg-secondary">@inbox.MineCount</span>
                                 </a>
@@ -78,7 +92,7 @@
                             </li>
                         }
                         <li>
-                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Unassigned && !inbox.ShowFavorites ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="unassigned" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread">
+                            <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Unassigned && !inbox.ShowFavorites ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="unassigned" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread">
                                 <span>@T["Unassigned"]</span>
                                 <span class="badge rounded-pill text-bg-secondary">@inbox.UnassignedCount</span>
                             </a>
@@ -88,16 +102,25 @@
                             <li><hr class="dropdown-divider" /></li>
                             <li><h6 class="dropdown-header">@T["Channel"]</h6></li>
                             <li>
-                                <a class="dropdown-item @(inbox.ChannelFilter is null ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="@show" asp-route-unread="@unread">@T["Every channel"]</a>
+                                <a class="dropdown-item @(inbox.ChannelFilter is null ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="@show" asp-route-unread="@unread">@T["Every channel"]</a>
                             </li>
                             @foreach (var channel in inbox.Channels)
                             {
                                 <li>
-                                    <a class="dropdown-item @(string.Equals(inbox.ChannelFilter, channel.Name, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@channel.Name" asp-route-unread="@unread">
+                                    <a class="dropdown-item @(string.Equals(inbox.ChannelFilter, channel.Name, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@channel.Name" asp-route-unread="@unread">
                                         <i class="@channel.IconCssClass me-2" aria-hidden="true"></i>@channel.DisplayName
                                     </a>
                                 </li>
                             }
+                        }
+                        @if (showNarrowing)
+                        {
+                            <li><hr class="dropdown-divider" /></li>
+                            <li>
+                                <button class="dropdown-item" type="button" data-bs-toggle="collapse" data-bs-target="#messaging-inbox-narrowing" aria-controls="messaging-inbox-narrowing" aria-expanded="@(inbox.IsNarrowed ? "true" : "false")">
+                                    <i class="fa-solid fa-sliders me-2" aria-hidden="true"></i>@T["More filters"]
+                                </button>
+                            </li>
                         }
                     </ul>
                 </div>
@@ -105,7 +128,7 @@
                 {
                     @* Narrows the open tab to the conversations nobody has read yet, and back. *@
                     <a class="btn btn-sm @(inbox.UnreadOnly ? "btn-primary" : "btn-outline-secondary")"
-                       asp-route-action="Index" asp-route-show="@show" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@(inbox.UnreadOnly ? null : "true")"
+                       asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@(inbox.UnreadOnly ? null : "true")"
                        title="@(inbox.UnreadOnly ? T["Show all conversations"] : T["Show unread conversations only"])"
                        aria-label="@T["Unread only"]" aria-pressed="@(inbox.UnreadOnly ? "true" : "false")" data-unread-toggle>
                         <i class="@(inbox.UnreadOnly ? "fa-solid" : "fa-regular") fa-envelope" aria-hidden="true"></i>
@@ -125,6 +148,57 @@
                     <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                 </a>
             </div>
+            @if (showNarrowing)
+            {
+                @* Narrows the list to one person's, one queue's or one campaign's conversations. It stays open while any is applied. *@
+                <form method="get" asp-route-action="Index" class="collapse @(inbox.IsNarrowed ? "show" : string.Empty)" id="messaging-inbox-narrowing" data-inbox-narrowing-form>
+                    <input type="hidden" name="show" value="@show" />
+                    <input type="hidden" name="channel" value="@inbox.ChannelFilter" />
+                    <input type="hidden" name="unread" value="@(inbox.UnreadOnly ? "true" : string.Empty)" />
+                    <div class="d-flex flex-column gap-1">
+                        @if (inbox.Agents.Count > 0)
+                        {
+                            <div class="input-group input-group-sm">
+                                <label class="input-group-text messaging-narrowing-label" for="messaging-filter-agent">@T["Assigned to"]</label>
+                                <select class="form-select" id="messaging-filter-agent" name="agent" data-inbox-narrowing>
+                                    <option value="">@T["Anyone"]</option>
+                                    @foreach (var option in inbox.Agents)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == inbox.AgentFilter)">@option.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        @if (inbox.Queues.Count > 0)
+                        {
+                            <div class="input-group input-group-sm">
+                                <label class="input-group-text messaging-narrowing-label" for="messaging-filter-queue">@T["Queue"]</label>
+                                <select class="form-select" id="messaging-filter-queue" name="queue" data-inbox-narrowing>
+                                    <option value="">@T["Any queue"]</option>
+                                    @foreach (var option in inbox.Queues)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == inbox.QueueFilter)">@option.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        @if (inbox.Campaigns.Count > 0)
+                        {
+                            <div class="input-group input-group-sm">
+                                <label class="input-group-text messaging-narrowing-label" for="messaging-filter-campaign">@T["Campaign"]</label>
+                                <select class="form-select" id="messaging-filter-campaign" name="campaign" data-inbox-narrowing>
+                                    <option value="">@T["Any campaign"]</option>
+                                    @foreach (var option in inbox.Campaigns)
+                                    {
+                                        <option value="@option.Value" selected="@(option.Value == inbox.CampaignFilter)">@option.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                    </div>
+                    <noscript><button type="submit" class="btn btn-sm btn-primary mt-1">@T["Apply"]</button></noscript>
+                </form>
+            }
             <div class="d-flex justify-content-between align-items-center small">
                 <span class="text-muted">
                     @filterLabel
@@ -135,12 +209,35 @@
                 </span>
                 @if (inbox.HasAgentProfile)
                 {
-                    <div class="form-check form-switch mb-0" title="@T["Accept routed conversations to your inbox"]">
+                    <div class="form-check form-switch mb-0 flex-shrink-0" title="@T["Accept routed conversations to your inbox"]">
                         <input class="form-check-input" type="checkbox" role="switch" id="messaging-available-toggle" data-availability-toggle @(inbox.Available ? "checked" : string.Empty) />
                         <label class="form-check-label" for="messaging-available-toggle">@T["Available"]</label>
                     </div>
                 }
             </div>
+            @if (inbox.IsNarrowed && !inbox.ShowFavorites)
+            {
+                <div class="d-flex flex-wrap gap-1" data-inbox-narrowing-chips>
+                    @if (agentFilterName is not null)
+                    {
+                        <a class="badge rounded-pill text-bg-light border text-decoration-none fw-normal" asp-all-route-data="@Without("agent")" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread" title="@T["Remove this filter"]">
+                            <i class="fa-solid fa-user me-1" aria-hidden="true"></i>@agentFilterName<i class="fa-solid fa-xmark ms-1" aria-hidden="true"></i>
+                        </a>
+                    }
+                    @if (queueFilterName is not null)
+                    {
+                        <a class="badge rounded-pill text-bg-light border text-decoration-none fw-normal" asp-all-route-data="@Without("queue")" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread" title="@T["Remove this filter"]">
+                            <i class="fa-solid fa-users me-1" aria-hidden="true"></i>@queueFilterName<i class="fa-solid fa-xmark ms-1" aria-hidden="true"></i>
+                        </a>
+                    }
+                    @if (campaignFilterName is not null)
+                    {
+                        <a class="badge rounded-pill text-bg-light border text-decoration-none fw-normal" asp-all-route-data="@Without("campaign")" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread" title="@T["Remove this filter"]">
+                            <i class="fa-solid fa-bullhorn me-1" aria-hidden="true"></i>@campaignFilterName<i class="fa-solid fa-xmark ms-1" aria-hidden="true"></i>
+                        </a>
+                    }
+                </div>
+            }
         </div>
 
         <div class="flex-grow-1 overflow-y-auto" data-inbox-list>
@@ -237,6 +334,10 @@
     .messaging-inbox-row.messaging-unread .messaging-row-preview {
         font-weight: 600;
         color: var(--bs-body-color);
+    }
+
+    .messaging-narrowing-label {
+        width: 6.5rem;
     }
 
     .messaging-avatar {
