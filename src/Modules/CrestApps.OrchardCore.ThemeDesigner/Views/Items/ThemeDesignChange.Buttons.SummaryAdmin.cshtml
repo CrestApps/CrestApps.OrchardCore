@@ -1,0 +1,13 @@
+@model ShapeViewModel<ThemeDesignChange>
+
+<a asp-action="Change"
+   asp-route-kind="@Model.Value.Kind"
+   asp-route-name="@Model.Value.Name"
+   class="btn btn-primary btn-sm">@T["View"]</a>
+<a asp-action="Revert"
+   asp-route-kind="@Model.Value.Kind"
+   asp-route-name="@Model.Value.Name"
+   class="btn btn-danger btn-sm"
+   data-title="@T["Drop the change"]"
+   data-message="@T["The published version will be left as it is. Continue?"]"
+   data-url-af="UnsafeUrl">@T["Drop"]</a>

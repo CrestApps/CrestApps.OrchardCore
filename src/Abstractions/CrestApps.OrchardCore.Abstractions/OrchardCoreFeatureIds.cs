@@ -170,6 +170,8 @@ public static class OrchardCoreFeatureIds
 
     public const string Templates = "OrchardCore.Templates";
 
+    public const string AdminTemplates = "OrchardCore.AdminTemplates";
+
     public const string Tenants = "OrchardCore.Tenants";
 
     public const string TenantsFeatureProfiles = "OrchardCore.Tenants.FeatureProfiles";
