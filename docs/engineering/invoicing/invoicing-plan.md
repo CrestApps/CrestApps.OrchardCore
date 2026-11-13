@@ -516,4 +516,43 @@ Billable sources, time and expense billing, progress invoicing, usage meters and
 
 ## 28. Progress
 
-Nothing built yet.
+Each entry says what was built, what differs from the plan above, and what is still open. Keep it current: it is the handover between sessions.
+
+### Naming and design changes made while building
+
+- The block §5 and §6.6 call **Documents** is named **BusinessDocuments** in code (`CrestApps.OrchardCore.BusinessDocuments`, `.Abstractions`, `.Core`; features `CrestApps.OrchardCore.BusinessDocuments` and `.Pdf`), so it is not confused with the AI Documents modules. Its model is `BusinessDocument`, its renderers `IBusinessDocumentHtmlRenderer` and `IBusinessDocumentPdfRenderer`, its template record `BusinessDocumentTemplate` with `IBusinessDocumentTemplateManager`, and consumers register kinds with `AddBusinessDocumentKind`.
+- §6.1: series are registered with `AddNumberSeries(name, title, NumberSeriesFormat)` and issued by `INumberSeries.NextAsync(series, NumberSeriesRequest)`, which returns a `SeriesNumber(Sequence, Text)`. Financial documents use the series `Financial.Receipt`, `Financial.Invoice`, `Financial.CreditNote` and `Financial.RefundDocument` (`FinancialDocumentSeries`), default formats `R-{seq}`, `INV-{seq}`, `CN-{seq}`, `RF-{seq}` from 1001, so the numbers a site already issued continue. **Invoices and credit notes take their numbers from `IFinancialDocumentNumberGenerator`** (kinds `Invoice` and `CreditNote`), not from separate `Invoicing.*` series; estimates and debit notes register their own series. The first number of a series only applies when the series is new.
+- §6.2: the shared format is the static `CurrencyFormat` (`WithCode`, `WithSymbol`, `GetSymbol`) in `CrestApps.OrchardCore.Abstractions`, with `IMoneyFormatter` (`AddMoneyFormatter()`) in Payments.Abstractions for views and documents. Left on their own formatters: the Stripe currency helper (provider precision) and `SubscriptionReportBase.FormatCurrency` (grouped, always two decimals).
+- §7 TX1: the payer is stored as `Transaction.PayerKind` and `Transaction.PayerId`, read and set through `GetPayer()` and `SetPayer(PartyRef)`. The index derives the payer of older rows (the account in the parent reference, else the owner), and the migration re-maps existing rows in a deferred task, so no stored document is rewritten.
+- §7 TX4: there is no `Transaction.Document`. An invoice's transaction has `ReferenceType = "Invoice"` and `ReferenceId` = the invoice id, and `InvoiceNumber` holds its number. Timeline entries carry `DocumentKind`, `DocumentId` and `DocumentNumber` (a credit note behind its adjustment).
+- §7 TX5: part payments are `Transaction.AllowPartialPayment` and `MinimumPayment`, `StartCheckoutRequest.Amount` (kept on the session as `CheckoutRequestedAmount`), and `TransactionStateMachine.TryGetPaymentAmount`. A part payment takes no promotion code.
+- §7 TX7 and TX8: there is no `ReopenAsync`. `ITransactionCommandService.ReverseAsync(transactionId, eventId, reason)` takes back a payment recorded by hand or an adjustment with a `Reversed` entry (`ReversesEventId`), and a transaction it had settled becomes collectable again; that is how a write-off is undone. `RecordPaymentAsync(id, TransactionPaymentRequest)` records the payment method and received date and returns `UnappliedAmount`; `AdjustAsync(id, TransactionAdjustmentRequest)` names the document and records it once. `TransactionManager` gives every timeline entry an id when it saves.
+
+### Done
+
+| Slice | Commit | Notes |
+|---|---|---|
+| Plan | `5d1000444` | |
+| A2 Money format | `9762c82b7` | |
+| A1 Number series | `660bcd1c5` | Contracts, service and the financial generator adapter. The **settings page** for number series is part of A4 (BusinessDocuments module) |
+| A3 PDF library | `5b825ee62` | `CrestApps.OrchardCore.Pdf.Core`: `PdfFlow`, `PdfPage`, `PdfFont`, `PdfFonts`, `PdfFontResolver`, `PdfText`, `PdfColor`. Report charts, tables and theme stay in the Reports PDF add-on |
+| A6 Ledger (part) | `1260e979b` | TX1 (payer, index, migration, query by payers), TX3, TX4 (as changed above), TX5, TX7 and TX8 (as changed above). 254 Transactions tests pass |
+
+### In progress when this was written (two agents in their own worktrees, started from `5b825ee62`)
+
+- **A4 BusinessDocuments block**, including the number series settings page and moving Receipts onto the shared renderer.
+- **A5 party billing profile, party members and party tax profile, and A8 e-mail attachments** (`IPartyBillingProfileService`, `IPartyMembershipService`, `IPartyTaxProfileService`, `CommerceEmailAttachment`, `ICommerceEmailSender.SendWithResultAsync`).
+
+Their branches are merged into this branch by cherry-pick once each reports; `CrestApps.OrchardCore.slnx`, the Targets csproj, the tests csproj, `sidebars.js`, `feature-reference.md` and the changelog are the files where their additions meet.
+
+### Still open in PR A
+
+- **A6 rest:** TX2 (visibility through `IPartyMembershipService`: `TransactionCustomerPageService`, `TransactionController`, `MyTransactionsController`, and `FakeTransactionStore` in the tests), TX6 (overpayment to customer credit through an `ICustomerCreditService` over Customers store credit, and applying credit), TX10 (e-mail kinds `invoice` and `payment-request` with the pay link as a template value), TX11 (the payment request rendered through BusinessDocuments, `ITransactionInvoiceBuilder` as the seam Invoicing replaces), TX12 (workflow events and tasks, webhook events, richer data set fields; recipe and deployment for transactions is PR B), TX13 (clean-up, and the detail page built from display drivers). New payers set by the modules that post debts: B2B account terms (`Account`), Work Orders, Bookings, Pay Later.
+- **A7** payment terms catalog (feature `CrestApps.OrchardCore.Transactions.PaymentTerms`).
+- **A9 to A16** as listed in §23.
+- Docs still describe the old financial number generator in `src/CrestApps.Docs/docs/modules/commerce.md`, `installment-plans.md` and `observability.md`; update them in A16. The building-blocks catalog rows are also A16.
+
+### How to build and test here
+
+- Build from the mapped drive (`W:\` is `C:\Code\CrestApps\CrestApps.OrchardCore\.claude\worktrees`), with the .NET 10 SDK: `global.json` rolls forward to SDK 11, whose new analyzers fail on unrelated code. Switch `"latestMajor"` to `"latestFeature"` for the build and restore it straight after; never commit that change.
+- Tests are xUnit v3: run the built test DLL with `-class` or `-namespace` (one filter kind per run). The architecture namespace takes more than ten minutes.
