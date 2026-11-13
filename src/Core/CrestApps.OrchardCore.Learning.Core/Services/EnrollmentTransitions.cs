@@ -9,10 +9,7 @@ namespace CrestApps.OrchardCore.Learning.Core.Services;
 /// </summary>
 public static class EnrollmentTransitions
 {
-    /// <summary>
-    /// Gets the transition table.
-    /// </summary>
-    public static TransitionTable<EnrollmentStatus> Table { get; } = new(new Dictionary<EnrollmentStatus, EnrollmentStatus[]>
+    private static readonly TransitionTable<EnrollmentStatus> _table = new(new Dictionary<EnrollmentStatus, EnrollmentStatus[]>
     {
         [EnrollmentStatus.Pending] = [EnrollmentStatus.Active, EnrollmentStatus.Withdrawn],
         [EnrollmentStatus.Active] = [EnrollmentStatus.Suspended, EnrollmentStatus.Completed, EnrollmentStatus.Expired, EnrollmentStatus.Withdrawn],
@@ -21,4 +18,21 @@ public static class EnrollmentTransitions
         [EnrollmentStatus.Completed] = [],
         [EnrollmentStatus.Withdrawn] = [],
     });
+
+    /// <summary>
+    /// Gets whether an enrollment may move from one state to another.
+    /// </summary>
+    /// <param name="from">The current state.</param>
+    /// <param name="to">The new state.</param>
+    /// <returns><see langword="true"/> when the move is allowed.</returns>
+    public static bool CanMove(EnrollmentStatus from, EnrollmentStatus to)
+        => _table.CanMove(from, to);
+
+    /// <summary>
+    /// Gets whether a state is final.
+    /// </summary>
+    /// <param name="status">The state.</param>
+    /// <returns><see langword="true"/> when no move leaves it.</returns>
+    public static bool IsTerminal(EnrollmentStatus status)
+        => _table.IsTerminal(status);
 }

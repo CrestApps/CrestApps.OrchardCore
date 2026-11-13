@@ -208,7 +208,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
             return EnrollmentResult.Fail(EnrollmentErrors.NotFound);
         }
 
-        if (!EnrollmentTransitions.Table.CanMove(enrollment.Status, status))
+        if (!EnrollmentTransitions.CanMove(enrollment.Status, status))
         {
             return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
         }
@@ -370,7 +370,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
 
             foreach (var enrollment in page)
             {
-                if (!seen.Add(enrollment.ItemId) || !EnrollmentTransitions.Table.CanMove(enrollment.Status, EnrollmentStatus.Expired))
+                if (!seen.Add(enrollment.ItemId) || !EnrollmentTransitions.CanMove(enrollment.Status, EnrollmentStatus.Expired))
                 {
                     continue;
                 }

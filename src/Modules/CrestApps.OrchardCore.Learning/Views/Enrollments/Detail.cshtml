@@ -179,7 +179,7 @@
                                 </td>
                                 <td>@item.Section</td>
                                 <td>@StateText(progress?.State ?? CourseItemState.NotStarted)</td>
-                                <td>@(progress?.Score is { } score ? T["{0}%", score.ToString("0.##")].Value : string.Empty)</td>
+                                <td>@(progress?.Score is { } score ? T.GetString("{0}%", score.ToString("0.##")).Value : string.Empty)</td>
                                 <td>@(progress is null ? string.Empty : TimeSpan.FromSeconds(progress.SecondsSpent).ToString(@"h\:mm\:ss"))</td>
                                 <td>
                                     @if (progress?.CompletedUtc is { } itemCompleted)

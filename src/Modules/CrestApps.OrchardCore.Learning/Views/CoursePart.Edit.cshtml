@@ -46,7 +46,7 @@
         <div class="ocat-wrapper" asp-validation-class-for="NewEnrollmentKey">
             <label asp-for="NewEnrollmentKey" class="ocat-label">@T["Enrollment key"]</label>
             <div class="ocat-end">
-                <input asp-for="NewEnrollmentKey" type="password" class="form-control" autocomplete="new-password" />
+                <input asp-for="NewEnrollmentKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
                 <span asp-validation-for="NewEnrollmentKey"></span>
                 <span class="hint">@(Model.HasEnrollmentKey ? T["A key is set. Type a new key to replace it; the key is stored only as a hash."] : T["For a course that needs a key. The key is stored only as a hash, so keep a copy to share."])</span>
             </div>

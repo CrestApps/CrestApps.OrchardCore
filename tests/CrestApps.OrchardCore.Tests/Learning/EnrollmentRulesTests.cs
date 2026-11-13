@@ -23,7 +23,7 @@ public sealed class EnrollmentRulesTests
     [InlineData(EnrollmentStatus.Withdrawn, EnrollmentStatus.Active, false)]
     public void Transitions_AllowOnlyThePlannedMoves(EnrollmentStatus from, EnrollmentStatus to, bool allowed)
     {
-        Assert.Equal(allowed, EnrollmentTransitions.Table.CanMove(from, to));
+        Assert.Equal(allowed, EnrollmentTransitions.CanMove(from, to));
     }
 
     [Theory]
@@ -33,7 +33,7 @@ public sealed class EnrollmentRulesTests
     [InlineData(EnrollmentStatus.Expired, false)]
     public void Transitions_CompletedAndWithdrawnAreFinal(EnrollmentStatus status, bool terminal)
     {
-        Assert.Equal(terminal, EnrollmentTransitions.Table.IsTerminal(status));
+        Assert.Equal(terminal, EnrollmentTransitions.IsTerminal(status));
     }
 
     [Fact]
