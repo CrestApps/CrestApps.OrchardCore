@@ -1,0 +1,4 @@
+@model EnrollmentRowViewModel
+
+<a asp-controller="Enrollments" asp-action="Detail" asp-route-id="@Model.Enrollment.ItemId">@Model.LearnerName</a>
+<div class="admin-list-secondary">@Model.Enrollment.Number</div>

@@ -1,0 +1,159 @@
+@model CoursePartViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Course"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Code">
+            <label asp-for="Code" class="ocat-label">@T["Course code"]</label>
+            <div class="ocat-end">
+                <input asp-for="Code" class="form-control" maxlength="64" />
+                <span class="hint">@T["A short code such as SAFE-101, shown in lists and on transcripts."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Summary">
+            <label asp-for="Summary" class="ocat-label">@T["Summary"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="Summary" class="form-control" rows="2" maxlength="500"></textarea>
+                <span class="hint">@T["One or two sentences shown in the catalog."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Level">
+            <label asp-for="Level" class="ocat-label">@T["Level"]</label>
+            <div class="ocat-end">
+                <input asp-for="Level" class="form-control" maxlength="64" />
+                <span class="hint">@T["For example Beginner, Intermediate or Advanced."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="EstimatedMinutes">
+            <label asp-for="EstimatedMinutes" class="ocat-label">@T["Estimated effort (minutes)"]</label>
+            <div class="ocat-end">
+                <input asp-for="EstimatedMinutes" type="number" min="1" class="form-control" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Enrollment"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="EnrollmentMode">
+            <label asp-for="EnrollmentMode" class="ocat-label">@T["How learners enroll"]</label>
+            <div class="ocat-end">
+                <select asp-for="EnrollmentMode" asp-items="Model.EnrollmentModeOptions" class="form-select"></select>
+                <span class="hint">@T["People with the Manage enrollments permission can always enroll a learner."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="NewEnrollmentKey">
+            <label asp-for="NewEnrollmentKey" class="ocat-label">@T["Enrollment key"]</label>
+            <div class="ocat-end">
+                <input asp-for="NewEnrollmentKey" type="password" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="NewEnrollmentKey"></span>
+                <span class="hint">@(Model.HasEnrollmentKey ? T["A key is set. Type a new key to replace it; the key is stored only as a hash."] : T["For a course that needs a key. The key is stored only as a hash, so keep a copy to share."])</span>
+            </div>
+        </div>
+        @if (Model.HasEnrollmentKey)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="ClearEnrollmentKey" type="checkbox" class="form-check-input" />
+                        <label asp-for="ClearEnrollmentKey" class="form-check-label">@T["Remove the enrollment key"]</label>
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="ocat-wrapper" asp-validation-class-for="AccessDays">
+            <label asp-for="AccessDays" class="ocat-label">@T["Access length (days)"]</label>
+            <div class="ocat-end">
+                <input asp-for="AccessDays" type="number" min="1" class="form-control" />
+                <span asp-validation-for="AccessDays"></span>
+                <span class="hint">@T["How long a self enrollment gives access. Leave empty for no end."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="PrerequisiteCourseIds" class="ocat-label">@T["Prerequisite courses"]</label>
+            <div class="ocat-end">
+                <select asp-for="PrerequisiteCourseIds" asp-items="Model.CourseOptions" class="form-select" multiple size="5"></select>
+                <span class="hint">@T["Courses a learner must have completed before enrolling."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Completion and grade"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset"><span class="hint">@T["A learner completes the course when every required item is completed and every rule below is met."]</span></div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="PassMark">
+            <label asp-for="PassMark" class="ocat-label">@T["Pass mark (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="PassMark" type="number" min="0" max="100" step="0.01" class="form-control" />
+                <span asp-validation-for="PassMark"></span>
+                <span class="hint">@T["The course grade is the weighted mean of the gradable items. Leave empty for a course without a grade."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumGrade">
+            <label asp-for="MinimumGrade" class="ocat-label">@T["Minimum course grade (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumGrade" type="number" min="0" max="100" step="0.01" class="form-control" />
+                <span asp-validation-for="MinimumGrade"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumMinutes">
+            <label asp-for="MinimumMinutes" class="ocat-label">@T["Minimum time (minutes)"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumMinutes" type="number" min="1" class="form-control" />
+                <span class="hint">@T["The total time on the course items the learner must reach."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="FinalItemId" class="ocat-label">@T["Final assessment to pass"]</label>
+            <div class="ocat-end">
+                <select asp-for="FinalItemId" asp-items="Model.ItemOptions" class="form-select"></select>
+                <span class="hint">@T["A graded item the learner must pass, with a result computed on the server."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="RequireStaffApproval" type="checkbox" class="form-check-input" />
+                    <label asp-for="RequireStaffApproval" class="form-check-label">@T["A member of the course staff approves each completion"]</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Course staff"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Instructors"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.InstructorIds).ToString(), selectedValues = Model.InstructorIds, valueType = "userId", multiple = true, buttonText = T["Choose instructors"].Value, searchPlaceholder = T["Search users"].Value })
+                <span class="hint">@T["Instructors and assistants edit the course and see its learners' records."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Assistants"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.AssistantIds).ToString(), selectedValues = Model.AssistantIds, valueType = "userId", multiple = true, buttonText = T["Choose assistants"].Value, searchPlaceholder = T["Search users"].Value })
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Graders"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.GraderIds).ToString(), selectedValues = Model.GraderIds, valueType = "userId", multiple = true, buttonText = T["Choose graders"].Value, searchPlaceholder = T["Search users"].Value })
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Observers"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.ObserverIds).ToString(), selectedValues = Model.ObserverIds, valueType = "userId", multiple = true, buttonText = T["Choose observers"].Value, searchPlaceholder = T["Search users"].Value })
+                <span class="hint">@T["Observers see the course and its learners' progress without changing anything."]</span>
+            </div>
+        </div>
+    </div>
+</div>

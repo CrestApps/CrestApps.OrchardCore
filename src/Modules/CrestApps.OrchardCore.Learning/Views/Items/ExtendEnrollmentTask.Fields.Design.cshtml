@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ExtendEnrollmentTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Extend Access or Due Date"])
+    </h4>
+</header>

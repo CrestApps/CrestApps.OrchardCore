@@ -33,9 +33,15 @@ public static class LearningCoreServiceCollectionExtensions
         services.TryAddScoped<ICourseAccessService, DefaultCourseAccessService>();
         services.TryAddScoped<CourseReleaseEvaluator>();
         services.TryAddScoped<CourseCompletionEvaluator>();
+        services.TryAddScoped<CourseListSynchronizer>();
+        services.TryAddScoped<LearningUpkeep>();
+        services.AddOptions<LearningUpkeepOptions>();
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
         services.TryAddScoped(sp => new Lazy<ICourseAccessService>(sp.GetRequiredService<ICourseAccessService>));
+        services.TryAddScoped(sp => new Lazy<ICourseStructureService>(sp.GetRequiredService<ICourseStructureService>));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, LearningContentAccessHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, LearningRecordAuthorizationHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, CourseStaffContentAuthorizationHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICoursePrerequisiteEvaluator, CompletedCoursePrerequisiteEvaluator>());
 
         services.AddCourseItemReleaseRule<ItemCompletedReleaseRule>();

@@ -73,4 +73,14 @@ public interface ILearnerProgressService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>What changed.</returns>
     Task<ProgressUpdate> CompleteItemAsync(Enrollment enrollment, string itemId, string actor, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that a member of the course staff approves the learner's completion, for a course whose completion
+    /// criteria include staff approval, and completes the course when every other criterion is met.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <param name="actor">The user id of the person approving.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>What changed.</returns>
+    Task<ProgressUpdate> ApproveCompletionAsync(Enrollment enrollment, string actor, CancellationToken cancellationToken = default);
 }

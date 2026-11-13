@@ -162,6 +162,76 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
     }
 
     /// <summary>
+    /// Lists active enrollments whose access ends within a window, soonest first.
+    /// </summary>
+    /// <param name="fromUtc">The start of the window, in UTC.</param>
+    /// <param name="toUtc">The end of the window, in UTC.</param>
+    /// <param name="take">The page size.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The enrollments.</returns>
+    public async Task<IReadOnlyList<Enrollment>> ListAccessEndingAsync(DateTime fromUtc, DateTime toUtc, int take, CancellationToken cancellationToken = default)
+    {
+        return (await Session.Query<Enrollment, EnrollmentIndex>(
+                index => index.IsOpen && index.Status == EnrollmentStatus.Active && index.AccessEndsUtc != null && index.AccessEndsUtc > fromUtc && index.AccessEndsUtc <= toUtc,
+                collection: CollectionName)
+            .OrderBy(index => index.AccessEndsUtc)
+            .ThenBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <summary>
+    /// Lists active enrollments whose learner has not worked on the course since a time, longest idle first.
+    /// </summary>
+    /// <param name="beforeUtc">The time, in UTC.</param>
+    /// <param name="take">The page size.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The enrollments.</returns>
+    public async Task<IReadOnlyList<Enrollment>> ListInactiveAsync(DateTime beforeUtc, int take, CancellationToken cancellationToken = default)
+    {
+        return (await Session.Query<Enrollment, EnrollmentIndex>(
+                index => index.IsOpen && index.Status == EnrollmentStatus.Active
+                    && ((index.LastActivityUtc != null && index.LastActivityUtc < beforeUtc) || (index.LastActivityUtc == null && index.CreatedUtc < beforeUtc)),
+                collection: CollectionName)
+            .OrderBy(index => index.CreatedUtc)
+            .ThenBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <summary>
+    /// Reads a page of enrollments for an export, oldest first, optionally of one course and created within a window.
+    /// </summary>
+    /// <param name="courseId">The course, or <see langword="null"/> for every course.</param>
+    /// <param name="fromUtc">The earliest creation time, in UTC, or <see langword="null"/>.</param>
+    /// <param name="toUtc">The latest creation time, in UTC, or <see langword="null"/>.</param>
+    /// <param name="skip">The number of enrollments to skip.</param>
+    /// <param name="take">The page size.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The page.</returns>
+    public async Task<IReadOnlyList<Enrollment>> PageForExportAsync(string courseId, DateTime? fromUtc, DateTime? toUtc, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var query = Session.Query<Enrollment, EnrollmentIndex>(collection: CollectionName);
+
+        if (!string.IsNullOrEmpty(courseId))
+        {
+            query = query.Where(index => index.CourseId == courseId);
+        }
+
+        if (fromUtc is { } from)
+        {
+            query = query.Where(index => index.CreatedUtc >= from);
+        }
+
+        if (toUtc is { } to)
+        {
+            query = query.Where(index => index.CreatedUtc <= to);
+        }
+
+        return (await query.OrderBy(index => index.CreatedUtc).ThenBy(index => index.Id).Skip(skip).Take(take).ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <summary>
     /// Saves an enrollment.
     /// </summary>
     /// <param name="enrollment">The enrollment.</param>

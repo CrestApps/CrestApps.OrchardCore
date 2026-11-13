@@ -74,4 +74,23 @@ public interface IEnrollmentObserver
     /// <returns>A task.</returns>
     Task ExtendedAsync(Enrollment enrollment, string actor, string reason, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// The access of an open enrollment ends within the notice period. Raised once per enrollment.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task AccessEndingAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// The learner of an active enrollment has not worked on the course for the inactivity period. Raised once until the
+    /// learner works on the course again.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task InactiveAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

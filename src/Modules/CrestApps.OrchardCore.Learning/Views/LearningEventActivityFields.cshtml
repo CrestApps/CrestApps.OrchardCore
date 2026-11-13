@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+
+@model LearningEventActivityViewModel
+
+<div class="mb-3">
+    <label asp-for="CourseIds" class="form-label">@T["Courses"]</label>
+    <select asp-for="CourseIds" asp-items="Model.CourseOptions" class="form-select" multiple size="6"></select>
+    <span class="hint">@T["The courses that start the workflow. Choose none for every course."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="IncludeWorkflowChanges" type="checkbox" class="form-check-input" />
+        <label asp-for="IncludeWorkflowChanges" class="form-check-label">@T["Also start for changes a workflow made"]</label>
+        <span class="hint dashed">@T["Off by default, so a workflow that changes an enrollment does not start itself again."]</span>
+    </div>
+</div>

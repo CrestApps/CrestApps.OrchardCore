@@ -178,6 +178,70 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         }, cancellationToken, manual: true);
     }
 
+    /// <inheritdoc />
+    public async Task<ProgressUpdate> ApproveCompletionAsync(Enrollment enrollment, string actor, CancellationToken cancellationToken = default)
+    {
+        if (enrollment is null || enrollment.Status != EnrollmentStatus.Active)
+        {
+            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "Only an active enrollment can be approved." };
+        }
+
+        var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
+
+        if (course is null)
+        {
+            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course is not available." };
+        }
+
+        var now = _clock.UtcNow;
+        var outline = await _courseStructure.GetOutlineAsync(course);
+        var progress = await _progressStore.FindByEnrollmentAsync(enrollment.ItemId, cancellationToken) ?? new EnrollmentProgress { EnrollmentId = enrollment.ItemId };
+
+        enrollment.Properties[LearningRuleNames.StaffApprovalProperty] = new Dictionary<string, object>
+        {
+            ["Actor"] = actor,
+            ["ApprovedUtc"] = now,
+        };
+
+        var grade = CourseGradeCalculator.Compute(outline, progress);
+        var passed = CourseGradeCalculator.IsPassed(grade, course.Get<CoursePart>(nameof(CoursePart))?.PassMark);
+        var completed = await _completionEvaluator.IsCompleteAsync(outline, enrollment, progress, grade);
+
+        if (completed)
+        {
+            Complete(enrollment, outline, progress, now, grade, passed, actor);
+        }
+
+        enrollment.ModifiedUtc = now;
+        await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+
+        if (completed)
+        {
+            await NotifyAsync(observer => observer.StatusChangedAsync(enrollment, EnrollmentStatus.Active, cancellationToken));
+            await NotifyAsync(observer => observer.CompletedAsync(enrollment, cancellationToken));
+        }
+
+        return new ProgressUpdate { Enrollment = enrollment, Progress = progress, CourseCompleted = completed };
+    }
+
+    private static void Complete(Enrollment enrollment, CourseOutline outline, EnrollmentProgress progress, DateTime now, decimal? grade, bool? passed, string actor)
+    {
+        enrollment.Grade = grade;
+        enrollment.Passed = passed;
+        enrollment.ProgressPercent = CourseCompletionEvaluator.ComputePercent(outline, progress);
+        enrollment.CompletedUtc = now;
+        enrollment.Completion = CompletionSnapshotFactory.Create(outline, progress, now, grade, passed);
+        enrollment.History.Add(new EnrollmentStatusChange
+        {
+            From = EnrollmentStatus.Active,
+            To = EnrollmentStatus.Completed,
+            ChangedUtc = now,
+            Actor = actor,
+        });
+
+        enrollment.Status = EnrollmentStatus.Completed;
+    }
+
     private async Task<ProgressUpdate> UpdateAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, CancellationToken cancellationToken, bool manual = false)
     {
         if (enrollment is null || string.IsNullOrEmpty(itemId))
@@ -218,7 +282,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = progress.Find(itemId) };
         }
 
-        if (!manual && !EnrollmentAccess.HasAccess(enrollment, now))
+        if (manual ? enrollment.Status != EnrollmentStatus.Active : !EnrollmentAccess.HasAccess(enrollment, now))
         {
             return new ProgressUpdate { Enrollment = enrollment, Progress = progress, RefusedReason = "You do not have access to this course." };
         }
@@ -325,17 +389,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (enrollment.Status == EnrollmentStatus.Active && await _completionEvaluator.IsCompleteAsync(outline, enrollment, progress, grade))
         {
-            enrollment.CompletedUtc = now;
-            enrollment.Completion = CompletionSnapshotFactory.Create(outline, progress, now, grade, passed);
-            enrollment.History.Add(new EnrollmentStatusChange
-            {
-                From = EnrollmentStatus.Active,
-                To = EnrollmentStatus.Completed,
-                ChangedUtc = now,
-                Actor = manual ? context.Item.CompletedBy : enrollment.UserId,
-            });
-
-            enrollment.Status = EnrollmentStatus.Completed;
+            Complete(enrollment, outline, progress, now, grade, passed, manual ? context.Item.CompletedBy : enrollment.UserId);
             enrollmentChanged = true;
             courseCompleted = true;
         }

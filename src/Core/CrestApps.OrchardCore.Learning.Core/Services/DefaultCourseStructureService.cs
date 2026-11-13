@@ -130,7 +130,7 @@ public sealed class DefaultCourseStructureService : ICourseStructureService
             return [];
         }
 
-        var query = _session.QueryIndex<CourseStaffIndex>(index => index.UserId == userId && index.Published);
+        var query = _session.QueryIndex<CourseStaffIndex>(index => index.UserId == userId && (index.Published || index.Latest));
 
         if (roles is { Length: > 0 })
         {
@@ -148,7 +148,7 @@ public sealed class DefaultCourseStructureService : ICourseStructureService
             return false;
         }
 
-        var query = _session.QueryIndex<CourseStaffIndex>(index => index.UserId == userId && index.CourseId == courseId && index.Published);
+        var query = _session.QueryIndex<CourseStaffIndex>(index => index.UserId == userId && index.CourseId == courseId && (index.Published || index.Latest));
 
         if (roles is { Length: > 0 })
         {

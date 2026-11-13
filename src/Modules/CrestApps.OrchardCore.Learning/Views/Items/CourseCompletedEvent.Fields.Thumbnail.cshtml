@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CourseCompletedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    @T["Course Completed"]
+</h4>
+<p>@T["Starts when a learner completes a course."]</p>

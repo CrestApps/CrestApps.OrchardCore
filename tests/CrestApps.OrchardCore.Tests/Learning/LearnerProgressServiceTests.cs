@@ -275,6 +275,32 @@ public sealed class LearnerProgressServiceTests
         Assert.Equal("Signed the paper roster", update.Item.CompletionReason);
     }
 
+    [Fact]
+    public async Task ApproveCompletionAsync_CompletesACourseThatWaitsForTheStaff_AndKeepsWhoApproved()
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1", part => part.CompletionCriteria = [new LearningRuleSettings { Name = LearningRuleNames.StaffApproval }]);
+        courses.AddItem("course1", "lesson");
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act
+        var viewed = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "lesson", 5), enrollment.ItemId);
+        var approved = await Progress(harness, (service, e) => service.ApproveCompletionAsync(e, "instructor1"), enrollment.ItemId);
+
+        // Assert
+        Assert.True(viewed.ItemCompleted);
+        Assert.False(viewed.CourseCompleted);
+        Assert.True(approved.CourseCompleted);
+
+        var completed = await FindAsync(harness, enrollment.ItemId);
+
+        Assert.Equal(EnrollmentStatus.Completed, completed.Status);
+        Assert.True(completed.Properties.ContainsKey(LearningRuleNames.StaffApprovalProperty));
+        Assert.Equal("instructor1", completed.History.Last().Actor);
+    }
+
     private static async Task<Enrollment> EnrollAsync(CalendarTestHarness harness, string userId, string courseId)
     {
         var result = await harness.RunAsync(services => services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest

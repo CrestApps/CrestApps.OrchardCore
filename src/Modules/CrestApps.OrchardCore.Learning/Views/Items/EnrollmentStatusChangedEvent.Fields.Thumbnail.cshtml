@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Learning.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EnrollmentStatusChangedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+    @T["Enrollment Status Changed"]
+</h4>
+<p>@T["Starts when an enrollment moves to another status."]</p>

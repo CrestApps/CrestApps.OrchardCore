@@ -1,0 +1,133 @@
+{
+  "name": "LearningRoles",
+  "displayName": "Learning roles",
+  "description": "Creates the suggested Learning roles: Learning Administrator, Course Author, Instructor, Grader, Training Manager and Learner, each with the permissions its people need.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [ "learning" ],
+  "tags": [ "learning", "roles" ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "OrchardCore.Roles",
+        "CrestApps.OrchardCore.Learning",
+        "CrestApps.OrchardCore.Learning.LearnerPages"
+      ]
+    },
+    {
+      "name": "Roles",
+      "Roles": [
+        {
+          "Name": "Learning Administrator",
+          "Description": "Runs learning: every course, enrollment, learner record and report.",
+          "Permissions": [
+            "AccessAdminPanel",
+            "ManageCourses",
+            "ManageEnrollments",
+            "ViewLearnerRecords",
+            "ViewLearningReports",
+            "ExportLearnerRecords",
+            "AccessLearning",
+            "ListContent",
+            "EditContent_Course",
+            "PublishContent_Course",
+            "DeleteContent_Course",
+            "ViewContent_Course",
+            "PreviewContent_Course",
+            "EditContent_PageLesson",
+            "PublishContent_PageLesson",
+            "DeleteContent_PageLesson",
+            "EditContent_VideoLesson",
+            "PublishContent_VideoLesson",
+            "DeleteContent_VideoLesson",
+            "EditContent_FileLesson",
+            "PublishContent_FileLesson",
+            "DeleteContent_FileLesson",
+            "EditContent_LinkLesson",
+            "PublishContent_LinkLesson",
+            "DeleteContent_LinkLesson",
+            "EditContent_Acknowledgement",
+            "PublishContent_Acknowledgement",
+            "DeleteContent_Acknowledgement",
+            "ManageMediaContent"
+          ]
+        },
+        {
+          "Name": "Course Author",
+          "Description": "Writes and publishes courses and their lessons.",
+          "Permissions": [
+            "AccessAdminPanel",
+            "ManageCourses",
+            "AccessLearning",
+            "ListContent",
+            "EditContent_Course",
+            "PublishContent_Course",
+            "ViewContent_Course",
+            "PreviewContent_Course",
+            "EditContent_PageLesson",
+            "PublishContent_PageLesson",
+            "EditContent_VideoLesson",
+            "PublishContent_VideoLesson",
+            "EditContent_FileLesson",
+            "PublishContent_FileLesson",
+            "EditContent_LinkLesson",
+            "PublishContent_LinkLesson",
+            "EditContent_Acknowledgement",
+            "PublishContent_Acknowledgement",
+            "ManageMediaContent"
+          ]
+        },
+        {
+          "Name": "Instructor",
+          "Description": "Teaches courses: edits the courses where they are on the course staff and sees and manages those courses' learners.",
+          "Permissions": [
+            "AccessAdminPanel",
+            "ManageOwnCourses",
+            "AccessLearning",
+            "ListContent",
+            "EditOwnContent_PageLesson",
+            "PublishOwnContent_PageLesson",
+            "EditOwnContent_VideoLesson",
+            "PublishOwnContent_VideoLesson",
+            "EditOwnContent_FileLesson",
+            "PublishOwnContent_FileLesson",
+            "EditOwnContent_LinkLesson",
+            "PublishOwnContent_LinkLesson",
+            "EditOwnContent_Acknowledgement",
+            "PublishOwnContent_Acknowledgement",
+            "ManageOwnMedia"
+          ]
+        },
+        {
+          "Name": "Grader",
+          "Description": "Grades work in the courses where they are on the course staff.",
+          "Permissions": [
+            "AccessAdminPanel",
+            "AccessLearning"
+          ]
+        },
+        {
+          "Name": "Training Manager",
+          "Description": "Enrolls people, follows their progress and runs the learning reports.",
+          "Permissions": [
+            "AccessAdminPanel",
+            "ManageEnrollments",
+            "ViewLearnerRecords",
+            "ViewLearningReports",
+            "AccessLearning"
+          ]
+        },
+        {
+          "Name": "Learner",
+          "Description": "Takes courses.",
+          "Permissions": [
+            "AccessLearning"
+          ]
+        }
+      ]
+    }
+  ]
+}

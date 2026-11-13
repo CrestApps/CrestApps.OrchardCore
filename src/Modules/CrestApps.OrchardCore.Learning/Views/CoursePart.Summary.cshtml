@@ -1,0 +1,20 @@
+@model CourseLearnerViewModel
+
+<div class="learning-course-summary small text-muted">
+    @if (!string.IsNullOrEmpty(Model.Part.Code))
+    {
+        <span class="me-2">@Model.Part.Code</span>
+    }
+    @if (!string.IsNullOrEmpty(Model.Part.Level))
+    {
+        <span class="me-2">@Model.Part.Level</span>
+    }
+    @if (Model.Part.EstimatedMinutes is { } minutes)
+    {
+        <span class="me-2"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["About {0} minutes", minutes]</span>
+    }
+    @if (!string.IsNullOrEmpty(Model.Part.Summary))
+    {
+        <p class="mb-0 mt-1">@Model.Part.Summary</p>
+    }
+</div>

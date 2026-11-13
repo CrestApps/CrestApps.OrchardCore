@@ -31,6 +31,12 @@ internal sealed class RecordingEnrollmentObserver : IEnrollmentObserver
     public Task ExtendedAsync(Enrollment enrollment, string actor, string reason, CancellationToken cancellationToken = default)
         => Record("Extended", enrollment);
 
+    public Task AccessEndingAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Record("AccessEnding:" + enrollment.ItemId, enrollment);
+
+    public Task InactiveAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Record("Inactive:" + enrollment.ItemId, enrollment);
+
     private Task Record(string name, Enrollment enrollment)
     {
         Events.Add(name);

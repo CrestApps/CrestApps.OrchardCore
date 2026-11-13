@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "learning-player.js",
+    "source": "Assets/js/learning-player.js",
+    "dest": "wwwroot/scripts/learning-player.js"
+  }
+]

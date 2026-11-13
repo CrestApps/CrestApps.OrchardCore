@@ -1,0 +1,17 @@
+@model LearningPartTextViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="RequiredPercent">
+    <label asp-for="RequiredPercent" class="ocat-label">@T["Share to watch (%)"]</label>
+    <div class="ocat-end">
+        <input asp-for="RequiredPercent" type="number" min="1" max="100" class="form-control" />
+        <span asp-validation-for="RequiredPercent"></span>
+        <span class="hint">@T["How much of the video file the learner must watch for the item to be completed by watching."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Transcript">
+    <label asp-for="Transcript" class="ocat-label">@T["Transcript"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Transcript" class="form-control" rows="6"></textarea>
+        <span class="hint">@T["Shown under the player, for people who cannot hear or prefer to read."]</span>
+    </div>
+</div>

@@ -1,0 +1,62 @@
+@model (CourseOutline Outline, EnrollmentProgress Progress, IDictionary<string, string> KindIcons, string CurrentItemId, bool CanOpen)
+
+@{
+    var courseId = Model.Outline.Course.ContentItemId;
+}
+
+@foreach (var group in Model.Outline.Entries.GroupBy(entry => entry.Section))
+{
+    <div class="mb-3">
+        <h3 class="h6 text-uppercase text-muted mb-1">@group.Key?.Title</h3>
+        @if (!string.IsNullOrEmpty(group.Key?.Summary))
+        {
+            <p class="small text-muted mb-1">@group.Key.Summary</p>
+        }
+        <ol class="list-group list-group-numbered">
+            @foreach (var entry in group)
+            {
+                var itemId = entry.Item.ContentItemId;
+                var state = Model.Progress?.Find(itemId)?.State ?? CourseItemState.NotStarted;
+                var icon = Model.KindIcons.TryGetValue(entry.Part?.Kind ?? string.Empty, out var kindIcon) ? kindIcon : "fa-solid fa-file-lines";
+                var isCurrent = itemId == Model.CurrentItemId;
+                var canOpen = Model.CanOpen || entry.Part?.FreePreview == true;
+
+                <li class="list-group-item d-flex align-items-center gap-2@(isCurrent ? " active" : string.Empty)" data-learning-item="@itemId" aria-current="@(isCurrent ? "step" : null)">
+                    <i class="@icon" aria-hidden="true"></i>
+                    <span class="flex-grow-1">
+                        @if (canOpen && !isCurrent)
+                        {
+                            <a href="@Url.RouteUrl("LearningPlayer", new { courseId, itemId })" class="stretched-link text-reset">@entry.Item.DisplayText</a>
+                        }
+                        else
+                        {
+                            @entry.Item.DisplayText
+                        }
+                        @if (!entry.Required)
+                        {
+                            <span class="badge text-bg-light border ms-1">@T["Optional"]</span>
+                        }
+                        @if (entry.Part?.FreePreview == true && !Model.CanOpen)
+                        {
+                            <span class="badge text-bg-info ms-1">@T["Free preview"]</span>
+                        }
+                    </span>
+                    <span data-learning-state>
+                        @switch (state)
+                        {
+                            case CourseItemState.Completed:
+                                <i class="fa-solid fa-circle-check text-success" title="@T["Completed"]" aria-hidden="true"></i><span class="visually-hidden">@T["Completed"]</span>
+                                break;
+                            case CourseItemState.InProgress:
+                                <i class="fa-solid fa-circle-half-stroke text-primary" title="@T["In progress"]" aria-hidden="true"></i><span class="visually-hidden">@T["In progress"]</span>
+                                break;
+                            case CourseItemState.Failed:
+                                <i class="fa-solid fa-circle-xmark text-danger" title="@T["Not passed"]" aria-hidden="true"></i><span class="visually-hidden">@T["Not passed"]</span>
+                                break;
+                        }
+                    </span>
+                </li>
+            }
+        </ol>
+    </div>
+}

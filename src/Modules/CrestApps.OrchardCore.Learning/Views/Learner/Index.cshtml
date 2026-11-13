@@ -1,0 +1,90 @@
+@model MyLearningViewModel
+
+@{
+    ViewData["Title"] = T["My learning"].Value;
+}
+
+<div class="container my-4">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningMyLearning" title="@T["My learning"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <h1 class="h3 mb-0">@T["My learning"]</h1>
+        <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My transcript"]</a>
+    </div>
+
+    <h2 class="h5">@T["In progress"]</h2>
+    @if (Model.Current.Count == 0)
+    {
+        <p class="text-muted">@T["You are not enrolled in any course right now."]</p>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-md-2 g-3 mb-4">
+            @foreach (var row in Model.Current)
+            {
+                var enrollment = row.Enrollment;
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6 card-title">@row.Title</h3>
+                            @if (!string.IsNullOrEmpty(row.Code))
+                            {
+                                <p class="small text-muted mb-2">@row.Code</p>
+                            }
+                            @if (enrollment.Status == EnrollmentStatus.Pending)
+                            {
+                                <p class="mb-0"><i class="fa-solid fa-hourglass-half me-1" aria-hidden="true"></i>@T["Waiting for approval"]</p>
+                            }
+                            else if (enrollment.Status == EnrollmentStatus.Suspended)
+                            {
+                                <p class="mb-0">@T["Paused by the course staff"]</p>
+                            }
+                            else
+                            {
+                                <div class="progress mb-2" role="progressbar" aria-label="@T["Progress of {0}", row.Title]" aria-valuenow="@enrollment.ProgressPercent" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar" style="width: @(enrollment.ProgressPercent)%">@(enrollment.ProgressPercent)%</div>
+                                </div>
+                                @if (enrollment.DueUtc is { } due)
+                                {
+                                    <p class="small mb-2">@T["Due"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(due, DateTimeKind.Utc), Format: "g"))</p>
+                                }
+                                @if (row.CourseAvailable)
+                                {
+                                    <a class="btn btn-primary btn-sm" href="@Url.RouteUrl("LearningPlayer", new { courseId = enrollment.CourseId })">@(enrollment.StartedUtc is null ? T["Start"] : T["Continue"])</a>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.Completed.Count > 0)
+    {
+        <h2 class="h5">@T["Completed"]</h2>
+        <ul class="list-group mb-4">
+            @foreach (var row in Model.Completed)
+            {
+                <li class="list-group-item d-flex flex-wrap justify-content-between gap-2">
+                    <span><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@row.Title</span>
+                    <span class="small text-muted">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(row.Enrollment.CompletedUtc ?? row.Enrollment.CreatedUtc, DateTimeKind.Utc), Format: "d"))</span>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (Model.Other.Count > 0)
+    {
+        <h2 class="h5">@T["Access ended"]</h2>
+        <ul class="list-group">
+            @foreach (var row in Model.Other)
+            {
+                <li class="list-group-item">@row.Title</li>
+            }
+        </ul>
+    }
+</div>

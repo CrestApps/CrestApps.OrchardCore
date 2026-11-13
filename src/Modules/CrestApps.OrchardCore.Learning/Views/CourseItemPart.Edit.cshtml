@@ -1,0 +1,99 @@
+@model CourseItemPartViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Course item: {0}", Model.KindDisplayName]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="CompletionMode">
+            <label asp-for="CompletionMode" class="ocat-label">@T["Completed"]</label>
+            <div class="ocat-end">
+                <select asp-for="CompletionMode" asp-items="Model.CompletionModeOptions" class="form-select"></select>
+                <span asp-validation-for="CompletionMode"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumMinutes">
+            <label asp-for="MinimumMinutes" class="ocat-label">@T["Minimum time (minutes)"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumMinutes" type="number" min="1" class="form-control" />
+                <span asp-validation-for="MinimumMinutes"></span>
+                <span class="hint">@T["For an item completed after a minimum time."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="EstimatedMinutes">
+            <label asp-for="EstimatedMinutes" class="ocat-label">@T["Estimated time (minutes)"]</label>
+            <div class="ocat-end"><input asp-for="EstimatedMinutes" type="number" min="1" class="form-control" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="FreePreview" type="checkbox" class="form-check-input" />
+                    <label asp-for="FreePreview" class="form-check-label">@T["Free preview"]</label>
+                    <span class="hint dashed">@T["Anyone can open this item and its files, enrolled or not."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Grade"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Gradable" type="checkbox" class="form-check-input" />
+                    <label asp-for="Gradable" class="form-check-label">@T["Counts toward the course grade"]</label>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Weight">
+            <label asp-for="Weight" class="ocat-label">@T["Weight"]</label>
+            <div class="ocat-end">
+                <input asp-for="Weight" type="number" min="0" step="0.01" class="form-control" />
+                <span asp-validation-for="Weight"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="PassMark">
+            <label asp-for="PassMark" class="ocat-label">@T["Pass mark (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="PassMark" type="number" min="0" max="100" step="0.01" class="form-control" />
+                <span asp-validation-for="PassMark"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowSelfReported" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowSelfReported" class="form-check-label">@T["Let a result reported by the browser count toward a certification"]</label>
+                    <span class="hint dashed">@T["Off by default. A learning package reports its own result in the browser, where a learner can change it."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["When it opens"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="AfterItemId" class="ocat-label">@T["After completing"]</label>
+            <div class="ocat-end">
+                <select asp-for="AfterItemId" asp-items="Model.ItemOptions" class="form-select"></select>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AfterMinimumScore">
+            <label asp-for="AfterMinimumScore" class="ocat-label">@T["With a score of at least (%)"]</label>
+            <div class="ocat-end"><input asp-for="AfterMinimumScore" type="number" min="0" max="100" step="0.01" class="form-control" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="OpensFrom" class="ocat-label">@T["Opens on"]</label>
+            <div class="ocat-end">
+                <input asp-for="OpensFrom" type="datetime-local" class="form-control" />
+                <span class="hint">@T["In your time zone."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="OpensDaysAfterEnrollment" class="ocat-label">@T["Opens days after enrollment"]</label>
+            <div class="ocat-end"><input asp-for="OpensDaysAfterEnrollment" type="number" min="1" class="form-control" /></div>
+        </div>
+    </div>
+</div>
