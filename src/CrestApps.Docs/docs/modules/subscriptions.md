@@ -134,6 +134,8 @@ An agreement carries who owns it, what it bills and on what cycle, the gateway's
 
 The status is one of `Active`, `Trialing`, `PastDue`, `Canceled`, `Expired`, `Paused`, or `Incomplete`. Whether a subscriber currently has access is a separate question from the status, and the agreement answers it: a cancelled agreement is still current until the paid period runs out, and a past-due one is current through its grace window.
 
+A subscription bought with a promise to pay ([Pay Later](pay-later), a bank transfer) starts `Incomplete` and grants nothing until a transaction of its checkout is paid (`SubscriptionFirstPaymentTransactionHandler` then resumes it), unless the plan's product ticks **Deliver before payment**. A period of such a subscription left unpaid past its due date marks it `PastDue` (`SubscriptionOverdueTransactionHandler`, which finds the subscription by its checkout first).
+
 ### Transitions
 
 Subscription state is edited from four directions at once: a gateway webhook, a nightly sweep, an administrator, and the customer. Every transition therefore goes through one service, takes a lock on the single agreement it changes, re-reads it inside that lock, and is idempotent.

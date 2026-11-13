@@ -60,6 +60,21 @@ Each cycle is created exactly once. The sweep takes a lock on the one commitment
 
 Under **Settings → Commerce → Offline payments** you can set the **net term (days)** — how many days after checkout a recorded Pay Later balance is due. The due date drives the reminder cadence configured in the [Transactions](transactions) settings. A value of `0` records the balance with no due date. `PayLaterSettings.Enabled` (off by default) offers the option at checkout; until it's on, enabling the feature adds nothing to checkout.
 
+### Who may promise, and what they get before paying
+
+A promise to pay is not money, so Pay Later and the two methods below are limited:
+
+- **Signed-in buyers only.** `PayLaterSettings.RequireSignedIn` is on by default, so guests are not offered Pay Later; untick it to offer it to them. Bank transfer and cash on delivery have the same option, off by default.
+- **Largest order.** `MaxOrderAmount` on each method leaves it out of a checkout whose total is higher. Empty means no limit.
+- **Nothing instant before the money.** What a product delivers instantly (a download, a membership, a site) is handed over only once the balance is paid, unless the product ticks **Deliver before payment** (`ProductPart.DeliverBeforePayment`). Goods ship when the store records the payment.
+- **Subscriptions.** A subscription bought this way starts `Incomplete` and grants nothing until a transaction of its checkout is paid, unless the plan delivers before payment; a period left unpaid past its due date makes the subscription past due, and it lapses at the end of the grace window. A trial still grants access during the trial, since nothing is owed yet.
+
+These rules are checked when the payment step lists the methods (`IsAvailableAsync`) and again when the checkout engine begins the payment.
+
+:::note Upgrading
+Before this release Pay Later was offered to guests and delivered at once. A store that wants that back unticks **Only for signed-in buyers** and ticks **Deliver before payment** on the products concerned.
+:::
+
 ## Bank transfer and cash on delivery
 
 The feature also ships two one-time offline methods on the same base, **`OfflineCheckoutPaymentProvider`**, which records a commitment without a gateway (`DefersPayment`, `ReportsAuthoritativeAmount = false`) and leaves a balance due when its settings say:
