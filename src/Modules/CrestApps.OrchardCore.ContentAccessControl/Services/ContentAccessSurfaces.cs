@@ -136,11 +136,21 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Search
     /// page never shows a restricted item's title or summary outside its roles.
     /// </summary>
     /// <remarks>
-    /// A page is the allowed hits at its position, so the hits are read from the top, in batches, until the page is full
-    /// or the index has no more (at most <see cref="MaxRounds"/> reads). Orchard's search page asks for one hit more than
-    /// it shows to decide whether there is a next page, and a page with restricted hits in it still gets that hit, so the
-    /// public hits after a restricted one stay reachable. The total count is lowered by the hits taken out of what was
-    /// read; it can still count restricted hits further down.
+    /// <para>
+    /// The two numbers keep the meaning Orchard's search page gives them: <c>start</c> is the rank of the first hit and
+    /// the last number the rank after the last hit. The page asks for <c>(0, PageSize + 1)</c>, then for
+    /// <c>(After, After + PageSize + 1)</c>, and offers a next page, at that end minus one, only when it gets
+    /// <c>PageSize + 1</c> hits back. Lucene reads the numbers the same way. Elasticsearch reads the end as a count and
+    /// returns more, so what comes back is cut to the window that was asked for.
+    /// </para>
+    /// <para>
+    /// When the window holds restricted hits, the hits right after it are read, a window at a time and at most
+    /// <see cref="MaxRounds"/> reads in all, until the window is full again or the index has no more. A page with a
+    /// restricted hit is then still full and still offers the next page, so no public hit becomes unreachable. The page
+    /// boundaries stay where the search page puts them, so the hits that refilled a page show again at the top of the
+    /// next one. A search loads and authorizes at most <see cref="MaxRounds"/> windows of items, whichever page is asked
+    /// for. The total count is lowered by the hits taken out of what was read.
+    /// </para>
     /// </remarks>
     public sealed class RestrictedContentSearchService : ISearchService
     {
@@ -177,50 +187,49 @@ namespace CrestApps.OrchardCore.ContentAccessControl.Search
         {
             start = Math.Max(0, start);
 
-            var wanted = start + size;
+            var result = await _inner.SearchAsync(index, term, start, size);
+
+            if (result?.ContentItemIds is not { Count: > 0 })
+            {
+                return result;
+            }
+
             var user = _httpContextAccessor.HttpContext?.User ?? new System.Security.Claims.ClaimsPrincipal();
-            var allowed = new List<string>(Math.Max(0, wanted));
-            SearchResult first = null;
-            var removed = 0;
-            var offset = 0;
+            var window = size - start;
 
-            for (var round = 0; round < MaxRounds && allowed.Count < wanted; round++)
+            // Not a window the search page asks for: what came back is only filtered.
+            var read = window > 0 ? result.ContentItemIds.Take(window).ToList() : [.. result.ContentItemIds];
+            var allowed = await AllowedAsync(read, result.Latest, user);
+            var removed = read.Count - allowed.Count;
+            var next = start + read.Count;
+            var more = window > 0 && read.Count == window;
+
+            for (var round = 1; round < MaxRounds && more && allowed.Count < window; round++)
             {
-                var result = await _inner.SearchAsync(index, term, offset, wanted);
+                var batch = (await _inner.SearchAsync(index, term, next, next + window))?.ContentItemIds?.Take(window).ToList() ?? [];
+                var kept = await AllowedAsync(batch, result.Latest, user);
 
-                first ??= result;
-
-                if (result?.ContentItemIds is not { Count: > 0 } ids)
-                {
-                    break;
-                }
-
-                var kept = await AllowedAsync(ids, result.Latest, user);
-
-                removed += ids.Count - kept.Count;
+                removed += batch.Count - kept.Count;
                 allowed.AddRange(kept);
-                offset += ids.Count;
+                next += batch.Count;
 
-                // Fewer hits than asked for: the index has no more.
-                if (ids.Count < wanted)
-                {
-                    break;
-                }
+                // Fewer hits than a window: the index has no more.
+                more = batch.Count == window;
             }
 
-            if (first?.ContentItemIds is null)
-            {
-                return first;
-            }
+            result.TotalCount = Math.Max(0, result.TotalCount - removed);
+            result.ContentItemIds = window > 0 ? [.. allowed.Take(window)] : allowed;
 
-            first.TotalCount = Math.Max(0, first.TotalCount - removed);
-            first.ContentItemIds = [.. allowed.Skip(start).Take(size)];
-
-            return first;
+            return result;
         }
 
-        private async Task<List<string>> AllowedAsync(IList<string> ids, bool latest, System.Security.Claims.ClaimsPrincipal user)
+        private async Task<List<string>> AllowedAsync(List<string> ids, bool latest, System.Security.Claims.ClaimsPrincipal user)
         {
+            if (ids.Count == 0)
+            {
+                return [];
+            }
+
             var items = (await _contentManager.GetAsync(ids, latest ? VersionOptions.Latest : VersionOptions.Published))
                 .Where(item => item is not null)
                 .ToDictionary(item => item.ContentItemId, StringComparer.Ordinal);
