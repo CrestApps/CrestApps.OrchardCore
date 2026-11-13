@@ -31,7 +31,7 @@ The list shows each template with the kinds of documents it is for and whether i
 | --- | --- |
 | **Name** | A name staff recognize, such as Standard or Wholesale. Required. |
 | **Notes** | Notes for staff. They are not printed. |
-| **Used for** | The kinds of documents the template is for, such as Receipts. Tick none to use it for every kind. Only the kinds of the features you have enabled are listed. |
+| **Used for** | The kinds of documents the template is for, such as Receipts or Payment requests (the invoice of a balance a customer pays themselves, with the Transactions and Receipts features on). Tick none to use it for every kind. Only the kinds of the features you have enabled are listed. |
 | **Default template** | Documents of its kinds that name no template are printed with it. When you save a template as the default, the template that was the default for the same kinds stops being the default. |
 
 ### Look

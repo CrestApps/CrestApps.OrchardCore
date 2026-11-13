@@ -159,3 +159,4 @@ The number series formats travel in Orchard Core's `Settings` step:
 ## Consumers
 
 - **[Receipts](receipts)** registers the `Receipt` kind and maps its `ReceiptDocument` to a `BusinessDocument`: the printable receipt view renders the shape, and the receipt e-mail body comes from the HTML renderer.
+- **[Transactions](transactions)** registers the `PaymentRequest` kind (`TransactionsConstants.BusinessDocumentKinds.PaymentRequest`, listed as *Payment requests*) while the Receipts module is on: `ITransactionInvoiceBuilder` returns the payment request of a transaction (shown to customers as its invoice) as a `BusinessDocument` with the payment request template applied, and the invoice and pay pages render the `BusinessDocument` shape. An invoicing module replaces the builder so a transaction posted for a real invoice shows that invoice.

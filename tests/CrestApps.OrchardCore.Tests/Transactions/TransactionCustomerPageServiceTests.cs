@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Accounts.Models;
+using CrestApps.OrchardCore.BusinessDocuments.Models;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
@@ -42,7 +43,8 @@ public sealed class TransactionCustomerPageServiceTests
         // Assert
         Assert.Equal(TransactionCustomerPageStatus.Found, result.Status);
         Assert.Equal("tx-1", result.Model.Transaction.ItemId);
-        Assert.Equal("Invoice", result.Model.Invoice.HeaderTitle);
+        Assert.Equal("Invoice", result.Model.Invoice.Title);
+        Assert.Equal("INV-1001", result.Model.Invoice.Number);
         Assert.False(result.Model.IsAdministrator);
         Assert.Equal(_payUrl, result.Model.PayUrl);
     }
@@ -391,11 +393,11 @@ public sealed class TransactionCustomerPageServiceTests
             var invoices = new Mock<ITransactionInvoiceBuilder>();
             invoices
                 .Setup(builder => builder.BuildAsync(It.IsAny<Transaction>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((Transaction transaction, CancellationToken _) => new ReceiptDocument
+                .ReturnsAsync((Transaction transaction, CancellationToken _) => new BusinessDocument
                 {
-                    HeaderTitle = "Invoice",
-                    Reference = transaction.InvoiceNumber,
-                    Total = transaction.TotalAmount,
+                    Kind = TransactionsConstants.BusinessDocumentKinds.PaymentRequest,
+                    Title = "Invoice",
+                    Number = transaction.InvoiceNumber,
                 });
 
             var receipts = new Mock<ITransactionReceiptBuilder>();

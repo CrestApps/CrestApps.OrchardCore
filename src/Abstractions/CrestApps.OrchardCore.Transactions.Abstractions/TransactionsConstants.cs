@@ -210,6 +210,17 @@ public static class TransactionsConstants
     }
 
     /// <summary>
+    /// The business document kinds the ledger prints, each with its own document template.
+    /// </summary>
+    public static class BusinessDocumentKinds
+    {
+        /// <summary>
+        /// The payment request of a transaction its owner pays themselves, shown to customers as its invoice.
+        /// </summary>
+        public const string PaymentRequest = "PaymentRequest";
+    }
+
+    /// <summary>
     /// The stable keys of the common ways money recorded by hand arrives (<see cref="Models.TransactionEvent.PaymentMethod"/>).
     /// The record payment form offers them, staff may still type another, and a report groups payments by these keys
     /// whatever the language of the person who recorded them.

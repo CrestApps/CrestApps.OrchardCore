@@ -89,5 +89,5 @@ else
         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print();">@T["Print invoice"]</button>
     </div>
 
-    <partial name="~/Areas/CrestApps.OrchardCore.Receipts/Views/ReceiptDocument.cshtml" model="Model.Invoice" />
+    @await DisplayAsync(await New.BusinessDocument(Document: Model.Invoice))
 }

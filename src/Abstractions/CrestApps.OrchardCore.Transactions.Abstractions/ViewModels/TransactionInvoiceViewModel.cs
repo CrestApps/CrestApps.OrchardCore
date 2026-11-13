@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Receipts.Models;
+using CrestApps.OrchardCore.BusinessDocuments.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Transactions.ViewModels;
@@ -17,7 +17,7 @@ public class TransactionInvoiceViewModel
     /// <summary>
     /// Gets or sets the invoice.
     /// </summary>
-    public ReceiptDocument Invoice { get; set; }
+    public BusinessDocument Invoice { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the viewer manages transactions.

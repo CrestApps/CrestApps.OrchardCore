@@ -1,15 +1,22 @@
+@using CrestApps.OrchardCore.BusinessDocuments
 @using CrestApps.OrchardCore.BusinessDocuments.Services
 @using CrestApps.OrchardCore.Receipts.Core.Services
+@using OrchardCore.Environment.Shell
 @model ReceiptDocument
 @inject ReceiptBusinessDocumentMapper ReceiptMapper
 @inject IBusinessDocumentTemplateManager TemplateManager
+@inject IShellFeaturesManager ShellFeaturesManager
 
 @* Other modules render this view as a partial with a ReceiptDocument. It prints the receipt through the shared
    BusinessDocument shape, in the look of the document template for receipts, so a theme restyles receipts with
-   BusinessDocument-Receipt.cshtml. *@
+   BusinessDocument-Receipt.cshtml. The template is read only once Business Documents is recorded as enabled (its
+   tables exist then); until then the receipt keeps its own look. *@
 @{
     var document = ReceiptMapper.Map(Model);
 
-    await TemplateManager.ApplyAsync(document);
+    if (await ShellFeaturesManager.IsFeatureEnabledAsync(BusinessDocumentsConstants.Features.Area))
+    {
+        await TemplateManager.ApplyAsync(document);
+    }
 }
 @await DisplayAsync(await New.BusinessDocument(Document: document))

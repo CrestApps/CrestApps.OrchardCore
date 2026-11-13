@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Commerce.Core;
@@ -127,17 +128,21 @@ public sealed class NotificationStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the printable receipt of every payment and the printable invoice of a transaction, whenever the
-/// Receipts module is enabled too. They only show what the ledger already holds, so they need no opt-in.
+/// Registers the printable receipt of every payment and the printable payment request (invoice) of a transaction, whenever the
+/// Receipts module is enabled too, and the payment request as a business document kind with its own template. They only
+/// show what the ledger already holds, so they need no opt-in.
 /// </summary>
 [RequireFeatures(ReceiptsConstants.Feature.Area)]
 public sealed class ReceiptPagesStartup : StartupBase
 {
+    private static readonly LocalizationSource _paymentRequestKindTitle = LocalizationSource.Create<ReceiptPagesStartup>("Payment requests");
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ITransactionReceiptBuilder, TransactionReceiptBuilder>();
         services.AddScoped<ITransactionInvoiceBuilder, TransactionInvoiceBuilder>();
+        services.AddBusinessDocumentKind(TransactionsConstants.BusinessDocumentKinds.PaymentRequest, _paymentRequestKindTitle);
     }
 }
 

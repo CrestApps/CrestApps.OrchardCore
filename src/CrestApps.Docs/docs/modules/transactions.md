@@ -144,6 +144,7 @@ The notice names the amount and what it was for, and the transaction's timeline 
 
 A transaction its owner pays themselves (one that is not charged automatically) is invoiced:
 
+- **The printed invoice.** The invoice a customer opens (the transaction's payment request) is a [business document](business-documents.md) of the kind `PaymentRequest`, built by `ITransactionInvoiceBuilder` (a `BusinessDocument`, the seam an invoicing module replaces): the site's business details from the receipt settings, the charge, each adjustment still in force (one taken back is left off), a tax line per rate from `Transaction.TaxLines` (one *Tax* line when the transaction only has a tax amount), the total still owed, and the payer (`PayerContact`) as the recipient, else the owner. It is printed in the look of the document template for **Payment requests**, read once Business Documents is recorded as enabled, and rendered with the `BusinessDocument` shape.
 - **Invoice numbers.** The first time the owner is told about the payment, by the invoice an administrator sends
   (**Send invoice**, `ITransactionCommandService.SendInvoiceAsync`), the reminder before the due date, the
   notice on the due date, or a reminder an administrator sends, the transaction is numbered `INV-1001`, `INV-1002`

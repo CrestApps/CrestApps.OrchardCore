@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.BusinessDocuments.Models;
+using CrestApps.OrchardCore.BusinessDocuments.Services;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
@@ -72,6 +74,9 @@ public sealed class TransactionCustomerPagesTests
         var services = new ServiceCollection();
 
         services.AddSingleton(Mock.Of<IReceiptService>());
+        services.AddSingleton(ReceiptRenderers.CreateMapper());
+        services.AddSingleton(Mock.Of<IBusinessDocumentTemplateManager>());
+        services.AddSingleton(ReceiptRenderers.CreateFeatures());
         services.AddSingleton(Mock.Of<ICustomerContactResolver>());
         services.AddSingleton(Mock.Of<ILocalClock>());
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
@@ -213,7 +218,7 @@ public sealed class TransactionCustomerPagesTests
         var model = new TransactionInvoiceViewModel
         {
             Transaction = TransactionCustomerPageServiceTests.CreateInvoicedTransaction(),
-            Invoice = new ReceiptDocument(),
+            Invoice = new BusinessDocument(),
         };
 
         var pages = new Mock<ITransactionCustomerPageService>();
