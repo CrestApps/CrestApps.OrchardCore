@@ -417,8 +417,8 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         }
 
         var created = hasDownPayment
-            ? S["The plan was created: {0} today, then {1} payments.", Format(downPayment, currency), request.InstallmentCount].Value
-            : S["The plan was created: {0} payments, the first of {1} taken today.", request.InstallmentCount, Format(firstPayment.Amount, currency)].Value;
+            ? S["The plan was created: {0} today, then {1} payments.", CurrencyFormat.WithCode(downPayment, currency), request.InstallmentCount].Value
+            : S["The plan was created: {0} payments, the first of {1} taken today.", request.InstallmentCount, CurrencyFormat.WithCode(firstPayment.Amount, currency)].Value;
 
         if (sourceTransaction is not null)
         {
@@ -686,7 +686,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                 await NotifyCustomerAsync(
                     plan,
                     S["Your payment plan was canceled"].Value,
-                    S["Your payment plan {0} was canceled. {1} of {2} was received and stays received; no further payments will be taken.", plan.Title, Format(plan.AmountPaid, plan.Currency), Format(plan.TotalAmount, plan.Currency)].Value,
+                    S["Your payment plan {0} was canceled. {1} of {2} was received and stays received; no further payments will be taken.", plan.Title, CurrencyFormat.WithCode(plan.AmountPaid, plan.Currency), CurrencyFormat.WithCode(plan.TotalAmount, plan.Currency)].Value,
                     cancellationToken);
             }
 
@@ -817,14 +817,14 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         if (isDownPayment)
         {
             activated = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge
-                ? S["The down payment of {0} was received. {1} will be charged on each due date.", Format(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
-                : S["The down payment of {0} was received. The customer will be invoiced for each payment.", Format(firstPayment.Amount, plan.Currency)].Value;
+                ? S["The down payment of {0} was received. {1} will be charged on each due date.", CurrencyFormat.WithCode(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
+                : S["The down payment of {0} was received. The customer will be invoiced for each payment.", CurrencyFormat.WithCode(firstPayment.Amount, plan.Currency)].Value;
         }
         else
         {
             activated = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge
-                ? S["The first payment of {0} was received. {1} will be charged for each remaining payment on its due date.", Format(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
-                : S["The first payment of {0} was received. The customer will be invoiced for each remaining payment.", Format(firstPayment.Amount, plan.Currency)].Value;
+                ? S["The first payment of {0} was received. {1} will be charged for each remaining payment on its due date.", CurrencyFormat.WithCode(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
+                : S["The first payment of {0} was received. The customer will be invoiced for each remaining payment.", CurrencyFormat.WithCode(firstPayment.Amount, plan.Currency)].Value;
         }
 
         AddEvent(plan, InstallmentPlanEventType.Activated, activated, paymentNumber: firstPayment.Number);
@@ -1192,7 +1192,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             await NotifyCustomerAsync(
                 plan,
                 S["We could not take your payment"].Value,
-                S["We could not charge {0} for {1} of {2}: {3}. We will try again on {4:d}. If your card has changed, please contact us.", plan.PaymentMethod?.Describe(), plan.Title, Format(payment.Amount, plan.Currency), reason, payment.NextChargeAttemptUtc.Value].Value,
+                S["We could not charge {0} for {1} of {2}: {3}. We will try again on {4:d}. If your card has changed, please contact us.", plan.PaymentMethod?.Describe(), plan.Title, CurrencyFormat.WithCode(payment.Amount, plan.Currency), reason, payment.NextChargeAttemptUtc.Value].Value,
                 cancellationToken);
         }
         else
@@ -1210,7 +1210,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                 await NotifyCustomerAsync(
                     plan,
                     S["Your payment is overdue"].Value,
-                    S["We could not charge {0} for {1} of {2}: {3}. Please sign in and pay it from your transactions.", plan.PaymentMethod?.Describe(), plan.Title, Format(payment.Amount, plan.Currency), reason].Value,
+                    S["We could not charge {0} for {1} of {2}: {3}. Please sign in and pay it from your transactions.", plan.PaymentMethod?.Describe(), plan.Title, CurrencyFormat.WithCode(payment.Amount, plan.Currency), reason].Value,
                     cancellationToken);
             }
             else
@@ -1293,7 +1293,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
         payment.Status = InstallmentPaymentStatus.Due;
 
-        AddEvent(plan, InstallmentPlanEventType.PaymentDue, S["Payment {0} of {1} is now due.", payment.Number, Format(payment.Amount, plan.Currency)].Value, payment.Number);
+        AddEvent(plan, InstallmentPlanEventType.PaymentDue, S["Payment {0} of {1} is now due.", payment.Number, CurrencyFormat.WithCode(payment.Amount, plan.Currency)].Value, payment.Number);
     }
 
     // Applies to the transaction whatever any checkout for it already collected and is not on it yet. The attempts
@@ -1341,7 +1341,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
                     if (payment.Number > 0)
                     {
-                        AddEvent(plan, InstallmentPlanEventType.PaymentReceived, S["Payment {0} of {1} was received.", payment.Number, Format(payment.Amount, plan.Currency)].Value, payment.Number);
+                        AddEvent(plan, InstallmentPlanEventType.PaymentReceived, S["Payment {0} of {1} was received.", payment.Number, CurrencyFormat.WithCode(payment.Amount, plan.Currency)].Value, payment.Number);
                     }
 
                     break;
@@ -1565,7 +1565,4 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
     private string CurrentUserName()
         => _httpContextAccessor.HttpContext?.User?.Identity?.Name;
-
-    private static string Format(decimal amount, string currency)
-        => $"{currency} {CurrencyScale.Format(amount, currency)}";
 }

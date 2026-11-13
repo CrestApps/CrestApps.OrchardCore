@@ -61,7 +61,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             return false;
         }
 
-        var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
+        var amount = CurrencyFormat.WithCode(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
         var invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
 
@@ -143,7 +143,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             return false;
         }
 
-        var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
+        var amount = CurrencyFormat.WithCode(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
         var due = await DocumentDates.ToSiteDueDateAsync(_localClock, transaction.DueUtc.Value);
         var paymentMethod = transaction.AutoCollection?.PaymentMethodDescription;
@@ -213,7 +213,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             return false;
         }
 
-        var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
+        var amount = CurrencyFormat.WithCode(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
         var invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
         var numbered = !string.IsNullOrEmpty(transaction.InvoiceNumber);
@@ -364,15 +364,6 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
                 HtmlBody = BuildHtmlBody(reminder),
             },
             cancellationToken);
-
-    private static string FormatAmount(decimal amount, string currency)
-    {
-        var formatted = CurrencyScale.Format(amount, currency);
-
-        return string.IsNullOrEmpty(currency)
-            ? formatted
-            : $"{currency} {formatted}";
-    }
 
     private sealed class Reminder
     {

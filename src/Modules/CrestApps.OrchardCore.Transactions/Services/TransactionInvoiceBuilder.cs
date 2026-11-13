@@ -58,7 +58,7 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
 
         if (!paid && transaction.AmountPaid > 0m)
         {
-            notes.Add(S["{0} has been received; {1} is still due.", Format(transaction.AmountPaid, currency), Format(transaction.OutstandingAmount, currency)].Value);
+            notes.Add(S["{0} has been received; {1} is still due.", CurrencyFormat.WithCode(transaction.AmountPaid, currency), CurrencyFormat.WithCode(transaction.OutstandingAmount, currency)].Value);
         }
 
         var lineItems = new List<ReceiptLineItem>
@@ -131,7 +131,4 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
             ? kind
             : S["{0}: {1}", kind, adjustment.Reason].Value;
     }
-
-    private static string Format(decimal amount, string currency)
-        => string.IsNullOrEmpty(currency) ? CurrencyScale.Format(amount, currency) : $"{currency} {CurrencyScale.Format(amount, currency)}";
 }
