@@ -63,7 +63,6 @@ public sealed partial class ConfigurationSchemaCoverageTests
         ["CrestApps.OrchardCore.Telephony: CrestApps_Telephony:Commands"] = 1,
         ["CrestApps.OrchardCore.Telephony: CrestApps_Telephony:Coordination"] = 1,
         ["CrestApps.OrchardCore.Transactions: CrestApps:Transactions:CustomerPages"] = 1,
-        ["CrestApps.OrchardCore.Users: CrestApps:Users:EmailSignIn"] = 1,
         ["CrestApps.OrchardCore.WebSockets: CrestApps:WebSockets"] = 1,
         ["CrestApps.OrchardCore.Workforce: CrestApps_Workforce:WebPush"] = 1,
     };
