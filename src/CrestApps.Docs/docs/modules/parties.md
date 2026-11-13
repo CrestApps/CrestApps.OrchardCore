@@ -57,10 +57,10 @@ Every `IPartyBillingProfileSource` of the party's kind adds what it knows, in re
 
 | Kind | Sources, in order | Registered by |
 | --- | --- | --- |
-| `User` | `UserBillingProfileSource`: the display name from `IDisplayNameProvider`, the e-mail, and the user's phone when it is in E.164 form | The CrestApps Users module |
-| `Customer` | `CustomerBillingProfileSource`: the record's name, e-mail, phone, default billing address, default shipping address when it is another place, tax id and exemption | [Customers](customers.md) |
+| `User` | `UserBillingProfileSource`: the display name from `IDisplayNameProvider`, the e-mail, and the user's phone in E.164 form (a phone typed another way, such as with spaces, is normalized when the Phone Numbers feature is on) | The CrestApps Users module |
+| `Customer` | `CustomerBillingProfileSource`: the record's name, e-mail, phone (normalized to E.164 with the billing address's country when the Phone Numbers feature is on), default billing address, default shipping address when it is another place, tax id and exemption | [Customers](customers.md) |
 | `Account` | `AccountBillingProfileSource`: the account's name and its [billing location](accounts.md#account-locations); then `B2BAccountBillingProfileSource`: the tax number, the billing e-mail and the terms | [Accounts](accounts.md), then [Accounts B2B](accounts-b2b.md#billing-profile) |
-| `Contact` | `ContactBillingProfileSource`: the contact's name, first e-mail, the number it is called on and the first address field on its type | Omnichannel Management |
+| `Contact` | `ContactBillingProfileSource`: the contact's name, first e-mail, the number it is called on and the first address field on its type that holds an address, in editor order (part position, then field position, then stored order) | Omnichannel Management |
 
 A module that keeps more about a kind registers a source in its own startup:
 

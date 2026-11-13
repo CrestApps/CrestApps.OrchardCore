@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 
 namespace CrestApps.OrchardCore.Customers.Core.Services;
 
@@ -13,14 +14,17 @@ namespace CrestApps.OrchardCore.Customers.Core.Services;
 public sealed class CustomerBillingProfileSource : IPartyBillingProfileSource
 {
     private readonly ICustomerStore _customerStore;
+    private readonly IPhoneNumberService _phoneNumberService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CustomerBillingProfileSource"/> class.
     /// </summary>
     /// <param name="customerStore">The customer store.</param>
-    public CustomerBillingProfileSource(ICustomerStore customerStore)
+    /// <param name="phoneNumberService">The phone number service that turns a phone typed in another form into E.164, read with the country of the billing address; <see langword="null"/> when the Phone Numbers feature is off.</param>
+    public CustomerBillingProfileSource(ICustomerStore customerStore, IPhoneNumberService phoneNumberService = null)
     {
         _customerStore = customerStore;
+        _phoneNumberService = phoneNumberService;
     }
 
     /// <inheritdoc/>
@@ -38,7 +42,8 @@ public sealed class CustomerBillingProfileSource : IPartyBillingProfileSource
 
         var billing = customer.GetDefaultBillingAddress()?.ToAddress();
         var shipping = customer.GetDefaultShippingAddress()?.ToAddress();
-        var found = ContactInfo.From(customer.GetName(), customer.Email, customer.Phone, billing);
+        var phone = PhoneNumberNormalization.ToE164OrTrimmed(customer.Phone, _phoneNumberService, billing?.Country);
+        var found = ContactInfo.From(customer.GetName(), customer.Email, phone, billing);
         var contact = profile.Contact ?? new ContactInfo();
 
         profile.Contact = contact with

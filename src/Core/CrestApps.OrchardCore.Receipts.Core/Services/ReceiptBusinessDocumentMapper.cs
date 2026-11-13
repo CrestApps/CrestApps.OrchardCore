@@ -81,6 +81,13 @@ public sealed class ReceiptBusinessDocumentMapper
         // The receipt's date is already in the time zone its consumer chose.
         document.Fields.Add(new BusinessDocumentField(S["Date"].Value, receipt.IssuedAt.ToString("g", CultureInfo.CurrentCulture)));
 
+        // Amounts print with a symbol, which several currencies share (the US and Canadian dollars both print "$"), so
+        // the receipt names its currency by its code.
+        if (!string.IsNullOrWhiteSpace(receipt.Currency))
+        {
+            document.Fields.Add(new BusinessDocumentField(S["Currency"].Value, receipt.Currency.ToUpperInvariant()));
+        }
+
         foreach (var lineItem in receipt.LineItems ?? [])
         {
             if (lineItem is null)

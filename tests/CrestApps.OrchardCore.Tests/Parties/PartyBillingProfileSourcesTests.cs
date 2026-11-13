@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Tests.Commerce.B2B;
 using CrestApps.OrchardCore.Tests.Customers;
 using CrestApps.OrchardCore.Users;
@@ -52,6 +53,63 @@ public sealed class PartyBillingProfileSourcesTests
         Assert.Equal("jane@example.com", profile.Contact.Email);
         Assert.Equal("+12065550100", profile.Contact.Phone.Value);
         Assert.Null(profile.Contact.Address);
+    }
+
+    /// <summary>
+    /// A phone typed as "+1 206 555 0100" is not in E.164 form; it used to be dropped from the billing contact.
+    /// </summary>
+    [Fact]
+    public async Task AUserPhoneThatIsNotInE164Form_IsNormalized_NotDropped()
+    {
+        // Arrange
+        var users = new Mock<IUserSearchService>();
+        users
+            .Setup(service => service.GetAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new UserSearchResult { UserId = "u1", UserName = "jdoe", Email = "jane@example.com", PhoneNumber = "+1 206 555 0100" }]);
+
+        var profile = new PartyBillingProfile { Party = new PartyRef(PartyKinds.User, "u1") };
+
+        // Act
+        await new UserBillingProfileSource(users.Object, PhoneNumbers("+1 206 555 0100", null, "+12065550100")).ContributeAsync(profile.Party, profile, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("+12065550100", profile.Contact.Phone.Value);
+    }
+
+    /// <summary>
+    /// A customer's phone typed without its country code is read with the country of their billing address.
+    /// </summary>
+    [Fact]
+    public async Task ACustomerPhoneWithoutACountryCode_IsNormalizedWithTheBillingCountry()
+    {
+        // Arrange
+        var customers = new InMemoryCustomerStore();
+        customers.Customers.Add(new Customer
+        {
+            ItemId = "c1",
+            FirstName = "Sam",
+            LastName = "Lee",
+            Phone = "(206) 555-0111",
+            Addresses = [new CustomerAddress { AddressId = "home", Address = _office }],
+            DefaultBillingAddressId = "home",
+        });
+
+        var profile = new PartyBillingProfile();
+
+        // Act
+        await new CustomerBillingProfileSource(customers, PhoneNumbers("(206) 555-0111", "US", "+12065550111")).ContributeAsync(new PartyRef(PartyKinds.Customer, "c1"), profile, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("+12065550111", profile.Contact.Phone.Value);
+    }
+
+    private static IPhoneNumberService PhoneNumbers(string typed, string region, string e164)
+    {
+        var service = new Mock<IPhoneNumberService>();
+        var formatted = e164;
+        service.Setup(candidate => candidate.TryFormatToE164(typed, region, out formatted)).Returns(true);
+
+        return service.Object;
     }
 
     [Fact]
@@ -277,6 +335,54 @@ public sealed class PartyBillingProfileSourcesTests
         Assert.Equal("+12065550123", profile.Contact.Phone.Value);
         Assert.Equal("Seattle", profile.Contact.Address.City);
     }
+
+    /// <summary>
+    /// A contact type may have several address fields. The billing address is the first one, in the order the editor
+    /// shows them (part position, then field position), that has an address; not whichever the definition stored first.
+    /// </summary>
+    [Fact]
+    public async Task AContactWithSeveralAddressFields_IsBilledAtTheFirstInEditorOrder()
+    {
+        // Arrange
+        var contact = new ContentItem { ContentItemId = "contact-1", ContentType = "Contact", DisplayText = "Alex Kim", Published = true, Latest = true };
+        contact.Weld<OmnichannelContactPart>();
+        contact.Content["ContactDetails"] = new JsonObject
+        {
+            ["Mailing"] = JsonSerializer.SerializeToNode(new AddressField { Address = _warehouse }),
+            ["Billing"] = JsonSerializer.SerializeToNode(new AddressField { Address = _office }),
+        };
+
+        var methods = new Mock<IContactMethodsAccessor>();
+        methods.Setup(accessor => accessor.Get(contact)).Returns(new ContactMethodSet([], []));
+
+        var mailing = new ContentPartFieldDefinition(new ContentFieldDefinition(nameof(AddressField)), "Mailing", Position("5"));
+        var billing = new ContentPartFieldDefinition(new ContentFieldDefinition(nameof(AddressField)), "Billing", Position("2"));
+        var part = new ContentPartDefinition("ContactDetails", [mailing, billing], []);
+        var type = new ContentTypeDefinition("Contact", "Contact", [new ContentTypePartDefinition("ContactDetails", part, [])], []);
+
+        foreach (var typePart in type.Parts)
+        {
+            typePart.ContentTypeDefinition = type;
+        }
+
+        var definitions = new Mock<IContentDefinitionManager>();
+        definitions.Setup(manager => manager.GetTypeDefinitionAsync("Contact")).ReturnsAsync(type);
+
+        var profile = new PartyBillingProfile();
+
+        // Act
+        await new ContactBillingProfileSource(ContentManager(contact), definitions.Object, methods.Object)
+            .ContributeAsync(new PartyRef(PartyKinds.Contact, "contact-1"), profile, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Seattle", profile.Contact.Address.City);
+    }
+
+    private static JsonObject Position(string position)
+        => new()
+        {
+            ["ContentPartFieldSettings"] = new JsonObject { ["Position"] = position },
+        };
 
     private static ContentTypeDefinition ContactType()
     {

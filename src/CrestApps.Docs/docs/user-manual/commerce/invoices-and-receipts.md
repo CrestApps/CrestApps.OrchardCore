@@ -107,7 +107,7 @@ With the **Send Payment Receipts** feature on, the customer is sent a receipt af
 A receipt shows:
 
 - your business's logo, name and address, under your **Header title** (*Payment receipt* unless you change it);
-- **Receipt:** with the receipt number, and the **Date** of the payment;
+- **Receipt:** with the receipt number, the **Date** of the payment, and the **Currency** code, such as *USD*, because several currencies share a symbol such as *$*;
 - **Billed to**, and the **Status** **Paid**;
 - the amount paid, with its share of the transaction's tax;
 - **Notes**: *Paid offline.* for a payment an administrator recorded, *Payment for invoice INV-1001.* when the payment settled an invoice, and how much of the charge was taken off without being paid when the transaction was adjusted;

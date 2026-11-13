@@ -4,9 +4,11 @@ using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Receipts.Core.Services;
 using CrestApps.OrchardCore.Receipts.Drivers;
+using CrestApps.OrchardCore.Receipts.Migrations;
 using CrestApps.OrchardCore.Receipts.Navigation;
 using CrestApps.OrchardCore.Receipts.Services;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
@@ -34,6 +36,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<ReceiptBusinessDocumentMapper>();
         services.AddScoped<IReceiptHtmlRenderer, DefaultReceiptHtmlRenderer>();
         services.AddBusinessDocumentKind(ReceiptsConstants.BusinessDocumentKind, _receiptKindTitle);
+
+        // A site that had Receipts on before it depended on Business Documents gets that feature recorded as enabled.
+        services.AddDataMigration<ReceiptsBusinessDocumentsFeatureMigrations>();
 
         services
             .AddSiteDisplayDriver<ReceiptSettingsDisplayDriver>()

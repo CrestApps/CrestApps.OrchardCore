@@ -67,19 +67,19 @@ public sealed class PaymentReceiptTests
     }
 
     [Fact]
-    public void Render_EncodesEverythingTakenFromTheReceipt()
+    public async Task RenderAsync_EncodesEverythingTakenFromTheReceipt()
     {
         // Arrange
         var renderer = ReceiptRenderers.CreateHtmlRenderer();
 
         // Act
-        var html = renderer.Render(new ReceiptDocument
+        var html = await renderer.RenderAsync(new ReceiptDocument
         {
             BusinessName = "<script>alert(1)</script>",
             Currency = "USD",
             Total = 10m,
             LineItems = [new ReceiptLineItem { Description = "<b>Plan</b>", Quantity = 1, Amount = 10m }],
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);

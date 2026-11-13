@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -6,13 +7,14 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Settings;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
 /// Bills a CRM contact (party kind <see cref="PartyKinds.Contact"/>) under its name, at its first e-mail address, with
 /// the number it is called on (else its first number) when that is in E.164 form, and at the first address an address
-/// field on its content type holds. The published version of the contact is read, or its latest version while it has
+/// field on its content type holds, the first in editor order (part position, then field position). The published version of the contact is read, or its latest version while it has
 /// never been published. A contact has no members: nobody signs in for it.
 /// </summary>
 internal sealed class ContactBillingProfileSource : IPartyBillingProfileSource
@@ -67,7 +69,9 @@ internal sealed class ContactBillingProfileSource : IPartyBillingProfileSource
         };
     }
 
-    // The CRM keeps no address of its own: a contact type that needs one adds an address field.
+    // The CRM keeps no address of its own: a contact type that needs one adds an address field. With several, the first
+    // in the order the editor shows them (part position, then field position, then the stored order) that holds an
+    // address is the billing address, so the choice does not depend on the order the definition happens to be stored in.
     private async Task<Address> GetAddressAsync(ContentItem contact)
     {
         var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contact.ContentType);
@@ -77,9 +81,21 @@ internal sealed class ContactBillingProfileSource : IPartyBillingProfileSource
             return null;
         }
 
-        foreach (var typePart in typeDefinition.Parts)
+        var typeParts = typeDefinition.Parts
+            .Select((typePart, index) => (TypePart: typePart, Index: index))
+            .OrderBy(entry => ParsePosition(entry.TypePart.GetSettings<ContentTypePartSettings>().Position))
+            .ThenBy(entry => entry.Index)
+            .Select(entry => entry.TypePart);
+
+        foreach (var typePart in typeParts)
         {
-            foreach (var partField in typePart.PartDefinition.Fields)
+            var partFields = typePart.PartDefinition.Fields
+                .Select((partField, index) => (PartField: partField, Index: index))
+                .OrderBy(entry => ParsePosition(entry.PartField.GetSettings<ContentPartFieldSettings>().Position))
+                .ThenBy(entry => entry.Index)
+                .Select(entry => entry.PartField);
+
+            foreach (var partField in partFields)
             {
                 if (!string.Equals(partField.FieldDefinition.Name, AddressFieldName, StringComparison.Ordinal))
                 {
@@ -97,4 +113,10 @@ internal sealed class ContactBillingProfileSource : IPartyBillingProfileSource
 
         return null;
     }
+
+    // An editor position such as "2" or "2.5"; one that is missing or not a number sorts after the numbered ones.
+    private static decimal ParsePosition(string position)
+        => decimal.TryParse(position, NumberStyles.Number, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : decimal.MaxValue;
 }

@@ -52,6 +52,27 @@ public sealed class ReceiptBusinessDocumentMapperTests
         Assert.Null(document.Watermark);
     }
 
+    /// <summary>
+    /// Amounts print with a symbol, and the US and Canadian dollars both print "$". The receipt must still say which
+    /// currency was paid.
+    /// </summary>
+    [Fact]
+    public async Task MapAndRender_NameTheCurrency_WhenItsSymbolIsShared()
+    {
+        // Arrange
+        using var culture = CultureScope.Create(CultureInfo.GetCultureInfo("en-US"), CultureInfo.GetCultureInfo("en-US"));
+        var receipt = CreateReceipt();
+        receipt.Currency = "CAD";
+
+        // Act
+        var document = ReceiptRenderers.CreateMapper().Map(receipt);
+        var html = await ReceiptRenderers.CreateHtmlRenderer().RenderAsync(receipt, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(document.Fields, field => field.Label == "Currency" && field.Value == "CAD");
+        Assert.Contains("CAD", html, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Map_MarksATestPaymentWithAWatermark_AndADueReceiptWithAWarning()
     {
@@ -95,7 +116,7 @@ public sealed class ReceiptBusinessDocumentMapperTests
     }
 
     [Fact]
-    public void Render_WritesTheReceiptThroughTheSharedRenderer_AndEncodesItsValues()
+    public async Task RenderAsync_WritesTheReceiptThroughTheSharedRenderer_AndEncodesItsValues()
     {
         // Arrange
         using var culture = CultureScope.Create(CultureInfo.GetCultureInfo("en-US"), CultureInfo.GetCultureInfo("en-US"));
@@ -104,7 +125,7 @@ public sealed class ReceiptBusinessDocumentMapperTests
         receipt.LineItems[0].Description = "<b>Plan</b>";
 
         // Act
-        var html = ReceiptRenderers.CreateHtmlRenderer().Render(receipt);
+        var html = await ReceiptRenderers.CreateHtmlRenderer().RenderAsync(receipt, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
