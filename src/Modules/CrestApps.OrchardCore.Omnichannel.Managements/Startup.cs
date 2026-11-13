@@ -38,6 +38,8 @@ using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using YesSql.Filters.Query;
+using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Parties.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements;
 
@@ -69,6 +71,10 @@ public sealed class Startup : StartupBase
         services.AddContentPart<OmnichannelContactPart>()
             .UseDisplayDriver<OmnichannelContactPartDisplayDriver>();
         services.AddContactMethods();
+
+        // Contacts are parties: pickers and lists in any module (asset owners, ticket requesters) find and name them.
+        services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();
+        services.AddPartySource<ContactPartySource>(PartyKinds.Contact, LocalizationSource.Create<Startup>("Contact"), global::OrchardCore.Contents.CommonPermissions.ListContent);
         services.AddScoped<IContentHandler, OmnichannelContactTimeZoneHandler>();
         services.AddScoped<IContentHandler, OmnichannelContactMethodIdsHandler>();
 

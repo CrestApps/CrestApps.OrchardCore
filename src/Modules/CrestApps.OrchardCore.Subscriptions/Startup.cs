@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Listing;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
@@ -105,6 +106,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ISubscriptionStore, SubscriptionStore>();
         services.AddScoped<ISubscriptionManager, SubscriptionManager>();
+        services.AddRecordSource<SubscriptionRecordSource>();
         services.AddScoped<ISubscriptionLifecycleService, DefaultSubscriptionLifecycleService>();
         services.AddScoped<ISubscriptionAccessService, DefaultSubscriptionAccessService>();
         services.AddScoped<ISubscriptionLifecycleHandler, EntitlementSubscriptionLifecycleHandler>();

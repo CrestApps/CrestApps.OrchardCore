@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -252,7 +253,7 @@ public class WorkOrderTypeEditViewModel
     /// <summary>
     /// Gets or sets the skills the job needs, with the lowest level.
     /// </summary>
-    public List<RequiredSkill> RequiredSkills { get; set; } = [];
+    public List<SkillRequirement> RequiredSkills { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the certifications the technician must hold.

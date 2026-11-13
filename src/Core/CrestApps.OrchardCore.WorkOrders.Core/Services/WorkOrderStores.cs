@@ -49,6 +49,33 @@ public sealed class WorkOrderStore : DocumentCatalog<WorkOrder, WorkOrderIndex>
 
         return counts;
     }
+
+    /// <summary>
+    /// Finds the work orders whose number or summary contains a text, newest first, in the database. A blank text
+    /// finds the newest work orders.
+    /// </summary>
+    /// <param name="text">The text, or <see langword="null"/> for the newest work orders.</param>
+    /// <param name="take">The most work orders to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The work orders found.</returns>
+    public async Task<IReadOnlyList<WorkOrder>> SearchAsync(string text, int take, CancellationToken cancellationToken = default)
+    {
+        if (take <= 0)
+        {
+            return [];
+        }
+
+        var query = Session.Query<WorkOrder, WorkOrderIndex>(collection: CollectionName);
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            var search = text.Trim();
+
+            query = query.Where(index => index.Number.Contains(search) || index.Summary.Contains(search));
+        }
+
+        return await LoadedAsync(await query.OrderByDescending(index => index.CreatedUtc).Take(take).ListAsync(cancellationToken));
+    }
 }
 
 /// <summary>

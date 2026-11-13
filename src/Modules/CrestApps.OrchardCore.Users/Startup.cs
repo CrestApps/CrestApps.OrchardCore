@@ -38,6 +38,8 @@ using OrchardCore.Users;
 using OrchardCore.Users.Handlers;
 using OrchardCore.Users.Models;
 using OrchardCore.Users.Services;
+using CrestApps.OrchardCore.Parties.Models;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Users;
 
@@ -51,7 +53,7 @@ public sealed class Startup : StartupBase
         services.AddUserCacheService();
         services.TryAddBasicDisplayNameProvider();
         services.AddUserSearchService();
-        services.AddPartySource<UserPartySource>();
+        services.AddPartySource<UserPartySource>(PartyKinds.User, LocalizationSource.Create<Startup>("User"), UserSearchPermissions.SearchUsers);
         services.AddPermissionProvider<UserSearchPermissionProvider>();
         services.AddDisplayDriver<UserMenu, DisplayNameUserMenuDisplayDriver>();
         // services.AddShapeTableProvider<NavbarShapeTableProvider>();

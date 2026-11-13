@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Skills.Models;
 using System.Globalization;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
@@ -209,7 +210,7 @@ public sealed class WorkOrderSettingsController : Controller
             RequiresSignature = item.RequiresSignature,
             RequiredPhotos = item.RequiredPhotos,
             ChecklistTemplateIds = [.. item.ChecklistTemplateIds],
-            RequiredSkills = [.. item.RequiredSkills.Select(skill => new RequiredSkill { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
+            RequiredSkills = [.. item.RequiredSkills.Select(skill => new SkillRequirement { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
             RequiredCertificationIds = [.. item.RequiredCertificationIds],
             AppointmentTypeIds = [.. item.AppointmentTypeIds],
             Lines = [.. item.DefaultLines.Select(ToEditModel)],
@@ -256,7 +257,7 @@ public sealed class WorkOrderSettingsController : Controller
         item.RequiredPhotos = Math.Max(0, form.RequiredPhotos);
         item.ChecklistTemplateIds = [.. (form.ChecklistTemplateIds ?? []).Where(templateId => !string.IsNullOrEmpty(templateId)).Distinct(StringComparer.Ordinal)];
         item.DefaultLines = [.. (form.Lines ?? []).Where(line => !string.IsNullOrWhiteSpace(line.Description)).Select(line => ToLine(line, null))];
-        item.RequiredSkills = [.. (form.RequiredSkills ?? []).Where(skill => !string.IsNullOrEmpty(skill.SkillId)).DistinctBy(skill => skill.SkillId).Select(skill => new RequiredSkill { SkillId = skill.SkillId, MinProficiency = Math.Clamp(skill.MinProficiency, 1, 5) })];
+        item.RequiredSkills = [.. (form.RequiredSkills ?? []).Where(skill => !string.IsNullOrEmpty(skill.SkillId)).DistinctBy(skill => skill.SkillId).Select(skill => new SkillRequirement { SkillId = skill.SkillId, MinProficiency = Math.Clamp(skill.MinProficiency, 1, 5) })];
         item.RequiredCertificationIds = [.. (form.RequiredCertificationIds ?? []).Where(certificationId => !string.IsNullOrEmpty(certificationId)).Distinct(StringComparer.Ordinal)];
         item.AppointmentTypeIds = [.. (form.AppointmentTypeIds ?? []).Where(typeId => !string.IsNullOrEmpty(typeId)).Distinct(StringComparer.Ordinal)];
 
@@ -738,7 +739,7 @@ public sealed class WorkOrderSettingsController : Controller
         // One empty row to add a skill, and two rows at least.
         while (!model.RequiredSkills.Any(skill => string.IsNullOrEmpty(skill.SkillId)) || model.RequiredSkills.Count < 2)
         {
-            model.RequiredSkills.Add(new RequiredSkill());
+            model.RequiredSkills.Add(new SkillRequirement());
         }
 
         while (model.Lines.Count(line => string.IsNullOrWhiteSpace(line.Description)) < BlankLines)

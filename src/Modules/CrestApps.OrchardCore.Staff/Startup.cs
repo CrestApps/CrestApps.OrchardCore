@@ -40,6 +40,7 @@ using OrchardCore.Users.Handlers;
 using OrchardCore.Users.Models;
 using OrchardCore.Workflows.Helpers;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
+using CrestApps.OrchardCore.Parties;
 
 namespace CrestApps.OrchardCore.Staff;
 
@@ -144,7 +145,7 @@ public sealed class PartiesStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartySource, StaffPartySource>());
+        services.AddPartySource<StaffPartySource>(StaffConstants.PartyKind, LocalizationSource.Create<Startup>("Staff member"), StaffPermissions.ViewStaff);
     }
 }
 

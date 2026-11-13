@@ -92,6 +92,33 @@ public sealed class AssetStore : DocumentCatalog<Asset, AssetIndex>
 
         return counts;
     }
+
+    /// <summary>
+    /// Finds the assets whose name, number or serial number contains a text, ordered by name, in the database. A blank
+    /// text finds the first assets by name.
+    /// </summary>
+    /// <param name="text">The text, or <see langword="null"/> for the first assets.</param>
+    /// <param name="take">The most assets to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The assets found.</returns>
+    public async Task<IReadOnlyList<Asset>> SearchAsync(string text, int take, CancellationToken cancellationToken = default)
+    {
+        if (take <= 0)
+        {
+            return [];
+        }
+
+        var query = Session.Query<Asset, AssetIndex>(collection: CollectionName);
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            var search = text.Trim();
+
+            query = query.Where(index => index.Name.Contains(search) || index.Number.Contains(search) || index.SerialNumber.Contains(search));
+        }
+
+        return await LoadedAsync(await query.OrderBy(index => index.Name).Take(take).ListAsync(cancellationToken));
+    }
 }
 
 /// <summary>

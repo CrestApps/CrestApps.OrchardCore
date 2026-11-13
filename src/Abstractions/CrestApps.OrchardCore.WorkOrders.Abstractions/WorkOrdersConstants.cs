@@ -16,6 +16,12 @@ public static class WorkOrdersConstants
     public const string ReferenceType = "WorkOrder";
 
     /// <summary>
+    /// The record kind of a work order: what a record reference to a work order names. It is stored in every
+    /// reference, so it never changes.
+    /// </summary>
+    public const string RecordKind = "WorkOrder";
+
+    /// <summary>
     /// The prefix of work order numbers.
     /// </summary>
     public const string NumberPrefix = "WO-";

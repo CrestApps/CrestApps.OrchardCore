@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Receipts.Core;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Drivers;
 using CrestApps.OrchardCore.Transactions.Migrations;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -53,6 +55,8 @@ public sealed class Startup : StartupBase
             .AddCustomersCore()
             .AddDataMigration<TransactionMigrations>()
             .AddIndexProvider<TransactionIndexProvider>();
+
+        services.AddRecordSource<TransactionRecordSource>();
 
         services
             .AddNavigationProvider<TransactionsAdminMenu>()

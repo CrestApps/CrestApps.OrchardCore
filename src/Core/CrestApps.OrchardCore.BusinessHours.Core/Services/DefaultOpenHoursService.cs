@@ -56,6 +56,30 @@ public sealed class DefaultOpenHoursService : IOpenHoursService
         return [.. schedules.Values.OrderBy(option => option.Name, StringComparer.CurrentCultureIgnoreCase)];
     }
 
+    /// <inheritdoc/>
+    public async Task<DateTime> AddOpenTimeAsync(string scheduleId, DateTime fromUtc, TimeSpan duration, string timeZoneId = null, CancellationToken cancellationToken = default)
+    {
+        var start = DateTime.SpecifyKind(fromUtc, DateTimeKind.Utc);
+        var schedule = await FindAsync(scheduleId, cancellationToken);
+
+        return schedule is null
+            ? start + (duration > TimeSpan.Zero ? duration : TimeSpan.Zero)
+            : HoursScheduleEvaluator.AddOpenTime(schedule, start, duration, timeZoneId) ?? start + duration;
+    }
+
+    /// <inheritdoc/>
+    public async Task<TimeSpan> GetOpenTimeBetweenAsync(string scheduleId, DateTime fromUtc, DateTime toUtc, string timeZoneId = null, CancellationToken cancellationToken = default)
+    {
+        if (toUtc <= fromUtc)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var schedule = await FindAsync(scheduleId, cancellationToken);
+
+        return schedule is null ? toUtc - fromUtc : HoursScheduleEvaluator.GetOpenTime(schedule, fromUtc, toUtc, timeZoneId);
+    }
+
     private async Task<HoursSchedule> FindAsync(string scheduleId, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(scheduleId))

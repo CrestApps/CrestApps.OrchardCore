@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.ServiceLevels</RootNamespace>
+    <Title>CrestApps OrchardCore Service Levels Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts for service levels: policies with a target per metric and priority, counted in business hours,
+      the timer kept for each record and metric, the tracker that starts, pauses and completes timers, and the
+      observers told when a timer nears or passes its target.
+    </Description>
+    <PackageTags>$(PackageTags) ServiceLevels SLA Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

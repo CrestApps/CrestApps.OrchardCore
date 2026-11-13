@@ -11,6 +11,12 @@ public static class TransactionsConstants
     public const string CollectionName = "Transaction";
 
     /// <summary>
+    /// The record kind of a transaction, such as an invoice: what a record reference to a transaction names. It is
+    /// stored in every reference, so it never changes.
+    /// </summary>
+    public const string RecordKind = "Transaction";
+
+    /// <summary>
     /// The identifier of the site settings group used to configure transaction reminders.
     /// </summary>
     public const string SettingsGroupId = "transactions";

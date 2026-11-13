@@ -25,6 +25,7 @@ using CrestApps.OrchardCore.Orders.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Feeds;
+using CrestApps.OrchardCore.Records;
 using Fluid;
 using CrestApps.OrchardCore.Commerce.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
@@ -61,6 +62,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<OrderIndexProvider>();
 
         services.AddScoped<IOrderStore, OrderStore>();
+        services.AddRecordSource<OrderRecordSource>();
         services.AddNumberSequence();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IStoreSetupStep, TestOrderSetupStep>();

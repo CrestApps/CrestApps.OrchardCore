@@ -1,5 +1,6 @@
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Skills.Models;
 
 namespace CrestApps.OrchardCore.WorkOrders.Models;
 
@@ -337,7 +338,7 @@ public sealed class WorkOrder : CatalogItem
     /// <summary>
     /// Gets or sets the skills it needs.
     /// </summary>
-    public List<RequiredSkill> RequiredSkills { get; set; } = [];
+    public List<SkillRequirement> RequiredSkills { get; set; } = [];
 
     /// <summary>
     /// Gets or sets how long it should take, in minutes.

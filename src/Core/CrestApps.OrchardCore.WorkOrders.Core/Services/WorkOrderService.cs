@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Skills.Models;
 using System.Globalization;
 using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
@@ -133,7 +134,7 @@ public sealed class WorkOrderService
             TypeId = type.ItemId,
             Priority = type.DefaultPriority,
             EstimatedMinutes = type.DefaultDurationMinutes,
-            RequiredSkills = [.. type.RequiredSkills.Select(skill => new RequiredSkill { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
+            RequiredSkills = [.. type.RequiredSkills.Select(skill => new SkillRequirement { SkillId = skill.SkillId, MinProficiency = skill.MinProficiency })],
             Lines = [.. type.DefaultLines.Select(line => Copy(line))],
             Sla = new WorkOrderSla { PolicyId = type.ServiceLevelPolicyId },
         };

@@ -29,6 +29,8 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security.Permissions;
+using CrestApps.OrchardCore.Parties.Models;
+using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.Accounts;
 
@@ -46,7 +48,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAccountContentTypeProvider, AccountContentTypeProvider>();
 
         // Accounts are parties: pickers and lists in any module (asset owners, work orders) find and name them.
-        services.AddPartySource<AccountPartySource>();
+        services.AddPartySource<AccountPartySource>(PartyKinds.Account, LocalizationSource.Create<Startup>("Account"), CommonPermissions.ListContent);
         services.AddScoped<AccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, AccountsContentDefinitionEventHandler>();
         services.AddScoped<IContentDisplayDriver, AccountPickerDisplayDriver>();
