@@ -45,7 +45,7 @@ internal sealed class StaffLearningProfileDisplayDriver : DisplayDriver<StaffMem
             return null;
         }
 
-        return Initialize<LearnerRecordSectionViewModel>("LearnerRecordSection", model => _summaryService.FillAsync(model, staff.UserId))
+        return Initialize<LearnerRecordSectionViewModel>("LearnerRecordSection", async model => await _summaryService.FillAsync(model, staff.UserId))
             .Location(StaffProfileSections.DisplayType, StaffProfileSections.Location(SectionName, "1"));
     }
 }

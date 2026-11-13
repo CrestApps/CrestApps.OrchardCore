@@ -37,7 +37,7 @@ internal sealed class UserLearningDisplayDriver : DisplayDriver<User>
             return null;
         }
 
-        return Initialize<LearnerRecordSectionViewModel>("LearnerRecordSection", model => _summaryService.FillAsync(model, user.UserId))
+        return Initialize<LearnerRecordSectionViewModel>("LearnerRecordSection", async model => await _summaryService.FillAsync(model, user.UserId))
             .Location("Content:20");
     }
 }
