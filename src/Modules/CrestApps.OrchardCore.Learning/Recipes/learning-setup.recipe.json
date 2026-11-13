@@ -1,0 +1,36 @@
+{
+  "name": "LearningSetup",
+  "displayName": "Learning setup",
+  "description": "Turns on Learning on an existing site: the learner pages, self-enrollment, notifications, Secure Media for lesson files, the suggested roles and the course catalog. Media outside attached lesson files then needs the View media content permission; run Learning public media to give it to everyone.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [ "learning" ],
+  "tags": [ "learning" ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.Learning",
+        "CrestApps.OrchardCore.Learning.LearnerPages",
+        "CrestApps.OrchardCore.Learning.SelfEnrollment",
+        "OrchardCore.Media.Security",
+        "OrchardCore.Notifications"
+      ]
+    },
+    {
+      "name": "Recipes",
+      "Values": [
+        {
+          "ExecutionId": "CrestApps.OrchardCore.Learning",
+          "Name": "LearningRoles"
+        },
+        {
+          "ExecutionId": "CrestApps.OrchardCore.Learning",
+          "Name": "LearningCatalog"
+        }
+      ]
+    }
+  ]
+}

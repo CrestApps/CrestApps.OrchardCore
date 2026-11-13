@@ -1,0 +1,55 @@
+{
+  "name": "LearningPublicMedia",
+  "displayName": "Learning public media",
+  "description": "Lets everyone, signed in or not, view the files in the root folder of the media library while Secure Media keeps protecting the files attached to lessons. It removes View media content in all folders from the Anonymous and Authenticated roles, because that permission would also open lesson files to everyone. Give other folders to a role with their own View media content permission.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [ "learning" ],
+  "tags": [ "learning", "media" ],
+  "steps": [
+    {
+      "name": "Roles",
+      "Roles": [
+        {
+          "Name": "Anonymous",
+          "Description": "Anonymous role",
+          "PermissionBehavior": "Remove",
+          "Permissions": [
+            "ViewMediaContent"
+          ]
+        },
+        {
+          "Name": "Authenticated",
+          "Description": "Authenticated role",
+          "PermissionBehavior": "Remove",
+          "Permissions": [
+            "ViewMediaContent"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "Roles": [
+        {
+          "Name": "Anonymous",
+          "Description": "Anonymous role",
+          "PermissionBehavior": "Add",
+          "Permissions": [
+            "ViewRootMediaContent"
+          ]
+        },
+        {
+          "Name": "Authenticated",
+          "Description": "Authenticated role",
+          "PermissionBehavior": "Add",
+          "Permissions": [
+            "ViewRootMediaContent"
+          ]
+        }
+      ]
+    }
+  ]
+}
