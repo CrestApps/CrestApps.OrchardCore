@@ -769,13 +769,12 @@ Build environment for this work: SDK 10.0.403 (the repository's `global.json` ro
 - The course page never renders Orchard's List part (an empty `Course-ListPart.Detail` alternate besides the placement rule): the List part does not authorize each child, and on a site whose theme does not apply the module placement it showed lesson bodies to anonymous visitors (found by the integration test on a Blank site).
 - The catalog is an Orchard Core search page (`/search/courses`), as the plan says; it is created by a recipe rather than code, because index profiles are site data.
 - The user editor section is a `DisplayDriver<User>` editor shape (read only), because the user editor has no page sections.
-- Telemetry (meters and activity sources) is not added in phase 1; see "Not done".
 
 **Fixed while verifying.** The course path pattern slugified the slash (`/courses-title`); now `courses/{slug}`, with `UpdateFrom1Async` for sites created earlier (existing items keep their path until saved). The Learning section drivers dropped their async fill (CS4014; seen as empty sections in the browser). A completed enrollment opened course items that are not in the outline (an active one did not); fixed test first. Earlier in the phase: saving a detached enrollment copy made a second document; the enrolled learner on a free preview was not tracked; the course page listed lessons.
 
 **Suites run.**
 
-- `CrestApps.OrchardCore.Tests`, namespace `Learning`: 94 of 94 passed. Honest note: several services were written with their tests in the same slice, so the first failing run was a compile failure rather than an observed red assertion; the later fixes (the detached enrollment copy, the free preview, the completed enrollment opening items outside the outline, the course page leak) each had a test that failed first.
+- `CrestApps.OrchardCore.Tests`, namespace `Learning`: 95 of 95 passed (with the telemetry test added after this section was first written). Honest note: several services were written with their tests in the same slice, so the first failing run was a compile failure rather than an observed red assertion; the later fixes (the detached enrollment copy, the free preview, the completed enrollment opening items outside the outline, the course page leak) each had a test that failed first.
 - `CrestApps.OrchardCore.Learning.IntegrationTests`: 7 of 7 passed (lesson file with and without enrollment, display route, player, content API and GraphQL, IDOR on progress and the admin enrollment, course page, recipe round trip).
 - Guards, namespaces `Architecture` and `PublicApi` (includes the migration guard, module layering, feature id literals, PDF licence): 468 tests, 2 failed on the first run and were fixed (two views showed a literal `{0}` from `T[...].Value`; the public static enrollment transition table tripped the static-state guard); both re-run green. The public API baselines govern only the Accounts, Contact Center, Telephony and Omnichannel families, so Learning needs none. The feature activation suite is Contact Center specific; Learning features are enabled in a real host by the Learning integration tests.
 - JavaScript: `npx vitest run`: 2 failures on the first run (the two enrollment key fields lacked the password-manager ignore attributes), fixed; the lint suites re-run green (21 of 21). ESLint is clean on the Learning assets.
@@ -790,6 +789,5 @@ Build environment for this work: SDK 10.0.403 (the repository's `global.json` ro
 
 **Not done or not verified.**
 
-- Telemetry meters and activity sources for Learning operations.
 - In the browser: the video lesson player, the editors of the Learning workflow activities (the 14 activities show in the designer palette with their descriptions; the designer adds an activity by dragging, which was not done), the deployment step editor and the pipeline step in the designer, the staff profile section (no staff member on the test site), and the user menu link (the test site's theme does not render the user menu).
 - The docs site was not built.

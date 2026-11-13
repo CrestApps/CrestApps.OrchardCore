@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Learning.Core.Telemetry;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.Extensions.Logging;
@@ -74,6 +75,23 @@ public sealed class LearningUpkeep
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
     public async Task RunAsync(CancellationToken cancellationToken = default)
+    {
+        using var scope = LearningTelemetry.StartUpkeep();
+
+        try
+        {
+            await RunCoreAsync(cancellationToken);
+            scope.Succeed();
+        }
+        catch (Exception exception)
+        {
+            scope.Fail(exception);
+
+            throw;
+        }
+    }
+
+    private async Task RunCoreAsync(CancellationToken cancellationToken)
     {
         await _enrollmentService.ExpireEndedAsync(cancellationToken);
 

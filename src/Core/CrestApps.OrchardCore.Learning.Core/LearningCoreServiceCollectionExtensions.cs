@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Core.Telemetry;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -35,6 +36,7 @@ public static class LearningCoreServiceCollectionExtensions
         services.TryAddScoped<CourseCompletionEvaluator>();
         services.TryAddScoped<CourseListSynchronizer>();
         services.TryAddScoped<LearningUpkeep>();
+        services.AddEnrollmentObserver<LearningTelemetryObserver>();
         services.AddOptions<LearningUpkeepOptions>();
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
         services.TryAddScoped(sp => new Lazy<ICourseAccessService>(sp.GetRequiredService<ICourseAccessService>));
