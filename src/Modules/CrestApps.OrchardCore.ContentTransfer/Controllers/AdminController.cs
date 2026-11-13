@@ -161,14 +161,12 @@ public sealed class AdminController : Controller, IUpdateModel
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> ListPOST(ListContentTransferEntryOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ListContentTransferEntries) || !await CanRunBulkActionAsync(options.BulkAction))
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ListContentTransferEntries))
         {
             return Forbid();
         }
 
-        await ExecuteBulkActionAsync(itemIds, options.BulkAction, ContentTransferDirection.Import);
-
-        return RedirectToAction(nameof(List));
+        return await ExecuteBulkActionAsync(itemIds, options.BulkAction, ContentTransferDirection.Import, nameof(List));
     }
 
     // Actions that change an entry answer POST with an antiforgery token only, so a link or an image can't trigger them.
@@ -491,14 +489,12 @@ public sealed class AdminController : Controller, IUpdateModel
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> ExportPOST(ListContentTransferEntryOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile) || !await CanRunBulkActionAsync(options.BulkAction))
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile))
         {
             return Forbid();
         }
 
-        await ExecuteBulkActionAsync(itemIds, options.BulkAction, ContentTransferDirection.Export, CurrentUserId());
-
-        return RedirectToAction(nameof(Export));
+        return await ExecuteBulkActionAsync(itemIds, options.BulkAction, ContentTransferDirection.Export, nameof(Export), CurrentUserId());
     }
 
     [Admin("export/contents/download-file", "ExportContentDownloadFile")]
@@ -845,14 +841,12 @@ public sealed class AdminController : Controller, IUpdateModel
     [FormValueRequired("submit.BulkAction")]
     public async Task<ActionResult> ExportDashboardPOST(ListContentTransferEntryOptions options, IEnumerable<string> itemIds)
     {
-        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile) || !await CanRunBulkActionAsync(options.BulkAction))
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile))
         {
             return Forbid();
         }
 
-        await ExecuteBulkActionAsync(itemIds, options.BulkAction, ContentTransferDirection.Export, CurrentUserId());
-
-        return RedirectToAction(nameof(ExportDashboard));
+        return await ExecuteBulkActionAsync(itemIds, options.BulkAction, ContentTransferDirection.Export, nameof(ExportDashboard), CurrentUserId());
     }
 
     [HttpPost]
@@ -1279,34 +1273,35 @@ public sealed class AdminController : Controller, IUpdateModel
         return RedirectToAction(actionName, options.RouteValues);
     }
 
-    // Removing needs the delete permission, on every list, whatever else the page needs.
-    private async Task<bool> CanRunBulkActionAsync(ContentTransferEntryBulkAction? bulkAction)
-        => bulkAction != ContentTransferEntryBulkAction.Remove ||
-            await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.DeleteContentTransferEntries);
-
-    private async Task ExecuteBulkActionAsync(IEnumerable<string> itemIds, ContentTransferEntryBulkAction? bulkAction, ContentTransferDirection direction, string owner = null)
+    // Runs a bulk action and answers with the list again. Removing needs the delete permission, on every list, whatever
+    // else the page needs: it is checked for every request, and only the Remove branch acts on the answer.
+    private async Task<ActionResult> ExecuteBulkActionAsync(IEnumerable<string> itemIds, ContentTransferEntryBulkAction? bulkAction, ContentTransferDirection direction, string listAction, string owner = null)
     {
+        var canDelete = await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.DeleteContentTransferEntries);
+
         if (itemIds?.Any() != true)
         {
-            return;
+            return RedirectToAction(listAction);
         }
-
-        var query = _session.QueryIndex<ContentTransferEntryIndex>(x =>
-            x.EntryId.IsIn(itemIds) && x.Direction == direction);
-
-        if (!string.IsNullOrWhiteSpace(owner))
-        {
-            query = query.Where(x => x.Owner == owner);
-        }
-
-        var entries = await query.ListAsync();
-
-        var deletedCount = 0;
 
         switch (bulkAction)
         {
             case ContentTransferEntryBulkAction.Remove:
-                foreach (var entry in entries)
+                if (!canDelete)
+                {
+                    return Forbid();
+                }
+
+                var query = _session.QueryIndex<ContentTransferEntryIndex>(x => x.EntryId.IsIn(itemIds) && x.Direction == direction);
+
+                if (!string.IsNullOrWhiteSpace(owner))
+                {
+                    query = query.Where(x => x.Owner == owner);
+                }
+
+                var deletedCount = 0;
+
+                foreach (var entry in await query.ListAsync())
                 {
                     await _contentTransferEntryManager.MarkAsDeletingAsync(entry.EntryId);
                     TriggerEntryDeletion(entry.EntryId);
@@ -1319,6 +1314,8 @@ public sealed class AdminController : Controller, IUpdateModel
                 }
                 break;
         }
+
+        return RedirectToAction(listAction);
     }
 
     private async Task<bool> IsImportRunningAsync(string entryId)
