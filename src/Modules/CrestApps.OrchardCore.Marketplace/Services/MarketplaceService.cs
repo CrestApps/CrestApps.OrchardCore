@@ -27,9 +27,19 @@ public interface IVendorPayoutProvider
 
     /// <summary>
     /// Sends <paramref name="amount"/> to the vendor for an order, from that order's payment when it can. Returns the
-    /// provider's reference for the transfer, or the reason it failed.
+    /// provider's reference for the transfer, a refusal, or <see cref="VendorPayoutResult.Unsettled"/> when the provider
+    /// couldn't be reached, answered with a temporary error, or said the key was used for another request: only a refusal
+    /// is proof that no transfer exists.
     /// </summary>
-    Task<(string TransferId, string Failure)> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default);
+    Task<VendorPayoutResult> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Looks for the transfer an earlier request of a pending <paramref name="payout"/> made. It is asked before the payout
+    /// is sent again, because the provider may no longer hold its idempotency key (Stripe keeps one for 24 hours).
+    /// </summary>
+    /// <returns>The transfer when one exists, <see cref="VendorPayoutResult.Unsettled"/> when the provider can't be asked
+    /// now, or <see langword="null"/> when no transfer exists.</returns>
+    Task<VendorPayoutResult> FindTransferAsync(Vendor vendor, Order order, VendorPayout payout, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -304,10 +314,19 @@ public sealed class MarketplaceService
         // meanwhile, such as a refund of the same order, and pay them twice.
         foreach (var payout in await ListPendingAsync(vendor, available, cancellationToken))
         {
+            settled.UnionWith(payout.EarningIds ?? []);
+
+            // Only the provider it was recorded with knows whether its transfer was made.
+            if (GetRecordedProvider(payout, provider) is not { } recorded)
+            {
+                failures.Add(S["The payout of order {0} was started with {1}, which isn't enabled now. It stays pending until it is.", payout.OrderNumber, payout.Provider].Value);
+
+                continue;
+            }
+
             var order = await _orders.FindByIdAsync(payout.OrderId, cancellationToken);
 
-            paid += await SendAsync(vendor, provider, payout, order, failures, cancellationToken);
-            settled.UnionWith(payout.EarningIds ?? []);
+            paid += await SendAsync(vendor, recorded, payout, order, resend: true, failures, cancellationToken);
         }
 
         foreach (var batch in PlanPayouts(available.Where(earning => !settled.Contains(earning.ItemId))))
@@ -348,11 +367,17 @@ public sealed class MarketplaceService
             // Committed before the transfer is asked for, so the key is on record whatever happens next.
             await _session.SaveChangesAsync(cancellationToken);
 
-            paid += await SendAsync(vendor, provider, payout, order, failures, cancellationToken);
+            paid += await SendAsync(vendor, provider, payout, order, resend: false, failures, cancellationToken);
         }
 
         return (paid, failures);
     }
+
+    // The provider a pending payout was recorded with, or null when it isn't enabled now.
+    private IVendorPayoutProvider GetRecordedProvider(VendorPayout payout, IVendorPayoutProvider selected)
+        => string.IsNullOrEmpty(payout.Provider) || string.Equals(payout.Provider, selected.Name, StringComparison.OrdinalIgnoreCase)
+            ? selected
+            : _payoutProviders.FirstOrDefault(candidate => string.Equals(candidate.Name, payout.Provider, StringComparison.OrdinalIgnoreCase));
 
     // The vendor's payouts still pending: those its ready earnings name, and, for one recorded before earnings named their
     // payout, those among its latest payouts.
@@ -379,21 +404,40 @@ public sealed class MarketplaceService
         return pending;
     }
 
-    // Asks the provider for one payout's transfer and records the answer. Returns what was paid.
-    private async Task<decimal> SendAsync(Vendor vendor, IVendorPayoutProvider provider, VendorPayout payout, Order order, List<string> failures, CancellationToken cancellationToken)
+    // Asks the provider for one payout's transfer and records the answer. A payout sent before (pending) is looked up at the
+    // provider first: its key may have expired there, and a resend would then make a second transfer. Returns what was paid.
+    private async Task<decimal> SendAsync(Vendor vendor, IVendorPayoutProvider provider, VendorPayout payout, Order order, bool resend, List<string> failures, CancellationToken cancellationToken)
     {
-        string transferId;
-        string failure;
+        VendorPayoutResult result = null;
 
         try
         {
-            (transferId, failure) = await provider.PayAsync(vendor, order, payout.Amount, payout.Currency, payout.IdempotencyKey, cancellationToken);
+            if (resend)
+            {
+                result = await provider.FindTransferAsync(vendor, order, payout, cancellationToken);
+            }
+
+            result ??= await provider.PayAsync(vendor, order, payout.Amount, payout.Currency, payout.IdempotencyKey, cancellationToken);
         }
         catch (Exception exception)
         {
             MarketplaceTelemetry.RecordPayout(provider.Name, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
 
             throw;
+        }
+
+        var transferId = result?.TransferId;
+        var failure = transferId is null ? result?.Failure ?? S["The payout provider gave no answer."].Value : null;
+
+        if (transferId is null && result?.RetryLater != false)
+        {
+            // Whether a transfer exists isn't known, so nothing is marked failed and the key is kept: the payout stays
+            // pending, and the next run asks the provider about it first.
+            MarketplaceTelemetry.RecordPayout(provider.Name, MarketplaceTelemetry.OutcomeUnsettled);
+            failures.Add(failure);
+            _logger.LogWarning("The payout of order '{OrderNumber}' to vendor '{VendorId}' stays pending: {Failure}", payout.OrderNumber, vendor.ItemId, failure);
+
+            return 0m;
         }
 
         MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
