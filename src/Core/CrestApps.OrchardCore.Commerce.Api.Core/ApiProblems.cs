@@ -28,6 +28,11 @@ public static class ApiProblems
 
         public const string IdempotencyInProgress = "idempotency-in-progress";
 
+        /// <summary>
+        /// The idempotency key was used for another request. Sending it again never succeeds: the caller needs a new key.
+        /// </summary>
+        public const string IdempotencyKeyReused = "idempotency-key-reused";
+
         public const string PaymentInProgress = "payment-in-progress";
     }
 

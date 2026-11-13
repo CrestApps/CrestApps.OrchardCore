@@ -45,6 +45,12 @@ public static class CheckoutConstants
         public const string PaymentDeclineAttempt = "payment-decline-attempt";
 
         /// <summary>
+        /// Provider failure events counted by the card-testing protection: each once within 3 days, so a redelivered
+        /// event counts no decline again.
+        /// </summary>
+        public const string PaymentDeclineEvent = "payment-decline-event";
+
+        /// <summary>
         /// Status polls per network and checkout: 120 per 5 minutes.
         /// </summary>
         public const string PaymentStatus = "payment-status";

@@ -1,5 +1,9 @@
+using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Bookings.Models;
+using CrestApps.OrchardCore.Bookings.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -7,6 +11,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -14,9 +19,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.ContentManagement;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -105,7 +112,97 @@ public sealed class OrderRefundConcurrencyTests : IAsyncLifetime
         Assert.Null(exception);
     }
 
-    private OrderOperationsService Operations(ISession session)
+    [Fact]
+    public async Task CancelingAPaidBookingWithARefund_KeepsTheRefundAndItsNoteOnTheOrder()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Arrange: one request cancels a paid booking; the refund it gives commits, then the cancellation writes the order.
+        await using var session = _store.CreateSession();
+        var booking = new Booking
+        {
+            ItemId = "booking-1",
+            OrderId = "order-1",
+            OrderNumber = "261112-ABC123",
+            ContentItemId = "tour-1",
+            Title = "River tour",
+            Status = BookingStatus.Confirmed,
+            StartsUtc = _now.AddDays(30),
+            Seats = 2,
+            Total = 236.50m,
+            Currency = "USD",
+            CustomerEmail = "pat@example.test",
+        };
+
+        // Act
+        var (succeeded, errors) = await Bookings(session, booking).CancelAsync(booking, refund: null, "Change of plans", "admin", cancellationToken);
+        var exception = await Record.ExceptionAsync(() => session.SaveChangesAsync(cancellationToken));
+
+        // Assert: what the request committed last still has the refund, its note and the cancellation's note.
+        Assert.True(succeeded, string.Join(" ", errors));
+        Assert.Null(exception);
+
+        await using var check = _store.CreateSession();
+        var order = await new OrderStore(check).FindByIdAsync("order-1", cancellationToken);
+
+        Assert.Equal(236.50m, Assert.Single(order.Refunds).Amount);
+        Assert.Contains(order.Notes, note => note.Text.StartsWith("Refunded", StringComparison.Ordinal));
+        Assert.Contains(order.Notes, note => note.Text.Contains("canceled", StringComparison.Ordinal));
+    }
+
+    // The booking service over the real order refund: the order's refund operation, and a payment refund that, like the
+    // checkout's, reports its success to the handler that records it on the order.
+    private BookingService Bookings(ISession session, Booking booking)
+    {
+        var orders = new OrderStore(session);
+        var clock = Mock.Of<IClock>(value => value.UtcNow == _now);
+        var orderService = new OrderService(orders, [], new InMemoryNumberSequence(), clock, NullLogger<OrderService>.Instance);
+        var scope = new OrderOperationScope();
+
+        var sessions = new Mock<ICheckoutSessionStore>();
+        sessions.Setup(value => value.GetManyAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new CheckoutSession { SessionId = "session-1", ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = "order-1" }]);
+
+        var recorder = new OrderRefundRecorder(orders, orderService, scope, new ServiceCollection().BuildServiceProvider(), clock, new PassThroughStringLocalizer<OrderRefundRecorder>(), sessions.Object);
+        var refunds = new Mock<ICheckoutRefundService>();
+        refunds.Setup(value => value.RequestRefundAsync(It.IsAny<RequestPaymentRefundContext>(), It.IsAny<CancellationToken>()))
+            .Returns(async (RequestPaymentRefundContext context, CancellationToken token) =>
+            {
+                var refund = new PaymentRefund { ItemId = "refund-1", SessionId = context.SessionId, RefundGrossAmount = context.Amount ?? 0m, Currency = "USD", Reason = context.Reason, Status = RefundStatus.Succeeded };
+
+                await recorder.RefundSucceededAsync(refund, token);
+
+                return refund;
+            });
+
+        var bookings = new Mock<IBookingStore>();
+        bookings.Setup(value => value.FindByIdAsync(booking.ItemId, It.IsAny<CancellationToken>())).Returns((string _, CancellationToken _) => ValueTask.FromResult(booking));
+
+        var slots = new Mock<IBookingSlotStore>();
+        slots.Setup(value => value.ListAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        var site = new Mock<ISite>();
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+
+        return new BookingService(
+            bookings.Object,
+            Mock.Of<IBookingBalanceStore>(),
+            new BookingCapacityService(slots.Object, bookings.Object, session, _locks, siteService.Object, clock, NullLogger<BookingCapacityService>.Instance),
+            Mock.Of<IContentManager>(),
+            orders,
+            orderService,
+            new BookingEmailSender(Mock.Of<ICommerceEmailSender>(), siteService.Object, HtmlEncoder.Default, new PassThroughStringLocalizer<BookingEmailSender>()),
+            clock,
+            NullLogger<BookingService>.Instance,
+            new PassThroughStringLocalizer<BookingService>(),
+            new OrderRefunder(Operations(session, refunds.Object, orderService, scope)),
+            Mock.Of<ITransactionManager>(),
+            Mock.Of<ITransactionCommandService>(),
+            []);
+    }
+
+    private OrderOperationsService Operations(ISession session, ICheckoutRefundService refundService = null, IOrderService orderService = null, OrderOperationScope scope = null)
     {
         var orders = new OrderStore(session);
         var clock = Mock.Of<IClock>(value => value.UtcNow == _now);
@@ -141,12 +238,12 @@ public sealed class OrderRefundConcurrencyTests : IAsyncLifetime
 
         return new OrderOperationsService(
             orders,
-            new OrderService(orders, [], new InMemoryNumberSequence(), clock, NullLogger<OrderService>.Instance),
-            new OrderOperationScope(),
+            orderService ?? new OrderService(orders, [], new InMemoryNumberSequence(), clock, NullLogger<OrderService>.Instance),
+            scope ?? new OrderOperationScope(),
             confirmationSender: null,
             Mock.Of<ICheckoutEngine>(),
             tenders.Object,
-            Mock.Of<ICheckoutRefundService>(),
+            refundService ?? Mock.Of<ICheckoutRefundService>(),
             attempts.Object,
             refundStore.Object,
             Mock.Of<ICheckoutPaymentProviderResolver>(),

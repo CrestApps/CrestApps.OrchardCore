@@ -56,6 +56,52 @@ public sealed class IdempotencyHardeningTests
     }
 
     [Fact]
+    public async Task TheSameKeyWithAnotherBody_IsRefusedWithACodeThatSaysNotToRetry()
+    {
+        // Arrange
+        var filter = new IdempotencyEndpointFilter();
+
+        static ValueTask<object> Next(EndpointFilterInvocationContext context)
+            => ValueTask.FromResult<object>(TypedResults.Ok(new { refunded = 10 }));
+
+        // Act
+        await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(Request("cart-1"), new RefundRequest { Amount = 10m }), Next);
+        var other = IdempotencyEndpointFilter.Capture(await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(Request("cart-1"), new RefundRequest { Amount = 500m }), Next));
+
+        // Assert: not the in-progress code, which a client retries.
+        Assert.Contains($"\"code\":\"{ApiProblems.Codes.IdempotencyKeyReused}\"", other.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain(ApiProblems.Codes.IdempotencyInProgress, other.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ARequestWhoseArgumentsCantBeCompared_NeverGetsAnotherRequestsAnswer()
+    {
+        // Arrange: arguments that can't be serialized, so they can't be fingerprinted.
+        var filter = new IdempotencyEndpointFilter();
+        var calls = 0;
+
+        ValueTask<object> Next(EndpointFilterInvocationContext context)
+        {
+            calls++;
+
+            return ValueTask.FromResult<object>(TypedResults.Ok(new { refunded = calls }));
+        }
+
+        var first = new CyclicRequest { Amount = 10m };
+        first.Self = first;
+        var second = new CyclicRequest { Amount = 500m };
+        second.Self = second;
+
+        // Act
+        await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(Request("cart-1"), first), Next);
+        var other = IdempotencyEndpointFilter.Capture(await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(Request("cart-1"), second), Next));
+
+        // Assert: refused, not the first request's answer replayed.
+        Assert.Equal(StatusCodes.Status409Conflict, other.StatusCode);
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
     public async Task TheSameKeyWithTheSameBody_GetsTheFirstAnswer()
     {
         // Arrange
@@ -143,5 +189,12 @@ public sealed class IdempotencyHardeningTests
     public sealed class RefundRequest
     {
         public decimal Amount { get; set; }
+    }
+
+    public sealed class CyclicRequest
+    {
+        public decimal Amount { get; set; }
+
+        public CyclicRequest Self { get; set; }
     }
 }

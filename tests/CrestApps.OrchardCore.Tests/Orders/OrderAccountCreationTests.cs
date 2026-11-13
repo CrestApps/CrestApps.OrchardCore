@@ -20,6 +20,7 @@ using Moq;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Tests.Orders;
 
@@ -64,6 +65,51 @@ public sealed class OrderAccountCreationTests
         harness.Users.Verify(manager => manager.CreateAsync(It.IsAny<IUser>(), It.IsAny<string>()), Times.Never());
         Assert.Equal(0, harness.EmailsSent);
     }
+
+    [Fact]
+    public async Task Create_WhenTheLinkCantBeSent_RemovesTheAccountItMade()
+    {
+        // Arrange: the email provider refuses the message, so the owner never gets a link to finish the account.
+        var harness = new OrderAccountHarness(sendSucceeds: false);
+
+        // Act
+        await harness.CreateController().Create(new OrderCreateAccountViewModel { Token = harness.Token }, returnUrl: null);
+
+        // Assert: no account without a password is left holding the address.
+        Assert.NotNull(harness.Created);
+        harness.Users.Verify(manager => manager.DeleteAsync(harness.Created), Times.Once());
+    }
+
+    [Fact]
+    public async Task Create_ForAnAccountStillWaitingForItsLink_SendsTheLinkAgain()
+    {
+        // Arrange: an account was made from this order earlier, and its link was lost or expired.
+        var pending = new User { UserId = "u1", UserName = "pat", Email = "pat@example.test", EmailConfirmed = false };
+        pending.Properties[OrderAccountController.PendingOrderPropertyName] = "order-1";
+
+        var harness = new OrderAccountHarness(existing: pending);
+
+        // Act
+        await harness.CreateController().Create(new OrderCreateAccountViewModel { Token = harness.Token }, returnUrl: null);
+
+        // Assert
+        harness.Users.Verify(manager => manager.CreateAsync(It.IsAny<IUser>()), Times.Never());
+        Assert.Equal(1, harness.EmailsSent);
+    }
+
+    [Fact]
+    public async Task Create_ForAnAccountThatIsFinished_SendsNothing()
+    {
+        // Arrange
+        var harness = new OrderAccountHarness(existing: new User { UserId = "u1", UserName = "pat", Email = "pat@example.test", EmailConfirmed = true });
+
+        // Act
+        await harness.CreateController().Create(new OrderCreateAccountViewModel { Token = harness.Token }, returnUrl: null);
+
+        // Assert
+        harness.Users.Verify(manager => manager.CreateAsync(It.IsAny<IUser>()), Times.Never());
+        Assert.Equal(0, harness.EmailsSent);
+    }
 }
 
 /// <summary>
@@ -73,7 +119,7 @@ internal sealed class OrderAccountHarness
 {
     private readonly ServiceProvider _services;
 
-    public OrderAccountHarness(bool canSend = true)
+    public OrderAccountHarness(bool canSend = true, bool sendSucceeds = true, IUser existing = null)
     {
         Order = new Order { ItemId = "order-1", OrderNumber = "261112-ABC123", CustomerEmail = "pat@example.test", Status = OrderStatus.Paid, Currency = "USD" };
 
@@ -85,7 +131,8 @@ internal sealed class OrderAccountHarness
         orders.Setup(store => store.FindByIdAsync(Order.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(Order);
 
         Users = new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, new List<IUserValidator<IUser>>(), new List<IPasswordValidator<IUser>>(), null, null, null, null);
-        Users.Setup(manager => manager.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((IUser)null);
+        Users.Setup(manager => manager.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(existing);
+        Users.Setup(manager => manager.DeleteAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
         Users.Setup(manager => manager.FindByNameAsync(It.IsAny<string>())).ReturnsAsync((IUser)null);
         Users.Setup(manager => manager.CreateAsync(It.IsAny<IUser>())).Callback<IUser>(user => Created = user).ReturnsAsync(IdentityResult.Success);
         Users.Setup(manager => manager.CreateAsync(It.IsAny<IUser>(), It.IsAny<string>())).Callback<IUser, string>((user, _) => Created = user).ReturnsAsync(IdentityResult.Success);
@@ -95,8 +142,8 @@ internal sealed class OrderAccountHarness
         var email = new Mock<ICommerceEmailSender>();
         email.SetupGet(sender => sender.CanSend).Returns(canSend);
         email.Setup(sender => sender.SendAsync(It.IsAny<CommerceEmail>(), It.IsAny<Func<CancellationToken, Task<CommerceEmailContent>>>(), It.IsAny<CancellationToken>()))
-            .Callback(() => EmailsSent++)
-            .ReturnsAsync(true);
+            .Callback(() => EmailsSent += sendSucceeds ? 1 : 0)
+            .ReturnsAsync(sendSucceeds);
 
         var stringLocalizer = new Mock<IStringLocalizer<OrderAccountController>>();
         stringLocalizer.Setup(value => value[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));

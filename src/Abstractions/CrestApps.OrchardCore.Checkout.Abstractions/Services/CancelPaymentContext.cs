@@ -23,4 +23,11 @@ public sealed class CancelPaymentContext
     /// The reason the attempt is being canceled, recorded for audit.
     /// </summary>
     public string Reason { get; set; }
+
+    /// <summary>
+    /// Whether to cancel only a payment that took nothing and waits for another card. The provider asks its gateway, not
+    /// the local attempt: a payment that succeeded, is processing, holds an authorization or waits for the buyer to
+    /// authenticate is left alone, and the cancel answers a failure. Nothing is refunded.
+    /// </summary>
+    public bool OnlyIfUnpaid { get; set; }
 }

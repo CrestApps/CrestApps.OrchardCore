@@ -38,9 +38,13 @@ provider's dashboard for the declines, and consider turning on the stronger stor
 
 Each decline is counted once: when its payment attempt becomes failed, whether the provider said so at once or when the
 reconciliation sweep asked, and, for a provider that confirms the card in the browser (Stripe), each time its webhook
-reports a failed confirmation. A buyer can try several cards against one Stripe payment, so after three failed
-confirmations the payment is canceled at Stripe and the buyer must begin a new one, which the card-testing gate can refuse.
-A saved card charged without the buyer (a renewal, a staff charge) is never counted.
+reports a failed confirmation, including the declined first invoice of a subscription. An event Stripe delivers again is
+not counted again. A buyer can try several cards against one Stripe payment, so the payment is canceled at Stripe and the
+buyer must begin a new one, which the card-testing gate can refuse, after three failed confirmations, or at the first
+failed confirmation once the network or the customer is blocked. Only a payment that is still waiting for a card is
+canceled: one the buyer has paid, or is authenticating, is left alone and never refunded by this protection. A
+subscription's open first invoice is voided with it. A saved card charged without the buyer (a renewal, a staff charge)
+is never counted.
 
 ## Attempt policies
 
@@ -57,6 +61,7 @@ policy off.
 | `payment-decline-customer` | 5 per hour, then blocked an hour | Declined card payments of one signed-in customer |
 | `payment-decline-store` | 30 per 10 minutes, then 30 minutes | Declined card payments across the store |
 | `payment-decline-attempt` | 3 per payment, then the payment is canceled | Failed card confirmations of one payment (Stripe) |
+| `payment-decline-event` | 1 per event within 3 days | Stripe failure events counted, so a redelivery counts nothing |
 | `payment-status` | 120 per 5 minutes | Status polls per network and checkout |
 | `checkout-start-network` | 60 per hour | Checkouts started from one network by an order's pay link |
 | `coupon-code` | 10 wrong codes per 10 minutes, then blocked 10 minutes | Wrong discount codes from one network |

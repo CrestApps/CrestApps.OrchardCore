@@ -111,8 +111,24 @@ public sealed class OrderAccountController : Controller
 
         var email = order.CustomerEmail.Trim();
 
-        if (await _userManager.FindByEmailAsync(email) is not null)
+        if (await _userManager.FindByEmailAsync(email) is { } existing)
         {
+            // An account made from an order whose link was lost, expired or never arrived: a new link goes to the address,
+            // so the owner can still finish it. Nothing else about the account changes.
+            if (existing is User { EmailConfirmed: false } pending && pending.Properties[PendingOrderPropertyName] is not null)
+            {
+                if (await SendActivationAsync(pending))
+                {
+                    await _notifier.SuccessAsync(H["We sent a new link to {0}. Open it to choose your password and finish your account.", email]);
+                }
+                else
+                {
+                    await _notifier.ErrorAsync(H["The email to finish your account couldn't be sent. Try again in a few minutes."]);
+                }
+
+                return LocalRedirect(back);
+            }
+
             await _notifier.InformationAsync(H["There's already an account with {0}. Sign in, and your orders with this email appear in your account.", email]);
 
             return LocalRedirect(back);
@@ -145,7 +161,16 @@ public sealed class OrderAccountController : Controller
 
         if (!await SendActivationAsync(user))
         {
-            await _notifier.ErrorAsync(H["Your account was created, but the email to finish it couldn't be sent. Use \"Forgot password\" with {0} to finish it.", email]);
+            // An account without a password whose owner never got the link would hold the address: registration with it
+            // fails, and a site that wants confirmed addresses refuses "Forgot password". So it goes, and can be made again.
+            var deleted = await _userManager.DeleteAsync(user);
+
+            if (!deleted.Succeeded)
+            {
+                _logger.LogWarning("The account made from order '{OrderNumber}' got no link and couldn't be removed: {Errors}", order.OrderNumber, string.Join(" ", deleted.Errors.Select(error => error.Description)));
+            }
+
+            await _notifier.ErrorAsync(H["Your account wasn't created: the email to finish it couldn't be sent. Try again in a few minutes."]);
 
             return LocalRedirect(back);
         }
@@ -306,7 +331,7 @@ public sealed class OrderAccountController : Controller
 
         var link = HtmlEncoder.Default.Encode(url);
 
-        await _emailSender.SendAsync(new CommerceEmail
+        return await _emailSender.SendAsync(new CommerceEmail
         {
             To = user.Email,
             Reference = user.UserId,
@@ -316,7 +341,5 @@ public sealed class OrderAccountController : Controller
             Text = S["Open this link to choose your password and finish your account: {0}", url],
             Html = $"<p>{HtmlEncoder.Default.Encode(S["Thanks for creating an account. Choose your password to finish it:"].Value)}</p><p><a href=\"{link}\">{HtmlEncoder.Default.Encode(S["Choose your password"].Value)}</a></p>",
         }));
-
-        return true;
     }
 }

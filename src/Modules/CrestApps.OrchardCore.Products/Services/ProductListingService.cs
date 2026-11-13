@@ -884,17 +884,15 @@ public sealed class ProductListingService
     }
 
     /// <summary>
-    /// What modules offer to do with a product: its <c>ProductAction</c> display. A module places a shape in its
-    /// Actions zone the Orchard way, for example <c>.Location("ProductAction", "Actions")</c>, and the shape shows on
-    /// the product's card and page. Subscriptions places its subscribe form there.
+    /// What modules offer to do with a product: its <c>ProductAction</c> display. A module places a shape in its Actions
+    /// zone, for example <c>.Location("ProductAction", "Actions")</c>, shown on the product's card and page.
     /// </summary>
     public async Task<IShape> BuildProductActionsAsync(ContentItem contentItem)
     {
         var shape = await _contentItemDisplayManager.BuildDisplayAsync(contentItem, _updateModelAccessor.ModelUpdater, ProductActionDisplayType);
 
-        // A type with a stereotype renders as "{Stereotype}_ProductAction" (Subscription_ProductAction for a plan),
-        // which no theme defines. Every product's actions render through Content_ProductAction instead; a
-        // template for the stereotype still wins through the alternates the display manager added.
+        // A type with a stereotype renders as "{Stereotype}_ProductAction", which no theme defines, so every product's
+        // actions render through Content_ProductAction; a stereotype's own template still wins through its alternates.
         if (shape is not null && shape.Metadata.Type != ContentProductActionShapeType)
         {
             shape.Metadata.Type = ContentProductActionShapeType;
@@ -1088,7 +1086,9 @@ public sealed class ProductListingService
 
         foreach (var id in ids)
         {
-            if (!documents.TryGetValue(id, out var document) || !items.TryGetValue(id, out var contentItem))
+            // Each card is checked, not only its type: a product can be kept from some visitors on its own (SEC-C17s).
+            if (!documents.TryGetValue(id, out var document) || !items.TryGetValue(id, out var contentItem) ||
+                (_httpContextAccessor.HttpContext is { } httpContext && !await _authorizationService.AuthorizeAsync(httpContext.User, CommonPermissions.ViewContent, contentItem)))
             {
                 continue;
             }
