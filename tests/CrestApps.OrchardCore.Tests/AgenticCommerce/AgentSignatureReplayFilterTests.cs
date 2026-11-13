@@ -46,6 +46,8 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
     private readonly ECDsa _key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
     private readonly IDistributedCache _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
+    private IDistributedLock _distributedLock = new LocalLock(NullLogger<LocalLock>.Instance);
+
     public void Dispose()
         => _key.Dispose();
 
@@ -81,6 +83,59 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
         Assert.Same(_passed, first);
         Assert.Same(_passed, retried);
         Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(otherKey));
+    }
+
+    [Fact]
+    public async Task AcpFilter_AGetWithAnIdempotencyKey_IsNotLetThroughTwice()
+    {
+        // Arrange: a GET has no idempotency layer to answer a repeat with its first result, so the key exempts nothing.
+        var platform = AcpPlatform(AcpRequestSignature.BoundVersion);
+        var signature = AcpRequestSignature.Sign(AcpRequestSignature.GetBoundSigningInput(Timestamp, "GET", "/acp/checkout_sessions/cs_1", []), _key);
+
+        // Act
+        var first = await InvokeAcpAsync(platform, "GET", "/acp/checkout_sessions/cs_1", body: null, signature, "key-1");
+        var replayed = await InvokeAcpAsync(platform, "GET", "/acp/checkout_sessions/cs_1", body: null, signature, "key-1");
+
+        // Assert
+        Assert.Same(_passed, first);
+        Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(replayed));
+    }
+
+    [Fact]
+    public async Task AcpMcp_AReadWithAnIdempotencyKey_IsNotLetThroughTwice()
+    {
+        // Arrange: get_checkout_session doesn't run through the MCP idempotency layer.
+        var platform = AcpPlatform(AcpRequestSignature.BoundVersion);
+        var signature = AcpRequestSignature.Sign(
+            AcpRequestSignature.GetBoundSigningInput(Timestamp, AcpSignatureCheck.McpMethod, $"{AcpMcpEndpoints.Tools.Get}/cs_1", []),
+            _key);
+
+        // Act
+        var first = await InvokeAcpMcpAsync(platform, AcpMcpEndpoints.Tools.Get, "cs_1", signature, "key-1");
+        var replayed = await InvokeAcpMcpAsync(platform, AcpMcpEndpoints.Tools.Get, "cs_1", signature, "key-1");
+
+        // Assert
+        Assert.NotEqual(AcpSignatureCheck.ErrorCode, ErrorCode(first));
+        Assert.Equal(AcpSignatureCheck.ErrorCode, ErrorCode(replayed));
+    }
+
+    [Fact]
+    public async Task AcpFilter_ALockThatCantBeTaken_AnswersARetryableError_NotAReplay()
+    {
+        // Arrange
+        var locks = new Mock<IDistributedLock>();
+
+        locks.Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, false));
+        _distributedLock = locks.Object;
+
+        var platform = AcpPlatform(AcpRequestSignature.BoundVersion);
+
+        // Act
+        var result = await InvokeAcpAsync(platform, "POST", CompletePath, Body, SignAcp("POST", CompletePath, Body), "key-1");
+
+        // Assert
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, StatusCode(result));
     }
 
     [Fact]
@@ -178,6 +233,37 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
     }
 
     [Fact]
+    public async Task UcpFilter_AnIdempotencyKeyOnAnEndpointWithoutTheIdempotencyLayer_DoesNotExemptAReplay()
+    {
+        // Arrange: a signed GET that carries a key; nothing answers a repeat of it with the first result.
+        var (input, signature) = SignUcp(HttpMethods.Get, "/ucp/checkout-sessions/cs_1", body: null, "key-1", created: true);
+
+        // Act
+        var first = await InvokeUcpAsync(HttpMethods.Get, "/ucp/checkout-sessions/cs_1", body: null, "key-1", input, signature, idempotentEndpoint: false);
+        var replayed = await InvokeUcpAsync(HttpMethods.Get, "/ucp/checkout-sessions/cs_1", body: null, "key-1", input, signature, idempotentEndpoint: false);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, StatusCode(first));
+        Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(replayed));
+    }
+
+    [Fact]
+    public async Task UcpFilter_TwoRequestsInTheSameSecond_WithTheirOwnNonce_AreBothAccepted()
+    {
+        // Arrange: created has one-second resolution, so a client that polls twice in a second makes its input unique.
+        var (firstInput, firstSignature) = SignUcp(HttpMethods.Get, "/ucp/checkout-sessions/cs_1", body: null, idempotencyKey: null, created: true, nonce: "n1");
+        var (secondInput, secondSignature) = SignUcp(HttpMethods.Get, "/ucp/checkout-sessions/cs_1", body: null, idempotencyKey: null, created: true, nonce: "n2");
+
+        // Act
+        var first = await InvokeUcpAsync(HttpMethods.Get, "/ucp/checkout-sessions/cs_1", body: null, idempotencyKey: null, firstInput, firstSignature, idempotentEndpoint: false);
+        var second = await InvokeUcpAsync(HttpMethods.Get, "/ucp/checkout-sessions/cs_1", body: null, idempotencyKey: null, secondInput, secondSignature, idempotentEndpoint: false);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, StatusCode(first));
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, StatusCode(second));
+    }
+
+    [Fact]
     public async Task UcpRestEndpoints_AChangeWithoutAnIdempotencyKey_IsRefused()
     {
         // Arrange: UCP's REST binding requires Idempotency-Key on POST and PUT, the key a signature without created
@@ -235,6 +321,12 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
             httpContext.Request.Headers["Idempotency-Key"] = idempotencyKey;
         }
 
+        // Every ACP POST runs through the idempotency layer; a GET doesn't.
+        if (HttpMethods.IsPost(method))
+        {
+            httpContext.SetEndpoint(new Endpoint(null, new EndpointMetadataCollection(AcpEndpoints.Idempotency), "AcpCompleteCheckout"));
+        }
+
         return await new AcpRequestFilter().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ => ValueTask.FromResult(_passed));
     }
 
@@ -266,6 +358,8 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
         var httpContext = CreateContext(services, HttpMethods.Post, "/" + AcpMcpEndpoints.Route, message.ToJsonString());
         var checkouts = new Mock<IAgentCheckoutService>();
 
+        checkouts.Setup(service => service.GetAsync(It.IsAny<AgentCheckoutContext>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AgentCheckoutResult.Fail(AgentCheckoutFailure.NotFound, "There is no such checkout."));
         checkouts.Setup(service => service.CancelAsync(It.IsAny<AgentCheckoutContext>(), It.IsAny<string>(), It.IsAny<JsonObject>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(AgentCheckoutResult.Fail(AgentCheckoutFailure.NotFound, "There is no such checkout."));
 
@@ -274,12 +368,12 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
         var result = await AcpMcpEndpoints.HandleAsync(
             httpContext,
             new AcpCheckoutOperations(checkouts.Object, new AcpCheckoutMapper(checkouts.Object)),
-            new AcpMcpIdempotency(_cache, new LocalLock(NullLogger<LocalLock>.Instance), new ShellSettings { Name = "Default" }));
+            new AcpMcpIdempotency(_cache, _distributedLock, new ShellSettings { Name = "Default" }));
 
         return Assert.IsType<JsonHttpResult<JsonObject>>(result).Value;
     }
 
-    private (string Input, string Signature) SignUcp(string method, string path, string body, string idempotencyKey, bool created)
+    private (string Input, string Signature) SignUcp(string method, string path, string body, string idempotencyKey, bool created, string nonce = null)
     {
         var httpContext = CreateContext(new ServiceCollection().BuildServiceProvider(), method, path, body);
 
@@ -290,7 +384,8 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
             HttpMessageSignatures.DefaultRequestComponents(body is not null, hasQuery: false, hasUcpAgent: true, idempotencyKey is not null),
             "k1",
             _key,
-            created: created ? new DateTimeOffset(_now).ToUnixTimeSeconds() : null);
+            created: created ? new DateTimeOffset(_now).ToUnixTimeSeconds() : null,
+            nonce: nonce);
 
         return (signed.SignatureInput, signed.Signature);
     }
@@ -356,7 +451,7 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
         return new ServiceCollection()
             .AddLogging()
             .AddSingleton(_cache)
-            .AddSingleton<IDistributedLock>(new LocalLock(NullLogger<LocalLock>.Instance))
+            .AddSingleton(_distributedLock)
             .AddSingleton<AgentSignatureReplayGuard>()
             .AddSingleton(platforms.Object)
             .AddSingleton(factory.Object)

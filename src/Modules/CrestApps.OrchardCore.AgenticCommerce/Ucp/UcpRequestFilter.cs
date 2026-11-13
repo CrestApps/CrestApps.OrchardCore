@@ -231,12 +231,22 @@ public sealed class UcpRequestFilter : IEndpointFilter
                 return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", policyError);
             }
 
-            if (!await httpContext.RequestServices.GetRequiredService<AgentSignatureReplayGuard>().TryUseAsync(
+            // The key lets the same signature through again only where the idempotency layer answers it with its first result.
+            var use = await httpContext.RequestServices.GetRequiredService<AgentSignatureReplayGuard>().UseAsync(
                 $"{platform?.ItemId}|{verification.KeyId}",
                 System.Text.Encoding.UTF8.GetBytes(verification.SignatureBase),
-                idempotencyKey,
+                idempotent ? idempotencyKey : null,
                 UcpSignaturePolicy.ReplayWindow,
-                httpContext.RequestAborted))
+                httpContext.RequestAborted);
+
+            if (use == AgentSignatureUse.Unavailable)
+            {
+                httpContext.Response.Headers.RetryAfter = "1";
+
+                return Fail(httpContext, body, StatusCodes.Status503ServiceUnavailable, "service_unavailable", "The signature couldn't be checked right now. Send the request again.");
+            }
+
+            if (use != AgentSignatureUse.Accepted)
             {
                 return Fail(httpContext, body, StatusCodes.Status401Unauthorized, "signature_invalid", "The signature was used before. Sign each request anew.");
             }

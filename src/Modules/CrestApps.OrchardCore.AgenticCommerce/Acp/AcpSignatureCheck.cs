@@ -111,24 +111,45 @@ public static class AcpSignatureCheck
 
     /// <summary>
     /// Remembers a verified signature for the time its timestamp could be valid, by the bytes it was verified over, and
-    /// returns <see langword="false"/> when it was used before by a request that isn't the same idempotent one.
+    /// returns <see cref="AgentSignatureUse.Replayed"/> when it was used before by a request that isn't the same idempotent
+    /// one.
     /// </summary>
     /// <param name="httpContext">The HTTP context.</param>
     /// <param name="platform">The signed-in platform.</param>
     /// <param name="verified">The bytes <see cref="Check(AgentPlatform, byte[], string, string, string, string, DateTimeOffset, out byte[])"/> verified, or <see langword="null"/> for nothing to remember.</param>
-    /// <param name="idempotencyKey">The request's idempotency key, or <see langword="null"/>.</param>
-    public static Task<bool> TryUseAsync(HttpContext httpContext, AgentPlatform platform, byte[] verified, string idempotencyKey)
+    /// <param name="idempotencyKey">The request's idempotency key when an idempotency layer answers it, or <see langword="null"/>.</param>
+    public static Task<AgentSignatureUse> UseAsync(HttpContext httpContext, AgentPlatform platform, byte[] verified, string idempotencyKey)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
         ArgumentNullException.ThrowIfNull(platform);
 
         if (verified is null || httpContext.RequestServices.GetService<AgentSignatureReplayGuard>() is not { } guard)
         {
-            return Task.FromResult(true);
+            return Task.FromResult(AgentSignatureUse.Accepted);
         }
 
         // A timestamp is accepted for the skew either way, so a signature could be valid for twice that.
-        return guard.TryUseAsync(platform.ItemId, verified, idempotencyKey, GetClockSkew(platform) * 2, httpContext.RequestAborted);
+        return guard.UseAsync(platform.ItemId, verified, idempotencyKey, GetClockSkew(platform) * 2, httpContext.RequestAborted);
+    }
+
+    /// <summary>
+    /// Returns the answer to a signature the replay guard didn't accept: <c>401</c> for a replay, or a retryable
+    /// <c>503</c> when the guard couldn't tell (its lock store is down or busy).
+    /// </summary>
+    /// <param name="httpContext">The HTTP context.</param>
+    /// <param name="use">What the guard answered.</param>
+    public static AcpOperationResult RefusedUse(HttpContext httpContext, AgentSignatureUse use)
+    {
+        ArgumentNullException.ThrowIfNull(httpContext);
+
+        if (use == AgentSignatureUse.Unavailable)
+        {
+            httpContext.Response.Headers.RetryAfter = "1";
+
+            return AcpOperationResult.Error(StatusCodes.Status503ServiceUnavailable, "service_unavailable", "The signature couldn't be checked right now. Send the request again.");
+        }
+
+        return AcpOperationResult.Error(StatusCodes.Status401Unauthorized, ErrorCode, "The signature was used before. Sign each request anew.");
     }
 
     /// <summary>
