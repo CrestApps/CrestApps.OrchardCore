@@ -27,9 +27,11 @@ using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
 using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -66,6 +68,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
         services.AddScoped<ILoginFormEvent, CustomerMergeLoginFormEvent>();
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
+
+        // Following a confirmation link is what proves the address above, so a link only confirms the address it was sent
+        // to: an old link must not confirm an address the user changed to afterwards.
+        services.AddTransient<EmailBoundConfirmationTokenProvider>();
+        services.AddTransient<IConfigureOptions<IdentityOptions>, EmailBoundConfirmationIdentityOptions>();
 
         services.AddScoped<CustomerAddressBook>();
 
