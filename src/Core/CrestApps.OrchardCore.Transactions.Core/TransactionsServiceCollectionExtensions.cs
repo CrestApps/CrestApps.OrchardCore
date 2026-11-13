@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -36,6 +37,10 @@ public static class TransactionsServiceCollectionExtensions
 
         services.TryAddScoped<IFinancialDocumentNumberGenerator, SequentialFinancialDocumentNumberGenerator>();
         services.TryAddScoped<ITransactionInvoiceService, TransactionInvoiceService>();
+
+        // A signed-in user sees the transactions they own and those owed by the parties they act for.
+        services.AddPartyMembership();
+        services.TryAddScoped<ITransactionVisibilityService, DefaultTransactionVisibilityService>();
 
         return services;
     }

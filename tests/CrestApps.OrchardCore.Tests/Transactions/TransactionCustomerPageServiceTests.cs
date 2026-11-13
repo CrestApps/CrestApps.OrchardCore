@@ -1,8 +1,13 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Receipts.Models;
+using CrestApps.OrchardCore.Tests.Parties;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -119,7 +124,7 @@ public sealed class TransactionCustomerPageServiceTests
     public async Task BuildInvoiceAsync_WithoutTheReceiptsModule_IsNotFound()
     {
         // Arrange
-        var service = CreateService(new FakeTransactionStore(CreateInvoicedTransaction()), withDocumentBuilders: false, TransactionsPermissions.ViewOwnTransactions);
+        var service = CreateService(new FakeTransactionStore(CreateInvoicedTransaction()), withDocumentBuilders: false, membership: null, TransactionsPermissions.ViewOwnTransactions);
 
         // Act
         var result = await service.BuildInvoiceAsync(CreateUser("customer-1"), "tx-1", TestContext.Current.CancellationToken);
@@ -238,6 +243,62 @@ public sealed class TransactionCustomerPageServiceTests
     }
 
     [Fact]
+    public async Task BuildStatementAsync_ForAnAdminOfTheAccountThatOwesIt_ListsTheAccountsTransaction()
+    {
+        // Arrange: a buyer of the account posted the debt, and the account owes it.
+        var store = new FakeTransactionStore(CreateInvoicedTransaction(), OwedByAccount("tx-acct", "acct-1"), OwedByAccount("tx-other", "acct-2"));
+        var service = CreateService(store, withDocumentBuilders: true, AccountMembership(), TransactionsPermissions.ViewOwnTransactions);
+
+        // Act
+        var result = await service.BuildStatementAsync(CreateUser("customer-1"), new TransactionStatementRequest(), TestContext.Current.CancellationToken);
+
+        // Assert: their own and the account's, never another account's.
+        Assert.Equal(TransactionCustomerPageStatus.Found, result.Status);
+        Assert.Equal(["tx-1", "tx-acct"], result.Model.Entries.Select(entry => entry.Transaction.ItemId).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task BuildStatementAsync_ForAPlainMemberOfTheAccount_ListsOnlyWhatTheyOwn()
+    {
+        // Arrange: the buyer's own order billed to the account, and another buyer's.
+        var theirs = OwedByAccount("tx-theirs", "acct-1");
+        theirs.OwnerId = "buyer-1";
+
+        var store = new FakeTransactionStore(theirs, OwedByAccount("tx-acct", "acct-1"));
+        var service = CreateService(store, withDocumentBuilders: true, AccountMembership(), TransactionsPermissions.ViewOwnTransactions);
+
+        // Act
+        var result = await service.BuildStatementAsync(CreateUser("buyer-1"), new TransactionStatementRequest(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TransactionCustomerPageStatus.Found, result.Status);
+        Assert.Equal("tx-theirs", Assert.Single(result.Model.Entries).Transaction.ItemId);
+    }
+
+    [Fact]
+    public async Task BuildInvoiceAndReceipt_OfTheAccountsTransaction_AreFoundForAnAdmin_AndNotForAPlainMember()
+    {
+        // Arrange
+        var store = new FakeTransactionStore(OwedByAccount("tx-acct", "acct-1"));
+        var service = CreateService(store, withDocumentBuilders: true, AccountMembership(), TransactionsPermissions.ViewOwnTransactions);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Act
+        var adminInvoice = await service.BuildInvoiceAsync(CreateUser("customer-1"), "tx-acct", cancellationToken);
+        var adminReceipt = await service.BuildReceiptAsync(CreateUser("customer-1"), "tx-acct", "payment-1", cancellationToken);
+        var buyerInvoice = await service.BuildInvoiceAsync(CreateUser("buyer-1"), "tx-acct", cancellationToken);
+        var buyerReceipt = await service.BuildReceiptAsync(CreateUser("buyer-1"), "tx-acct", "payment-1", cancellationToken);
+        var strangerInvoice = await service.BuildInvoiceAsync(CreateUser("customer-2"), "tx-acct", cancellationToken);
+
+        // Assert
+        Assert.Equal(TransactionCustomerPageStatus.Found, adminInvoice.Status);
+        Assert.Equal(TransactionCustomerPageStatus.Found, adminReceipt.Status);
+        Assert.Equal(TransactionCustomerPageStatus.NotFound, buyerInvoice.Status);
+        Assert.Equal(TransactionCustomerPageStatus.NotFound, buyerReceipt.Status);
+        Assert.Equal(TransactionCustomerPageStatus.NotFound, strangerInvoice.Status);
+    }
+
+    [Fact]
     public async Task BuildStatementAsync_WithoutThePermissionToViewOwnTransactions_IsForbidden()
     {
         // Arrange
@@ -298,10 +359,30 @@ public sealed class TransactionCustomerPageServiceTests
             ],
         };
 
-    private static TransactionCustomerPageService CreateService(FakeTransactionStore store, params Permission[] granted)
-        => CreateService(store, withDocumentBuilders: true, granted);
+    // Owed by an account, posted by one of its buyers.
+    private static Transaction OwedByAccount(string itemId, string accountId)
+    {
+        var transaction = CreateInvoicedTransaction();
+        transaction.ItemId = itemId;
+        transaction.OwnerId = "buyer-9";
+        transaction.PayerKind = PartyKinds.Account;
+        transaction.PayerId = accountId;
 
-    private static TransactionCustomerPageService CreateService(FakeTransactionStore store, bool withDocumentBuilders, params Permission[] granted)
+        return transaction;
+    }
+
+    // Account acct-1: customer-1 is its admin; buyer-1 and buyer-9 are plain members.
+    private static IPartyMembershipService AccountMembership()
+        => AccountMembershipFixture.CreateMembership(
+            "acct-1",
+            ("customer-1", AccountMemberRole.Admin),
+            ("buyer-1", AccountMemberRole.Member),
+            ("buyer-9", AccountMemberRole.Member));
+
+    private static TransactionCustomerPageService CreateService(FakeTransactionStore store, params Permission[] granted)
+        => CreateService(store, withDocumentBuilders: true, membership: null, granted);
+
+    private static TransactionCustomerPageService CreateService(FakeTransactionStore store, bool withDocumentBuilders, IPartyMembershipService membership, params Permission[] granted)
     {
         var services = new ServiceCollection();
 
@@ -359,6 +440,7 @@ public sealed class TransactionCustomerPageServiceTests
             payLinks.Object,
             new HttpContextAccessor { HttpContext = new DefaultHttpContext() },
             linkGenerator.Object,
+            new DefaultTransactionVisibilityService(membership ?? Mock.Of<IPartyMembershipService>()),
             services.BuildServiceProvider());
     }
 

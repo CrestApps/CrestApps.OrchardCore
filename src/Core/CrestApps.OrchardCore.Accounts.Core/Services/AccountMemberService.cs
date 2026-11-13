@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Accounts.Indexes;
+using CrestApps.OrchardCore.Accounts.Models;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Accounts.Services;
@@ -74,5 +76,22 @@ public sealed class AccountMemberService : IAccountMemberService
             .Select(row => row.UserId)
             .Where(userId => !string.IsNullOrEmpty(userId))
             .Distinct(StringComparer.Ordinal)];
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<AccountMember>> GetMembersAsync(string accountId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(accountId))
+        {
+            return [];
+        }
+
+        var account = await _session
+            .Query<ContentItem, ContentItemIndex>(index => index.ContentItemId == accountId && index.Published)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return account is not null && account.TryGet<AccountMembersPart>(out var part)
+            ? [.. (part.Members ?? []).Where(member => !string.IsNullOrEmpty(member?.UserId))]
+            : [];
     }
 }

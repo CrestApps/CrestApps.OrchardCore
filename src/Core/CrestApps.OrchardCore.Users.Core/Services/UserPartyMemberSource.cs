@@ -19,4 +19,14 @@ public sealed class UserPartyMemberSource : IPartyMemberSource
     /// <inheritdoc/>
     public Task<IReadOnlyList<PartyRef>> GetPartiesAsync(string userId, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<PartyRef>>(string.IsNullOrEmpty(userId) ? [] : [new PartyRef(PartyKinds.User, userId)]);
+
+    /// <inheritdoc/>
+    /// <remarks>The one member has every access level.</remarks>
+    public Task<IReadOnlyList<string>> GetMemberUserIdsAsync(PartyRef party, PartyAccess access, CancellationToken cancellationToken = default)
+        => GetMemberUserIdsAsync(party, cancellationToken);
+
+    /// <inheritdoc/>
+    /// <remarks>The one member has every access level.</remarks>
+    public Task<IReadOnlyList<PartyRef>> GetPartiesAsync(string userId, PartyAccess access, CancellationToken cancellationToken = default)
+        => GetPartiesAsync(userId, cancellationToken);
 }

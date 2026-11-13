@@ -82,12 +82,23 @@ A user acts for themselves even when no source of users is registered.
 
 | Kind | Members | Source | Registered by |
 | --- | --- | --- | --- |
-| `User` | The user | `UserPartyMemberSource` | The CrestApps Users module |
-| `Customer` | The user the record belongs to; a guest's record has none | `CustomerPartyMemberSource` | Customers |
-| `Account` | The account's members | `AccountPartyMemberSource` (`IAccountMemberService.GetMemberUserIdsAsync`) | Account Members |
+| `User` | The user, with billing access | `UserPartyMemberSource` | The CrestApps Users module |
+| `Customer` | The user the record belongs to, with billing access; a guest's record has none | `CustomerPartyMemberSource` | Customers |
+| `Account` | The account's members; billing access for its admins only | `AccountPartyMemberSource` (`IAccountMemberService.GetMemberUserIdsAsync` and `GetMembersAsync`) | Account Members |
 | `Contact` | None | | |
 
 Register a source with `services.AddPartyMemberSource<T>()`, or the service alone with `services.AddPartyMembership()`.
+
+### Access levels: member and billing
+
+Membership has levels (`PartyAccess`), and each method above has an overload that takes one. The overloads without a level answer for `PartyAccess.Member`.
+
+- `Member` acts for the party in what they do themselves, such as an order placed in its name. Every member of an account, a plain buyer too, has it.
+- `Billing` also sees and settles the party's money: everything it owes (invoices, balances, statements), its receipts, paying for it and the payment methods it keeps. A user has it for their own user party and for their customer record; of an account, **only its admins** (`AccountMemberRole.Admin`) have it.
+
+**The rule for money:** anything that shows or settles a party's money asks for `PartyAccess.Billing`, never for plain membership. The Transactions customer pages do so through `ITransactionVisibilityService`, so a plain member of a business account sees the transactions they own, also those billed to the account, while an admin of the account sees all of the account's. The same holds for the invoice portal, paying several invoices at once and saved payment methods.
+
+A source says who has billing access by overriding `GetMemberUserIdsAsync(party, access)` and `GetPartiesAsync(userId, access)`. Their default implementations grant it to no one, so a source that does not override them never opens a party's money to its members by mistake.
 
 ## Consumers
 

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
@@ -69,6 +70,56 @@ public sealed class PartyMembershipServiceTests
         Assert.Empty(await service.GetMemberUserIdsAsync(new PartyRef(PartyKinds.Customer, "guest-1"), cancellationToken));
     }
 
+    [Fact]
+    public async Task BillingAccess_OfAnAccount_IsForItsAdminsOnly_WhilePlainMembershipCoversEveryMember()
+    {
+        // Arrange
+        var service = AccountMembershipFixture.CreateMembership("account-1", ("admin-1", AccountMemberRole.Admin), ("buyer-1", AccountMemberRole.Member));
+        var account = new PartyRef(PartyKinds.Account, "account-1");
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Act & Assert
+        Assert.True(await service.IsMemberAsync(account, "admin-1", PartyAccess.Billing, cancellationToken));
+        Assert.False(await service.IsMemberAsync(account, "buyer-1", PartyAccess.Billing, cancellationToken));
+        Assert.True(await service.IsMemberAsync(account, "buyer-1", cancellationToken));
+        Assert.Equal(["admin-1"], await service.GetMemberUserIdsAsync(account, PartyAccess.Billing, cancellationToken));
+        Assert.Equal(["admin-1", "buyer-1"], await service.GetMemberUserIdsAsync(account, cancellationToken));
+        Assert.Contains(account, await service.GetPartiesAsync("admin-1", PartyAccess.Billing, cancellationToken));
+        Assert.DoesNotContain(account, await service.GetPartiesAsync("buyer-1", PartyAccess.Billing, cancellationToken));
+        Assert.Contains(account, await service.GetPartiesAsync("buyer-1", cancellationToken));
+    }
+
+    [Fact]
+    public async Task BillingAccess_OfTheirOwnUserAndCustomer_IsTheUsers()
+    {
+        // Arrange
+        var service = CreateService();
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Act
+        var parties = await service.GetPartiesAsync(UserId, PartyAccess.Billing, cancellationToken);
+
+        // Assert
+        Assert.Contains(new PartyRef(PartyKinds.User, UserId), parties);
+        Assert.Contains(new PartyRef(PartyKinds.Customer, "customer-1"), parties);
+        Assert.True(await service.IsMemberAsync(new PartyRef(PartyKinds.Customer, "customer-1"), UserId, PartyAccess.Billing, cancellationToken));
+        Assert.True(await service.IsMemberAsync(new PartyRef(PartyKinds.User, UserId), UserId, PartyAccess.Billing, cancellationToken));
+    }
+
+    [Fact]
+    public async Task BillingAccess_FromASourceThatDoesNotGrantIt_IsNobodys()
+    {
+        // Arrange: a source that only knows plain members.
+        var service = new PartyMembershipService([new PlainMembersSource()]);
+        var club = new PartyRef("Club", "club-1");
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Act & Assert
+        Assert.True(await service.IsMemberAsync(club, UserId, cancellationToken));
+        Assert.False(await service.IsMemberAsync(club, UserId, PartyAccess.Billing, cancellationToken));
+        Assert.DoesNotContain(club, await service.GetPartiesAsync(UserId, PartyAccess.Billing, cancellationToken));
+    }
+
     private static PartyMembershipService CreateService()
     {
         var customers = new InMemoryCustomerStore();
@@ -89,5 +140,17 @@ public sealed class PartyMembershipServiceTests
             new CustomerPartyMemberSource(customers),
             new AccountPartyMemberSource(accountMembers.Object),
         ]);
+    }
+
+    // Knows only plain members, so it relies on the interface's default, which grants billing access to no one.
+    private sealed class PlainMembersSource : IPartyMemberSource
+    {
+        public string Kind => "Club";
+
+        public Task<IReadOnlyList<string>> GetMemberUserIdsAsync(PartyRef party, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<string>>([UserId]);
+
+        public Task<IReadOnlyList<PartyRef>> GetPartiesAsync(string userId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<PartyRef>>([new PartyRef("Club", "club-1")]);
     }
 }

@@ -48,7 +48,7 @@ payments and refunds** permission rather than coming free with the ability to re
 
 ## Customer pages in the site theme
 
-Besides the customer pages in the admin, a signed-in customer can open their statement at `my-transactions`, an invoice at `my-transactions/invoices/{itemId}` and a payment's receipt at `my-transactions/receipts/{itemId}/{paymentId}`, in the site theme. Each page renders a shape a theme can override: `TransactionStatement`, `TransactionInvoice` and `TransactionReceipt`. `ITransactionCustomerPageService` (Transactions.Abstractions) builds their models with the same ownership checks as the admin pages, so another module can show them in its own pages; `ITransactionInvoiceBuilder` and `ITransactionReceiptBuilder` live in the abstractions too.
+Besides the customer pages in the admin, a signed-in customer can open their statement at `my-transactions`, an invoice at `my-transactions/invoices/{itemId}` and a payment's receipt at `my-transactions/receipts/{itemId}/{paymentId}`, in the site theme. Each page renders a shape a theme can override: `TransactionStatement`, `TransactionInvoice` and `TransactionReceipt`. `ITransactionCustomerPageService` (Transactions.Abstractions) builds their models with the same ownership checks as the admin pages (`ITransactionVisibilityService`: what the user owns and what the parties they have billing access to, such as an account they are an admin of, owe), so another module can show them in its own pages; `ITransactionInvoiceBuilder` and `ITransactionReceiptBuilder` live in the abstractions too.
 
 Set `CrestApps:Transactions:CustomerPages:LinkTarget` to `Site` to make the links in receipt and reminder messages open these pages instead of the admin ones.
 

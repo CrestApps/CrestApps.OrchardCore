@@ -22,6 +22,7 @@ public sealed class TransactionCustomerPageService : ITransactionCustomerPageSer
     private readonly ITransactionPayLinkService _payLinks;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
+    private readonly ITransactionVisibilityService _visibility;
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
@@ -32,6 +33,7 @@ public sealed class TransactionCustomerPageService : ITransactionCustomerPageSer
     /// <param name="payLinks">The service that creates signed pay links.</param>
     /// <param name="httpContextAccessor">The accessor for the current request, used to link the statement's documents.</param>
     /// <param name="linkGenerator">The link generator.</param>
+    /// <param name="visibility">The rule of which transactions a user may see: their own and those of the parties they act for.</param>
     /// <param name="serviceProvider">
     /// The service provider the optional invoice and receipt builders are resolved from. They are registered only
     /// while the Receipts module is enabled.
@@ -42,6 +44,7 @@ public sealed class TransactionCustomerPageService : ITransactionCustomerPageSer
         ITransactionPayLinkService payLinks,
         IHttpContextAccessor httpContextAccessor,
         LinkGenerator linkGenerator,
+        ITransactionVisibilityService visibility,
         IServiceProvider serviceProvider)
     {
         _transactionManager = transactionManager;
@@ -49,6 +52,7 @@ public sealed class TransactionCustomerPageService : ITransactionCustomerPageSer
         _payLinks = payLinks;
         _httpContextAccessor = httpContextAccessor;
         _linkGenerator = linkGenerator;
+        _visibility = visibility;
         _serviceProvider = serviceProvider;
     }
 
@@ -73,13 +77,10 @@ public sealed class TransactionCustomerPageService : ITransactionCustomerPageSer
             return TransactionCustomerPageResult<TransactionStatementViewModel>.Forbidden();
         }
 
-        var query = new TransactionQuery
-        {
-            OwnerId = userId,
-            OwnerKind = CustomerOwnerKind.Authenticated,
-            Search = request.Search,
-            OutstandingOnly = request.OutstandingOnly,
-        };
+        // Their own transactions and those owed by the parties they act for, such as their account.
+        var query = await _visibility.CreateQueryAsync(userId, cancellationToken);
+        query.Search = request.Search;
+        query.OutstandingOnly = request.OutstandingOnly;
 
         var page = Math.Max(1, request.Page);
         var pageSize = request.PageSize > 0
@@ -149,7 +150,7 @@ public sealed class TransactionCustomerPageService : ITransactionCustomerPageSer
         // probed. An invoice exists only once the customer was sent one.
         if (transaction is null ||
             string.IsNullOrEmpty(transaction.InvoiceNumber) ||
-            (!canManage && !IsOwnedBy(user, transaction)))
+            (!canManage && !await _visibility.CanViewAsync(transaction, GetUserId(user), cancellationToken)))
         {
             return TransactionCustomerPageResult<TransactionInvoiceViewModel>.NotFound();
         }
@@ -193,7 +194,7 @@ public sealed class TransactionCustomerPageService : ITransactionCustomerPageSer
 
         // A customer only ever sees a receipt for their own money. Answering "not found" rather than "forbidden"
         // for someone else's transaction keeps the identifiers from being probed.
-        if (transaction is null || (!canManage && !IsOwnedBy(user, transaction)))
+        if (transaction is null || (!canManage && !await _visibility.CanViewAsync(transaction, GetUserId(user), cancellationToken)))
         {
             return TransactionCustomerPageResult<TransactionReceiptViewModel>.NotFound();
         }
@@ -221,21 +222,6 @@ public sealed class TransactionCustomerPageService : ITransactionCustomerPageSer
             Receipt = receipt,
             IsAdministrator = canManage,
         });
-    }
-
-    /// <summary>
-    /// Returns whether <paramref name="user"/> is the signed-up customer who owns <paramref name="transaction"/>. A guest
-    /// transaction is never owned by an account, even one that happens to share its identifier.
-    /// </summary>
-    /// <param name="user">The viewer.</param>
-    /// <param name="transaction">The transaction.</param>
-    private static bool IsOwnedBy(ClaimsPrincipal user, Transaction transaction)
-    {
-        var userId = GetUserId(user);
-
-        return !string.IsNullOrEmpty(userId) &&
-            transaction.OwnerKind == CustomerOwnerKind.Authenticated &&
-            string.Equals(transaction.OwnerId, userId, StringComparison.Ordinal);
     }
 
     private static string GetUserId(ClaimsPrincipal user)

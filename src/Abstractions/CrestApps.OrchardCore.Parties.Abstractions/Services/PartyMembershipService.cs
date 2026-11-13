@@ -4,7 +4,8 @@ namespace CrestApps.OrchardCore.Parties.Services;
 
 /// <summary>
 /// The default <see cref="IPartyMembershipService"/>: it asks every <see cref="IPartyMemberSource"/> of the party's kind,
-/// and treats a user as the one member of their own user party. Kinds compare without case; user ids compare exactly.
+/// and treats a user as the one member of their own user party, with every access level. Kinds compare without case; user
+/// ids compare exactly.
 /// </summary>
 public sealed class PartyMembershipService : IPartyMembershipService
 {
@@ -20,7 +21,11 @@ public sealed class PartyMembershipService : IPartyMembershipService
     }
 
     /// <inheritdoc/>
-    public async Task<bool> IsMemberAsync(PartyRef party, string userId, CancellationToken cancellationToken = default)
+    public Task<bool> IsMemberAsync(PartyRef party, string userId, CancellationToken cancellationToken = default)
+        => IsMemberAsync(party, userId, PartyAccess.Member, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<bool> IsMemberAsync(PartyRef party, string userId, PartyAccess access, CancellationToken cancellationToken = default)
     {
         if (party.IsEmpty || string.IsNullOrEmpty(userId))
         {
@@ -32,13 +37,17 @@ public sealed class PartyMembershipService : IPartyMembershipService
             return true;
         }
 
-        var members = await GetMemberUserIdsAsync(party, cancellationToken);
+        var members = await GetMemberUserIdsAsync(party, access, cancellationToken);
 
         return members.Contains(userId, StringComparer.Ordinal);
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<string>> GetMemberUserIdsAsync(PartyRef party, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<string>> GetMemberUserIdsAsync(PartyRef party, CancellationToken cancellationToken = default)
+        => GetMemberUserIdsAsync(party, PartyAccess.Member, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<string>> GetMemberUserIdsAsync(PartyRef party, PartyAccess access, CancellationToken cancellationToken = default)
     {
         if (party.IsEmpty)
         {
@@ -55,7 +64,7 @@ public sealed class PartyMembershipService : IPartyMembershipService
 
         foreach (var source in SourcesOf(party.Kind))
         {
-            foreach (var userId in await source.GetMemberUserIdsAsync(party, cancellationToken) ?? [])
+            foreach (var userId in await source.GetMemberUserIdsAsync(party, access, cancellationToken) ?? [])
             {
                 if (!string.IsNullOrEmpty(userId) && seen.Add(userId))
                 {
@@ -68,7 +77,11 @@ public sealed class PartyMembershipService : IPartyMembershipService
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<PartyRef>> GetPartiesAsync(string userId, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<PartyRef>> GetPartiesAsync(string userId, CancellationToken cancellationToken = default)
+        => GetPartiesAsync(userId, PartyAccess.Member, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<PartyRef>> GetPartiesAsync(string userId, PartyAccess access, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(userId))
         {
@@ -86,7 +99,7 @@ public sealed class PartyMembershipService : IPartyMembershipService
                 continue;
             }
 
-            foreach (var party in await source.GetPartiesAsync(userId, cancellationToken) ?? [])
+            foreach (var party in await source.GetPartiesAsync(userId, access, cancellationToken) ?? [])
             {
                 if (!party.IsEmpty && seen.Add(party))
                 {

@@ -222,6 +222,8 @@ A reminder you send by hand counts toward **Maximum reminders**, and the next sc
 
 Customers see and pay their own balances on **My Transactions**. Every signed-in user has the **View own transactions** permission by default.
 
+An **admin** of a business account also sees what the account owes, whoever in the account placed the order, and can open its invoices and receipts and pay them. A buyer of the account who is not an admin sees only the orders they placed, also when the account is billed for them. Nobody sees what another account owes.
+
 | | |
 | --- | --- |
 | **Menu** | Commerce > My Transactions |

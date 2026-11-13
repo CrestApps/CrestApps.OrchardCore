@@ -187,10 +187,12 @@ it to the `Account` type at position 4; another account type can be given the pa
   of each version.
 - **Lookup.** `IAccountMemberService.FindAccountAsync(userId)` returns the published account a user signs in for;
   `FindOtherAccountIdAsync(userId, exceptAccountId)` tells an editor the user already belongs to another one;
-  `GetMemberUserIdsAsync(accountId)` returns the user ids of the members of the published account.
+  `GetMemberUserIdsAsync(accountId)` returns the user ids of the members of the published account, and
+  `GetMembersAsync(accountId)` its members with their roles.
 - **Party members.** The feature registers `AccountPartyMemberSource`, so `IPartyMembershipService` (see
-  [Parties](parties.md#who-may-act-for-a-party)) answers that an account's members act for it, such as in a billing
-  portal.
+  [Parties](parties.md#who-may-act-for-a-party)) answers that an account's members act for it. Only its admins have
+  billing access (`PartyAccess.Billing`): they see and settle what the account owes, while a plain member (a buyer)
+  sees only what they own, as on the business account page.
 - **Contacts.** When an account is saved, each member is linked to the account's contact with their email, through the
   registered `IAccountContactFinder`s. The CRM registers one that matches a contact's primary email among the contacts
   in the account. A member with no match, or more than one, has no contact.
