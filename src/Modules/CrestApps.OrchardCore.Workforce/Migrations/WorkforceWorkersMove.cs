@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Core.Handlers;
 using CrestApps.OrchardCore.Staff.Core.Indexes;
 using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
+using Microsoft.AspNetCore.DataProtection;
 using YesSql;
 using YesSql.Sql;
 
@@ -15,13 +17,15 @@ namespace CrestApps.OrchardCore.Workforce.Migrations;
 /// Moves Workforce workers into the Staff collection as staff members with the same ids, so every stored worker id
 /// (punches, timesheets, shifts, time off, visits, territories, skills) still points at the same person. Workforce's
 /// own values go to <see cref="WorkforceStaffSettings"/>, pay rates to <see cref="StaffPayRates"/> and the kiosk PIN to
-/// <see cref="StaffBadge"/>. The old index tables stay, empty; the old documents are deleted once copied.
+/// <see cref="StaffBadge"/>. The old index tables stay, empty; the old documents are deleted once copied. A feed secret
+/// stored in plain text gets its hash and protected copy as the worker moves: the portal's own backfill may have run
+/// before the move, on the start that turned Staff on, and found no worker to upgrade.
 /// </summary>
 internal static class WorkforceWorkersMove
 {
     public const string LegacyTypeName = "CrestApps.OrchardCore.Workforce.Models.WorkerProfile, CrestApps.OrchardCore.Workforce.Abstractions";
 
-    public static async Task<IReadOnlyList<StaffMember>> MoveAsync(ISchemaBuilder schemaBuilder, IStore store, ISession session)
+    public static async Task<IReadOnlyList<StaffMember>> MoveAsync(ISchemaBuilder schemaBuilder, IStore store, ISession session, IDataProtectionProvider dataProtectionProvider = null)
     {
         ArgumentNullException.ThrowIfNull(schemaBuilder);
         ArgumentNullException.ThrowIfNull(store);
@@ -60,6 +64,11 @@ internal static class WorkforceWorkersMove
             if (Convert(content, store.Configuration.ContentSerializer) is not { } staff || string.IsNullOrEmpty(staff.ItemId) || !existingIds.Add(staff.ItemId))
             {
                 continue;
+            }
+
+            if (dataProtectionProvider is not null)
+            {
+                WorkerFeedTokenBackfill.Upgrade(staff, dataProtectionProvider);
             }
 
             await session.SaveAsync(staff, false, StaffConstants.CollectionName);
