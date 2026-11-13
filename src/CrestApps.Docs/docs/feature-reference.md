@@ -289,6 +289,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.AgenticCommerce.Ap2` | Agent Payments Protocol (Preview) | [Agentic Commerce](./modules/agentic-commerce#ap2-mandates-preview) |
 | `CrestApps.OrchardCore.Webhooks` | Webhooks | [Webhooks](./modules/webhooks#outbound-webhooks) |
 | `CrestApps.OrchardCore.PointOfSale` | Point of Sale | [Point of Sale](./modules/point-of-sale) |
+| `CrestApps.OrchardCore.PointOfSale.WebRegister` | Point of Sale Web Register | [Point of Sale](./modules/point-of-sale#web-register) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
 | `CrestApps.OrchardCore.Receipts` | Receipts | [Receipts](./modules/receipts) |
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |

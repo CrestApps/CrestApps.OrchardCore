@@ -1,20 +1,20 @@
 ---
 sidebar_label: Point of Sale
 title: Point of Sale
-description: Registers at inventory locations, shifts with a counted cash drawer, counter sales as orders on the checkout framework with a cash tender and a counter-card payment method, receipts, returns at the till, and the point-of-sale API a till app calls, with Stripe Terminal readers.
+description: Registers at inventory locations, shifts with a counted cash drawer, counter sales as orders on the checkout framework with a cash tender and a counter-card payment method, department sales without items, receipts, returns at the till, the point-of-sale API a till app calls, Stripe Terminal readers, and the web register.
 user_manual: user-manual/commerce/point-of-sale
 ---
 
 | | |
 | --- | --- |
-| **Feature** | `CrestApps.OrchardCore.PointOfSale` (Point of Sale) |
+| **Feature** | `CrestApps.OrchardCore.PointOfSale` (Point of Sale); `CrestApps.OrchardCore.PointOfSale.WebRegister` (Point of Sale Web Register) |
 | **Category** | Commerce |
 | **Depends on** | Commerce, Orders, Inventory, Checkout API |
 | **Works with** | Receipts (printed and emailed receipts), Customers (a named buyer), Gift Cards, Stripe (Terminal readers) |
 
 <YouTube video="point-of-sale" title="Narrated video overview of Point of sale" />
 
-The **Point of Sale** feature sells at a store's counter from a till app over the [commerce API](commerce-api.md). A sale is an order on the ordinary checkout framework, so prices, coupons, gift cards, tax, stock holds, order events and reports work as they do online. The module adds what a counter needs: registers, shifts with their cash, a cash tender, a payment method for the store's own card terminal, receipts, and returns at the till.
+The **Point of Sale** feature sells at a store's counter from a till app over the [commerce API](commerce-api.md). A sale is an order on the ordinary checkout framework, so prices, coupons, gift cards, tax, stock holds, order events and reports work as they do online. The module adds what a counter needs: registers, shifts with their cash, a cash tender, a payment method for the store's own card terminal, [departments](#departments) for amounts sold without an item to track, receipts, and returns at the till. The **Point of Sale Web Register** feature adds a register page in the admin, so a store can sell without a till app ([Web register](#web-register)).
 
 <YouTube video="point-of-sale-till" title="Narrated video of a day at the till and what the manager sees" />
 
@@ -22,11 +22,31 @@ The **Point of Sale** feature sells at a store's counter from a till app over th
 
 Registers and shifts live in the `PointOfSale` YesSql collection.
 
-- **`Register`** (`RegisterIndex`): `Name`, `LocationId` (an inventory location), `Address` (an `Address`, which sales are taxed by and billed to), `Currency` (empty sells in the products' own currency), `Roles` (empty lets anyone who may sell at a register), `IsEnabled`, `CreatedUtc`, `ModifiedUtc`.
+- **`Register`** (`RegisterIndex`): `Name`, `LocationId` (an inventory location), `Address` (an `Address`, which sales are taxed by and billed to), `Currency` (empty sells in the products' own currency), `Roles` (empty lets anyone who may sell at a register), `IsEnabled`, `Keys` (its department keys, each a `RegisterKey`: `DepartmentId`, `Label`, `PresetAmount`; empty shows a key for every department that's on), `CreatedUtc`, `ModifiedUtc`.
+- **`PosDepartment`** (`PosDepartmentIndex`): `Name`, `Number` (unique when given; order lines keep it as their SKU), `TaxCategoryCode` (empty uses the store's default rate), `Color` (its key's hex color), `MinimumAmount` and `MaximumAmount` (the limits of one ring-up), `Position`, `IsEnabled`, `CreatedUtc`, `ModifiedUtc`.
 - **`RegisterShift`** (`RegisterShiftIndex`): `RegisterId`, `RegisterName`, `LocationId`, `Currency`, `Status` (`Open` or `Closed`), who opened and closed it and when, `OpeningFloat`, `CashMovements` (each a `RegisterCashMovement`: `Amount`, positive in and negative out, `Reason`, who and when), and at the close `CountedCash`, `ExpectedCash`, `CloseNote` and `Summary`.
-- **`RegisterShiftSummary`**: `Sales`, `Total`, `Cash` (kept: handed over less change), `Card`, `Other` (gift cards and other balances) and `Refunded` (refunds of the shift's sales). `PosShiftService.SummarizeAsync` works it out from the shift's paid orders (`OrderQuery.ShiftId`); a closed shift keeps it.
+- **`RegisterShiftSummary`**: `Sales`, `Total`, `Cash` (kept: handed over less change), `Card`, `Other` (gift cards and other balances), `Refunded` (refunds of the shift's sales), `Tax` (the sales' `TaxAmount`) and `Departments` (each a `RegisterShiftDepartmentTotal`: `DepartmentId`, `Name`, `Quantity` and `Total` before tax, largest first). `PosShiftService.SummarizeAsync` works it out from the shift's paid orders (`OrderQuery.ShiftId`); a closed shift keeps it.
 
 `RegisterShift.GetExpectedCash(cashKept)` is the float, plus the cash kept for sales, plus the cash movements.
+
+## Departments
+
+A department is what a register rings an amount up in when there's no item to track, as on a cash register: $10.00 keyed in and **Candy** pressed is $10.00 of candy sales. Departments are records of the module (`IPosDepartmentStore`), not content items, so they never show in the online catalog, its search, feeds or agent catalogs.
+
+A sale line with a `DepartmentId` and an `Amount` (`PosSaleLine`) is checked by `PosDepartments.CheckAmount` (the department is on, the amount is more than zero, in whole cents, and within its limits) and priced as keyed in by `PosDepartmentLines.Price`, without `ICartService`. It joins the sale's product lines on the order as an `OrderLine` with:
+
+| Field | Value |
+| --- | --- |
+| `ContentItemId` | The department's id (no content item has it) |
+| `ContentType` | `PosDepartment` (`PosConstants.DepartmentLineType`); `PosDepartmentLines.IsDepartmentLine` tells such a line |
+| `Title`, `Sku` | The department's name and number |
+| `UnitPrice`, `Quantity`, `LineTotal` | The amount keyed in, how many (3 × 1.50 is three at 1.50), and their product |
+| `TaxCategoryCode` | The department's tax category, which the checkout taxes the line by (`CheckoutTaxContextFactory` reads it off the line) |
+| `ProductType` | `Undefined`, so the line never counts as shipping |
+
+Nothing downstream needs a content item for it: Inventory finds no stock item for the id, so nothing is held, sold or restocked; refunds, receipts and reports read the line; store-wide coupons apply to it, while product and category coupons don't match it. Review request emails (`ReviewRequestService`) skip a line whose content type the site doesn't have. Webhooks and the orders API show the department's id as the line's `productId`, and the sales reports list a department as a product.
+
+`PosShiftService.SummarizeAsync` adds up each department's lines into the shift's `Departments`, with the tax collected, for the shift report.
 
 ## Orders and the checkout
 
@@ -72,11 +92,12 @@ It commits that, then starts the order's checkout with `ICheckoutEngine.StartAsy
 | Method | Path | What it does |
 | --- | --- | --- |
 | `GET` | `pos/registers` | The registers the caller may sell at (`ApiRegister`, with `openShiftId`). |
+| `GET` | `pos/registers/{registerId}/keys` | Its department keys, in order (`ApiRegisterKey`: `departmentId`, `label`, `number`, `color`, `presetAmount`, `minimumAmount`, `maximumAmount`). |
 | `POST` | `pos/registers/{registerId}/shifts` | Opens a shift (`openingFloat`); `409 shift-open` when one is open. Idempotent. |
-| `GET` | `pos/shifts/{shiftId}` | The shift (`ApiShift`), with its summary and expected cash. |
+| `GET` | `pos/shifts/{shiftId}` | The shift (`ApiShift`), with its summary, the `tax` collected, what each department rang up (`departments`) and its expected cash. |
 | `POST` | `pos/shifts/{shiftId}/cash` | A cash movement (`amount`, `reason`); `409 shift-closed`. Idempotent. |
 | `POST` | `pos/shifts/{shiftId}/close` | Closes it with `countedCash` and `note`. |
-| `POST` | `pos/sales` | Rings up `lines` (`PosSaleLine`: `productId`, `variantId`, `priceId`, `quantity`, `addOns`) for a `customerId`, or a `customerEmail` and `customerName`; `201` with `orderId`, `orderNumber` and the `checkout` (`ApiCheckout`); `400` on `customerId` when it isn't a customer, `409 shift-closed` without an open shift. Idempotent. |
+| `POST` | `pos/sales` | Rings up `lines` (`PosSaleLine`: `productId`, `variantId`, `priceId`, `quantity`, `addOns`; or `departmentId`, `amount` and `quantity` for an amount in a department) for a `customerId`, or a `customerEmail` and `customerName`; `201` with `orderId`, `orderNumber` and the `checkout` (`ApiCheckout`); `400` on `customerId` when it isn't a customer, `409 shift-closed` without an open shift. Idempotent. |
 | `POST` | `pos/sales/{checkoutId}/pay` | `cash`, then `card` (`approvalCode`) or `reader` (`readerId`); answers `ApiPosPayment` with `status` `completed`, `due` or `pending`, `amountDue`, `change` and, once completed, `receipt`; `{}` asks whether a reader's payment is done. `409 shift-closed` once the sale's shift has closed; `409 not-available` for a declined reader payment. Idempotent. |
 | `GET` | `pos/sales/{orderId}/receipt` | The receipt's HTML; `409 unsupported` without Receipts. |
 | `POST` | `pos/sales/{orderId}/receipt/email` | Emails it to `email`; `204`. |
@@ -164,7 +185,7 @@ Content-Type: application/json
 }
 ```
 
-Each line is a product, with `variantId`, `priceId` and `addOns` as for adding it to a cart. Name the buyer with `customerId` when staff look them up, so the sale is on their account and earns them points (an id that isn't a customer answers `400`); or give a walk-in buyer's `customerEmail` and `customerName`, for their receipt; or neither.
+Each line is a product, with `variantId`, `priceId` and `addOns` as for adding it to a cart, or an amount rung up in a department: `{ "departmentId": "4dp00000000000000000000004", "amount": 1.50, "quantity": 3 }` is three at 1.50 in that department, from the register's keys (`GET pos/registers/{registerId}/keys`). An amount outside the department's limits answers `409` with what's wrong. Name the buyer with `customerId` when staff look them up, so the sale is on their account and earns them points (an id that isn't a customer answers `400`); or give a walk-in buyer's `customerEmail` and `customerName`, for their receipt; or neither.
 
 The answer is `201 Created`:
 
@@ -314,14 +335,43 @@ Content-Type: application/json
 
 `GET pos/shifts/9s4m2k7x` gives the same at any time while it's open, so the till can show how the day is going.
 
+## Web register
+
+The **Point of Sale Web Register** feature (`CrestApps.OrchardCore.PointOfSale.WebRegister`) adds **Commerce > Point of sale > Web register** (`pos-register`, `WebRegisterController`, for **Sell at a register**). It lists the registers the user may sell at, or opens the only one, at `pos-register/Till/{registerId}`. The page calls the controller's JSON actions with the admin cookie and an antiforgery token (`RequestVerificationToken` header), and they call the same services as the API, so its sales are the same orders and checkouts:
+
+| Action | What it does |
+| --- | --- |
+| `GET Shift` | The open shift, as the shift report reads it, or none. |
+| `POST OpenShift`, `MoveCash`, `CloseShift` | `PosShiftService.OpenAsync`, `MoveCashAsync` and `CloseAsync`. |
+| `GET Product?sku=` | Finds a published product or variant by SKU (`ProductSkuIndex`) and prices it at the register. |
+| `POST Sale` | `PosSaleService.StartAsync` with the ticket's department and product lines; answers the checkout's id with the subtotal, discount, tax, total and amount due. |
+| `POST Pay` | `PosSaleService.PayAsync` with the cash handed over and/or a card on the counter terminal (`approvalCode`). |
+| `POST Cancel` | Voids an unpaid sale: `ICheckoutEngine.CancelAsync`, which cancels its order. |
+| `GET Receipt?orderId=` | The branded receipt (`PosReceipts.RenderAsync`) with Receipts on; otherwise a plain till receipt, sized for an 80 mm receipt printer. |
+
+Amounts are keyed in as on a cash register, cents first, and `×` multiplies. The page's script is `Assets/js/web-register.js`. The web register doesn't name a customer, take codes or gift cards, use Stripe readers, or take returns: a till app does those through the API.
+
 ## Admin
 
-- **Commerce > Point of sale > Registers** (`point-of-sale/registers`, `RegistersAdminController`) lists registers through the `AdminList` shape, with **Add register** and each register's editor.
+- **Commerce > Point of sale > Registers** (`point-of-sale/registers`, `RegistersAdminController`) lists registers through the `AdminList` shape, with **Add register** and each register's editor. Its **Department keys** card programs the register's keys: a department, what the key reads, and a preset amount, in order.
+- **Commerce > Point of sale > Departments** (`pos-departments`, `PosDepartmentsAdminController`) lists departments through the `AdminList` shape, with **Add department**, each department's editor (its tax category is picked from Taxation's categories when Taxation is on), and **Delete**. A deleted department's sales keep its name.
 - **Commerce > Point of sale > Shifts** (`point-of-sale/shifts`) lists shifts, newest first, with a register filter in the list toolbar; a shift's page shows its sales by tender and its cash drawer (float, put in less taken out, expected, counted, difference), its cash movements and its close note.
 
 ## Recipes and deployment
 
-The `Registers` recipe step (`RegistersStep`) creates or updates registers. A register is matched by its `ItemId`, then by its name, so running a recipe twice changes nothing. It is checked as on the admin screen: a name, a store location that exists (import the [stock locations](./inventory.md) first), an address with a street, a city and a two-letter country, and a three-letter currency or none. The **Registers** deployment step (`RegistersDeploymentStep`, *Commerce*) writes every register; shifts and sales stay on the site.
+The `PosDepartments` recipe step (`PosDepartmentsStep`) creates or updates departments, matched by `ItemId`, then by name, and checked as on the admin screen (a name, a unique number, a hex color, the least amount no more than the most). The **Register departments** deployment step (`PosDepartmentsDeploymentStep`, *Commerce*) writes every department. Import departments before the registers whose keys name them.
+
+```json
+{
+  "name": "PosDepartments",
+  "PosDepartments": [
+    { "ItemId": "4dp00000000000000000000004", "Name": "Candy", "Number": "4", "TaxCategoryCode": "Candy",
+      "Color": "#C2185B", "MaximumAmount": 50, "Position": 4, "IsEnabled": true }
+  ]
+}
+```
+
+The `Registers` recipe step (`RegistersStep`) creates or updates registers, with their `Keys`. A register is matched by its `ItemId`, then by its name, so running a recipe twice changes nothing. It is checked as on the admin screen: a name, a store location that exists (import the [stock locations](./inventory.md) first), an address with a street, a city and a two-letter country, and a three-letter currency or none. The **Registers** deployment step (`RegistersDeploymentStep`, *Commerce*) writes every register; shifts and sales stay on the site.
 
 ```json
 {
@@ -338,8 +388,8 @@ The `Registers` recipe step (`RegistersStep`) creates or updates registers. A re
 
 | Permission | Allows |
 | --- | --- |
-| **Sell at a register** (`SellAtRegister`) | The point-of-sale API at the registers the user's roles may use: shifts, sales, payments, receipts and returns. |
-| **Manage registers and shifts** (`ManageRegisters`) | The registers and shifts admin pages, selling at every register, and pairing Stripe readers. |
+| **Sell at a register** (`SellAtRegister`) | The point-of-sale API and the web register at the registers the user's roles may use: shifts, sales, payments, receipts and returns. The web register is an admin page, so its users also need **Access admin panel**. |
+| **Manage registers and shifts** (`ManageRegisters`) | The registers, shifts and departments admin pages, selling at every register, and pairing Stripe readers. |
 
 Administrators have both by default.
 
