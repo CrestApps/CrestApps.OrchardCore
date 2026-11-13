@@ -59,14 +59,14 @@ public sealed class ChatSessionDocumentUploadGuardTests
     /// <summary>
     /// The package's session-start limiter counts anonymous visitors only, so without Orchard Core's Rate Limits a
     /// signed-in caller could start upload sessions in a loop. Each signed-in user is held to the
-    /// <see cref="ChatSessionDocumentUploadOptions.SessionStartPolicyName"/> attempt policy.
+    /// <see cref="ChatSessionDocumentUploadOptions.UploadPolicyName"/> attempt policy.
     /// </summary>
     [Fact]
     public async Task InvokeAsync_ASignedInCallerPastTheSessionStartQuota_Answers429()
     {
         var limiter = new Mock<IAttemptLimiter>();
         limiter
-            .Setup(l => l.AcquireAsync(ChatSessionDocumentUploadOptions.SessionStartPolicyName, "user:user-1", It.IsAny<CancellationToken>()))
+            .Setup(l => l.AcquireAsync(ChatSessionDocumentUploadOptions.UploadPolicyName, "user:user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AttemptLimitResult(false, 0, TimeSpan.FromMinutes(10)));
 
         var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test"));
@@ -82,6 +82,49 @@ public sealed class ChatSessionDocumentUploadGuardTests
 
         Assert.False(called);
         Assert.Equal(StatusCodes.Status429TooManyRequests, httpContext.Response.StatusCode);
+    }
+
+    /// <summary>
+    /// The hub lets a signed-in caller start sessions without a limit, so counting only the uploads that start a session
+    /// left a loop of new sessions with the most documents each without a ceiling. Every upload is counted.
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_ASignedInCallerPastTheQuota_IsRefusedForAnExistingSessionToo()
+    {
+        var limiter = new Mock<IAttemptLimiter>();
+        limiter
+            .Setup(l => l.AcquireAsync(ChatSessionDocumentUploadOptions.UploadPolicyName, "user:user-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AttemptLimitResult(false, 0, TimeSpan.FromMinutes(10)));
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test"));
+        var (httpContext, _) = CreateContext(authorized: true, files: 1, sessionDocuments: 0, user: user, attemptLimiter: limiter.Object);
+        var called = false;
+
+        await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
+        {
+            called = true;
+
+            return ValueTask.FromResult<object>(Results.Ok());
+        });
+
+        Assert.False(called);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, httpContext.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ASignedInCallersUploadToAnExistingSession_IsCounted()
+    {
+        var limiter = new Mock<IAttemptLimiter>();
+        limiter
+            .Setup(l => l.AcquireAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AttemptLimitResult(true, 10, TimeSpan.Zero));
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")], "Test"));
+        var (httpContext, _) = CreateContext(authorized: true, files: 1, sessionDocuments: 0, user: user, attemptLimiter: limiter.Object);
+
+        await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ => ValueTask.FromResult<object>(Results.Ok()));
+
+        limiter.Verify(l => l.AcquireAsync(ChatSessionDocumentUploadOptions.UploadPolicyName, "user:user-1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

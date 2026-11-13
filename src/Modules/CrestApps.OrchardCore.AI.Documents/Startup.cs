@@ -159,10 +159,10 @@ public sealed class ChatSessionDocumentsStartup : StartupBase
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateSessionDocumentsDisplayDriver>();
         services.Configure<ChatSessionDocumentUploadOptions>(_shellConfiguration.GetSection(ChatSessionDocumentUploadOptions.SectionName));
 
-        // Signed-in users get a ceiling on the upload sessions they start; an operator changes it under
-        // CrestApps_Throttling:AttemptPolicies:ai-chat-document-sessions.
+        // Signed-in users get a ceiling on the documents they upload; an operator changes it under
+        // CrestApps_Throttling:AttemptPolicies:ai-chat-document-uploads.
         services
-            .AddAttemptPolicy(ChatSessionDocumentUploadOptions.SessionStartPolicyName, ChatSessionDocumentUploadOptions.DefaultSessionStartLimit, ChatSessionDocumentUploadOptions.DefaultSessionStartWindow)
+            .AddAttemptPolicy(ChatSessionDocumentUploadOptions.UploadPolicyName, ChatSessionDocumentUploadOptions.DefaultUploadLimit, ChatSessionDocumentUploadOptions.DefaultUploadWindow)
             .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(CrestApps.OrchardCore.Throttling.AttemptLimitOptions.SectionName));
     }
 
