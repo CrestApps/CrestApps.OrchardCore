@@ -153,10 +153,10 @@ public sealed class EmailSignInController : Controller
         await _userManager.ResetAccessFailedCountAsync(user);
 
         // The code proves the email is theirs, by a round trip, which is what lets a user claim what belongs to the address.
-        if (user is User account && (!account.EmailConfirmed || !UserEmailOwnership.IsVerified(account.Properties)))
+        if (user is User account && (!account.EmailConfirmed || !UserEmailOwnership.IsVerified(account.Properties, account.Email)))
         {
             account.EmailConfirmed = true;
-            UserEmailOwnership.MarkVerified(account.Properties, _clock.UtcNow);
+            UserEmailOwnership.MarkVerified(account.Properties, account.Email, _clock.UtcNow);
             await _userManager.UpdateAsync(account);
         }
 

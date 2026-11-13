@@ -1,5 +1,6 @@
+using CrestApps.OrchardCore.Checkout.Core.Services;
+using CrestApps.OrchardCore.Core.Throttling;
 using OrchardCore.RateLimits;
-using CrestApps.OrchardCore.Checkout.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -17,19 +18,19 @@ public sealed class DiscountLinkController : Controller
     // Long enough to browse and come back, short enough that a code from an old email doesn't follow the buyer around.
     private static readonly TimeSpan _lifetime = TimeSpan.FromDays(7);
 
-    private readonly ICouponStore _couponStore;
+    private readonly CheckoutCouponService _couponService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
 
     internal readonly IHtmlLocalizer H;
 
     public DiscountLinkController(
-        ICouponStore couponStore,
+        CheckoutCouponService couponService,
         INotifier notifier,
         IClock clock,
         IHtmlLocalizer<DiscountLinkController> htmlLocalizer)
     {
-        _couponStore = couponStore;
+        _couponService = couponService;
         _notifier = notifier;
         _clock = clock;
         H = htmlLocalizer;
@@ -44,9 +45,15 @@ public sealed class DiscountLinkController : Controller
     [RateLimitGroup(CheckoutConstants.RateLimitGroups.Code)]
     public async Task<IActionResult> Apply(string code, string redirect)
     {
-        var coupon = await _couponStore.GetByCodeAsync(code);
+        // The notice tells whoever follows the link whether the code works, so the link is a code oracle unless it counts
+        // wrong codes against the same coupon-code policy as the code box.
+        var (coupon, tooManyTries) = await _couponService.FindCodeAsync(code, ClientNetworkKey.NetworkOnly(HttpContext));
 
-        if (coupon is { CanBeTyped: true } && coupon.IsRedeemable(_clock.UtcNow))
+        if (tooManyTries)
+        {
+            await _notifier.WarningAsync(H["Too many codes were tried. Wait a few minutes, then try again."]);
+        }
+        else if (coupon is not null && coupon.IsRedeemable(_clock.UtcNow))
         {
             Response.Cookies.Append(CheckoutConstants.DiscountLinkCookieName, coupon.Code, new CookieOptions
             {

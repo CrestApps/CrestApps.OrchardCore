@@ -86,6 +86,13 @@ public readonly record struct AttemptLimitResult(bool Allowed, int Remaining, Ti
     /// An attempt that may go ahead with no limit applied.
     /// </summary>
     public static AttemptLimitResult Unlimited { get; } = new(true, int.MaxValue, TimeSpan.Zero);
+
+    /// <summary>
+    /// Gets a value indicating whether this failure is the one that used up the window and blocked the key. Exactly one
+    /// caller sees it for each block, so it is the moment to tell the staff; a refusal because the counter couldn't be
+    /// reached never sets it.
+    /// </summary>
+    public bool ReachedLimit { get; init; }
 }
 
 /// <summary>
@@ -115,6 +122,11 @@ public sealed class AttemptLimitOptions
     public AttemptLimitOptions AddPolicy(string name, int permitLimit, TimeSpan window, TimeSpan blockDuration = default, bool resetOnSuccess = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        if (permitLimit > 0 && window <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(window), window, "An attempt policy that limits needs a window longer than zero.");
+        }
 
         Policies[name] = new AttemptLimitPolicy
         {

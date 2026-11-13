@@ -106,7 +106,7 @@ window.checkoutPayment = (function () {
             // A body that is not JSON is treated as a generic failure below.
         }
 
-        return { ok: response.ok, status: response.status, payload: payload };
+        return { ok: response.ok, status: response.status, retryAfter: Number(response.headers.get('Retry-After')) || 0, payload: payload };
     }
 
     // Asks the server whether the checkout settled. The provider may still be finalizing, so a pending answer
@@ -115,6 +115,14 @@ window.checkoutPayment = (function () {
     async function pollUntilSettled() {
         for (var attempt = 0; attempt < config.maxStatusAttempts; attempt++) {
             var result = await postJson(config.statusEndpoint, {});
+
+            // Polls are limited per network, and buyers behind one address share it. Being told to slow down says nothing
+            // about the payment, which may well be taken: wait as asked and ask again.
+            if (result.status === 429) {
+                await new Promise(function (resolve) { setTimeout(resolve, Math.max(result.retryAfter * 1000, config.statusIntervalMs)); });
+
+                continue;
+            }
 
             if (!result.ok) {
                 showError(result.payload && result.payload.errorMessage);

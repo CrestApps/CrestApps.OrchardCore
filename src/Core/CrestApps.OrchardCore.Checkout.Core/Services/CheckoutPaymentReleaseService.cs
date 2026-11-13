@@ -137,7 +137,9 @@ public sealed class CheckoutPaymentReleaseService : ICheckoutPaymentReleaseServi
 
         try
         {
-            if (!string.IsNullOrEmpty(attempt.ProviderReference))
+            // A provider that defers payment (Pay Later, a bank transfer, cash on delivery) says "succeeded" as soon as it is
+            // begun, though no money moved; asking it would refuse every edit after such a begin, for good. It is set aside.
+            if (!string.IsNullOrEmpty(attempt.ProviderReference) && provider.Capabilities?.DefersPayment != true)
             {
                 var verification = await provider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = attempt }, cancellationToken);
 

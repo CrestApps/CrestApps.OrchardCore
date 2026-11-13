@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,7 @@ using Moq;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 using Xunit;
@@ -138,6 +140,101 @@ public sealed class PaymentVelocityGateTests
         Assert.Equal(customerRefused, customer.IsRefused);
     }
 
+    /// <summary>
+    /// RL-4 (review): the recorder peeked without the lock and then recorded, so two declines at the limit in parallel
+    /// both saw "allowed" before and "blocked" after, and recorded two issues.
+    /// </summary>
+    [Fact]
+    public async Task TwoDeclinesThatReachTheLimitInParallel_RecordOneIssue()
+    {
+        var (_, recorder) = Create(cache: new YieldingCache(_cache));
+
+        for (var i = 0; i < 4; i++)
+        {
+            await recorder.RecordAsync(Session($"s{i}", network: "203.0.113.7"), Attempt(CardProvider), TestContext.Current.CancellationToken);
+        }
+
+        await Task.WhenAll(
+            recorder.RecordAsync(Session("s5", network: "203.0.113.7"), Attempt(CardProvider), TestContext.Current.CancellationToken),
+            recorder.RecordAsync(Session("s4", network: "203.0.113.7"), Attempt(CardProvider), TestContext.Current.CancellationToken));
+
+        Assert.Single(_issues, issue => issue.Kind == PaymentIssueKinds.SuspectedCardTesting);
+    }
+
+    /// <summary>
+    /// RL-4 (review): a lock timeout answers "not allowed", which the recorder took for a block and reported as one.
+    /// </summary>
+    [Fact]
+    public async Task ADeclineThatCantBeCounted_RecordsNoIssue()
+    {
+        var busy = new Mock<IDistributedLock>();
+        busy.Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((Mock.Of<ILocker>(), false));
+
+        var (_, recorder) = Create(distributedLock: busy.Object);
+
+        await recorder.RecordAsync(Session("s1", network: "203.0.113.7"), Attempt(CardProvider), TestContext.Current.CancellationToken);
+
+        Assert.Empty(_issues);
+    }
+
+    /// <summary>
+    /// Plan 3.3: the issue says who was blocked, with the network masked, and after how many declines.
+    /// </summary>
+    [Fact]
+    public async Task TheIssue_NamesTheMaskedNetwork_AndTheDeclineCount()
+    {
+        var (_, recorder) = Create();
+
+        for (var i = 0; i < 5; i++)
+        {
+            await recorder.RecordAsync(Session($"s{i}", network: "203.0.113.7"), Attempt(CardProvider), TestContext.Current.CancellationToken);
+        }
+
+        var issue = Assert.Single(_issues, issue => issue.Kind == PaymentIssueKinds.SuspectedCardTesting);
+        Assert.Contains("203.0.113.0/24", issue.Error, StringComparison.Ordinal);
+        Assert.DoesNotContain("203.0.113.7", issue.Error, StringComparison.Ordinal);
+        Assert.Contains("5 declines", issue.Error, StringComparison.Ordinal);
+    }
+
+    // Reads the cache asynchronously, so two callers interleave the way two requests on a server do.
+    private sealed class YieldingCache : IDistributedCache
+    {
+        private readonly IDistributedCache _inner;
+
+        public YieldingCache(IDistributedCache inner)
+        {
+            _inner = inner;
+        }
+
+        public byte[] Get(string key)
+            => _inner.Get(key);
+
+        public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
+        {
+            await Task.Yield();
+
+            return await _inner.GetAsync(key, token);
+        }
+
+        public void Refresh(string key)
+            => _inner.Refresh(key);
+
+        public Task RefreshAsync(string key, CancellationToken token = default)
+            => _inner.RefreshAsync(key, token);
+
+        public void Remove(string key)
+            => _inner.Remove(key);
+
+        public Task RemoveAsync(string key, CancellationToken token = default)
+            => _inner.RemoveAsync(key, token);
+
+        public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
+            => _inner.Set(key, value, options);
+
+        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
+            => _inner.SetAsync(key, value, options, token);
+    }
     [Fact]
     public void ADeclineIsCountedOnce_OnTheTransitionToFailed()
     {
@@ -146,7 +243,7 @@ public sealed class PaymentVelocityGateTests
         Assert.False(PaymentDeclineRecorder.IsNewDecline(PaymentAttemptState.Pending, PaymentAttemptState.Succeeded));
     }
 
-    private (PaymentVelocityGate Gate, PaymentDeclineRecorder Recorder) Create(DeclineSpikeAction action = DeclineSpikeAction.Notify)
+    private (PaymentVelocityGate Gate, PaymentDeclineRecorder Recorder) Create(DeclineSpikeAction action = DeclineSpikeAction.Notify, IDistributedCache cache = null, IDistributedLock distributedLock = null)
     {
         var options = new AttemptLimitOptions();
         options.AddPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, 30, TimeSpan.FromMinutes(10));
@@ -159,8 +256,8 @@ public sealed class PaymentVelocityGateTests
         clock.Setup(c => c.UtcNow).Returns(() => DateTime.UtcNow);
 
         var limiter = new DistributedAttemptLimiter(
-            _cache,
-            new LocalLock(NullLogger<LocalLock>.Instance),
+            cache ?? _cache,
+            distributedLock ?? new LocalLock(NullLogger<LocalLock>.Instance),
             new ShellSettings { Name = "Default" },
             clock.Object,
             Options.Create(options),
@@ -184,7 +281,14 @@ public sealed class PaymentVelocityGateTests
         localizer.Setup(l => l[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));
 
         var gate = new PaymentVelocityGate(limiter, resolver.Object, siteService.Object, localizer.Object);
-        var recorder = new PaymentDeclineRecorder(limiter, resolver.Object, issues.Object, NullLogger<PaymentDeclineRecorder>.Instance);
+        var services = new ServiceCollection()
+            .AddSingleton<IAttemptLimiter>(limiter)
+            .AddSingleton(resolver.Object)
+            .AddSingleton(issues.Object)
+            .AddSingleton(Options.Create(options))
+            .AddSingleton<Microsoft.Extensions.Logging.ILogger<PaymentDeclineRecorder>>(NullLogger<PaymentDeclineRecorder>.Instance)
+            .BuildServiceProvider();
+        var recorder = ActivatorUtilities.CreateInstance<PaymentDeclineRecorder>(services);
 
         return (gate, recorder);
     }

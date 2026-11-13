@@ -54,12 +54,29 @@ public static class ClientNetworkKey
     }
 
     /// <summary>
-    /// The network key of an address string.
+    /// The network key of an address string. A key this class made already is given back unchanged, so a caller that
+    /// is handed a key rather than an address can't turn every IPv6 network into <see cref="Unknown"/>.
     /// </summary>
-    /// <param name="address">The address.</param>
+    /// <param name="address">The address, or a network key.</param>
     public static string FromAddress(string address)
     {
-        if (string.IsNullOrWhiteSpace(address) || !IPAddress.TryParse(address, out var ip))
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return Unknown;
+        }
+
+        // An IPv6 key ends with its /64 prefix length, which IPAddress.TryParse refuses.
+        if (address.EndsWith("/64", StringComparison.Ordinal))
+        {
+            address = address[..^3];
+
+            if (!IPAddress.TryParse(address, out var network) || network.AddressFamily != AddressFamily.InterNetworkV6)
+            {
+                return Unknown;
+            }
+        }
+
+        if (!IPAddress.TryParse(address, out var ip))
         {
             return Unknown;
         }

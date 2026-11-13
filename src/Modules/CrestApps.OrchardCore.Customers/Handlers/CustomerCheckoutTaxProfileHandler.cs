@@ -58,7 +58,10 @@ internal sealed class CustomerCheckoutTaxProfileHandler : ICheckoutTaxProfileHan
         profile.Customer = new CustomerTaxProfile
         {
             CustomerId = customer.ItemId,
-            CustomerType = customer.Kind == CustomerKind.Business ? CustomerTaxType.B2B : CustomerTaxType.B2C,
+            // The customer sets their own kind, and tax rules are scoped by it, so a self-declared business would step
+            // out of a consumer-only rule. Only a verified business number makes the buyer a business for tax; a store-
+            // managed business account says so through its own handler, before this one.
+            CustomerType = customer.Kind == CustomerKind.Business && IsVerified(customer) ? CustomerTaxType.B2B : CustomerTaxType.B2C,
             TaxRegistrationNumber = customer.TaxId,
             VatNumber = customer.TaxId,
             TaxRegistrationVerified = IsVerified(customer),

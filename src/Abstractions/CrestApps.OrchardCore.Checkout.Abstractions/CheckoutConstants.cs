@@ -38,6 +38,13 @@ public static class CheckoutConstants
         public const string PaymentDeclineStore = "payment-decline-store";
 
         /// <summary>
+        /// Failed confirmations of one payment attempt, such as cards tried one after another against one Stripe client
+        /// secret: 3, then the attempt is canceled at the provider and the buyer must begin a new payment, which the gate can
+        /// refuse.
+        /// </summary>
+        public const string PaymentDeclineAttempt = "payment-decline-attempt";
+
+        /// <summary>
         /// Status polls per network and checkout: 120 per 5 minutes.
         /// </summary>
         public const string PaymentStatus = "payment-status";

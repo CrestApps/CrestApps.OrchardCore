@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using OrchardCore.RateLimits;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement;
@@ -48,6 +49,7 @@ public sealed class TransactionPayController : Controller
     /// </summary>
     /// <param name="token">The signed token from the link.</param>
     [HttpGet("transactions/pay/{token}", Name = TransactionsConstants.RouteNames.Pay)]
+    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)]
     public async Task<IActionResult> Index(string token)
     {
         var transaction = await FindAsync(token);
@@ -77,6 +79,7 @@ public sealed class TransactionPayController : Controller
     /// </summary>
     /// <param name="token">The signed token from the link.</param>
     [HttpPost("transactions/pay/{token}")]
+    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Start)]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Pay(string token)
     {

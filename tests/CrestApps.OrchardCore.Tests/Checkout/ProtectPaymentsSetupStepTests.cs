@@ -41,10 +41,24 @@ public sealed class ProtectPaymentsSetupStepTests
         Assert.Contains("Reverse Proxy", description.Status.Value, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Orchard Core's Reverse Proxy forwards nothing by default: with the feature on but X-Forwarded-For not forwarded,
+    /// the header is still on the request and every buyer still has the proxy's address.
+    /// </summary>
     [Fact]
-    public async Task BehindATrustedProxy_TheStepIsDone()
+    public async Task BehindAProxyWhoseHeaderIsNotApplied_TheStepWarns_EvenWithReverseProxyOn()
     {
         var description = await DescribeAsync(enabled: [CheckoutConstants.Features.RateLimits, OrchardCoreFeatureIds.ReverseProxy], forwarded: true);
+
+        Assert.False(description.IsDone);
+        Assert.Contains("X-Forwarded-For", description.Status.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BehindATrustedProxy_WhoseHeaderWasApplied_TheStepIsDone()
+    {
+        // The forwarded-headers middleware takes the header off the request once it applied it.
+        var description = await DescribeAsync(enabled: [CheckoutConstants.Features.RateLimits, OrchardCoreFeatureIds.ReverseProxy], forwarded: false);
 
         Assert.True(description.IsDone);
     }

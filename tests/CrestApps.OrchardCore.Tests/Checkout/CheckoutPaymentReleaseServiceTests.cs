@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Tests.Checkout.Fakes;
 using CrestApps.OrchardCore.Transactions.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking;
@@ -69,10 +70,63 @@ public sealed class CheckoutPaymentReleaseServiceTests
         Assert.Equal(0, provider.CancelCalls);
     }
 
+    /// <summary>
+    /// SEC-C1 (review): an offline provider (Pay Later, bank transfer, cash on delivery) verifies as succeeded as soon as
+    /// it is begun, though no money moved, so after such a begin every edit was refused with "a payment is in progress",
+    /// for good. Its payment is set aside like any other the provider will cancel.
+    /// </summary>
+    [Fact]
+    public async Task ReleaseAsync_WithAPaymentThatIsOnlyDeferred_SetsItAside()
+    {
+        var (service, attempts, provider) = Create(PaymentStatus.Succeeded, cancelSucceeds: true, defersPayment: true);
+
+        var result = await service.ReleaseAsync("session-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(CheckoutPaymentReleaseResult.Released, result);
+        Assert.Equal(1, provider.CancelCalls);
+        Assert.True(Assert.Single(await attempts.GetBySessionAsync("session-1", TestContext.Current.CancellationToken)).IsSuperseded);
+    }
+
+    /// <summary>
+    /// SEC-C1 (review): the plan's "an edit while the provider refuses to cancel answers 409", through the endpoint filter
+    /// every tender and shipping route carries.
+    /// </summary>
+    [Fact]
+    public async Task TheEndpointFilter_WhenThePaymentCantBeSetAside_Answers409_AndSkipsTheEdit()
+    {
+        var sessions = new InMemoryCheckoutSessionStore();
+        sessions.Seed(new CheckoutSession { SessionId = "session-1", Status = CheckoutSessionStatus.Pending, Currency = "USD" });
+
+        var releaser = new Mock<ICheckoutPaymentReleaseService>();
+        releaser.Setup(value => value.ReleaseAsync("session-1", It.IsAny<CancellationToken>())).ReturnsAsync(CheckoutPaymentReleaseResult.PaymentInProgress);
+
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+        {
+            RequestServices = new Microsoft.Extensions.DependencyInjection.ServiceCollection()
+                .AddSingleton<ICheckoutSessionStore>(sessions)
+                .AddSingleton(releaser.Object)
+                .BuildServiceProvider(),
+        };
+        httpContext.Request.RouteValues["id"] = "session-1";
+
+        var edited = false;
+        var result = await new global::CrestApps.OrchardCore.Checkout.Core.Api.ReleaseLivePaymentEndpointFilter().InvokeAsync(
+            new Microsoft.AspNetCore.Http.DefaultEndpointFilterInvocationContext(httpContext),
+            _ =>
+            {
+                edited = true;
+
+                return ValueTask.FromResult<object>(null);
+            });
+
+        Assert.False(edited);
+        Assert.Equal(409, Assert.IsAssignableFrom<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>(result).StatusCode);
+    }
     private static (CheckoutPaymentReleaseService Service, InMemoryPaymentAttemptStore Attempts, CancelRecordingProvider Provider) Create(
         PaymentStatus verification = PaymentStatus.Unknown,
         bool cancelSucceeds = true,
-        PaymentAttemptState? attemptState = PaymentAttemptState.Pending)
+        PaymentAttemptState? attemptState = PaymentAttemptState.Pending,
+        bool defersPayment = false)
     {
         var attempts = new InMemoryPaymentAttemptStore();
 
@@ -94,7 +148,7 @@ public sealed class CheckoutPaymentReleaseServiceTests
         var sessionStore = new InMemoryCheckoutSessionStore();
         sessionStore.Seed(new CheckoutSession { SessionId = "session-1", Status = CheckoutSessionStatus.AwaitingProvider, Currency = "USD" });
 
-        var provider = new CancelRecordingProvider(verification, cancelSucceeds);
+        var provider = new CancelRecordingProvider(verification, cancelSucceeds) { Capabilities = { DefersPayment = defersPayment } };
         var resolver = new Mock<ICheckoutPaymentProviderResolver>();
         resolver.Setup(r => r.GetProvider(ProviderKey)).Returns(provider);
 
@@ -131,7 +185,7 @@ public sealed class CheckoutPaymentReleaseServiceTests
 
         public string DisplayName => ProviderKey;
 
-        public PaymentProviderCapabilities Capabilities { get; } = new() { SupportsOneTimePayments = true };
+        public PaymentProviderCapabilities Capabilities { get; init; } = new() { SupportsOneTimePayments = true };
 
         public Task<PaymentBeginResult> BeginAsync(BeginPaymentContext context, CancellationToken cancellationToken = default)
             => Task.FromResult(PaymentBeginResult.Success("ref"));

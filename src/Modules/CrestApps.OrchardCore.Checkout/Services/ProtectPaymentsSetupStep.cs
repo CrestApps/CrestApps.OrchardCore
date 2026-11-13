@@ -43,10 +43,11 @@ internal sealed class ProtectPaymentsSetupStep : IStoreSetupStep
         var rateLimitsOn = enabled.Contains(CheckoutConstants.Features.RateLimits);
         var httpContext = _httpContextAccessor.HttpContext;
 
-        // A request that came through a proxy carries the header; without the Reverse Proxy feature every buyer has the
-        // proxy's address, so every per-network limit is shared by the whole store.
-        var behindUntrustedProxy = httpContext?.Request.Headers.ContainsKey("X-Forwarded-For") == true &&
-            !enabled.Contains(OrchardCoreFeatureIds.ReverseProxy);
+        // A request that came through a proxy carries the header, and the forwarded-headers middleware takes it off once it
+        // applied it. Still on the request means no one applied it: the Reverse Proxy feature is off, or on without
+        // forwarding X-Forwarded-For (it forwards nothing by default). Then every buyer has the proxy's address and every
+        // per-network limit, the always-on card-testing ones included, is shared by the whole store.
+        var behindUntrustedProxy = httpContext?.Request.Headers.ContainsKey("X-Forwarded-For") == true;
 
         return new StoreSetupStepDescription
         {
@@ -54,7 +55,7 @@ internal sealed class ProtectPaymentsSetupStep : IStoreSetupStep
             Description = S["Limits how often a visitor can try to pay or enter a discount code, on top of the card-testing protection every store has. Turn on the Payment Rate Limits feature."],
             IsDone = rateLimitsOn && !behindUntrustedProxy,
             Status = behindUntrustedProxy
-                ? S["This site is behind a proxy, but the Reverse Proxy feature is off, so every buyer looks like the proxy and shares one limit. Turn on Reverse Proxy and trust only your own proxies."]
+                ? S["This site is behind a proxy whose forwarded address isn't applied, so every buyer looks like the proxy and shares one limit, the always-on card-testing limits included. Turn on Reverse Proxy, forward X-Forwarded-For, and trust only your own proxies."]
                 : rateLimitsOn
                     ? S["Payment Rate Limits is on. See Tools › Rate Limits."]
                     : S["Payment Rate Limits is off."],

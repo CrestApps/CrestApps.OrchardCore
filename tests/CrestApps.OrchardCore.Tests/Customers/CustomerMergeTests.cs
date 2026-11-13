@@ -123,10 +123,32 @@ public sealed class CustomerMergeTests
         Assert.Empty(_handled);
     }
 
+    /// <summary>
+    /// SEC-C3 (review): the marker was a timestamp, not bound to the address. Where users may change their email
+    /// (Orchard Core's profile editor sets it with no round trip), a user who confirmed their own mailbox could change
+    /// their email to a guest buyer's and take their orders on the next sign-in.
+    /// </summary>
+    [Fact]
+    public async Task AnEmailChangedAfterTheOldOneWasProved_MergesNothing()
+    {
+        var guest = AddGuest("g1", "guest@example.test");
+        var user = VerifiedUser();
+
+        user.Email = "guest@example.test";
+
+        var merged = await CreateService(user).MergeVerifiedGuestsAsync("user-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, merged);
+        Assert.Equal(CustomerStatus.Active, guest.Status);
+        Assert.Empty(_handled);
+    }
     private static User VerifiedUser()
     {
         var user = new User { UserId = "user-1", UserName = "pat", Email = "pat@example.test", EmailConfirmed = true };
-        UserEmailOwnership.MarkVerified(user.Properties, _now);
+
+        // What following the confirmation link records: when, and for which address.
+        user.Properties[UserEmailOwnership.PropertyName] = _now.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+        user.Properties["EmailOwnershipVerifiedEmail"] = "PAT@EXAMPLE.TEST";
 
         return user;
     }
