@@ -456,6 +456,7 @@ const sidebars = {
                 'modules/service-levels',
                 'modules/timeline',
                 'modules/attachments',
+                'modules/templated-emails',
                 'modules/scheduling',
             ],
         },
