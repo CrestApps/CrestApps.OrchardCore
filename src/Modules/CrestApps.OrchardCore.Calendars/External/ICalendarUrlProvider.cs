@@ -11,7 +11,9 @@ namespace CrestApps.OrchardCore.Calendars.External;
 /// Subscribes to an iCalendar address (a <c>.ics</c> feed, such as the secret address Google Calendar or Outlook gives a
 /// calendar). Read only: the calendar shows the feed's events and can't change them. The feed is fetched with the
 /// egress-guarded client, which refuses the site's own network at connect, after every DNS answer and on every redirect
-/// it follows; the body is read up to 10 MB and no further, and the whole fetch, body included, within 30 seconds.
+/// it follows; the body is read up to 10 MB and no further, and the whole fetch, body included, within 30 seconds. A
+/// fetch that runs out of time fails with a <see cref="TimeoutException"/>, so the sync records it on this subscription
+/// and goes on with the next calendar; only the caller's own cancellation stops the run.
 /// </summary>
 public sealed class ICalendarUrlProvider : ICalendarProvider
 {
@@ -22,17 +24,24 @@ public sealed class ICalendarUrlProvider : ICalendarProvider
 
     private const int MaxBytes = 10 * 1024 * 1024;
 
-    private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(30);
 
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly TimeSpan _timeout;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ICalendarUrlProvider"/> class.
     /// </summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     public ICalendarUrlProvider(IHttpClientFactory httpClientFactory)
+        : this(httpClientFactory, _defaultTimeout)
+    {
+    }
+
+    internal ICalendarUrlProvider(IHttpClientFactory httpClientFactory, TimeSpan timeout)
     {
         _httpClientFactory = httpClientFactory;
+        _timeout = timeout;
     }
 
     /// <inheritdoc />
@@ -64,15 +73,17 @@ public sealed class ICalendarUrlProvider : ICalendarProvider
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_timeout);
 
-        using var client = _httpClientFactory.CreateClient(nameof(ICalendarUrlProvider));
-        using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+        string text;
 
-        response.EnsureSuccessStatusCode();
-
-        var bytes = await response.Content.ReadBoundedAsync(MaxBytes, timeout.Token)
-            ?? throw new InvalidOperationException("The calendar is larger than 10 MB.");
-
-        var text = Decode(bytes, response.Content.Headers.ContentType?.CharSet);
+        try
+        {
+            text = await FetchAsync(uri, timeout.Token);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The sync run treats a cancellation as its own and stops; running out of time is this feed's failure.
+            throw new TimeoutException("The calendar didn't answer in time.", ex);
+        }
 
         if (!text.Contains("BEGIN:VCALENDAR", StringComparison.OrdinalIgnoreCase))
         {
@@ -80,6 +91,19 @@ public sealed class ICalendarUrlProvider : ICalendarProvider
         }
 
         return ICalendarReader.Read(text, calendar.TimeZoneId ?? "UTC");
+    }
+
+    private async Task<string> FetchAsync(Uri uri, CancellationToken cancellationToken)
+    {
+        using var client = _httpClientFactory.CreateClient(nameof(ICalendarUrlProvider));
+        using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        var bytes = await response.Content.ReadBoundedAsync(MaxBytes, cancellationToken)
+            ?? throw new InvalidOperationException("The calendar is larger than 10 MB.");
+
+        return Decode(bytes, response.Content.Headers.ContentType?.CharSet);
     }
 
     // The declared character set when there is one and it is known, otherwise UTF-8 (iCalendar's default); a byte order
