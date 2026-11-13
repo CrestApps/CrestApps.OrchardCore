@@ -15,11 +15,14 @@ using CrestApps.OrchardCore.Learning.Reports;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.Webhooks;
 using CrestApps.OrchardCore.Learning.Workflows;
+using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.YesSql.Core.Numbering;
 using Microsoft.AspNetCore.Builder;
@@ -35,12 +38,14 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
 using OrchardCore.Deployment;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users.Models;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Learning;
@@ -50,6 +55,17 @@ namespace CrestApps.OrchardCore.Learning;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _configuration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="configuration">The tenant configuration.</param>
+    public Startup(IShellConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -61,10 +77,13 @@ public sealed class Startup : StartupBase
 
         services.AddNumberSequence();
         services.AddLearningCore();
+        services.Configure<LearningUpkeepOptions>(_configuration.GetSection("CrestApps:Learning:Upkeep"));
         services.AddScoped<CourseEditorOptions>();
         services.AddScoped<EnrollmentListService>();
         services.AddScoped<LearnerUserLookup>();
         services.AddPersonalDataContributor<LearningPersonalDataContributor>();
+        services.AddScoped<LearnerRecordSummaryService>();
+        services.AddDisplayDriver<User, UserLearningDisplayDriver>();
 
         services.AddContentPart<CoursePart>()
             .UseDisplayDriver<CoursePartDisplayDriver>();
@@ -99,6 +118,8 @@ public sealed class LearnerPagesStartup : StartupBase
             .UseDisplayDriver<CourseLearnerDisplayDriver>();
         services.AddContentPart<VideoLessonPart>()
             .UseDisplayDriver<VideoLessonPlayerDisplayDriver>();
+        services.AddDisplayDriver<UserMenu, LearningUserMenuDisplayDriver>();
+        services.AddNavigationProvider<LearningAccountMenu>();
     }
 }
 
@@ -289,5 +310,33 @@ public sealed class ReportsStartup : StartupBase
         services.AddReport<LearningTranscriptReport>();
         services.AddReport<LearningInactiveLearnersReport>();
         services.AddDisplayDriver<ReportFilter, LearningTranscriptFilterDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Adds the Instructor capability, the Learning section of the staff profile, and My learning on a staff member's page.
+/// </summary>
+[RequireFeatures(StaffConstants.Features.Staff)]
+public sealed class StaffStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddStaffCapability(LearningConstants.InstructorCapability, LocalizationSource.Create<StaffStartup>("Instructor"), LocalizationSource.Create<StaffStartup>("Teaches courses and can be named on a course's staff."), 60);
+        services.AddPageSection(StaffProfileSections.PageName, StaffLearningProfileDisplayDriver.SectionName, LocalizationSource.Create<StaffStartup>("Learning"), "fa-solid fa-graduation-cap", 40);
+        services.AddDisplayDriver<StaffMember, StaffLearningProfileDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Puts My learning on a staff member's own page when the learner pages are on.
+/// </summary>
+[RequireFeatures(StaffConstants.Features.Staff, LearningConstants.Features.LearnerPages)]
+public sealed class StaffLearnerPagesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddStaffHomeLinkProvider<LearningStaffHomeLinks>();
     }
 }
