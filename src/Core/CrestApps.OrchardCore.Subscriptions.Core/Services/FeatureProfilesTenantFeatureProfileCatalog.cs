@@ -23,10 +23,11 @@ public sealed class FeatureProfilesTenantFeatureProfileCatalog : ITenantFeatureP
     {
         var profiles = await _featureProfilesService.GetFeatureProfilesAsync();
 
-        // The plan stores a profile's id (the onboarding editor offers ids); the document is keyed by it too.
+        // Orchard Core resolves a tenant's profile by the document's key alone (FeatureProfilesValidationProvider), and a
+        // name it can't find allows every feature. A profile's own Id is not always its key: the FeatureProfiles recipe step
+        // keys a profile by its property name, whatever Id its body carries. So only the keys are names a plan may use.
         return profiles.Keys
-            .Concat(profiles.Values.Select(profile => profile?.Id))
-            .Where(id => !string.IsNullOrEmpty(id))
+            .Where(key => !string.IsNullOrEmpty(key))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

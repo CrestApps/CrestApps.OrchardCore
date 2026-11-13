@@ -1,8 +1,12 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
@@ -33,19 +37,58 @@ public sealed class DeferredPaymentReleaseTests
             TenantName = "shop1",
             Status = TenantProvisioningStatus.AwaitingPayment,
         });
-        var handler = new TenantProvisioningPaymentReceivedHandler(store, new TestClock(_now));
+        var handler = CreateTenantHandler(store);
+        var transaction = new Transaction { CheckoutSessionId = "session-1", ObligationId = CheckoutObligations.OneTime };
 
         // Act: a payment toward it that does not settle it yet changes nothing.
-        await handler.StatusChangedAsync(new Transaction { CheckoutSessionId = "session-1" }, TransactionStatus.Outstanding, TransactionStatus.PartiallyPaid, TestContext.Current.CancellationToken);
+        await handler.StatusChangedAsync(transaction, TransactionStatus.Outstanding, TransactionStatus.PartiallyPaid, TestContext.Current.CancellationToken);
 
         Assert.Equal(TenantProvisioningStatus.AwaitingPayment, Assert.Single(store.Jobs).Status);
 
-        await handler.StatusChangedAsync(new Transaction { CheckoutSessionId = "session-1" }, TransactionStatus.PartiallyPaid, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+        await handler.StatusChangedAsync(transaction, TransactionStatus.PartiallyPaid, TransactionStatus.Paid, TestContext.Current.CancellationToken);
 
         // Assert
         var job = Assert.Single(store.Jobs);
         Assert.Equal(TenantProvisioningStatus.Pending, job.Status);
         Assert.Null(job.NextAttemptUtc);
+    }
+
+    /// <summary>
+    /// SEC-C5: a site sold with a plan waits for the plan's own obligation. Pay Later records one transaction per
+    /// obligation, so paying the checkout's small one-time balance must not create a site whose plan is unpaid.
+    /// </summary>
+    [Fact]
+    public async Task ASiteSoldWithAPlan_WaitsForThePlansObligation_NotTheOneTimeBalance()
+    {
+        // Arrange
+        var planObligation = CheckoutObligations.Recurring(new BillingDurationKey(DurationType.Month, 1));
+        var store = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
+        {
+            ItemId = "job-1",
+            CheckoutSessionId = "session-1",
+            TenantName = "shop1",
+            Status = TenantProvisioningStatus.AwaitingPayment,
+        });
+        var subscriptions = new InMemorySubscriptionStore(new Subscription
+        {
+            ItemId = "subscription-1",
+            CheckoutSessionId = "session-1",
+            ObligationId = planObligation,
+            Status = SubscriptionStatus.Incomplete,
+        });
+        var handler = CreateTenantHandler(store, subscriptions);
+
+        // Act: the one-time balance is paid.
+        await handler.StatusChangedAsync(new Transaction { CheckoutSessionId = "session-1", ObligationId = CheckoutObligations.OneTime }, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        // Assert: the site still waits.
+        Assert.Equal(TenantProvisioningStatus.AwaitingPayment, Assert.Single(store.Jobs).Status);
+
+        // Act: the plan's first cycle is paid.
+        await handler.StatusChangedAsync(new Transaction { CheckoutSessionId = "session-1", ObligationId = planObligation }, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TenantProvisioningStatus.Pending, Assert.Single(store.Jobs).Status);
     }
 
     [Fact]
@@ -59,14 +102,20 @@ public sealed class DeferredPaymentReleaseTests
             TenantName = "shop1",
             Status = TenantProvisioningStatus.Succeeded,
         });
-        var handler = new TenantProvisioningPaymentReceivedHandler(store, new TestClock(_now));
+        var handler = CreateTenantHandler(store);
 
         // Act
-        await handler.StatusChangedAsync(new Transaction { CheckoutSessionId = "session-1" }, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+        await handler.StatusChangedAsync(new Transaction { CheckoutSessionId = "session-1", ObligationId = CheckoutObligations.OneTime }, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(TenantProvisioningStatus.Succeeded, Assert.Single(store.Jobs).Status);
     }
+
+    private static TenantProvisioningPaymentReceivedHandler CreateTenantHandler(InMemoryTenantProvisioningJobStore jobs, InMemorySubscriptionStore subscriptions = null)
+        => new(
+            jobs,
+            new SubscriptionManager(subscriptions ?? new InMemorySubscriptionStore(), [], NullLogger<CatalogManager<Subscription>>.Instance),
+            new TestClock(_now));
 
     [Fact]
     public async Task AnOrderPaidLater_DeliversWhatItHeldBack_WhenItsTransactionIsPaid_Once()

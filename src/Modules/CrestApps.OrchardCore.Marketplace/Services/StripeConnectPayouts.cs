@@ -1,3 +1,4 @@
+using System.Net;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -128,6 +129,9 @@ public sealed class StripeConnectVendorService
 /// </summary>
 internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
 {
+    // Ties a transfer to the payout that asked for it, so a pending payout is found at Stripe after its key has expired.
+    internal const string PayoutKeyMetadata = "payoutKey";
+
     private readonly StripeClient _stripeClient;
     private readonly IPaymentAttemptStore _attempts;
     private readonly ILogger _logger;
@@ -142,11 +146,19 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
     public string Name
         => MarketplaceConstants.StripeConnectPayoutProvider;
 
-    public async Task<(string TransferId, string Failure)> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
+    public async Task<VendorPayoutResult> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(vendor?.StripeAccountId))
         {
-            return (null, "The vendor has no Stripe account.");
+            return VendorPayoutResult.Refused("The vendor has no Stripe account.");
+        }
+
+        var (chargeId, chargeUnknown) = await GetChargeIdAsync(order, cancellationToken);
+
+        if (chargeUnknown)
+        {
+            // Sending without the charge would be a different request under the same key.
+            return VendorPayoutResult.Unsettled($"The payment of order {order?.OrderNumber} couldn't be read from Stripe, so its payout waits for the next run.");
         }
 
         try
@@ -162,33 +174,95 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
                 {
                     ["vendorId"] = vendor.ItemId,
                     ["orderId"] = order?.ItemId ?? string.Empty,
+                    [PayoutKeyMetadata] = idempotencyKey,
                 },
             };
 
             // Funded by the order's own charge, it can go before that charge's money is available to the store.
-            if (await GetChargeIdAsync(order, cancellationToken) is { } chargeId)
+            if (chargeId is not null)
             {
                 options.SourceTransaction = chargeId;
             }
 
             var transfer = await new TransferService(_stripeClient).CreateAsync(options, new RequestOptions { IdempotencyKey = "vendor-payout-" + idempotencyKey }, cancellationToken);
 
-            return (transfer.Id, null);
+            return VendorPayoutResult.Paid(transfer.Id);
         }
         catch (StripeException ex)
         {
-            _logger.LogWarning(ex, "Stripe refused the transfer to vendor '{VendorId}'.", vendor.ItemId);
+            _logger.LogWarning(ex, "Stripe didn't make the transfer to vendor '{VendorId}'.", vendor.ItemId);
 
-            return (null, ex.StripeError?.Message ?? ex.Message);
+            var message = ex.StripeError?.Message ?? ex.Message;
+
+            return IsRefusal(ex) ? VendorPayoutResult.Refused(message) : VendorPayoutResult.Unsettled(message);
         }
     }
 
-    // The charge of the order's Stripe payment, from its succeeded payment attempt.
-    private async Task<string> GetChargeIdAsync(Order order, CancellationToken cancellationToken)
+    public async Task<VendorPayoutResult> FindTransferAsync(Vendor vendor, Order order, VendorPayout payout, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(payout);
+
+        if (string.IsNullOrEmpty(vendor?.StripeAccountId))
+        {
+            return null;
+        }
+
+        var options = new TransferListOptions
+        {
+            Destination = vendor.StripeAccountId,
+            TransferGroup = string.IsNullOrEmpty(order?.OrderNumber) ? null : order.OrderNumber,
+            Created = new DateRangeOptions { GreaterThanOrEqual = payout.CreatedUtc.AddDays(-1) },
+            Limit = 100,
+        };
+
+        try
+        {
+            await foreach (var transfer in new TransferService(_stripeClient).ListAutoPagingAsync(options, cancellationToken: cancellationToken))
+            {
+                if (IsTransferOf(transfer, vendor, payout))
+                {
+                    return VendorPayoutResult.Paid(transfer.Id);
+                }
+            }
+
+            return null;
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogWarning(ex, "Stripe couldn't be asked whether the payout of order '{OrderNumber}' was made.", payout.OrderNumber);
+
+            return VendorPayoutResult.Unsettled($"Stripe couldn't be asked whether the payout of order {payout.OrderNumber} was made, so it waits for the next run.");
+        }
+    }
+
+    // A transfer names the payout's key; one made before transfers carried it is matched on what it was for.
+    private static bool IsTransferOf(Transfer transfer, Vendor vendor, VendorPayout payout)
+    {
+        var metadata = transfer.Metadata ?? [];
+
+        if (metadata.TryGetValue(PayoutKeyMetadata, out var key))
+        {
+            return string.Equals(key, payout.IdempotencyKey, StringComparison.Ordinal);
+        }
+
+        return metadata.TryGetValue("vendorId", out var vendorId) && string.Equals(vendorId, vendor.ItemId, StringComparison.Ordinal) &&
+            metadata.TryGetValue("orderId", out var orderId) && string.Equals(orderId, payout.OrderId, StringComparison.Ordinal) &&
+            transfer.Amount == StripeCurrency.ToMinorUnits(payout.Amount, payout.Currency) &&
+            string.Equals(transfer.Currency, payout.Currency, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Only Stripe saying no to the request (its parameters, the account, the balance) proves no transfer was made. A reused
+    // key, a conflict, a rate limit, a server error or no answer at all prove nothing.
+    private static bool IsRefusal(StripeException exception)
+        => !string.Equals(exception.StripeError?.Type, "idempotency_error", StringComparison.Ordinal) &&
+            exception.HttpStatusCode is HttpStatusCode.BadRequest or HttpStatusCode.PaymentRequired or HttpStatusCode.Forbidden or HttpStatusCode.NotFound;
+
+    // The charge of the order's Stripe payment, from its succeeded payment attempt. Unknown when Stripe couldn't be asked.
+    private async Task<(string ChargeId, bool Unknown)> GetChargeIdAsync(Order order, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(order?.CheckoutSessionId))
         {
-            return null;
+            return (null, false);
         }
 
         var paymentIntentId = (await _attempts.GetBySessionAsync(order.CheckoutSessionId, cancellationToken))
@@ -201,20 +275,20 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
 
         if (paymentIntentId is null)
         {
-            return null;
+            return (null, false);
         }
 
         try
         {
             var intent = await new PaymentIntentService(_stripeClient).GetAsync(paymentIntentId, cancellationToken: cancellationToken);
 
-            return intent.LatestChargeId;
+            return (intent.LatestChargeId, false);
         }
         catch (StripeException ex)
         {
             _logger.LogWarning(ex, "The payment '{PaymentIntentId}' of order '{OrderNumber}' couldn't be read.", paymentIntentId, order.OrderNumber);
 
-            return null;
+            return (null, true);
         }
     }
 }

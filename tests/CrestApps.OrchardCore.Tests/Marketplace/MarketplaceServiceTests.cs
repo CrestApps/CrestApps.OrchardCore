@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.Tests.Marketplace;
 /// A vendor's sale is recorded once, less the commission, held until released; a refund takes back its share; and a
 /// payout sends what's released, order by order.
 /// </summary>
-public sealed class MarketplaceServiceTests
+public sealed partial class MarketplaceServiceTests
 {
     private static readonly DateTime _now = new(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc);
 
@@ -499,7 +499,7 @@ public sealed class MarketplaceServiceTests
 
         public Func<Task> Gate { get; set; }
 
-        public async Task<(string TransferId, string Failure)> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
+        public async Task<VendorPayoutResult> PayAsync(Vendor vendor, Order order, decimal amount, string currency, string idempotencyKey, CancellationToken cancellationToken = default)
         {
             Calls++;
             Amount = amount;
@@ -512,7 +512,20 @@ public sealed class MarketplaceServiceTests
                 await Gate();
             }
 
-            return Failure is null ? ("tr_1", null) : (null, Failure);
+            if (Failure is not null)
+            {
+                return VendorPayoutResult.Refused(Failure);
+            }
+
+            _transferred.Add(idempotencyKey);
+
+            return VendorPayoutResult.Paid("tr_1");
         }
+
+        // Like a provider's own records: the transfers made, by the key that asked for them.
+        public Task<VendorPayoutResult> FindTransferAsync(Vendor vendor, Order order, VendorPayout payout, CancellationToken cancellationToken = default)
+            => Task.FromResult(_transferred.Contains(payout.IdempotencyKey) ? VendorPayoutResult.Paid("tr_1") : null);
+
+        private readonly HashSet<string> _transferred = new(StringComparer.Ordinal);
     }
 }
