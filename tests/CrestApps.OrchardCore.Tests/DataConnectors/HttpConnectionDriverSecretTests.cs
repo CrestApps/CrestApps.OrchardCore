@@ -94,6 +94,89 @@ public sealed class HttpConnectionDriverSecretTests
         Assert.True(secrets.Has(connection, HttpAuthenticationSecrets.Password));
     }
 
+    /// <summary>
+    /// When the secrets are dropped and the box is left empty, the save must say what is missing instead of saving a
+    /// Basic or OAuth connection that can no longer sign in.
+    /// </summary>
+    [Fact]
+    public async Task FixingTheHostOfABasicConnection_WithThePasswordLeftEmpty_AsksForThePassword()
+    {
+        var (connection, secrets) = Stored(new HttpAuthenticationSettings { Type = HttpAuthenticationType.Basic, UserName = "svc" }, HttpAuthenticationSecrets.Password);
+
+        var modelState = await PostAsync(connection, secrets, new HttpConnectionViewModel
+        {
+            BaseUrl = "https://api2.example.com/v1",
+            AuthenticationType = HttpAuthenticationType.Basic,
+            UserName = "svc",
+            TimeoutSeconds = 30,
+        });
+
+        Assert.False(modelState.IsValid);
+        Assert.Contains(modelState, entry => entry.Key.EndsWith(nameof(HttpConnectionViewModel.Password), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MovingTheTokenEndpointOfAnOAuthConnection_WithTheSecretLeftEmpty_AsksForTheClientSecret()
+    {
+        var (connection, secrets) = Stored(
+            new HttpAuthenticationSettings { Type = HttpAuthenticationType.OAuth2, GrantType = OAuthGrantType.ClientCredentials, TokenUrl = "https://login.example.com/token", ClientId = "client" },
+            HttpAuthenticationSecrets.ClientSecret);
+
+        var modelState = await PostAsync(connection, secrets, new HttpConnectionViewModel
+        {
+            BaseUrl = "https://api.example.com/v1",
+            AuthenticationType = HttpAuthenticationType.OAuth2,
+            GrantType = OAuthGrantType.ClientCredentials,
+            TokenUrl = "https://login2.example.com/token",
+            ClientId = "client",
+            TimeoutSeconds = 30,
+        });
+
+        Assert.False(modelState.IsValid);
+        Assert.Contains(modelState, entry => entry.Key.EndsWith(nameof(HttpConnectionViewModel.ClientSecret), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MovingTheTokenEndpointOfAPasswordGrant_WithThePasswordLeftEmpty_AsksForThePassword()
+    {
+        var (connection, secrets) = Stored(
+            new HttpAuthenticationSettings { Type = HttpAuthenticationType.OAuth2, GrantType = OAuthGrantType.Password, TokenUrl = "https://login.example.com/token", ClientId = "client", UserName = "svc" },
+            HttpAuthenticationSecrets.Password);
+
+        var modelState = await PostAsync(connection, secrets, new HttpConnectionViewModel
+        {
+            BaseUrl = "https://api.example.com/v1",
+            AuthenticationType = HttpAuthenticationType.OAuth2,
+            GrantType = OAuthGrantType.Password,
+            TokenUrl = "https://login2.example.com/token",
+            ClientId = "client",
+            UserName = "svc",
+            TimeoutSeconds = 30,
+        });
+
+        Assert.False(modelState.IsValid);
+        Assert.Contains(modelState, entry => entry.Key.EndsWith(nameof(HttpConnectionViewModel.Password), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task APublicOAuthClientThatNeverHadASecret_SavesWithoutOne()
+    {
+        var secrets = new DataConnectionSecretManager(new EphemeralDataProtectionProvider(), NullLogger<DataConnectionSecretManager>.Instance);
+        var connection = new DataConnection { Name = "api", Connector = HttpApiDataConnector.Name };
+
+        var modelState = await PostAsync(connection, secrets, new HttpConnectionViewModel
+        {
+            BaseUrl = "https://api.example.com/v1",
+            AuthenticationType = HttpAuthenticationType.OAuth2,
+            GrantType = OAuthGrantType.ClientCredentials,
+            TokenUrl = "https://login.example.com/token",
+            ClientId = "client",
+            TimeoutSeconds = 30,
+        });
+
+        Assert.True(modelState.IsValid);
+    }
+
     private static (DataConnection Connection, IDataConnectionSecretManager Secrets) Stored(HttpAuthenticationSettings authentication, string secretName)
     {
         var secrets = new DataConnectionSecretManager(new EphemeralDataProtectionProvider(), NullLogger<DataConnectionSecretManager>.Instance);
@@ -105,12 +188,15 @@ public sealed class HttpConnectionDriverSecretTests
         return (connection, secrets);
     }
 
-    private static async Task PostAsync(DataConnection connection, IDataConnectionSecretManager secrets, HttpConnectionViewModel posted)
+    private static async Task<Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary> PostAsync(DataConnection connection, IDataConnectionSecretManager secrets, HttpConnectionViewModel posted)
     {
         var driver = new HttpConnectionDisplayDriver(secrets, new PassThroughStringLocalizer<HttpConnectionDisplayDriver>());
-        var context = new UpdateEditorContext(Mock.Of<IShape>(), string.Empty, false, string.Empty, Mock.Of<IShapeFactory>(), null, new PostedUpdater(posted));
+        var updater = new PostedUpdater(posted);
+        var context = new UpdateEditorContext(Mock.Of<IShape>(), string.Empty, false, string.Empty, Mock.Of<IShapeFactory>(), null, updater);
 
         await driver.UpdateAsync(connection, context);
+
+        return updater.ModelState;
     }
 
     private sealed class PostedUpdater : IUpdateModel

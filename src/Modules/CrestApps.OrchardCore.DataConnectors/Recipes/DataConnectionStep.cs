@@ -1,4 +1,6 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.DataConnectors.Drivers;
+using CrestApps.OrchardCore.DataConnectors.Http;
 using CrestApps.OrchardCore.DataConnectors.Models;
 using CrestApps.OrchardCore.DataConnectors.Services;
 using Microsoft.Extensions.Localization;
@@ -114,8 +116,12 @@ internal sealed class DataConnectionStep : NamedRecipeStepHandler
             connection.DisplayText = displayText;
             connection.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description.Trim();
 
+            var stored = isNew ? null : connection.GetOrCreate<HttpConnectionSettings>();
+
             connection.Properties ??= new Dictionary<string, object>();
             DataConnectorRecipeJson.MergeProperties(connection.Properties, model.Properties);
+
+            DropSecretsSentElsewhere(connection, stored);
 
             foreach (var secret in model.Secrets ?? [])
             {
@@ -135,6 +141,25 @@ internal sealed class DataConnectionStep : NamedRecipeStepHandler
                 connection.ModifiedUtc = model.ModifiedUtc ?? _clock.UtcNow;
                 await _connectionStore.UpdateAsync(connection);
             }
+        }
+    }
+
+    // The editor's rule: a stored secret was given for one host and one way of signing in. When the entry sends the
+    // requests or the token requests of an existing connection to another host, or signs in another way, the stored
+    // secrets are dropped, so a recipe can't hand them to a new server. A secret the entry gives is set after this.
+    private void DropSecretsSentElsewhere(DataConnection connection, HttpConnectionSettings stored)
+    {
+        var posted = connection.GetOrCreate<HttpConnectionSettings>();
+        var authentication = posted.Authentication ?? new HttpAuthenticationSettings();
+
+        if (!HttpConnectionDisplayDriver.SendsSecretsElsewhere(stored, posted.BaseUrl, authentication.TokenUrl, authentication.Authority, authentication.Type, authentication.GrantType))
+        {
+            return;
+        }
+
+        foreach (var secret in new[] { HttpAuthenticationSecrets.ApiKey, HttpAuthenticationSecrets.Password, HttpAuthenticationSecrets.BearerToken, HttpAuthenticationSecrets.ClientSecret })
+        {
+            _secretManager.Remove(connection, secret);
         }
     }
 }

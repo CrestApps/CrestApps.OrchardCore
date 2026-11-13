@@ -92,6 +92,77 @@ public sealed class DataConnectorRecipeTests
         Assert.Equal("first", await ReadSecretAsync(harness, connection, "Password"));
     }
 
+    /// <summary>
+    /// SEC-A20 l: a recipe entry that names an existing connection and moves its token requests to another host, or
+    /// signs in another way, must not carry the stored password there. The step drops the stored secrets as the editor
+    /// does; a secret the entry itself gives is kept.
+    /// </summary>
+    [Fact]
+    public async Task DataConnectionStep_ThatSendsTheTokenRequestsElsewhere_DropsTheStoredSecrets()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", secrets: new JsonObject { [HttpAuthenticationSecrets.Password] = "first" })));
+
+        // Act: OAuth 2.0 password grant against a token endpoint on another host, with the password box left empty.
+        var errors = await RunAsync(harness, Step("DataConnection", "Connections", new JsonObject
+        {
+            ["Name"] = "Source",
+            ["Properties"] = new JsonObject
+            {
+                [nameof(HttpConnectionSettings)] = new JsonObject
+                {
+                    ["BaseUrl"] = "https://api.example.com",
+                    ["Authentication"] = new JsonObject
+                    {
+                        ["Type"] = (int)HttpAuthenticationType.OAuth2,
+                        ["GrantType"] = (int)OAuthGrantType.Password,
+                        ["UserName"] = "service",
+                        ["TokenUrl"] = "https://evil.example.net/token",
+                        ["ClientId"] = "client",
+                    },
+                },
+            },
+            ["Secrets"] = new JsonObject { [HttpAuthenticationSecrets.Password] = string.Empty },
+        }));
+        var connection = await FindConnectionAsync(harness, "Source");
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.Equal("https://evil.example.net/token", connection.GetOrCreate<HttpConnectionSettings>().Authentication.TokenUrl);
+        Assert.Null(await ReadSecretAsync(harness, connection, HttpAuthenticationSecrets.Password));
+    }
+
+    [Fact]
+    public async Task DataConnectionStep_ThatMovesTheHost_KeepsASecretTheEntryGives()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", secrets: new JsonObject { [HttpAuthenticationSecrets.Password] = "first" })));
+
+        // Act
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", "https://other.example.net", new JsonObject { [HttpAuthenticationSecrets.Password] = "second" })));
+        var connection = await FindConnectionAsync(harness, "Source");
+
+        // Assert
+        Assert.Equal("second", await ReadSecretAsync(harness, connection, HttpAuthenticationSecrets.Password));
+    }
+
+    [Fact]
+    public async Task DataConnectionStep_OnTheSameHost_KeepsTheStoredSecret()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", secrets: new JsonObject { [HttpAuthenticationSecrets.Password] = "first" })));
+
+        // Act
+        await RunAsync(harness, Step("DataConnection", "Connections", BasicConnection("Source", "https://api.example.com/v2")));
+        var connection = await FindConnectionAsync(harness, "Source");
+
+        // Assert
+        Assert.Equal("first", await ReadSecretAsync(harness, connection, HttpAuthenticationSecrets.Password));
+    }
+
     [Theory]
     [InlineData("Missing", "Test", "isn't enabled")]
     [InlineData("1st", "Test", "technical name")]
@@ -315,6 +386,26 @@ public sealed class DataConnectorRecipeTests
             Assert.Equal(expected, id);
         }
     }
+
+    private static JsonObject BasicConnection(string name, string baseUrl = "https://api.example.com", JsonObject secrets = null)
+        => new()
+        {
+            ["Name"] = name,
+            ["Connector"] = "Test",
+            ["Properties"] = new JsonObject
+            {
+                [nameof(HttpConnectionSettings)] = new JsonObject
+                {
+                    ["BaseUrl"] = baseUrl,
+                    ["Authentication"] = new JsonObject
+                    {
+                        ["Type"] = (int)HttpAuthenticationType.Basic,
+                        ["UserName"] = "service",
+                    },
+                },
+            },
+            ["Secrets"] = secrets,
+        };
 
     private static JsonObject Step(string name, string member, params JsonObject[] entries)
         => new()
