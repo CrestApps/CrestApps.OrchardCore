@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.AuditTrail;
 using CrestApps.OrchardCore.Learning.Controllers;
 using CrestApps.OrchardCore.Learning.Core;
 using CrestApps.OrchardCore.Learning.Core.Indexes;
@@ -7,24 +8,33 @@ using CrestApps.OrchardCore.Learning.Handlers;
 using CrestApps.OrchardCore.Learning.Migrations;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Navigation;
+using CrestApps.OrchardCore.Learning.Notifications;
+using CrestApps.OrchardCore.Learning.Pipelines;
 using CrestApps.OrchardCore.Learning.Recipes;
 using CrestApps.OrchardCore.Learning.Reports;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Learning.Webhooks;
 using CrestApps.OrchardCore.Learning.Workflows;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
+using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.YesSql.Core.Numbering;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.DataPipelines.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -52,6 +62,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<CourseEditorOptions>();
         services.AddScoped<EnrollmentListService>();
         services.AddScoped<LearnerUserLookup>();
+        services.AddPersonalDataContributor<LearningPersonalDataContributor>();
 
         services.AddContentPart<CoursePart>()
             .UseDisplayDriver<CoursePartDisplayDriver>();
@@ -210,5 +221,54 @@ public sealed class DataSourcesStartup : StartupBase
         services.AddScoped<ILearningReportDataSet, LearningItemProgressReportDataSet>();
         services.AddScoped<ILearningReportDataSet, LearningCompletionsReportDataSet>();
         services.AddScoped<ILearningReportDataSet, LearningCourseStaffReportDataSet>();
+        services.AddDataPipelineStepType<EnrollLearnersStep>();
+        services.AddDisplayDriver<DataPipelineStep, EnrollLearnersStepDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Tells learners they are enrolled, and that a course is due soon or overdue, through Orchard Core notifications.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class NotificationsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNotificationType(LearningConstants.NotificationTypes.Enrolled, LocalizationSource.Create<NotificationsStartup>("Enrolled in a course"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When you are enrolled in a course."));
+        services.AddNotificationType(LearningConstants.NotificationTypes.DueSoon, LocalizationSource.Create<NotificationsStartup>("Course due soon"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("A few days before a course you are taking is due."));
+        services.AddNotificationType(LearningConstants.NotificationTypes.Overdue, LocalizationSource.Create<NotificationsStartup>("Course overdue"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When a course you are taking passes its due date."));
+        services.AddEnrollmentObserver<LearningNotificationObserver>();
+    }
+}
+
+/// <summary>
+/// Writes the changes people make to enrollments by hand, and exports of learner records, to the Audit Trail.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
+public sealed class AuditTrailStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransient<IConfigureOptions<AuditTrailOptions>, LearningAuditTrailEvents>();
+        services.AddScoped<LearningAuditTrailObserver>();
+        services.AddScoped<IEnrollmentObserver>(sp => sp.GetRequiredService<LearningAuditTrailObserver>());
+        services.AddScoped<ILearnerRecordExportObserver>(sp => sp.GetRequiredService<LearningAuditTrailObserver>());
+    }
+}
+
+/// <summary>
+/// Publishes the Learning webhook events.
+/// </summary>
+[RequireFeatures(WebhooksConstants.Feature.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWebhookEvent(LearningWebhookObserver.EnrollmentCreated, "Learner enrolled", "Learning");
+        services.AddWebhookEvent(LearningWebhookObserver.CourseCompleted, "Course completed", "Learning");
+        services.AddEnrollmentObserver<LearningWebhookObserver>();
     }
 }
