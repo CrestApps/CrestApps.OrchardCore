@@ -63,7 +63,8 @@ public static class AdminColorSchemeCssBuilder
         var tintEnd = (scheme.Tint ?? accent).Mix(page, 0.09);
         var toolbar = (scheme.Toolbar ?? primary).EnsureContrast([on], TextContrast, ink);
         var listHeader = AdminColor.FromHsl(hue, 0.14 * k, 0.975);
-        AdminColor[] surfaces = [page, AdminColor.White, surfaceMuted, tintStart, tintEnd, listHeader];
+        var rowHover = primary.Mix(AdminColor.White, 0.08);
+        AdminColor[] surfaces = [page, AdminColor.White, surfaceMuted, tintStart, tintEnd, listHeader, rowHover];
         var border = AdminColor.FromHsl(hue, 0.38 * k, 0.92);
         var menuMiddle = deep.Mix(ink, 0.5);
         var link = primary.EnsureContrast(surfaces, TextContrast, ink);
@@ -96,6 +97,7 @@ public static class AdminColorSchemeCssBuilder
         tokens.Add(new("--ca-toolbar-fg-rgb", on.ToTriplet()));
         tokens.Add(new("--ca-toolbar-hover-bg", lightText ? AdminColor.Black.ToRgba(0.16) : AdminColor.White.ToRgba(0.3)));
         Add(tokens, "--ca-list-header-bg", listHeader);
+        Add(tokens, "--ca-row-hover-bg", rowHover);
         Add(tokens, "--ca-border", border);
         Add(tokens, "--ca-control-border", border.EnsureContrast(surfaces, UiContrast, deep));
         Add(tokens, "--ca-control-checked-border", primary.EnsureContrast(surfaces, UiContrast, ink));
@@ -138,7 +140,8 @@ public static class AdminColorSchemeCssBuilder
         var tintStart = (scheme.TintDark ?? accent).Mix(page, 0.08);
         var tintEnd = (scheme.TintDark ?? primary).Mix(page, 0.12);
         var listHeader = AdminColor.FromHsl(hue, 0.5 * k, 0.21);
-        AdminColor[] surfaces = [page, surface, surfaceMuted, tintStart, tintEnd, listHeader];
+        var rowHover = primary.Mix(surface, 0.16);
+        AdminColor[] surfaces = [page, surface, surfaceMuted, tintStart, tintEnd, listHeader, rowHover];
         var border = AdminColor.FromHsl(hue, 0.49 * k, 0.28);
         var bodyColor = AdminColor.FromHsl(hue, 0.35 * k, 0.92);
         var link = accent.EnsureContrast(surfaces, TextContrast, AdminColor.White);
@@ -161,6 +164,7 @@ public static class AdminColorSchemeCssBuilder
         tokens.Add(new("--ca-surface-rgb", surface.ToTriplet()));
         Add(tokens, "--ca-surface-muted", surfaceMuted);
         Add(tokens, "--ca-list-header-bg", listHeader);
+        Add(tokens, "--ca-row-hover-bg", rowHover);
         Add(tokens, "--ca-secondary-bg", AdminColor.FromHsl(hue, 0.55 * k, 0.233));
         Add(tokens, "--ca-border", border);
         Add(tokens, "--ca-control-border", border.EnsureContrast(surfaces, UiContrast, AdminColor.White));

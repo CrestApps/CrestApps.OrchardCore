@@ -1,0 +1,17 @@
+@inject IOptions<AdminOptions> AdminOptions
+
+@*
+    Orchard Core's admin branding, with the logo marked decorative: the site's name beside it is the link's name, so a
+    screen reader announces it once. Where the theme hides the name visually (the icon rail, a phone's top bar), it
+    stays readable by screen readers.
+*@
+
+<zone name="HeadMeta">
+    <link asp-src="~/OrchardCore.Admin/favicon.ico" type="image/x-icon" rel="shortcut icon" />
+</zone>
+<a class="ta-navbar-brand navbar-brand" href="@Url.Content("~/" + AdminOptions.Value.AdminUrlPrefix)">
+    <div class="d-flex align-items-center">
+        <img src="@Url.Content("~/OrchardCore.Admin/logo.png")" alt="" class="pe-2" />
+        <span>@Site.SiteName</span>
+    </div>
+</a>

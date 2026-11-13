@@ -346,6 +346,20 @@
             justify-content: center;
             padding: 0;
 
+            // The name is the link's accessible name (the logo is decorative): hidden visually, not from screen readers.
+            .ta-navbar-brand span {
+                display: block;
+                position: absolute !important;
+                width: 1px !important;
+                height: 1px !important;
+                padding: 0 !important;
+                margin: -1px !important;
+                overflow: hidden !important;
+                clip: rect(0, 0, 0, 0) !important;
+                white-space: nowrap !important;
+                border: 0 !important;
+            }
+
             .ta-navbar-brand img {
                 padding-inline-end: 0 !important;
             }

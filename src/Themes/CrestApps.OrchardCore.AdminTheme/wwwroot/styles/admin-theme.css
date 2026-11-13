@@ -53,6 +53,7 @@
   --ca-toolbar-fg-rgb: 255, 255, 255;
   --ca-toolbar-hover-bg: rgba(0, 0, 0, 0.16);
   --ca-list-header-bg: rgb(97.458%, 97.5%, 97.542%);
+  --ca-row-hover-bg: rgb(92.4203921569%, 95.4051764706%, 99.8042352941%);
   --ca-border: rgb(91.6352%, 92%, 92.3648%);
   --ca-control-border: rgb(52.2881882353%, 53.2549019608%, 54.2216156863%);
   --ca-control-checked-border: rgb(5.2549019608%, 42.5647058824%, 97.5529411765%);
@@ -97,9 +98,10 @@
   --ca-surface-rgb: 44, 47, 50;
   --ca-surface-muted: rgb(20.14848%, 21.6%, 23.05152%);
   --ca-list-header-bg: rgb(19.74%, 21%, 22.26%);
+  --ca-row-hover-bg: rgb(15.3178483137%, 22.3503529412%, 32.2114065882%);
   --ca-secondary-bg: rgb(21.7622%, 23.3%, 24.8378%);
   --ca-border: rgb(26.3536%, 28%, 29.6464%);
-  --ca-control-border: rgb(49.920448%, 51.04%, 52.159552%);
+  --ca-control-border: rgb(51.393376%, 52.48%, 53.566624%);
   --ca-control-checked-border: #6ea8fe;
   --ca-muted: rgb(68.956%, 70%, 71.044%);
   --ca-label: rgb(78.1684%, 79%, 79.8316%);
@@ -506,7 +508,15 @@ body.ca-admin {
 }
 @media (max-width: 575.98px) {
   .ca-topbar-brand .ta-navbar-brand span {
-    display: none;
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
   }
 }
 
@@ -538,7 +548,7 @@ body.ca-admin {
   height: 40px;
   margin: 0;
   flex: 0 0 auto;
-  border-radius: 50%;
+  border-radius: var(--bs-border-radius);
   color: var(--ca-topbar-color);
 }
 .ca-admin .ta-sidebar-toggler:hover, .ca-admin .ta-sidebar-toggler:focus-visible {
@@ -561,7 +571,7 @@ body.ca-admin {
   height: 40px;
   padding: 0 0.625rem;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--bs-border-radius);
   text-decoration: none;
   transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
 }
@@ -941,6 +951,18 @@ body.ca-admin {
     justify-content: center;
     padding: 0;
   }
+  .ca-admin.left-sidebar-compact .ca-sidebar-brand .ta-navbar-brand span {
+    display: block;
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
   .ca-admin.left-sidebar-compact .ca-sidebar-brand .ta-navbar-brand img {
     padding-inline-end: 0 !important;
   }
@@ -1104,7 +1126,7 @@ body.ca-admin {
   --bs-list-group-border-color: var(--ca-border);
   --bs-list-group-border-radius: var(--ca-radius);
   --bs-list-group-bg: var(--ca-surface);
-  --bs-list-group-action-hover-bg: rgba(var(--ca-primary-rgb), 0.04);
+  --bs-list-group-action-hover-bg: var(--ca-row-hover-bg);
   --bs-list-group-item-padding-y: 0.875rem;
   --bs-list-group-item-padding-x: 1.25rem;
 }
@@ -1115,6 +1137,16 @@ body.ca-admin {
 
 .ca-admin .admin-list .list-group > .list-group-item:not(.active):hover {
   background-color: var(--bs-list-group-action-hover-bg);
+}
+
+.ca-admin .admin-list a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge) {
+  text-decoration: underline;
+  text-decoration-color: rgba(var(--ca-link-rgb), 0.35);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.ca-admin .admin-list a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge):hover {
+  text-decoration-color: currentColor;
 }
 
 .ca-admin .admin-list-grid {
@@ -1141,7 +1173,7 @@ body.ca-admin {
   transition: background-color 0.15s ease-in-out;
 }
 .ca-admin .admin-list-grid .admin-list-grid-row:hover {
-  background-color: rgba(var(--ca-primary-rgb), 0.04);
+  background-color: var(--ca-row-hover-bg);
 }
 
 .ca-admin .admin-list .bootstrap-select > .dropdown-toggle.bs-placeholder {
@@ -1151,7 +1183,7 @@ body.ca-admin {
 .ca-admin .ta-content .table {
   --bs-table-bg: var(--ca-surface);
   --bs-table-border-color: var(--ca-border);
-  --bs-table-hover-bg: rgba(var(--ca-primary-rgb), 0.04);
+  --bs-table-hover-bg: var(--ca-row-hover-bg);
 }
 .ca-admin .ta-content .table > thead th {
   font-size: 0.8125rem;
@@ -1202,7 +1234,7 @@ body.ca-admin {
 }
 
 .ca-admin .nav-pills .nav-link {
-  border-radius: 999px;
+  border-radius: var(--bs-border-radius);
   font-weight: 600;
 }
 

@@ -197,7 +197,9 @@ $ui-contrast: 3.1;
     // color of the primary on it, and its column headers, a light shade between the page and the white records.
     $toolbar: ensure-contrast(option($scheme, toolbar, $primary), (on-primary($scheme),), $text-contrast, $ink);
     $list-header: tone($hue, 14% * $k, 97.5%);
-    $surfaces: ($page, #fff, $surface-muted, $tint-start, $tint-end, $list-header);
+    // A hovered row: a light tint of the primary, set apart from the neutral page and the white records.
+    $row-hover: color.mix($primary, #fff, 8%);
+    $surfaces: ($page, #fff, $surface-muted, $tint-start, $tint-end, $list-header, $row-hover);
     $border: tone($hue, 38% * $k, 92%);
     $menu-middle: color.mix($deep, $ink, 50%);
     $link: ensure-contrast($primary, $surfaces, $text-contrast, $ink);
@@ -230,6 +232,7 @@ $ui-contrast: 3.1;
     // Hovering a control on the bar moves it away from the text color: darker under white text, lighter under dark.
     --ca-toolbar-hover-bg: #{if-light-text($scheme, rgba(#000, 0.16), rgba(#fff, 0.3))};
     --ca-list-header-bg: #{$list-header};
+    --ca-row-hover-bg: #{$row-hover};
     --ca-border: #{$border};
     // The outline of fields, selects and check boxes, which is what shows they are there.
     --ca-control-border: #{ensure-contrast($border, $surfaces, $ui-contrast, $deep)};
@@ -264,7 +267,8 @@ $ui-contrast: 3.1;
     $tint-start: color.mix(option($scheme, tint-dark, $accent), $page, 8%);
     $tint-end: color.mix(option($scheme, tint-dark, $primary), $page, 12%);
     $list-header: tone($hue, 50% * $k, 21%);
-    $surfaces: ($page, $surface, $surface-muted, $tint-start, $tint-end, $list-header);
+    $row-hover: color.mix($primary, $surface, 16%);
+    $surfaces: ($page, $surface, $surface-muted, $tint-start, $tint-end, $list-header, $row-hover);
     $border: tone($hue, 49% * $k, 28%);
     $body-color: tone($hue, 35% * $k, 92%);
     $link: ensure-contrast($accent, $surfaces, $text-contrast, #fff);
@@ -286,6 +290,7 @@ $ui-contrast: 3.1;
     --ca-surface-rgb: #{rgb-triplet($surface)};
     --ca-surface-muted: #{$surface-muted};
     --ca-list-header-bg: #{$list-header};
+    --ca-row-hover-bg: #{$row-hover};
     --ca-secondary-bg: #{tone($hue, 55% * $k, 23.3%)};
     --ca-border: #{$border};
     --ca-control-border: #{ensure-contrast($border, $surfaces, $ui-contrast, #fff)};

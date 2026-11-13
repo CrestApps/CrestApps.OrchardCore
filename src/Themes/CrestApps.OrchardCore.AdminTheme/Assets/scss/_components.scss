@@ -115,7 +115,7 @@
     --bs-list-group-border-color: var(--ca-border);
     --bs-list-group-border-radius: var(--ca-radius);
     --bs-list-group-bg: var(--ca-surface);
-    --bs-list-group-action-hover-bg: rgba(var(--ca-primary-rgb), 0.04);
+    --bs-list-group-action-hover-bg: var(--ca-row-hover-bg);
     --bs-list-group-item-padding-y: 0.875rem;
     --bs-list-group-item-padding-x: 1.25rem;
 }
@@ -126,6 +126,19 @@
 
 .ca-admin .admin-list .list-group > .list-group-item:not(.active):hover {
     background-color: var(--bs-list-group-action-hover-bg);
+}
+
+// Links inside the records of a list are underlined, lightly, so they do not tell themselves apart from the text
+// around them by color alone (WCAG 1.4.1); the underline firms up on hover, like the breadcrumb's.
+.ca-admin .admin-list a:not(.btn):not(.dropdown-item):not(.page-link):not(.badge) {
+    text-decoration: underline;
+    text-decoration-color: rgba(var(--ca-link-rgb), 0.35);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+
+    &:hover {
+        text-decoration-color: currentColor;
+    }
 }
 
 // The 'Grid' layout of the AdminList shape.
@@ -157,7 +170,7 @@
         transition: background-color 0.15s ease-in-out;
 
         &:hover {
-            background-color: rgba(var(--ca-primary-rgb), 0.04);
+            background-color: var(--ca-row-hover-bg);
         }
     }
 }
@@ -173,7 +186,7 @@
 .ca-admin .ta-content .table {
     --bs-table-bg: var(--ca-surface);
     --bs-table-border-color: var(--ca-border);
-    --bs-table-hover-bg: rgba(var(--ca-primary-rgb), 0.04);
+    --bs-table-hover-bg: var(--ca-row-hover-bg);
 
     > thead th {
         font-size: 0.8125rem;
@@ -232,9 +245,9 @@
     box-shadow: var(--ca-shadow-sm);
 }
 
-// Pills read as a segmented control.
+// Pills are rounded rectangles, like the buttons.
 .ca-admin .nav-pills .nav-link {
-    border-radius: 999px;
+    border-radius: var(--bs-border-radius);
     font-weight: 600;
 }
 
