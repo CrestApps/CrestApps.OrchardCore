@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Localization;
 
@@ -26,6 +27,8 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
         services.TryAddScoped<IAssessmentContentSource, DefaultAssessmentContentSource>();
         services.TryAddScoped<AttemptReviewPolicy>();
         services.TryAddScoped<IAssessmentAttemptService, DefaultAssessmentAttemptService>();
+        services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, QuestionContentAccessHandler>());
         services.AddLeasedWorkQueue<AttemptDeadlineWork>(options =>
         {
             options.CollectionName = AttemptDeadlineWork.CollectionName;
