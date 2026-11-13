@@ -40,4 +40,20 @@ public static class ServiceLevelsServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers a provider that says which of a module's records use a policy, so a policy in use isn't deleted.
+    /// </summary>
+    /// <typeparam name="TProvider">The usage provider.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddServiceLevelPolicyUsage<TProvider>(this IServiceCollection services)
+        where TProvider : class, IServiceLevelPolicyUsageProvider
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceLevelPolicyUsageProvider, TProvider>());
+
+        return services;
+    }
 }

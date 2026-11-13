@@ -20,7 +20,7 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             WorkOrdersRecipeStep.RecipeName,
             "Creates or updates work order checklists, service levels, sub-statuses and types, and service agreements when the agreements feature is on. Records are matched by ItemId only; an existing record takes only the members given. The sections are imported in this order, so a type can point at a checklist or service level of the same step by ItemId.",
             ("Checklists", Array(Checklist(), "The checklist templates.")),
-            ("ServiceLevels", Array(ServiceLevel(), "The service level policies.")),
+            ("ServiceLevels", Array(ServiceLevel(), "Deprecated: Work Orders' own service level policies, as older recipes carried them. Each one becomes a shared policy; use the ServiceLevelPolicies step instead.")),
             ("SubStatuses", Array(SubStatus(), "The sub-statuses.")),
             ("Types", Array(TypeEntry(), "The work order types.")),
             ("Agreements", Array(Agreement(), "The service agreements. Read only when the service agreements feature is on; their customers, accounts and assets must be on the site too.")));
@@ -65,7 +65,7 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             ("ResolveMinutes", Integer("The minutes to resolution; 0 for none.")));
 
         return Object(
-            "A service level policy: how fast work orders must be answered and resolved, by priority.",
+            "Deprecated: a service level policy as older recipes carried it. Each one is copied to a shared policy with the same id; new recipes use the ServiceLevelPolicies step.",
             ("ItemId", ItemId("service level policy")),
             ("Name", Text("The policy name.")),
             ("Targets", Array(target, "The targets, by priority.")),

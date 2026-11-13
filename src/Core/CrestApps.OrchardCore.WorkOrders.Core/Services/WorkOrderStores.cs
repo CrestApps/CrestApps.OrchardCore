@@ -235,59 +235,6 @@ internal sealed class ChecklistTemplateHandler : CatalogEntryHandlerBase<Checkli
 }
 
 /// <summary>
-/// Checks and stamps service level policies.
-/// </summary>
-internal sealed class ServiceLevelPolicyHandler : CatalogEntryHandlerBase<ServiceLevelPolicy>
-{
-    private readonly IClock _clock;
-
-    internal readonly IStringLocalizer S;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ServiceLevelPolicyHandler"/> class.
-    /// </summary>
-    /// <param name="clock">The clock.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public ServiceLevelPolicyHandler(IClock clock, IStringLocalizer<ServiceLevelPolicyHandler> stringLocalizer)
-    {
-        _clock = clock;
-        S = stringLocalizer;
-    }
-
-    /// <inheritdoc/>
-    public override Task InitializedAsync(InitializedContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
-    {
-        context.Model.CreatedUtc = _clock.UtcNow;
-
-        // A new policy stops the clock while work orders are on hold.
-        context.Model.PauseStatuses = [WorkOrderStatus.OnHold];
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public override Task ValidatingAsync(ValidatingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(context.Model.Name))
-        {
-            context.Result.Fail(new ValidationResult(S["The name is required."], [nameof(ServiceLevelPolicy.Name)]));
-        }
-
-        if (context.Model.WarningPercent is < 1 or > 99)
-        {
-            context.Result.Fail(new ValidationResult(S["The warning must come between 1 and 99 percent of the way."], [nameof(ServiceLevelPolicy.WarningPercent)]));
-        }
-
-        if (context.Model.Targets.Any(target => target.ResponseMinutes < 0 || target.ResolveMinutes < 0))
-        {
-            context.Result.Fail(new ValidationResult(S["Targets can't be negative."], [nameof(ServiceLevelPolicy.Targets)]));
-        }
-
-        return Task.CompletedTask;
-    }
-}
-
-/// <summary>
 /// Checks sub-statuses.
 /// </summary>
 internal sealed class WorkOrderSubStatusHandler : CatalogEntryHandlerBase<WorkOrderSubStatus>

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ServiceLevels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -44,8 +45,8 @@ public sealed class WorkOrdersAdminMenu : AdminNavigationProvider
                 .LocalNav())
             .Add(S["Service Levels"], S["Service Levels"].PrefixPosition("62"), policies => policies
                 .Id("workOrderServiceLevels")
-                .Action("Index", "WorkOrderSettings", new { area = WorkOrdersConstants.Features.WorkOrders, kind = "service-levels" })
-                .Permission(WorkOrdersPermissions.ManageWorkOrderSettings)
+                .Action("Index", "Policies", ServiceLevelsConstants.Features.ServiceLevels)
+                .Permission(ServiceLevelsPermissions.ManageServiceLevelPolicies)
                 .LocalNav())
             .Add(S["Sub-statuses"], S["Sub-statuses"].PrefixPosition("63"), subStatuses => subStatuses
                 .Id("workOrderSubStatuses")

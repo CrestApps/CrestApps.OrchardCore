@@ -6,8 +6,9 @@
     <Description>
       $(CrestAppsDescription)
 
-      Core services for business hours: the open-hours service that answers from the registered schedule sources,
-      and its registration helper.
+      Core services for business hours: the open-hours service that answers from the registered schedule sources, the
+      store and rules of the schedules the Business Hours module keeps, the editor helpers for weekly hours and date
+      exceptions, and their registration helpers.
     </Description>
     <PackageTags>$(PackageTags) BusinessHours Hours Holidays Schedule Core</PackageTags>
   </PropertyGroup>
@@ -22,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.BusinessHours.Abstractions\CrestApps.OrchardCore.BusinessHours.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
   </ItemGroup>
 
 </Project>

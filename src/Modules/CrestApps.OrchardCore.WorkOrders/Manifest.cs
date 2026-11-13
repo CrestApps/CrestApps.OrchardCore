@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.WorkOrders;
 using OrchardCore.Modules.Manifest;
 
@@ -13,7 +14,11 @@ using OrchardCore.Modules.Manifest;
     Id = WorkOrdersConstants.Features.WorkOrders,
     Name = "Work Orders",
     Description = "Jobs to do for customers: types with their defaults, checklists, service levels with warnings and breaches, parts used, signatures, follow-ups and invoices.",
-    Category = "Field Service"
+    Category = "Field Service",
+    Dependencies =
+    [
+        ServiceLevelsConstants.Features.ServiceLevels,
+    ]
 )]
 
 [assembly: Feature(

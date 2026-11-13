@@ -207,16 +207,16 @@ public sealed class ServiceAgreementTests
             {
                 services.AddSingleton(clock.Object);
                 services.AddSingleton(observer.Object);
-                services.AddWorkOrdersCore();
+                services.AddWorkOrdersWithServiceLevels();
                 services.AddServiceAgreementsCore();
             },
             async builder =>
             {
-                await WorkOrdersIndexSchema.CreateAsync(builder);
+                await WorkOrderTestStores.CreateSchemaAsync(builder);
                 await ServiceAgreementsIndexSchema.CreateAsync(builder);
             },
-            [new WorkOrderIndexProvider(), new WorkOrderTypeIndexProvider(), new ChecklistTemplateIndexProvider(), new ServiceLevelPolicyIndexProvider(), new WorkOrderSubStatusIndexProvider(), new ServiceAgreementIndexProvider()],
-            [WorkOrdersConstants.CollectionName]);
+            [.. WorkOrderTestStores.IndexProviders, new ServiceAgreementIndexProvider()],
+            WorkOrderTestStores.Collections);
 
         setup.TypeId = await setup.Harness.RunAsync(async services =>
         {

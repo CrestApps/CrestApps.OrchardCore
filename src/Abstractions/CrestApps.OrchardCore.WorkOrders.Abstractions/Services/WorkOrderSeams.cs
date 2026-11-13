@@ -1,32 +1,6 @@
-using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.WorkOrders.Models;
 
 namespace CrestApps.OrchardCore.WorkOrders.Services;
-
-/// <summary>
-/// Gives the hours a service level clock runs in.
-/// </summary>
-public interface IServiceHoursProvider
-{
-    /// <summary>
-    /// Gives the open stretches of a business hours calendar between two times.
-    /// </summary>
-    /// <param name="calendarId">The calendar.</param>
-    /// <param name="timeZoneId">Its time zone.</param>
-    /// <param name="fromUtc">The start.</param>
-    /// <param name="toUtc">The end.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The open stretches, in order, or <see langword="null"/> when the provider doesn't know the calendar.</returns>
-    Task<IReadOnlyList<TimeWindow>> GetOpenAsync(string calendarId, string timeZoneId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Lists the calendars the provider knows, so the service level policy editor can offer them.
-    /// </summary>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <returns>The calendars, or none.</returns>
-    Task<IReadOnlyList<ServiceHoursCalendar>> ListCalendarsAsync(CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<ServiceHoursCalendar>>([]);
-}
 
 /// <summary>
 /// Takes the parts used on a work order off a stock location.

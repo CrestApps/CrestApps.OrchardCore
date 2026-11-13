@@ -134,13 +134,6 @@ public sealed class ChecklistTemplateIndex : WorkOrderSettingIndex
 }
 
 /// <summary>
-/// Indexes the service level policies.
-/// </summary>
-public sealed class ServiceLevelPolicyIndex : WorkOrderSettingIndex
-{
-}
-
-/// <summary>
 /// Indexes the sub-statuses.
 /// </summary>
 public sealed class WorkOrderSubStatusIndex : WorkOrderSettingIndex
@@ -232,27 +225,6 @@ public sealed class ChecklistTemplateIndexProvider : IndexProvider<ChecklistTemp
 }
 
 /// <summary>
-/// Maps service level policies.
-/// </summary>
-public sealed class ServiceLevelPolicyIndexProvider : IndexProvider<ServiceLevelPolicy>
-{
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ServiceLevelPolicyIndexProvider"/> class.
-    /// </summary>
-    public ServiceLevelPolicyIndexProvider()
-    {
-        CollectionName = WorkOrdersConstants.CollectionName;
-    }
-
-    /// <inheritdoc/>
-    public override void Describe(DescribeContext<ServiceLevelPolicy> context)
-    {
-        context.For<ServiceLevelPolicyIndex>()
-            .Map(item => new ServiceLevelPolicyIndex { ItemId = item.ItemId, Name = item.Name });
-    }
-}
-
-/// <summary>
 /// Maps sub-statuses.
 /// </summary>
 public sealed class WorkOrderSubStatusIndexProvider : IndexProvider<WorkOrderSubStatus>
@@ -328,7 +300,6 @@ public static class WorkOrdersIndexSchema
 
         await CreateSettingTableAsync<WorkOrderTypeIndex>(schemaBuilder, collection);
         await CreateSettingTableAsync<ChecklistTemplateIndex>(schemaBuilder, collection);
-        await CreateSettingTableAsync<ServiceLevelPolicyIndex>(schemaBuilder, collection);
         await CreateSettingTableAsync<WorkOrderSubStatusIndex>(schemaBuilder, collection);
     }
 

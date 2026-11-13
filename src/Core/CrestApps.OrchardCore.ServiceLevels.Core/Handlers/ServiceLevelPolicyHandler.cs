@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.ServiceLevels.Core.Services;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using Microsoft.Extensions.Localization;
@@ -28,6 +29,15 @@ internal sealed class ServiceLevelPolicyHandler : CatalogEntryHandlerBase<Servic
         S = stringLocalizer;
     }
 
+    public override Task InitializingAsync(InitializingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
+    {
+        // A recipe creates the entry from its JSON.
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
@@ -49,6 +59,8 @@ internal sealed class ServiceLevelPolicyHandler : CatalogEntryHandlerBase<Servic
 
     public override Task UpdatingAsync(UpdatingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
     {
+        // A recipe updates the entry from its JSON; the editor has already changed it.
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
         Tidy(context.Model);
         context.Model.ModifiedUtc = _clock.UtcNow;
 

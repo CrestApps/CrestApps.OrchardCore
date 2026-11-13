@@ -11,21 +11,23 @@ A work order is a job done for a customer, such as a repair or an installation. 
 | | |
 | --- | --- |
 | **Menu** | Field Service > Work Orders, Work Order Types, Checklists, Service Levels, Sub-statuses |
-| **Permission** | Manage work orders, or View work orders to see them; Manage work order settings for the types, checklists, service levels and sub-statuses |
-| **Feature** | Work Orders; Service Agreements for recurring visits; Inventory for parts, Transactions for invoices, Geo for territories, Assets for equipment |
+| **Permission** | Manage work orders, or View work orders to see them; Manage work order settings for the types, checklists and sub-statuses; Manage service level policies for the service levels |
+| **Feature** | Work Orders (it turns on Service Levels and Business Hours); Service Agreements for recurring visits; Inventory for parts, Transactions for invoices, Geo for territories, Assets for equipment |
 
 <AskYourAdmin />
 
 ## Set up a service level
 
-A service level says how fast work orders are responded to and resolved.
+A service level policy says how fast work orders are responded to and resolved, at each priority. Work order policies are kept with every other policy in **Configuration > Service Levels**; **Field Service > Service Levels** opens the same page.
 
-1. Go to **Field Service > Service Levels** and select **Add service level**.
-2. Enter a name and choose the time zone.
-3. Under **Targets**, enter the hours to respond and to resolve for each priority. Responding means making it ready, scheduling it or starting it; resolving means completing it.
+1. Go to **Field Service > Service Levels** and select **Add Policy** (choose **For Work orders** when it asks).
+2. Enter a name and choose in **Counted on** the business hours to count in, or **Around the clock**. See [Business Hours Schedules](../administration/business-hours-schedules.md).
+3. Under **Targets**, enter the minutes to respond and to resolve for each priority. Responding means making it ready, scheduling it or starting it; resolving means completing it.
 4. Choose when the warning comes, such as at 80% of a target.
-5. Under **When the clock runs**, tick **Only in opening hours** and choose the days and hours, or leave it unticked for around the clock. Choose the statuses the clock stops in, such as *On hold*.
+5. Under **Work orders**, tick the statuses the timers stop in, such as *On hold*.
 6. Select **Save**.
+
+See [Service Levels](../administration/service-levels.md) for every field.
 
 ## Make a checklist
 
@@ -46,7 +48,7 @@ A required question must be answered before the work order is completed.
 6. Tick its checklists, and list the lines every work order starts with, such as an hour of labor or a filter. With Inventory on, choose the stock item a part comes from.
 7. Select **Save**.
 
-Sub-statuses, under **Field Service > Sub-statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level clock.
+Sub-statuses, under **Field Service > Sub-statuses**, are finer statuses inside one, such as *Waiting for parts* under *On hold*. A sub-status can stop the service level timers.
 
 ## Create a work order
 

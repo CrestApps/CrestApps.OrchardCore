@@ -7,14 +7,18 @@
       $(CrestAppsDescription)
 
       Public contracts for business hours: the weekly hours schedule with its date exceptions (holidays and special
-      hours), the open-hours service every module asks "are we open?", the schedule sources that keep schedules,
-      and the pure evaluator that turns a schedule into open windows in its time zone.
+      hours), the schedules the Business Hours module keeps, the open-hours service every module asks "are we open?",
+      the schedule sources that keep schedules, and the pure evaluator that turns a schedule into open windows in its
+      time zone.
     </Description>
     <PackageTags>$(PackageTags) BusinessHours Hours Holidays Schedule Abstractions</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

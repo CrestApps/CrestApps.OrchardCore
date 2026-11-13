@@ -22,6 +22,11 @@ public static class WorkOrdersConstants
     public const string RecordKind = "WorkOrder";
 
     /// <summary>
+    /// The name of the service level scope work orders register: the shared policies written for work orders.
+    /// </summary>
+    public const string ServiceLevelScope = "WorkOrders";
+
+    /// <summary>
     /// The prefix of work order numbers.
     /// </summary>
     public const string NumberPrefix = "WO-";

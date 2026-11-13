@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -392,100 +393,6 @@ public class ChecklistTemplateEditViewModel
     /// Gets or sets the questions.
     /// </summary>
     public List<QuestionEditModel> Questions { get; set; } = [];
-}
-
-/// <summary>
-/// The targets of a priority in the service level editor.
-/// </summary>
-public class TargetEditModel
-{
-    /// <summary>
-    /// Gets or sets the priority.
-    /// </summary>
-    public WorkOrderPriority Priority { get; set; }
-
-    /// <summary>
-    /// Gets or sets the hours to respond in.
-    /// </summary>
-    public decimal? ResponseHours { get; set; }
-
-    /// <summary>
-    /// Gets or sets the hours to resolve in.
-    /// </summary>
-    public decimal? ResolveHours { get; set; }
-}
-
-/// <summary>
-/// The service level policy editor.
-/// </summary>
-public class ServiceLevelPolicyEditViewModel
-{
-    /// <summary>
-    /// Gets or sets the id, or <see langword="null"/> for a new policy.
-    /// </summary>
-    public string Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name.
-    /// </summary>
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the time zone.
-    /// </summary>
-    public string TimeZoneId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the hours calendar the clock runs in, or <see langword="null"/> for the weekly hours or around the clock.
-    /// </summary>
-    public string HoursCalendarId { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether the clock runs only in opening hours.
-    /// </summary>
-    public bool BusinessHoursOnly { get; set; }
-
-    /// <summary>
-    /// Gets or sets the days open.
-    /// </summary>
-    public List<DayOfWeek> Days { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets when they open.
-    /// </summary>
-    public TimeOnly Opens { get; set; } = new(9, 0);
-
-    /// <summary>
-    /// Gets or sets when they close.
-    /// </summary>
-    public TimeOnly Closes { get; set; } = new(17, 0);
-
-    /// <summary>
-    /// Gets or sets the share of a target used up when the warning is raised.
-    /// </summary>
-    public int WarningPercent { get; set; } = 80;
-
-    /// <summary>
-    /// Gets or sets the statuses the clock stops in.
-    /// </summary>
-    public List<WorkOrderStatus> PauseStatuses { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the targets, one per priority.
-    /// </summary>
-    public List<TargetEditModel> Targets { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the time zones.
-    /// </summary>
-    [BindNever]
-    public IList<SelectListItem> TimeZoneOptions { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the hours calendars the policy can run in.
-    /// </summary>
-    [BindNever]
-    public IList<SelectListItem> HoursCalendarOptions { get; set; } = [];
 }
 
 /// <summary>

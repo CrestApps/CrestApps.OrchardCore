@@ -15,4 +15,13 @@ public interface IServiceLevelPolicyManager : ICatalogManager<ServiceLevelPolicy
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The policies.</returns>
     Task<IReadOnlyList<ServiceLevelPolicy>> ListByScopeAsync(string scope, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the policy of a name in a scope.
+    /// </summary>
+    /// <param name="scope">The scope's name.</param>
+    /// <param name="name">The policy's name.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The policy, or <see langword="null"/>.</returns>
+    Task<ServiceLevelPolicy> FindByNameAsync(string scope, string name, CancellationToken cancellationToken = default);
 }

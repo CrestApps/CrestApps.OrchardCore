@@ -1,0 +1,45 @@
+@model ServiceLevelPolicyViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["A clear name, such as Premium support or Standard maintenance."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["For"]</label>
+    <div class="ocat-end">
+        <input class="form-control-plaintext" value="@Model.ScopeDisplayName" readonly aria-label="@T["For"]" />
+        <span class="hint">@T["The kind of work the policy is for. It sets the metrics and priorities below and can't be changed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="HoursScheduleId">
+    <label for="@Html.IdFor(model => model.HoursScheduleId)" class="ocat-label">@T["Counted on"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("HoursSchedulePicker", new { name = Html.NameFor(model => model.HoursScheduleId).ToString(), selectedValue = Model.HoursScheduleId, emptyText = T["Around the clock"].Value })
+        <span class="hint">@T["The business hours the targets are counted in. Closed hours, weekends and holidays don't count. Choose Around the clock to count every hour."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="WarningPercent">
+    <label asp-for="WarningPercent" class="ocat-label">@T["Warn at"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 10rem">
+            <input asp-for="WarningPercent" type="number" min="1" max="99" class="form-control" />
+            <span class="input-group-text">%</span>
+        </div>
+        <span asp-validation-for="WarningPercent" class="text-danger"></span>
+        <span class="hint">@T["How much of a target may pass before a warning is raised."]</span>
+    </div>
+</div>

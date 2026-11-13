@@ -272,6 +272,8 @@ const sidebars = {
                 'user-manual/administration/do-not-call-lists',
                 'user-manual/administration/phone-number-verification',
                 'user-manual/administration/time-zones',
+                'user-manual/administration/business-hours-schedules',
+                'user-manual/administration/service-levels',
                 'user-manual/administration/wizard',
                 'user-manual/administration/recipes',
                 'user-manual/administration/child-tenants',
@@ -449,6 +451,7 @@ const sidebars = {
             items: [
                 'modules/calendars',
                 'modules/business-hours',
+                'modules/service-levels',
                 'modules/scheduling',
             ],
         },

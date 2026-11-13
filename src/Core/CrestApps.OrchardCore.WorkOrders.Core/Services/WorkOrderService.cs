@@ -34,7 +34,7 @@ public sealed class WorkOrderResult
 }
 
 /// <summary>
-/// Creates, changes, completes, bills and follows up work orders, keeping their service level clock.
+/// Creates, changes, completes, bills and follows up work orders, keeping their service level timers.
 /// </summary>
 public sealed class WorkOrderService
 {
@@ -43,9 +43,8 @@ public sealed class WorkOrderService
     private readonly WorkOrderStore _store;
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
     private readonly WorkOrderSettingManager<ChecklistTemplate> _checklists;
-    private readonly WorkOrderSettingManager<ServiceLevelPolicy> _policies;
     private readonly WorkOrderSettingManager<WorkOrderSubStatus> _subStatuses;
-    private readonly SlaClock _slaClock;
+    private readonly WorkOrderServiceLevels _serviceLevels;
     private readonly IEnumerable<IWorkOrderHandler> _handlers;
     private readonly IEnumerable<IWorkOrderObserver> _observers;
     private readonly IEnumerable<IWorkOrderPartsService> _parts;
@@ -62,9 +61,8 @@ public sealed class WorkOrderService
     /// <param name="store">The work order store.</param>
     /// <param name="types">The work order types.</param>
     /// <param name="checklists">The checklist templates.</param>
-    /// <param name="policies">The service level policies.</param>
     /// <param name="subStatuses">The sub-statuses.</param>
-    /// <param name="slaClock">The service level clock.</param>
+    /// <param name="serviceLevels">The work order's service level timers.</param>
     /// <param name="handlers">The work order handlers.</param>
     /// <param name="observers">The work order observers.</param>
     /// <param name="parts">The parts service, when Inventory is on.</param>
@@ -77,9 +75,8 @@ public sealed class WorkOrderService
         WorkOrderStore store,
         WorkOrderSettingManager<WorkOrderType> types,
         WorkOrderSettingManager<ChecklistTemplate> checklists,
-        WorkOrderSettingManager<ServiceLevelPolicy> policies,
         WorkOrderSettingManager<WorkOrderSubStatus> subStatuses,
-        SlaClock slaClock,
+        WorkOrderServiceLevels serviceLevels,
         IEnumerable<IWorkOrderHandler> handlers,
         IEnumerable<IWorkOrderObserver> observers,
         IEnumerable<IWorkOrderPartsService> parts,
@@ -92,9 +89,8 @@ public sealed class WorkOrderService
         _store = store;
         _types = types;
         _checklists = checklists;
-        _policies = policies;
         _subStatuses = subStatuses;
-        _slaClock = slaClock;
+        _serviceLevels = serviceLevels;
         _handlers = handlers;
         _observers = observers;
         _parts = parts;
@@ -180,7 +176,7 @@ public sealed class WorkOrderService
             line.Id ??= CrestApps.Core.UniqueId.GenerateId();
         }
 
-        await ScheduleSlaAsync(workOrder, now, cancellationToken);
+        await _serviceLevels.StartAsync(workOrder, now, cancellationToken);
 
         foreach (var handler in _handlers)
         {
@@ -217,6 +213,7 @@ public sealed class WorkOrderService
             await handler.UpdatingAsync(workOrder, cancellationToken);
         }
 
+        await _serviceLevels.UpdatedAsync(workOrder, cancellationToken);
         Note(workOrder, actor, S["Details changed."]);
         await _store.UpdateAsync(workOrder, cancellationToken);
 
@@ -691,50 +688,12 @@ public sealed class WorkOrderService
 
     private async Task MoveAsync(WorkOrder workOrder, WorkOrderStatus status, WorkOrderSubStatus subStatus, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
-        var policy = string.IsNullOrEmpty(workOrder.Sla.PolicyId) ? null : await _policies.FindByIdAsync(workOrder.Sla.PolicyId, cancellationToken);
-        var pauses = policy is not null && (policy.PauseStatuses.Contains(status) || subStatus?.PausesSla == true);
-
-        if (workOrder.Sla.FirstResponseUtc is null && WorkOrderStatusRules.IsResponse(status))
-        {
-            workOrder.Sla.FirstResponseUtc = now;
-        }
-
-        // The clock stops while the work order waits, and its open targets move by the time it stopped.
-        if (workOrder.Sla.PausedSinceUtc is { } since && !pauses)
-        {
-            var stopped = now - since;
-
-            workOrder.Sla.PausedSeconds += (long)stopped.TotalSeconds;
-            workOrder.Sla.PausedSinceUtc = null;
-
-            if (workOrder.Sla.FirstResponseUtc is null && workOrder.Sla.RespondByUtc is { } respondBy)
-            {
-                workOrder.Sla.RespondByUtc = respondBy + stopped;
-            }
-
-            if (workOrder.Sla.ResolveByUtc is { } resolveBy)
-            {
-                workOrder.Sla.ResolveByUtc = resolveBy + stopped;
-            }
-        }
-        else if (pauses && workOrder.Sla.PausedSinceUtc is null)
-        {
-            workOrder.Sla.PausedSinceUtc = now;
-        }
-
         workOrder.Status = status;
         workOrder.SubStatusId = subStatus?.ItemId;
-    }
 
-    private async Task ScheduleSlaAsync(WorkOrder workOrder, DateTime now, CancellationToken cancellationToken)
-    {
-        var policy = string.IsNullOrEmpty(workOrder.Sla?.PolicyId) ? null : await _policies.FindByIdAsync(workOrder.Sla.PolicyId, cancellationToken);
-        var target = SlaClock.TargetOf(policy, workOrder.Priority);
-
-        workOrder.Sla ??= new WorkOrderSla();
-        workOrder.Sla.RespondByUtc = target?.ResponseMinutes > 0 ? await _slaClock.DueAsync(now, target.ResponseMinutes, policy, cancellationToken) : null;
-        workOrder.Sla.ResolveByUtc = target?.ResolveMinutes > 0 ? await _slaClock.DueAsync(now, target.ResolveMinutes, policy, cancellationToken) : null;
+        // The first move to a response status answers it, a status that waits stops the timers, and a finished or
+        // canceled work order ends them.
+        await _serviceLevels.MovedAsync(workOrder, subStatus, _clock.UtcNow, cancellationToken);
     }
 
     private async Task<IReadOnlyList<string>> ValidateAsync(WorkOrder workOrder, CancellationToken cancellationToken)

@@ -1,7 +1,10 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Core.Recipes;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
+using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Json.Schema;
@@ -16,7 +19,9 @@ using OrchardCore.Recipes.Services;
 namespace CrestApps.OrchardCore.WorkOrders.Recipes;
 
 /// <summary>
-/// Imports the WorkOrders step: Checklists, ServiceLevels, SubStatuses, Types, Agreements, each created or updated by ItemId with the same checks as the admin.
+/// Imports the WorkOrders step: Checklists, SubStatuses, Types, Agreements, each created or updated by ItemId with the same checks as the admin.
+/// The ServiceLevels section of older recipes is copied to the shared service level policies; new recipes use the
+/// ServiceLevelPolicies step.
 /// </summary>
 internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
 {
@@ -36,7 +41,7 @@ internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
         await CatalogRecipeSections.ImportAsync(context, "Checklists", _services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>(), "checklist");
-        await CatalogRecipeSections.ImportAsync(context, "ServiceLevels", _services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>(), "service level");
+        await ImportLegacyServiceLevelsAsync(context);
         await CatalogRecipeSections.ImportAsync(context, "SubStatuses", _services.GetRequiredService<WorkOrderSettingManager<WorkOrderSubStatus>>(), "sub-status");
         await CatalogRecipeSections.ImportAsync(context, "Types", _services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>(), "work order type");
         if (_services.GetService<ServiceAgreementManager>() is { } agreements)
@@ -44,10 +49,36 @@ internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
             await CatalogRecipeSections.ImportAsync(context, "Agreements", agreements, "service agreement");
         }
     }
+
+    // Older recipes carried Work Orders' own policies; each one becomes a shared policy with the same id.
+    private async Task ImportLegacyServiceLevelsAsync(RecipeExecutionContext context)
+    {
+        if (context.Step["ServiceLevels"] is not JsonArray policies)
+        {
+            return;
+        }
+
+        var upgrade = _services.GetRequiredService<WorkOrderServiceLevelUpgrade>();
+
+        foreach (var node in policies.OfType<JsonObject>())
+        {
+            var legacy = node.Deserialize<LegacyServiceLevelPolicy>(JOptions.Default);
+
+            if (legacy is null || string.IsNullOrWhiteSpace(legacy.Name))
+            {
+                context.Errors.Add($"A service level in the WorkOrders step has no name.");
+
+                continue;
+            }
+
+            await upgrade.ImportAsync(legacy);
+        }
+    }
 }
 
 /// <summary>
-/// Exports work order types, checklists, service levels and sub-statuses, and service agreements when asked.
+/// Exports work order types, checklists and sub-statuses, and service agreements when asked. Service level policies are
+/// exported by the ServiceLevelPolicies step.
 /// </summary>
 public sealed class WorkOrdersDeploymentStep : DeploymentStep
 {
@@ -84,7 +115,6 @@ internal sealed class WorkOrdersDeploymentSource : DeploymentSourceBase<WorkOrde
         var node = new JsonObject { ["name"] = step.Name };
 
         node["Checklists"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<ChecklistTemplate>>().GetAllAsync()));
-        node["ServiceLevels"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<ServiceLevelPolicy>>().GetAllAsync()));
         node["SubStatuses"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<WorkOrderSubStatus>>().GetAllAsync()));
         node["Types"] = CatalogRecipeSections.Export((await _services.GetRequiredService<WorkOrderSettingManager<WorkOrderType>>().GetAllAsync()));
         if (step.IncludeAgreements)

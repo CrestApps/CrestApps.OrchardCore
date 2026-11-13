@@ -36,4 +36,16 @@ public sealed class ServiceLevelStart
     /// Gets or sets whether the timer starts paused, for a record created in a state that doesn't count.
     /// </summary>
     public bool Paused { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the warning was already raised, for a timer copied from another system, so the monitor
+    /// doesn't raise it again.
+    /// </summary>
+    public bool AlreadyWarned { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the breach was already raised, for a timer copied from another system, so the monitor
+    /// doesn't raise it again.
+    /// </summary>
+    public bool AlreadyBreached { get; set; }
 }

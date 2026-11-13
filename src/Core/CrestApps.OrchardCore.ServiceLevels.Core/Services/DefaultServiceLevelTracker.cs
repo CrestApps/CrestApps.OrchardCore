@@ -75,6 +75,16 @@ public sealed class DefaultServiceLevelTracker : IServiceLevelTracker
         Apply(timer, policy, target);
         await _timerClock.ScheduleAsync(timer, now, cancellationToken);
 
+        if (start.AlreadyWarned || start.AlreadyBreached)
+        {
+            timer.WarnedUtc = timer.WarnAtUtc;
+        }
+
+        if (start.AlreadyBreached)
+        {
+            timer.BreachedUtc = timer.DueUtc;
+        }
+
         if (start.Paused)
         {
             timer.State = ServiceLevelTimerState.Paused;

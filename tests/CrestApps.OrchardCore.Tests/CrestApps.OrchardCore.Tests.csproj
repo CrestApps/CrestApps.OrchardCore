@@ -191,6 +191,7 @@
     <ProjectReference Include="..\..\src\Core\CrestApps.OrchardCore.Accounts.Core\CrestApps.OrchardCore.Accounts.Core.csproj" />
     <ProjectReference Include="..\..\src\Abstractions\CrestApps.OrchardCore.Accounts.Abstractions\CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Calendars\CrestApps.OrchardCore.Calendars.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.BusinessHours\CrestApps.OrchardCore.BusinessHours.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Skills\CrestApps.OrchardCore.Skills.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />

@@ -37,4 +37,21 @@ internal sealed class ServiceLevelPolicyManager : CatalogManager<ServiceLevelPol
 
         return policies;
     }
+
+    public async Task<ServiceLevelPolicy> FindByNameAsync(string scope, string name, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(scope) || string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        var policy = await _store.FindByNameAsync(scope.Trim(), name.Trim(), cancellationToken);
+
+        if (policy is not null)
+        {
+            await LoadAsync(policy, cancellationToken);
+        }
+
+        return policy;
+    }
 }

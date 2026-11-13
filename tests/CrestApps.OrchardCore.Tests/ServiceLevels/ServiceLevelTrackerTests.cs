@@ -236,6 +236,35 @@ public sealed class ServiceLevelTrackerTests
         Assert.Equal(9000, timer.UsedSeconds);
     }
 
+    [Fact]
+    public async Task ATimerCopiedFromAnotherSystem_DoesNotRaiseAWarningOrBreachAlreadyRaised()
+    {
+        // Arrange: a timer started in the past, whose warning and breach were raised before it was copied.
+        var kit = new Kit(Utc(_monday, 12, 0));
+
+        // Act
+        var timer = await kit.Tracker.StartAsync(
+            new ServiceLevelStart
+            {
+                Subject = _ticket,
+                Metric = ServiceLevelMetrics.FirstResponse,
+                PolicyId = kit.Policy.ItemId,
+                Priority = "High",
+                StartUtc = Utc(_monday, 9, 0),
+                AlreadyWarned = true,
+                AlreadyBreached = true,
+            },
+            TestContext.Current.CancellationToken);
+        var raised = await kit.Monitor.CheckAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, raised);
+        Assert.Equal(Utc(_monday, 10, 0), timer.WarnedUtc);
+        Assert.Equal(Utc(_monday, 11, 0), timer.BreachedUtc);
+        Assert.Empty(kit.Observer.Warned);
+        Assert.Empty(kit.Observer.Breached);
+    }
+
     private static DateTime Utc(DateOnly date, int hour, int minute)
         => new(date.Year, date.Month, date.Day, hour, minute, 0, DateTimeKind.Utc);
 
