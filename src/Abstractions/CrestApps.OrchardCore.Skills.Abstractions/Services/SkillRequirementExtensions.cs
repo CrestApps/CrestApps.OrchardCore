@@ -28,7 +28,7 @@ public static class SkillRequirementExtensions
 
         foreach (var requirement in requirements ?? [])
         {
-            if (string.IsNullOrEmpty(requirement?.SkillId))
+            if (string.IsNullOrWhiteSpace(requirement?.SkillId))
             {
                 continue;
             }
