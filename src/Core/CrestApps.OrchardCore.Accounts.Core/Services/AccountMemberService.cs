@@ -57,4 +57,22 @@ public sealed class AccountMemberService : IAccountMemberService
             .Select(row => row.AccountContentItemId)
             .FirstOrDefault(accountId => !string.Equals(accountId, exceptAccountId, StringComparison.Ordinal));
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<string>> GetMemberUserIdsAsync(string accountId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(accountId))
+        {
+            return [];
+        }
+
+        var rows = await _session
+            .QueryIndex<AccountMemberIndex>(index => index.AccountContentItemId == accountId && index.Published)
+            .ListAsync(cancellationToken);
+
+        return [.. rows
+            .Select(row => row.UserId)
+            .Where(userId => !string.IsNullOrEmpty(userId))
+            .Distinct(StringComparer.Ordinal)];
+    }
 }

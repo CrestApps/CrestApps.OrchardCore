@@ -186,7 +186,11 @@ it to the `Account` type at position 4; another account type can be given the pa
 - **Index.** `AccountMemberIndex` (`AccountContentItemId`, `UserId`, `Published`, `Latest`) holds one row per member
   of each version.
 - **Lookup.** `IAccountMemberService.FindAccountAsync(userId)` returns the published account a user signs in for;
-  `FindOtherAccountIdAsync(userId, exceptAccountId)` tells an editor the user already belongs to another one.
+  `FindOtherAccountIdAsync(userId, exceptAccountId)` tells an editor the user already belongs to another one;
+  `GetMemberUserIdsAsync(accountId)` returns the user ids of the members of the published account.
+- **Party members.** The feature registers `AccountPartyMemberSource`, so `IPartyMembershipService` (see
+  [Parties](parties.md#who-may-act-for-a-party)) answers that an account's members act for it, such as in a billing
+  portal.
 - **Contacts.** When an account is saved, each member is linked to the account's contact with their email, through the
   registered `IAccountContactFinder`s. The CRM registers one that matches a contact's primary email among the contacts
   in the account. A member with no match, or more than one, has no contact.
@@ -209,9 +213,19 @@ adds it to the `Account` type at position 5.
 | `LocationId` | Stays the same when the location is renamed or moved. |
 | `Name` | Such as *Head office*; the city when left blank. |
 | `Address` | An `Address`, entered and checked with the shared [address editor](addresses.md), addressed to the account. |
+| `IsBilling` | Whether the account's invoices and other billing documents are addressed to this location. The editor's **Billing location** box marks it, and refuses a save with more than one. |
 
-`AccountLocationsPart.FindLocation(locationId)` finds one. Accounts B2B offers them as shipping addresses at checkout;
-a field service module offers them as service addresses.
+`AccountLocationsPart.FindLocation(locationId)` finds one. `AccountLocationsPart.GetBillingLocation()` returns the
+location the account is billed at: the one marked as the billing location, else the first location, or none. Accounts
+B2B offers the locations as shipping addresses at checkout; a field service module offers them as service addresses.
+
+## Billing an account
+
+The Accounts feature registers `AccountBillingProfileSource`, the first source of the `Account` party kind's
+[billing profile](parties.md#billing-a-party): the account's name, and its billing location's address as the billing
+address. It reads the published account, or its latest version while it was never published. Modules that keep more
+about an account add a source of their own after it: [Accounts B2B](accounts-b2b.md#billing-profile) adds the tax
+number, the billing e-mail and the terms.
 
 ## Removing an account
 
@@ -269,7 +283,8 @@ as their contacts and opportunities.
           {
             "LocationId": "hq",
             "Name": "Head office",
-            "Address": { "Country": "US", "AddressLine1": "1 Main Street", "City": "Reno", "Region": "NV", "PostalCode": "89501" }
+            "Address": { "Country": "US", "AddressLine1": "1 Main Street", "City": "Reno", "Region": "NV", "PostalCode": "89501" },
+            "IsBilling": true
           }
         ]
       }

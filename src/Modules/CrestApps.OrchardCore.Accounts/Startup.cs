@@ -47,6 +47,10 @@ public sealed class Startup : StartupBase
 
         // Accounts are parties: pickers and lists in any module (asset owners, work orders) find and name them.
         services.AddPartySource<AccountPartySource>();
+
+        // An account is billed under its name at its billing location; modules that keep more about it add their own
+        // billing profile source after this one.
+        services.AddPartyBillingProfileSource<AccountBillingProfileSource>();
         services.AddScoped<AccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, AccountsContentDefinitionEventHandler>();
         services.AddScoped<IContentDisplayDriver, AccountPickerDisplayDriver>();
@@ -95,6 +99,9 @@ public sealed class MembersStartup : StartupBase
             .AddHandler<AccountMembersPartHandler>();
 
         services.AddScoped<IAccountMemberService, AccountMemberService>();
+
+        // The members of an account act for it wherever a party's members are asked for, such as a billing portal.
+        services.AddPartyMemberSource<AccountPartyMemberSource>();
         services.AddIndexProvider<AccountMemberIndexProvider>();
         services.AddDataMigration<AccountMembersMigrations>();
         services.AddPermissionProvider<AccountMembersPermissionProvider>();
