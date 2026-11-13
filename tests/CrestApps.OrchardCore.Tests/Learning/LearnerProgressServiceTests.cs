@@ -301,6 +301,26 @@ public sealed class LearnerProgressServiceTests
         Assert.Equal("instructor1", completed.History.Last().Actor);
     }
 
+    [Fact]
+    public async Task RecordAccessAsync_WithACopyReadInAnotherScope_UpdatesTheSameDocument()
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "lesson");
+        var copy = await EnrollAsync(harness, "user1", "course1");
+
+        // Act
+        await harness.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().RecordAccessAsync(copy, "lesson", 10));
+
+        // Assert
+        var enrollments = await harness.RunAsync(services => services.GetRequiredService<IEnrollmentStore>().ListByUserAsync("user1"), commit: false);
+        var only = Assert.Single(enrollments);
+
+        Assert.Equal(EnrollmentStatus.Completed, only.Status);
+    }
+
     private static async Task<Enrollment> EnrollAsync(CalendarTestHarness harness, string userId, string courseId)
     {
         var result = await harness.RunAsync(services => services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest

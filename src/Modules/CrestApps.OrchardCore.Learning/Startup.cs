@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Learning.Migrations;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Navigation;
 using CrestApps.OrchardCore.Learning.Recipes;
+using CrestApps.OrchardCore.Learning.Reports;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.Workflows;
 using CrestApps.OrchardCore.Recipes.Core;
@@ -21,6 +22,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataSources;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -191,5 +193,22 @@ public sealed class RecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, LearningEnrollmentsRecipeStepSchema>();
         services.AddDeploymentStepSchema<LearningEnrollmentsDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Adds the Learning data source of Data Pipelines and the Report Builder.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
+public sealed class DataSourcesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataSource<LearningReportDataSource>();
+        services.AddScoped<ILearningReportDataSet, LearningEnrollmentsReportDataSet>();
+        services.AddScoped<ILearningReportDataSet, LearningItemProgressReportDataSet>();
+        services.AddScoped<ILearningReportDataSet, LearningCompletionsReportDataSet>();
+        services.AddScoped<ILearningReportDataSet, LearningCourseStaffReportDataSet>();
     }
 }

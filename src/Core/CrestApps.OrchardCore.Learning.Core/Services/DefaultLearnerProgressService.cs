@@ -181,6 +181,11 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     /// <inheritdoc />
     public async Task<ProgressUpdate> ApproveCompletionAsync(Enrollment enrollment, string actor, CancellationToken cancellationToken = default)
     {
+        if (enrollment is not null)
+        {
+            enrollment = await TrackedAsync(enrollment, cancellationToken);
+        }
+
         if (enrollment is null || enrollment.Status != EnrollmentStatus.Active)
         {
             return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "Only an active enrollment can be approved." };
@@ -248,6 +253,10 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         {
             return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course item was not found." };
         }
+
+        // Work on the instance the session tracks: a caller may hold a copy read in another scope, and saving that
+        // copy would store a second document.
+        enrollment = await TrackedAsync(enrollment, cancellationToken);
 
         var now = _clock.UtcNow;
         var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
@@ -439,6 +448,9 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             CourseCompleted = courseCompleted,
         };
     }
+
+    private async Task<Enrollment> TrackedAsync(Enrollment enrollment, CancellationToken cancellationToken)
+        => string.IsNullOrEmpty(enrollment.ItemId) ? enrollment : await _enrollmentStore.FindByIdAsync(enrollment.ItemId, cancellationToken) ?? enrollment;
 
     private static void ApplyCompletionMode(UpdateContext context)
     {
