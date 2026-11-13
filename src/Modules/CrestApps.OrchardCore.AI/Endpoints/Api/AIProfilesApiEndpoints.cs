@@ -109,7 +109,7 @@ internal static class AIProfilesApiEndpoints
         return profile is null ? NotFound() : TypedResults.Ok(profile);
     }
 
-    private static async Task<Results<Created<AIProfile>, ValidationProblem, ProblemHttpResult>> CreateAsync(
+    internal static async Task<Results<Created<AIProfile>, ValidationProblem, ProblemHttpResult>> CreateAsync(
         JsonObject body,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
@@ -138,7 +138,7 @@ internal static class AIProfilesApiEndpoints
 
         var profile = await profileManager.NewAsync(body, httpContext.RequestAborted);
 
-        if (await RefuseUnauthorizedToolsAsync(profile, [], httpContext, toolAccessEvaluator) is { } toolsRefused)
+        if (await RefuseUnauthorizedToolsAsync(profile, existing: null, httpContext, toolAccessEvaluator) is { } toolsRefused)
         {
             return toolsRefused;
         }
@@ -155,7 +155,7 @@ internal static class AIProfilesApiEndpoints
         return TypedResults.Created($"/{AIConversationsApiEndpoints.RoutePrefix}/profiles/{profile.ItemId}", profile);
     }
 
-    private static async Task<Results<Ok<AIProfile>, ValidationProblem, ProblemHttpResult>> UpdateAsync(
+    internal static async Task<Results<Ok<AIProfile>, ValidationProblem, ProblemHttpResult>> UpdateAsync(
         string profileId,
         JsonObject body,
         HttpContext httpContext,
@@ -189,7 +189,7 @@ internal static class AIProfilesApiEndpoints
         copy.ItemId = profile.ItemId;
         copy.Name = profile.Name;
 
-        if (await RefuseUnauthorizedToolsAsync(copy, profile.GetOrCreate<FunctionInvocationMetadata>().Names, httpContext, toolAccessEvaluator) is { } toolsRefused)
+        if (await RefuseUnauthorizedToolsAsync(copy, profile, httpContext, toolAccessEvaluator) is { } toolsRefused)
         {
             return toolsRefused;
         }
@@ -276,19 +276,25 @@ internal static class AIProfilesApiEndpoints
     private static ProblemHttpResult NotFound()
         => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found");
 
-    // The editor offers only the tools the caller may use; the API takes raw JSON, so the same rule is applied here and a
-    // tool the caller may not use (and the profile did not already have) is a validation error.
+    // The editors offer only the tools the caller may use; the API takes raw JSON, so the same rule is applied here to the
+    // profile's tools and to its post-session tools, which run after the session with no user, and a tool the caller may
+    // not use (and the profile did not already have) is a validation error.
     private static async Task<ValidationProblem> RefuseUnauthorizedToolsAsync(
         AIProfile profile,
-        IEnumerable<string> existing,
+        AIProfile existing,
         HttpContext httpContext,
         IAIToolAccessEvaluator toolAccessEvaluator)
     {
-        var requested = profile.GetOrCreate<FunctionInvocationMetadata>().Names ?? [];
-        var refused = await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(
-            requested,
-            existing,
-            tool => toolAccessEvaluator.IsAuthorizedAsync(httpContext.User, tool));
+        Func<string, Task<bool>> isAuthorized = tool => toolAccessEvaluator.IsAuthorizedAsync(httpContext.User, tool);
+        var refusedTools = await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(
+            profile.GetOrCreate<FunctionInvocationMetadata>().Names,
+            existing?.GetOrCreate<FunctionInvocationMetadata>().Names,
+            isAuthorized);
+        var refusedPostSessionTools = await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(
+            profile.GetSettings<AIProfilePostSessionSettings>()?.ToolNames,
+            existing?.GetSettings<AIProfilePostSessionSettings>()?.ToolNames,
+            isAuthorized);
+        var refused = refusedTools.Concat(refusedPostSessionTools).Distinct(StringComparer.Ordinal).ToList();
 
         return refused.Count == 0
             ? null
