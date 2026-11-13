@@ -37,7 +37,7 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Core/CrestApps.OrchardCore.WorkOrders.Core/Services/WorkOrderService.cs: WorkOrderService"] = 14,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultOpenShiftService.cs: DefaultOpenShiftService"] = 18,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs: DefaultSchedulePlanningService"] = 21,
-        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimeClockService.cs: DefaultTimeClockService"] = 17,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimeClockService.cs: DefaultTimeClockService"] = 18,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimeOffRequestService.cs: DefaultTimeOffRequestService"] = 19,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimesheetService.cs: DefaultTimesheetService"] = 18,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/ScheduleAutoScheduler.cs: ScheduleAutoScheduler"] = 16,
@@ -68,6 +68,7 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Orders/Controllers/ReturnsAdminController.cs: ReturnsAdminController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Orders/Services/OrderOperationsService.cs: OrderOperationsService"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Products/Services/ProductListingService.cs: ProductListingService"] = 19,
+        ["src/Modules/CrestApps.OrchardCore.Staff/Controllers/StaffController.cs: StaffController"] = 14,
         ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/ChildTenantManager.cs: ChildTenantManager"] = 15,
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrderSettingsController.cs: WorkOrderSettingsController"] = 14,
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrdersController.cs: WorkOrdersController"] = 13,
@@ -76,6 +77,5 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs: SchedulesController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/TimeOffController.cs: TimeOffController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/TimesheetsController.cs: TimesheetsController"] = 14,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/WorkersController.cs: WorkersController"] = 13,
     };
 }

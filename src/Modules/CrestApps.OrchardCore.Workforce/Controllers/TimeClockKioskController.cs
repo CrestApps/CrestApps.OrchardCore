@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -181,7 +182,7 @@ public sealed class TimeClockKioskController : Controller
         return View(nameof(Index), model);
     }
 
-    private async Task<bool> AllowedAsync(TimeClockKiosk kiosk, WorkerProfile worker)
+    private async Task<bool> AllowedAsync(TimeClockKiosk kiosk, StaffMember worker)
     {
         if (string.IsNullOrEmpty(kiosk.TeamId))
         {

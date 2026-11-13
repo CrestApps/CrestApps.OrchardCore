@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -84,10 +85,10 @@ public sealed class SignInPunchHandlerTests
     private static Task HandleAsync(TimeClockKit kit, InteractionEvent interactionEvent)
         => kit.Harness.RunAsync(services => ActivatorUtilities.CreateInstance<SignInPunchHandler>(services, NullLogger<SignInPunchHandler>.Instance).HandleAsync(interactionEvent, TestContext.Current.CancellationToken));
 
-    private static Task<TimeClockStatus> StatusAsync(TimeClockKit kit, WorkerProfile worker)
+    private static Task<TimeClockStatus> StatusAsync(TimeClockKit kit, StaffMember worker)
         => kit.Harness.RunAsync(services => services.GetRequiredService<ITimeClockService>().GetStatusAsync(worker), commit: false);
 
-    private static Task<IReadOnlyList<TimePunch>> PunchesAsync(TimeClockKit kit, WorkerProfile worker)
+    private static Task<IReadOnlyList<TimePunch>> PunchesAsync(TimeClockKit kit, StaffMember worker)
         => kit.Harness.RunAsync(services => services.GetRequiredService<ITimeClockService>().ListAsync(worker.ItemId, TimeClockKit.Local(_monday, 0), TimeClockKit.Local(_monday.AddDays(1), 0)), commit: false);
 
     private static InteractionEvent StateChange(string id, string userId, DateTime at, AgentPresenceStatus previous, AgentPresenceStatus current, string source)

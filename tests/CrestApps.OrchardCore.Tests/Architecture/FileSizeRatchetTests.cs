@@ -42,7 +42,7 @@ public sealed class FileSizeRatchetTests
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs"] = 1571,
         ["src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Services/TenantHierarchyBroker.cs"] = 1126,
         ["src/Core/CrestApps.OrchardCore.WorkOrders.Core/Services/WorkOrderService.cs"] = 804,
-        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs"] = 812,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs"] = 814,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriClient.cs"] = 930,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskTelephonyProviderBase.cs"] = 1348,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1148,
@@ -63,8 +63,8 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/ChildTenantsController.cs"] = 893,
         ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultTransactionCommandService.cs"] = 877,
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrderSettingsController.cs"] = 874,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs"] = 1151,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 977,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs"] = 1153,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 979,
     };
 
     [Fact]

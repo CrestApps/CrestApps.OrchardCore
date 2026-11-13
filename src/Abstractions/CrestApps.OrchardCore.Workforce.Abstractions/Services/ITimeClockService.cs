@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -14,7 +15,7 @@ public interface ITimeClockService
     /// <param name="date">The day.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The policy, or <see langword="null"/>.</returns>
-    Task<TimeClockPolicy> GetPolicyAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default);
+    Task<TimeClockPolicy> GetPolicyAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns where a worker stands on the clock.
@@ -22,7 +23,7 @@ public interface ITimeClockService
     /// <param name="worker">The worker.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The status.</returns>
-    Task<TimeClockStatus> GetStatusAsync(WorkerProfile worker, CancellationToken cancellationToken = default);
+    Task<TimeClockStatus> GetStatusAsync(StaffMember worker, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records a punch, once per idempotency key, when it follows the last one and the policy allows it.
@@ -80,7 +81,7 @@ public interface ITimeClockService
     /// <param name="pin">The PIN, four to eight digits; empty to remove it.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The worker, or the reasons it was refused.</returns>
-    Task<PlanningResult<WorkerProfile>> SetPinAsync(WorkerProfile worker, string pin, CancellationToken cancellationToken = default);
+    Task<PlanningResult<StaffMember>> SetPinAsync(StaffMember worker, string pin, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds the worker with a badge number and PIN, refusing for a while after five wrong PINs in a row.
@@ -89,7 +90,7 @@ public interface ITimeClockService
     /// <param name="pin">The PIN.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The worker, or the reason they weren't found.</returns>
-    Task<PlanningResult<WorkerProfile>> IdentifyAsync(string badgeNumber, string pin, CancellationToken cancellationToken = default);
+    Task<PlanningResult<StaffMember>> IdentifyAsync(string badgeNumber, string pin, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds the kiosk in use that an address's secret opens.

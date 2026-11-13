@@ -1,6 +1,8 @@
 using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Localization;
@@ -17,7 +19,7 @@ internal sealed class DefaultAttendanceService : IAttendanceService
     private readonly AttendanceExceptionStore _exceptionStore;
     private readonly PunchCorrectionStore _correctionStore;
     private readonly TimesheetStore _timesheetStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly ITimeClockService _timeClock;
     private readonly WorkerTimeZones _timeZones;
     private readonly IWorkforceNotifier _notifier;
@@ -30,7 +32,7 @@ internal sealed class DefaultAttendanceService : IAttendanceService
         AttendanceExceptionStore exceptionStore,
         PunchCorrectionStore correctionStore,
         TimesheetStore timesheetStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         ITimeClockService timeClock,
         WorkerTimeZones timeZones,
         IWorkforceNotifier notifier,
@@ -93,7 +95,7 @@ internal sealed class DefaultAttendanceService : IAttendanceService
         }, cancellationToken);
     }
 
-    public async Task<decimal> GetPointsAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default)
+    public async Task<decimal> GetPointsAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -109,7 +111,7 @@ internal sealed class DefaultAttendanceService : IAttendanceService
         return exceptions.Where(exception => exception.Status != AttendanceExceptionStatus.Excused).Sum(exception => exception.Points);
     }
 
-    public async Task<PlanningResult<PunchCorrection>> RequestCorrectionAsync(WorkerProfile worker, TimePunchKind kind, DateTime utc, string reason, CancellationToken cancellationToken = default)
+    public async Task<PlanningResult<PunchCorrection>> RequestCorrectionAsync(StaffMember worker, TimePunchKind kind, DateTime utc, string reason, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

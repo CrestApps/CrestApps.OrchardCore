@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Scheduling.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -24,6 +25,7 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
     private readonly ICalendarService _calendarService;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISiteService _siteService;
+    private readonly IOptions<Staff.SchedulingStaffOptions> _staffOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -31,8 +33,10 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
         ICalendarService calendarService,
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         ISiteService siteService,
+        IOptions<Staff.SchedulingStaffOptions> staffOptions,
         IStringLocalizer<SchedulingResourceFieldsDisplayDriver> stringLocalizer)
     {
+        _staffOptions = staffOptions;
         _calendarService = calendarService;
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _siteService = siteService;
@@ -133,5 +137,6 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
         ];
         model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId);
         model.InitialUserJson = string.IsNullOrEmpty(model.UserId) ? "[]" : JsonSerializer.Serialize(new[] { new { value = model.UserId, text = model.UserId } });
+        model.UseStaffPicker = _staffOptions.Value.UseStaffPicker;
     }
 }

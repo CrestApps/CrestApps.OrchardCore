@@ -123,3 +123,22 @@ internal sealed class AccountLocationsPartSchemaDefinition : PartSchemaDefinitio
     private static JsonSchemaBuilder Text(string description)
         => new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description(description);
 }
+
+internal sealed class AccountTeamPartSchemaDefinition : PartSchemaDefinitionBase
+{
+    public override string Name => AccountsConstants.ContentParts.Team;
+
+    protected override JsonSchemaBuilder BuildSettingsCore()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .AdditionalProperties(true);
+
+    protected override JsonSchemaBuilder BuildPartSchemaCore()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("The staff who look after the account.")
+            .Properties(
+                (nameof(AccountTeamPart.OwnerStaffId), new JsonSchemaBuilder().Type(SchemaValueType.String, SchemaValueType.Null).Description("The staff member who owns the account.")),
+                (nameof(AccountTeamPart.TeamStaffIds), new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The other staff members who work with the account.")))
+            .AdditionalProperties(true);
+}

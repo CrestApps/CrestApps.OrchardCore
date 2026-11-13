@@ -1,0 +1,10 @@
+@*
+    A staff member's profile: the header, then the sections other modules add, listed down the side by the shared
+    PageSections shape. Modules place shapes with StaffProfileSections.Location and register their section with
+    AddPageSection(StaffProfileSections.PageName, ...).
+*@
+@if (Model.Header != null)
+{
+    @await DisplayAsync(Model.Header)
+}
+@await DisplayAsync(await New.PageSections(Zone: Model.Content, Page: StaffProfileSections.PageName, DefaultSection: StaffProfileSections.Overview, KeyPrefix: "staff-", PageId: "staff-profile"))

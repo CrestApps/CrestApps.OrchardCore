@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -14,7 +15,7 @@ public interface ITimesheetService
     /// <param name="date">The day.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The timesheet, or the reasons there is none, such as no policy.</returns>
-    Task<PlanningResult<Timesheet>> GetForDateAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default);
+    Task<PlanningResult<Timesheet>> GetForDateAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds a timesheet.

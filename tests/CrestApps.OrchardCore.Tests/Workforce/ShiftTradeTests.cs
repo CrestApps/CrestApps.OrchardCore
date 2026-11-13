@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -232,7 +233,7 @@ public sealed class ShiftTradeTests
         return harness.RunAsync(services => services.GetRequiredService<IShiftTradeService>().OfferAsync(offer, "tester"));
     }
 
-    private static Task<PlanningResult<ShiftTrade>> AcceptAsync(CalendarTestHarness harness, ShiftTrade trade, WorkerProfile worker)
+    private static Task<PlanningResult<ShiftTrade>> AcceptAsync(CalendarTestHarness harness, ShiftTrade trade, StaffMember worker)
     {
         return harness.RunAsync(services => services.GetRequiredService<IShiftTradeService>().AcceptAsync(trade.ItemId, worker.ItemId, worker.UserId));
     }
@@ -247,5 +248,5 @@ public sealed class ShiftTradeTests
         return (await PlanningKit.ListShiftsAsync(harness, setup.Team)).Single(calendarEvent => calendarEvent.ItemId == shift.ItemId);
     }
 
-    private sealed record Setup(Team Team, WorkerProfile Ana, WorkerProfile Ben, WorkerProfile Cy, SchedulePeriod Period, CalendarEvent AnaMonday, CalendarEvent BenTuesday);
+    private sealed record Setup(Team Team, StaffMember Ana, StaffMember Ben, StaffMember Cy, SchedulePeriod Period, CalendarEvent AnaMonday, CalendarEvent BenTuesday);
 }

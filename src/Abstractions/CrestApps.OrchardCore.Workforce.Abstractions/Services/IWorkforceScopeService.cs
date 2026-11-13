@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -24,7 +25,7 @@ public interface IWorkforceScopeService
     /// <param name="worker">The worker.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns><see langword="true"/> when they do.</returns>
-    Task<bool> ManagesWorkerAsync(ClaimsPrincipal user, WorkerProfile worker, CancellationToken cancellationToken = default);
+    Task<bool> ManagesWorkerAsync(ClaimsPrincipal user, StaffMember worker, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets whether a user may decide on a worker's records (approve a timesheet, add or correct punches, decide time off,

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.Localization;
@@ -18,7 +19,7 @@ internal sealed class PendingTimeOffEventSource : ICalendarEventSource
     private readonly TeamStore _teamStore;
     private readonly TimeOffRequestStore _requestStore;
     private readonly TimeOffTypeStore _typeStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
 
     internal readonly IStringLocalizer S;
 
@@ -26,7 +27,7 @@ internal sealed class PendingTimeOffEventSource : ICalendarEventSource
         TeamStore teamStore,
         TimeOffRequestStore requestStore,
         TimeOffTypeStore typeStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         IStringLocalizer<PendingTimeOffEventSource> stringLocalizer)
     {
         _teamStore = teamStore;

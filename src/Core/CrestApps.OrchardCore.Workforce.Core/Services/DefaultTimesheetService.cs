@@ -1,6 +1,8 @@
 using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +24,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
     private readonly AttendanceExceptionStore _exceptionStore;
     private readonly PayPeriodCalendarStore _calendarStore;
     private readonly PayCodeStore _payCodeStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly ITimeClockService _timeClock;
     private readonly ITimesheetCalculator _calculator;
     private readonly WorkerShiftReader _shiftReader;
@@ -43,7 +45,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         AttendanceExceptionStore exceptionStore,
         PayPeriodCalendarStore calendarStore,
         PayCodeStore payCodeStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         ITimeClockService timeClock,
         ITimesheetCalculator calculator,
         WorkerShiftReader shiftReader,
@@ -78,7 +80,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         S = stringLocalizer;
     }
 
-    public async Task<PlanningResult<Timesheet>> GetForDateAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default)
+    public async Task<PlanningResult<Timesheet>> GetForDateAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 
@@ -414,7 +416,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
     /// <summary>
     /// Changes a timesheet under its worker's lock, working it out again after the change when asked.
     /// </summary>
-    private async Task<PlanningResult<Timesheet>> ChangeAsync(string id, bool recalculate, Func<Timesheet, WorkerProfile, PlanningResult<Timesheet>, Task> change, CancellationToken cancellationToken)
+    private async Task<PlanningResult<Timesheet>> ChangeAsync(string id, bool recalculate, Func<Timesheet, StaffMember, PlanningResult<Timesheet>, Task> change, CancellationToken cancellationToken)
     {
         var result = new PlanningResult<Timesheet>();
         var timesheet = await FindAsync(id, cancellationToken);
@@ -472,7 +474,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         }
     }
 
-    private async Task<(TimeClockPolicy Policy, PayPeriodCalendar Calendar)> PolicyAsync(WorkerProfile worker, Timesheet timesheet, CancellationToken cancellationToken)
+    private async Task<(TimeClockPolicy Policy, PayPeriodCalendar Calendar)> PolicyAsync(StaffMember worker, Timesheet timesheet, CancellationToken cancellationToken)
     {
         var policy = await _timeClock.GetPolicyAsync(worker, timesheet.PeriodStart, cancellationToken)
             ?? await _timeClock.GetPolicyAsync(worker, timesheet.PeriodEnd, cancellationToken);
@@ -481,7 +483,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         return (policy, calendar);
     }
 
-    private async Task<TimesheetCalculation> RecalculateAsync(Timesheet timesheet, WorkerProfile worker, TimeClockPolicy policy, PayPeriodCalendar calendar, CancellationToken cancellationToken)
+    private async Task<TimesheetCalculation> RecalculateAsync(Timesheet timesheet, StaffMember worker, TimeClockPolicy policy, PayPeriodCalendar calendar, CancellationToken cancellationToken)
     {
         var calculation = await BuildAsync(timesheet, worker, policy, calendar, cancellationToken);
 
@@ -537,7 +539,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         return calculation;
     }
 
-    private async Task<TimesheetCalculation> BuildAsync(Timesheet timesheet, WorkerProfile worker, TimeClockPolicy policy, PayPeriodCalendar calendar, CancellationToken cancellationToken)
+    private async Task<TimesheetCalculation> BuildAsync(Timesheet timesheet, StaffMember worker, TimeClockPolicy policy, PayPeriodCalendar calendar, CancellationToken cancellationToken)
     {
         var zone = await _timeZones.GetAsync(worker, WorkerTimeZones.TeamOn(worker, timesheet.PeriodStart), cancellationToken);
         var weekStart = calendar.WeekOf(timesheet.PeriodStart);
@@ -576,7 +578,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         });
     }
 
-    private async Task<IReadOnlyList<TimesheetTimeOff>> TimeOffAsync(WorkerProfile worker, Timesheet timesheet, IEnumerable<PayCode> payCodes, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<TimesheetTimeOff>> TimeOffAsync(StaffMember worker, Timesheet timesheet, IEnumerable<PayCode> payCodes, CancellationToken cancellationToken)
     {
         var requestStore = _serviceProvider.GetService<TimeOffRequestStore>();
         var typeStore = _serviceProvider.GetService<TimeOffTypeStore>();
@@ -617,7 +619,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         return days;
     }
 
-    private async Task<IReadOnlyList<PredictabilityPayEntry>> PredictabilityPayAsync(WorkerProfile worker, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<PredictabilityPayEntry>> PredictabilityPayAsync(StaffMember worker, CancellationToken cancellationToken)
     {
         var store = _serviceProvider.GetService<PredictabilityPayStore>();
 
@@ -632,7 +634,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         return [.. approved.Items, .. exported.Items];
     }
 
-    private async Task AfterRaisedAsync(WorkerProfile worker, TimeClockPolicy policy, IReadOnlyList<AttendanceException> raised, CancellationToken cancellationToken)
+    private async Task AfterRaisedAsync(StaffMember worker, TimeClockPolicy policy, IReadOnlyList<AttendanceException> raised, CancellationToken cancellationToken)
     {
         foreach (var exception in raised)
         {
@@ -691,7 +693,7 @@ internal sealed class DefaultTimesheetService : ITimesheetService
         return exceptions.Where(exception => exception.Status != AttendanceExceptionStatus.Excused).Sum(exception => exception.Points);
     }
 
-    private Task NotifyAsync(WorkerProfile worker, Timesheet timesheet, string title, string body, CancellationToken cancellationToken)
+    private Task NotifyAsync(StaffMember worker, Timesheet timesheet, string title, string body, CancellationToken cancellationToken)
     {
         return _notifier.NotifyAsync(new WorkforceNotification
         {

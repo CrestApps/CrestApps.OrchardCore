@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Http;
@@ -54,11 +56,11 @@ public abstract class WorkforceAIToolBase : AIFunction
     /// <summary>
     /// Returns the worker linked to the user, or <see langword="null"/>.
     /// </summary>
-    protected static Task<WorkerProfile> WorkerOfAsync(IServiceProvider services, ClaimsPrincipal user)
+    protected static Task<StaffMember> WorkerOfAsync(IServiceProvider services, ClaimsPrincipal user)
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        return string.IsNullOrEmpty(userId) ? Task.FromResult<WorkerProfile>(null) : services.GetRequiredService<IWorkerManager>().FindByUserIdAsync(userId);
+        return string.IsNullOrEmpty(userId) ? Task.FromResult<StaffMember>(null) : services.GetRequiredService<IStaffMemberManager>().FindByUserIdAsync(userId);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -21,7 +22,7 @@ internal sealed class ShiftAssignmentContexts
         _timeZones = timeZones;
     }
 
-    public async Task<ShiftAssignmentContext> ForEventAsync(CalendarEvent calendarEvent, ShiftData data, WorkerProfile worker, IEnumerable<string> ignoredShiftKeys, CancellationToken cancellationToken = default)
+    public async Task<ShiftAssignmentContext> ForEventAsync(CalendarEvent calendarEvent, ShiftData data, StaffMember worker, IEnumerable<string> ignoredShiftKeys, CancellationToken cancellationToken = default)
     {
         var timeZoneId = await _timeZones.GetAsync(data.TeamId, cancellationToken);
         var codes = await CodesAsync(cancellationToken);
@@ -41,7 +42,7 @@ internal sealed class ShiftAssignmentContexts
         };
     }
 
-    public async Task<ShiftAssignmentContext> ForOpenShiftAsync(OpenShift shift, WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<ShiftAssignmentContext> ForOpenShiftAsync(OpenShift shift, StaffMember worker, CancellationToken cancellationToken = default)
     {
         var codes = await CodesAsync(cancellationToken);
 

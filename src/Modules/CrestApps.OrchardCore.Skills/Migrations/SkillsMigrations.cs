@@ -15,7 +15,7 @@ internal sealed class SkillsMigrations : DataMigration
     {
         await SkillsIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -51,5 +51,32 @@ internal sealed class SkillsMigrations : DataMigration
         });
 
         return 2;
+    }
+
+    /// <summary>
+    /// Workforce workers became staff members with the same ids: records held by a worker are read as held by a staff
+    /// member, so they are mapped again to index them under the new kind name.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public static int UpdateFrom2()
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<SkillsMigrations>>();
+
+            try
+            {
+                var session = scope.ServiceProvider.GetRequiredService<ISession>();
+
+                await CatalogIndexBackfill.ReindexAsync<SkillAssignment, SkillAssignmentIndex>(session, SkillsConstants.CollectionName);
+                await CatalogIndexBackfill.ReindexAsync<CertificationRecord, CertificationRecordIndex>(session, SkillsConstants.CollectionName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "The skill assignments and certification records held by workers could not be indexed again as held by staff members. They are indexed again when they are next saved.");
+            }
+        });
+
+        return 3;
     }
 }

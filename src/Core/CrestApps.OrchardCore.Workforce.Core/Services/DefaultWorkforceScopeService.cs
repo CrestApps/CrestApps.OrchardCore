@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -14,14 +16,14 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 internal sealed class DefaultWorkforceScopeService : IWorkforceScopeService
 {
     private readonly IAuthorizationService _authorizationService;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly TeamStore _teamStore;
     private readonly IClock _clock;
     private readonly Dictionary<string, WorkforceScope> _cache = new(StringComparer.Ordinal);
 
     public DefaultWorkforceScopeService(
         IAuthorizationService authorizationService,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         TeamStore teamStore,
         IClock clock)
     {
@@ -104,7 +106,7 @@ internal sealed class DefaultWorkforceScopeService : IWorkforceScopeService
             await _authorizationService.AuthorizeAsync(user, WorkforcePermissions.ApproveOwnRecords);
     }
 
-    public async Task<bool> ManagesWorkerAsync(ClaimsPrincipal user, WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<bool> ManagesWorkerAsync(ClaimsPrincipal user, StaffMember worker, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

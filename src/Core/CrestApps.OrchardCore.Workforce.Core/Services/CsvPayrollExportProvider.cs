@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Tabular;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -47,7 +48,7 @@ internal sealed class CsvPayrollExportProvider : IPayrollExportProvider
         foreach (var timesheet in context.Timesheets)
         {
             var worker = context.Workers.GetValueOrDefault(timesheet.WorkerId);
-            var rates = worker is not null && worker.TryGet<WorkerPayRates>(out var stored) ? stored : new WorkerPayRates();
+            var rates = worker is not null && worker.TryGet<StaffPayRates>(out var stored) ? stored : new StaffPayRates();
             var groups = timesheet.Lines
                 .Where(line => !string.IsNullOrEmpty(line.PayCodeId) && line.Hours != 0)
                 .GroupBy(line => (

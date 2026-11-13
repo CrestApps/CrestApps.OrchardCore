@@ -1,6 +1,8 @@
 using System.Net;
 using System.Security.Cryptography;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Workforce;
@@ -337,9 +339,9 @@ public sealed class PortalTests
 
         await harness.RunAsync(services => services.GetRequiredService<ITimeOffRequestService>().ApproveAsync(request.Value.ItemId, "manager"));
 
-        var token = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IWorkerManager>().FindByIdAsync(ana.ItemId), false));
+        var token = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(ana.ItemId), false));
         var feed = await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync(token), commit: false);
-        var renewed = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IWorkerManager>().FindByIdAsync(ana.ItemId), true));
+        var renewed = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(ana.ItemId), true));
         var old = await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync(token), commit: false);
         var current = await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync(renewed), commit: false);
 
@@ -362,9 +364,9 @@ public sealed class PortalTests
         var team = await WorkforceTests.AddTeamAsync(harness, "Front desk", TeamKind.Team);
         var ana = await PlanningKit.AddMemberAsync(harness, "Ana", team);
 
-        var token = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IWorkerManager>().FindByIdAsync(ana.ItemId), true));
-        var shownAgain = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IWorkerManager>().FindByIdAsync(ana.ItemId), false));
-        var document = await harness.RunAsync(async services => System.Text.Json.JsonSerializer.Serialize(await services.GetRequiredService<IWorkerManager>().FindByIdAsync(ana.ItemId)), commit: false);
+        var token = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(ana.ItemId), true));
+        var shownAgain = await harness.RunAsync(async services => await services.GetRequiredService<IWorkerFeedService>().GetTokenAsync(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(ana.ItemId), false));
+        var document = await harness.RunAsync(async services => System.Text.Json.JsonSerializer.Serialize(await services.GetRequiredService<IStaffMemberManager>().FindByIdAsync(ana.ItemId)), commit: false);
         var feed = await harness.RunAsync(services => services.GetRequiredService<IWorkerFeedService>().WriteAsync(token), commit: false);
 
         Assert.Equal(token, shownAgain);
@@ -560,7 +562,7 @@ public sealed class PortalTests
         });
     }
 
-    private static Task NotifyAsync(CalendarTestHarness harness, WorkerProfile worker, WorkforceNotificationKind kind, string title)
+    private static Task NotifyAsync(CalendarTestHarness harness, StaffMember worker, WorkforceNotificationKind kind, string title)
     {
         return harness.RunAsync(services => services.GetRequiredService<IWorkforceNotifier>().NotifyAsync(new WorkforceNotification
         {
@@ -572,11 +574,11 @@ public sealed class PortalTests
         }));
     }
 
-    private static Task SettingsAsync(CalendarTestHarness harness, WorkerProfile worker, Action<WorkerPortalSettings> change)
+    private static Task SettingsAsync(CalendarTestHarness harness, StaffMember worker, Action<WorkerPortalSettings> change)
     {
         return harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IWorkerManager>();
+            var manager = services.GetRequiredService<IStaffMemberManager>();
             var stored = await manager.FindByIdAsync(worker.ItemId);
             var settings = stored.TryGet<WorkerPortalSettings>(out var existing) ? existing : new WorkerPortalSettings();
 
@@ -586,7 +588,7 @@ public sealed class PortalTests
         });
     }
 
-    private static Task<(int Count, int Unread, IReadOnlyList<WorkforceInboxItem> Items)> InboxAsync(CalendarTestHarness harness, WorkerProfile worker)
+    private static Task<(int Count, int Unread, IReadOnlyList<WorkforceInboxItem> Items)> InboxAsync(CalendarTestHarness harness, StaffMember worker)
     {
         return harness.RunAsync(services => services.GetRequiredService<IWorkforceInbox>().PageAsync(worker.ItemId, 0, 50), commit: false);
     }
@@ -635,7 +637,7 @@ public sealed class PortalTests
 
         public Func<Task> OnSend { get; set; }
 
-        public async Task SendAsync(WorkerProfile worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
+        public async Task SendAsync(StaffMember worker, WorkforceNotification notification, CancellationToken cancellationToken = default)
         {
             lock (Titles)
             {

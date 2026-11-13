@@ -714,6 +714,16 @@ public sealed class MigrationAdditiveOnlyGuardTests
             null,
             "A row-level move, not a schema change: it removes the old team documents from the Workforce collection only after each has been saved again in the Teams collection with the same id in this same step, and touches only rows of the old team type. No table, column or index is removed by this statement, and every team keeps exactly one document."),
         new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Workforce/Migrations/WorkforceWorkersMove.cs",
+            "WorkforceWorkersMove",
+            "DeleteLegacyDocumentsAsync",
+            "raw SQL",
+            "delete",
+            MigrationContractJustification.ReviewedAdditive,
+            "3.0.0",
+            null,
+            "A row-level move, not a schema change: it removes the old worker documents from the Workforce collection only after each has been saved again in the Staff collection as a staff member with the same id in this same step, and touches only rows of the old worker type. No table, column or index is removed by this statement (the old worker index tables stay), and every person keeps exactly one document."),
+        new MigrationContractEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/DocumentTypeColumnWidening.cs",
             "DocumentTypeColumnWidening",
             "WidenOnPostgreSqlAsync",

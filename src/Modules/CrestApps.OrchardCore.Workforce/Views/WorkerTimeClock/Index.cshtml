@@ -4,7 +4,8 @@
 
 <zone Name="Title">
     <breadcrumb name="WorkforceWorkerTimeClock" title="@T["{0}'s Time Clock", Model.Worker.DisplayName]">
-        <breadcrumb-item id="WorkforceWorkers" action="Index" controller="Workers" area="CrestApps.OrchardCore.Workforce">@T["Workers"]</breadcrumb-item>
+        <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
+        <breadcrumb-item id="StaffProfile" action="Profile" controller="Staff" area="CrestApps.OrchardCore.Staff" route-id="@Model.Worker.ItemId">@Model.Worker.DisplayName</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -37,7 +38,7 @@
     <div class="card-body">
         @if (string.IsNullOrEmpty(Model.Worker.EmployeeNumber))
         {
-            <p class="mb-0">@T["Kiosks know workers by their employee number and a PIN. Give {0} an employee number first.", Model.Worker.DisplayName] <a asp-controller="Workers" asp-action="Edit" asp-route-id="@Model.Worker.ItemId">@T["Edit the worker"]</a></p>
+            <p class="mb-0">@T["Kiosks know workers by their employee number and a PIN. Give {0} an employee number first.", Model.Worker.DisplayName] <a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-id="@Model.Worker.ItemId">@T["Edit the staff member"]</a></p>
         }
         else
         {

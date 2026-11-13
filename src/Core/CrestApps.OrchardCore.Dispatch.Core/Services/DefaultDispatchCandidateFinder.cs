@@ -5,11 +5,12 @@ using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.Workforce.Models;
-using Microsoft.Extensions.Localization;
 using IClock = OrchardCore.Modules.IClock;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Dispatch.Core.Services;
 
@@ -211,7 +212,7 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
 
         var worker = await _resources.FindWorkerAsync(workerId, cancellationToken);
 
-        if (worker is null || worker.Status != WorkerStatus.Active)
+        if (worker is null || worker.Status != StaffStatus.Active)
         {
             return S["The worker doesn't exist or doesn't work here any more."];
         }
@@ -224,14 +225,14 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
         return await RuleOutAsync(worker, workOrder, workOrder?.RequiredSkills ?? [], type?.RequiredCertificationIds ?? [], territory, territory?.Members.Count > 0 && settings.StrictTerritory, date.ToDateTime(TimeOnly.MinValue), cancellationToken);
     }
 
-    private async Task<string> RuleOutAsync(WorkerProfile worker, WorkOrder workOrder, List<RequiredSkill> requiredSkills, List<string> requiredCertifications, Geo.Models.ServiceTerritory territory, bool strictTerritory, DateTime fromUtc, CancellationToken cancellationToken)
+    private async Task<string> RuleOutAsync(StaffMember worker, WorkOrder workOrder, List<RequiredSkill> requiredSkills, List<string> requiredCertifications, Geo.Models.ServiceTerritory territory, bool strictTerritory, DateTime fromUtc, CancellationToken cancellationToken)
     {
         if (workOrder?.ExcludedWorkerIds.Contains(worker.ItemId) == true)
         {
             return S["The work order leaves them out."];
         }
 
-        var subject = SkillSubject.Worker(worker.ItemId);
+        var subject = SkillSubject.Staff(worker.ItemId);
         var date = DateOnly.FromDateTime(fromUtc);
 
         foreach (var required in requiredSkills.Where(required => !string.IsNullOrEmpty(required.SkillId)))
@@ -285,7 +286,7 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
 
         if (requiredSkills.Count > 0 && objective.ProficiencyWeight > 0)
         {
-            var held = await _skillAssignments.GetEffectiveAsync(SkillSubject.Worker(candidate.WorkerId), DateOnly.FromDateTime(candidate.StartUtc), cancellationToken);
+            var held = await _skillAssignments.GetEffectiveAsync(SkillSubject.Staff(candidate.WorkerId), DateOnly.FromDateTime(candidate.StartUtc), cancellationToken);
             var share = requiredSkills.Average(required =>
             {
                 var level = held.Where(assignment => assignment.SkillId == required.SkillId).Select(assignment => assignment.Proficiency).DefaultIfEmpty(required.MinProficiency).Max();
@@ -315,7 +316,7 @@ public sealed class DefaultDispatchCandidateFinder : IDispatchCandidateFinder
         candidate.Score = Math.Round(parts.Values.Sum(), 2);
     }
 
-    private static bool IsMember(Geo.Models.ServiceTerritory territory, WorkerProfile worker)
+    private static bool IsMember(Geo.Models.ServiceTerritory territory, StaffMember worker)
     {
         if (territory is null)
         {

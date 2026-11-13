@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using OrchardCore.Modules;
@@ -12,12 +13,12 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class PredictabilityPayChangeHandler : IScheduleChangeHandler
 {
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly PredictabilityPayStore _store;
     private readonly ILaborRuleEvaluator _evaluator;
     private readonly IClock _clock;
 
-    public PredictabilityPayChangeHandler(WorkerStore workerStore, PredictabilityPayStore store, ILaborRuleEvaluator evaluator, IClock clock)
+    public PredictabilityPayChangeHandler(StaffMemberStore workerStore, PredictabilityPayStore store, ILaborRuleEvaluator evaluator, IClock clock)
     {
         _workerStore = workerStore;
         _store = store;

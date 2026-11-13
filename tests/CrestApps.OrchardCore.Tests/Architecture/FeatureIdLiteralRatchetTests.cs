@@ -41,6 +41,7 @@ public sealed partial class FeatureIdLiteralRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Recipes/Startup.cs"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Scheduling/AIToolsStartup.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Seo/Startup.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Staff/AIToolsStartup.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Startup.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Workforce/AIToolsStartup.cs"] = 3,
     };

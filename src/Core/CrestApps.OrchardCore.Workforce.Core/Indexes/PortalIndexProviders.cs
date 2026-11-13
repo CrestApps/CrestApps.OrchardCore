@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using YesSql.Indexes;
@@ -61,18 +63,19 @@ public sealed class WebPushSubscriptionIndexProvider : IndexProvider<WebPushSubs
 /// <summary>
 /// Maps a worker's feed secret to <see cref="WorkerFeedIndex"/> rows.
 /// </summary>
-public sealed class WorkerFeedIndexProvider : IndexProvider<WorkerProfile>
+public sealed class WorkerFeedIndexProvider : IndexProvider<StaffMember>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkerFeedIndexProvider"/> class.
     /// </summary>
     public WorkerFeedIndexProvider()
     {
-        CollectionName = WorkforceConstants.CollectionName;
+        // Workers are staff members, kept in the Staff collection.
+        CollectionName = StaffConstants.CollectionName;
     }
 
     /// <inheritdoc />
-    public override void Describe(DescribeContext<WorkerProfile> context)
+    public override void Describe(DescribeContext<StaffMember> context)
     {
         context.For<WorkerFeedIndex>()
             .Map(worker => worker.TryGet<WorkerPortalSettings>(out var settings) && DefaultWorkerFeedService.GetHash(settings) is { } hash

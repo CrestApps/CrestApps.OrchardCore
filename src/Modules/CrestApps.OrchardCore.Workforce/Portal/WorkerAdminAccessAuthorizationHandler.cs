@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +16,10 @@ namespace CrestApps.OrchardCore.Workforce.Portal;
 /// </summary>
 internal sealed class WorkerAdminAccessAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly Lazy<IAuthorizationService> _authorizationService;
 
-    public WorkerAdminAccessAuthorizationHandler(IWorkerManager workerManager, Lazy<IAuthorizationService> authorizationService)
+    public WorkerAdminAccessAuthorizationHandler(IStaffMemberManager workerManager, Lazy<IAuthorizationService> authorizationService)
     {
         _workerManager = workerManager;
         _authorizationService = authorizationService;
@@ -36,7 +38,7 @@ internal sealed class WorkerAdminAccessAuthorizationHandler : AuthorizationHandl
 
         if (string.IsNullOrEmpty(userId)
             || await _workerManager.FindByUserIdAsync(userId) is not { } worker
-            || worker.Status == WorkerStatus.Terminated)
+            || worker.Status == StaffStatus.Terminated)
         {
             return;
         }

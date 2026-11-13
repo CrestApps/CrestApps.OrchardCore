@@ -1,6 +1,8 @@
 using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -16,8 +18,8 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
-using OrchardCore.Routing;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -28,7 +30,7 @@ namespace CrestApps.OrchardCore.Workforce.Controllers;
 public sealed class WorkerTimeClockController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ITimeClockService _timeClock;
     private readonly IAttendanceService _attendance;
@@ -54,7 +56,7 @@ public sealed class WorkerTimeClockController : Controller
     /// <param name="stringLocalizer">The string localizer.</param>
     public WorkerTimeClockController(
         IAuthorizationService authorizationService,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IWorkforceScopeService scopeService,
         ITimeClockService timeClock,
         IAttendanceService attendance,
@@ -92,8 +94,8 @@ public sealed class WorkerTimeClockController : Controller
         }
 
         var today = await PlanningOptions.TodayAsync(_localClock);
-        var settings = worker.TryGet<WorkerTimeClockSettings>(out var stored) ? stored : new WorkerTimeClockSettings();
-        var rates = worker.TryGet<WorkerPayRates>(out var payRates) ? payRates : new WorkerPayRates();
+        var settings = worker.TryGet<StaffBadge>(out var stored) ? stored : new StaffBadge();
+        var rates = worker.TryGet<StaffPayRates>(out var payRates) ? payRates : new StaffPayRates();
         var activities = await _activityCodes.GetAllAsync(HttpContext.RequestAborted);
         var model = new WorkerTimeClockViewModel
         {
@@ -179,11 +181,11 @@ public sealed class WorkerTimeClockController : Controller
             return RedirectToAction(nameof(Index), new { workerId });
         }
 
-        var rates = worker.TryGet<WorkerPayRates>(out var stored) ? stored : new WorkerPayRates();
+        var rates = worker.TryGet<StaffPayRates>(out var stored) ? stored : new StaffPayRates();
         var activity = string.IsNullOrEmpty(model.RateActivityCodeId) ? null : model.RateActivityCodeId;
 
         rates.Rates = rates.Rates.Where(rate => rate.EffectiveFrom != model.RateFrom.Value || rate.ActivityCodeId != activity).ToList();
-        rates.Rates.Add(new WorkerPayRate { EffectiveFrom = model.RateFrom.Value, HourlyRate = Math.Round(model.HourlyRate.Value, 4), ActivityCodeId = activity });
+        rates.Rates.Add(new StaffPayRate { EffectiveFrom = model.RateFrom.Value, HourlyRate = Math.Round(model.HourlyRate.Value, 4), ActivityCodeId = activity });
         worker.Put(rates);
         await _workerManager.UpdateAsync(worker);
         await _notifier.SuccessAsync(H["The rate has been saved."]);
@@ -214,7 +216,7 @@ public sealed class WorkerTimeClockController : Controller
             return Forbid();
         }
 
-        var rates = worker.TryGet<WorkerPayRates>(out var stored) ? stored : new WorkerPayRates();
+        var rates = worker.TryGet<StaffPayRates>(out var stored) ? stored : new StaffPayRates();
         var activity = string.IsNullOrEmpty(activityCodeId) ? null : activityCodeId;
 
         rates.Rates = rates.Rates.Where(rate => rate.EffectiveFrom != from || rate.ActivityCodeId != activity).ToList();
@@ -225,7 +227,7 @@ public sealed class WorkerTimeClockController : Controller
         return RedirectToAction(nameof(Index), new { workerId });
     }
 
-    private async Task<(WorkerProfile Worker, IActionResult Denied)> WorkerAsync(string workerId)
+    private async Task<(StaffMember Worker, IActionResult Denied)> WorkerAsync(string workerId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ManageWorkers))
         {

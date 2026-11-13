@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
@@ -42,10 +43,10 @@ internal static class PlanningKit
     public static Task GrantSkillAsync(CalendarTestHarness harness, string workerId, string skillId)
     {
         return harness.RunAsync(services => services.GetRequiredService<ISkillAssignmentService>()
-            .AssignAsync(SkillSubject.Worker(workerId), new SkillAssignmentInput { SkillId = skillId }, "tester"));
+            .AssignAsync(SkillSubject.Staff(workerId), new SkillAssignmentInput { SkillId = skillId }, "tester"));
     }
 
-    public static Task<WorkerProfile> AddMemberAsync(CalendarTestHarness harness, string name, Team team, Action<WorkerProfile> configure = null)
+    public static Task<StaffMember> AddMemberAsync(CalendarTestHarness harness, string name, Team team, Action<StaffMember> configure = null)
     {
         return WorkforceTests.AddWorkerAsync(harness, name, worker =>
         {

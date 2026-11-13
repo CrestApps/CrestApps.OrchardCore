@@ -37,7 +37,7 @@ Register the services with `services.AddTeamsCore()`. The call is safe to repeat
 | Contract | When it runs | Use it for |
 | --- | --- | --- |
 | `ICatalogEntryHandler<Team>` | The team manager's lifecycle. | Keeping a module's records in step with a team, as Workforce does for each team's calendar. |
-| `ITeamMemberProvider` | `ITeamMembershipService`. | Giving the members of teams a module keeps, as `TeamMember { TeamId, UserId, Role, EffectiveFrom, EffectiveTo, Source }` (`Role` is an open string; `TeamMemberRoles` names the usual ones). Register it with `services.AddTeamMemberProvider<TProvider>()`. Workforce gives each worker with a user account from its team memberships, and shows a team's workers on the team editor with its own driver. |
+| `ITeamMemberProvider` | `ITeamMembershipService`. | Giving the members of teams a module keeps, as `TeamMember { TeamId, UserId, Role, EffectiveFrom, EffectiveTo, Source }` (`Role` is an open string; `TeamMemberRoles` names the usual ones). Register it with `services.AddTeamMemberProvider<TProvider>()`. [Staff](./staff.md) gives every staff member from their dated team memberships, people without a user account included (with `StaffMemberId` set and no `UserId`); Workforce shows a team's workers on the team editor with its own driver. |
 | `ITeamDeletionGuard` | `ITeamManager.GetDeletionBlockersAsync`, which the **Delete** action calls first. | Refusing to delete a team the module still uses. Return the reason, shown to the person deleting it, or `null`. Register it with `services.AddTeamDeletionGuard<TGuard>()`. |
 | `DisplayDriver<Team>` | The team editor, and the rows of the team list. | Adding a section to the editor (a shape in the `Content` zone, after the Teams card at `Content:1`) or actions to a row's menu (between **Add a team under it** at `ActionsMenu:5` and **Delete** at `ActionsMenu:100`). |
 
@@ -98,3 +98,7 @@ When Workforce is on, **Manage workforce teams** grants **Manage teams** too, so
 ## Upgrading from Workforce teams
 
 Before this module, Workforce kept its teams as `WorkforceTeam` documents in the `Workforce` collection. On an existing site, the Workforce feature's migration (`WorkforceMigrations.UpdateFrom1Async`) runs after the Teams migration and moves them: each old document is read as JSON, saved as a `Team` in the `Teams` collection with the **same id** (worker memberships and every other record that names a team keep working), and its Workforce fields go into the team's `WorkforceTeamSettings`. A team already in the `Teams` collection is left as it is. The old documents and the old `Workforce_TeamIndex` table are then removed. The move runs on the migration's own connection and transaction.
+
+## Staff
+
+When the [Staff](./staff.md) module is on, Teams adds the **Teams** card (the `StaffTeams_Edit` shape) to the staff editor, where a person's dated team memberships and roles are kept, and turns on `StaffOptions.UsesTeams`, so Staff uses teams for manager scoping, time zones, filters and reports. A manager can only add people to the teams they manage.

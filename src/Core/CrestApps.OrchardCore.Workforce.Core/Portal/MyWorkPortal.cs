@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -12,7 +14,7 @@ namespace CrestApps.OrchardCore.Workforce.Portal;
 /// </summary>
 public sealed class MyWorkPortal
 {
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IWorkforceInbox _inbox;
     private readonly IWorkforceScopeService _scopeService;
     private readonly IAuthorizationService _authorizationService;
@@ -28,7 +30,7 @@ public sealed class MyWorkPortal
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="featuresManager">The features manager.</param>
     /// <param name="linkProviders">The providers of the menu's other links.</param>
-    public MyWorkPortal(IWorkerManager workerManager, IWorkforceInbox inbox, IWorkforceScopeService scopeService, IAuthorizationService authorizationService, IShellFeaturesManager featuresManager, IEnumerable<IMyWorkLinkProvider> linkProviders)
+    public MyWorkPortal(IStaffMemberManager workerManager, IWorkforceInbox inbox, IWorkforceScopeService scopeService, IAuthorizationService authorizationService, IShellFeaturesManager featuresManager, IEnumerable<IMyWorkLinkProvider> linkProviders)
     {
         _workerManager = workerManager;
         _inbox = inbox;
@@ -43,7 +45,7 @@ public sealed class MyWorkPortal
     /// </summary>
     /// <param name="user">The user.</param>
     /// <returns>The worker.</returns>
-    public async Task<WorkerProfile> GetWorkerAsync(ClaimsPrincipal user)
+    public async Task<StaffMember> GetWorkerAsync(ClaimsPrincipal user)
     {
         var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -58,7 +60,7 @@ public sealed class MyWorkPortal
     /// <param name="active">The page.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The navigation.</returns>
-    public async Task<MyWorkNavViewModel> NavAsync(ClaimsPrincipal user, WorkerProfile worker, string active, CancellationToken cancellationToken = default)
+    public async Task<MyWorkNavViewModel> NavAsync(ClaimsPrincipal user, StaffMember worker, string active, CancellationToken cancellationToken = default)
     {
         var features = (await _featuresManager.GetEnabledFeaturesAsync()).Select(feature => feature.Id).ToHashSet(StringComparer.Ordinal);
         var scope = await _scopeService.GetManagedScopeAsync(user, cancellationToken);

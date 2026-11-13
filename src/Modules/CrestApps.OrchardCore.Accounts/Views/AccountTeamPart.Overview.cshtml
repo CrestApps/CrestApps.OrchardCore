@@ -1,0 +1,31 @@
+@model CrestApps.OrchardCore.Accounts.ViewModels.AccountTeamViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Account team"]</div>
+    <div class="card-body">
+        @if (string.IsNullOrEmpty(Model.OwnerName) && Model.Team.Count == 0)
+        {
+            <p class="hint mb-0">@T["Nobody looks after this account yet."]</p>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(Model.OwnerName))
+            {
+                <p class="mb-2">@T["Owner"]: <a href="@Url.Content("~/Admin/staff/edit/" + Model.OwnerStaffId)">@Model.OwnerName</a></p>
+            }
+            @if (Model.Team.Count > 0)
+            {
+                <p class="mb-0">@T["Team"]:
+                    @for (var i = 0; i < Model.Team.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            <span>, </span>
+                        }
+                        <a href="@Url.Content("~/Admin/staff/edit/" + Model.Team[i].Key)">@Model.Team[i].Value</a>
+                    }
+                </p>
+            }
+        }
+    </div>
+</div>

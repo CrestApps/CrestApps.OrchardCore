@@ -3,11 +3,13 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Locking;
+using CrestApps.OrchardCore.Staff.Core.Services;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Core.Services;
+using CrestApps.OrchardCore.Workforce.Core.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
-using CrestApps.OrchardCore.Locking;
-using CrestApps.OrchardCore.Workforce.Core.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -31,7 +33,7 @@ internal sealed class ShiftReminderService
     private static readonly TimeSpan _retention = TimeSpan.FromDays(2);
 
     private readonly TeamStore _teamStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly ICalendarQueryService _queryService;
     private readonly IWorkforceNotifier _notifier;
     private readonly IWorkerTimeZoneService _timeZones;
@@ -44,7 +46,7 @@ internal sealed class ShiftReminderService
 
     public ShiftReminderService(
         TeamStore teamStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         ICalendarQueryService queryService,
         IWorkforceNotifier notifier,
         IWorkerTimeZoneService timeZones,
@@ -104,7 +106,7 @@ internal sealed class ShiftReminderService
             EventTypes = [WorkforceConstants.EventTypes.Shift],
         }, cancellationToken);
         var teamNames = teams.ToDictionary(team => team.ItemId, team => team.Name, StringComparer.Ordinal);
-        var workers = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+        var workers = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
         var sent = 0;
 
         foreach (var occurrence in occurrences.Where(occurrence => occurrence.StartUtc > now))
@@ -122,7 +124,7 @@ internal sealed class ShiftReminderService
 
             var minutes = worker?.TryGet<WorkerPortalSettings>(out var settings) == true ? settings.ReminderMinutes : new WorkerPortalSettings().ReminderMinutes;
 
-            if (worker is null || worker.Status != WorkerStatus.Active || minutes <= 0 || occurrence.StartUtc.AddMinutes(-Math.Min(minutes, MaxMinutes)) > now)
+            if (worker is null || worker.Status != StaffStatus.Active || minutes <= 0 || occurrence.StartUtc.AddMinutes(-Math.Min(minutes, MaxMinutes)) > now)
             {
                 continue;
             }

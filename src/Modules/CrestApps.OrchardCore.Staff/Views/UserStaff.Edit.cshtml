@@ -1,0 +1,26 @@
+@model UserStaffViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Staff"]</div>
+    <div class="card-body">
+        @if (string.IsNullOrEmpty(Model.StaffMemberId))
+        {
+            <div class="form-check">
+                <input asp-for="MakeStaff" class="form-check-input" />
+                <label asp-for="MakeStaff" class="form-check-label">@T["They work for us"]</label>
+                <span class="hint dashed">@T["Makes them a staff member when you save, so other modules can schedule them, assign them work and pay them. Their job, manager, teams and the rest are then kept on their staff profile."]</span>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span>
+                    @T["A staff member"]@(string.IsNullOrEmpty(Model.JobTitle) ? null : ": " + Model.JobTitle)
+                </span>
+                <a class="btn btn-sm btn-outline-primary" asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Profile" asp-route-id="@Model.StaffMemberId">@T["Open their staff profile"]</a>
+                <a class="btn btn-sm btn-outline-secondary" asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-id="@Model.StaffMemberId">@T["Edit employment"]</a>
+            </div>
+            <span class="hint">@T["Their name and email come from this account. Their job, manager, teams, pay and the cards other modules add are on their staff profile."]</span>
+        }
+    </div>
+</div>

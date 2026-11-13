@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.PersonalData;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -18,11 +19,11 @@ internal sealed class TimeOffRequestPersonalDataContributor : IPersonalDataContr
     // A privacy request reads at most this many requests of each worker.
     private const int MaxRequests = 5_000;
 
-    private readonly IWorkerManager _workers;
+    private readonly IStaffMemberManager _workers;
     private readonly TimeOffRequestStore _requests;
 
     public TimeOffRequestPersonalDataContributor(
-        IWorkerManager workers,
+        IStaffMemberManager workers,
         TimeOffRequestStore requests)
     {
         _workers = workers;
@@ -71,7 +72,7 @@ internal sealed class TimeOffRequestPersonalDataContributor : IPersonalDataContr
     {
         var requests = new List<TimeOffRequest>();
 
-        foreach (var worker in await WorkerProfilePersonalDataContributor.FindWorkersAsync(_workers, subject, cancellationToken))
+        foreach (var worker in await _workers.GetByUserIdsAsync(subject.UserIds, cancellationToken))
         {
             requests.AddRange(await _requests.ListForWorkerAsync(worker.ItemId, MaxRequests, cancellationToken));
         }

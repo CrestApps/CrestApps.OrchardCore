@@ -34,9 +34,6 @@ using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.WorkOrders;
 
-/// <summary>
-/// Registers work orders, their settings records, the service level monitor and the pages.
-/// </summary>
 public sealed class Startup : StartupBase
 {
     /// <inheritdoc/>

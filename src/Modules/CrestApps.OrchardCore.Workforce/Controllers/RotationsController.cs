@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -29,7 +30,7 @@ public sealed class RotationsController : Controller
     private readonly IShiftPatternManager _patternManager;
     private readonly IShiftTemplateManager _templateManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
@@ -55,7 +56,7 @@ public sealed class RotationsController : Controller
         IShiftPatternManager patternManager,
         IShiftTemplateManager templateManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IWorkforceScopeService scopeService,
         ILocalClock localClock,
         INotifier notifier,

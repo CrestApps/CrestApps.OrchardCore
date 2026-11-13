@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Controllers;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -126,7 +127,7 @@ public sealed class AttendanceAuthorizationTests
         var controller = new AttendanceController(
             authorization.Object,
             attendance,
-            Mock.Of<IWorkerManager>(),
+            Mock.Of<IStaffMemberManager>(),
             Mock.Of<ITeamManager>(),
             scopes.Object,
             Mock.Of<INotifier>(),

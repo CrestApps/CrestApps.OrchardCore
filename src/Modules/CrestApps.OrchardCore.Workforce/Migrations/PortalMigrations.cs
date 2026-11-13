@@ -11,8 +11,9 @@ internal sealed class PortalMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await PortalIndexSchema.CreateAsync(SchemaBuilder);
+        await PortalIndexSchema.CreateStaffFeedIndexAsync(SchemaBuilder);
 
-        return 3;
+        return 4;
     }
 
     public async Task<int> UpdateFrom1Async()
@@ -22,12 +23,20 @@ internal sealed class PortalMigrations : DataMigration
         return 2;
     }
 
+    // Workers became staff members, kept in the Staff collection: their feed secrets are indexed there.
+    public async Task<int> UpdateFrom2Async()
+    {
+        await PortalIndexSchema.CreateStaffFeedIndexAsync(SchemaBuilder);
+
+        return 3;
+    }
+
     // Feed secrets are stored hashed and protected: the workers whose secret is from before get both. The plain secret
-    // stays one release, for a rollback.
-    public static int UpdateFrom2Async()
+    // stays one release, for a rollback. It runs after the workers moved to the Staff collection.
+    public static int UpdateFrom3Async()
     {
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<WorkerFeedTokenBackfill>().RunAsync());
 
-        return 3;
+        return 4;
     }
 }

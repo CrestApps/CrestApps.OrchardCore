@@ -14,6 +14,17 @@ namespace CrestApps.OrchardCore.Dispatch.ViewModels;
 public class DispatchSettingsViewModel
 {
     /// <summary>
+    /// Gets or sets the capabilities of the staff dispatch sends.
+    /// </summary>
+    public IList<string> TechnicianCapabilities { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the capabilities to choose from.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public IList<SelectListItem> CapabilityOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets whether a new work order gets an unscheduled visit.
     /// </summary>
     public bool CreateVisitsForNewWorkOrders { get; set; }
@@ -190,6 +201,11 @@ public sealed class BoardOptimizeModel
     /// Gets or sets the team, if one is shown.
     /// </summary>
     public string TeamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the capability the board is filtered by; empty for the dispatch settings' ones.
+    /// </summary>
+    public string Capability { get; set; }
 
     /// <summary>
     /// Gets or sets whether to fit in unscheduled visits.
@@ -373,6 +389,21 @@ public class DispatchBoardViewModel
     /// Gets or sets the teams to filter by.
     /// </summary>
     public IList<SelectListItem> TeamOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the capability filter; empty for the dispatch settings' ones.
+    /// </summary>
+    public string Capability { get; set; }
+
+    /// <summary>
+    /// Gets or sets the capabilities to filter by.
+    /// </summary>
+    public IList<SelectListItem> CapabilityOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the names of the capabilities the settings name, for the default choice.
+    /// </summary>
+    public string DefaultCapabilitiesText { get; set; }
 
     /// <summary>
     /// Gets or sets whether the user can move visits.

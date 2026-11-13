@@ -141,6 +141,8 @@ public sealed class DependencyInjectionArchitectureTests
         ["src/Core/CrestApps.OrchardCore.Recipes.Core/Services/RecipeSchemaExampleService.cs: RecipeSchemaExampleService"] = 1,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Services/ReportExportManager.cs: ReportExportManager"] = 1,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Services/ReportManager.cs: ReportManager"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Staff.Core/Handlers/StaffMemberCatalogHandler.cs: StaffMemberCatalogHandler"] = 1,
+        ["src/Core/CrestApps.OrchardCore.Staff.Core/Services/StaffTeamReader.cs: StaffTeamReader"] = 1,
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Handlers/SubscriptionsPermissionsHandler.cs: SubscriptionsPermissionsHandler"] = 1,
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/TenantProvisioningService.cs: TenantProvisioningService"] = 1,
         ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxAutomaticCallRecorder.cs: TelnyxAutomaticCallRecorder"] = 1,
@@ -209,6 +211,7 @@ public sealed class DependencyInjectionArchitectureTests
         ["src/Modules/CrestApps.OrchardCore.Reports/Designer/Workflows/Activities/ExportReportTask.cs: ExportReportTask"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Reviews/Services/ReviewPhotoStore.cs: ReviewPhotoStore"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Seo/SchemaOrg/SchemaOrgContentSources.cs: SchemaOrgContentSources"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Staff/Drivers/UserStaffDisplayDriver.cs: StaffUserEventHandler"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Controllers/AccountPaymentMethodsController.cs: AccountPaymentMethodsController"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripePersonalDataContributor.cs: StripePersonalDataContributor"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Workflows/StripeWorkflowNotifier.cs: StripeWorkflowNotifier"] = 1,
@@ -231,7 +234,6 @@ public sealed class DependencyInjectionArchitectureTests
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Recipes/WorkOrdersRecipes.cs: WorkOrdersDeploymentSource"] = 1,
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Recipes/WorkOrdersRecipes.cs: WorkOrdersRecipeStep"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Deployments/WorkforceSettingsDeploymentSource.cs: WorkforceSettingsDeploymentSource"] = 1,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Drivers/UserWorkforceDisplayDriver.cs: WorkerUserEventHandler"] = 1,
     };
 
     /// <summary>

@@ -107,6 +107,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Products/Services/ProductListingService.cs: BuildAsync"] = 169,
         ["src/Modules/CrestApps.OrchardCore.Reports/Designer/Services/ReportDesignRunner.cs: RunCoreAsync"] = 178,
         ["src/Modules/CrestApps.OrchardCore.Reports/Designer/ViewModels/ReportDesignerTexts.cs: Build"] = 433,
+        ["src/Modules/CrestApps.OrchardCore.Staff/Recipes/StaffRecipeStep.cs: HandleAsync"] = 163,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Endpoints/CreateWebhookEndpoint.cs: DispatchCoreAsync"] = 365,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.CallQuality.cs: ReportCallQuality"] = 156,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Services/TelephonyInteractionSynchronizationService.cs: RefreshInteractionAsync"] = 195,

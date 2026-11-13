@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
@@ -33,7 +34,7 @@ public sealed class OpenShiftsController : Controller
     private readonly IActivityCodeManager _activityCodeManager;
     private readonly ISkillManager _skillManager;
     private readonly ITeamManager _teamManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
@@ -63,7 +64,7 @@ public sealed class OpenShiftsController : Controller
         IActivityCodeManager activityCodeManager,
         ISkillManager skillManager,
         ITeamManager teamManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IWorkforceScopeService scopeService,
         ILocalClock localClock,
         INotifier notifier,

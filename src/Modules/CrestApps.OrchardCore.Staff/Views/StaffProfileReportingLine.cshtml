@@ -1,0 +1,52 @@
+@model StaffReportingLineViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Reporting line"]</div>
+    <div class="card-body">
+        @if (Model.ManagerChain.Count == 0)
+        {
+            <p class="hint mb-2">@T["Reports to nobody."]</p>
+        }
+        else
+        {
+            <p class="mb-2">
+                @T["Reports to"]
+                @for (var i = 0; i < Model.ManagerChain.Count; i++)
+                {
+                    var manager = Model.ManagerChain[i];
+                    if (i > 0)
+                    {
+                        <span class="text-secondary"> &rsaquo; </span>
+                    }
+                    <a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Profile" asp-route-id="@manager.ItemId">@manager.DisplayName</a>
+                }
+            </p>
+        }
+        @if (Model.Reports.Count == 0)
+        {
+            <p class="hint mb-0">
+                @T["Nobody reports to them."]
+                @if (Model.CanAddReports)
+                {
+                    <a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-managerId="@Model.StaffMemberId">@T["Add someone reporting to them"]</a>
+                }
+            </p>
+        }
+        else
+        {
+            <p class="mb-1">@T["Direct reports"]</p>
+            <ul class="mb-0">
+                @foreach (var report in Model.Reports)
+                {
+                    <li>
+                        <a asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Profile" asp-route-id="@report.ItemId">@report.DisplayName</a>
+                        @if (!string.IsNullOrEmpty(report.JobTitle))
+                        {
+                            <span class="hint">@report.JobTitle</span>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

@@ -170,6 +170,11 @@ internal sealed class CalendarTestHarness : IAsyncDisposable
         }, commit);
     }
 
+    /// <summary>
+    /// Gets the root services, for singletons such as test doubles.
+    /// </summary>
+    public IServiceProvider Services => _provider;
+
     public AsyncServiceScope CreateScope()
     {
         return _provider.CreateAsyncScope();

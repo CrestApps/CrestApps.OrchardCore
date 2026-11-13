@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -52,7 +53,7 @@ public interface IAttendanceService
     /// <param name="date">The day.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The points.</returns>
-    Task<decimal> GetPointsAsync(WorkerProfile worker, DateOnly date, CancellationToken cancellationToken = default);
+    Task<decimal> GetPointsAsync(StaffMember worker, DateOnly date, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Asks for a forgotten punch to be added.
@@ -63,7 +64,7 @@ public interface IAttendanceService
     /// <param name="reason">Why.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The correction, or the reasons it was refused.</returns>
-    Task<PlanningResult<PunchCorrection>> RequestCorrectionAsync(WorkerProfile worker, TimePunchKind kind, DateTime utc, string reason, CancellationToken cancellationToken = default);
+    Task<PlanningResult<PunchCorrection>> RequestCorrectionAsync(StaffMember worker, TimePunchKind kind, DateTime utc, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Approves a correction, adding the punch, or declines it.

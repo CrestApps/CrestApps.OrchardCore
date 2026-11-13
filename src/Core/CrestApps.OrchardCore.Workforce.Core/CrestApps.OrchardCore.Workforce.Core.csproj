@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Staff.Core\CrestApps.OrchardCore.Staff.Core.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.TimeTracker.Abstractions\CrestApps.OrchardCore.TimeTracker.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Workforce.Abstractions\CrestApps.OrchardCore.Workforce.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Calendars.Core\CrestApps.OrchardCore.Calendars.Core.csproj" />

@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Workforce.Core.Telemetry;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -22,7 +23,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
     private readonly TimesheetStore _timesheetStore;
     private readonly PayPeriodCalendarStore _calendarStore;
     private readonly PayCodeStore _payCodeStore;
-    private readonly WorkerStore _workerStore;
+    private readonly StaffMemberStore _workerStore;
     private readonly PayrollCsvSettingsStore _csvSettings;
     private readonly TimeOffLocks _locks;
     private readonly IServiceProvider _serviceProvider;
@@ -37,7 +38,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         TimesheetStore timesheetStore,
         PayPeriodCalendarStore calendarStore,
         PayCodeStore payCodeStore,
-        WorkerStore workerStore,
+        StaffMemberStore workerStore,
         PayrollCsvSettingsStore csvSettings,
         TimeOffLocks locks,
         IServiceProvider serviceProvider,

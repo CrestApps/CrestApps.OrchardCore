@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.Extensions.Options;
@@ -16,7 +17,7 @@ internal sealed class DefaultWorkerScheduleLimitsProvider : IWorkerScheduleLimit
         _options = options.Value;
     }
 
-    public Task<WorkerScheduleLimits> GetAsync(WorkerProfile worker, string teamId, CancellationToken cancellationToken = default)
+    public Task<WorkerScheduleLimits> GetAsync(StaffMember worker, string teamId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(worker);
 

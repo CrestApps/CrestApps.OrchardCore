@@ -1,0 +1,21 @@
+@model CrestApps.OrchardCore.Accounts.ViewModels.AccountTeamEditViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Account team"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Owner"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.OwnerStaffId).ToString(), selectedValues = new[] { Model.OwnerStaffId }, buttonText = T["Choose the owner"].Value })
+                <span class="hint">@T["The account manager or sales rep who answers for this account."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Team"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.TeamStaffIds).ToString(), selectedValues = Model.TeamStaffIds, multiple = true, buttonText = T["Choose staff"].Value })
+                <span class="hint">@T["Others who work with this account, such as support or a technician."]</span>
+            </div>
+        </div>
+    </div>
+</div>

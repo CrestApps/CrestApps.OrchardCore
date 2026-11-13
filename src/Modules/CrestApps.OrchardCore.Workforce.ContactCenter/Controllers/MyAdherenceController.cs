@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
@@ -6,13 +7,13 @@ using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
+using ISession = YesSql.ISession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
 using YesSql;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Workforce.ContactCenter.Controllers;
 
@@ -119,7 +120,7 @@ internal sealed class MyAdherenceLinkProvider : IMyWorkLinkProvider
         S = stringLocalizer;
     }
 
-    public async Task<IEnumerable<MyWorkLink>> GetLinksAsync(ClaimsPrincipal user, WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<MyWorkLink>> GetLinksAsync(ClaimsPrincipal user, StaffMember worker, CancellationToken cancellationToken = default)
     {
         if (worker is null)
         {

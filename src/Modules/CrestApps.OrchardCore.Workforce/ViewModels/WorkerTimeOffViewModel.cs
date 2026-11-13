@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -15,7 +16,7 @@ public class WorkerTimeOffViewModel
     /// Gets or sets the worker.
     /// </summary>
     [BindNever]
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     /// <summary>
     /// Gets or sets the day the balances are for.

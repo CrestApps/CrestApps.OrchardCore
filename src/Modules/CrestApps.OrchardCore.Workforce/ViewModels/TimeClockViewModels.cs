@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -17,7 +18,7 @@ public sealed class KioskViewModel
 
     public string Error { get; set; }
 
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     public TimeClockStatus Status { get; set; }
 
@@ -190,7 +191,7 @@ public sealed class TimesheetRowViewModel
 {
     public Timesheet Timesheet { get; set; }
 
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     public string TeamName { get; set; }
 
@@ -220,7 +221,7 @@ public sealed class TimesheetDetailsViewModel
 {
     public Timesheet Timesheet { get; set; }
 
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     public string TeamName { get; set; }
 
@@ -272,7 +273,7 @@ public sealed class AttendanceRowViewModel
 {
     public AttendanceException Exception { get; set; }
 
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     public string TeamName { get; set; }
 }
@@ -320,7 +321,7 @@ public sealed class PayrollColumnsViewModel
 public sealed class WorkerTimeClockViewModel
 {
     [BindNever]
-    public WorkerProfile Worker { get; set; }
+    public StaffMember Worker { get; set; }
 
     [BindNever]
     public bool HasPin { get; set; }
@@ -329,7 +330,7 @@ public sealed class WorkerTimeClockViewModel
     public DateTime? LockedUntilUtc { get; set; }
 
     [BindNever]
-    public IList<WorkerPayRate> Rates { get; set; } = [];
+    public IList<StaffPayRate> Rates { get; set; } = [];
 
     [BindNever]
     public bool CanViewRates { get; set; }

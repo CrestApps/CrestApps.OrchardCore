@@ -1,4 +1,6 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.AspNetCore.DataProtection;
@@ -31,7 +33,7 @@ public sealed class WorkerFeedTokenBackfill
     public async Task<int> RunAsync()
     {
         var changed = 0;
-        var workers = await _session.Query<WorkerProfile, WorkerFeedIndex>(collection: WorkforceConstants.CollectionName).ListAsync();
+        var workers = await _session.Query<StaffMember, WorkerFeedIndex>(collection: StaffConstants.CollectionName).ListAsync();
 
         foreach (var worker in workers)
         {
@@ -46,7 +48,7 @@ public sealed class WorkerFeedTokenBackfill
             settings.ProtectedFeedToken = _dataProtectionProvider.CreateProtector(DefaultWorkerFeedService.ProtectionPurpose).Protect(settings.FeedToken);
             worker.Put(settings);
 
-            await _session.SaveAsync(worker, false, WorkforceConstants.CollectionName);
+            await _session.SaveAsync(worker, false, StaffConstants.CollectionName);
             changed++;
         }
 

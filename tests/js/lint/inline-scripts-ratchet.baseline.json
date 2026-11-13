@@ -1,7 +1,6 @@
 {
     "scriptLines": {
         "src/Modules/CrestApps.OrchardCore.Accounts.B2B/Views/PunchoutTransfer.cshtml": 6,
-        "src/Modules/CrestApps.OrchardCore.Accounts/Views/ContentZone-AccountPage.cshtml": 31,
         "src/Modules/CrestApps.OrchardCore.AI.A2A/Views/A2AConnectionFields.Edit.cshtml": 17,
         "src/Modules/CrestApps.OrchardCore.AI.Chat.Claude/Views/ClaudeSettings.Edit.cshtml": 12,
         "src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/Views/AIProfileCopilotConfig.Edit.cshtml": 100,
@@ -133,8 +132,11 @@
         "src/Modules/CrestApps.OrchardCore.Products/Views/ProductPricePart.Edit.cshtml": 40,
         "src/Modules/CrestApps.OrchardCore.Products/Views/ProductRecentlyViewed.cshtml": 34,
         "src/Modules/CrestApps.OrchardCore.Reports/Views/Shared/_ReportWidgetOptions.cshtml": 10,
+        "src/Modules/CrestApps.OrchardCore.Resources/Views/PageSections.cshtml": 31,
         "src/Modules/CrestApps.OrchardCore.Scheduling/Views/AppointmentTypeFields.Edit.cshtml": 31,
         "src/Modules/CrestApps.OrchardCore.Shipping/Views/ShippingCheckoutStep.Edit.cshtml": 41,
+        "src/Modules/CrestApps.OrchardCore.Staff/Views/Staff/OrgChart.cshtml": 53,
+        "src/Modules/CrestApps.OrchardCore.Staff/Views/StaffMemberFields.Edit.cshtml": 46,
         "src/Modules/CrestApps.OrchardCore.Stripe/Views/StripeCheckoutPaymentMethod.cshtml": 16,
         "src/Modules/CrestApps.OrchardCore.Stripe/Views/StripeSettings.Edit.cshtml": 85,
         "src/Modules/CrestApps.OrchardCore.Subscriptions/Views/InstallmentPlans/Create.cshtml": 97,

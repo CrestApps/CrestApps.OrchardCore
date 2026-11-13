@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 
@@ -19,7 +20,7 @@ internal sealed class WorkerTimeZones : IWorkerTimeZoneService
     /// <summary>
     /// Returns the worker's main team when they are on it that day, or else the first team they are on.
     /// </summary>
-    public static string TeamOn(WorkerProfile worker, DateOnly date)
+    public static string TeamOn(StaffMember worker, DateOnly date)
     {
         var memberships = worker.MembershipsOn(date).Select(membership => membership.TeamId).Where(id => !string.IsNullOrEmpty(id)).ToArray();
 
@@ -31,7 +32,7 @@ internal sealed class WorkerTimeZones : IWorkerTimeZoneService
         return memberships.FirstOrDefault() ?? worker.TeamMemberships.Select(membership => membership.TeamId).FirstOrDefault(id => !string.IsNullOrEmpty(id));
     }
 
-    public async Task<string> GetAsync(WorkerProfile worker, string teamId, CancellationToken cancellationToken = default)
+    public async Task<string> GetAsync(StaffMember worker, string teamId, CancellationToken cancellationToken = default)
     {
         if (CalendarTimeZones.IsValid(worker.TimeZoneId))
         {

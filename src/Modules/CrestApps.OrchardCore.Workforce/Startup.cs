@@ -1,28 +1,28 @@
+using CrestApps.OrchardCore.PageSections;
+using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
-using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Workforce.Core;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Drivers;
 using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
-using CrestApps.OrchardCore.Workforce.PersonalData;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Users.Handlers;
-using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Workforce;
 
 /// <summary>
-/// Registers workers, the Workforce settings of teams, activity codes, the Workforce calendar type and the admin screens.
+/// Registers Workforce's scheduling card on staff members, the Workforce settings of teams, activity codes, the Workforce calendar type and the admin screens.
 /// </summary>
 public sealed class Startup : StartupBase
 {
@@ -31,20 +31,18 @@ public sealed class Startup : StartupBase
     {
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkforceConstants.CollectionName));
         services.AddDataMigration<WorkforceMigrations>()
-            .AddIndexProvider<WorkerIndexProvider>()
             .AddIndexProvider<ActivityCodeIndexProvider>();
 
         services.AddWorkforceCore();
-        services.AddPersonalDataContributor<WorkerProfilePersonalDataContributor>();
+
+        // Workers are staff members: Workforce managers manage the staff of their teams, and Workforce admins everyone.
+        services.AddStaffScopePermissions(WorkforcePermissions.ManageAllWorkforce, WorkforcePermissions.ManageWorkers);
         services.AddDisplayDriver<Team, WorkforceTeamDisplayDriver>();
         services.AddDisplayDriver<Team, WorkforceTeamMembersDisplayDriver>();
         services.AddDisplayDriver<Team, WorkforceTeamRowDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, WorkforceTeamsAuthorizationHandler>());
-        services.AddDisplayDriver<WorkerProfile, WorkerRowDisplayDriver>();
-        services.AddDisplayDriver<WorkerProfile, WorkerProfileDisplayDriver>();
-        services.AddDisplayDriver<WorkerProfile, WorkerSkillsDisplayDriver>();
-        services.AddDisplayDriver<User, UserWorkforceDisplayDriver>();
-        services.AddScoped<IUserEventHandler, WorkerUserEventHandler>();
+        services.AddDisplayDriver<StaffMember, WorkforceStaffDisplayDriver>();
+        services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.Work, LocalizationSource.Create<Startup>("Work"), "fa-solid fa-briefcase", 40);
         services.AddDisplayDriver<ActivityCode, ActivityCodeRowDisplayDriver>();
         services.AddPermissionProvider<WorkforcePermissionsProvider>();
         services.AddNavigationProvider<WorkforceAdminMenu>();

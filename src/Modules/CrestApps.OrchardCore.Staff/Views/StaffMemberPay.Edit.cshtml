@@ -1,0 +1,19 @@
+@model CrestApps.OrchardCore.Staff.Drivers.StaffPayViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Pay"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper"><label asp-for="AnnualSalary" class="ocat-label">@T["Annual salary"]</label><div class="ocat-end"><input asp-for="AnnualSalary" type="number" step="0.01" min="0" class="form-control" style="max-width: 14rem" /><span class="hint">@T["For salaried staff."]</span></div></div>
+        <div class="ocat-wrapper"><label asp-for="HourlyCost" class="ocat-label">@T["Cost of an hour"]</label><div class="ocat-end"><input asp-for="HourlyCost" type="number" step="0.01" min="0" class="form-control" style="max-width: 14rem" /><span class="hint">@T["Pay, taxes and benefits for an hour of their work, used to price labor on jobs. Empty to use the hourly rate."]</span></div></div>
+        <div class="row g-2 fw-semibold small mb-1 mt-2"><div class="col-md-4">@T["From"]</div><div class="col-md-4">@T["Hourly rate"]</div><div class="col-md-4">@T["Kind of work"]</div></div>
+        @for (var i = 0; i < Model.Rates.Count; i++)
+        {
+            <div class="row g-2 mb-2">
+                <div class="col-md-4"><input type="date" name="@Html.NameFor(m => m.Rates[i].EffectiveFrom)" value="@Model.Rates[i].EffectiveFrom?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["From"]" /></div>
+                <div class="col-md-4"><input type="number" step="0.01" min="0" name="@Html.NameFor(m => m.Rates[i].HourlyRate)" value="@Model.Rates[i].HourlyRate" class="form-control" aria-label="@T["Hourly rate"]" /></div>
+                <div class="col-md-4"><input name="@Html.NameFor(m => m.Rates[i].ActivityCodeId)" value="@Model.Rates[i].ActivityCodeId" class="form-control" aria-label="@T["Kind of work"]" placeholder="@T["All work"]" /></div>
+            </div>
+        }
+        <span class="hint">@T["The rate that applies on a day is the latest one that has started. A rate for a kind of work wins over the general one. Save to get more empty rows."]</span>
+    </div>
+</div>

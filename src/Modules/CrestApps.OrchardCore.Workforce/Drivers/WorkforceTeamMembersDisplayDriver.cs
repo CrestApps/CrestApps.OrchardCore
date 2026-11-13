@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using CrestApps.OrchardCore.Workforce.ViewModels;
@@ -13,11 +14,11 @@ namespace CrestApps.OrchardCore.Workforce.Drivers;
 /// </summary>
 internal sealed class WorkforceTeamMembersDisplayDriver : DisplayDriver<Team>
 {
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly IClock _clock;
 
     public WorkforceTeamMembersDisplayDriver(
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         IClock clock)
     {
         _workerManager = workerManager;

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -30,7 +31,7 @@ public sealed class PayrollExportContext
     /// <summary>
     /// Gets or sets the timesheets' workers, by id.
     /// </summary>
-    public IReadOnlyDictionary<string, WorkerProfile> Workers { get; set; }
+    public IReadOnlyDictionary<string, StaffMember> Workers { get; set; }
 
     /// <summary>
     /// Gets or sets the pay codes, by id.

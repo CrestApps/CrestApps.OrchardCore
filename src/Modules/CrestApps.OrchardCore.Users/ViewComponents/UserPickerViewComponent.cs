@@ -45,7 +45,8 @@ public sealed class UserPickerViewComponent : ViewComponent
         string buttonText = null,
         string searchPlaceholder = null,
         bool smallButton = true,
-        bool required = false)
+        bool required = false,
+        string audience = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
@@ -73,6 +74,7 @@ public sealed class UserPickerViewComponent : ViewComponent
             InputName = name,
             ValueType = string.IsNullOrWhiteSpace(valueType) ? "userId" : valueType,
             Roles = roles ?? [],
+            Audience = audience,
             Multiple = multiple,
             Label = label,
             ButtonText = buttonText,

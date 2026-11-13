@@ -1,0 +1,9 @@
+@model StaffProfilePageViewModel
+
+<zone Name="Title">
+    <breadcrumb name="StaffProfile" title="@T["{0}", Model.DisplayName]">
+        <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@await DisplayAsync(Model.Profile)

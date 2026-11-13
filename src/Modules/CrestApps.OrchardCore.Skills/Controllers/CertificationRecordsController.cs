@@ -157,7 +157,7 @@ public sealed class CertificationRecordsController : Controller
         {
             Id = record.ItemId,
             UserId = record.SubjectKind == SkillSubjectKind.User ? record.SubjectId : null,
-            HeldByWorker = record.SubjectKind == SkillSubjectKind.Worker,
+            HeldByWorker = record.SubjectKind == SkillSubjectKind.Staff,
             SubjectName = record.SubjectName,
             CertificationId = record.CertificationId,
             Number = record.Number,
@@ -240,7 +240,7 @@ public sealed class CertificationRecordsController : Controller
 
         if (!ModelState.IsValid)
         {
-            model.HeldByWorker = record.SubjectKind == SkillSubjectKind.Worker;
+            model.HeldByWorker = record.SubjectKind == SkillSubjectKind.Staff;
             model.SubjectName = record.SubjectName;
             await FillAsync(model);
 

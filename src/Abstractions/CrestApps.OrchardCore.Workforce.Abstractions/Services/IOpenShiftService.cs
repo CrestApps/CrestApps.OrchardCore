@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
 namespace CrestApps.OrchardCore.Workforce.Services;
@@ -50,7 +51,7 @@ public interface IOpenShiftService
     /// <param name="id">The open shift.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The workers.</returns>
-    Task<IReadOnlyList<WorkerProfile>> ListEligibleWorkersAsync(string id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StaffMember>> ListEligibleWorkersAsync(string id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records a worker's claim. Under <see cref="OpenShiftClaimPolicy.FirstCome"/> the worker gets the shift at once.

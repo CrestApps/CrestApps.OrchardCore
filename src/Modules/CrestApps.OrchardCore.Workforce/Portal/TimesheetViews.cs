@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -44,7 +45,7 @@ public sealed class TimesheetViews
     /// <param name="worker">Its worker.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The page.</returns>
-    public async Task<TimesheetDetailsViewModel> BuildAsync(Timesheet timesheet, WorkerProfile worker, CancellationToken cancellationToken = default)
+    public async Task<TimesheetDetailsViewModel> BuildAsync(Timesheet timesheet, StaffMember worker, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(timesheet);
         ArgumentNullException.ThrowIfNull(worker);

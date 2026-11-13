@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Core.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -15,8 +17,8 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
-using OrchardCore.Routing;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -32,7 +34,7 @@ public sealed class TimeOffController : Controller
     private readonly ITimeOffBalanceService _balanceService;
     private readonly ITimeOffTypeManager _typeManager;
     private readonly ITimeOffPolicyManager _policyManager;
-    private readonly IWorkerManager _workerManager;
+    private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
     private readonly IWorkforceScopeService _scopeService;
     private readonly IShiftService _shiftService;
@@ -64,7 +66,7 @@ public sealed class TimeOffController : Controller
         ITimeOffBalanceService balanceService,
         ITimeOffTypeManager typeManager,
         ITimeOffPolicyManager policyManager,
-        IWorkerManager workerManager,
+        IStaffMemberManager workerManager,
         ITeamManager teamManager,
         IWorkforceScopeService scopeService,
         IShiftService shiftService,
@@ -708,7 +710,7 @@ public sealed class TimeOffController : Controller
     {
         var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
         var today = await PlanningOptions.TodayAsync(_localClock);
-        var workers = new Dictionary<string, WorkerProfile>(StringComparer.Ordinal);
+        var workers = new Dictionary<string, StaffMember>(StringComparer.Ordinal);
 
         foreach (var item in (await _teamManager.ListTreeAsync(HttpContext.RequestAborted)).Where(item => scope.Covers(item.Team.ItemId)))
         {
@@ -719,7 +721,7 @@ public sealed class TimeOffController : Controller
         }
 
         model.WorkerOptions = workers.Values
-            .Where(worker => worker.Status != WorkerStatus.Terminated)
+            .Where(worker => worker.Status != StaffStatus.Terminated)
             .OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .Select(worker => new SelectListItem(worker.DisplayName, worker.ItemId, worker.ItemId == model.WorkerId))
             .ToList();

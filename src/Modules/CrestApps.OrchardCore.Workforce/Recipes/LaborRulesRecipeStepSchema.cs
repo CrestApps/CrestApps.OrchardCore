@@ -1,6 +1,7 @@
 using System.Reflection;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using Json.Schema;
 using static CrestApps.OrchardCore.Workforce.Recipes.WorkforceSchemaBuilder;
