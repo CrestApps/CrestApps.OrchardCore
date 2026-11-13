@@ -481,7 +481,7 @@ public sealed class TransactionCustomerPagesTests
 
         return new PaymentReceiptTransactionPaymentHandler(
             receipts.Object,
-            new DefaultReceiptHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<DefaultReceiptHtmlRenderer>()),
+            ReceiptRenderers.CreateHtmlRenderer(),
             TransactionManagerFactory.Create(new FakeTransactionStore(transaction)),
             TestCustomerOwnerNotifier.Create(notifications, userService.Object, services: services),
             services,

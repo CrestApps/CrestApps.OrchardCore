@@ -79,7 +79,7 @@ internal static class PosReceipts
             Notes = string.Join(" · ", GetPayments(order, S["Cash"], S["Card"]).Select(payment => $"{payment.Method}: {ProductPriceFormatter.Format(payment.Amount, order.Currency)}")),
         });
 
-        return renderer.Render(document);
+        return await renderer.RenderAsync(document);
     }
 
     // How the order was paid: each balance it was tendered, then the card for the rest. The API names the methods in

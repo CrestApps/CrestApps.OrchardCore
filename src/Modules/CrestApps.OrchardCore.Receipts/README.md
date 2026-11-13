@@ -6,9 +6,9 @@ Provides configurable, printable proof-of-purchase receipts that any module can 
 
 | Feature | Id | Description |
 | --- | --- | --- |
-| Receipts | `CrestApps.OrchardCore.Receipts` | Provides the reusable receipt builder, printable receipt view, and receipt branding settings. |
+| Receipts | `CrestApps.OrchardCore.Receipts` | Provides the reusable receipt builder, printable receipt view, and receipt branding settings. Receipts are printed as business documents. |
 
-Enable a feature under **Configuration > Features**, or with the `Feature` step of a recipe.
+Enable a feature under **Configuration > Features**, or with the `Feature` step of a recipe. The Receipts feature depends on the Business Documents feature (`CrestApps.OrchardCore.BusinessDocuments`): the printable receipt view and the receipt e-mail body map the receipt with `ReceiptBusinessDocumentMapper` and render it with the shared `BusinessDocument` shape and HTML renderer, in the look of the document template for receipts.
 
 ## Extension points
 

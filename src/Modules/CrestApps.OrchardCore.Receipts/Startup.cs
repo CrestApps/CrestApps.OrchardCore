@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Commerce.Core;
 using CrestApps.OrchardCore.Receipts.Core;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.Receipts.Navigation;
 using CrestApps.OrchardCore.Receipts.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -15,17 +17,23 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Receipts;
 
 /// <summary>
-/// Registers the reusable receipt builder, the receipt branding settings screen, and its permissions.
+/// Registers the reusable receipt builder, the receipt branding settings screen, and its permissions. Receipts are
+/// printed as business documents of the <see cref="ReceiptsConstants.BusinessDocumentKind"/> kind.
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private static readonly LocalizationSource _receiptKindTitle = LocalizationSource.Create<Startup>("Receipts");
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IReceiptService, DefaultReceiptService>();
         services.AddStoreLocations();
         services.AddScoped<IStoreSetupStep, StoreDetailsSetupStep>();
+        services.AddMoneyFormatter();
+        services.AddScoped<ReceiptBusinessDocumentMapper>();
         services.AddScoped<IReceiptHtmlRenderer, DefaultReceiptHtmlRenderer>();
+        services.AddBusinessDocumentKind(ReceiptsConstants.BusinessDocumentKind, _receiptKindTitle);
 
         services
             .AddSiteDisplayDriver<ReceiptSettingsDisplayDriver>()

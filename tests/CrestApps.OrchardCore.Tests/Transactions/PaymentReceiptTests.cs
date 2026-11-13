@@ -70,7 +70,7 @@ public sealed class PaymentReceiptTests
     public void Render_EncodesEverythingTakenFromTheReceipt()
     {
         // Arrange
-        var renderer = new DefaultReceiptHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<DefaultReceiptHtmlRenderer>());
+        var renderer = ReceiptRenderers.CreateHtmlRenderer();
 
         // Act
         var html = renderer.Render(new ReceiptDocument
@@ -346,7 +346,7 @@ public sealed class PaymentReceiptTests
 
         return new PaymentReceiptTransactionPaymentHandler(
             CreateBuilder(),
-            new DefaultReceiptHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<DefaultReceiptHtmlRenderer>()),
+            ReceiptRenderers.CreateHtmlRenderer(),
             TransactionManagerFactory.Create(store),
             TestCustomerOwnerNotifier.Create(notifications, userService, services: services.BuildServiceProvider()),
             services.BuildServiceProvider(),
