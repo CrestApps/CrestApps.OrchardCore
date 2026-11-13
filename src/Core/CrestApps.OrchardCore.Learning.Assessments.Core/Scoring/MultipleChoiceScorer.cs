@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Assessments.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
 /// Scores multiple choice questions: all or nothing, or with partial credit the share of right choices less the share
 /// of wrong ones.
 /// </summary>
-public sealed class MultipleChoiceScorer : Services.IQuestionScorer
+public sealed class MultipleChoiceScorer : IQuestionScorer
 {
     /// <inheritdoc />
     public string QuestionType => AssessmentsConstants.QuestionTypes.MultipleChoice;

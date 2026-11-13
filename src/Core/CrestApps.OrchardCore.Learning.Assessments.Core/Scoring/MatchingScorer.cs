@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Assessments.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
 /// Scores matching questions. The answers are shown shuffled under ids of their own, so the shown answers never reveal
 /// which prompt they belong to.
 /// </summary>
-public sealed class MatchingScorer : Services.IQuestionScorer
+public sealed class MatchingScorer : IQuestionScorer
 {
     /// <inheritdoc />
     public string QuestionType => AssessmentsConstants.QuestionTypes.Matching;

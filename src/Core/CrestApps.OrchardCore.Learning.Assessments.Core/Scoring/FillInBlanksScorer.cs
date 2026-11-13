@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Assessments.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
 /// Scores fill in the blanks questions. The text is split at its <c>[[answer]]</c> blanks: the segments are shown, the
 /// answers become the key, and each blank earns its share of the points.
 /// </summary>
-public sealed partial class FillInBlanksScorer : Services.IQuestionScorer
+public sealed partial class FillInBlanksScorer : IQuestionScorer
 {
     /// <inheritdoc />
     public string QuestionType => AssessmentsConstants.QuestionTypes.FillInBlanks;

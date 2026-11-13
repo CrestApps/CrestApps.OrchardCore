@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Assessments.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
@@ -6,7 +7,7 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
 /// <summary>
 /// Scores short text questions against the accepted answers, trimmed, with runs of spaces collapsed.
 /// </summary>
-public sealed class ShortTextScorer : Services.IQuestionScorer
+public sealed class ShortTextScorer : IQuestionScorer
 {
     /// <inheritdoc />
     public string QuestionType => AssessmentsConstants.QuestionTypes.ShortText;

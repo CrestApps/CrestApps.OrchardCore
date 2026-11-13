@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Assessments.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
 /// Leaves essays to a grader. An empty answer scores zero at once. The grader guidance is not copied into the attempt
 /// item: it is read from the question by graders only.
 /// </summary>
-public sealed class EssayScorer : Services.IQuestionScorer
+public sealed class EssayScorer : IQuestionScorer
 {
     /// <inheritdoc />
     public string QuestionType => AssessmentsConstants.QuestionTypes.Essay;

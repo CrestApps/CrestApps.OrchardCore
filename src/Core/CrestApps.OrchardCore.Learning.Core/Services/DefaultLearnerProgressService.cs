@@ -170,6 +170,18 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         {
             var item = context.Item;
 
+            if (result.ResetScore)
+            {
+                item.Score = null;
+                item.Passed = null;
+
+                if (item.State is CourseItemState.Completed or CourseItemState.Failed && string.IsNullOrEmpty(item.CompletedBy))
+                {
+                    item.State = CourseItemState.InProgress;
+                    item.CompletedUtc = null;
+                }
+            }
+
             if (result.Score is not null)
             {
                 item.Score = Math.Clamp(result.Score.Value, 0, 100);

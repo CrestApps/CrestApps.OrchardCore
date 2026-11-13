@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Assessments.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
@@ -6,7 +7,7 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
 /// <summary>
 /// Scores numeric questions: an answer within the tolerance of the key earns the points.
 /// </summary>
-public sealed class NumericScorer : Services.IQuestionScorer
+public sealed class NumericScorer : IQuestionScorer
 {
     /// <inheritdoc />
     public string QuestionType => AssessmentsConstants.QuestionTypes.Numeric;

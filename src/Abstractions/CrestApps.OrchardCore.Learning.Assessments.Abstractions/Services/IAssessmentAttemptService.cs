@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Services;
@@ -92,6 +93,11 @@ public sealed class StartAttemptRequest
     /// Gets or sets the learner.
     /// </summary>
     public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the signed-in person, for the Learning access decision.
+    /// </summary>
+    public ClaimsPrincipal User { get; set; }
 
     /// <summary>
     /// Gets or sets the quiz.

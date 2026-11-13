@@ -49,4 +49,10 @@ public sealed class CourseItemResult
     /// Gets or sets the number of attempts so far.
     /// </summary>
     public int Attempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the result clears the score and pass of the item, such as when the only graded attempt of a
+    /// quiz is voided. An item a staff member completed by hand stays completed.
+    /// </summary>
+    public bool ResetScore { get; set; }
 }

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Assessments.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
@@ -6,7 +7,7 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Core.Scoring;
 /// <summary>
 /// Scores ordering questions. The items are shown shuffled; the key is their right order.
 /// </summary>
-public sealed class OrderingScorer : Services.IQuestionScorer
+public sealed class OrderingScorer : IQuestionScorer
 {
     /// <inheritdoc />
     public string QuestionType => AssessmentsConstants.QuestionTypes.Ordering;
