@@ -17,21 +17,30 @@ public sealed class RecordingCommerceEmailSender : ICommerceEmailSender
 
     /// <inheritdoc />
     public async Task<bool> SendAsync(CommerceEmail email, Func<CancellationToken, Task<CommerceEmailContent>> buildAsync, CancellationToken cancellationToken = default)
+        => (await SendWithResultAsync(email, buildAsync, cancellationToken)).Succeeded;
+
+    /// <inheritdoc />
+    public async Task<CommerceEmailResult> SendWithResultAsync(CommerceEmail email, Func<CancellationToken, Task<CommerceEmailContent>> buildAsync, CancellationToken cancellationToken = default)
     {
-        if (!CanSend || string.IsNullOrWhiteSpace(email.To))
+        if (!CanSend)
         {
-            return false;
+            return CommerceEmailResult.Failed("The site can't send email.");
+        }
+
+        if (string.IsNullOrWhiteSpace(email.To))
+        {
+            return CommerceEmailResult.Failed("The email has no recipient.");
         }
 
         var content = await buildAsync(cancellationToken);
 
         if (content is null)
         {
-            return false;
+            return CommerceEmailResult.Failed("There was nothing to send.");
         }
 
         Sent.Add((email, content));
 
-        return true;
+        return CommerceEmailResult.Success();
     }
 }
