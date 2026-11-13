@@ -6,6 +6,8 @@
         => ProductPriceFormatter.Format(amount, Model.Order.Currency);
 }
 @{
+    // A page of its own, without the admin around it, to print on a receipt printer.
+    Layout = null;
     var order = Model.Order;
     var address = Model.Register.Address;
     var total = order.Total ?? order.Subtotal;

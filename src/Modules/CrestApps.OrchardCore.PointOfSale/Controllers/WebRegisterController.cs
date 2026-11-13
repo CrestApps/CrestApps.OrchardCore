@@ -389,8 +389,7 @@ public sealed class WebRegisterController : Controller
             return Content(html, "text/html; charset=utf-8");
         }
 
-        // A page of its own, without the admin around it, to print on a receipt printer.
-        return PartialView(new WebRegisterReceiptViewModel
+        return View(new WebRegisterReceiptViewModel
         {
             Register = register,
             Order = order,
