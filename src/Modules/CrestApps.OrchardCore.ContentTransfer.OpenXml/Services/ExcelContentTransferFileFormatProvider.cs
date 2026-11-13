@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using CrestApps.OrchardCore.ContentTransfer.Telemetry;
 using CrestApps.OrchardCore.Diagnostics;
 using DocumentFormat.OpenXml;

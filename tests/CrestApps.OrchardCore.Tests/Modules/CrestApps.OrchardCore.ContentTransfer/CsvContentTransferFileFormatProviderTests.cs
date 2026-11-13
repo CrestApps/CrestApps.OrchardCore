@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using CrestApps.OrchardCore.ContentTransfer.FileFormats;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContentTransfer;

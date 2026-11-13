@@ -1,4 +1,4 @@
-﻿# Content Transfer
+# Content Transfer
 
 Provides bulk content import and export with pluggable file format support.
 

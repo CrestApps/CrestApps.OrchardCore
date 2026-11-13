@@ -1,4 +1,4 @@
-﻿# Artificial Intelligence
+# Artificial Intelligence
 
 Provides AI services.
 

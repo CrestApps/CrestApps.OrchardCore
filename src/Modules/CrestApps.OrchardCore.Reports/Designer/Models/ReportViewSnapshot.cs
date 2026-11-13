@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Models;

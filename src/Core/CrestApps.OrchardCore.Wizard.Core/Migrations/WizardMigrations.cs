@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Wizard;
+using CrestApps.OrchardCore.Wizard;
 using CrestApps.OrchardCore.Wizard.Core.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;

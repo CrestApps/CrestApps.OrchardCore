@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.ContentTransfer.Models;
+namespace CrestApps.OrchardCore.ContentTransfer.Models;
 
 public sealed class ContentImportOptions
 {

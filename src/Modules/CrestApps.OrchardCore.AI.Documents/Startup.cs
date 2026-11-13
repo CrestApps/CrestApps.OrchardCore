@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Endpoints;
 using CrestApps.Core.AI.Documents.Models;

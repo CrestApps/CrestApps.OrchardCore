@@ -1,4 +1,4 @@
-﻿# AI Documents
+# AI Documents
 
 Provides the foundation for document processing, text extraction, and Retrieval-Augmented Generation (RAG) capabilities.
 

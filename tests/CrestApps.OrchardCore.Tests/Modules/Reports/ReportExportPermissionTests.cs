@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Controllers;
 using CrestApps.OrchardCore.Reports.Designer.Services;

@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.YesSql.Core.Retention;
 using CrestApps.OrchardCore.Wizard.Contents;

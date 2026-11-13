@@ -1,4 +1,4 @@
-﻿# Wizard
+# Wizard
 
 Provides a reusable, multi-step wizard (stepper) services.
 

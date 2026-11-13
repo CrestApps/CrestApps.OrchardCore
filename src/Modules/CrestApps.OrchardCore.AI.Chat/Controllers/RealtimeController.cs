@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Capabilities;
+using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Speech;

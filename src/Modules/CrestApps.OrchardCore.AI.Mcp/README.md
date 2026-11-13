@@ -1,4 +1,4 @@
-﻿# Model Context Protocol (MCP) Client
+# Model Context Protocol (MCP) Client
 
 Offers core services and a user interface for connecting to Model Context Protocol (MCP) servers, enabling AI models to leverage additional capabilities and resources.
 

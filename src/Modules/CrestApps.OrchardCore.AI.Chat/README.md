@@ -1,4 +1,4 @@
-﻿# Artificial Intelligence
+# Artificial Intelligence
 
 Provides UI to interact with AI models using the profiles.
 

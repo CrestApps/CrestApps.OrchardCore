@@ -1,4 +1,4 @@
-﻿---
+---
 sidebar_label: Data Connectors
 title: Data Connectors
 description: Connect to SQL Server, Elasticsearch, any HTTP API and media library files, and expose their data sets to reports and data pipelines, read live or imported on a schedule.

@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;

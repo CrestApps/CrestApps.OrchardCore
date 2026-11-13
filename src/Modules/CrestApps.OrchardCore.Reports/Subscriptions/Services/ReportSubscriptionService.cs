@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Net;
 using CrestApps.OrchardCore.Diagnostics;
 using Microsoft.AspNetCore.Authorization;

@@ -1,4 +1,4 @@
-﻿using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.Environment.Shell.Configuration;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;

@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.AI.Memory.Services;
+using CrestApps.OrchardCore.AI.Memory.Services;
 using System.Security.Claims;
 using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Core;

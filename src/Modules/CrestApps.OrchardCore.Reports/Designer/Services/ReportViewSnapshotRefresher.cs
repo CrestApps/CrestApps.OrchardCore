@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.DataSources;
 using System.Diagnostics;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
