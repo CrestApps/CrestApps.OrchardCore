@@ -114,6 +114,13 @@ jobs:
       if: matrix.suite == 'integration'
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj
+    # The Learning suite runs one real tenant with a course, a lesson file under Secure Media and two learners, and
+    # checks over HTTP that a person who is not enrolled cannot open a lesson or its file, and that a recipe moves a
+    # course and its enrollments.
+    - name: Learning integration tests
+      if: matrix.suite == 'integration'
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Learning.IntegrationTests/CrestApps.OrchardCore.Learning.IntegrationTests.csproj
 
   # The soft phone's arithmetic and state mapping - number formatting, the call-quality score, the Telnyx
   # call-state mapping, the reconnect schedule - now live in their own files with unit tests. A mistake in any
