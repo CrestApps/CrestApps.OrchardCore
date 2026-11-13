@@ -143,7 +143,7 @@ public sealed class OrderViewController : Controller
             await SendOrderLinkAsync(order);
         }
 
-        return View("FindSent", await LookupShapeAsync("OrderLookupSent", email));
+        return View("FindSent", await LookupShapeAsync("OrderLookupSent", email, emailUnavailable: !_emailSender.CanSend));
     }
 
     [HttpGet("orders/find", Name = OrderConstants.RouteNames.Find)]
@@ -172,12 +172,17 @@ public sealed class OrderViewController : Controller
             await SendLinksAsync(email);
         }
 
-        return View("FindSent", await LookupShapeAsync("OrderLookupSent", email));
+        return View("FindSent", await LookupShapeAsync("OrderLookupSent", email, emailUnavailable: !_emailSender.CanSend));
     }
 
-    // Find my order and its answer are the OrderLookup and OrderLookupSent shapes, so a theme can override them.
-    private ValueTask<IShape> LookupShapeAsync(string shapeType, string email)
-        => _shapeFactory.CreateAsync<FindOrderViewModel>(shapeType, model => model.Email = email);
+    // Find my order and its answer are the OrderLookup and OrderLookupSent shapes, so a theme can override them. A store
+    // that can't send email says so on the answer instead of telling the buyer a link is on its way.
+    private ValueTask<IShape> LookupShapeAsync(string shapeType, string email, bool emailUnavailable = false)
+        => _shapeFactory.CreateAsync<FindOrderViewModel>(shapeType, model =>
+        {
+            model.Email = email;
+            model.EmailUnavailable = emailUnavailable;
+        });
 
     private async Task SendLinksAsync(string email)
     {

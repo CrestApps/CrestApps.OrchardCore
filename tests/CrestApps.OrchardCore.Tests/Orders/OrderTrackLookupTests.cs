@@ -56,7 +56,23 @@ public sealed class OrderTrackLookupTests
         Assert.Contains(OrderConstants.AttemptPolicies.OrderLookupEmail, _limited);
     }
 
-    private OrderViewController CreateController()
+    [Fact]
+    public async Task Track_OnAStoreThatCantSendEmail_SaysSoInsteadOfClaimingALinkWasSent()
+    {
+        // Arrange
+        var controller = CreateController(canSend: false);
+
+        // Act
+        var result = await controller.Track(new TrackOrderViewModel { OrderNumber = "261018-ABC123", Email = "pat@example.test" });
+
+        // Assert
+        var model = Assert.IsAssignableFrom<FindOrderViewModel>(Assert.IsType<ViewResult>(result).Model);
+
+        Assert.True(model.EmailUnavailable);
+        _emails.Verify(sender => sender.SendAsync(It.IsAny<CommerceEmail>(), It.IsAny<Func<CancellationToken, Task<CommerceEmailContent>>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private OrderViewController CreateController(bool canSend = true)
     {
         var orders = new Mock<IOrderStore>();
         orders.Setup(store => store.FindByNumberAsync("261018-ABC123", It.IsAny<CancellationToken>())).ReturnsAsync(_order);
@@ -71,7 +87,7 @@ public sealed class OrderTrackLookupTests
             .Callback((string policy, string _, CancellationToken _) => _limited.Add(policy))
             .ReturnsAsync(AttemptLimitResult.Unlimited);
 
-        _emails.SetupGet(sender => sender.CanSend).Returns(true);
+        _emails.SetupGet(sender => sender.CanSend).Returns(canSend);
         _emails.Setup(sender => sender.SendAsync(It.IsAny<CommerceEmail>(), It.IsAny<Func<CancellationToken, Task<CommerceEmailContent>>>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         var services = new ServiceCollection()

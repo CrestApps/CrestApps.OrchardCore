@@ -2,4 +2,11 @@
 
 @* The same answer whether or not there are orders, so the page never tells who has bought here. *@
 
-<p>@T["If we have orders placed with {0}, we've emailed a link to each of them. It can take a few minutes to arrive.", Model.Email]</p>
+@if (Model.EmailUnavailable)
+{
+    <div class="alert alert-warning" role="alert">@T["We can't send email right now, so no order link was sent. Use the link in your order confirmation email, or contact the store."]</div>
+}
+else
+{
+    <p>@T["If we have orders placed with {0}, we've emailed a link to each of them. It can take a few minutes to arrive.", Model.Email]</p>
+}
