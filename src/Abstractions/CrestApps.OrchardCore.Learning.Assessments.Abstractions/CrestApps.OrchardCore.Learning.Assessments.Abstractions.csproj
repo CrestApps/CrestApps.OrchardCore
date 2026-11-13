@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Assessments</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Assessments Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of Learning assessments: question parts and question types, the quiz course item, self-contained
+      assessment attempts with their drawn items and responses, overrides, grade scales, scorers and the permissions.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Assessments Quiz Exam Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Abstractions\CrestApps.OrchardCore.Learning.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
