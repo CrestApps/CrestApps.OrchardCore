@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Support;
@@ -166,11 +165,9 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
-        // Keys typed while the keypad is private are secure data, never the caller's turn. The capture is kept where every
-        // node finds it, so a keypad event that lands on another node than the one that started it is captured too.
-        // Without the store no capture can have started (the tool needs it too), so the keys are the caller's as usual.
-        var captures = ShellScope.Services?.GetService<ISecureKeypadCaptureStore>();
-        var secureEntry = captures is null ? SecureKeypadEntry.NotCapturing : await captures.OfferAsync(voiceEvent.ActivityId, digits);
+        // Keys typed while the keypad is private are secure data, never the caller's turn, on any node. This is the one
+        // way in for keys: the realtime session hears them only through the command sent below.
+        var secureEntry = await _secureKeypadCaptures.OfferAsync(voiceEvent.ActivityId, digits);
 
         if (secureEntry.Captured)
         {

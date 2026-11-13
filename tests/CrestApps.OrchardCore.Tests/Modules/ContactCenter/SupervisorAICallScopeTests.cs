@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
+using CrestApps.OrchardCore.ContactCenter.Endpoints.Api;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -95,6 +96,42 @@ public sealed class SupervisorAICallScopeTests
         Assert.Equal(403, Status(listen));
         harness.Supervision.VerifyNoOtherCalls();
         harness.PhoneCalls.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task TheLiveCallsApi_RefusesAScopedSupervisor_AnotherCampaignsAICall()
+    {
+        // Arrange: a queue-scoped supervisor with an OpenID token reaches the same calls through api/ai/v1/live-calls.
+        var harness = new Harness(MonitorAndIntervene());
+        var transfers = new Mock<IAIVoiceCallTransfers>(MockBehavior.Strict);
+
+        // Act
+        var note = await AILiveCallsApiEndpoints.NoteAsync("theirs", new ApiAILiveCallNote { Note = "Offer the discount." }, Harness.Request(), harness.Authorization, [harness.Supervision.Object], harness.Activities.Object, harness.QueueAuthorization);
+        var transfer = await AILiveCallsApiEndpoints.TransferAsync("theirs", new ApiAILiveCallTransfer { AgentId = "agent-2" }, Harness.Request(), harness.Authorization, [transfers.Object], harness.Activities.Object, harness.QueueAuthorization);
+        var profile = await AILiveCallsApiEndpoints.SwitchProfileAsync("theirs", new ApiAILiveCallProfile { ProfileId = "profile-2" }, Harness.Request(), harness.Authorization, [harness.Supervision.Object], harness.Activities.Object, harness.QueueAuthorization);
+        var end = await AILiveCallsApiEndpoints.EndAsync("theirs", Harness.Request(), harness.Authorization, [harness.Supervision.Object], harness.Activities.Object, harness.QueueAuthorization);
+
+        // Assert
+        Assert.Equal(403, Status(note.Result));
+        Assert.Equal(403, Status(transfer.Result));
+        Assert.Equal(403, Status(profile.Result));
+        Assert.Equal(403, Status(end.Result));
+        harness.Supervision.VerifyNoOtherCalls();
+        transfers.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task TheLiveCallsApi_LetsAScopedSupervisorEndTheirOwnCampaignsAICall()
+    {
+        // Arrange
+        var harness = new Harness(MonitorAndIntervene());
+        harness.Supervision.Setup(supervision => supervision.EndAsync("ours", It.IsAny<CancellationToken>())).ReturnsAsync(new AIVoiceCallActionResult(true, "Ended."));
+
+        // Act
+        var end = await AILiveCallsApiEndpoints.EndAsync("ours", Harness.Request(), harness.Authorization, [harness.Supervision.Object], harness.Activities.Object, harness.QueueAuthorization);
+
+        // Assert
+        Assert.IsType<Ok<ApiAILiveCallResult>>(end.Result);
     }
 
     [Fact]

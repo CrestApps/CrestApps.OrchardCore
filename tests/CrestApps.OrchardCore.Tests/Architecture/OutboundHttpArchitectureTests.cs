@@ -19,6 +19,8 @@ public sealed class OutboundHttpArchitectureTests
 
     private static readonly Regex _resilienceRegex = new(@"\bAdd(?:Standard)?ResilienceHandler\b", RegexOptions.Compiled);
 
+    private static readonly Regex _unnamedCreateClientRegex = new(@"\.CreateClient\(\s*\)", RegexOptions.Compiled);
+
     // The guard's own implementation, which every guarded registration goes through.
     private static readonly HashSet<string> _exemptFiles = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -45,8 +47,8 @@ public sealed class OutboundHttpArchitectureTests
         ["src/Modules/CrestApps.OrchardCore.Shipping/Startup.cs|EasyPostCarrierProvider.HttpClientName"] = "Fixed host: api.easypost.com.",
         ["src/Modules/CrestApps.OrchardCore.Stripe/Startup.cs|StripeConstants.HttpClientName"] = "Fixed host: api.stripe.com.",
         ["src/Modules/CrestApps.OrchardCore.Taxation/TaxJar/TaxJarStartup.cs|TaxJarTaxDeterminationProvider.HttpClientName"] = "Fixed host: api.taxjar.com.",
-        ["src/Modules/CrestApps.OrchardCore.Telnyx/Startup.cs|TelnyxConstants.ProviderTechnicalName"] = "Fixed host: api.telnyx.com (an administrator may only point it at another Telnyx API base).",
-        ["src/Modules/CrestApps.OrchardCore.Telnyx/Startup.cs|<TelnyxApiClient>"] = "Fixed host: api.telnyx.com (an administrator may only point it at another Telnyx API base).",
+        ["src/Modules/CrestApps.OrchardCore.Telnyx/Startup.cs|TelnyxConstants.ProviderTechnicalName"] = "Fixed host: an https address on telnyx.com. The API base setting is refused at save and ignored when read for any other host (TelnyxApiAddress).",
+        ["src/Modules/CrestApps.OrchardCore.Telnyx/Startup.cs|<TelnyxApiClient>"] = "Fixed host: an https address on telnyx.com. The API base setting is refused at save and ignored when read for any other host (TelnyxApiAddress).",
         ["src/Startup/CrestApps.OrchardCore.Asterisk.Web/Program.cs|"] = "A development-only sample host that calls the developer's own Asterisk and site.",
         ["src/Startup/CrestApps.OrchardCore.Samples.A2AClient/Program.cs|"] = "A sample console host that calls the developer's own site.",
         ["src/Startup/CrestApps.OrchardCore.Samples.McpClient/Program.cs|"] = "A sample host that calls the developer's own site.",
@@ -96,6 +98,34 @@ public sealed class OutboundHttpArchitectureTests
         Assert.True(bare.Count == 0, BuildMessage(
             "These typed HttpClient registrations get no resilience handler. Register them on the named client that has one, or add one:",
             bare));
+    }
+
+    [Fact]
+    public void NoClientIsCreated_WithoutAName()
+    {
+        // A client taken with no name never appears among the registrations this test checks, and gets the default
+        // handler: no egress guard and no resilience, whatever address it is then given. Sample hosts are left out.
+        var repositoryRoot = ProjectReferenceRulesTests.FindRepositoryRoot();
+        var unnamed = new List<string>();
+
+        foreach (var file in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
+        {
+            var relative = Path.GetRelativePath(repositoryRoot, file).Replace(Path.DirectorySeparatorChar, '/');
+
+            if (relative.StartsWith("src/Startup/", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (_unnamedCreateClientRegex.IsMatch(StripComments(File.ReadAllText(file))))
+            {
+                unnamed.Add(relative);
+            }
+        }
+
+        Assert.True(unnamed.Count == 0, BuildMessage(
+            "These files create an HttpClient with no name. Create a named client registered with AddEgressGuardedHttpClient, or one on the fixed-host list:",
+            unnamed));
     }
 
     private static List<Registration> Scan()

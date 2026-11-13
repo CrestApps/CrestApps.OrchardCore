@@ -1,9 +1,11 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -67,23 +69,16 @@ internal static class AILiveCallsApiEndpoints
         HttpContext httpContext,
         IAuthorizationService authorizationService,
         ISession session,
-        IClock clock)
+        IClock clock,
+        ISupervisorQueueAuthorizationService queueAuthorization)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Calls, ContactCenterPermissions.MonitorContactCenter))
         {
             return Forbidden();
         }
 
-        var activities = await session
-            .Query<OmnichannelActivity, OmnichannelActivityIndex>(
-                index => index.InteractionType == ActivityInteractionType.Automated &&
-                    index.Status == ActivityStatus.InProgress &&
-                    index.Channel == OmnichannelConstants.Channels.Phone &&
-                    !index.AiEscalated,
-                collection: OmnichannelConstants.CollectionName)
-            .OrderByDescending(index => index.ScheduledUtc)
-            .Take(MaxLiveCalls)
-            .ListAsync(httpContext.RequestAborted);
+        // The calls in the caller's scope, as on the supervisor dashboard.
+        var activities = await SupervisorAICallScope.ListLiveAsync(session, MaxLiveCalls, authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted);
 
         var now = clock.UtcNow;
         var calls = new List<ApiAILiveCall>();
@@ -108,14 +103,23 @@ internal static class AILiveCallsApiEndpoints
         return TypedResults.Ok<IReadOnlyList<ApiAILiveCall>>(calls);
     }
 
-    private static async Task<Results<Ok<ApiAILiveCallResult>, ValidationProblem, ProblemHttpResult>> NoteAsync(
+    internal static async Task<Results<Ok<ApiAILiveCallResult>, ValidationProblem, ProblemHttpResult>> NoteAsync(
         string activityId,
         ApiAILiveCallNote request,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IEnumerable<IAIVoiceCallSupervision> supervisions)
+        IEnumerable<IAIVoiceCallSupervision> supervisions,
+        IOmnichannelActivityStore activityStore,
+        ISupervisorQueueAuthorizationService queueAuthorization)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Calls, ContactCenterPermissions.InterveneInCalls))
+        {
+            return Forbidden();
+        }
+
+        // The same scope as the supervisor dashboard: the AI calls of the caller's campaigns, or every one with Monitor
+        // every AI call.
+        if (!await SupervisorAICallScope.IsAuthorizedAsync(await activityStore.FindByIdAsync(activityId, httpContext.RequestAborted), authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted))
         {
             return Forbidden();
         }
@@ -131,14 +135,23 @@ internal static class AILiveCallsApiEndpoints
         return TypedResults.Ok(new ApiAILiveCallResult(sent, sent ? "The AI got the note." : "No AI is on this call."));
     }
 
-    private static async Task<Results<Ok<ApiAILiveCallResult>, ValidationProblem, ProblemHttpResult>> TransferAsync(
+    internal static async Task<Results<Ok<ApiAILiveCallResult>, ValidationProblem, ProblemHttpResult>> TransferAsync(
         string activityId,
         ApiAILiveCallTransfer request,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IEnumerable<IAIVoiceCallTransfers> transfers)
+        IEnumerable<IAIVoiceCallTransfers> transfers,
+        IOmnichannelActivityStore activityStore,
+        ISupervisorQueueAuthorizationService queueAuthorization)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Calls, ContactCenterPermissions.InterveneInCalls))
+        {
+            return Forbidden();
+        }
+
+        // The same scope as the supervisor dashboard: the AI calls of the caller's campaigns, or every one with Monitor
+        // every AI call.
+        if (!await SupervisorAICallScope.IsAuthorizedAsync(await activityStore.FindByIdAsync(activityId, httpContext.RequestAborted), authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted))
         {
             return Forbidden();
         }
@@ -190,14 +203,23 @@ internal static class AILiveCallsApiEndpoints
         return TypedResults.Ok(new ApiAILiveCallResult(result.Succeeded, result.Message));
     }
 
-    private static async Task<Results<Ok<ApiAILiveCallResult>, ValidationProblem, ProblemHttpResult>> SwitchProfileAsync(
+    internal static async Task<Results<Ok<ApiAILiveCallResult>, ValidationProblem, ProblemHttpResult>> SwitchProfileAsync(
         string activityId,
         ApiAILiveCallProfile request,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IEnumerable<IAIVoiceCallSupervision> supervisions)
+        IEnumerable<IAIVoiceCallSupervision> supervisions,
+        IOmnichannelActivityStore activityStore,
+        ISupervisorQueueAuthorizationService queueAuthorization)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Calls, ContactCenterPermissions.InterveneInCalls))
+        {
+            return Forbidden();
+        }
+
+        // The same scope as the supervisor dashboard: the AI calls of the caller's campaigns, or every one with Monitor
+        // every AI call.
+        if (!await SupervisorAICallScope.IsAuthorizedAsync(await activityStore.FindByIdAsync(activityId, httpContext.RequestAborted), authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted))
         {
             return Forbidden();
         }
@@ -219,13 +241,22 @@ internal static class AILiveCallsApiEndpoints
         return TypedResults.Ok(new ApiAILiveCallResult(result.Succeeded, result.Message));
     }
 
-    private static async Task<Results<Ok<ApiAILiveCallResult>, ProblemHttpResult>> EndAsync(
+    internal static async Task<Results<Ok<ApiAILiveCallResult>, ProblemHttpResult>> EndAsync(
         string activityId,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IEnumerable<IAIVoiceCallSupervision> supervisions)
+        IEnumerable<IAIVoiceCallSupervision> supervisions,
+        IOmnichannelActivityStore activityStore,
+        ISupervisorQueueAuthorizationService queueAuthorization)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Calls, ContactCenterPermissions.InterveneInCalls))
+        {
+            return Forbidden();
+        }
+
+        // The same scope as the supervisor dashboard: the AI calls of the caller's campaigns, or every one with Monitor
+        // every AI call.
+        if (!await SupervisorAICallScope.IsAuthorizedAsync(await activityStore.FindByIdAsync(activityId, httpContext.RequestAborted), authorizationService, queueAuthorization, httpContext.User, httpContext.RequestAborted))
         {
             return Forbidden();
         }

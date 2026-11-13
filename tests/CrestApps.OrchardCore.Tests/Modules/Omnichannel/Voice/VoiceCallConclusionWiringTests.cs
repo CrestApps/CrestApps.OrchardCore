@@ -763,6 +763,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IRealtimeVoiceConversationRunner>(),
                 Mock.Of<ITurnBasedSilenceWatchdog>(),
                 Mock.Of<ITurnBasedCallerKeys>(),
+                Mock.Of<ISecureKeypadCaptureStore>(),
                 Mock.Of<IAIVoiceSessionTracker>(),
                 new FakeAIVoiceCallShutdown(),
                 Mock.Of<ILiquidTemplateManager>(),

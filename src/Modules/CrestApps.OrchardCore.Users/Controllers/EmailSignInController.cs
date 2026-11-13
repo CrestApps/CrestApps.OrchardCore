@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Email;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Events;
@@ -68,6 +69,7 @@ public sealed class EmailSignInController : Controller
 
     [HttpPost("sign-in/email")]
     [ValidateAntiForgeryToken]
+    [RateLimitGroup(EmailSignInCodes.RateLimitGroup)]
     public async Task<IActionResult> Index(EmailSignInViewModel model)
     {
         var email = model.Email?.Trim();
@@ -101,18 +103,19 @@ public sealed class EmailSignInController : Controller
 
     [HttpPost("sign-in/email/code")]
     [ValidateAntiForgeryToken]
+    [RateLimitGroup(EmailSignInCodes.RateLimitGroup)]
     public async Task<IActionResult> Code(EmailSignInViewModel model)
     {
         var email = model.Email?.Trim();
 
-        // The same events a password sign-in raises, so reCAPTCHA, audit, lockout and any other hook sees this sign-in.
-        foreach (var loginFormEvent in _loginFormEvents)
+        // The events a password sign-in raises after its form is posted, so audit, lockout and any other hook sees this
+        // sign-in. LoggingInAsync is not raised: its handlers check what the password form carries (reCAPTCHA's widget
+        // among them), which this form has none of, so with reCAPTCHA on every code was refused. Guessing is limited by
+        // the code's five tries, the checks allowed per network and the account's lockout instead.
+        if (!await _codes.TryCountVerifyAsync(ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted))
         {
-            await loginFormEvent.LoggingInAsync(email, (key, message) => ModelState.AddModelError(key, message));
-        }
+            ModelState.AddModelError(nameof(model.Code), S["Too many codes were tried. Wait a few minutes, or sign in with your password."]);
 
-        if (!ModelState.IsValid)
-        {
             return View(model);
         }
 
@@ -126,20 +129,35 @@ public sealed class EmailSignInController : Controller
             return CodeRefused(model);
         }
 
-        if (!await _codes.VerifyAsync(email, model.Code, HttpContext.RequestAborted))
+        var check = await _codes.CheckAsync(email, model.Code, HttpContext.RequestAborted);
+
+        if (check != EmailSignInCodeCheck.Right)
         {
             // A wrong code counts toward the account's lockout, as a wrong password does, so guessing stops for good once
-            // the lockout threshold is reached instead of resuming with every new code.
-            await _userManager.AccessFailedAsync(user);
-
-            if (await _userManager.IsLockedOutAsync(user))
+            // the lockout threshold is reached instead of resuming with every new code. Only a live code that was
+            // compared counts: digits posted for an address no code was sent to would otherwise lock anyone out.
+            if (check == EmailSignInCodeCheck.Wrong)
             {
-                await _loginFormEvents.InvokeAsync((handler, lockedOut) => handler.IsLockedOutAsync(lockedOut), user, _logger);
+                await _userManager.AccessFailedAsync(user);
+
+                if (await _userManager.IsLockedOutAsync(user))
+                {
+                    await _loginFormEvents.InvokeAsync((handler, lockedOut) => handler.IsLockedOutAsync(lockedOut), user, _logger);
+                }
             }
 
             await _loginFormEvents.InvokeAsync((handler, failed) => handler.LoggingInFailedAsync(failed), user, _logger);
 
             return CodeRefused(model);
+        }
+
+        // The code proves the email is theirs, by a round trip, which is what lets a user claim what belongs to the address.
+        // It is recorded before the login is validated, so Orchard's check that the email is confirmed sees it confirmed.
+        if (user is User account && (!account.EmailConfirmed || !UserEmailOwnership.IsVerified(account.Properties, account.Email)))
+        {
+            account.EmailConfirmed = true;
+            UserEmailOwnership.MarkVerified(account.Properties, account.Email, _clock.UtcNow);
+            await _userManager.UpdateAsync(account);
         }
 
         foreach (var loginFormEvent in _loginFormEvents)
@@ -151,14 +169,6 @@ public sealed class EmailSignInController : Controller
         }
 
         await _userManager.ResetAccessFailedCountAsync(user);
-
-        // The code proves the email is theirs, by a round trip, which is what lets a user claim what belongs to the address.
-        if (user is User account && (!account.EmailConfirmed || !UserEmailOwnership.IsVerified(account.Properties, account.Email)))
-        {
-            account.EmailConfirmed = true;
-            UserEmailOwnership.MarkVerified(account.Properties, account.Email, _clock.UtcNow);
-            await _userManager.UpdateAsync(account);
-        }
 
         await _signInManager.SignInAsync(user, isPersistent: false);
 

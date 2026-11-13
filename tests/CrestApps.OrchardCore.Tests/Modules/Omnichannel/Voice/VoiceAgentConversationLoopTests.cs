@@ -1482,6 +1482,10 @@ public sealed partial class VoiceAgentConversationLoopTests
             AbandonmentHandler = new RecordingAbandonmentHandler();
 
             AnsweringMachine = new AnsweringMachineSignals(Clock);
+            ActivityStore = activityStore.Object;
+
+            // This node's secure keypad entries, in a cache of its own: what another node started is not in it.
+            SecureKeypadCaptures = CreateSecureKeypadNode();
 
             Loop = new VoiceAgentConversationLoop(
                 activityStore.Object,
@@ -1506,12 +1510,13 @@ public sealed partial class VoiceAgentConversationLoopTests
                 Realtime,
                 SilenceWatchdog,
                 CallerKeys,
+                SecureKeypadCaptures,
                 SessionTracker,
                 CallShutdown,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<CrestApps.Core.AI.Tooling.IToolRegistry>(),
                 new CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelConversationContextFactory(Mock.Of<IContentManager>(), Mock.Of<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>>(), Mock.Of<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore>()),
-                new CrestApps.OrchardCore.Omnichannel.Voice.Services.AIVoiceCallCommands(), Mock.Of<CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier>(), null,
+                VoiceCallCommands, Mock.Of<CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier>(), null,
                 Mock.Of<IContentManager>(),
                 Clock,
                 NullLogger<VoiceAgentConversationLoop>.Instance,
@@ -1552,6 +1557,35 @@ public sealed partial class VoiceAgentConversationLoopTests
         public RecordingSilenceWatchdog SilenceWatchdog { get; } = new();
 
         public RecordingCallerKeys CallerKeys { get; } = new();
+
+        /// <summary>
+        /// Where a live session on this node takes commands for its call, the caller's keys among them.
+        /// </summary>
+        public AIVoiceCallCommands VoiceCallCommands { get; } = new();
+
+        /// <summary>
+        /// The activity store every node reads, standing in for the database.
+        /// </summary>
+        public IOmnichannelActivityStore ActivityStore { get; }
+
+        /// <summary>
+        /// The secure keypad entries of the node this loop runs on.
+        /// </summary>
+        public DistributedSecureKeypadCaptureStore SecureKeypadCaptures { get; }
+
+        /// <summary>
+        /// A node's secure keypad store: its own memory cache, as on a site without the Redis cache, over the shared
+        /// activity store.
+        /// </summary>
+        public DistributedSecureKeypadCaptureStore CreateSecureKeypadNode()
+            => new(
+                new Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache(Microsoft.Extensions.Options.Options.Create(new Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions())),
+                ActivityStore,
+                new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance),
+                new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(),
+                new global::OrchardCore.Environment.Shell.ShellSettings { Name = "Default" },
+                Clock,
+                NullLogger<DistributedSecureKeypadCaptureStore>.Instance);
 
         public VoiceAgentConversationLoop Loop { get; }
 

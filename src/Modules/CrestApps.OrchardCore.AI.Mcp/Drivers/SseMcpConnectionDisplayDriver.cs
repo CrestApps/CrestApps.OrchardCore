@@ -26,7 +26,7 @@ internal sealed class SseMcpConnectionDisplayDriver : ConnectionAuthDisplayDrive
         IDataProtectionProvider dataProtectionProvider,
         IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<SseMcpConnectionDisplayDriver> stringLocalizer)
-        : base(dataProtectionProvider, McpConstants.DataProtectionPurpose, stringLocalizer)
+        : base(dataProtectionProvider, McpConstants.DataProtectionPurpose, stringLocalizer, endpointPolicy)
     {
         _endpointPolicy = endpointPolicy;
     }

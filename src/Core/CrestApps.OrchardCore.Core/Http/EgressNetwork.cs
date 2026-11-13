@@ -17,7 +17,8 @@ namespace CrestApps.OrchardCore.Core.Http;
 /// <remarks>
 /// An address is checked when it is saved, but a host name can resolve to anything when it is called, so the guarded
 /// handler checks the addresses a host resolves to at connection time and refuses the connection when every one of them
-/// is internal. Redirects are not followed, so an approved address cannot send the request somewhere else.
+/// is internal. A client that follows redirects has every hop checked the same way. The handler never goes through a
+/// proxy: through one, the connection would be checked against the proxy's address rather than the destination's.
 /// </remarks>
 public static class EgressNetwork
 {
@@ -29,8 +30,9 @@ public static class EgressNetwork
     /// <summary>
     /// Returns whether an address is on the site's own network: loopback, private, link-local, shared (carrier-grade
     /// NAT), IETF protocol assignments (192.0.0.0/24), benchmarking (198.18.0.0/15), multicast, reserved, broadcast or
-    /// unspecified, an IPv6 site-local, unique-local or multicast address, and a NAT64 address (64:ff9b::/96) whose
-    /// embedded IPv4 address is any of these. An address of an unknown family is treated as internal.
+    /// unspecified, the Azure host's platform address (168.63.129.16), an IPv6 site-local, unique-local or multicast
+    /// address, and a NAT64 (64:ff9b::/96) or 6to4 (2002::/16) address whose embedded IPv4 address is any of these. An
+    /// address of an unknown family is treated as internal.
     /// </summary>
     /// <param name="address">The address to classify.</param>
     public static bool IsInternal(IPAddress address)
@@ -66,13 +68,14 @@ public static class EgressNetwork
                 (bytes[0] == 192 && bytes[1] == 168) ||
                 (bytes[0] == 192 && bytes[1] == 0 && bytes[2] == 0) ||
                 (bytes[0] == 198 && (bytes[1] == 18 || bytes[1] == 19)) ||
+                (bytes[0] == 168 && bytes[1] == 63 && bytes[2] == 129 && bytes[3] == 16) ||
                 bytes[0] >= 224;
         }
 
         if (address.AddressFamily == AddressFamily.InterNetworkV6)
         {
-            // 64:ff9b::/96 translates to IPv4, so the embedded address decides.
-            return TryGetNat64Embedded(bytes, out var embedded) && IsInternal(embedded);
+            // 64:ff9b::/96 and 2002::/16 translate to IPv4, so the embedded address decides.
+            return TryGetEmbeddedIPv4(bytes, out var embedded) && IsInternal(embedded);
         }
 
         return true;
@@ -97,7 +100,8 @@ public static class EgressNetwork
 
     /// <summary>
     /// Returns whether outbound events may be posted to a URL: an absolute https address that is not on the site's own
-    /// network, or plain http to this machine while developing.
+    /// network, or plain http to this machine while developing: the rule for receivers that are sent secrets or signed
+    /// events. Addresses that may be plain http use <see cref="IsExternalUrl"/>.
     /// </summary>
     /// <param name="url">The URL.</param>
     /// <param name="isDevelopment">Whether the site runs in the Development environment.</param>
@@ -124,6 +128,31 @@ public static class EgressNetwork
     }
 
     /// <summary>
+    /// Returns whether a URL is an absolute http or https address with no user name or password whose host is not on the
+    /// site's own network by its address or as <c>localhost</c> (this machine is allowed while developing). It says
+    /// nothing about the scheme beyond that: a feature that needs https checks it as a separate rule, with its own
+    /// message, and a host name that only resolves to an internal address is refused when it is called.
+    /// </summary>
+    /// <param name="url">The URL.</param>
+    /// <param name="isDevelopment">Whether the site runs in the Development environment.</param>
+    public static bool IsExternalUrl(string url, bool isDevelopment)
+    {
+        if (!Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+            !string.IsNullOrEmpty(uri.UserInfo))
+        {
+            return false;
+        }
+
+        if (IPAddress.TryParse(uri.Host.Trim('[', ']'), out var literal) && IsInternal(literal))
+        {
+            return isDevelopment && IPAddress.IsLoopback(literal);
+        }
+
+        return !uri.IsLoopback || isDevelopment;
+    }
+
+    /// <summary>
     /// Returns a handler that follows no redirects and refuses connections to the site's own network, except to this
     /// machine when <paramref name="allowLoopback"/> is set (while developing).
     /// </summary>
@@ -143,6 +172,8 @@ public static class EgressNetwork
     public static SocketsHttpHandler CreateHandler(bool allowLoopback, bool allowPrivateNetwork, bool allowRedirects)
         => new()
         {
+            // Through a proxy the connect callback would see the proxy's address, not the destination's.
+            UseProxy = false,
             AllowAutoRedirect = allowRedirects,
             AutomaticDecompression = DecompressionMethods.All,
             ConnectCallback = (context, cancellationToken) => ConnectAsync(context, allowLoopback, allowPrivateNetwork, cancellationToken),
@@ -194,7 +225,7 @@ public static class EgressNetwork
 
         if (bytes.Length == 16)
         {
-            return TryGetNat64Embedded(bytes, out var embedded) && IsLinkLocal(embedded);
+            return TryGetEmbeddedIPv4(bytes, out var embedded) && IsLinkLocal(embedded);
         }
 
         return bytes.Length == 4 && bytes[0] == 169 && bytes[1] == 254;
@@ -207,12 +238,14 @@ public static class EgressNetwork
     /// <param name="services">The service collection.</param>
     /// <param name="name">The name of the client.</param>
     /// <param name="configureClient">Configures the client, for example its time-out.</param>
-    public static IHttpClientBuilder AddEgressGuardedHttpClient(this IServiceCollection services, string name, Action<HttpClient> configureClient = null)
+    /// <param name="allowRedirects">Whether redirects are followed, each hop checked at connect, for addresses that commonly
+    /// move (calendar feeds, recording downloads). Off by default.</param>
+    public static IHttpClientBuilder AddEgressGuardedHttpClient(this IServiceCollection services, string name, Action<HttpClient> configureClient = null, bool allowRedirects = false)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        return AddGuardedClient(services, name, configureClient, allowPrivateNetwork: null);
+        return AddGuardedClient(services, name, configureClient, allowPrivateNetwork: null, allowRedirects);
     }
 
     /// <summary>
@@ -238,7 +271,7 @@ public static class EgressNetwork
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        var builder = AddGuardedClient(services, name, configureClient, allowPrivateNetwork);
+        var builder = AddGuardedClient(services, name, configureClient, allowPrivateNetwork, allowRedirects: false);
 
         builder.AddStandardResilienceHandler(options =>
         {
@@ -257,7 +290,7 @@ public static class EgressNetwork
         return builder;
     }
 
-    private static IHttpClientBuilder AddGuardedClient(IServiceCollection services, string name, Action<HttpClient> configureClient, Func<IServiceProvider, bool> allowPrivateNetwork)
+    private static IHttpClientBuilder AddGuardedClient(IServiceCollection services, string name, Action<HttpClient> configureClient, Func<IServiceProvider, bool> allowPrivateNetwork, bool allowRedirects)
     {
         var builder = configureClient is null
             ? services.AddHttpClient(name)
@@ -266,7 +299,7 @@ public static class EgressNetwork
         return builder.ConfigurePrimaryHttpMessageHandler(serviceProvider => CreateHandler(
             serviceProvider.GetService<IHostEnvironment>()?.IsDevelopment() == true,
             allowPrivateNetwork?.Invoke(serviceProvider) == true,
-            allowRedirects: false));
+            allowRedirects));
     }
 
     private static bool IsRefusal(Exception exception)
@@ -282,11 +315,20 @@ public static class EgressNetwork
         return false;
     }
 
-    private static bool TryGetNat64Embedded(byte[] bytes, out IPAddress embedded)
+    // The IPv4 address a NAT64 (64:ff9b::/96, the last four bytes) or 6to4 (2002::/16, bytes two to five) address
+    // carries.
+    private static bool TryGetEmbeddedIPv4(byte[] bytes, out IPAddress embedded)
     {
         if (bytes.Length == 16 && bytes[0] == 0x00 && bytes[1] == 0x64 && bytes[2] == 0xff && bytes[3] == 0x9b)
         {
             embedded = new IPAddress(bytes.AsSpan(12, 4));
+
+            return true;
+        }
+
+        if (bytes.Length == 16 && bytes[0] == 0x20 && bytes[1] == 0x02)
+        {
+            embedded = new IPAddress(bytes.AsSpan(2, 4));
 
             return true;
         }

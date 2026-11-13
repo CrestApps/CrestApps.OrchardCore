@@ -1,6 +1,11 @@
+using System.Text.Json;
+using CrestApps.Core;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Distributed;
@@ -22,6 +27,7 @@ public sealed class SecureKeypadCaptureTests
     private readonly MemoryDistributedCache _cache = new(Options.Create(new MemoryDistributedCacheOptions()));
     private readonly IDataProtectionProvider _keys = new EphemeralDataProtectionProvider();
     private readonly LocalLock _lock = new(NullLogger<LocalLock>.Instance);
+    private readonly Dictionary<string, string> _activities = [];
     private DateTime _now = _start;
 
     [Fact]
@@ -103,9 +109,10 @@ public sealed class SecureKeypadCaptureTests
     }
 
     [Fact]
-    public async Task SEC_P2_KeysThatLandOnAnotherNode_AreCaptured_NotHandedOnAsTheCallersTurn()
+    public async Task SEC_P2_KeysThatLandOnAnotherNode_AreCaptured_WhenTheNodesShareTheCache()
     {
-        // Arrange: the AI session that asked for the card runs on node A; the provider's keypad events land on node B.
+        // Arrange: the AI session that asked for the card runs on node A; the provider's keypad events land on node B,
+        // and both use the shared (Redis) cache.
         var nodeA = CreateNode();
         var nodeB = CreateNode();
         await nodeA.StartAsync("act-nodes", SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
@@ -119,6 +126,48 @@ public sealed class SecureKeypadCaptureTests
         Assert.Null(digits.Value);
         Assert.Equal(SecureKeypadEntryState.Completed, pound.State);
         Assert.Equal("4111111111111111", pound.Value);
+    }
+
+    [Fact]
+    public async Task SEC_P2_KeysThatLandOnANodeWithItsOwnCache_AreAllDropped_WhileTheWindowIsOpen()
+    {
+        // Arrange: each node has its own memory cache, as on a site without the Redis cache, so node B never finds the
+        // entry node A started. Only the window on the activity, which both read, is shared.
+        var nodeA = CreateNode(cache: NewCache());
+        var nodeB = CreateNode(cache: NewCache());
+        await nodeA.StartAsync("act-own-cache", SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
+
+        // Act: one key per webhook, the way Telnyx sends them.
+        var entries = new List<SecureKeypadEntry>();
+
+        foreach (var key in "4111111111111111")
+        {
+            entries.Add(await nodeB.OfferAsync("act-own-cache", key.ToString(), TestContext.Current.CancellationToken));
+        }
+
+        // Assert
+        Assert.All(entries, entry => Assert.True(entry.Captured));
+        Assert.All(entries, entry => Assert.Null(entry.Value));
+    }
+
+    [Fact]
+    public async Task SEC_P2_TheWindowCloses_WhenTheEntryIsFinishedOrCancelled()
+    {
+        // Arrange
+        var store = CreateNode();
+        await store.StartAsync("act-close", SecureCaptureField.CardSecurityCode, TestContext.Current.CancellationToken);
+        await store.OfferAsync("act-close", "123#", TestContext.Current.CancellationToken);
+        await store.StartAsync("act-cancel", SecureCaptureField.CardSecurityCode, TestContext.Current.CancellationToken);
+        await store.OfferAsync("act-cancel", "*", TestContext.Current.CancellationToken);
+
+        // Act
+        var afterFinished = await CreateNode(cache: NewCache()).OfferAsync("act-close", "1", TestContext.Current.CancellationToken);
+        var afterCancelled = await CreateNode(cache: NewCache()).OfferAsync("act-cancel", "1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(afterFinished.Captured);
+        Assert.False(afterCancelled.Captured);
+        Assert.False(ReadActivity("act-close").Has<SecureCaptureWindow>());
     }
 
     [Fact]
@@ -138,18 +187,24 @@ public sealed class SecureKeypadCaptureTests
     }
 
     [Fact]
-    public async Task AnEntryANodeCantRead_IsCancelled_NotHandedOn()
+    public async Task AnEntryANodeCantRead_IsCancelled_AndNoLaterKeyIsHandedOn()
     {
         // Arrange: a node whose data protection keys differ can't read the entry.
         await CreateNode().StartAsync("act-keys", SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
         var stranger = CreateNode(new EphemeralDataProtectionProvider());
 
-        // Act
-        var entry = await stranger.OfferAsync("act-keys", "4111", TestContext.Current.CancellationToken);
+        // Act: one key per webhook, the way Telnyx sends them.
+        var entries = new List<SecureKeypadEntry>();
+
+        foreach (var key in "4111111111111111")
+        {
+            entries.Add(await stranger.OfferAsync("act-keys", key.ToString(), TestContext.Current.CancellationToken));
+        }
 
         // Assert
-        Assert.True(entry.Captured);
-        Assert.Equal(SecureKeypadEntryState.Cancelled, entry.State);
+        Assert.Equal(SecureKeypadEntryState.Cancelled, entries[0].State);
+        Assert.All(entries, entry => Assert.True(entry.Captured));
+        Assert.All(entries, entry => Assert.Null(entry.Value));
     }
 
     [Fact]
@@ -227,13 +282,34 @@ public sealed class SecureKeypadCaptureTests
         Assert.False(VoiceAgentConversationLoop.OffersSecureKeypad(null));
     }
 
-    private DistributedSecureKeypadCaptureStore CreateNode(IDataProtectionProvider keys = null)
+    private static MemoryDistributedCache NewCache()
+        => new(Options.Create(new MemoryDistributedCacheOptions()));
+
+    private OmnichannelActivity ReadActivity(string activityId)
+        => _activities.TryGetValue(activityId, out var json)
+            ? JsonSerializer.Deserialize<OmnichannelActivity>(json, JOptions.Default)
+            : new OmnichannelActivity { ItemId = activityId };
+
+    // Every node reads the same activities, each read its own copy of what was last saved, as from the database.
+    private IOmnichannelActivityStore CreateActivityStore()
+    {
+        var store = new Mock<IOmnichannelActivityStore>();
+        store.Setup(s => s.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken _) => ReadActivity(id));
+        store.Setup(s => s.UpdateAsync(It.IsAny<OmnichannelActivity>(), It.IsAny<CancellationToken>()))
+            .Callback<OmnichannelActivity, CancellationToken>((activity, _) => _activities[activity.ItemId] = JsonSerializer.Serialize(activity, JOptions.Default));
+
+        return store.Object;
+    }
+
+    private DistributedSecureKeypadCaptureStore CreateNode(IDataProtectionProvider keys = null, IDistributedCache cache = null)
     {
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(() => _now);
 
         return new DistributedSecureKeypadCaptureStore(
-            _cache,
+            cache ?? _cache,
+            CreateActivityStore(),
             _lock,
             keys ?? _keys,
             new ShellSettings { Name = "Default" },

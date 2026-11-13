@@ -16,18 +16,23 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureSpeechDeploymentDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="endpointPolicy">The policy for the endpoints AI features call.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AzureSpeechDeploymentDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<AzureSpeechDeploymentDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -77,6 +82,10 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out _))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["A valid endpoint URL is required."]);
+        }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
         else
         {

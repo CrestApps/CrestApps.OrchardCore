@@ -28,7 +28,7 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Core/CrestApps.OrchardCore.Dispatch.Core/Services/FieldSyncService.cs: FieldSyncService"] = 14,
         ["src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/Services/MessagingInboundProcessor.cs: MessagingInboundProcessor"] = 17,
         ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/RealtimeVoiceConversationRunner.cs: RealtimeVoiceConversationRunner"] = 14,
-        ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/VoiceAgentConversationLoop.cs: VoiceAgentConversationLoop"] = 34,
+        ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/VoiceAgentConversationLoop.cs: VoiceAgentConversationLoop"] = 35,
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs: DefaultInstallmentPlanService"] = 19,
         ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/TenantProvisioningService.cs: TenantProvisioningService"] = 13,
         ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/TaxService.cs: TaxService"] = 13,

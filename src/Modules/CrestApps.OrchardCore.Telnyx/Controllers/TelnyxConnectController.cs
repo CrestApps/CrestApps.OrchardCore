@@ -146,7 +146,7 @@ public sealed class TelnyxConnectController : Controller
             return BadRequest(new { message = "Missing api key." });
         }
 
-        var client = httpClientFactory.CreateClient();
+        var client = httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
         client.BaseAddress = new Uri(ResolveApiBaseUrl(settings));
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 
@@ -244,15 +244,9 @@ public sealed class TelnyxConnectController : Controller
         }
     }
 
+    // Only an https address on telnyx.com: the API key goes to it as a bearer token.
     private static string ResolveApiBaseUrl(TelnyxSettings settings)
-    {
-        if (string.IsNullOrWhiteSpace(settings.ApiBaseUrl))
-        {
-            return TelnyxConstants.DefaultApiBaseUrl;
-        }
-
-        return settings.ApiBaseUrl.EndsWith('/') ? settings.ApiBaseUrl : settings.ApiBaseUrl + '/';
-    }
+        => TelnyxApiAddress.Resolve(settings.ApiBaseUrl);
 
     private string BuildResourceName()
     {

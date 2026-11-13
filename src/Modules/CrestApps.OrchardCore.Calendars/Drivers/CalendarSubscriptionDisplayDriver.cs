@@ -101,7 +101,7 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
         // at connect.
         if (model.SubscriptionEnabled && usesAddress && !string.IsNullOrEmpty(url) && !IsAllowedAddress(url, _hostEnvironment.IsDevelopment()))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionUrl), S["The address must start with https:// or webcal://, and can't be on the site's own network."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionUrl), S["The address must start with https://, http:// or webcal://, and can't be on the site's own network."]);
         }
 
         if (!string.Equals(subscription.Url, url, StringComparison.Ordinal) || !string.Equals(subscription.Provider, providerName, StringComparison.OrdinalIgnoreCase))
@@ -133,8 +133,9 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
     }
 
     /// <summary>
-    /// Gets whether a calendar may subscribe to an address: a public https:// or webcal:// address (webcal is fetched
-    /// over HTTPS), never one on the site's own network.
+    /// Gets whether a calendar may subscribe to an address: a public https://, http:// or webcal:// address (webcal is
+    /// fetched over HTTPS), never one on the site's own network. The sync fetches http:// as well, so a calendar with a
+    /// stored http:// feed can still be saved.
     /// </summary>
     /// <param name="url">The address.</param>
     /// <param name="isDevelopment">Whether the site runs in the Development environment.</param>
@@ -147,7 +148,7 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
             address = string.Concat("https://", address.AsSpan(9));
         }
 
-        return EgressNetwork.IsAllowedUrl(address, isDevelopment);
+        return EgressNetwork.IsExternalUrl(address, isDevelopment);
     }
 
     private bool Supports(Calendar calendar)

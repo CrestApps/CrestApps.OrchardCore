@@ -21,9 +21,10 @@ public sealed class ExternalStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        // The address is a calendar manager's, so the client never reaches the site's own network or follows a redirect,
-        // whatever the host resolves to when the sync task calls it.
-        services.AddEgressGuardedHttpClient(nameof(ICalendarUrlProvider), client => client.Timeout = TimeSpan.FromSeconds(30));
+        // The address is a calendar manager's, so the client never reaches the site's own network, whatever the host
+        // resolves to when the sync task calls it. Feeds commonly redirect (an old calendar address, http:// moved to
+        // https://), so redirects are followed, and every hop is checked at connect.
+        services.AddEgressGuardedHttpClient(nameof(ICalendarUrlProvider), allowRedirects: true);
         services.AddCalendarProvider<ICalendarUrlProvider>();
         services.AddSingleton<IBackgroundTask, CalendarSyncBackgroundTask>();
         services.AddDisplayDriver<Calendar, CalendarSubscriptionDisplayDriver>();

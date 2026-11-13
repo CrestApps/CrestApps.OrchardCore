@@ -4,6 +4,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,7 @@ internal sealed class AIDeploymentStep : CatalogRecipeStepBase<AIDeployment>
 
     private readonly IAIDeploymentManager _manager;
     private readonly AIOptions _aiOptions;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -36,11 +38,13 @@ internal sealed class AIDeploymentStep : CatalogRecipeStepBase<AIDeployment>
     public AIDeploymentStep(
         IAIDeploymentManager manager,
         IOptions<AIOptions> aiOptions,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<AIDeploymentStep> stringLocalizer)
         : base(StepKey, "Deployments")
     {
         _manager = manager;
         _aiOptions = aiOptions.Value;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -102,8 +106,18 @@ internal sealed class AIDeploymentStep : CatalogRecipeStepBase<AIDeployment>
         }
     }
 
-    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIDeployment entry)
-        => _manager.ValidateAsync(entry);
+    protected override async ValueTask<ValidationResultDetails> ValidateAsync(AIDeployment entry)
+    {
+        var result = await _manager.ValidateAsync(entry);
+
+        // The editor refuses an endpoint on the site's own network; a recipe is held to the same rule.
+        if (AIRecipeEndpoints.FindRefused(entry, _endpointPolicy) is { } refused)
+        {
+            result.Fail(new System.ComponentModel.DataAnnotations.ValidationResult(S["The endpoint '{0}' is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.", refused]));
+        }
+
+        return result;
+    }
 
     protected override ValueTask CreateAsync(AIDeployment entry)
         => _manager.CreateAsync(entry);

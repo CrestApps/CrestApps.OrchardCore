@@ -164,15 +164,18 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
     {
         if (principal is null ||
             string.IsNullOrEmpty(supervisorUserId) ||
-            !PhoneCallKey.TryParse(key, out var monitoredUserId, out _))
+            !PhoneCallKey.TryParse(key, out var monitoredUserId, out var callId))
         {
             return false;
         }
 
-        // A listen on an AI call: the dashboard endpoint already required the permission to monitor.
+        // An AI call's key names only the provider's call, no campaign to check, so it opens the call to a supervisor who
+        // may see every AI call, or who started listening to it through the AI-call dashboard, which checks the call's
+        // campaign. Any other key of this form could end or join an AI call outside the supervisor's scope.
         if (string.Equals(monitoredUserId, AICallUserMarker, StringComparison.Ordinal))
         {
-            return true;
+            return await _authorizationService.AuthorizeAsync(principal, ContactCenterPermissions.MonitorAllAICalls) ||
+                await _engagements.FindAsync(callId, supervisorUserId, cancellationToken) is not null;
         }
 
         var agent = await _agentProfileManager.FindByUserIdAsync(monitoredUserId, cancellationToken);

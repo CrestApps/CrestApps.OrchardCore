@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CrestApps Users configuration",
+  "description": "Settings of the CrestApps Users features, read from appsettings.json in the OrchardCore section of the host or a tenant.",
+  "type": "object",
+  "properties": {
+    "OrchardCore": {
+      "type": "object",
+      "properties": {
+        "CrestApps": {
+          "type": "object",
+          "properties": {
+            "Users": {
+              "type": "object",
+              "properties": {
+                "EmailSignIn": {
+                  "type": "object",
+                  "description": "E-mail code sign-in.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "ExcludedRoles": {
+                      "type": "array",
+                      "items": { "type": "string" },
+                      "default": [ "Administrator" ],
+                      "description": "Roles kept to password sign-in: a user in any of them is never signed in by an e-mailed code."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "CrestApps_Throttling": {
+          "type": "object",
+          "properties": {
+            "AttemptPolicies": {
+              "type": "object",
+              "description": "Overrides of the attempt policies, by name. E-mail code sign-in uses email-signin-send-network (10 per 15 minutes), email-signin-send-email (3 per 15 minutes) and email-signin-verify-network (30 per 15 minutes). Only the values given change.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "PermitLimit": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "How many attempts a key may have in a window. 0 turns the policy off."
+                  },
+                  "Window": {
+                    "type": "string",
+                    "description": "The window, as a time span such as 00:15:00."
+                  },
+                  "BlockDuration": {
+                    "type": "string",
+                    "description": "How long a key that reached the limit with failures stays blocked, as a time span such as 00:30:00. Empty or 00:00:00 for none."
+                  },
+                  "ResetOnSuccess": {
+                    "type": "boolean",
+                    "description": "Whether a success clears the key's counter."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,15 +1,17 @@
 ﻿using System.Collections.Specialized;
-using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Webhooks.Core.Signatures;
 using CrestApps.OrchardCore.Webhooks.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Twilio;
 
+/// <summary>
+/// Checks Twilio's signature of a form-encoded webhook: an HMAC-SHA1 of the full URL followed by the sorted form fields.
+/// A JSON body, which Twilio signs only through a <c>bodySHA256</c> in the URL, is not accepted by the endpoint at all,
+/// so this validator has no JSON path.
+/// </summary>
 internal sealed class TwilioRequestValidator
 {
-    // The body hash Twilio sends with a JSON body, checked as this validator always has.
-
     private readonly string _secret;
 
     /// <summary>
@@ -86,51 +88,6 @@ internal sealed class TwilioRequestValidator
         parameterStringBuilder.Insert(0, url);
 
         return IsSigned(parameterStringBuilder.ToString(), expected);
-    }
-
-    /// <summary>
-    /// Validates the .
-    /// </summary>
-    /// <param name="url">The url.</param>
-    /// <param name="body">The body.</param>
-    /// <param name="expected">The expected.</param>
-    public bool Validate(string url, string body, string expected)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(url);
-        ArgumentException.ThrowIfNullOrEmpty(body);
-        ArgumentException.ThrowIfNullOrEmpty(expected);
-
-        var paramString = new Uri(url, UriKind.Absolute).Query.TrimStart('?');
-        var bodyHash = paramString.Split('&')
-            .Select(param => param.Split('='))
-            .Where(split => split[0] == "bodySHA256")
-            .Select(split => Uri.UnescapeDataString(split[1]))
-            .FirstOrDefault() ?? "";
-
-        return Validate(url, (IDictionary<string, string>)null, expected) && ValidateBody(body, bodyHash);
-    }
-
-    /// <summary>
-    /// Validate the body of a request.
-    /// The validateBody function is provided to validate the body of incoming webhook requests from Twilio
-    /// It does this by creating a SHA256 hash of the body and comparing it to the expected hash.
-    /// </summary>
-    /// <param name="rawBody">Raw body of the request</param>
-    /// <param name="expected">The expected SHA256 hash of the body</param>
-#pragma warning disable CA1822 // An instance member like the rest of the validator, matching Twilio's own RequestValidator.
-    public bool ValidateBody(string rawBody, string expected)
-#pragma warning restore CA1822
-    {
-        // bodySHA256 is the plain SHA-256 of the raw body in lower-case hex, as Twilio's own RequestValidator computes
-        // it; the URL that carries it is what the auth token signs.
-        if (string.IsNullOrEmpty(expected))
-        {
-            return false;
-        }
-
-        var actual = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(rawBody ?? string.Empty)));
-
-        return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(actual), Encoding.ASCII.GetBytes(expected));
     }
 
     private static Dictionary<string, string> ToDictionary(NameValueCollection col)

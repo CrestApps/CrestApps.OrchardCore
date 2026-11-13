@@ -10,8 +10,8 @@ namespace CrestApps.OrchardCore.Calendars.External;
 /// <summary>
 /// Subscribes to an iCalendar address (a <c>.ics</c> feed, such as the secret address Google Calendar or Outlook gives a
 /// calendar). Read only: the calendar shows the feed's events and can't change them. The feed is fetched with the
-/// egress-guarded client, which refuses the site's own network at connect, after every DNS answer, and follows no
-/// redirect; the body is read up to 10 MB and no further.
+/// egress-guarded client, which refuses the site's own network at connect, after every DNS answer and on every redirect
+/// it follows; the body is read up to 10 MB and no further, and the whole fetch, body included, within 30 seconds.
 /// </summary>
 public sealed class ICalendarUrlProvider : ICalendarProvider
 {
@@ -21,6 +21,8 @@ public sealed class ICalendarUrlProvider : ICalendarProvider
     public const string ProviderName = "ics";
 
     private const int MaxBytes = 10 * 1024 * 1024;
+
+    private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(30);
 
     private readonly IHttpClientFactory _httpClientFactory;
 
@@ -57,12 +59,17 @@ public sealed class ICalendarUrlProvider : ICalendarProvider
             throw new InvalidOperationException("The address must start with https://, http:// or webcal://.");
         }
 
+        // HttpClient.Timeout stops at the headers when the body is streamed, and the sync task reads one feed after another,
+        // so a feed that trickles its body would hold up every other calendar: the timeout covers the body too.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(_timeout);
+
         using var client = _httpClientFactory.CreateClient(nameof(ICalendarUrlProvider));
-        using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
 
         response.EnsureSuccessStatusCode();
 
-        var bytes = await response.Content.ReadBoundedAsync(MaxBytes, cancellationToken)
+        var bytes = await response.Content.ReadBoundedAsync(MaxBytes, timeout.Token)
             ?? throw new InvalidOperationException("The calendar is larger than 10 MB.");
 
         var text = Decode(bytes, response.Content.Headers.ContentType?.CharSet);

@@ -223,6 +223,12 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
                 S["The credential lifetime must be at least {0} minutes.", TelnyxCredentialLifetime.MinimumMinutes]);
         }
 
+        // The API key goes to this address as a bearer token, so only an https address on telnyx.com is accepted.
+        if (!TelnyxApiAddress.IsAllowed(model.ApiBaseUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiBaseUrl), S["The API base URL must be an https address on telnyx.com, or empty for the default."]);
+        }
+
         // Saving requires only the API key. The connection ids are provisioned by the Connect action, and
         // the webhook public key is pasted after connecting, so neither blocks the initial save.
         if (string.IsNullOrEmpty(settings.ApiKey))

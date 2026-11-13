@@ -25,6 +25,16 @@ public sealed class AIEgressTests
         Assert.False(AIEgress.IsAllowedEndpoint(url, isDevelopment: false, new AIEgressOptions()));
     }
 
+    [Theory]
+    [InlineData("http://example.com/")]
+    [InlineData("http://mcp.example.com/sse")]
+    public void IsAllowedEndpoint_APublicHttpAddress_IsAllowed_AsItIsWhenCalled(string url)
+    {
+        // A crawler's http:// site or an http:// MCP endpoint was refused at save with "on the site's own network",
+        // though the connect guard allows it and it is not on the site's network.
+        Assert.True(AIEgress.IsAllowedEndpoint(url, isDevelopment: false, new AIEgressOptions()));
+    }
+
     [Fact]
     public void IsAllowedEndpoint_APublicHttpsAddress_IsAllowed()
     {
@@ -57,6 +67,7 @@ public sealed class AIEgressTests
     [InlineData("CrestApps.Mcp")]
     [InlineData("CrestApps.A2A")]
     [InlineData("CrestApps.WebCrawler")]
+    [InlineData("DefaultOAuth2TokenService")]
     public async Task TheGuardedClients_RefuseALoopbackAddressAtConnect(string clientName)
     {
         var services = new ServiceCollection();

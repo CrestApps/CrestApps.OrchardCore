@@ -27,7 +27,7 @@ internal sealed class A2AConnectionDisplayDriver : ConnectionAuthDisplayDriverBa
         IDataProtectionProvider dataProtectionProvider,
         IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<A2AConnectionDisplayDriver> stringLocalizer)
-        : base(dataProtectionProvider, A2AConstants.DataProtectionPurpose, stringLocalizer)
+        : base(dataProtectionProvider, A2AConstants.DataProtectionPurpose, stringLocalizer, endpointPolicy)
     {
         _endpointPolicy = endpointPolicy;
     }
