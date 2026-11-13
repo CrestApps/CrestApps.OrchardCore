@@ -29,6 +29,8 @@ A `CheckLayout` (a named catalog record, kept in a document) says how checks pri
 | `SecondSignatureAbove` | The amount above which a second signature line prints. |
 | `HasSignature`, `HasSecondSignature`, `HasMicrFont` | Whether the files are stored. |
 
+The editor's **Check designer** draws the check at 612 by 264 points with sample values and puts each field where it prints. A field is dragged to move it, its right edge to change its width, and the chosen field is edited in a bar above the check (place, width, text size, left off) or moved with the arrow keys. It shades the check line's clear band and outlines a field that enters it in red, and it follows the paper, payer, check line and calibration as they are typed. The script (`check-layout-designer`, registered by `ChecksResourceManagementOptionsConfiguration`) reads and writes the form's own `Fields[i]` inputs, which stay under **Exact positions**, so the form posts what the designer shows and works without the script.
+
 The signature images (PNG or JPEG, up to 1 MB) and the check line font (TrueType, up to 2 MB) are uploaded on the layout and kept in an encrypted tenant file store (`ICheckFileStore`, `EncryptedFileStore` with the purpose `Checks.Files`, under `App_Data/Sites/{tenant}/Checks`), never in the media library, which serves files to anyone with the URL.
 
 **No check line font ships with the module.** A site uploads a MICR E-13B TrueType font it is licensed to use. Until it does, a layout with **Print the check line** on refuses to print and says why, and the layout list flags it.

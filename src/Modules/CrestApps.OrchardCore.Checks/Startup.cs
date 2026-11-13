@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
@@ -24,6 +25,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
@@ -51,6 +53,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<CheckRecord, CheckRecordDisplayDriver>();
         services.AddPermissionProvider<ChecksPermissionProvider>();
         services.AddNavigationProvider<ChecksAdminMenu>();
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ChecksResourceManagementOptionsConfiguration>();
     }
 }
 

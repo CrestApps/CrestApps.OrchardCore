@@ -28,9 +28,19 @@ Checks prints the business's checks and keeps a register of every check it wrote
 
 Signature pictures and the font are stored encrypted, never in the media library.
 
+### Arrange the check
+
+The **Check designer** shows the check at its real proportions with sample values, and every change you make on the page shows on it at once: the paper, the payer, the check line and the calibration.
+
+- Drag a field to move it. Drag its right edge to make it wider or narrower.
+- Choose a field to edit it in the bar above the check: its **Left** and **Top** place, **Width**, text **Size**, and **Leave off** to stop printing it. The arrow keys move the chosen field one point at a time, ten with Shift.
+- A field drawn in red reaches into the band at the bottom that is kept clear for the check line: move it up.
+- The payer and the bank show faded on pre-printed checks, since they don't print there; the second signature shows faded until you set an amount for it.
+- **Exact positions**, under the check, lists every field's numbers if you prefer to type them.
+
 ### Calibrate it
 
-Print a check on plain paper and hold it against the stock. If everything is too far left or up, enter how far to move it under **Calibration**, in points (72 points make an inch). Under **Fields** you can move or leave off each field.
+Print a check on plain paper and hold it against the stock. If everything is too far left or up, enter how far to move it under **Calibration**, in points (72 points make an inch). The designer moves with it.
 
 ## Write a check
 
