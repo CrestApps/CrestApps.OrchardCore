@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Pdf;
 using CrestApps.OrchardCore.Reports.Models;
 using UglyToad.PdfPig.Writer;
 
@@ -39,10 +40,10 @@ internal sealed class ReportPdfDocumentBuilder
 
     private readonly ReportDocument _report;
     private readonly string _pageNumberFormat;
-    private readonly ReportPdfFonts _fonts;
+    private readonly PdfFonts _fonts;
     private readonly Dictionary<ReportSection, ReportPdfTableLayout> _tables = [];
 
-    private ReportPdfFlow _flow;
+    private PdfFlow _flow;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportPdfDocumentBuilder"/> class.
@@ -53,7 +54,7 @@ internal sealed class ReportPdfDocumentBuilder
     public ReportPdfDocumentBuilder(
         ReportDocument report,
         string pageNumberFormat,
-        ReportPdfFonts fonts)
+        PdfFonts fonts)
     {
         _report = report;
         _pageNumberFormat = pageNumberFormat;
@@ -79,18 +80,18 @@ internal sealed class ReportPdfDocumentBuilder
         MeasureTables(bold);
 
         // Landscape when a table's words do not fit across a portrait page, or a table of many columns would wrap.
-        var portraitWidth = LetterWidth - (2 * ReportPdfFlow.Margin);
+        var portraitWidth = LetterWidth - (2 * PdfFlow.Margin);
         var landscape = _tables.Values.Any(layout =>
             layout.MinimumWidth > portraitWidth ||
             (layout.ColumnCount > PortraitColumns && layout.PreferredWidth > portraitWidth));
 
         _flow = landscape
-            ? new ReportPdfFlow(builder, LetterHeight, LetterWidth, regular, bold)
-            : new ReportPdfFlow(builder, LetterWidth, LetterHeight, regular, bold);
+            ? new PdfFlow(builder, LetterHeight, LetterWidth, regular, bold)
+            : new PdfFlow(builder, LetterWidth, LetterHeight, regular, bold);
 
         if (!string.IsNullOrWhiteSpace(_report.Title))
         {
-            _flow.WriteLines(ReportPdfText.Wrap(bold.Prepare(_report.Title), bold, TitleSize, _flow.Width), bold, TitleSize, ReportPdfTheme.Text);
+            _flow.WriteLines(PdfText.Wrap(bold.Prepare(_report.Title), bold, TitleSize, _flow.Width), bold, TitleSize, ReportPdfTheme.Text);
             _flow.Advance(8);
         }
 
@@ -113,12 +114,12 @@ internal sealed class ReportPdfDocumentBuilder
             }
         }
 
-        _flow.WriteFooters(_pageNumberFormat);
+        _flow.WriteFooters(_pageNumberFormat, ReportPdfTheme.BaseFontSize - 1.5, ReportPdfTheme.Muted);
 
         return builder.Build();
     }
 
-    private void MeasureTables(ReportPdfFont font)
+    private void MeasureTables(PdfFont font)
     {
         foreach (var section in _report.Sections)
         {
@@ -189,9 +190,9 @@ internal sealed class ReportPdfDocumentBuilder
         var regular = _flow.Regular;
         var band = string.IsNullOrWhiteSpace(containerTitle)
             ? []
-            : ReportPdfText.Wrap(bold.Prepare(containerTitle), bold, ContainerTitleSize, _flow.Width - (2 * ContainerTitlePadding));
+            : PdfText.Wrap(bold.Prepare(containerTitle), bold, ContainerTitleSize, _flow.Width - (2 * ContainerTitlePadding));
         var title = showTitle
-            ? ReportPdfText.Wrap(bold.Prepare(section.Title), bold, SectionTitleSize, _flow.Width)
+            ? PdfText.Wrap(bold.Prepare(section.Title), bold, SectionTitleSize, _flow.Width)
             : [];
 
         // Which values picked in other sections filter this one, as those sections show them, then the description.
@@ -202,12 +203,12 @@ internal sealed class ReportPdfDocumentBuilder
             var values = string.Join(", ", filter.Selection.GetPickedValues());
             var text = string.IsNullOrWhiteSpace(filter.Title) ? $"Filtered by: {values}" : $"Filtered by {filter.Title}: {values}";
 
-            description.AddRange(ReportPdfText.Wrap(regular.Prepare(text), regular, DescriptionSize, _flow.Width));
+            description.AddRange(PdfText.Wrap(regular.Prepare(text), regular, DescriptionSize, _flow.Width));
         }
 
         if (!string.IsNullOrWhiteSpace(section.Description))
         {
-            description.AddRange(ReportPdfText.Wrap(regular.Prepare(section.Description), regular, DescriptionSize, _flow.Width));
+            description.AddRange(PdfText.Wrap(regular.Prepare(section.Description), regular, DescriptionSize, _flow.Width));
         }
 
         // The height as WriteHead draws it, without the space above the head, which a page does not start with.
@@ -225,12 +226,12 @@ internal sealed class ReportPdfDocumentBuilder
 
         if (title.Count > 0)
         {
-            height += ReportPdfFlow.GetHeight(title, bold, SectionTitleSize) + HeadSpacing;
+            height += PdfFlow.GetHeight(title, bold, SectionTitleSize) + HeadSpacing;
         }
 
         if (description.Count > 0)
         {
-            height += ReportPdfFlow.GetHeight(description, regular, DescriptionSize) + HeadSpacing;
+            height += PdfFlow.GetHeight(description, regular, DescriptionSize) + HeadSpacing;
         }
 
         return new Head(band, title, description, height);
@@ -289,7 +290,7 @@ internal sealed class ReportPdfDocumentBuilder
 
     private double GetBandHeight(List<string> lines)
     {
-        return ReportPdfFlow.GetHeight(lines, _flow.Bold, ContainerTitleSize) + (2 * ContainerTitlePadding);
+        return PdfFlow.GetHeight(lines, _flow.Bold, ContainerTitleSize) + (2 * ContainerTitlePadding);
     }
 
     private List<List<Card>> CreateMetricRows(IList<ReportMetric> metrics)
@@ -356,16 +357,16 @@ internal sealed class ReportPdfDocumentBuilder
 
         var parts = new List<CardPart>
         {
-            new(ReportPdfText.Wrap(regular.Prepare(metric.Label?.ToUpper(CultureInfo.CurrentCulture)), regular, SmallSize, width), regular, SmallSize, ReportPdfTheme.Muted, 0),
-            new(ReportPdfText.Wrap(bold.Prepare(metric.Value), bold, valueSize, width), bold, valueSize, ReportPdfTheme.Text, 2),
+            new(PdfText.Wrap(regular.Prepare(metric.Label?.ToUpper(CultureInfo.CurrentCulture)), regular, SmallSize, width), regular, SmallSize, ReportPdfTheme.Muted, 0),
+            new(PdfText.Wrap(bold.Prepare(metric.Value), bold, valueSize, width), bold, valueSize, ReportPdfTheme.Text, 2),
         };
 
         if (!string.IsNullOrWhiteSpace(metric.Hint))
         {
-            parts.Add(new CardPart(ReportPdfText.Wrap(regular.Prepare(metric.Hint), regular, SmallSize, width), regular, SmallSize, ReportPdfTheme.Muted, 2));
+            parts.Add(new CardPart(PdfText.Wrap(regular.Prepare(metric.Hint), regular, SmallSize, width), regular, SmallSize, ReportPdfTheme.Muted, 2));
         }
 
-        var height = (2 * CardVerticalPadding) + parts.Sum(part => part.SpaceBefore + ReportPdfFlow.GetHeight(part.Lines, part.Font, part.Size));
+        var height = (2 * CardVerticalPadding) + parts.Sum(part => part.SpaceBefore + PdfFlow.GetHeight(part.Lines, part.Font, part.Size));
 
         return new Card(parts, cardWidth, height);
     }
@@ -397,7 +398,7 @@ internal sealed class ReportPdfDocumentBuilder
         // The value ends the first line of the label, which wraps before it.
         var value = _flow.Bold.Prepare(bar.Value).Replace('\n', ' ');
         var width = Math.Max(_flow.Width / 4, _flow.Width - _flow.Bold.Measure(value, DescriptionSize) - 8);
-        var lines = ReportPdfText.Wrap(_flow.Regular.Prepare(bar.Label), _flow.Regular, DescriptionSize, width);
+        var lines = PdfText.Wrap(_flow.Regular.Prepare(bar.Label), _flow.Regular, DescriptionSize, width);
         var ratio = double.IsFinite(bar.Ratio) ? Math.Clamp(bar.Ratio, 0, 1) : 0;
         var height = (Math.Max(1, lines.Count) * _flow.Regular.LineHeight * DescriptionSize) + 2 + BarHeight;
 
@@ -440,7 +441,7 @@ internal sealed class ReportPdfDocumentBuilder
     // filters it and its description, wrapped, with their height on the page.
     private sealed record Head(List<string> Band, List<string> Title, List<string> Description, double Height);
 
-    private sealed record CardPart(List<string> Lines, ReportPdfFont Font, double Size, ReportPdfColor Color, double SpaceBefore);
+    private sealed record CardPart(List<string> Lines, PdfFont Font, double Size, PdfColor Color, double SpaceBefore);
 
     private sealed record Card(List<CardPart> Parts, double Width, double Height);
 

@@ -2,13 +2,13 @@ using System.Globalization;
 using System.Text;
 using UglyToad.PdfPig.Writer;
 
-namespace CrestApps.OrchardCore.Reports.Pdf.Services;
+namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// Lays content out down the pages of a report PDF: it holds the page being filled and the position on it, and adds a
+/// Lays content out down the pages of a PDF: it holds the page being filled and the position on it, and adds a
 /// page when the next block does not fit.
 /// </summary>
-internal sealed class ReportPdfFlow
+public sealed class PdfFlow
 {
     /// <summary>
     /// The margin at the top, left and right of a page, in points.
@@ -22,22 +22,22 @@ internal sealed class ReportPdfFlow
     private readonly PdfDocumentBuilder _builder;
     private readonly double _pageWidth;
     private readonly double _pageHeight;
-    private readonly List<ReportPdfPage> _pages = [];
+    private readonly List<PdfPage> _pages = [];
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReportPdfFlow"/> class, with its first page.
+    /// Initializes a new instance of the <see cref="PdfFlow"/> class, with its first page.
     /// </summary>
     /// <param name="builder">The document.</param>
     /// <param name="pageWidth">The width of a page, in points.</param>
     /// <param name="pageHeight">The height of a page, in points.</param>
     /// <param name="regular">The regular face.</param>
     /// <param name="bold">The bold face.</param>
-    public ReportPdfFlow(
+    public PdfFlow(
         PdfDocumentBuilder builder,
         double pageWidth,
         double pageHeight,
-        ReportPdfFont regular,
-        ReportPdfFont bold)
+        PdfFont regular,
+        PdfFont bold)
     {
         _builder = builder;
         _pageWidth = pageWidth;
@@ -51,17 +51,17 @@ internal sealed class ReportPdfFlow
     /// <summary>
     /// Gets the regular face.
     /// </summary>
-    public ReportPdfFont Regular { get; }
+    public PdfFont Regular { get; }
 
     /// <summary>
     /// Gets the bold face.
     /// </summary>
-    public ReportPdfFont Bold { get; }
+    public PdfFont Bold { get; }
 
     /// <summary>
     /// Gets the page being filled.
     /// </summary>
-    public ReportPdfPage Page { get; private set; }
+    public PdfPage Page { get; private set; }
 
     /// <summary>
     /// Gets the left of the content, in points.
@@ -96,7 +96,7 @@ internal sealed class ReportPdfFlow
     /// </summary>
     public void NewPage()
     {
-        Page = new ReportPdfPage(_builder.AddPage(_pageWidth, _pageHeight), _pageHeight);
+        Page = new PdfPage(_builder.AddPage(_pageWidth, _pageHeight), _pageHeight);
         _pages.Add(Page);
         Top = Margin;
     }
@@ -138,11 +138,11 @@ internal sealed class ReportPdfFlow
     /// <summary>
     /// Measures the lines of a paragraph across the content.
     /// </summary>
-    /// <param name="lines">The lines, from <see cref="ReportPdfText.Wrap"/>.</param>
+    /// <param name="lines">The lines, from <see cref="PdfText.Wrap"/>.</param>
     /// <param name="font">The face.</param>
     /// <param name="size">The font size, in points.</param>
     /// <returns>The height, in points.</returns>
-    public static double GetHeight(IReadOnlyCollection<string> lines, ReportPdfFont font, double size)
+    public static double GetHeight(IReadOnlyCollection<string> lines, PdfFont font, double size)
     {
         return lines.Count * font.LineHeight * size;
     }
@@ -150,11 +150,11 @@ internal sealed class ReportPdfFlow
     /// <summary>
     /// Writes the lines of a paragraph across the content, moving to the next page between lines when the page is full.
     /// </summary>
-    /// <param name="lines">The lines, from <see cref="ReportPdfText.Wrap"/>.</param>
+    /// <param name="lines">The lines, from <see cref="PdfText.Wrap"/>.</param>
     /// <param name="font">The face.</param>
     /// <param name="size">The font size, in points.</param>
     /// <param name="color">The color.</param>
-    public void WriteLines(IReadOnlyList<string> lines, ReportPdfFont font, double size, ReportPdfColor color)
+    public void WriteLines(IReadOnlyList<string> lines, PdfFont font, double size, PdfColor color)
     {
         var lineHeight = font.LineHeight * size;
 
@@ -170,18 +170,18 @@ internal sealed class ReportPdfFlow
     /// Writes the page numbers in the footer of every page.
     /// </summary>
     /// <param name="format">The page numbers, with <c>{0}</c> for the page and <c>{1}</c> for the number of pages.</param>
-    public void WriteFooters(string format)
+    /// <param name="size">The font size, in points.</param>
+    /// <param name="color">The color.</param>
+    public void WriteFooters(string format, double size, PdfColor color)
     {
-        const double Size = ReportPdfTheme.BaseFontSize - 1.5;
-
-        var lineHeight = Regular.LineHeight * Size;
+        var lineHeight = Regular.LineHeight * size;
 
         for (var index = 0; index < _pages.Count; index++)
         {
             var text = Regular.Prepare(FormatPageNumbers(format, index + 1, _pages.Count)).Replace('\n', ' ');
-            var width = Regular.Measure(text, Size);
+            var width = Regular.Measure(text, size);
 
-            _pages[index].DrawText(text, Regular, Size, _pageWidth - Margin - width, _pageHeight - FooterDistance - lineHeight, ReportPdfTheme.Muted);
+            _pages[index].DrawText(text, Regular, size, _pageWidth - Margin - width, _pageHeight - FooterDistance - lineHeight, color);
         }
     }
 

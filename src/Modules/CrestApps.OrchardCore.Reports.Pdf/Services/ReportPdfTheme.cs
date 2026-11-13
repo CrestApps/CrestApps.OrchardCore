@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Pdf;
+
 namespace CrestApps.OrchardCore.Reports.Pdf.Services;
 
 /// <summary>
@@ -12,61 +14,56 @@ internal static class ReportPdfTheme
     public const double BaseFontSize = 9;
 
     /// <summary>
-    /// The family the report is written in, or the installed font that stands in for it.
-    /// </summary>
-    public const string FontFamily = "Arial";
-
-    /// <summary>
     /// The color of body text.
     /// </summary>
-    public static readonly ReportPdfColor Text = new(0x21, 0x25, 0x29);
+    public static readonly PdfColor Text = new(0x21, 0x25, 0x29);
 
     /// <summary>
     /// The color of muted text, such as descriptions and axis labels, and of the rules under headers and along axes.
     /// </summary>
-    public static readonly ReportPdfColor Muted = new(0x6C, 0x75, 0x7D);
+    public static readonly PdfColor Muted = new(0x6C, 0x75, 0x7D);
 
     /// <summary>
     /// The color of the rules between table rows and of chart gridlines.
     /// </summary>
-    public static readonly ReportPdfColor Border = new(0xDE, 0xE2, 0xE6);
+    public static readonly PdfColor Border = new(0xDE, 0xE2, 0xE6);
 
     /// <summary>
     /// The fill of a table's header row.
     /// </summary>
-    public static readonly ReportPdfColor HeaderFill = new(0xF1, 0xF3, 0xF5);
+    public static readonly PdfColor HeaderFill = new(0xF1, 0xF3, 0xF5);
 
     /// <summary>
     /// The fill of a metric card.
     /// </summary>
-    public static readonly ReportPdfColor CardFill = new(0xF8, 0xF9, 0xFA);
+    public static readonly PdfColor CardFill = new(0xF8, 0xF9, 0xFA);
 
     /// <summary>
     /// The fill of a subtotal row.
     /// </summary>
-    public static readonly ReportPdfColor SubtotalFill = new(0xCF, 0xF4, 0xFC);
+    public static readonly PdfColor SubtotalFill = new(0xCF, 0xF4, 0xFC);
 
     /// <summary>
     /// The fill of a grand total row.
     /// </summary>
-    public static readonly ReportPdfColor GrandTotalFill = new(0xCF, 0xE2, 0xFF);
+    public static readonly PdfColor GrandTotalFill = new(0xCF, 0xE2, 0xFF);
 
     /// <summary>
     /// The empty part of a progress bar.
     /// </summary>
-    public static readonly ReportPdfColor BarTrack = new(0xE9, 0xEC, 0xEF);
+    public static readonly PdfColor BarTrack = new(0xE9, 0xEC, 0xEF);
 
     /// <summary>
     /// The color of the title on a container's band and of the lines between the slices of a pie.
     /// </summary>
-    public static readonly ReportPdfColor White = new(0xFF, 0xFF, 0xFF);
+    public static readonly PdfColor White = new(0xFF, 0xFF, 0xFF);
 
     /// <summary>
     /// The fill of a container's title band.
     /// </summary>
-    public static readonly ReportPdfColor Primary = new(0x0D, 0x6E, 0xFD);
+    public static readonly PdfColor Primary = new(0x0D, 0x6E, 0xFD);
 
-    private static readonly ReportPdfColor[] _palette =
+    private static readonly PdfColor[] _palette =
     [
         new(0x25, 0x63, 0xEB),
         new(0x14, 0xB8, 0xA6),
@@ -85,7 +82,7 @@ internal static class ReportPdfTheme
     /// </summary>
     /// <param name="index">The index of the series or slice.</param>
     /// <returns>The color.</returns>
-    public static ReportPdfColor GetPaletteColor(int index)
+    public static PdfColor GetPaletteColor(int index)
     {
         return _palette[index % _palette.Length];
     }

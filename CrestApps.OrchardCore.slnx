@@ -99,6 +99,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Outreach.Core/CrestApps.OrchardCore.Outreach.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Products.Core/CrestApps.OrchardCore.Products.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Pdf.Core/CrestApps.OrchardCore.Pdf.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Receipts.Core/CrestApps.OrchardCore.Receipts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />

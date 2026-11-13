@@ -6,23 +6,23 @@ using UglyToad.PdfPig.Graphics.Operations.PathConstruction;
 using UglyToad.PdfPig.Graphics.Operations.PathPainting;
 using UglyToad.PdfPig.Writer;
 
-namespace CrestApps.OrchardCore.Reports.Pdf.Services;
+namespace CrestApps.OrchardCore.Pdf;
 
 /// <summary>
-/// Draws on a page of a report PDF. Positions are in points from the top left of the page, as the report is laid out;
+/// Draws on a page of a PDF. Positions are in points from the top left of the page, as a document is laid out;
 /// the page turns them into the coordinates of PDF, which start at the bottom left.
 /// </summary>
-internal sealed class ReportPdfPage
+public sealed class PdfPage
 {
     private readonly PdfPageBuilder _page;
     private readonly double _height;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ReportPdfPage"/> class.
+    /// Initializes a new instance of the <see cref="PdfPage"/> class.
     /// </summary>
     /// <param name="page">The page of the PdfPig document.</param>
     /// <param name="height">The height of the page, in points.</param>
-    public ReportPdfPage(
+    public PdfPage(
         PdfPageBuilder page,
         double height)
     {
@@ -40,7 +40,7 @@ internal sealed class ReportPdfPage
     /// <param name="width">The width of the rectangle.</param>
     /// <param name="height">The height of the rectangle.</param>
     /// <param name="color">The color.</param>
-    public void FillRectangle(double x, double top, double width, double height, ReportPdfColor color)
+    public void FillRectangle(double x, double top, double width, double height, PdfColor color)
     {
         if (width <= 0 || height <= 0)
         {
@@ -61,7 +61,7 @@ internal sealed class ReportPdfPage
     /// <param name="top2">The top of the second point.</param>
     /// <param name="color">The color.</param>
     /// <param name="width">The width of the line.</param>
-    public void DrawLine(double x1, double top1, double x2, double top2, ReportPdfColor color, double width)
+    public void DrawLine(double x1, double top1, double x2, double top2, PdfColor color, double width)
     {
         DrawPolyline([(x1, top1), (x2, top2)], color, width);
     }
@@ -72,7 +72,7 @@ internal sealed class ReportPdfPage
     /// <param name="points">The points, from the top left of the page.</param>
     /// <param name="color">The color.</param>
     /// <param name="width">The width of the line.</param>
-    public void DrawPolyline(IReadOnlyList<(double X, double Top)> points, ReportPdfColor color, double width)
+    public void DrawPolyline(IReadOnlyList<(double X, double Top)> points, PdfColor color, double width)
     {
         if (points.Count < 2)
         {
@@ -97,7 +97,7 @@ internal sealed class ReportPdfPage
     /// </summary>
     /// <param name="points">The corners of the polygon, from the top left of the page.</param>
     /// <param name="color">The color.</param>
-    public void FillPolygon(IReadOnlyList<(double X, double Top)> points, ReportPdfColor color)
+    public void FillPolygon(IReadOnlyList<(double X, double Top)> points, PdfColor color)
     {
         if (points.Count < 3)
         {
@@ -123,7 +123,7 @@ internal sealed class ReportPdfPage
     /// <param name="top">The top of the center.</param>
     /// <param name="radius">The radius.</param>
     /// <param name="color">The color.</param>
-    public void FillCircle(double x, double top, double radius, ReportPdfColor color)
+    public void FillCircle(double x, double top, double radius, PdfColor color)
     {
         FillWedge(x, top, radius, 0, 0, 2 * Math.PI, color);
     }
@@ -138,7 +138,7 @@ internal sealed class ReportPdfPage
     /// <param name="start">The angle the slice starts at, in radians clockwise from twelve o'clock.</param>
     /// <param name="sweep">The angle of the slice, in radians.</param>
     /// <param name="color">The color.</param>
-    public void FillWedge(double x, double top, double radius, double innerRadius, double start, double sweep, ReportPdfColor color)
+    public void FillWedge(double x, double top, double radius, double innerRadius, double start, double sweep, PdfColor color)
     {
         if (radius <= 0 || sweep <= 0)
         {
@@ -171,13 +171,13 @@ internal sealed class ReportPdfPage
     /// <summary>
     /// Writes a line of prepared text, outlining its letters when the face simulates bold.
     /// </summary>
-    /// <param name="text">The text, from <see cref="ReportPdfFont.Prepare"/>, without line breaks.</param>
+    /// <param name="text">The text, from <see cref="PdfFont.Prepare"/>, without line breaks.</param>
     /// <param name="font">The font.</param>
     /// <param name="size">The font size, in points.</param>
     /// <param name="x">The left of the text.</param>
     /// <param name="top">The top of the line of text.</param>
     /// <param name="color">The color.</param>
-    public void DrawText(string text, ReportPdfFont font, double size, double x, double top, ReportPdfColor color)
+    public void DrawText(string text, PdfFont font, double size, double x, double top, PdfColor color)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -202,7 +202,7 @@ internal sealed class ReportPdfPage
         }
     }
 
-    private void SetFillColor(ReportPdfColor color)
+    private void SetFillColor(PdfColor color)
     {
         Operations.Add(new SetNonStrokeColorDeviceRgb(color.R / 255d, color.G / 255d, color.B / 255d));
     }

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Pdf</RootNamespace>
+    <Title>CrestApps OrchardCore PDF Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Layout primitives for writing PDF files with PdfPig: pages, a page flow, installed TrueType fonts with a
+      built-in fallback, text measuring and wrapping, and colors. Report exports and business documents such as
+      invoices and receipts are written with them.
+    </Description>
+    <PackageTags>$(PackageTags) PDF</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PdfPig" />
+  </ItemGroup>
+
+</Project>

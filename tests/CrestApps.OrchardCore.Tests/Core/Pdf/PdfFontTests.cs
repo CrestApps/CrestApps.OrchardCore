@@ -1,12 +1,12 @@
-using CrestApps.OrchardCore.Reports.Pdf.Services;
+using CrestApps.OrchardCore.Pdf;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
 using UglyToad.PdfPig.Writer;
 
-namespace CrestApps.OrchardCore.Tests.Modules.Reports.Pdf.Services;
+namespace CrestApps.OrchardCore.Tests.Core.Pdf;
 
-public sealed class ReportPdfFontTests
+public sealed class PdfFontTests
 {
     // Georgia maps its characters for Mac Roman before Unicode, so its accented letters are other glyphs there.
     private static readonly string _georgiaPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "georgia.ttf");
@@ -18,7 +18,7 @@ public sealed class ReportPdfFontTests
     {
         // Arrange
         using var builder = new PdfDocumentBuilder();
-        var font = ReportPdfFont.FromStandard(builder, Standard14Font.Helvetica);
+        var font = PdfFont.FromStandard(builder, Standard14Font.Helvetica);
 
         // Act
         // A byte order mark, then a heart with the variation selector that shows it as an emoji, and an emoji.
@@ -35,7 +35,7 @@ public sealed class ReportPdfFontTests
     {
         // Arrange
         using var builder = new PdfDocumentBuilder();
-        var font = ReportPdfFont.FromStandard(builder, Standard14Font.Helvetica);
+        var font = PdfFont.FromStandard(builder, Standard14Font.Helvetica);
 
         // Act
         // An e and a combining acute accent, then half of a surrogate pair, which cannot be normalized.
@@ -49,10 +49,10 @@ public sealed class ReportPdfFontTests
     public void Prepare_WhenAnAccentFollowsItsLetter_ShouldWriteTheAccentedLetterOfTheFont()
     {
         // Arrange
-        Assert.SkipWhen(ReportPdfFonts.Installed.Regular is null, "No TrueType font is installed.");
+        Assert.SkipWhen(PdfFonts.Installed.Regular is null, "No TrueType font is installed.");
 
         using var builder = new PdfDocumentBuilder();
-        var font = ReportPdfFonts.Installed.CreateRegular(builder);
+        var font = PdfFonts.Installed.CreateRegular(builder);
 
         // Act
         var text = font.Prepare("Cafe\U00000301");
@@ -67,7 +67,7 @@ public sealed class ReportPdfFontTests
     {
         // Arrange
         using var builder = new PdfDocumentBuilder();
-        var font = ReportPdfFont.FromTrueType(builder, File.ReadAllBytes(_georgiaPath), simulatesBold: false);
+        var font = PdfFont.FromTrueType(builder, File.ReadAllBytes(_georgiaPath), simulatesBold: false);
         var text = font.Prepare(new string(Enumerable.Range(0xC0, 64).Select(code => (char)code).ToArray()));
 
         // Act
