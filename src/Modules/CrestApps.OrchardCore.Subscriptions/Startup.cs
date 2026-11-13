@@ -177,6 +177,9 @@ public sealed class CheckoutStartup : StartupBase
         // A subscription bought with a promise to pay starts once its first transaction is paid.
         services.AddScoped<ITransactionEventHandler, SubscriptionFirstPaymentTransactionHandler>();
 
+        // An offline agreement's next period is invoiced only while its subscription is current.
+        services.AddScoped<ITransactionRenewalFilter, SubscriptionTransactionRenewalFilter>();
+
         services.AddDisplayDriver<CheckoutFlow, UserRegistrationCheckoutFlowDisplayDriver>();
         services.AddDisplayDriver<CheckoutFlow, ContentStepCheckoutFlowDisplayDriver>();
     }

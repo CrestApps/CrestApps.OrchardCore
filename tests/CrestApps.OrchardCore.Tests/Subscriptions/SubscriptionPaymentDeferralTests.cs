@@ -33,6 +33,8 @@ public sealed class SubscriptionPaymentDeferralTests
 
     private static readonly DateTime _now = new(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    private static readonly string _planObligation = CheckoutObligations.Recurring(new BillingDurationKey(DurationType.Month, 1));
+
     [Fact]
     public async Task ASubscriptionPaidLater_GrantsNothing_UntilItsFirstTransactionIsPaid()
     {
@@ -62,8 +64,27 @@ public sealed class SubscriptionPaymentDeferralTests
             NullLogger<DefaultSubscriptionLifecycleService>.Instance);
         var paid = new SubscriptionFirstPaymentTransactionHandler(lifecycle, manager);
 
+        // SEC-C5: Pay Later records one transaction per obligation. Paying the checkout's one-time balance (a sign-up fee,
+        // a small item next to the plan) is not paying for the plan's first cycle.
         await paid.StatusChangedAsync(
-            new Transaction { CheckoutSessionId = "session-1", ReferenceType = "Subscription", ReferenceId = "plan-1" },
+            new Transaction { CheckoutSessionId = "session-1", ObligationId = CheckoutObligations.OneTime, ReferenceType = "Subscription", ReferenceId = "plan-1" },
+            TransactionStatus.Outstanding,
+            TransactionStatus.Paid,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(SubscriptionStatus.Incomplete, Assert.Single(store.Subscriptions).Status);
+
+        // A later cycle of the same agreement does not start it either: only its own obligation does.
+        await paid.StatusChangedAsync(
+            new Transaction { CheckoutSessionId = "session-1", ObligationId = _planObligation + ":cycle-2", ReferenceType = "Subscription", ReferenceId = "plan-1" },
+            TransactionStatus.Outstanding,
+            TransactionStatus.Paid,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(SubscriptionStatus.Incomplete, Assert.Single(store.Subscriptions).Status);
+
+        await paid.StatusChangedAsync(
+            new Transaction { CheckoutSessionId = "session-1", ObligationId = _planObligation, ReferenceType = "Subscription", ReferenceId = "plan-1" },
             TransactionStatus.Outstanding,
             TransactionStatus.Paid,
             TestContext.Current.CancellationToken);
