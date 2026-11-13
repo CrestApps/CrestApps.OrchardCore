@@ -1,7 +1,9 @@
 namespace CrestApps.OrchardCore.Transactions.Core.Models;
 
 /// <summary>
-/// The last number issued in each financial-document series of a site, kept as one document.
+/// The last number issued in each financial-document series of a site, kept as one document, as it was before the
+/// numbers moved to the shared number series. It is only read now: a series used for the first time carries on after
+/// the number stored here.
 /// </summary>
 public sealed class FinancialDocumentSequences
 {

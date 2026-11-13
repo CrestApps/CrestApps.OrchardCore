@@ -1,8 +1,10 @@
+using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Transactions.Core;
 
@@ -21,6 +23,15 @@ public static class TransactionsServiceCollectionExtensions
         services.AddScoped<ITransactionStore, TransactionStore>();
         services.AddScoped<ITransactionManager, TransactionManager>();
         services.AddScoped<ITransactionSettlementService, TransactionSettlementService>();
+
+        // Financial document numbers come from the shared number series, one series per kind of document, so a site
+        // chooses the format of its receipts, invoices and credit notes in one place.
+        services.AddNumberSequence();
+        services.AddNumberSeries(FinancialDocumentSeries.GetName(FinancialDocumentKind.Receipt), LocalizationSource.Create("Receipts", typeof(FinancialDocumentSeries)), FinancialDocumentSeries.GetDefaultFormat(FinancialDocumentKind.Receipt));
+        services.AddNumberSeries(FinancialDocumentSeries.GetName(FinancialDocumentKind.Invoice), LocalizationSource.Create("Invoices", typeof(FinancialDocumentSeries)), FinancialDocumentSeries.GetDefaultFormat(FinancialDocumentKind.Invoice));
+        services.AddNumberSeries(FinancialDocumentSeries.GetName(FinancialDocumentKind.CreditNote), LocalizationSource.Create("Credit notes", typeof(FinancialDocumentSeries)), FinancialDocumentSeries.GetDefaultFormat(FinancialDocumentKind.CreditNote));
+        services.AddNumberSeries(FinancialDocumentSeries.GetName(FinancialDocumentKind.RefundDocument), LocalizationSource.Create("Refund documents", typeof(FinancialDocumentSeries)), FinancialDocumentSeries.GetDefaultFormat(FinancialDocumentKind.RefundDocument));
+
         services.TryAddScoped<IFinancialDocumentNumberGenerator, SequentialFinancialDocumentNumberGenerator>();
         services.TryAddScoped<ITransactionInvoiceService, TransactionInvoiceService>();
 
