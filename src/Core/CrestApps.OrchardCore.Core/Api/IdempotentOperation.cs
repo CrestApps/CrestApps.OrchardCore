@@ -4,7 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using OrchardCore.Locking.Distributed;
 
-namespace CrestApps.OrchardCore.Commerce.Api;
+namespace CrestApps.OrchardCore.Api;
 
 /// <summary>
 /// Runs an operation once per idempotency key, for a protocol whose key isn't an HTTP header: a message id inside a
@@ -80,6 +80,7 @@ public static class IdempotentOperation
         }
     }
 
+    // The prefix predates the move out of Commerce; it stays so answers kept before an upgrade are still found.
     internal static string GetCacheKey(string scope, string key)
         => "commerce-idempotent-operation:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{scope}|{key}")));
 

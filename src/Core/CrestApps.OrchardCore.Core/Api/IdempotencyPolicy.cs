@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
 
-namespace CrestApps.OrchardCore.Commerce.Api;
+namespace CrestApps.OrchardCore.Api;
 
 /// <summary>
 /// How <see cref="IdempotencyEndpointFilter"/> treats an endpoint's idempotency keys, when the endpoint follows a
@@ -12,7 +12,7 @@ public sealed class IdempotencyPolicy
     /// <summary>
     /// Gets the header the key comes in.
     /// </summary>
-    public string KeyHeader { get; init; } = CommerceApi.IdempotencyKeyHeader;
+    public string KeyHeader { get; init; } = ModuleApi.IdempotencyKeyHeader;
 
     /// <summary>
     /// Gets how long an answer is kept for a retry.

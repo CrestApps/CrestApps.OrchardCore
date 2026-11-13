@@ -8,10 +8,10 @@ using Microsoft.Net.Http.Headers;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 
-namespace CrestApps.OrchardCore.Commerce.Api;
+namespace CrestApps.OrchardCore.Api;
 
 /// <summary>
-/// Makes a request safe to send again. A caller that sends <see cref="CommerceApi.IdempotencyKeyHeader"/> and gets no
+/// Makes a request safe to send again. A caller that sends <see cref="ModuleApi.IdempotencyKeyHeader"/> and gets no
 /// answer, because the network dropped, sends the same request with the same key, and gets the first request's
 /// response back instead of a second order, payment or refund. Keys are kept for a day, per tenant, caller and route.
 /// </summary>
@@ -28,7 +28,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     {
         var httpContext = context.HttpContext;
         var policy = httpContext.GetEndpoint()?.Metadata.GetMetadata<IdempotencyPolicy>();
-        var keyHeader = policy?.KeyHeader ?? CommerceApi.IdempotencyKeyHeader;
+        var keyHeader = policy?.KeyHeader ?? ModuleApi.IdempotencyKeyHeader;
         var key = httpContext.Request.Headers[keyHeader].ToString();
 
         if (string.IsNullOrWhiteSpace(key))
@@ -103,7 +103,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     // else changing the same thing) are worth sending again with the same key.
     private static async Task KeepAsync(IDistributedCache cache, string cacheKey, object result, HttpContext httpContext, IdempotencyPolicy policy = null, string fingerprint = null)
     {
-        if (Capture(result, httpContext.Response.Headers) is { } response && IsFinal(response))
+        if (Capture(result, httpContext.Response.Headers, ReplayedHeaders(httpContext)) is { } response && IsFinal(response))
         {
             await cache.SetStringAsync(
                 cacheKey,
@@ -126,25 +126,38 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
     internal static string GetCacheKey(HttpContext httpContext, string key, IdempotencyPolicy policy = null)
     {
-        // A guest is known by their cart's token, or their checkout's when they have no cart. Never both: the answer to
-        // starting a checkout hands out the checkout token, so a retry of it carries one the first request didn't.
+        // A guest is known by the first guest header the endpoint's group names that the request carries, such as a
+        // cart's token, or a checkout's when there is no cart. Never both: the answer to starting a checkout hands out the
+        // checkout token, so a retry of it carries one the first request didn't.
         var caller = policy?.Caller?.Invoke(httpContext) ??
             httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
             httpContext.User?.FindFirstValue("sub") ??
-            FirstNonEmpty(httpContext.Request.Headers[CommerceApi.CartTokenHeader].ToString(), httpContext.Request.Headers[CommerceApi.CheckoutTokenHeader].ToString());
+            FirstGuestHeader(httpContext);
 
         var scope = $"{httpContext.Request.PathBase}|{httpContext.Request.Method}|{httpContext.Request.Path}|{caller}|{key}";
 
+        // The prefix predates the move out of Commerce; it stays so answers kept before an upgrade are still found.
         return "commerce-api-idempotency:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(scope)));
     }
 
-    private static string FirstNonEmpty(string first, string second)
-        => string.IsNullOrEmpty(first) ? second : first;
+    private static string FirstGuestHeader(HttpContext httpContext)
+    {
+        foreach (var name in httpContext.GetEndpoint()?.Metadata.GetMetadata<IdempotencyGuestHeaders>()?.Headers ?? [])
+        {
+            if (httpContext.Request.Headers[name].ToString() is { Length: > 0 } value)
+            {
+                return value;
+            }
+        }
 
-    // The headers a client acts on: the guest tokens the first answer handed out, and where a created thing is.
-    private static readonly string[] _replayedHeaders = [CommerceApi.CartTokenHeader, CommerceApi.CheckoutTokenHeader, HeaderNames.Location];
+        return string.Empty;
+    }
 
-    internal static StoredResponse Capture(object result, IHeaderDictionary responseHeaders = null)
+    // The headers a client acts on: where a created thing is, and the guest headers the first answer handed out.
+    private static IEnumerable<string> ReplayedHeaders(HttpContext httpContext)
+        => [HeaderNames.Location, .. httpContext?.GetEndpoint()?.Metadata.GetMetadata<IdempotencyGuestHeaders>()?.Headers ?? []];
+
+    internal static StoredResponse Capture(object result, IHeaderDictionary responseHeaders = null, IEnumerable<string> replayedHeaders = null)
     {
         result = Unwrap(result);
 
@@ -152,7 +165,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         var value = result is IValueHttpResult valueResult ? valueResult.Value : result is IResult ? null : result;
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var name in _replayedHeaders)
+        foreach (var name in replayedHeaders ?? [HeaderNames.Location])
         {
             if (responseHeaders is not null && responseHeaders.TryGetValue(name, out var headerValue) && !string.IsNullOrEmpty(headerValue))
             {
@@ -250,7 +263,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 public static class IdempotencyEndpointExtensions
 {
     /// <summary>
-    /// Makes the endpoint safe to call again with the same <see cref="CommerceApi.IdempotencyKeyHeader"/>.
+    /// Makes the endpoint safe to call again with the same <see cref="ModuleApi.IdempotencyKeyHeader"/>.
     /// </summary>
     public static RouteHandlerBuilder WithIdempotency(this RouteHandlerBuilder builder)
         => builder.AddEndpointFilter<IdempotencyEndpointFilter>();

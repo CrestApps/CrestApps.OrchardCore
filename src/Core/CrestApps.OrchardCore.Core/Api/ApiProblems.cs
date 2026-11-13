@@ -2,10 +2,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
-namespace CrestApps.OrchardCore.Commerce.Api;
+namespace CrestApps.OrchardCore.Api;
 
 /// <summary>
-/// The problem responses commerce endpoints return (RFC 9457). A conflict carries a <c>code</c> a client can act on.
+/// The problem responses API endpoints return (RFC 9457). A conflict carries a <c>code</c> a client can act on.
 /// </summary>
 public static class ApiProblems
 {
@@ -14,12 +14,6 @@ public static class ApiProblems
     /// </summary>
     public static class Codes
     {
-        public const string EmptyCart = "empty-cart";
-
-        public const string OutOfStock = "out-of-stock";
-
-        public const string InvoiceChanged = "invoice-changed";
-
         public const string Concurrency = "concurrency";
 
         public const string NotAvailable = "not-available";

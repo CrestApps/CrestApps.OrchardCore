@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Commerce.Api;
 using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.DataProtection;
@@ -97,12 +98,12 @@ public sealed class CommerceApiFoundationTests
     [Fact]
     public void AKey_IsKeptPerCallerAndRoute()
     {
-        var first = new DefaultHttpContext();
+        var first = CommerceContext();
         first.Request.Method = "POST";
         first.Request.Path = "/api/commerce/v1/cart/checkout";
         first.Request.Headers[CommerceApi.CartTokenHeader] = "cart-a";
 
-        var second = new DefaultHttpContext();
+        var second = CommerceContext();
         second.Request.Method = "POST";
         second.Request.Path = "/api/commerce/v1/cart/checkout";
         second.Request.Headers[CommerceApi.CartTokenHeader] = "cart-b";
@@ -113,12 +114,12 @@ public sealed class CommerceApiFoundationTests
     [Fact]
     public void ARetry_CarryingTheCheckoutTokenTheFirstAnswerHandedOut_IsTheSameRequest()
     {
-        var first = new DefaultHttpContext();
+        var first = CommerceContext();
         first.Request.Method = "POST";
         first.Request.Path = "/api/commerce/v1/checkout";
         first.Request.Headers[CommerceApi.CartTokenHeader] = "cart-a";
 
-        var retry = new DefaultHttpContext();
+        var retry = CommerceContext();
         retry.Request.Method = "POST";
         retry.Request.Path = "/api/commerce/v1/checkout";
         retry.Request.Headers[CommerceApi.CartTokenHeader] = "cart-a";
@@ -158,5 +159,15 @@ public sealed class CommerceApiFoundationTests
         }
 
         return EndpointFilterInvocationContext.Create(context);
+    }
+
+    // A request routed into the commerce API group, which names the guest headers.
+    private static DefaultHttpContext CommerceContext()
+    {
+        var context = new DefaultHttpContext();
+
+        context.SetEndpoint(new Endpoint(null, new EndpointMetadataCollection(CommerceApi.GuestHeaders), "commerce"));
+
+        return context;
     }
 }
