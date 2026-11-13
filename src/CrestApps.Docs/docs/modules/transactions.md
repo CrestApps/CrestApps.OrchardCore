@@ -360,7 +360,7 @@ The same statement, and the customer's invoices and receipts, are also available
 Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
 
 - **Send reminder** — deliver a payment reminder now. Available only when the **Transaction Reminders** feature is enabled.
-- **Record payment** — record a full or partial payment received offline, with an optional reference.
+- **Record payment** — record a full or partial payment received offline, with an optional reference, how it arrived and when. The payment method field suggests the common methods; one picked or typed by its label or key is stored as its stable key from `TransactionsConstants.OfflinePaymentMethods` (`cash`, `check`, `bank-transfer`, `card-terminal`, `other`), so reports and webhooks group payments the same in every language, and any other text is kept as typed. The timeline shows the localized label.
 - **Mark paid** — settle the remaining balance offline.
 - **Adjust or waive** — lower what is owed by a discount, waiver, credit or write-off, never more than is outstanding.
 - **Send invoice** — send the invoice now, with its pay link. Available only when the **Transaction Reminders** feature is enabled, and not for a transaction collected automatically.

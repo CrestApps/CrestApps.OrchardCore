@@ -101,7 +101,7 @@ Use this when the customer paid by cash, check or bank transfer.
 
 1. Open the transaction from **Commerce > Transactions**.
 2. In **Record an offline payment**, check the **Amount**. It starts at the full outstanding balance; change it for a part payment.
-3. Optionally, type how the customer paid in **Payment method**, such as *Bank transfer*, and change **Received** to when the money arrived. **Received** starts at now, in your site's time zone.
+3. Optionally, pick how the customer paid in **Payment method**: *Cash*, *Check*, *Bank transfer*, *Card terminal* or *Other*, or type another way. Then change **Received** to when the money arrived. **Received** starts at now, in your site's time zone.
 4. Optionally, type the check number or transfer reference in **Reference**. It is recorded with the payment.
 5. Optionally, add anything else about the payment in **Note**.
 6. Click **Record payment**, then click **Record payment** again in the confirmation box.

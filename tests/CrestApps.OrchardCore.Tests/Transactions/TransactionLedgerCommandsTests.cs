@@ -45,6 +45,27 @@ public sealed class TransactionLedgerCommandsTests
         Assert.Equal(TransactionStatus.PartiallyPaid, result.Transaction.Status);
     }
 
+    [Theory]
+    [InlineData("Bank transfer", TransactionsConstants.OfflinePaymentMethods.BankTransfer)]
+    [InlineData("CASH", TransactionsConstants.OfflinePaymentMethods.Cash)]
+    [InlineData(" Western Union ", "Western Union")]
+    public async Task RecordPaymentAsync_StoresACommonPaymentMethodByItsKey(string entered, string stored)
+    {
+        // Arrange
+        var context = new LedgerContext(CreateOutstanding());
+
+        // Act
+        var result = await context.Service.RecordPaymentAsync("transaction-1", new TransactionPaymentRequest
+        {
+            Amount = 10m,
+            PaymentMethod = entered,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal(stored, result.Event.PaymentMethod);
+    }
+
     [Fact]
     public async Task RecordPaymentAsync_ForMoreThanIsOwed_ReturnsWhatWasNotRecorded()
     {

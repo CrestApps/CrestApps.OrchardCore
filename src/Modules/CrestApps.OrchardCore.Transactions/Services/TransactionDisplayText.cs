@@ -158,4 +158,47 @@ public sealed class TransactionDisplayText
     /// <param name="providerKey">The stored provider key.</param>
     public ICheckoutPaymentProvider FindPaymentProvider(string providerKey)
         => _paymentProviders.FindByKey(providerKey);
+
+    /// <summary>
+    /// Gets the label of how money recorded by hand arrived: the localized name of one of
+    /// <see cref="TransactionsConstants.OfflinePaymentMethods"/>, or the text staff typed.
+    /// </summary>
+    /// <param name="method">The stored payment method.</param>
+    public string OfflinePaymentMethodName(string method)
+        => method switch
+        {
+            TransactionsConstants.OfflinePaymentMethods.Cash => S["Cash"],
+            TransactionsConstants.OfflinePaymentMethods.Check => S["Check"],
+            TransactionsConstants.OfflinePaymentMethods.BankTransfer => S["Bank transfer"],
+            TransactionsConstants.OfflinePaymentMethods.CardTerminal => S["Card terminal"],
+            TransactionsConstants.OfflinePaymentMethods.Other => S["Other"],
+            _ => method,
+        };
+
+    /// <summary>
+    /// Turns what staff entered as the payment method into what is stored: the key of a common method when they picked
+    /// it or typed its key or its label (without regard to case), otherwise their text, trimmed.
+    /// </summary>
+    /// <param name="value">The entered value.</param>
+    /// <returns>The value to store, or <see langword="null"/> when nothing was entered.</returns>
+    public string NormalizeOfflinePaymentMethod(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+
+        foreach (var key in TransactionsConstants.OfflinePaymentMethods.All)
+        {
+            if (string.Equals(trimmed, key, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(trimmed, OfflinePaymentMethodName(key), StringComparison.OrdinalIgnoreCase))
+            {
+                return key;
+            }
+        }
+
+        return trimmed;
+    }
 }

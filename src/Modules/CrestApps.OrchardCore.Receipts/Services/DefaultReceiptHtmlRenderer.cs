@@ -1,7 +1,8 @@
+using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.BusinessDocuments.Services;
 using CrestApps.OrchardCore.Receipts.Core.Services;
 using CrestApps.OrchardCore.Receipts.Models;
-using Microsoft.Extensions.Logging;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Receipts.Services;
 
@@ -10,12 +11,19 @@ namespace CrestApps.OrchardCore.Receipts.Services;
 /// template for receipts, and renders it with the shared, e-mail-safe <see cref="IBusinessDocumentHtmlRenderer"/>, so
 /// receipts look like every other business document.
 /// </summary>
+/// <remarks>
+/// The template is applied only once the Business Documents feature is recorded as enabled, which is when its tables
+/// exist. On a site upgraded from a version where receipts had no templates, the feature is recorded by a migration a
+/// moment after the first request; until then the receipt is printed and sent with its own logo, footer and colors, and no
+/// template query is issued. The query would fail on the missing table, and on PostgreSQL a failed statement aborts the
+/// whole transaction, including the payment the receipt is rendered for.
+/// </remarks>
 public sealed class DefaultReceiptHtmlRenderer : IReceiptHtmlRenderer
 {
     private readonly ReceiptBusinessDocumentMapper _mapper;
     private readonly IBusinessDocumentTemplateManager _templateManager;
     private readonly IBusinessDocumentHtmlRenderer _renderer;
-    private readonly ILogger _logger;
+    private readonly IShellFeaturesManager _shellFeaturesManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultReceiptHtmlRenderer"/> class.
@@ -23,17 +31,17 @@ public sealed class DefaultReceiptHtmlRenderer : IReceiptHtmlRenderer
     /// <param name="mapper">The mapper that turns a receipt into a business document.</param>
     /// <param name="templateManager">The manager of the document templates.</param>
     /// <param name="renderer">The business document HTML renderer.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="shellFeaturesManager">The features manager, which tells whether the template tables exist yet.</param>
     public DefaultReceiptHtmlRenderer(
         ReceiptBusinessDocumentMapper mapper,
         IBusinessDocumentTemplateManager templateManager,
         IBusinessDocumentHtmlRenderer renderer,
-        ILogger<DefaultReceiptHtmlRenderer> logger)
+        IShellFeaturesManager shellFeaturesManager)
     {
         _mapper = mapper;
         _templateManager = templateManager;
         _renderer = renderer;
-        _logger = logger;
+        _shellFeaturesManager = shellFeaturesManager;
     }
 
     /// <inheritdoc/>
@@ -63,15 +71,9 @@ public sealed class DefaultReceiptHtmlRenderer : IReceiptHtmlRenderer
 
         var document = _mapper.Map(receipt);
 
-        try
+        if (await _shellFeaturesManager.IsFeatureEnabledAsync(BusinessDocumentsConstants.Features.Area))
         {
             await _templateManager.ApplyAsync(document, cancellationToken: cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            // A site upgraded before Business Documents is recorded as enabled has no template table yet. The receipt is
-            // still printed and sent, with its own logo, footer and colors.
-            _logger.LogWarning(ex, "The document template of a receipt could not be read; the receipt is rendered with its own look.");
         }
 
         return await _renderer.RenderAsync(document, cancellationToken);

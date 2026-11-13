@@ -160,7 +160,8 @@ public sealed class TransactionLifecycleEventsTests
 
         // Assert
         var payment = (await store.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken)).Events.Single(entry => entry.Type == TransactionEventType.PaymentRecorded);
-        Assert.Equal("Bank transfer", payment.PaymentMethod);
+        // The label of a common method is stored as its stable key.
+        Assert.Equal(TransactionsConstants.OfflinePaymentMethods.BankTransfer, payment.PaymentMethod);
         Assert.Equal(new DateTime(2026, 7, 1, 13, 0, 0, DateTimeKind.Utc), payment.ReceivedUtc);
     }
 

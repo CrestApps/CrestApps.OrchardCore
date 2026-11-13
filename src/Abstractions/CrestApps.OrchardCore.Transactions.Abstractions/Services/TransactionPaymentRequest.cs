@@ -12,8 +12,8 @@ public sealed class TransactionPaymentRequest
     public decimal Amount { get; set; }
 
     /// <summary>
-    /// Gets or sets how the money was received, as a short key such as <c>cash</c>, <c>check</c> or
-    /// <c>bank-transfer</c>. The caller chooses the keys it offers; the ledger stores the key as given.
+    /// Gets or sets how the money was received: one of the keys of <see cref="TransactionsConstants.OfflinePaymentMethods"/>
+    /// (its localized label is accepted too and stored as the key), or any other short text, which is stored trimmed.
     /// </summary>
     public string PaymentMethod { get; set; }
 

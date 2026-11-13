@@ -1,10 +1,13 @@
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.BusinessDocuments.Core.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Receipts.Core.Services;
 using CrestApps.OrchardCore.Receipts.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using OrchardCore.Environment.Extensions.Features;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Doubles;
 
@@ -22,7 +25,7 @@ internal static class ReceiptRenderers
         => new(new DefaultMoneyFormatter(), new PassThroughStringLocalizer<ReceiptBusinessDocumentMapper>());
 
     /// <summary>
-    /// Creates the receipt HTML renderer.
+    /// Creates the receipt HTML renderer, on a site where Business Documents is enabled.
     /// </summary>
     /// <param name="templates">The document templates, or <see langword="null"/> for none.</param>
     public static DefaultReceiptHtmlRenderer CreateHtmlRenderer(InMemoryBusinessDocumentTemplateStore templates = null)
@@ -30,5 +33,19 @@ internal static class ReceiptRenderers
             CreateMapper(),
             (templates ?? new InMemoryBusinessDocumentTemplateStore()).CreateManager(),
             new BusinessDocumentHtmlRenderer(HtmlEncoder.Default, new PassThroughStringLocalizer<BusinessDocumentHtmlRenderer>()),
-            NullLogger<DefaultReceiptHtmlRenderer>.Instance);
+            CreateFeatures(BusinessDocumentsConstants.Features.Area));
+
+    /// <summary>
+    /// Creates a features manager with the given features enabled.
+    /// </summary>
+    /// <param name="enabled">The ids of the enabled features.</param>
+    public static IShellFeaturesManager CreateFeatures(params string[] enabled)
+    {
+        var manager = new Mock<IShellFeaturesManager>();
+        manager
+            .Setup(candidate => candidate.GetEnabledFeaturesAsync())
+            .ReturnsAsync(enabled.Select(id => Mock.Of<IFeatureInfo>(feature => feature.Id == id)).ToArray());
+
+        return manager.Object;
+    }
 }

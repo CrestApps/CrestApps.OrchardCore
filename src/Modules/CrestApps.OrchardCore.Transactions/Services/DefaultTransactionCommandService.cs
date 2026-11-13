@@ -152,7 +152,9 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
                 S["An offline payment of {0} {1} was recorded.{2}{3}", CurrencyScale.Format(applied, transaction.Currency), transaction.Currency, referenceSuffix, noteSuffix].Value);
 
             payment.Reference = trimmedReference;
-            payment.PaymentMethod = Trim(request.PaymentMethod);
+            // A common method is stored as its stable key, whether it was picked or typed by its label, so reports group it
+            // the same in every language.
+            payment.PaymentMethod = _displayText.NormalizeOfflinePaymentMethod(request.PaymentMethod);
             payment.ReceivedUtc = request.ReceivedUtc;
             await SetActorAsync(payment);
 

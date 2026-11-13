@@ -203,4 +203,42 @@ public static class TransactionsConstants
         /// </summary>
         public const string Adjusted = "adjusted";
     }
+
+    /// <summary>
+    /// The stable keys of the common ways money recorded by hand arrives (<see cref="Models.TransactionEvent.PaymentMethod"/>).
+    /// The record payment form offers them, staff may still type another, and a report groups payments by these keys
+    /// whatever the language of the person who recorded them.
+    /// </summary>
+    public static class OfflinePaymentMethods
+    {
+        /// <summary>
+        /// Cash.
+        /// </summary>
+        public const string Cash = "cash";
+
+        /// <summary>
+        /// A check.
+        /// </summary>
+        public const string Check = "check";
+
+        /// <summary>
+        /// A bank transfer.
+        /// </summary>
+        public const string BankTransfer = "bank-transfer";
+
+        /// <summary>
+        /// A card taken on a card terminal in person.
+        /// </summary>
+        public const string CardTerminal = "card-terminal";
+
+        /// <summary>
+        /// Any other way.
+        /// </summary>
+        public const string Other = "other";
+
+        /// <summary>
+        /// The keys, in the order they are offered.
+        /// </summary>
+        public static readonly IReadOnlyList<string> All = [Cash, Check, BankTransfer, CardTerminal, Other];
+    }
 }

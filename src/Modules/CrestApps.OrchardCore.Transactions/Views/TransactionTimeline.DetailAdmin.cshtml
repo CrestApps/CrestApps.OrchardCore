@@ -2,8 +2,13 @@
 @using CrestApps.OrchardCore.Transactions.Core.Services
 @model TransactionDetailViewModel
 @inject TransactionDisplayText DisplayText
+@inject OrchardCore.Modules.ILocalClock LocalClock
 
 @{
+    // Dates go into the sentences as arguments, in the site's or user's time zone, so a translation can place them.
+    async Task<string> FormatLocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime.ToString("g", System.Globalization.CultureInfo.CurrentCulture);
+
     var transaction = Model.Transaction;
     var entriesById = transaction.Events
         .Where(entry => !string.IsNullOrEmpty(entry.Id))
@@ -49,19 +54,18 @@
                         <div class="text-muted small">
                             @if (!string.IsNullOrEmpty(evt.PaymentMethod))
                             {
-                                @T["Paid by {0}.", evt.PaymentMethod]
+                                @T["Paid by {0}.", DisplayText.OfflinePaymentMethodName(evt.PaymentMethod)]
                             }
                             @if (evt.ReceivedUtc.HasValue)
                             {
-                                @T["Received"] @await DisplayAsync(await New.DateTime(Utc: evt.ReceivedUtc.Value, Format: "g"))
+                                @T["Received {0}.", await FormatLocalAsync(evt.ReceivedUtc.Value)]
                             }
                         </div>
                     }
                     @if (evt.Type == TransactionEventType.Reversed && !string.IsNullOrEmpty(evt.ReversesEventId) && entriesById.TryGetValue(evt.ReversesEventId, out var reversed))
                     {
                         <div class="text-muted small">
-                            @T["Takes back the {0} of {1} {2} recorded on", DisplayText.EventTypeName(reversed.Type), transaction.Currency, CurrencyScale.Format(reversed.Amount ?? 0m, transaction.Currency)]
-                            @await DisplayAsync(await New.DateTime(Utc: reversed.CreatedUtc, Format: "g"))
+                            @T["Takes back the {0} of {1} {2} recorded on {3}.", DisplayText.EventTypeName(reversed.Type), transaction.Currency, CurrencyScale.Format(reversed.Amount ?? 0m, transaction.Currency), await FormatLocalAsync(reversed.CreatedUtc)]
                         </div>
                     }
                     @if (Model.ShowReceipts && evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id))

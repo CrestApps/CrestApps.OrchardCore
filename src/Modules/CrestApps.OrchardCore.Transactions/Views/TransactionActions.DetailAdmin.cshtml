@@ -4,6 +4,7 @@
 @using CrestApps.OrchardCore.Transactions.Core
 @model TransactionDetailViewModel
 @inject OrchardCore.Modules.ILocalClock LocalClock
+@inject TransactionDisplayText DisplayText
 
 @{
     var transaction = Model.Transaction;
@@ -68,7 +69,14 @@
                 </div>
                 <div class="mb-2">
                     <label class="form-label" for="PaymentMethod">@T["Payment method"]</label>
-                    <input type="text" class="form-control" id="PaymentMethod" name="PaymentMethod" maxlength="100" placeholder="@T["Bank transfer, check, cash (optional)"]" />
+                    <input type="text" class="form-control" id="PaymentMethod" name="PaymentMethod" maxlength="100" list="PaymentMethodSuggestions" autocomplete="off" placeholder="@T["Pick one or type another (optional)"]" />
+                    <datalist id="PaymentMethodSuggestions">
+                        @foreach (var method in TransactionsConstants.OfflinePaymentMethods.All)
+                        {
+                            <option value="@DisplayText.OfflinePaymentMethodName(method)"></option>
+                        }
+                    </datalist>
+                    <div class="form-text">@T["A common method is saved with a fixed key, so reports group it the same in every language."]</div>
                 </div>
                 <div class="mb-2">
                     <label class="form-label" for="ReceivedAt">@T["Received"]</label>
