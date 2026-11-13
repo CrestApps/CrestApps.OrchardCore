@@ -437,6 +437,7 @@ public sealed partial class MessagingWorkspaceBuilder
             ContactAddressDisplay = channel?.FormatAddress(conversation.ContactAddress) ?? conversation.ContactAddress,
             ServiceAddressDisplay = channel?.FormatAddress(conversation.ServiceAddress) ?? conversation.ServiceAddress,
             SupportsSubject = channel?.Capabilities.SupportsSubject == true,
+            ReplySubject = channel?.Capabilities.SupportsSubject == true ? MessagingSubjects.ForReplyTo(messages) : null,
             MaxBodyLength = channel?.Capabilities.MaxBodyLength,
             Attachments = channel?.Capabilities.Attachments ?? MessagingAttachmentCapabilities.None,
             Messages = messages,

@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
@@ -175,6 +176,15 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
             ScheduleAt = new DateTime(2026, 9, 28, 9, 0, 0, DateTimeKind.Unspecified),
         };
 
+    private static ActivityChannelOptions CreateChannelOptions()
+    {
+        var options = new ActivityChannelOptions();
+        options.AddChannel(OmnichannelConstants.Channels.Phone);
+        options.AddChannel(OmnichannelConstants.Channels.Sms);
+
+        return options;
+    }
+
     private static OmnichannelActivityBatchDisplayDriver CreateDriver(string subjectDefaultCampaignId, params ActivityDialerWaitingRecord[] waitingRecords)
         => CreateDriver(subjectDefaultCampaignId, Mock.Of<ILocalClock>(), waitingRecords);
 
@@ -219,6 +229,7 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
             subjectFlowSettingsService.Object,
             optionsProvider,
             Options.Create(sourceOptions),
+            Options.Create(CreateChannelOptions()),
             Array.Empty<IAIProfileManager>(),
             Mock.Of<IBusinessHoursGate>(),
             new PassThroughStringLocalizer<OmnichannelActivityBatchDisplayDriver>());

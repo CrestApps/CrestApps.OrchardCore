@@ -29,5 +29,10 @@ public static class MessagingConstants
         /// The SMS channel feature: sends and receives text messages in the messaging workspace.
         /// </summary>
         public const string Sms = "CrestApps.OrchardCore.Omnichannel.Messaging.Sms";
+
+        /// <summary>
+        /// The feature that adds email as a channel of the workspace.
+        /// </summary>
+        public const string Email = "CrestApps.OrchardCore.Omnichannel.Messaging.Email";
     }
 }

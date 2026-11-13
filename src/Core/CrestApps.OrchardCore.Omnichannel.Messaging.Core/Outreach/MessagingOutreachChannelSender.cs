@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Outreach;
 using CrestApps.OrchardCore.Outreach.Models;
 
@@ -46,14 +47,28 @@ public sealed class MessagingOutreachChannelSender : IOutreachChannelSender
         ArgumentNullException.ThrowIfNull(recipient);
         ArgumentNullException.ThrowIfNull(content);
 
-        var result = await _conversationService.SendDirectAsync(run.Channel, run.SenderAddress, recipient.Address, content.Body, run.ActorId, cancellationToken);
+        // Sent as bulk mail, so the sending address's limits apply and an email carries its unsubscribe link.
+        var result = await _conversationService.SendDirectAsync(new MessagingDirectSendRequest
+        {
+            Channel = run.Channel,
+            ServiceAddress = run.SenderAddress,
+            ContactAddress = recipient.Address,
+            Subject = content.Subject,
+            Body = content.Body,
+            ActingAgentId = run.ActorId,
+            Purpose = MessagingOutboundPurpose.Broadcast,
+        }, cancellationToken);
+
+        // A message held back by the address's sending limits, or waiting for a retry, is queued and the outbox sends it
+        // later, so it is not a failure.
+        var accepted = result.Succeeded || string.Equals(result.Message?.DeliveryStatus, MessageDeliveryStatus.Queued.ToString(), StringComparison.Ordinal);
 
         if (string.Equals(run.OwnerType, MessagingOutreachConstants.BroadcastOwnerType, StringComparison.Ordinal))
         {
-            MessagingTelemetry.RecordBroadcastRecipient(_channelResolver.Get(run.Channel)?.Name, result.Succeeded);
+            MessagingTelemetry.RecordBroadcastRecipient(_channelResolver.Get(run.Channel)?.Name, accepted);
         }
 
-        return result.Succeeded
+        return accepted
             ? OutreachSendResult.Success()
             : OutreachSendResult.Failure(result.Error);
     }

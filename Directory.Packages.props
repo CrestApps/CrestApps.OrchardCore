@@ -17,8 +17,10 @@
     <PackageVersion Include="libphonenumber-csharp" Version="9.0.42" />
     <PackageVersion Include="JsonSchema.Net" Version="8.0.5" />
     <PackageVersion Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00018" />
+    <PackageVersion Include="MailKit" Version="4.18.2" />
     <PackageVersion Include="Markdig" Version="1.5.1" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <PackageVersion Include="MimeKit" Version="4.18.2" />
     <PackageVersion Include="NodaTime" Version="3.3.7" />
     <PackageVersion Include="NLayer" Version="3.0.0" />
     <PackageVersion Include="NLog" Version="6.2.2" />
@@ -65,6 +67,7 @@
     <PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Email.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Email.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Features" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.FileStorage.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.FileStorage.AzureBlob" Version="$(OrchardCoreVersion)" />

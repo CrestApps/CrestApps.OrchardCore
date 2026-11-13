@@ -17,4 +17,10 @@ public class MessagingLineEndpointViewModel
     /// </summary>
     [BindNever]
     public string ServedCapabilities { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display names of those channels, for the card's wording.
+    /// </summary>
+    [BindNever]
+    public string ChannelNames { get; set; }
 }

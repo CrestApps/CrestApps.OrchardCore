@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Omnichannel.Automation</RootNamespace>
+    <Title>CrestApps OrchardCore Omnichannel Automation Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The channel-neutral engine of automated (AI) messaging conversations for CrestApps OrchardCore Omnichannel:
+      the opening message of an automated activity, the reply loop with its should-respond gate, the conclusion
+      with dispositions and lead conversion, the handoff to a person or a queue, the entry-point AI starter, the
+      owed-reply recovery and the cadence follow-ups. A messaging channel plugs in through IAutomatedMessagingChannel.
+    </Description>
+    <PackageTags>$(PackageTags) Omnichannel Automation AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Omnichannel.Email" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.Flows.Core" />
+    <PackageReference Include="CrestApps.Core.Support" />
+    <PackageReference Include="YesSql.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
+  </ItemGroup>
+
+</Project>

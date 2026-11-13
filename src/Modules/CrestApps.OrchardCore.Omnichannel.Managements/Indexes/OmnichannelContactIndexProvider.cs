@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -50,7 +51,10 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
 
         var contactMethods = _contactMethods.Get(contact);
 
-        index.PrimaryEmailAddress = TruncateOrNull(contactMethods.GetPrimaryEmailAddress(), 255);
+        var primaryEmailAddress = contactMethods.GetPrimaryEmailAddress();
+
+        index.PrimaryEmailAddress = TruncateOrNull(primaryEmailAddress, 255);
+        index.NormalizedPrimaryEmailAddress = TruncateOrNull(OmnichannelEmailAddress.Normalize(primaryEmailAddress), 255);
 
         if (contactMethods.GetFirstPhoneNumber(ContactPhoneTypes.Cell) is { } cellPhoneNumber)
         {

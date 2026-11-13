@@ -27,6 +27,11 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     public string ServiceAddress { get; set; }
 
     /// <summary>
+    /// Gets or sets the subject line sent to every recipient, on a channel that supports one.
+    /// </summary>
+    public string Subject { get; set; }
+
+    /// <summary>
     /// Gets or sets the message body sent to every recipient.
     /// </summary>
     public string Body { get; set; }

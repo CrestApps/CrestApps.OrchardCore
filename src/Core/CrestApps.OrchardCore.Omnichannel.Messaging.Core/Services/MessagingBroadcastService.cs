@@ -96,7 +96,7 @@ public sealed class MessagingBroadcastService : IMessagingBroadcastService
             ConsentContactKind = ConsentContactKinds.Contact,
             SenderAddress = broadcast.ServiceAddress,
             ActorId = broadcast.OwnerAgentId,
-            Template = new OutreachTemplate { Body = broadcast.Body },
+            Template = new OutreachTemplate { Subject = broadcast.Subject, Body = broadcast.Body },
             Sent = broadcast.SentCount,
             Failed = broadcast.FailedCount,
             Skipped = broadcast.SkippedCount,

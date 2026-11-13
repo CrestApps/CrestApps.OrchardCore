@@ -1,9 +1,9 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -78,10 +78,13 @@ public sealed class MessagingOutbox : IMessagingOutbox
             return 0;
         }
 
-        var candidates = await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
-                index => index.Channel.IsIn(channelNames) && !index.IsInbound,
+        // Read from the index of waiting messages, which holds nothing else. Taking the oldest outbound messages and
+        // filtering them afterwards (as an earlier revision did) stopped seeing any retry once a tenant had sent more
+        // messages than one batch holds.
+        var candidates = await _session.Query<OmnichannelMessage, MessagingOutboxIndex>(
+                index => index.Channel.IsIn(channelNames) && index.NextAttemptUtc <= now,
                 collection: OmnichannelConstants.CollectionName)
-            .OrderBy(index => index.CreatedUtc)
+            .OrderBy(index => index.NextAttemptUtc)
             .Take(Math.Max(1, _options.OutboxBatchSize))
             .ListAsync(cancellationToken);
 
@@ -125,8 +128,10 @@ public sealed class MessagingOutbox : IMessagingOutbox
             attempted++;
 
             // A picture message is re-sent with fresh links: the ones the first attempt carried may have expired.
-            var mediaUrls = await BuildMediaUrlsAsync(message, cancellationToken);
+            var mediaUrls = await BuildMediaUrlsAsync(channel, message, cancellationToken);
 
+            // The retry carries everything the first attempt did, the subject and the thread included, so the
+            // contact receives the same message rather than a stripped-down copy of it.
             var dispatch = mediaUrls is null
                 ? MessageDispatchResult.Failed("The site has no public address the provider could download the pictures from. Set the site's base URL.")
                 : await channel.SendAsync(
@@ -134,15 +139,25 @@ public sealed class MessagingOutbox : IMessagingOutbox
                     {
                         ServiceAddress = message.ServiceAddress,
                         ContactAddress = message.CustomerAddress,
+                        ConversationId = message.ConversationId,
+                        Purpose = state.Purpose,
+                        Subject = message.GetSubject(),
                         Body = message.Content,
                         MediaUrls = mediaUrls,
+                        Attachments = message.GetAttachments().ToList(),
                     },
                     cancellationToken);
 
-            state.Attempts += 1;
-
-            if (dispatch.Succeeded)
+            if (dispatch.IsDeferred)
             {
+                // Still held back: the message moves to its new turn and keeps its retries.
+                state.NextAttemptUtc = dispatch.RetryAfterUtc;
+                state.LastError = dispatch.GetErrorText();
+                message.ErrorCode = state.LastError;
+            }
+            else if (dispatch.Succeeded)
+            {
+                state.Attempts += 1;
                 state.NextAttemptUtc = null;
                 state.LastError = null;
 
@@ -155,6 +170,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
             }
             else
             {
+                state.Attempts += 1;
                 state.LastError = dispatch.GetErrorText();
 
                 if (OutboundDeliveryState.CanRetry(state.Attempts, dispatch.ErrorCode))
@@ -198,9 +214,14 @@ public sealed class MessagingOutbox : IMessagingOutbox
         return accepted;
     }
 
-    private async Task<IList<string>> BuildMediaUrlsAsync(OmnichannelMessage message, CancellationToken cancellationToken)
+    private async Task<IList<string>> BuildMediaUrlsAsync(IMessagingChannel channel, OmnichannelMessage message, CancellationToken cancellationToken)
     {
         var urls = message.MediaReferences?.Where(url => !string.IsNullOrWhiteSpace(url)).ToList() ?? [];
+
+        if (!channel.Capabilities.Attachments.DeliveredAsLinks)
+        {
+            return urls;
+        }
 
         foreach (var attachment in message.GetAttachments())
         {

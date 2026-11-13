@@ -266,9 +266,18 @@ public sealed class MessagingBroadcastOutreachTests
 
         var conversations = new Mock<IMessagingConversationService>();
         conversations
-            .Setup(value => value.SendDirectAsync("SMS", "+15553334444", It.IsAny<string>(), "We are closed on Friday.", "agent-1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string _, string _, string to, string _, string _, CancellationToken _) =>
+            .Setup(value => value.SendDirectAsync(
+                It.Is<MessagingDirectSendRequest>(request =>
+                    request.Channel == "SMS" &&
+                    request.ServiceAddress == "+15553334444" &&
+                    request.Body == "We are closed on Friday." &&
+                    request.ActingAgentId == "agent-1" &&
+                    request.Purpose == MessagingOutboundPurpose.Broadcast),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MessagingDirectSendRequest request, CancellationToken _) =>
             {
+                var to = request.ContactAddress;
+
                 if (to == refuse)
                 {
                     return MessagingSendResult.Failed("blocked");

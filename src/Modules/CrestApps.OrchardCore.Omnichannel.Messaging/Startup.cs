@@ -216,6 +216,7 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<MessagingConversationIndexProvider>();
         services.AddIndexProvider<MessageTemplateIndexProvider>();
         services.AddIndexProvider<MessagingBroadcastIndexProvider>();
+        services.AddIndexProvider<MessagingOutboxIndexProvider>();
         services.AddDataMigration<MessagingMigrations>();
 
         // Where a number's messages go used to be saved on the number; it moves onto an entry point for its channel.
@@ -246,7 +247,8 @@ public sealed class Startup : StartupBase
             .AddScoped<MessagingWorkspaceBuilder>()
             .AddSingleton<MessagingAttentionCountCache>()
             .AddScoped<MessagingContactSearch>()
-            .AddScoped<MessagingTransferTargets>();
+            .AddScoped<MessagingTransferTargets>()
+            .AddScoped<MessagingSenderLines>();
 
         // Permissions.
         services.AddPermissionProvider<MessagingPermissionProvider>();

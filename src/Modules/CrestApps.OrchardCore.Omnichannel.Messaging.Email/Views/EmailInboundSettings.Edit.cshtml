@@ -1,0 +1,78 @@
+@model EmailInboundSettingsViewModel
+
+<p class="text-muted">@T["Email providers that can post inbound mail call these addresses for the messaging workspace's email addresses. Each address carries the site's secret key, so keep it private. Addresses that read their mailbox over IMAP need none of this."]</p>
+
+@if (Model.WebhookUrls.Count == 0)
+{
+    <div class="alert alert-info">@T["Save this page to create the webhook key; the webhook addresses then show here."]</div>
+}
+else
+{
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>@T["Provider"]</th>
+                <th>@T["Webhook address"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var (provider, url) in Model.WebhookUrls)
+            {
+                <tr>
+                    <td class="text-nowrap">@provider</td>
+                    <td class="text-break"><code>@url</code></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (Model.DeliveryEventUrls.Count > 0)
+{
+    <h6 class="mt-4">@T["Bounce and complaint webhooks"]</h6>
+    <p class="text-muted">@T["Point your sending provider's event webhook here (SendGrid Event Webhook, Mailgun webhooks, Postmark bounce and spam complaint webhooks, an Amazon SES bounce and complaint SNS topic). A hard bounce or a spam complaint takes the address off every list; a block pauses the sending address; deferrals slow mail to that receiving domain. The same key protects them."]</p>
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>@T["Provider"]</th>
+                <th>@T["Webhook address"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var (provider, url) in Model.DeliveryEventUrls)
+            {
+                <tr>
+                    <td class="text-nowrap">@provider</td>
+                    <td class="text-break"><code>@url</code></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="RegenerateWebhookKey" />
+        <label class="form-check-label" asp-for="RegenerateWebhookKey">@T["Create a new webhook key"]</label>
+        <span class="hint dashed">@T["Every provider must then be given the new addresses; calls with the old key are refused."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MailgunSigningKey" class="form-label">@T["Mailgun HTTP webhook signing key"]</label>
+    <input asp-for="MailgunSigningKey" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasMailgunSigningKey ? T["Stored; leave empty to keep it"] : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+    <span class="hint">@T["When set, a Mailgun call must also carry a valid signature. Find it in Mailgun under Sending > Webhooks."]</span>
+    @if (Model.HasMailgunSigningKey)
+    {
+        <div class="form-check mt-1">
+            <input type="checkbox" class="form-check-input" asp-for="ClearMailgunSigningKey" />
+            <label class="form-check-label" asp-for="ClearMailgunSigningKey">@T["Remove the stored signing key"]</label>
+        </div>
+    }
+</div>
+
+<div class="mb-3">
+    <label asp-for="AmazonSnsTopicArns" class="form-label">@T["Allowed Amazon SNS topics"]</label>
+    <textarea asp-for="AmazonSnsTopicArns" class="form-control" rows="2" placeholder="arn:aws:sns:us-east-1:123456789012:inbound-email"></textarea>
+    <span class="hint">@T["One topic ARN per line. When any are listed, Amazon SES mail from another topic is refused. The SES receipt rule's SNS action must use UTF-8 or Base64 encoding so the email is included."]</span>
+</div>
