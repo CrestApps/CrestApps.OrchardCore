@@ -1,0 +1,318 @@
+@using System.Globalization
+@* The themeable BusinessDocument shape. It takes the document as Model.Document; a theme overrides it for one kind of
+   document with BusinessDocument-{Kind}.cshtml. Every value is already formatted, so the view only lays it out. *@
+@{
+    var document = Model.Document as BusinessDocument;
+
+    string AlignClass(BusinessDocumentAlignment alignment)
+    {
+        return alignment switch
+        {
+            BusinessDocumentAlignment.Center => "text-center",
+            BusinessDocumentAlignment.End => "text-end",
+            _ => null,
+        };
+    }
+
+    string CellOf(BusinessDocumentRow row, BusinessDocumentColumn column)
+    {
+        return column.Name is not null && row.Cells is not null && row.Cells.TryGetValue(column.Name, out var value) ? value : null;
+    }
+
+    bool HasContent(BusinessDocumentParty party)
+    {
+        return party is not null &&
+            (!string.IsNullOrWhiteSpace(party.Name) ||
+            (party.Lines?.Any(line => !string.IsNullOrWhiteSpace(line)) ?? false) ||
+            !string.IsNullOrWhiteSpace(party.TaxId) ||
+            !string.IsNullOrWhiteSpace(party.Email) ||
+            !string.IsNullOrWhiteSpace(party.Phone) ||
+            !string.IsNullOrWhiteSpace(party.Website));
+    }
+}
+
+@if (document is not null)
+{
+    using (BusinessDocumentCulture.Use(document.Culture))
+    {
+        var accent = BusinessDocumentStyle.TryNormalizeAccentColor(document.AccentColor, out var accentColor) ? accentColor : null;
+        var kindName = BusinessDocumentStyle.GetAlternateName(document.Kind)?.ToLowerInvariant();
+        var paperSize = BusinessDocumentStyle.GetPaperSize(document.PaperSize) == BusinessDocumentPaperSize.A4 ? "A4" : "letter";
+        var columns = (document.Columns ?? []).Where(column => column is not null).ToList();
+        var rows = (document.Rows ?? []).Where(row => row is not null).ToList();
+        var totals = (document.Totals ?? []).Where(total => total is not null).ToList();
+        var fields = (document.Fields ?? []).Where(field => field is not null && (!string.IsNullOrWhiteSpace(field.Label) || !string.IsNullOrWhiteSpace(field.Value))).ToList();
+        var parties = new List<(string Title, BusinessDocumentParty Party)>();
+
+        if (HasContent(document.Recipient))
+        {
+            parties.Add((document.RecipientTitle ?? T["Bill to"].Value, document.Recipient));
+        }
+
+        if (HasContent(document.ShipTo))
+        {
+            parties.Add((document.ShipToTitle ?? T["Ship to"].Value, document.ShipTo));
+        }
+
+        var hasStatus = !string.IsNullOrWhiteSpace(document.Status?.Label);
+        var partyColumnClass = parties.Count + (hasStatus ? 1 : 0) > 2 ? "col-md-4" : "col-md-6";
+        var hasTable = columns.Count > 0 && rows.Count > 0;
+        var labelColumns = Math.Max(1, columns.Count - 1);
+        var contacts = new[] { document.Issuer?.Email, document.Issuer?.Phone, document.Issuer?.Website }.Where(value => !string.IsNullOrWhiteSpace(value)).ToList();
+
+        <style>
+            .business-document {
+                position: relative;
+                overflow: hidden;
+            }
+
+            .business-document > .card-body {
+                position: relative;
+                z-index: 1;
+            }
+
+            .business-document .business-document-logo {
+                max-height: 64px;
+                max-width: 220px;
+            }
+
+            .business-document .business-document-watermark {
+                position: absolute;
+                top: 45%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(-30deg);
+                font-size: 6rem;
+                font-weight: 700;
+                color: rgba(156, 163, 175, 0.2);
+                text-transform: uppercase;
+                white-space: nowrap;
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            .business-document .business-document-accent {
+                color: var(--business-document-accent);
+            }
+
+            .business-document thead.business-document-accent th {
+                border-bottom: 2px solid var(--business-document-accent);
+            }
+
+            .business-document .business-document-text {
+                white-space: pre-line;
+            }
+
+            .business-document .business-document-subtotal > td {
+                border-top: 1px solid var(--bs-secondary-color);
+            }
+
+            @@media print {
+                .business-document {
+                    border: 0;
+                    box-shadow: none;
+                }
+
+                .business-document > .card-body {
+                    padding: 0;
+                }
+            }
+
+            @@page {
+                size: @paperSize;
+            }
+        </style>
+
+        <div class="card business-document @(kindName is null ? null : "business-document-" + kindName)" style="@(accent is null ? null : "--business-document-accent: " + accent)">
+            @if (!string.IsNullOrWhiteSpace(document.Watermark))
+            {
+                <div class="business-document-watermark" aria-hidden="true">@document.Watermark</div>
+            }
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+                    <div>
+                        @if (BusinessDocumentStyle.IsSafeImageUrl(document.LogoUrl))
+                        {
+                            <img class="business-document-logo mb-2" src="@document.LogoUrl.Trim()" alt="@document.Issuer?.Name" />
+                        }
+                        @if (!string.IsNullOrWhiteSpace(document.Issuer?.Name))
+                        {
+                            <h3 class="mb-1">@document.Issuer.Name</h3>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(document.Title))
+                        {
+                            <div class="text-muted @(accent is null ? null : "business-document-accent")">@document.Title</div>
+                        }
+                        @foreach (var line in (document.Issuer?.Lines ?? []).Where(line => !string.IsNullOrWhiteSpace(line)))
+                        {
+                            <div class="text-muted small">@line</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(document.Issuer?.TaxId))
+                        {
+                            <div class="text-muted small">@T["Tax ID: {0}", document.Issuer.TaxId]</div>
+                        }
+                    </div>
+                    <div class="text-end">
+                        @if (!string.IsNullOrWhiteSpace(document.Number))
+                        {
+                            <div class="h5 mb-1">@document.Number</div>
+                        }
+                        @foreach (var field in fields)
+                        {
+                            <div><strong>@field.Label:</strong> @field.Value</div>
+                        }
+                    </div>
+                </div>
+
+                @if (parties.Count > 0 || hasStatus)
+                {
+                    <div class="row mb-4">
+                        @foreach (var (title, party) in parties)
+                        {
+                            <div class="@partyColumnClass">
+                                <h6 class="text-muted">@title</h6>
+                                @if (!string.IsNullOrWhiteSpace(party.Name))
+                                {
+                                    <div>@party.Name</div>
+                                }
+                                @foreach (var line in (party.Lines ?? []).Where(line => !string.IsNullOrWhiteSpace(line)))
+                                {
+                                    <div>@line</div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(party.TaxId))
+                                {
+                                    <div class="small text-muted">@T["Tax ID: {0}", party.TaxId]</div>
+                                }
+                                @foreach (var contact in new[] { party.Email, party.Phone, party.Website }.Where(value => !string.IsNullOrWhiteSpace(value)))
+                                {
+                                    <div>@contact</div>
+                                }
+                            </div>
+                        }
+                        @if (hasStatus)
+                        {
+                            <div class="@partyColumnClass text-md-end ms-auto">
+                                <h6 class="text-muted">@T["Status"]</h6>
+                                <span class="badge text-bg-@BusinessDocumentStyle.GetBootstrapColor(document.Status.Tone)">@document.Status.Label</span>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (hasTable)
+                {
+                    var weights = columns.Sum(column => column.Width > 0 ? column.Width : 0);
+
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead class="@(accent is null ? null : "business-document-accent")">
+                                <tr>
+                                    @foreach (var column in columns)
+                                    {
+                                        <th scope="col" class="@AlignClass(column.Alignment)" style="@(column.Width > 0 && weights > 0 ? "width: " + Math.Round(column.Width / weights * 100).ToString(CultureInfo.InvariantCulture) + "%" : null)">@column.Title</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in rows)
+                                {
+                                    var spanning = CellOf(row, columns[0]) ?? row.Cells?.Values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+
+                                    if (row.Kind == BusinessDocumentRowKind.Section)
+                                    {
+                                        <tr class="table-light">
+                                            <th scope="rowgroup" colspan="@columns.Count">
+                                                @spanning
+                                                @if (!string.IsNullOrWhiteSpace(row.Detail))
+                                                {
+                                                    <div class="small text-muted fw-normal business-document-text">@row.Detail</div>
+                                                }
+                                            </th>
+                                        </tr>
+                                    }
+                                    else if (row.Kind == BusinessDocumentRowKind.Note)
+                                    {
+                                        <tr>
+                                            <td colspan="@columns.Count" class="small text-muted business-document-text">@spanning</td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr class="@(row.Kind == BusinessDocumentRowKind.Subtotal ? "business-document-subtotal fw-semibold" : null)">
+                                            @for (var index = 0; index < columns.Count; index++)
+                                            {
+                                                <td class="@AlignClass(columns[index].Alignment)">
+                                                    <span class="business-document-text">@CellOf(row, columns[index])</span>
+                                                    @if (index == 0 && !string.IsNullOrWhiteSpace(row.Detail))
+                                                    {
+                                                        <div class="small text-muted fw-normal business-document-text">@row.Detail</div>
+                                                    }
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                            @if (totals.Count > 0)
+                            {
+                                <tfoot>
+                                    @foreach (var total in totals)
+                                    {
+                                        <tr class="@(total.Muted && !total.Emphasized ? "text-muted" : null)">
+                                            <th scope="row" class="text-end @(total.Emphasized ? null : "fw-normal")" colspan="@labelColumns">@total.Label</th>
+                                            <th class="text-end @(total.Emphasized ? (accent is null ? null : "business-document-accent") : "fw-normal")">@total.Value</th>
+                                        </tr>
+                                    }
+                                </tfoot>
+                            }
+                        </table>
+                    </div>
+                }
+                else if (totals.Count > 0)
+                {
+                    <table class="table w-auto ms-auto">
+                        <tbody>
+                            @foreach (var total in totals)
+                            {
+                                <tr class="@(total.Muted && !total.Emphasized ? "text-muted" : null)">
+                                    <th scope="row" class="text-end @(total.Emphasized ? null : "fw-normal")">@total.Label</th>
+                                    <td class="text-end @(total.Emphasized ? "fw-bold" : null)">@total.Value</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+
+                @foreach (var documentSection in (document.Sections ?? []).Where(item => item is not null && (!string.IsNullOrWhiteSpace(item.Title) || !string.IsNullOrWhiteSpace(item.Text))))
+                {
+                    <div class="mt-3">
+                        @if (!string.IsNullOrWhiteSpace(documentSection.Title))
+                        {
+                            <h6 class="text-muted">@documentSection.Title</h6>
+                        }
+                        <div class="business-document-text">@documentSection.Text</div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(document.Footer) || contacts.Count > 0)
+                {
+                    <hr />
+                    <div class="text-muted small">
+                        @if (!string.IsNullOrWhiteSpace(document.Footer))
+                        {
+                            <div class="business-document-text">@document.Footer</div>
+                        }
+                        @if (contacts.Count > 0)
+                        {
+                            <div>
+                                @foreach (var contact in contacts)
+                                {
+                                    <span class="me-3">@contact</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}

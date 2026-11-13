@@ -48,6 +48,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Outreach.Abstractions/CrestApps.OrchardCore.Outreach.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Receipts.Abstractions/CrestApps.OrchardCore.Receipts.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.BusinessDocuments.Abstractions/CrestApps.OrchardCore.BusinessDocuments.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Subscriptions.Abstractions/CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Taxation.Abstractions/CrestApps.OrchardCore.Taxation.Abstractions.csproj" />
@@ -101,6 +102,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Products.Core/CrestApps.OrchardCore.Products.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Pdf.Core/CrestApps.OrchardCore.Pdf.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Receipts.Core/CrestApps.OrchardCore.Receipts.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.BusinessDocuments.Core/CrestApps.OrchardCore.BusinessDocuments.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Roles.Core/CrestApps.OrchardCore.Roles.Core.csproj" />
@@ -232,6 +234,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Products.Elasticsearch/CrestApps.OrchardCore.Products.Elasticsearch.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Products.Lucene/CrestApps.OrchardCore.Products.Lucene.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Receipts/CrestApps.OrchardCore.Receipts.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.BusinessDocuments/CrestApps.OrchardCore.BusinessDocuments.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Stripe/CrestApps.OrchardCore.Stripe.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Subscriptions/CrestApps.OrchardCore.Subscriptions.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Taxation/CrestApps.OrchardCore.Taxation.csproj" />
