@@ -1,0 +1,25 @@
+@model SimpleQuestionViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="MinWords" class="ocat-label">@T["Fewest words"]</label>
+    <div class="ocat-end ocat-end-sm">
+        <input asp-for="MinWords" type="number" min="0" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxWords">
+    <label asp-for="MaxWords" class="ocat-label">@T["Most words"]</label>
+    <div class="ocat-end ocat-end-sm">
+        <input asp-for="MaxWords" type="number" min="0" class="form-control" />
+        <span asp-validation-for="MaxWords"></span>
+        <span class="hint">@T["Zero for no limit."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="GraderGuidance" class="ocat-label">@T["Guidance for graders"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="GraderGuidance" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["What a good answer covers. Graders see it; learners never do."]</span>
+    </div>
+</div>

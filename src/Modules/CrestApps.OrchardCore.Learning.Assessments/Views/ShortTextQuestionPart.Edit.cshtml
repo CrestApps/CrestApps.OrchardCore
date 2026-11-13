@@ -1,0 +1,19 @@
+@model SimpleQuestionViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="AcceptedAnswers">
+    <label asp-for="AcceptedAnswers" class="ocat-label">@T["Accepted answers"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="AcceptedAnswers" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="AcceptedAnswers"></span>
+        <span class="hint">@T["One a line. Spaces at the ends and doubled spaces are ignored."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end ocat-start-offset">
+        <div class="form-check">
+            <input asp-for="CaseSensitive" type="checkbox" class="form-check-input" />
+            <label asp-for="CaseSensitive" class="form-check-label">@T["Letter case must match"]</label>
+        </div>
+    </div>
+</div>
