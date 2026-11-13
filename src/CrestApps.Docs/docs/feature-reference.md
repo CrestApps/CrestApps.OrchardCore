@@ -291,6 +291,8 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.PointOfSale` | Point of Sale | [Point of Sale](./modules/point-of-sale) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
 | `CrestApps.OrchardCore.Receipts` | Receipts | [Receipts](./modules/receipts) |
+| `CrestApps.OrchardCore.BusinessDocuments` | Business Documents | [Business Documents](./modules/business-documents) |
+| `CrestApps.OrchardCore.BusinessDocuments.Pdf` | Business Documents PDF | [Business Documents](./modules/business-documents#the-pdf) |
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Taxation.TaxJar` | TaxJar | [Taxation](./modules/taxation#taxjar) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
@@ -359,6 +361,7 @@ Orchard Core's settings screen (`/Admin/Settings/{groupId}`) authorizes `Setting
 | `transactions` | `ManageTransactionSettings` | Transaction Reminders (`CrestApps.OrchardCore.Transactions.Notification`) |
 | `paylater` | `ManageTransactionSettings` | Pay Later |
 | `receipts` | `ManageReceiptSettings` | Receipts |
+| `number-series` | `ManageNumberSeries` | Business Documents |
 | `inventory` | `ManageInventory` | Inventory |
 | `shipping` | `ManageShipping` | Shipping |
 | `taxjar` | `ManageTaxation` | TaxJar (`CrestApps.OrchardCore.Taxation.TaxJar`) |

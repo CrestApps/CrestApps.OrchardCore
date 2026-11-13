@@ -159,7 +159,9 @@ Invoices and receipts share one set of branding settings.
 | **Contact phone** | A phone number printed at the bottom. |
 | **Website** | A website address printed at the bottom. |
 | **Footer text** | Free text printed at the bottom, such as a thank-you note or your return policy. |
-| **Show a test-payment badge for test-mode payments** | Marks receipts for payments made in a payment provider's test mode with a **Test payment** badge. On by default. |
+| **Show a test-payment badge for test-mode payments** | Prints **Test payment** across receipts for payments made in a payment provider's test mode. On by default. |
+
+Invoices and receipts are printed with the document template for **Receipts**, when there is one. The template adds an accent color and a paper size, and its logo and footer when these settings leave them empty. See [Document Templates and Number Series](document-templates-and-number-series.md).
 
 ## Make sure links point at your site
 
@@ -171,3 +173,4 @@ Set it before you rely on pay links. Without it, a link copied from the invoice 
 
 - [Transactions](transactions.md): the report, recording payments and reminder settings.
 - [Payments and Refunds](payments-and-refunds.md): refunding a payment.
+- [Document Templates and Number Series](document-templates-and-number-series.md): the look of printed documents and how their numbers are written.

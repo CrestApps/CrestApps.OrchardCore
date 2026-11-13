@@ -999,12 +999,16 @@ Deferred work (`DeferredWork.Add`, span `crestapps.deferred.<name>` linked to th
 
 ### Logging
 
-Commerce owns EventIds 12000-12999, split by area: checkout 12000-12099, Stripe 12100-12199, subscriptions 12200-12299, orders 12300-12399, marketplace 12400-12499, shipping 12500-12599, taxation 12600-12699, products 12700-12799, bookings and pay later 12800-12899 (others unassigned).
+Commerce owns EventIds 12000-12999, split by area: checkout 12000-12099, Stripe 12100-12199, subscriptions 12200-12299, orders 12300-12399, marketplace 12400-12499, shipping 12500-12599, taxation 12600-12699, products 12700-12799, bookings and pay later 12800-12899, business documents 12900-12999.
 
 | EventId | Class | Level | Message |
 |---|---|---|---|
 | 12000 | `CheckoutLog.ReconciliationSwept` (Checkout module) | Information | The checkout reconciliation sweep checked `{Sessions}` waiting checkouts: `{Completed}` completed, `{Failed}` failed to reconcile, `{Expired}` abandoned ones expired; the oldest had waited `{OldestPendingSeconds}` seconds. (only when there was something to do) |
 | 12200 | `SubscriptionsLog.TenantProvisioned` (Subscriptions.Core) | Information | Provisioning job '`{JobId}`' created its site on attempt `{Attempt}` in `{ElapsedSeconds}` seconds. |
+| 12900 | `BusinessDocumentPdfTelemetry.FontFallbackUsed` (Business Documents) | Warning | No TrueType font could be used for business document PDFs, so they use the built-in Helvetica font. Logged once. |
+| 12901 | `BusinessDocumentPdfTelemetry.LogoNotDrawn` (Business Documents) | Warning | The logo of a business document could not be drawn in its PDF, which is written without it. |
+
+Business document PDFs count `crestapps.business_document.pdf.font_fallbacks` (Counter, `{document}`, meter `CrestApps.OrchardCore.BusinessDocuments`): the PDFs written with the built-in Helvetica font, which shows Latin-1 text only.
 
 New log scopes: `CheckoutSessionId` (reconciliation sweep, per session), `StripeEventId`/`StripeEventType` (webhook), `ProvisioningJobId` (tenant provisioning), `InstallmentPlanId` (installment sweep).
 
