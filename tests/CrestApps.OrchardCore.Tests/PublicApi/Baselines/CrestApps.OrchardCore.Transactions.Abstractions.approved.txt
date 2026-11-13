@@ -371,6 +371,10 @@ namespace CrestApps.OrchardCore.Transactions.Services
         System.Threading.Tasks.Task<bool> SendReminderAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> SendUpcomingReminderAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITransactionRenewalFilter
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Transactions.Services.TransactionRenewalDecision> DecideAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITransactionSettlementService
     {
         System.Threading.Tasks.Task<bool> ApplyAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Transactions.Models.PaymentAttempt> attempts, string settlementReference, System.Threading.CancellationToken cancellationToken = default);
@@ -461,6 +465,12 @@ namespace CrestApps.OrchardCore.Transactions.Services
         public string Search { get; set; }
         public string Source { get; set; }
         public CrestApps.OrchardCore.Transactions.Models.TransactionStatus? Status { get; set; }
+    }
+    public enum TransactionRenewalDecision
+    {
+        Renew = 0,
+        Hold = 1,
+        Stop = 2,
     }
     public sealed class TransactionStatementRequest
     {
