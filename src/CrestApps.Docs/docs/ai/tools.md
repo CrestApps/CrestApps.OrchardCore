@@ -131,6 +131,8 @@ When `createOrUpdateContentItem` is available alongside recipe-backed content sc
 | `removeContentPartDefinition` | Removes the content part definition. |
 | `applyContentTypeDefinitionFromRecipe` | Creates a new content type definition or updates an existing one. |
 
+`applyContentTypeDefinitionFromRecipe` needs **Edit content types** and `createOrUpdateWorkflow` needs **Manage workflows**, not **Manage recipes**, so each imports only its own recipe steps (`ContentDefinition` and `ReplaceContentDefinition`, or `WorkflowType`) and refuses a recipe with a script or file directive such as `[js: ...]` or `[file: ...]` in any value. Orchard Core evaluates those directives before a step runs, and they can read the site's configuration or change content. Use `importOrchardCoreRecipe`, which needs **Manage recipes**, for a recipe that needs them.
+
 ### Feature management tools
 
 **Available when:** `CrestApps.OrchardCore.AI.Agent` + `OrchardCore.Features`

@@ -22,6 +22,13 @@ internal sealed class OrchardCoreAzureAISearchDataSourceContentManager : IDataSo
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
+            // The filter must only narrow the data source clause: one that closes its parentheses early or leaves a
+            // literal open could add an "or" that reads the chunks of every other data source in the index.
+            if (!ODataFilter.IsSelfContained(filter))
+            {
+                throw new ArgumentException("The data source filter has unbalanced parentheses or an unclosed string literal.", nameof(filter));
+            }
+
             odataFilter = $"({odataFilter}) and ({filter})";
         }
 

@@ -29,7 +29,7 @@
           "properties": {
             "AttemptPolicies": {
               "type": "object",
-              "description": "Overrides of attempt policies by name. This module registers ai-chat-document-sessions: the upload sessions a signed-in user may start (30 an hour by default). Only the values given change.",
+              "description": "Overrides of attempt policies by name. This module registers ai-chat-document-uploads: the chat session document uploads a signed-in user may make, to a new or an existing session (60 an hour by default). Only the values given change.",
               "additionalProperties": {
                 "type": "object",
                 "additionalProperties": false,

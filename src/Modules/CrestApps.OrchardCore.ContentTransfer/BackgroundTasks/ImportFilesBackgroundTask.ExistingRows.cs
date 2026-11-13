@@ -15,11 +15,13 @@ public sealed partial class ImportFilesBackgroundTask
     /// type is refused and leaves that item exactly as it was.
     /// </summary>
     /// <remarks>
-    /// The items are first read with <see cref="VersionOptions.Latest"/>, which changes nothing. Only the items of the
-    /// import's type are then asked for with <see cref="VersionOptions.DraftRequired"/>, which unpublishes an item whose
-    /// type is not versionable and adds a draft to one whose type is: asking for every named item that way changed the
-    /// items of the rows it then refused. Ids are matched without regard to case, as a case-insensitive database
-    /// collation matches them, so an id in another case can't pass for a new item and take the existing one's id.
+    /// The items are first read with <see cref="VersionOptions.Latest"/>, which changes nothing. An item of the import's
+    /// type whose latest version is a draft is edited as it is. Only the published items of the import's type are then
+    /// asked for with <see cref="VersionOptions.DraftRequired"/>, which unpublishes an item whose type is not versionable
+    /// and adds a draft to one whose type is (and returns nothing for an item that is already a draft): asking for every
+    /// named item that way changed the items of the rows it then refused. Ids are matched without regard to case, as a
+    /// case-insensitive database collation matches them, so an id in another case can't pass for a new item and take
+    /// the existing one's id.
     /// </remarks>
     internal static async Task ImportExistingRowsAsync(
         ContentTransferEntry entry,
@@ -39,25 +41,31 @@ public sealed partial class ImportFilesBackgroundTask
         }
 
         var refusedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var acceptedIds = new List<string>();
+        var publishedIds = new List<string>();
+        var existingContentItems = new Dictionary<string, ContentItem>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var item in await contentManager.GetAsync(existingRows.Keys, VersionOptions.Latest))
         {
-            if (IsSameContentType(item, entry))
-            {
-                acceptedIds.Add(item.ContentItemId);
-            }
-            else
+            if (!IsSameContentType(item, entry))
             {
                 refusedIds.Add(item.ContentItemId);
             }
+            else if (item.Published)
+            {
+                publishedIds.Add(item.ContentItemId);
+            }
+            else
+            {
+                // The latest version is already a draft, and it is the one to edit. Orchard's DraftRequired read
+                // returns only the items that were published, so asking it for this one would return nothing and the
+                // row would create a second item with the same id.
+                existingContentItems.TryAdd(item.ContentItemId, item);
+            }
         }
 
-        var existingContentItems = new Dictionary<string, ContentItem>(StringComparer.OrdinalIgnoreCase);
-
-        if (acceptedIds.Count > 0)
+        if (publishedIds.Count > 0)
         {
-            foreach (var item in await contentManager.GetAsync(acceptedIds, VersionOptions.DraftRequired))
+            foreach (var item in await contentManager.GetAsync(publishedIds, VersionOptions.DraftRequired))
             {
                 existingContentItems.TryAdd(item.ContentItemId, item);
             }

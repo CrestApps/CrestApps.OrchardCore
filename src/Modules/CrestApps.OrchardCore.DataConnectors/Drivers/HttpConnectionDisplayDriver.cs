@@ -161,7 +161,11 @@ internal sealed class HttpConnectionDisplayDriver : DisplayDriver<DataConnection
         // A stored secret was given for one host and one way of signing in. When the connection now sends its requests or
         // its token requests to another host, or signs in another way, the secrets are dropped and must be entered again,
         // so an edit can't hand them to a new server.
-        if (SendsSecretsElsewhere(connection.GetOrCreate<HttpConnectionSettings>(), model.BaseUrl, model.TokenUrl, model.Authority, model.AuthenticationType, model.GrantType))
+        var dropped = SendsSecretsElsewhere(connection.GetOrCreate<HttpConnectionSettings>(), model.BaseUrl, model.TokenUrl, model.Authority, model.AuthenticationType, model.GrantType);
+        var droppedPassword = dropped && _secretManager.Has(connection, HttpAuthenticationSecrets.Password);
+        var droppedClientSecret = dropped && _secretManager.Has(connection, HttpAuthenticationSecrets.ClientSecret);
+
+        if (dropped)
         {
             foreach (var secret in new[] { HttpAuthenticationSecrets.ApiKey, HttpAuthenticationSecrets.Password, HttpAuthenticationSecrets.BearerToken, HttpAuthenticationSecrets.ClientSecret })
             {
@@ -196,17 +200,37 @@ internal sealed class HttpConnectionDisplayDriver : DisplayDriver<DataConnection
         _secretManager.Set(connection, HttpAuthenticationSecrets.BearerToken, model.BearerToken?.Trim());
         _secretManager.Set(connection, HttpAuthenticationSecrets.ClientSecret, model.ClientSecret);
 
+        ValidateSecrets(connection, model, droppedPassword, droppedClientSecret, context.Updater.ModelState);
+
+        return Edit(connection, context);
+    }
+
+    private void ValidateSecrets(DataConnection connection, HttpConnectionViewModel model, bool droppedPassword, bool droppedClientSecret, Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary modelState)
+    {
         if (model.AuthenticationType == HttpAuthenticationType.ApiKey && !_secretManager.Has(connection, HttpAuthenticationSecrets.ApiKey))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApiKey), S["The API key is required."]);
+            modelState.AddModelError(Prefix, nameof(model.ApiKey), S["The API key is required."]);
         }
 
         if (model.AuthenticationType == HttpAuthenticationType.Bearer && !_secretManager.Has(connection, HttpAuthenticationSecrets.BearerToken))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BearerToken), S["The bearer token is required."]);
+            modelState.AddModelError(Prefix, nameof(model.BearerToken), S["The bearer token is required."]);
         }
 
-        return Edit(connection, context);
+        // A password or client secret the edit dropped, and the connection still signs in with, must be entered again:
+        // without this the connection saved with no secret and failed on its next request.
+        var usesOAuth = model.AuthenticationType is HttpAuthenticationType.OAuth2 or HttpAuthenticationType.OpenIdConnect;
+        var signsInWithPassword = model.AuthenticationType == HttpAuthenticationType.Basic || (usesOAuth && model.GrantType == OAuthGrantType.Password);
+
+        if (droppedPassword && signsInWithPassword && !_secretManager.Has(connection, HttpAuthenticationSecrets.Password))
+        {
+            modelState.AddModelError(Prefix, nameof(model.Password), S["Enter the password again: it was cleared because the connection now sends it to another server or signs in another way."]);
+        }
+
+        if (droppedClientSecret && usesOAuth && !_secretManager.Has(connection, HttpAuthenticationSecrets.ClientSecret))
+        {
+            modelState.AddModelError(Prefix, nameof(model.ClientSecret), S["Enter the client secret again: it was cleared because the connection now sends it to another server or signs in another way."]);
+        }
     }
 
     private static bool Applies(DataConnection connection)

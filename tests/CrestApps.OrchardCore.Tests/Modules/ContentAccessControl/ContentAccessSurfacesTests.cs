@@ -83,34 +83,6 @@ public sealed class ContentAccessSurfacesTests
     }
 
     [Fact]
-    public async Task ASearchPage_WithARestrictedHit_IsStillFull_SoTheNextPageIsOffered()
-    {
-        // Arrange: Orchard's search page shows two hits a page and asks for three, to know whether there is a next page.
-        var search = Search(["r1", "o1", "r2", "o2", "o3", "o4", "o5"]);
-
-        // Act
-        var first = await search.SearchAsync(new global::OrchardCore.Indexing.Models.IndexProfile(), "members", 0, 3);
-        var second = await search.SearchAsync(new global::OrchardCore.Indexing.Models.IndexProfile(), "members", 2, 3);
-
-        // Assert
-        Assert.Equal(["o1", "o2", "o3"], first.ContentItemIds);
-        Assert.Equal(["o3", "o4", "o5"], second.ContentItemIds);
-    }
-
-    [Fact]
-    public async Task ASearchWindow_OfOnlyRestrictedHits_StillShowsThePublicHitsAfterIt()
-    {
-        // Arrange
-        var search = Search(["r1", "r2", "r3", "o1", "o2"]);
-
-        // Act
-        var result = await search.SearchAsync(new global::OrchardCore.Indexing.Models.IndexProfile(), "members", 0, 3);
-
-        // Assert
-        Assert.Equal(["o1", "o2"], result.ContentItemIds);
-    }
-
-    [Fact]
     public async Task TheFeedOfARestrictedList_IsEmptied_ForANonMember()
     {
         // Arrange: Orchard's list feed wrote the restricted container's title into the channel before any item.
@@ -203,24 +175,6 @@ public sealed class ContentAccessSurfacesTests
     private static ClaimsPrincipal Member()
         => new(new ClaimsIdentity([new Claim(ClaimTypes.Role, "Member")], "Test"));
 
-    // A search over the hits, in order, where an id that starts with "r" is a restricted item.
-    private static RestrictedContentSearchService Search(string[] hits)
-    {
-        var inner = new Mock<ISearchService>();
-        inner.Setup(service => service.SearchAsync(It.IsAny<global::OrchardCore.Indexing.Models.IndexProfile>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .ReturnsAsync((global::OrchardCore.Indexing.Models.IndexProfile _, string _, int start, int size) => new SearchResult
-            {
-                Success = true,
-                ContentItemIds = [.. hits.Skip(start).Take(size)],
-                TotalCount = hits.Length,
-            });
-        var contents = new Mock<IContentManager>();
-        contents.Setup(manager => manager.GetAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<VersionOptions>()))
-            .ReturnsAsync((IEnumerable<string> ids, VersionOptions _) => [.. ids.Select(id => id.StartsWith('r') ? Restricted(id) : Open(id))]);
-
-        return new RestrictedContentSearchService(inner.Object, contents.Object, Authorization(), Accessor(_anonymous));
-    }
-
     private static IContentManager Contents()
     {
         var contents = new Mock<IContentManager>();
@@ -229,7 +183,7 @@ public sealed class ContentAccessSurfacesTests
         return contents.Object;
     }
 
-    private static ContentItem Restricted(string id = "restricted")
+    internal static ContentItem Restricted(string id = "restricted")
     {
         var item = new ContentItem { ContentItemId = id, ContentType = "MembersArticle", DisplayText = "Members only" };
 
@@ -238,7 +192,7 @@ public sealed class ContentAccessSurfacesTests
         return item;
     }
 
-    private static ContentItem Open(string id = "open")
+    internal static ContentItem Open(string id = "open")
         => new() { ContentItemId = id, ContentType = "Article", DisplayText = "For everyone" };
 
     private static IContentDefinitionManager Definitions()
@@ -261,10 +215,10 @@ public sealed class ContentAccessSurfacesTests
         => new ServiceCollection().AddSingleton(Definitions()).BuildServiceProvider();
 
     // Everyone may view content; the Content Access Control handler refuses what is restricted.
-    private static HandlerAuthorizationService Authorization()
+    internal static IAuthorizationService Authorization()
         => new HandlerAuthorizationService(new RoleBasedContentItemAuthorizationHandler(Services()));
 
-    private static HttpContextAccessor Accessor(ClaimsPrincipal user)
+    internal static HttpContextAccessor Accessor(ClaimsPrincipal user)
         => new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = user } };
 
     private sealed class HandlerAuthorizationService : IAuthorizationService

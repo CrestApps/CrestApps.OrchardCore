@@ -142,6 +142,17 @@ public abstract class ImportRecipeBaseTool : AIFunction
             return $"This tool can only import a recipe whose steps are: {string.Join(", ", allowedSteps)}.";
         }
 
+        // Orchard's recipe executor evaluates a value shaped like [js: ...] or [file: ...] anywhere in the recipe (each
+        // step and the variables) before a step runs, and those scripts can read the shell configuration and create,
+        // change or delete content. The step list alone would let a narrower permission run them.
+        if (allowedSteps is not null && HasDirective(data))
+        {
+            logger.LogWarning("AI tool recipe import refused: the recipe has a script or file directive.");
+            RecordImport(AIModuleTelemetry.ModeInline, AIModuleTelemetry.OutcomeInvalid);
+
+            return "This tool can't import a recipe with a script or file directive such as [js: ...] or [file: ...]. Write every value as plain text.";
+        }
+
         var result = rootSchema.Evaluate(JsonSerializer.SerializeToElement(data, RecipeSerializerOptions), new EvaluationOptions()
         {
             OutputFormat = OutputFormat.List,
@@ -207,6 +218,29 @@ public abstract class ImportRecipeBaseTool : AIFunction
         }
 
         return true;
+    }
+
+    private static bool HasDirective(JsonNode node)
+        => node switch
+        {
+            JsonObject properties => properties.Any(property => HasDirective(property.Value)),
+            JsonArray items => items.Any(HasDirective),
+            JsonValue value => value.TryGetValue<string>(out var text) && IsDirective(text),
+            _ => false,
+        };
+
+    // The test of the pinned Orchard Core's RecipeExecutor.EvaluateJsonTreeAsync: a value that starts with '[', ends with
+    // ']' and has only letters between the '[' and its first ':' is evaluated as a script.
+    private static bool IsDirective(string text)
+    {
+        if (text is null || !text.StartsWith('[') || !text.EndsWith(']'))
+        {
+            return false;
+        }
+
+        var colon = text.IndexOf(':');
+
+        return colon > 0 && text.AsSpan(1, colon - 1).ToString().All(char.IsLetter);
     }
 
     private static async Task ExecuteDeferredRecipeAsync(ShellScope scope, string serializedRecipe)

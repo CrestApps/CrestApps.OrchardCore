@@ -18,7 +18,8 @@ namespace CrestApps.OrchardCore.AI.Mcp.Handlers;
 
 /// <summary>
 /// Handles content-type resources by listing the published content items of a given type that the caller may view,
-/// a page at a time.
+/// a page at a time. A page is filtered after it is read, so it can hold fewer items than <see cref="PageSize"/>; when
+/// another page follows, a second, plain-text content says which page to read next.
 /// Supported variables:
 ///   {contentType} - the content type to query.
 ///   {page} - (optional) the 1-based page; each page holds at most <see cref="PageSize"/> items.
@@ -86,20 +87,23 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
             _logger.LogDebug("Reading content by type: {ContentType}, page {Page}", contentType, page);
         }
 
-        var contentItems = await _session.Query<ContentItem, ContentItemIndex>()
+        // One row more than a page tells whether another page follows. The items the caller may not view are left out
+        // after the page is read, so a page can hold fewer than PageSize items without being the last one.
+        var rows = (await _session.Query<ContentItem, ContentItemIndex>()
             .Where(x => x.ContentType == contentType && x.Published)
             .OrderByDescending(x => x.PublishedUtc)
             .ThenBy(x => x.Id)
             .Skip((page - 1) * PageSize)
-            .Take(PageSize)
-            .ListAsync(cancellationToken);
+            .Take(PageSize + 1)
+            .ListAsync(cancellationToken)).ToList();
 
+        var hasNextPage = rows.Count > PageSize && page < MaxPage;
         var user = _httpContextAccessor.HttpContext?.User;
         var visible = new List<ContentItem>();
 
         if (user is not null)
         {
-            foreach (var contentItem in contentItems)
+            foreach (var contentItem in rows.Take(PageSize))
             {
                 if (await _authorizationService.AuthorizeAsync(user, CommonPermissions.ViewContent, contentItem))
                 {
@@ -114,19 +118,29 @@ public sealed class ContentByTypeResourceTypeHandler : McpResourceTypeHandlerBas
         }
 
         var json = JsonSerializer.Serialize(visible, _jsonOptions.SerializerOptions);
+        var contents = new List<ResourceContents>
+        {
+            new TextResourceContents
+            {
+                Uri = resource.Resource.Uri,
+                MimeType = "application/json",
+                Text = json,
+            },
+        };
+
+        if (hasNextPage)
+        {
+            contents.Add(new TextResourceContents
+            {
+                Uri = resource.Resource.Uri,
+                MimeType = "text/plain",
+                Text = string.Create(CultureInfo.InvariantCulture, $"More items of this type follow: read page {page + 1}."),
+            });
+        }
 
         return new ReadResourceResult
         {
-            Contents =
-            [
-                new TextResourceContents
-                {
-                    Uri = resource.Resource.Uri,
-                    MimeType = "application/json",
-                    Text = json,
-                }
-
-            ]
+            Contents = contents,
         };
     }
 }
