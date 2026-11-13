@@ -19,6 +19,7 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Liquid;
@@ -1583,6 +1584,12 @@ public sealed partial class VoiceAgentConversationLoopTests
                 ActivityStore,
                 new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance),
                 new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(),
+                async work =>
+                {
+                    await using var services = new ServiceCollection().AddSingleton<IOmnichannelActivityStore>(ActivityStore).AddSingleton(Mock.Of<global::YesSql.ISession>()).BuildServiceProvider();
+
+                    await work(services);
+                },
                 new global::OrchardCore.Environment.Shell.ShellSettings { Name = "Default" },
                 Clock,
                 NullLogger<DistributedSecureKeypadCaptureStore>.Instance);

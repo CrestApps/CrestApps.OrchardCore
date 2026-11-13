@@ -12,6 +12,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 
@@ -94,9 +95,19 @@ public sealed class CollectSecureDigitsTool : AIFunction
             return "Secure keypad entry works only on a phone call.";
         }
 
-        await services.GetRequiredService<ISecureKeypadCaptureStore>().StartAsync(activityId, field, cancellationToken);
-
         var logger = services.GetService<ILogger<CollectSecureDigitsTool>>();
+
+        try
+        {
+            await services.GetRequiredService<ISecureKeypadCaptureStore>().StartAsync(activityId, field, cancellationToken);
+        }
+        catch (ConcurrencyException ex)
+        {
+            // The keypad could not be made private, so the caller must not be asked to type.
+            logger?.LogWarning(ex, "The keypad on AI call activity '{ActivityId}' could not be made private.", activityId.SanitizeLogValue());
+
+            return "Secure keypad entry is not available right now. Do not ask for the number; offer another way to pay or to verify.";
+        }
 
         if (logger is not null && logger.IsEnabled(LogLevel.Information))
         {
