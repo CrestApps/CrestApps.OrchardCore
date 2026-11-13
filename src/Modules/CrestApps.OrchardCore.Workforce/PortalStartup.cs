@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Workforce.Navigation;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -62,6 +64,12 @@ public sealed class PortalStartup : StartupBase
 
         // A device that kept My Work pages offline forgets them when its user signs out.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ILogoutFormEvent, MyWorkSignOut>());
+    }
+
+    /// <inheritdoc />
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.MapMyWorkSignedOut();
     }
 }
 
