@@ -27,4 +27,10 @@ public class TransactionPayViewModel
     /// Gets or sets a value indicating whether the transaction can be paid online now.
     /// </summary>
     public bool CanPay { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the payer just asked to pay less than the smallest part payment the transaction accepts,
+    /// so the page says what the smallest payment is.
+    /// </summary>
+    public bool AmountTooSmall { get; set; }
 }

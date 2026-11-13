@@ -39,6 +39,12 @@ public sealed class TransactionCommandResult
     public SavedPaymentMethodChargeStatus ChargeStatus { get; set; }
 
     /// <summary>
+    /// Gets or sets the part of a payment that was not recorded because it was more than what the transaction still
+    /// owed, in the transaction's currency. The caller decides what becomes of it, for example the payer's credit.
+    /// </summary>
+    public decimal UnappliedAmount { get; set; }
+
+    /// <summary>
     /// Gets the reasons the command was refused or did not fully succeed, ready to show to the person who asked.
     /// </summary>
     public IList<string> Errors { get; } = [];

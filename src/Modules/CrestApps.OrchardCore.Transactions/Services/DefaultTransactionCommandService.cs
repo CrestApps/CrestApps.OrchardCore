@@ -87,7 +87,17 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
     /// <inheritdoc/>
     public Task<TransactionCommandResult> RecordOfflinePaymentAsync(string transactionId, decimal amount, string reference, string note, CancellationToken cancellationToken = default)
+        => RecordPaymentAsync(transactionId, new TransactionPaymentRequest { Amount = amount, Reference = reference, Note = note }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TransactionCommandResult> RecordPaymentAsync(string transactionId, TransactionPaymentRequest request, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var amount = request.Amount;
+        var reference = request.Reference;
+        var note = request.Note;
+
         return ExecuteAsync(transactionId, async (transaction, result) =>
         {
             if (amount <= 0m)
@@ -116,6 +126,15 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             }
 
             var now = _clock.UtcNow;
+
+            // Money dated after now was not received yet, so it is recorded as received now.
+            if (request.ReceivedUtc is DateTime receivedUtc && receivedUtc > now)
+            {
+                result.Fail(S["The date the payment was received can't be in the future."]);
+
+                return null;
+            }
+
             var trimmedReference = Trim(reference);
 
             var referenceSuffix = trimmedReference is null
@@ -133,6 +152,8 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
                 S["An offline payment of {0} {1} was recorded.{2}{3}", CurrencyScale.Format(applied, transaction.Currency), transaction.Currency, referenceSuffix, noteSuffix].Value);
 
             payment.Reference = trimmedReference;
+            payment.PaymentMethod = Trim(request.PaymentMethod);
+            payment.ReceivedUtc = request.ReceivedUtc;
             await SetActorAsync(payment);
 
             transaction.Events.Add(payment);
@@ -143,6 +164,9 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             }
 
             result.Event = payment;
+
+            // What was received above what is owed is not recorded here: the caller decides what becomes of it.
+            result.UnappliedAmount = Math.Max(0m, CurrencyScale.Round(amount - applied, transaction.Currency));
 
             return () => RaisePaymentRecordedAsync(transaction, payment, cancellationToken);
         }, saveOnFailure: false, save: true, cancellationToken);
@@ -226,9 +250,36 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
     /// <inheritdoc/>
     public Task<TransactionCommandResult> AdjustAsync(string transactionId, decimal amount, TransactionAdjustmentKind kind, string reason, CancellationToken cancellationToken = default)
+        => AdjustAsync(transactionId, new TransactionAdjustmentRequest { Amount = amount, Kind = kind, Reason = reason }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TransactionCommandResult> AdjustAsync(string transactionId, TransactionAdjustmentRequest request, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var amount = request.Amount;
+        var kind = request.Kind;
+        var reason = request.Reason;
+
         return ExecuteAsync(transactionId, async (transaction, result) =>
         {
+            // An adjustment recorded for a document is recorded once, so repeating the command after a failure is safe.
+            if (!string.IsNullOrEmpty(request.DocumentId))
+            {
+                var recorded = transaction.Events.FirstOrDefault(entry =>
+                    entry.Type == TransactionEventType.Adjusted &&
+                    string.Equals(entry.DocumentKind, request.DocumentKind, StringComparison.Ordinal) &&
+                    string.Equals(entry.DocumentId, request.DocumentId, StringComparison.Ordinal) &&
+                    !transaction.Events.Any(other => string.Equals(other.ReversesEventId, entry.Id, StringComparison.Ordinal)));
+
+                if (recorded is not null)
+                {
+                    result.Event = recorded;
+
+                    return NoFollowUp;
+                }
+            }
+
             if (!Enum.IsDefined(kind))
             {
                 result.Fail(S["Choose why the amount is adjusted."]);
@@ -284,6 +335,9 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
                 Amount = adjusted,
                 AdjustmentKind = kind,
                 Reason = trimmedReason,
+                DocumentKind = Trim(request.DocumentKind),
+                DocumentId = Trim(request.DocumentId),
+                DocumentNumber = Trim(request.DocumentNumber),
                 Message = trimmedReason is null
                     ? S["{0} of {1} taken off what is owed.", kindName, formatted].Value
                     : S["{0} of {1} taken off what is owed. Reason: {2}", kindName, formatted, trimmedReason].Value,
@@ -300,6 +354,106 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             }
 
             result.Event = adjustment;
+
+            return null;
+        }, saveOnFailure: false, save: true, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TransactionCommandResult> ReverseAsync(string transactionId, string eventId, string reason, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(transactionId, async (transaction, result) =>
+        {
+            var entry = string.IsNullOrEmpty(eventId)
+                ? null
+                : transaction.Events.FirstOrDefault(candidate => string.Equals(candidate.Id, eventId, StringComparison.Ordinal));
+
+            if (entry is null)
+            {
+                result.Fail(S["The entry to take back could not be found on this transaction."]);
+
+                return null;
+            }
+
+            if (entry.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(entry.PaymentAttemptId))
+            {
+                result.Fail(S["This payment was taken online. Refund it instead of taking it back."]);
+
+                return null;
+            }
+
+            if (!TransactionStateMachine.CanReverse(transaction, entry))
+            {
+                result.Fail(S["This entry can't be taken back: it was taken back already, or the transaction was canceled or refunded."]);
+
+                return null;
+            }
+
+            var trimmedReason = Trim(reason);
+
+            if (trimmedReason is null)
+            {
+                result.Fail(S["Say why the entry is taken back."]);
+
+                return null;
+            }
+
+            var now = _clock.UtcNow;
+            var amount = CurrencyScale.Round(entry.Amount.Value, transaction.Currency);
+            var formatted = $"{CurrencyScale.Format(amount, transaction.Currency)} {transaction.Currency}";
+            var wasPayment = entry.Type == TransactionEventType.PaymentRecorded;
+
+            if (wasPayment)
+            {
+                transaction.AmountPaid = Math.Max(0m, CurrencyScale.Round(transaction.AmountPaid - amount, transaction.Currency));
+            }
+            else
+            {
+                transaction.AmountAdjusted = Math.Max(0m, CurrencyScale.Round(transaction.AmountAdjusted - amount, transaction.Currency));
+            }
+
+            transaction.UpdatedUtc = now;
+
+            var reversal = new TransactionEvent
+            {
+                Id = IdGenerator.GenerateId(),
+                CreatedUtc = now,
+                Type = TransactionEventType.Reversed,
+                Amount = amount,
+                Reason = trimmedReason,
+                ReversesEventId = entry.Id,
+                DocumentKind = entry.DocumentKind,
+                DocumentId = entry.DocumentId,
+                DocumentNumber = entry.DocumentNumber,
+                Message = wasPayment
+                    ? S["The payment of {0} was taken back, so it is owed again. Reason: {1}", formatted, trimmedReason].Value
+                    : S["The adjustment of {0} was taken back, so it is owed again. Reason: {1}", formatted, trimmedReason].Value,
+            };
+
+            await SetActorAsync(reversal);
+
+            transaction.Events.Add(reversal);
+
+            // Money is owed again, so a transaction this entry settled is collectable again.
+            if (transaction.OutstandingAmount > 0m && transaction.Status == TransactionStatus.Paid)
+            {
+                transaction.Status = transaction.AmountPaid > 0m ? TransactionStatus.PartiallyPaid : TransactionStatus.Outstanding;
+                transaction.SettledUtc = null;
+                transaction.SettlementMethod = null;
+                transaction.Events.Add(new TransactionEvent
+                {
+                    Id = IdGenerator.GenerateId(),
+                    CreatedUtc = now,
+                    Type = TransactionEventType.StatusChanged,
+                    Message = S["The transaction owes {0} again, so it is no longer settled.", $"{CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)} {transaction.Currency}"].Value,
+                });
+            }
+            else if (transaction.Status == TransactionStatus.PartiallyPaid && transaction.AmountPaid <= 0m)
+            {
+                transaction.Status = TransactionStatus.Outstanding;
+            }
+
+            result.Event = reversal;
 
             return null;
         }, saveOnFailure: false, save: true, cancellationToken);

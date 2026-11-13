@@ -78,8 +78,44 @@ public sealed class TransactionEvent
     public string Method { get; set; }
 
     /// <summary>
+    /// Gets or sets how money received outside the site was paid, as the short key the person who recorded it chose,
+    /// such as <c>cash</c>, <c>check</c> or <c>bank-transfer</c>, when the event is a payment recorded by hand.
+    /// </summary>
+    public string PaymentMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the money of a payment recorded by hand was received, in UTC, when that was before the payment
+    /// was recorded. <see cref="CreatedUtc"/> stays the time it was recorded.
+    /// </summary>
+    public DateTime? ReceivedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the receipt number issued for a recorded payment, for example <c>R-1001</c>. It is issued once,
     /// when the receipt is first sent, and every later copy of that receipt shows the same number.
     /// </summary>
     public string ReceiptNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of document the event was recorded for, such as <c>CreditNote</c>, when a document stands
+    /// behind it: a credit note behind an adjustment, for example.
+    /// </summary>
+    public string DocumentKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the document named by <see cref="DocumentKind"/>.
+    /// </summary>
+    public string DocumentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of the document named by <see cref="DocumentKind"/>, such as <c>CN-1001</c>, as it is
+    /// shown to people.
+    /// </summary>
+    public string DocumentNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the earlier event this event takes back, when it does. A payment or an adjustment
+    /// recorded by mistake is never edited or removed: an event that reverses it is added, so the timeline keeps
+    /// everything that happened.
+    /// </summary>
+    public string ReversesEventId { get; set; }
 }

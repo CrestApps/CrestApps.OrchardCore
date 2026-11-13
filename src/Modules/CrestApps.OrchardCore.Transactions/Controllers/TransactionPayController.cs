@@ -48,7 +48,7 @@ public sealed class TransactionPayController : Controller
     /// </summary>
     /// <param name="token">The signed token from the link.</param>
     [HttpGet("transactions/pay/{token}", Name = TransactionsConstants.RouteNames.Pay)]
-    public async Task<IActionResult> Index(string token)
+    public async Task<IActionResult> Index(string token, bool tooSmall = false)
     {
         var transaction = await FindAsync(token);
 
@@ -69,6 +69,7 @@ public sealed class TransactionPayController : Controller
             model.Transaction = transaction;
             model.Invoice = invoice;
             model.CanPay = canPay;
+            model.AmountTooSmall = tooSmall;
         }));
     }
 
@@ -78,7 +79,7 @@ public sealed class TransactionPayController : Controller
     /// <param name="token">The signed token from the link.</param>
     [HttpPost("transactions/pay/{token}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Pay(string token)
+    public async Task<IActionResult> Pay(string token, decimal? amount = null)
     {
         var transaction = await FindAsync(token);
 
@@ -94,12 +95,21 @@ public sealed class TransactionPayController : Controller
             return RedirectToRoute(TransactionsConstants.RouteNames.Pay, new { token });
         }
 
+        // A part payment below the smallest one accepted goes back to the page, which says what the smallest is.
+        if (!TransactionStateMachine.TryGetPaymentAmount(transaction, amount, out var amountToPay))
+        {
+            return RedirectToRoute(TransactionsConstants.RouteNames.Pay, new { token, tooSmall = true });
+        }
+
         // The checkout belongs to whoever opened the link, a guest browser included; the settlement handler applies
         // what it collects to this transaction, whoever paid.
         var session = await engine.StartAsync(new StartCheckoutRequest
         {
             ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
             ReferenceId = transaction.ItemId,
+
+            // Only a part payment names an amount; paying everything charges whatever is owed when the payment begins.
+            Amount = amountToPay < transaction.OutstandingAmount ? amountToPay : null,
 
             // The customer came from this page, so the checkout brings them back to it: after paying, where it
             // shows the payment as received, or when they decide not to pay after all.

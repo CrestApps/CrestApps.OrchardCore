@@ -12,6 +12,10 @@
 @{
     var transaction = Model.Transaction;
     var outstanding = $"{transaction.Currency} {CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)}";
+    var decimals = CurrencyScale.GetDecimalPlaces(transaction.Currency);
+    var amountStep = decimals == 0 ? "1" : (1m / (decimal)Math.Pow(10, decimals)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var smallestPayment = Math.Min(transaction.OutstandingAmount, transaction.MinimumPayment ?? 0m);
+    var smallestInput = smallestPayment > 0m ? CurrencyScale.Format(smallestPayment, transaction.Currency) : amountStep;
 }
 
 @* What a pay link's transaction still owes, the way to pay it, and its invoice. *@
@@ -52,6 +56,31 @@ else
             }
         </div>
     </div>
+
+    @if (Model.CanPay && transaction.AllowPartialPayment)
+    {
+        @* Paying part of what is owed. The number is typed in the invariant format the browser's number field posts. *@
+        <div class="card mb-3 no-print">
+            <div class="card-body">
+                <form asp-action="Pay" asp-route-token="@Model.Token" method="post" class="row g-2 align-items-end">
+                    <div class="col-12 col-sm-auto">
+                        <label for="pay-amount" class="form-label">@T["Pay another amount ({0})", transaction.Currency]</label>
+                        <input id="pay-amount" name="amount" type="number" class="form-control" inputmode="decimal" required
+                               min="@smallestInput"
+                               max="@CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)"
+                               step="@amountStep" />
+                    </div>
+                    <div class="col-12 col-sm-auto">
+                        <button type="submit" class="btn btn-outline-primary">@T["Pay this amount"]</button>
+                    </div>
+                </form>
+                @if (smallestPayment > 0m)
+                {
+                    <div class="@(Model.AmountTooSmall ? "text-danger" : "text-muted") small mt-2">@T["The smallest payment accepted is {0} {1}.", transaction.Currency, CurrencyScale.Format(smallestPayment, transaction.Currency)]</div>
+                }
+            </div>
+        </div>
+    }
 }
 
 @if (Model.Invoice is not null)

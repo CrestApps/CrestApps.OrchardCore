@@ -30,6 +30,16 @@ public sealed class TransactionIndex : CatalogItemIndex
     public CustomerOwnerKind OwnerKind { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of party that owes the money.
+    /// </summary>
+    public string PayerKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the party that owes the money.
+    /// </summary>
+    public string PayerId { get; set; }
+
+    /// <summary>
     /// The reference type the transaction is for.
     /// </summary>
     public string ReferenceType { get; set; }

@@ -1,7 +1,10 @@
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Transactions.Migrations;
@@ -54,8 +57,9 @@ internal sealed class TransactionMigrations : DataMigration
         }, collection: TransactionsConstants.CollectionName);
 
         await CreateReportIndexAsync();
+        await CreatePayerColumnsAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -68,6 +72,39 @@ internal sealed class TransactionMigrations : DataMigration
         await CreateReportIndexAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the payer columns, which say which party owes each transaction, and the index a party's transactions are
+    /// found through.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await CreatePayerColumnsAsync();
+
+        // The payer of a transaction recorded before these columns follows from its owner, so mapping each transaction
+        // again fills them. It runs after the migration, in pages, so the migration itself only changes the schema.
+        ShellScope.AddDeferredTask(scope => CatalogIndexBackfill.ReindexAsync<Transaction, TransactionIndex>(
+            scope.ServiceProvider.GetRequiredService<ISession>(),
+            TransactionsConstants.CollectionName));
+
+        return 3;
+    }
+
+    private async Task CreatePayerColumnsAsync()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table =>
+        {
+            table.AddColumn<string>("PayerKind", column => column.Nullable().WithLength(26));
+            table.AddColumn<string>("PayerId", column => column.Nullable().WithLength(TransactionIndexProvider.MaxParentReferenceLength));
+        }, collection: TransactionsConstants.CollectionName);
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<TransactionIndex>(
+            SchemaBuilder,
+            "IDX_TransactionIndex_Payer",
+            TransactionsConstants.CollectionName,
+            "PayerKind", "PayerId", "Status");
     }
 
     private Task<bool> CreateReportIndexAsync()

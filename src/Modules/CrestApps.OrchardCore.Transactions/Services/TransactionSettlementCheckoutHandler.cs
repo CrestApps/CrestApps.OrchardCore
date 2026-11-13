@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -116,13 +117,27 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             session.Currency = transaction.Currency;
         }
 
+        // The payer may have asked to pay part of the balance. The transaction decides whether it takes part payments
+        // and how small one may be.
+        var requested = session.TryGet<CheckoutRequestedAmount>(out var requestedAmount) ? requestedAmount.Amount : (decimal?)null;
+
+        if (!TransactionStateMachine.TryGetPaymentAmount(transaction, requested, out var amountToPay))
+        {
+            context.Reject(S["The smallest payment accepted is {0}.", CurrencyFormat.WithCode(amountToPay, transaction.Currency)]);
+
+            return;
+        }
+
+        var paysInPart = amountToPay < transaction.OutstandingAmount;
+
         // The balance already exists, so it must be paid now: a provider that only records a promise to pay later
         // can't settle it, and is neither offered nor accepted.
         session.SettlesExistingBalance = true;
 
         // A promotion code may be used: what it takes off the invoice is recorded on the transaction as a discount
-        // when the checkout completes, so the balance is settled rather than left owing the discount.
-        session.AcceptsDiscountsOnBalance = true;
+        // when the checkout completes, so the balance is settled rather than left owing the discount. A part payment
+        // takes no code: a code is used up only when the balance is settled, so it could be applied again and again.
+        session.AcceptsDiscountsOnBalance = !paysInPart;
 
         // What the payment is for, so a coupon limited to a source, a kind of charge or one customer can be checked.
         session.Put(new CheckoutDiscountScope
@@ -152,7 +167,7 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
                     Description = string.IsNullOrEmpty(transaction.Title)
                         ? S["Outstanding payment"].Value
                         : transaction.Title,
-                    Amount = transaction.OutstandingAmount,
+                    Amount = amountToPay,
                     Plan = null,
 
                     // The transaction already carries its own tax, decided when it was raised. Settling it is

@@ -30,6 +30,17 @@ public interface ITransactionCommandService
     Task<TransactionCommandResult> RecordOfflinePaymentAsync(string transactionId, decimal amount, string reference, string note, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records money received outside the site against the transaction, with how and when it was received. An amount
+    /// above what is still owed records only what is owed, and the rest is returned in
+    /// <see cref="TransactionCommandResult.UnappliedAmount"/>. The transaction becomes paid once nothing is owed, and
+    /// the payment handlers are told about the payment.
+    /// </summary>
+    /// <param name="transactionId">The transaction identifier.</param>
+    /// <param name="request">The payment.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> RecordPaymentAsync(string transactionId, TransactionPaymentRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Settles whatever is still owed on the transaction as paid offline, and tells the payment handlers about that
     /// payment.
     /// </summary>
@@ -60,6 +71,28 @@ public interface ITransactionCommandService
     /// <param name="reason">An optional reason recorded with the adjustment.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<TransactionCommandResult> AdjustAsync(string transactionId, decimal amount, TransactionAdjustmentKind kind, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lowers what is owed on the transaction without money being received, for a document such as a credit note. It
+    /// does what <see cref="AdjustAsync(string, decimal, TransactionAdjustmentKind, string, CancellationToken)"/> does,
+    /// names the document on the timeline, and records nothing when an adjustment for the same document is already
+    /// there.
+    /// </summary>
+    /// <param name="transactionId">The transaction identifier.</param>
+    /// <param name="request">The adjustment.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> AdjustAsync(string transactionId, TransactionAdjustmentRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Takes back a payment recorded by hand, or an adjustment, that should not have been recorded. The entry stays on
+    /// the timeline; an entry that reverses it is added, its amount is owed again, and a transaction that was settled
+    /// by it is collectable again. A payment taken online is not reversed this way: it is refunded.
+    /// </summary>
+    /// <param name="transactionId">The transaction identifier.</param>
+    /// <param name="eventId">The identifier of the timeline entry to take back.</param>
+    /// <param name="reason">Why it is taken back.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> ReverseAsync(string transactionId, string eventId, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends the owner the transaction's invoice now: issues its invoice number when it has none, and sends an
