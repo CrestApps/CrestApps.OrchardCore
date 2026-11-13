@@ -55,7 +55,7 @@ public sealed class AIChatAGUITests
         var provider = CreateContentItemProvider(contentItem);
         var context = CreateContext(new { area = "OrchardCore.Contents", controller = "Admin", action = "Edit", contentItemId = "item-1" });
 
-        await provider.PopulateAsync(context);
+        await provider.PopulateAsync(context, TestContext.Current.CancellationToken);
 
         var entry = Assert.Single(context.Entries);
         Assert.Equal("Content item being edited", entry.Description);
@@ -68,7 +68,7 @@ public sealed class AIChatAGUITests
         var provider = CreateContentItemProvider(contentItem: null);
         var context = CreateContext(new { area = "OrchardCore.Contents", controller = "Admin", action = "Create", id = "BlogPost" });
 
-        await provider.PopulateAsync(context);
+        await provider.PopulateAsync(context, TestContext.Current.CancellationToken);
 
         var entry = Assert.Single(context.Entries);
         Assert.Equal("Content item being created", entry.Description);
@@ -82,8 +82,8 @@ public sealed class AIChatAGUITests
         var otherPage = CreateContext(new { area = "OrchardCore.Users", controller = "Admin", action = "Edit", contentItemId = "item-1" });
         var missingItem = CreateContext(new { area = "OrchardCore.Contents", controller = "Admin", action = "Edit", contentItemId = "gone" });
 
-        await provider.PopulateAsync(otherPage);
-        await provider.PopulateAsync(missingItem);
+        await provider.PopulateAsync(otherPage, TestContext.Current.CancellationToken);
+        await provider.PopulateAsync(missingItem, TestContext.Current.CancellationToken);
 
         Assert.Empty(otherPage.Entries);
         Assert.Empty(missingItem.Entries);

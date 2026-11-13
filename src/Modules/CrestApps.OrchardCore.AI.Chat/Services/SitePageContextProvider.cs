@@ -32,7 +32,7 @@ public sealed class SitePageContextProvider : IAIChatPageContextProvider
     }
 
     /// <inheritdoc/>
-    public async Task PopulateAsync(AIChatPageContext context)
+    public async Task PopulateAsync(AIChatPageContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 

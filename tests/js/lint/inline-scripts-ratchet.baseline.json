@@ -14,7 +14,7 @@
         "src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/Views/ChatInteractionSystemInstructions.Edit.cshtml": 10,
         "src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/Views/ChatInteractionTools.Edit.cshtml": 89,
         "src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/Views/OrchestratorSelection.Edit.cshtml": 32,
-        "src/Modules/CrestApps.OrchardCore.AI.Chat/Views/AIChatAdminWidget.cshtml": 20,
+        "src/Modules/CrestApps.OrchardCore.AI.Chat/Views/AIChatAdminWidget.cshtml": 28,
         "src/Modules/CrestApps.OrchardCore.AI.Chat/Views/AIProfileAnalytics.Edit.cshtml": 57,
         "src/Modules/CrestApps.OrchardCore.AI.Chat/Views/AIProfileChatMode.Edit.cshtml": 137,
         "src/Modules/CrestApps.OrchardCore.AI.Chat/Views/AIProfileDataExtraction.Edit.cshtml": 71,

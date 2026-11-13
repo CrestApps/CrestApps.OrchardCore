@@ -163,41 +163,6 @@ public sealed class AdminWidgetStartup : StartupBase
 }
 
 /// <summary>
-/// Tells the admin chat widget which content item the user is editing, when Orchard Core's Contents feature is on.
-/// </summary>
-[Feature(AIConstants.Feature.ChatAdminWidget)]
-[RequireFeatures(OrchardCoreFeatureIds.Contents)]
-public sealed class AdminWidgetContentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IAIChatPageContextProvider, ContentItemPageContextProvider>();
-    }
-}
-
-/// <summary>
-/// Maps the AG-UI endpoint, through which any AG-UI client runs the AI chat profiles over HTTP and Server-Sent
-/// Events, when the AI Chat API is on.
-/// </summary>
-[RequireFeatures(AIConstants.Feature.ChatApi)]
-public sealed class AGUIEndpointStartup : StartupBase
-{
-    /// <summary>
-    /// The route of the AG-UI endpoint, next to the other AI APIs.
-    /// </summary>
-    public const string RoutePattern = "api/ai/v1/agui";
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        // The hub authorizes the profile and the session; the endpoint only needs an authenticated API caller (an AI API
-        // key or a bearer token), and answers others with 401. It reads JSON only, which a cross-site page cannot send
-        // without the browser asking first, so it needs no antiforgery token. The chat UI and the widgets use the hub.
-        routes.MapAGUIChat<AIChatHub, CrestApps.OrchardCore.AI.Chat.Hubs.IAIChatHubClient>(RoutePattern)
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes });
-    }
-}
-
-/// <summary>
 /// Registers services and configuration for the ChatAnalyticsUI feature.
 /// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
