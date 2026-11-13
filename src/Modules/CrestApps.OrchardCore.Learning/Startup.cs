@@ -18,6 +18,8 @@ using CrestApps.OrchardCore.Learning.Workflows;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.YesSql.Core.Numbering;
 using Microsoft.AspNetCore.Builder;
@@ -270,5 +272,22 @@ public sealed class WebhooksStartup : StartupBase
         services.AddWebhookEvent(LearningWebhookObserver.EnrollmentCreated, "Learner enrolled", "Learning");
         services.AddWebhookEvent(LearningWebhookObserver.CourseCompleted, "Course completed", "Learning");
         services.AddEnrollmentObserver<LearningWebhookObserver>();
+    }
+}
+
+/// <summary>
+/// Adds the Learning coded reports under Reports.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<LearningReportText>();
+        services.AddReport<LearningCourseCompletionReport>();
+        services.AddReport<LearningTranscriptReport>();
+        services.AddReport<LearningInactiveLearnersReport>();
+        services.AddDisplayDriver<ReportFilter, LearningTranscriptFilterDisplayDriver>();
     }
 }

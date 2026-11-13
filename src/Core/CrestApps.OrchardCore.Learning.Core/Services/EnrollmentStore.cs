@@ -232,6 +232,37 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
     }
 
     /// <summary>
+    /// Lists completed enrollments, oldest completion first, optionally completed within a window.
+    /// </summary>
+    /// <param name="fromUtc">The earliest completion time, in UTC, or <see langword="null"/>.</param>
+    /// <param name="toUtc">The latest completion time, in UTC, or <see langword="null"/>.</param>
+    /// <param name="userId">The learner, or <see langword="null"/> for every learner.</param>
+    /// <param name="take">The most enrollments to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The enrollments.</returns>
+    public async Task<IReadOnlyList<Enrollment>> ListCompletedAsync(DateTime? fromUtc, DateTime? toUtc, string userId, int take, CancellationToken cancellationToken = default)
+    {
+        var query = Session.Query<Enrollment, EnrollmentIndex>(index => index.CompletedUtc != null, collection: CollectionName);
+
+        if (fromUtc is { } from)
+        {
+            query = query.Where(index => index.CompletedUtc >= from);
+        }
+
+        if (toUtc is { } to)
+        {
+            query = query.Where(index => index.CompletedUtc <= to);
+        }
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            query = query.Where(index => index.UserId == userId);
+        }
+
+        return (await query.OrderBy(index => index.CompletedUtc).ThenBy(index => index.Id).Take(take).ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <summary>
     /// Lists active enrollments due within a window, soonest first.
     /// </summary>
     /// <param name="fromUtc">The start of the window, in UTC, excluded.</param>
