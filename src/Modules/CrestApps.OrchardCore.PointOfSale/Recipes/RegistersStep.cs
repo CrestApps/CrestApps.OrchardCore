@@ -22,7 +22,8 @@ namespace CrestApps.OrchardCore.PointOfSale.Recipes;
 /// { "name": "Registers", "Registers": [ { "ItemId": "...", "Name": "Front till", "LocationId": "default",
 ///   "Address": { "AddressLine1": "1 Main St", "City": "Springfield", "Country": "US" }, "Currency": "USD" } ] }
 /// </code>
-/// The store location is named by its id: import the stock locations first, with the <c>StockLocations</c> step.
+/// The store location is named by its id: import the stock locations first, with the <c>StockLocations</c> step. Its
+/// department keys name departments by id: import them first, with the <c>PosDepartments</c> step.
 /// </remarks>
 internal sealed class RegistersStep : CatalogStoreRecipeStep<Register>
 {
@@ -63,6 +64,7 @@ internal sealed class RegistersStep : CatalogStoreRecipeStep<Register>
         entry.Name = entry.Name?.Trim();
         entry.Currency = string.IsNullOrWhiteSpace(entry.Currency) ? null : entry.Currency.Trim().ToUpperInvariant();
         entry.Roles ??= [];
+        entry.Keys = [.. (entry.Keys ?? []).Where(key => !string.IsNullOrEmpty(key?.DepartmentId))];
     }
 
     protected override async ValueTask<ValidationResultDetails> ValidateAsync(Register entry)

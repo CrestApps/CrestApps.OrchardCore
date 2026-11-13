@@ -12,7 +12,7 @@ internal sealed class RegistersRecipeStepSchema : RecordsRecipeStepSchemaBase
 
     protected override string EntriesName => RegistersStep.EntriesName;
 
-    protected override string Description => "Creates or updates point-of-sale registers, matched by ItemId, then by name. Import the stock locations first.";
+    protected override string Description => "Creates or updates point-of-sale registers, matched by ItemId, then by name. Import the stock locations and the departments its keys name first.";
 
     protected override string EntryDescription => "A register: a till at one of the store's locations.";
 
@@ -27,5 +27,6 @@ internal sealed class RegistersRecipeStepSchema : RecordsRecipeStepSchemaBase
             ("Currency", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The three-letter currency the register sells in, or none for the store's.")),
             ("Roles", new JsonSchemaBuilder().Type(SchemaValueType.Array).Description("The roles whose users can sell on the register.")),
             ("IsEnabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the register is in use.")),
+            ("Keys", new JsonSchemaBuilder().Type(SchemaValueType.Array).Description("The department keys on its keypad, in order: each with a DepartmentId, an optional Label and an optional PresetAmount. None shows a key for every department that's on.")),
         ];
 }

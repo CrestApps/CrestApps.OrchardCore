@@ -1,0 +1,345 @@
+@model WebRegisterViewModel
+@using System.Globalization
+@using System.Text.Json
+@functions {
+    // White text on a dark key, black on a light one.
+    private static string TextColor(string hex)
+    {
+        if (hex is not { Length: 7 } || !int.TryParse(hex.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgb))
+        {
+            return "#fff";
+        }
+
+        var luminance = (0.299 * ((rgb >> 16) & 0xFF)) + (0.587 * ((rgb >> 8) & 0xFF)) + (0.114 * (rgb & 0xFF));
+
+        return luminance > 160 ? "#000" : "#fff";
+    }
+}
+@{
+    var register = Model.Register;
+    var config = new
+    {
+        currency = Model.Currency,
+        culture = CultureInfo.CurrentCulture.Name,
+        canTakeCards = Model.CanTakeCards,
+        urls = new
+        {
+            shift = Url.Action("Shift", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+            openShift = Url.Action("OpenShift", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+            moveCash = Url.Action("MoveCash", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+            closeShift = Url.Action("CloseShift", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+            product = Url.Action("Product", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+            sale = Url.Action("Sale", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+            pay = Url.Action("Pay", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+            cancel = Url.Action("Cancel", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+            receipt = Url.Action("Receipt", "WebRegister", new { area = PosConstants.Feature, registerId = register.ItemId }),
+        },
+        keys = Model.Keys.Select(key => new
+        {
+            departmentId = key.DepartmentId,
+            label = key.Label,
+            color = key.Color,
+            presetAmount = key.PresetAmount,
+            minimumAmount = key.MinimumAmount,
+            maximumAmount = key.MaximumAmount,
+        }),
+        texts = new Dictionary<string, string>
+        {
+            ["keyInAmount"] = T["Key in the amount, then press the department."].Value,
+            ["atLeast"] = T["{0} rings up at least {1}."].Value,
+            ["atMost"] = T["{0} rings up at most {1}: check the amount."].Value,
+            ["quantity"] = T["{0} ×"].Value,
+            ["emptyTicket"] = T["Key in an amount and press a department, or scan an item."].Value,
+            ["voidTicket"] = T["Void the whole ticket?"].Value,
+            ["nothingToPay"] = T["Ring something up first."].Value,
+            ["working"] = T["Working…"].Value,
+            ["somethingWrong"] = T["Something went wrong. Try again."].Value,
+            ["due"] = T["Still due: {0}"].Value,
+            ["change"] = T["Change: {0}"].Value,
+            ["paid"] = T["Paid. Sale {0}."].Value,
+            ["noChange"] = T["No change."].Value,
+            ["shiftClosed"] = T["The shift is closed."].Value,
+            ["shiftClosedReport"] = T["Shift closed"].Value,
+            ["openedBy"] = T["Opened by {0}, {1}"].Value,
+            ["sales"] = T["Sales"].Value,
+            ["total"] = T["Total"].Value,
+            ["tax"] = T["Tax"].Value,
+            ["cashKept"] = T["Cash kept"].Value,
+            ["card"] = T["Card"].Value,
+            ["other"] = T["Gift cards and balances"].Value,
+            ["refunded"] = T["Refunded"].Value,
+            ["openingFloat"] = T["Opening float"].Value,
+            ["movedCash"] = T["Put in, less taken out"].Value,
+            ["expected"] = T["Expected in the drawer"].Value,
+            ["counted"] = T["Counted"].Value,
+            ["difference"] = T["Difference"].Value,
+            ["departments"] = T["Departments"].Value,
+            ["noDepartments"] = T["Nothing rung up in a department yet."].Value,
+            ["department"] = T["Department"].Value,
+            ["count"] = T["Count"].Value,
+            ["each"] = T["{0} × {1}"].Value,
+        },
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="PosWebRegisterTill" title="@Html.Raw(Html.Encode(register.Name))">
+        <breadcrumb-item id="PosWebRegisterIndex" action="Index" controller="WebRegister" area="CrestApps.OrchardCore.PointOfSale" permission="@PosPermissions.SellAtRegister.Name">@T["Web register"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@Html.AntiForgeryToken()
+
+<style>
+    .web-register-display { font-variant-numeric: tabular-nums; }
+    .web-register-display .entry { font-size: 2.25rem; line-height: 1.1; }
+    .web-register-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+    .web-register-keypad .btn, .web-register-departments .btn { min-height: 3.5rem; font-size: 1.25rem; }
+    .web-register-departments { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: .5rem; }
+    .web-register-departments .btn { white-space: normal; line-height: 1.15; font-size: 1.05rem; }
+    .web-register-departments .btn .preset { display: block; font-size: .8rem; opacity: .85; }
+    .web-register-ticket { max-height: 50vh; overflow-y: auto; }
+    .web-register-ticket .list-group-item.active .text-body-secondary { color: inherit !important; }
+    .web-register-total { font-size: 1.75rem; font-variant-numeric: tabular-nums; }
+</style>
+
+<div id="web-register" data-config="@JsonSerializer.Serialize(config)">
+
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <span class="badge fs-6 fw-normal" data-shift-badge></span>
+        <span class="text-body-secondary small" data-shift-opened></span>
+        @* The d-flex utility would override the hidden attribute, so it goes on an inner element. *@
+        <div class="ms-auto" data-shift-actions hidden>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-secondary" data-action="cash"><i class="fa-solid fa-money-bill-transfer me-1" aria-hidden="true"></i>@T["Cash in or out"]</button>
+                <button type="button" class="btn btn-secondary" data-action="report"><i class="fa-solid fa-receipt me-1" aria-hidden="true"></i>@T["Shift report"]</button>
+                <button type="button" class="btn btn-danger" data-action="close"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Close shift"]</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-danger" role="alert" data-error hidden>
+        <i class="fa-solid fa-triangle-exclamation me-2" aria-hidden="true"></i><span data-error-text></span>
+    </div>
+
+    @* Shown while the register has no open shift. *@
+    <div class="card mb-3" data-open-panel hidden>
+        <div class="card-header">@T["Open a shift"]</div>
+        <div class="card-body">
+            <form data-open-form>
+                <div class="ocat-limited-wrapper">
+                    <label for="web-register-float" class="ocat-label">@T["Opening float"]</label>
+                    <div class="ocat-limited">
+                        <input id="web-register-float" type="number" min="0" step="0.01" class="form-control" value="0.00" />
+                        <span class="hint">@T["The cash you put in the drawer to give change from."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-unlock me-1" aria-hidden="true"></i>@T["Open shift"]</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* The register itself, while a shift is open. *@
+    <div class="row g-3" data-till hidden>
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center">
+                    <span>@T["Ticket"]</span>
+                    <span class="ms-auto text-body-secondary small" data-ticket-count></span>
+                </div>
+                <ul class="list-group list-group-flush web-register-ticket" data-ticket aria-live="polite"></ul>
+                <div class="card-body border-top">
+                    <div class="d-flex align-items-baseline">
+                        <span class="text-body-secondary">@T["Before tax"]</span>
+                        <span class="ms-auto web-register-total" data-ticket-total></span>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-outline-danger flex-fill" data-action="void-line" disabled>@T["Void line"]</button>
+                        <button type="button" class="btn btn-outline-danger flex-fill" data-action="void-ticket" disabled>@T["Void ticket"]</button>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                        <button type="button" class="btn btn-success btn-lg flex-fill" data-action="pay" disabled><i class="fa-solid fa-money-bill-wave me-1" aria-hidden="true"></i>@T["Total and pay"]</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card mb-3">
+                <div class="card-body web-register-display">
+                    <div class="d-flex align-items-baseline">
+                        <span class="text-body-secondary me-2" data-multiplier></span>
+                        <span class="entry ms-auto" data-entry aria-live="polite">0.00</span>
+                    </div>
+                    <form class="input-group mt-3" data-sku-form>
+                        <span class="input-group-text"><i class="fa-solid fa-barcode" aria-hidden="true"></i></span>
+                        <input type="text" class="form-control" data-sku autocomplete="off" placeholder="@T["Scan or enter a SKU, then Enter"]" aria-label="@T["SKU"]" />
+                        <button type="submit" class="btn btn-secondary">@T["Add item"]</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <div class="web-register-keypad" data-keypad>
+                        @foreach (var digit in new[] { "7", "8", "9", "4", "5", "6", "1", "2", "3", "0", "00" })
+                        {
+                            <button type="button" class="btn btn-light border" data-digit="@digit">@digit</button>
+                        }
+                        <button type="button" class="btn btn-light border" data-key="back" title="@T["Remove the last digit"]"><i class="fa-solid fa-delete-left" aria-hidden="true"></i><span class="visually-hidden">@T["Remove the last digit"]</span></button>
+                        <button type="button" class="btn btn-warning" data-key="clear">@T["Clear"]</button>
+                        <button type="button" class="btn btn-secondary" data-key="times" title="@T["Ring up several: key in how many, press ×, then the amount"]">×</button>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    @if (Model.Keys.Count == 0)
+                    {
+                        <div class="alert alert-info mb-0">@T["No department keys yet. A manager adds departments under Commerce › Point of sale › Departments."]</div>
+                    }
+                    else
+                    {
+                        <div class="web-register-departments" data-departments>
+                            @for (var i = 0; i < Model.Keys.Count; i++)
+                            {
+                                var key = Model.Keys[i];
+                                <button type="button" class="btn @(string.IsNullOrEmpty(key.Color) ? "btn-primary" : null)" data-key-index="@i" data-department="@key.DepartmentId" style="@(string.IsNullOrEmpty(key.Color) ? null : $"background-color:{key.Color};border-color:{key.Color};color:{TextColor(key.Color)}")">
+                                    @key.Label
+                                    @if (key.PresetAmount is { } preset)
+                                    {
+                                        <span class="preset" data-preset-label="@preset.ToString(CultureInfo.InvariantCulture)"></span>
+                                    }
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Paying a sale. *@
+    <div class="modal fade" id="web-register-pay" tabindex="-1" aria-labelledby="web-register-pay-title" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="web-register-pay-title">@T["Take payment"]</h5>
+                    <button type="button" class="btn-close" data-pay-dismiss aria-label="@T["Back to the ticket"]"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-3 web-register-display">
+                        <dt class="col-7 fw-normal text-body-secondary">@T["Subtotal"]</dt><dd class="col-5 text-end mb-1" data-pay-subtotal></dd>
+                        <dt class="col-7 fw-normal text-body-secondary" data-pay-discount-row>@T["Discount"]</dt><dd class="col-5 text-end mb-1" data-pay-discount></dd>
+                        <dt class="col-7 fw-normal text-body-secondary">@T["Tax"]</dt><dd class="col-5 text-end mb-1" data-pay-tax></dd>
+                        <dt class="col-7">@T["Total"]</dt><dd class="col-5 text-end fw-bold mb-1" data-pay-total></dd>
+                        <dt class="col-7 fs-5">@T["Due"]</dt><dd class="col-5 text-end fs-5 fw-bold mb-0" data-pay-due></dd>
+                    </dl>
+
+                    <div data-pay-tenders>
+                        <label for="web-register-cash" class="form-label">@T["Cash handed over"]</label>
+                        <div class="input-group mb-2">
+                            <input id="web-register-cash" type="number" min="0" step="0.01" class="form-control form-control-lg" />
+                            <button type="button" class="btn btn-success" data-action="take-cash">@T["Take cash"]</button>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-3" data-quick-cash></div>
+
+                        @if (Model.CanTakeCards)
+                        {
+                            <label for="web-register-approval" class="form-label">@T["Card on the counter terminal"]</label>
+                            <div class="input-group">
+                                <input id="web-register-approval" type="text" class="form-control" maxlength="40" autocomplete="off" placeholder="@T["Approval code (optional)"]" />
+                                <button type="button" class="btn btn-primary" data-action="take-card">@T["Card paid"]</button>
+                            </div>
+                            <span class="form-text">@T["Charge the card on the terminal first, then record it here."]</span>
+                        }
+                    </div>
+
+                    <div class="text-center" data-pay-done hidden>
+                        <div class="display-6 mb-2" data-pay-change></div>
+                        <p class="text-body-secondary mb-0" data-pay-result></p>
+                    </div>
+
+                    <div class="alert alert-danger mt-3 mb-0" role="alert" data-pay-error hidden></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary me-auto" data-pay-dismiss>@T["Back to the ticket"]</button>
+                    <button type="button" class="btn btn-secondary" data-action="print" hidden><i class="fa-solid fa-print me-1" aria-hidden="true"></i>@T["Print receipt"]</button>
+                    <button type="button" class="btn btn-primary" data-action="new-sale" hidden>@T["New sale"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Cash put in or taken out of the drawer. *@
+    <div class="modal fade" id="web-register-cash-modal" tabindex="-1" aria-labelledby="web-register-cash-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" data-cash-form>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="web-register-cash-title">@T["Cash in or out"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Cancel"]"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="btn-group w-100 mb-3" role="group" aria-label="@T["Cash in or out"]">
+                        <input type="radio" class="btn-check" name="web-register-cash-direction" id="web-register-cash-in" value="in" checked />
+                        <label class="btn btn-outline-success" for="web-register-cash-in">@T["Put in"]</label>
+                        <input type="radio" class="btn-check" name="web-register-cash-direction" id="web-register-cash-out" value="out" />
+                        <label class="btn btn-outline-danger" for="web-register-cash-out">@T["Take out"]</label>
+                    </div>
+                    <label for="web-register-cash-amount" class="form-label">@T["Amount"]</label>
+                    <input id="web-register-cash-amount" type="number" min="0.01" step="0.01" class="form-control mb-3" required />
+                    <label for="web-register-cash-reason" class="form-label">@T["Reason"]</label>
+                    <input id="web-register-cash-reason" type="text" class="form-control" maxlength="200" placeholder="@T["Such as change from the bank, or a cash drop to the safe"]" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                    <button type="submit" class="btn btn-primary">@T["Record"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* The shift's numbers so far (an X report), or at its close (a Z report). *@
+    <div class="modal fade" id="web-register-report" tabindex="-1" aria-labelledby="web-register-report-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="web-register-report-title" data-report-title>@T["Shift report"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body" data-report-body></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-action="print-report"><i class="fa-solid fa-print me-1" aria-hidden="true"></i>@T["Print"]</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">@T["Done"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Counting the drawer and closing the shift. *@
+    <div class="modal fade" id="web-register-close" tabindex="-1" aria-labelledby="web-register-close-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" data-close-form>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="web-register-close-title">@T["Close shift"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Cancel"]"></button>
+                </div>
+                <div class="modal-body">
+                    <p>@T["Count the cash in the drawer, float included, and enter it. The shift report shows what it should hold."]</p>
+                    <label for="web-register-counted" class="form-label">@T["Cash counted"]</label>
+                    <input id="web-register-counted" type="number" min="0" step="0.01" class="form-control mb-3" required />
+                    <label for="web-register-close-note" class="form-label">@T["Note"]</label>
+                    <textarea id="web-register-close-note" class="form-control" rows="2" maxlength="500" placeholder="@T["Anything about the count, such as why it's short"]"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Close shift"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script asp-src="~/CrestApps.OrchardCore.PointOfSale/scripts/web-register.min.js" debug-src="~/CrestApps.OrchardCore.PointOfSale/scripts/web-register.js" at="Foot"></script>

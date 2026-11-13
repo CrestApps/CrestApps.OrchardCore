@@ -39,6 +39,38 @@ internal sealed class RegisterDisplayDriver : DisplayDriver<Register>
 }
 
 /// <summary>
+/// Renders a department as a row of the departments admin list, in both of its layouts (List and Grid).
+/// </summary>
+internal sealed class PosDepartmentDisplayDriver : DisplayDriver<PosDepartment>
+{
+    public override IDisplayResult Display(PosDepartment department, BuildDisplayContext context)
+    {
+        if (context.DisplayType is not (OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid))
+        {
+            return null;
+        }
+
+        if (context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = department.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
+        return Combine(
+            View("PosDepartment_Fields_SummaryAdmin", department)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("PosDepartment_Description_SummaryAdmin", department)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5"),
+            View("PosDepartment_Status_SummaryAdmin", department)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:1"),
+            View("PosDepartment_Buttons_SummaryAdmin", department).Location("Actions:5"));
+    }
+}
+
+/// <summary>
 /// Renders a shift as a row of the shifts admin list, in both of its layouts (List and Grid).
 /// </summary>
 internal sealed class RegisterShiftDisplayDriver : DisplayDriver<RegisterShift>

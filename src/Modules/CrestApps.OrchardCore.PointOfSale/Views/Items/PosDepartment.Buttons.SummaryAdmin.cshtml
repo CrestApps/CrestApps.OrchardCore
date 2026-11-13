@@ -1,0 +1,4 @@
+@model ShapeViewModel<PosDepartment>
+
+<a asp-action="Edit" asp-controller="PosDepartmentsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+<a asp-action="Delete" asp-controller="PosDepartmentsAdmin" asp-route-itemId="@Model.Value.ItemId" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Delete {0}? Its past sales keep its name, and registers drop its key.", Model.Value.Name]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -37,6 +38,7 @@ public sealed class ReviewRequestService
     private readonly ISiteService _siteService;
     private readonly IClock _clock;
     private readonly LinkGenerator _linkGenerator;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
 
     internal readonly IStringLocalizer S;
 
@@ -47,7 +49,8 @@ public sealed class ReviewRequestService
         ISiteService siteService,
         IClock clock,
         IStringLocalizer<ReviewRequestService> stringLocalizer,
-        LinkGenerator linkGenerator)
+        LinkGenerator linkGenerator,
+        IContentDefinitionManager contentDefinitionManager)
     {
         _orders = orders;
         _customers = customers;
@@ -55,6 +58,7 @@ public sealed class ReviewRequestService
         _siteService = siteService;
         _clock = clock;
         _linkGenerator = linkGenerator;
+        _contentDefinitionManager = contentDefinitionManager;
         S = stringLocalizer;
     }
 
@@ -95,6 +99,10 @@ public sealed class ReviewRequestService
 
         var sent = 0;
 
+        // Only a line bought as a content item has a page to review: an amount rung up in a register department
+        // names no content type the site has.
+        var contentTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync()).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+
         foreach (var order in due.Take(BatchSize))
         {
             // Asked once either way: a buyer who doesn't accept marketing isn't asked later.
@@ -102,7 +110,7 @@ public sealed class ReviewRequestService
 
             var customer = string.IsNullOrEmpty(order.CustomerId) ? null : await _customers.FindByIdAsync(order.CustomerId, cancellationToken);
 
-            if (customer is { AcceptsMarketing: true } && !string.IsNullOrWhiteSpace(order.CustomerEmail) && order.Lines.Any(line => !string.IsNullOrEmpty(line.ContentItemId)))
+            if (customer is { AcceptsMarketing: true } && !string.IsNullOrWhiteSpace(order.CustomerEmail) && order.Lines.Any(line => IsReviewable(line, contentTypes)))
             {
                 var wasSent = await _emailSender.SendAsync(new CommerceEmail
                 {
@@ -113,7 +121,7 @@ public sealed class ReviewRequestService
                     Reference = order.OrderNumber,
                 }, _ =>
                 {
-                    var (subject, text, html) = Build(order, site.BaseUrl, site.SiteName);
+                    var (subject, text, html) = Build(order, site.BaseUrl, site.SiteName, contentTypes);
 
                     return Task.FromResult(new CommerceEmailContent { Subject = subject, Text = text, Html = html });
                 }, cancellationToken);
@@ -130,7 +138,13 @@ public sealed class ReviewRequestService
         return sent;
     }
 
-    internal (string Subject, string Text, string Html) Build(Order order, string baseUrl, string storeName)
+    // A line names a product to review when it has a content item of a type the site has; a line without a type kept
+    // is taken as one, as orders from before types were kept on lines are.
+    internal static bool IsReviewable(OrderLine line, IReadOnlySet<string> contentTypes)
+        => !string.IsNullOrEmpty(line?.ContentItemId) &&
+            (string.IsNullOrEmpty(line.ContentType) || contentTypes is null || contentTypes.Contains(line.ContentType));
+
+    internal (string Subject, string Text, string Html) Build(Order order, string baseUrl, string storeName, IReadOnlySet<string> contentTypes = null)
     {
         var encoder = HtmlEncoder.Default;
         var subject = S["How was your order from {0}?", storeName].Value;
@@ -142,7 +156,7 @@ public sealed class ReviewRequestService
         var html = new StringBuilder("<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#212529;max-width:600px\">")
             .Append("<p>").Append(encoder.Encode(lead)).Append("</p><ul>");
 
-        foreach (var line in order.Lines.Where(line => !string.IsNullOrEmpty(line.ContentItemId)).DistinctBy(line => line.ContentItemId))
+        foreach (var line in order.Lines.Where(line => IsReviewable(line, contentTypes)).DistinctBy(line => line.ContentItemId))
         {
             // The site's address holds the tenant's prefix, so the route's path goes after it as is.
             var path = _linkGenerator.GetPathByAction("Display", "Item", new { area = "OrchardCore.Contents", contentItemId = line.ContentItemId });

@@ -1,0 +1,85 @@
+@model WebRegisterReceiptViewModel
+@using CrestApps.OrchardCore.Orders.Core.Services
+@using CrestApps.OrchardCore.Products.Core.Services
+@functions {
+    private string Money(decimal amount)
+        => ProductPriceFormatter.Format(amount, Model.Order.Currency);
+}
+@{
+    // A page of its own, without the admin around it, to print on a receipt printer.
+    Layout = null;
+    var order = Model.Order;
+    var address = Model.Register.Address;
+    var total = order.Total ?? order.Subtotal;
+    var tendered = (order.Tenders ?? []).Sum(tender => tender.Amount);
+}
+<!DOCTYPE html>
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.Name">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@T["Receipt {0}", order.OrderNumber]</title>
+    <style>
+        body { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; color: #000; margin: 0 auto; padding: 12px; max-width: 80mm; }
+        h1 { font-size: 16px; text-align: center; margin: 0 0 4px; }
+        .center { text-align: center; }
+        .muted { color: #444; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        td { padding: 2px 0; vertical-align: top; }
+        td.amount { text-align: right; white-space: nowrap; padding-left: 8px; }
+        tr.rule td { border-top: 1px dashed #000; padding-top: 4px; }
+        tr.strong td { font-weight: bold; font-size: 15px; }
+        @@media print { body { padding: 0; } .no-print { display: none; } }
+    </style>
+</head>
+<body>
+    <h1>@Model.Register.Name</h1>
+    @if (address is not null)
+    {
+        <div class="center muted">@string.Join(", ", new[] { address.AddressLine1, address.City, address.Region, address.PostalCode }.Where(part => !string.IsNullOrEmpty(part)))</div>
+    }
+    <div class="center muted">@Model.SoldAt.ToString("g", System.Globalization.CultureInfo.CurrentCulture) · @order.OrderNumber</div>
+    @if (!string.IsNullOrEmpty(order.StaffName))
+    {
+        <div class="center muted">@T["Served by {0}", order.StaffName]</div>
+    }
+
+    <table>
+        @foreach (var line in order.Lines)
+        {
+            <tr>
+                <td>
+                    @OrderLineText.Describe(line)
+                    @if (line.Quantity != 1)
+                    {
+                        <div class="muted">@T["{0} × {1}", line.Quantity, Money(line.UnitPrice)]</div>
+                    }
+                </td>
+                <td class="amount">@Money(line.LineTotal)</td>
+            </tr>
+        }
+        <tr class="rule"><td>@T["Subtotal"]</td><td class="amount">@Money(order.Subtotal)</td></tr>
+        @if (order.DiscountTotal > 0m)
+        {
+            <tr><td>@T["Discount"]</td><td class="amount">−@Money(order.DiscountTotal)</td></tr>
+        }
+        <tr><td>@T["Tax"]</td><td class="amount">@Money(order.TaxAmount ?? 0m)</td></tr>
+        <tr class="strong"><td>@T["Total"]</td><td class="amount">@Money(total)</td></tr>
+        @foreach (var tender in order.Tenders ?? [])
+        {
+            <tr><td>@(tender.ProviderKey == PosConstants.CashTenderKey ? T["Cash"].Value : tender.Description ?? tender.ProviderKey)</td><td class="amount">@Money(tender.Amount)</td></tr>
+        }
+        @if (total - tendered > 0m)
+        {
+            <tr><td>@T["Card"]</td><td class="amount">@Money(total - tendered)</td></tr>
+        }
+    </table>
+
+    <p class="center">@T["Thank you!"]</p>
+    <p class="center no-print"><button type="button" onclick="window.print()">@T["Print"]</button></p>
+
+    <script>
+        window.addEventListener('load', () => window.print());
+    </script>
+</body>
+</html>

@@ -46,8 +46,38 @@ internal sealed class PosMigrations : DataMigration
 
         await CreateReportIndexAsync();
         await AddUserColumnsAsync();
+        await CreateDepartmentIndexAsync();
 
-        return 3;
+        return 4;
+    }
+
+    /// <summary>
+    /// Adds the index of the departments registers ring amounts up in.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreateDepartmentIndexAsync();
+
+        return 4;
+    }
+
+    private async Task CreateDepartmentIndexAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<PosDepartmentIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.WithLength(255))
+            .Column<string>("Number", column => column.Nullable().WithLength(50))
+            .Column<int>("Position")
+            .Column<bool>("IsEnabled"),
+            collection: PosConstants.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<PosDepartmentIndex>(table =>
+        {
+            table.CreateIndex("IDX_PosDepartmentIndex_ItemId", "ItemId");
+            table.CreateIndex("IDX_PosDepartmentIndex_Position", "Position", "Name");
+        }, collection: PosConstants.CollectionName);
     }
 
     /// <summary>

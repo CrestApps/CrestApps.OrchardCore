@@ -5,6 +5,17 @@ public static class PosConstants
     public const string Feature = "CrestApps.OrchardCore.PointOfSale";
 
     /// <summary>
+    /// The feature that lets staff ring up sales in the browser, on the site's own register page.
+    /// </summary>
+    public const string WebRegisterFeature = "CrestApps.OrchardCore.PointOfSale.WebRegister";
+
+    /// <summary>
+    /// The content type an order line rung up in a department carries, in place of a product's: its content item id is
+    /// the department's id.
+    /// </summary>
+    public const string DepartmentLineType = "PosDepartment";
+
+    /// <summary>
     /// The YesSql collection registers and shifts live in.
     /// </summary>
     public const string CollectionName = "PointOfSale";
@@ -35,5 +46,10 @@ public static class PosConstants
         /// The recipe step that adds or updates registers.
         /// </summary>
         public const string Registers = "Registers";
+
+        /// <summary>
+        /// The recipe step that adds or updates the departments registers ring amounts up in.
+        /// </summary>
+        public const string Departments = "PosDepartments";
     }
 }

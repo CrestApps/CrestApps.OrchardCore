@@ -1,21 +1,23 @@
 ---
 sidebar_label: Point of sale
 title: Point of sale
-description: "Sell at your stores' counters from a till app: set up registers and Stripe card readers, open and close shifts with their cash, ring up sales paid in cash, by card or a mix, print and email receipts, and take returns at the till."
+description: "Sell at your stores' counters from the web register or a till app: set up registers, departments and Stripe card readers, open and close shifts with their cash, ring up items and amounts by department, take cash, a card or a mix, print and email receipts, and take returns at the till."
 technical_manual:
   - modules/point-of-sale
   - modules/payments
 ---
 
-The **Point of Sale** feature lets your staff sell at the counter of each of your stores, from a phone, tablet or till computer running a **till app**. No till app ships with this solution: your developers, or a partner, build one on the commerce API. The site gives the registers, the shifts, the cash drawer and the rules. The till app talks to your site through the [commerce API](headless-api.md), so a sale at the counter uses the same products, prices, coupons, gift cards, stock and orders as your online store.
+The **Point of Sale** feature lets your staff sell at the counter of each of your stores. They sell in the browser, on the site's own **web register**, or from a phone, tablet or till computer running a **till app** that your developers, or a partner, build on the [commerce API](headless-api.md). Either way, a sale at the counter uses the same products, prices, coupons, gift cards, stock and orders as your online store.
+
+A store can also sell **by department**, the way a cash register does: key in $10.00 and press **Candy**, and $10.00 counts toward candy sales, taxed as candy, with no item to look up and no stock to count. That suits a small store that rings up most sales by amount.
 
 At each store you set up one or more **registers**. A member of staff opens a **shift** at a register with the cash in its drawer, rings up sales, takes cash, a card or both, prints or emails the receipt, and at the end of the day counts the drawer and closes the shift. You see every shift, what it sold and whether its drawer came out right.
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Point of sale > Registers; Commerce > Point of sale > Shifts |
-| **Permission** | **Sell at a register** for staff at the till; **Manage registers and shifts** to set up registers and read every shift |
-| **Feature** | Point of Sale (it needs Orders, Inventory and the Checkout API). Receipts, to print and email receipts. Stripe, to take cards on Stripe Terminal readers. |
+| **Menu** | Commerce > Point of sale > Web register; Registers; Shifts; Departments |
+| **Permission** | **Sell at a register** for staff at the till; **Manage registers and shifts** to set up registers and departments, and read every shift |
+| **Feature** | Point of Sale (it needs Orders, Inventory and the Checkout API). Point of Sale Web Register, to sell in the browser. Receipts, to print and email branded receipts. Stripe, to take cards on Stripe Terminal readers. |
 
 <AskYourAdmin />
 
@@ -25,12 +27,13 @@ This video shows why a store sells at the counter with the same system, the regi
 
 ## Before you start
 
-1. Turn on **Point of Sale**, and **Receipts** if you'll print or email receipts.
+1. Turn on **Point of Sale**; **Point of Sale Web Register** to sell in the browser; and **Receipts** if you'll email receipts or print them branded.
 2. Add a location for each store under **Settings > Commerce > Inventory**: a register sells from one of them. See [Inventory](inventory.md).
 3. Give staff who sell at the counter a role with **Sell at a register**. Give whoever manages the stores **Manage registers and shifts**, which includes selling.
-4. Set up sign-in for the till app, as an app people sign in to with the authorization code flow, and include the `roles` scope so registers can check staff roles. See [Set up sign-in](headless-api.md#set-up-sign-in).
+4. For the web register, give those roles **Access admin panel** too: the web register is a page of the admin.
+5. For a till app, set up its sign-in, as an app people sign in to with the authorization code flow, and include the `roles` scope so registers can check staff roles. See [Set up sign-in](headless-api.md#set-up-sign-in).
 
-Staff sign in to the till app with their own accounts, so every shift, sale and cash movement says who made it.
+Staff sign in with their own accounts, so every shift, sale and cash movement says who made it.
 
 ## Set up registers
 
@@ -39,7 +42,7 @@ Staff sign in to the till app with their own accounts, so every shift, sale and 
 1. Open **Commerce > Point of sale > Registers** and click **Add register**.
 2. Fill in the fields (below), and click **Save**.
 
-*The register was added. Staff who may sell at registers can open a shift at it from the till app.* confirms it.
+*The register was added. Staff who may sell at registers can open a shift at it from the web register or a till app.* confirms it.
 
 | Field | What it does |
 | --- | --- |
@@ -49,6 +52,48 @@ Staff sign in to the till app with their own accounts, so every shift, sale and 
 | **Currency** | The currency its drawer holds, such as *USD*. Leave it blank to sell in the products' own currency. |
 | **Who may sell here** | Tick roles to let only their staff sell at this register. None ticked lets anyone with **Sell at a register**. Staff with **Manage registers and shifts** may sell at every register. |
 | **On** | A register that's off can't open a shift or ring up a sale. |
+| **Department keys** | The keys on its keypad that ring an amount up in a department. See [Program the department keys](#program-the-department-keys). |
+
+## Departments
+
+A department is what a register rings an amount up in when there's no item to track, such as *Grocery*, *Candy* or *Lottery*. Its sales are counted toward it, on the shift report and in the shift's page, and taxed by its tax category. Departments are only for the registers: they never show in your online store.
+
+1. Open **Commerce > Point of sale > Departments** and click **Add department**.
+2. Fill in the fields (below), and click **Save**.
+
+| Field | What it does |
+| --- | --- |
+| **Name** | What its key, receipts and reports say, such as *Candy*. Required. |
+| **Number** | The department's number, such as *4*, if your store numbers them. No two departments can share one. |
+| **Tax category** | What its sales are taxed as, from your [tax categories](taxes.md), such as groceries at a lower rate. Leave it on **The store's default rate** to tax them like anything else. |
+| **Position** | Where its key comes on registers whose keys you haven't programmed: a smaller number first. |
+| **On** | Registers can't ring amounts up in a department that's off, and drop its key. |
+| **Key color** | The color of its key on the register. |
+| **Least amount** and **Most amount** | The limits of one ring-up. The most amount catches a mistyped amount, such as 1000.00 for 10.00. |
+
+**Delete** removes a department; its past sales keep its name.
+
+### Program the department keys
+
+Each register shows a key for every department that's on, in their order, until you program its keys. To choose its keys, open the register under **Commerce > Point of sale > Registers**, and in **Department keys**:
+
+1. Click **Add key**, and choose its department.
+2. Optionally, change what the key reads, and give it a **Preset amount**: a key with one rings that amount up when nothing is keyed in, such as *1.00* for a coffee.
+3. Use the arrow to move a key up, and the bin to remove it. Keys show in this order.
+4. Click **Save**.
+
+## The web register
+
+With **Point of Sale Web Register** on, staff sell in the browser at **Commerce > Point of sale > Web register**. Staff who may sell at more than one register pick theirs first.
+
+1. **Open the shift.** Enter the cash you put in the drawer, and click **Open shift**.
+2. **Ring up.** Key in an amount on the keypad or the keyboard, cents first, so *1 0 0 0* is 10.00, and press a department. A key with a preset amount rings it up alone. To ring up several, key in how many, press **×**, then the amount and the department: *3 × 1 5 0* then **Candy** is three at 1.50. To sell an item, scan its barcode, or type its SKU and press Enter. Click a line and **Void line** to take it off, or **Void ticket** to start again.
+3. **Take the payment.** Click **Total and pay**: the site adds the tax. Enter the cash handed over, or click one of the quick amounts, and **Take cash**: the change is shown. For a card, charge it on your card terminal, then click **Card paid**, with the approval code if you like. Cash and a card can share a sale. **Back to the ticket** voids the sale so you can change it.
+4. **Print the receipt**, then click **New sale**. With Receipts on, the receipt is your branded one; otherwise it's a plain till receipt for an 80 mm receipt printer.
+5. **Cash in or out** records cash put in the drawer or taken out, with the reason. **Shift report** shows how the shift is going: sales, tax, how they were paid, what the drawer should hold, and what each department rang up.
+6. **Close the shift.** Count the drawer, float included, enter it, and click **Close shift**. The closing report shows the count against what the drawer should hold.
+
+The web register doesn't name a customer, take discount codes or gift cards, use Stripe readers, or take returns. A till app does those.
 
 ## Card payments
 
@@ -162,12 +207,13 @@ Click **View** to open a shift:
 | **Card** | What cards paid, on the counter terminal or a Stripe reader. |
 | **Gift cards and balances** | What gift cards paid. |
 | **Refunded** | What has been refunded of the shift's sales, wherever it was refunded. |
+| **Tax collected** | The tax on the shift's sales. |
 | **Opening float** | The cash put in the drawer at the start. |
 | **Put in, less taken out** | The cash movements, returns at the till included. Each one is listed with its reason and who made it. |
 | **Expected** | What the drawer should hold. |
 | **Counted** and **Difference** | For a closed shift: the cash counted, and how far off it was. Negative is shown in red. |
 
-The note given at the close is shown with it.
+**Departments** lists what each department rang up in the shift: how many, and what they came to before tax. The note given at the close is shown with it.
 
 ## What a register sale does differently
 
@@ -181,6 +227,7 @@ A register sale is an order, like an online one, so it's under **Commerce > Orde
 - The buyer takes it with them: nothing is shipped, and its checkout skips the **Contact** and **Shipping** steps.
 - It's **taxed** by the register's store address, and billed to it.
 - It's paid in **cash**, by **card on the counter terminal**, by **card on a Stripe reader**, with a **gift card**, or a mix. Store credit and loyalty points aren't taken at a register.
+- An amount rung up in a **department** is a line of the order with the department's name. It takes no stock, and it's listed with your products in the sales reports.
 
 ## For your developers
 

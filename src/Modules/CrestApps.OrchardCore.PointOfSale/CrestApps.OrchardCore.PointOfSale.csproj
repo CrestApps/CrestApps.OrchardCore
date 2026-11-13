@@ -6,8 +6,9 @@
     <Description>
       $(OCCMSDescription)
 
-      Selling at a store's counter over the commerce API: registers at each location, shifts with their cash, sales paid
-      in cash, by card, gift card or several of them, receipts, and returns at the till.
+      Selling at a store's counter over the commerce API or in the browser: registers at each location, shifts with
+      their cash, sales of products and of amounts by department, paid in cash, by card, gift card or several of them,
+      receipts, and returns at the till.
     </Description>
     <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Commerce PointOfSale POS</PackageTags>
   </PropertyGroup>
