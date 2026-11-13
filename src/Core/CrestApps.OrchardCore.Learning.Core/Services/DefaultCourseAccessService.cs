@@ -129,18 +129,24 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
                 return access;
 
             case EnrollmentStatus.Completed:
-                access.Reason = enrollment.Grants.Count > 0 && (enrollment.AccessEndsUtc is null || enrollment.AccessEndsUtc > now)
-                    ? CourseItemAccessReason.Enrolled
-                    : CourseItemAccessReason.AccessEnded;
+                if (enrollment.Grants.Count == 0 || (enrollment.AccessEndsUtc is not null && enrollment.AccessEndsUtc <= now))
+                {
+                    access.Reason = CourseItemAccessReason.AccessEnded;
 
-                return access;
-        }
+                    return access;
+                }
 
-        if (!EnrollmentAccess.HasAccess(enrollment, now))
-        {
-            access.Reason = CourseItemAccessReason.AccessEnded;
+                break;
 
-            return access;
+            default:
+                if (!EnrollmentAccess.HasAccess(enrollment, now))
+                {
+                    access.Reason = CourseItemAccessReason.AccessEnded;
+
+                    return access;
+                }
+
+                break;
         }
 
         var course = await _courseStructure.GetCourseAsync(courseId);
@@ -150,6 +156,14 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
         {
             access.Reason = CourseItemAccessReason.NotReleased;
             access.LockedReason = "This item is not part of the course outline.";
+
+            return access;
+        }
+
+        // A learner who completed the course may review every item of its outline, whatever its release rules.
+        if (enrollment.Status == EnrollmentStatus.Completed)
+        {
+            access.Reason = CourseItemAccessReason.Enrolled;
 
             return access;
         }

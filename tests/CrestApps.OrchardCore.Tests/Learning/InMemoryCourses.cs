@@ -54,6 +54,11 @@ internal sealed class InMemoryCourses : ICourseStructureService
         _items[id] = item;
         _courseOfItem[id] = courseId;
 
+        if (sectionId is null)
+        {
+            return item;
+        }
+
         var course = _items[courseId];
 
         course.Alter<CourseOutlinePart>(outline =>

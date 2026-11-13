@@ -53,6 +53,27 @@ public sealed class CourseAccessTests
     }
 
     [Fact]
+    public async Task GetItemAccessAsync_ForACompletedEnrollment_OpensOnlyItemsInTheOutline()
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        var placed = courses.AddItem("course1", "placed");
+        var unplaced = courses.AddItem("course1", "unplaced", sectionId: null);
+        var enrollment = await EnrollAsync(harness, "learner", "course1");
+        await harness.RunAsync(services => services.GetRequiredService<IEnrollmentService>().ChangeStatusAsync(enrollment.ItemId, EnrollmentStatus.Completed, "admin", "Done on paper"));
+
+        // Act
+        Task<CourseItemAccess> Access(ContentItem item)
+            => harness.RunAsync(services => services.GetRequiredService<ICourseAccessService>().GetItemAccessAsync(CalendarTestHarness.User("learner"), item), commit: false);
+
+        // Assert
+        Assert.Equal(CourseItemAccessReason.Enrolled, (await Access(placed)).Reason);
+        Assert.Equal(CourseItemAccessReason.NotReleased, (await Access(unplaced)).Reason);
+    }
+
+    [Fact]
     public async Task GetItemAccessAsync_OnAFreePreview_TreatsAnEnrolledLearnerAsEnrolled_SoProgressCounts()
     {
         // Arrange
