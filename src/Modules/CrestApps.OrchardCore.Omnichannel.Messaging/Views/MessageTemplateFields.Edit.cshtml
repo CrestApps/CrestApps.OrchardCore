@@ -15,9 +15,9 @@
 
 <div class="mb-3">
     <div class="form-check">
-        <input asp-for="IsPlainText" type="checkbox" class="form-check-input" />
-        <label asp-for="IsPlainText" class="form-check-label">@T["Plain text"]</label>
-        <span class="hint dashed">@T["Insert the body exactly as written, braces included, without filling in placeholders."]</span>
+        <input asp-for="FillsPlaceholders" type="checkbox" class="form-check-input" />
+        <label asp-for="FillsPlaceholders" class="form-check-label">@T["Fill in placeholders"]</label>
+        <span class="hint dashed">@T["Off, the body is inserted exactly as written, braces included."]</span>
     </div>
 </div>
 

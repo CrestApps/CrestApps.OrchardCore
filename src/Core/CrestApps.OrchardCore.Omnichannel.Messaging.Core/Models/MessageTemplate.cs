@@ -27,10 +27,12 @@ public sealed class MessageTemplate : CatalogItem, INameAwareModel, IModifiedUtc
     public string Scope { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the body is inserted as written, without filling in placeholders. Templates
-    /// written before placeholders existed are plain text, so braces an agent typed keep their meaning.
+    /// Gets or sets a value indicating whether the body's Liquid placeholders are filled in. Off, the body is inserted
+    /// exactly as written. Templates written before placeholders existed don't have the value, so they stay plain text and
+    /// braces an agent typed keep their meaning, with no stored template rewritten; the editor turns it on for new
+    /// templates, and a recipe asks for it.
     /// </summary>
-    public bool IsPlainText { get; set; }
+    public bool FillsPlaceholders { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the template was created.

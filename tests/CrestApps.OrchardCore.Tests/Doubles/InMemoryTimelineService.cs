@@ -41,8 +41,27 @@ public sealed class InMemoryTimelineService : ITimelineService
         return AddAsync(entry, cancellationToken);
     }
 
-    public Task<TimelineResult> UpdateAsync(TimelineEntry entry, CancellationToken cancellationToken = default)
-        => Task.FromResult(new TimelineResult { Entry = entry });
+    public Task<TimelineResult> UpdateAsync(string entryId, Action<TimelineEntryChanges> change, CancellationToken cancellationToken = default)
+    {
+        var entry = Entries.FirstOrDefault(item => item.ItemId == entryId);
+
+        if (entry is null)
+        {
+            return Task.FromResult(new TimelineResult { Errors = ["The entry doesn't exist."] });
+        }
+
+        var changes = new TimelineEntryChanges(entry);
+        change(changes);
+        entry.Properties.Clear();
+        foreach (var (key, value) in changes.Properties)
+        {
+            entry.Properties[key] = value;
+        }
+        entry.Channel = changes.Channel;
+        entry.ExternalId = changes.ExternalId;
+
+        return Task.FromResult(new TimelineResult { Entry = entry });
+    }
 
     public Task<TimelineEntry> FindByExternalIdAsync(string externalId, CancellationToken cancellationToken = default)
         => Task.FromResult(Entries.FirstOrDefault(entry => entry.ExternalId == externalId));

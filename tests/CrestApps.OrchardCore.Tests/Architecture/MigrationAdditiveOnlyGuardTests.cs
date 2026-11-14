@@ -807,7 +807,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
             "CatalogIndexBackfill",
             "ReindexAsync",
-            "bc3e9128102669bb",
+            "90c96eb10c72e6a4",
             "Not SQL text at all: a YesSql LINQ query that pages through a catalog's documents and saves each one again through the session, so YesSql maps its index rows again. It only reads documents and rewrites index rows for them; it never creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",

@@ -71,7 +71,9 @@ internal sealed class ContentItemTimelineAccess : ITimelineAccessProvider
         return await IsStaffAsync(user, contentItem);
     }
 
-    // Asked of an item of the type that nobody owns, so the right to edit one's own items doesn't count.
-    private Task<bool> IsStaffAsync(ClaimsPrincipal user, ContentItem contentItem)
-        => _authorizationService.AuthorizeAsync(user, CommonPermissions.EditContent, new ContentItem { ContentType = contentItem.ContentType });
+    // Staff may edit this item (so a handler that decides per item, such as content access control, is honored) and
+    // every item of the type: asked of an item nobody owns, so the right to edit one's own items doesn't count.
+    private async Task<bool> IsStaffAsync(ClaimsPrincipal user, ContentItem contentItem)
+        => await _authorizationService.AuthorizeAsync(user, CommonPermissions.EditContent, contentItem)
+        && await _authorizationService.AuthorizeAsync(user, CommonPermissions.EditContent, new ContentItem { ContentType = contentItem.ContentType });
 }

@@ -4,7 +4,9 @@ using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Emails;
 using Fluid;
 using Fluid.Values;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Core.Emails;
@@ -20,6 +22,8 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
 {
     private readonly IEnumerable<ITemplatedEmailTemplateSource> _sources;
     private readonly ISiteService _siteService;
+    private readonly ILocalClock _localClock;
+    private readonly IStringLocalizer _localizer;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -31,12 +35,16 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
     public LiquidTemplatedEmailTemplates(
         IEnumerable<ITemplatedEmailTemplateSource> sources,
         ISiteService siteService,
+        ILocalClock localClock,
+        IStringLocalizer<LiquidTemplatedEmailTemplates> localizer,
         ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         _sources = sources;
         _siteService = siteService;
+        _localClock = localClock;
+        _localizer = localizer;
         _logger = loggerFactory.CreateLogger<LiquidTemplatedEmailTemplates>();
     }
 
@@ -97,17 +105,18 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
 
             var subject = context.Subject;
             var html = context.Html;
+            var liquid = await RestrictedLiquidContexts.CreateAsync(_localClock, _localizer);
 
             if (template is not null)
             {
                 if (!string.IsNullOrWhiteSpace(template.Subject))
                 {
-                    subject = (await RenderOrThrowAsync(template.Subject, values, NullEncoder.Default)).Trim();
+                    subject = (await RenderOrThrowAsync(template.Subject, values, NullEncoder.Default, liquid)).Trim();
                 }
 
                 if (!string.IsNullOrWhiteSpace(template.Body))
                 {
-                    html = await RenderOrThrowAsync(template.Body, values, HtmlEncoder.Default);
+                    html = await RenderOrThrowAsync(template.Body, values, HtmlEncoder.Default, liquid);
                     values["Content"] = StringValue.Create(html, encode: false);
                 }
             }
@@ -115,7 +124,7 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
             // A text-only email stays text-only, unless the site's template wrote a body for it.
             if (!string.IsNullOrWhiteSpace(layout) && !string.IsNullOrEmpty(html))
             {
-                html = await RenderOrThrowAsync(layout, values, HtmlEncoder.Default);
+                html = await RenderOrThrowAsync(layout, values, HtmlEncoder.Default, liquid);
             }
 
             // The text part follows the HTML a template wrote; with only a layout, the built text stays.
@@ -141,9 +150,9 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
         => RestrictedLiquid.TryValidate(source, out error);
 
     // A part that doesn't parse sends the built email instead, never the parser's message.
-    private static async Task<string> RenderOrThrowAsync(string source, Dictionary<string, FluidValue> values, TextEncoder encoder)
-        => await RestrictedLiquid.RenderAsync(source, values, encoder)
-            ?? throw new InvalidOperationException("The template doesn't parse.");
+    private static async Task<string> RenderOrThrowAsync(string source, Dictionary<string, FluidValue> values, TextEncoder encoder, RestrictedLiquidContext context)
+        => await RestrictedLiquid.RenderAsync(source, values, encoder, context)
+            ?? throw new InvalidOperationException("The template doesn't parse, or uses a filter that isn't available.");
 
     /// <summary>
     /// Writes the text part of an HTML body.

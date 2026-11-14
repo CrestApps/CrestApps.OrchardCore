@@ -32,14 +32,16 @@ public interface ITimelineService
     Task<TimelineResult> ImportAsync(TimelineEntry entry, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Saves a change to an entry that doesn't rewrite what it says, such as a delivery status a channel keeps in its
-    /// properties or the external id it was sent under. The body of an entry can't change this way; it can only be
-    /// redacted. The <see cref="ITimelineEntryHandler"/>s are told after.
+    /// Saves a change to an entry that doesn't rewrite what it says: a delivery status a channel keeps in its
+    /// properties, the channel, or the external id it was sent under. Only those can be reached through
+    /// <see cref="TimelineEntryChanges"/>; the body can only be redacted. The <see cref="ITimelineEntryHandler"/>s are
+    /// told after.
     /// </summary>
-    /// <param name="entry">The entry, as read from <see cref="FindAsync"/> and changed.</param>
+    /// <param name="entryId">The entry.</param>
+    /// <param name="change">Changes the values that may change.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>The result.</returns>
-    Task<TimelineResult> UpdateAsync(TimelineEntry entry, CancellationToken cancellationToken = default);
+    /// <returns>The result, with the stored entry.</returns>
+    Task<TimelineResult> UpdateAsync(string entryId, Action<TimelineEntryChanges> change, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds an entry.

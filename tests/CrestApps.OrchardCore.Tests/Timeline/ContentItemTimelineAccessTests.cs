@@ -90,6 +90,22 @@ public sealed class ContentItemTimelineAccessTests
     }
 
     [Fact]
+    public async Task AnItemAPerItemHandlerDenies_StaysClosed_ToSomeoneWhoMayEditTheType()
+    {
+        // Arrange: content access control, a team rule or a contained-item rule refuses this one item.
+        var access = Create(denyItem: "account-1");
+        var editor = User("editor", CommonPermissions.EditContent);
+
+        // Act
+        var reads = await access.CanViewAsync(editor, _account, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
+        var adds = await access.CanAddAsync(editor, _account, TimelineConstants.Kinds.Note, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(reads);
+        Assert.False(adds);
+    }
+
+    [Fact]
     public async Task AMissingItem_HasNoTimeline()
     {
         // Arrange
@@ -105,6 +121,9 @@ public sealed class ContentItemTimelineAccessTests
     }
 
     private static ContentItemTimelineAccess Create(params string[] publicTypes)
+        => Create(denyItem: null, publicTypes);
+
+    private static ContentItemTimelineAccess Create(string denyItem, params string[] publicTypes)
     {
         var contentManager = new Mock<IContentManager>();
 
@@ -119,12 +138,12 @@ public sealed class ContentItemTimelineAccessTests
             options.PublicContentTypes.Add(type);
         }
 
-        return new ContentItemTimelineAccess(contentManager.Object, RealAuthorization(), Options.Create(options));
+        return new ContentItemTimelineAccess(contentManager.Object, RealAuthorization(denyItem), Options.Create(options));
     }
 
     // Orchard's authorization as a tenant runs it: the permission handler (claims, implied permissions) and the Contents
     // module's content type handler (per-type and own-item variations).
-    private static IAuthorizationService RealAuthorization()
+    private static IAuthorizationService RealAuthorization(string denyItem = null)
     {
         var definitions = new Mock<IContentDefinitionManager>();
         definitions.Setup(manager => manager.GetTypeDefinitionAsync(It.IsAny<string>()))
@@ -141,7 +160,33 @@ public sealed class ContentItemTimelineAccessTests
         var contentTypeHandler = Assembly.Load("OrchardCore.Contents").GetTypes().Single(type => type.Name == "ContentTypeAuthorizationHandler");
         services.AddScoped(typeof(IAuthorizationHandler), provider => ActivatorUtilities.CreateInstance(provider, contentTypeHandler));
 
+        if (denyItem is not null)
+        {
+            services.AddScoped<IAuthorizationHandler>(_ => new DenyItemHandler(denyItem));
+        }
+
         return services.BuildServiceProvider().CreateScope().ServiceProvider.GetRequiredService<IAuthorizationService>();
+    }
+
+    // A handler that decides per item, as content access control does: it fails every requirement on one item.
+    private sealed class DenyItemHandler : IAuthorizationHandler
+    {
+        private readonly string _contentItemId;
+
+        public DenyItemHandler(string contentItemId)
+        {
+            _contentItemId = contentItemId;
+        }
+
+        public Task HandleAsync(AuthorizationHandlerContext context)
+        {
+            if (context.Resource is ContentItem { ContentItemId: { } id } && id == _contentItemId)
+            {
+                context.Fail();
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     private static ClaimsPrincipal User(string userId, params Permission[] permissions)

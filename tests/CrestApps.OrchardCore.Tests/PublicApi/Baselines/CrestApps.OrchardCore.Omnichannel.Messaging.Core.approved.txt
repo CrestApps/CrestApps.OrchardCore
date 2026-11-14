@@ -205,7 +205,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public MessageTemplate() { }
         public string Body { get; set; }
         public System.DateTime CreatedUtc { get; set; }
-        public bool IsPlainText { get; set; }
+        public bool FillsPlaceholders { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
         public string Name { get; set; }
         public string Scope { get; set; }
@@ -561,7 +561,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public sealed class LiquidMessageTemplateRenderer : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessageTemplateRenderer
     {
-        public LiquidMessageTemplateRenderer(Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.LiquidMessageTemplateRenderer> logger) { }
+        public LiquidMessageTemplateRenderer(OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.LiquidMessageTemplateRenderer> localizer, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.LiquidMessageTemplateRenderer> logger) { }
         public System.Threading.Tasks.Task<string> RenderAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate template, System.Collections.Generic.IReadOnlyDictionary<string, object> models, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class MessageDeliveryReceipt

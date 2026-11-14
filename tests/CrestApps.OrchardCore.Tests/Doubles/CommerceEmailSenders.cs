@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Commerce.Core.Emails;
 using CrestApps.OrchardCore.Commerce.Emails;
+using CrestApps.OrchardCore.Core.Emails;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -55,7 +56,11 @@ public static class CommerceEmailSenders
         var siteService = new Mock<ISiteService>();
         siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site);
 
-        var services = new ServiceCollection().AddLogging().BuildServiceProvider();
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddSingleton(LiquidTestClocks.In("UTC"))
+            .AddSingleton(RecipeRoundTrip.Localizer<LiquidTemplatedEmailTemplates>())
+            .BuildServiceProvider();
 
         return new LiquidCommerceEmailTemplates(services, siteService.Object, NullLogger<LiquidCommerceEmailTemplates>.Instance);
     }

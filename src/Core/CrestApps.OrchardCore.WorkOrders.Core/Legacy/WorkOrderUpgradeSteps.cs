@@ -58,7 +58,9 @@ internal sealed class WorkOrderNotesStep : IResumableStep
     /// </summary>
     public const string StepName = "WorkOrders.Notes";
 
-    private const int BatchesPerRun = 5;
+    // Notes are cheap to move, and a record shows the notes not yet moved only after they are; 50 batches of 100 a
+    // minute moves a store of 100,000 records in about 20 minutes.
+    private const int BatchesPerRun = 50;
 
     private readonly WorkOrderNotesUpgrade _upgrade;
 

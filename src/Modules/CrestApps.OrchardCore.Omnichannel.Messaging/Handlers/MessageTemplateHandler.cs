@@ -70,7 +70,7 @@ internal sealed class MessageTemplateHandler : CatalogEntryHandlerBase<MessageTe
         {
             context.Result.Fail(new ValidationResult(S["A template body is required."], [nameof(MessageTemplate.Body)]));
         }
-        else if (!template.IsPlainText && !RestrictedLiquid.TryValidate(template.Body, out var error))
+        else if (template.FillsPlaceholders && !RestrictedLiquid.TryValidate(template.Body, out var error))
         {
             // A body that doesn't parse would put the parser's message in every agent's composer.
             context.Result.Fail(new ValidationResult(S["The placeholders can't be read: {0}", error], [nameof(MessageTemplate.Body)]));

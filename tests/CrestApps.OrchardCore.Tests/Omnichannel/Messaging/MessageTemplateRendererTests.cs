@@ -20,7 +20,7 @@ public sealed class MessageTemplateRendererTests
     {
         // Arrange
         var renderer = Renderer();
-        var template = new MessageTemplate { Body = "Hi {{ Contact.DisplayName }}, your request {{ Ticket.Number }} is solved. <3" };
+        var template = new MessageTemplate { Body = "Hi {{ Contact.DisplayName }}, your request {{ Ticket.Number }} is solved. <3", FillsPlaceholders = true };
 
         // Act
         var body = await renderer.RenderAsync(template, new Dictionary<string, object>
@@ -41,9 +41,10 @@ public sealed class MessageTemplateRendererTests
         var models = new Dictionary<string, object> { ["Contact"] = new { DisplayName = "Sam" } };
 
         // Act
-        var plain = await renderer.RenderAsync(new MessageTemplate { Body = "Thanks, we're on it." }, models, TestContext.Current.CancellationToken);
-        var broken = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {{ Contact.DisplayName }" }, models, TestContext.Current.CancellationToken);
-        var plainText = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {{name}}, your order is ready", IsPlainText = true }, models, TestContext.Current.CancellationToken);
+        var plain = await renderer.RenderAsync(new MessageTemplate { Body = "Thanks, we're on it.", FillsPlaceholders = true }, models, TestContext.Current.CancellationToken);
+        var broken = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {{ Contact.DisplayName }", FillsPlaceholders = true }, models, TestContext.Current.CancellationToken);
+        // A template written before placeholders existed doesn't have the value, so it stays plain text.
+        var plainText = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {{name}}, your order is ready" }, models, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Thanks, we're on it.", plain);
@@ -75,7 +76,7 @@ public sealed class MessageTemplateRendererTests
 
         // Act
         var body = await renderer.RenderAsync(
-            new MessageTemplate { Body = "[{{ Request.Headers.Cookie }}][{{ User.Identity.Name }}][{{ Contact.DisplayName }}]" },
+            new MessageTemplate { Body = "[{{ Request.Headers.Cookie }}][{{ User.Identity.Name }}][{{ Contact.DisplayName }}]", FillsPlaceholders = true },
             new Dictionary<string, object> { ["Contact"] = new { DisplayName = "Sam" } },
             TestContext.Current.CancellationToken);
 
@@ -84,5 +85,5 @@ public sealed class MessageTemplateRendererTests
     }
 
     private static LiquidMessageTemplateRenderer Renderer()
-        => new(NullLogger<LiquidMessageTemplateRenderer>.Instance);
+        => new(LiquidTestClocks.In("Europe/Paris"), RecipeRoundTrip.Localizer<LiquidMessageTemplateRenderer>(), NullLogger<LiquidMessageTemplateRenderer>.Instance);
 }

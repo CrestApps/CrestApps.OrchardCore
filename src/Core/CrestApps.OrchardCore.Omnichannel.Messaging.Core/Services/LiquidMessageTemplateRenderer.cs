@@ -3,7 +3,9 @@ using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using Fluid;
 using Fluid.Values;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 
@@ -15,14 +17,20 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// </summary>
 public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
 {
+    private readonly ILocalClock _localClock;
+    private readonly IStringLocalizer _localizer;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LiquidMessageTemplateRenderer"/> class.
     /// </summary>
+    /// <param name="localClock">The local clock, for the time zone dates are shown in.</param>
+    /// <param name="localizer">The localizer the <c>t</c> filter looks texts up in.</param>
     /// <param name="logger">The logger.</param>
-    public LiquidMessageTemplateRenderer(ILogger<LiquidMessageTemplateRenderer> logger)
+    public LiquidMessageTemplateRenderer(ILocalClock localClock, IStringLocalizer<LiquidMessageTemplateRenderer> localizer, ILogger<LiquidMessageTemplateRenderer> logger)
     {
+        _localClock = localClock;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -34,7 +42,7 @@ public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
         var body = template.Body ?? string.Empty;
 
         // Only a body with Liquid in it is rendered, so a plain reply never changes.
-        if (template.IsPlainText || !RestrictedLiquid.HasLiquid(body))
+        if (!template.FillsPlaceholders || !RestrictedLiquid.HasLiquid(body))
         {
             return body;
         }
@@ -49,12 +57,12 @@ public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
             }
 
             // A reply is plain text, so nothing in it is encoded as HTML.
-            if (await RestrictedLiquid.RenderAsync(body, values, NullEncoder.Default) is { } rendered)
+            if (await RestrictedLiquid.RenderAsync(body, values, NullEncoder.Default, await RestrictedLiquidContexts.CreateAsync(_localClock, _localizer)) is { } rendered)
             {
                 return rendered.Trim();
             }
 
-            _logger.LogWarning("The reply template '{TemplateId}' doesn't parse; its body was used as written.", template.ItemId.SanitizeLogValue());
+            _logger.LogWarning("The reply template '{TemplateId}' doesn't parse or uses a filter that isn't available; its body was used as written.", template.ItemId.SanitizeLogValue());
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

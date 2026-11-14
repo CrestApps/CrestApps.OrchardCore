@@ -14,7 +14,9 @@ public sealed class OrderNotesStep : IResumableStep
     /// </summary>
     public const string StepName = "Orders.Notes";
 
-    private const int BatchesPerRun = 5;
+    // Notes are cheap to move, and a record shows the notes not yet moved only after they are; 50 batches of 100 a
+    // minute moves a store of 100,000 records in about 20 minutes.
+    private const int BatchesPerRun = 50;
 
     private readonly OrderNotesUpgrade _upgrade;
 

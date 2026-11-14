@@ -66,7 +66,8 @@ public sealed class MessageTemplateDisplayDriver : DisplayDriver<MessageTemplate
             model.Name = template.Name;
             model.Body = template.Body;
             model.Scope = template.Scope;
-            model.IsPlainText = template.IsPlainText;
+            // A new template fills in its placeholders; an existing one keeps what it was saved with.
+            model.FillsPlaceholders = context.IsNew || template.FillsPlaceholders;
             model.Scopes = [.. _scopeOptions.Value.Scopes.Select(scope => new KeyValuePair<string, string>(scope.Key, _localizerFactory.Localize(scope.Value).Value))];
 
             // A scope this site doesn't register (from another site's recipe) is shown as it is, so saving keeps it.
@@ -85,7 +86,7 @@ public sealed class MessageTemplateDisplayDriver : DisplayDriver<MessageTemplate
 
         template.Name = model.Name?.Trim();
         template.Body = model.Body?.Trim();
-        template.IsPlainText = model.IsPlainText;
+        template.FillsPlaceholders = model.FillsPlaceholders;
 
         // A registered scope, or the one the template already had; anything else is the messaging workspace's.
         template.Scope = !string.IsNullOrEmpty(model.Scope)

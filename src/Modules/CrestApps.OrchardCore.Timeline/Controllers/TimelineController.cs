@@ -113,7 +113,7 @@ public sealed class TimelineController : Controller
         {
             await _notifier.ErrorAsync(H["Files can't be attached here."]);
 
-            return Refused(record, body, returnUrl);
+            return await RefusedAsync(record, body, returnUrl);
         }
 
         try
@@ -130,7 +130,7 @@ public sealed class TimelineController : Controller
                         await _notifier.ErrorAsync(H["{0}", error]);
                     }
 
-                    return Refused(record, body, returnUrl);
+                    return await RefusedAsync(record, body, returnUrl);
                 }
 
                 attached.AddRange(stored.Attachments.Select(attachment => attachment.ItemId));
@@ -148,7 +148,7 @@ public sealed class TimelineController : Controller
                     await _notifier.ErrorAsync(H["{0}", error]);
                 }
 
-                return Refused(record, body, returnUrl);
+                return await RefusedAsync(record, body, returnUrl);
             }
         }
         catch
@@ -208,10 +208,15 @@ public sealed class TimelineController : Controller
         return Back(returnUrl);
     }
 
-    // Goes back with what was typed kept, so a refused file or entry doesn't lose the text.
-    private IActionResult Refused(RecordRef record, string body, string returnUrl)
+    // Goes back with what was typed kept, so a refused file or entry doesn't lose the text. The draft travels in the
+    // TempData cookie, so a long one isn't kept: it would push the request headers past what servers accept.
+    private async Task<IActionResult> RefusedAsync(RecordRef record, string body, string returnUrl)
     {
-        if (!string.IsNullOrWhiteSpace(body))
+        if (body?.Length > TimelineConstants.MaxKeptDraftLength)
+        {
+            await _notifier.WarningAsync(H["Your text was too long to keep for another try. Copy a long text before you send it."]);
+        }
+        else if (!string.IsNullOrWhiteSpace(body))
         {
             TempData[ViewComponents.TimelineViewComponent.DraftKey] = record + "\n" + body;
         }

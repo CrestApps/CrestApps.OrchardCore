@@ -18,9 +18,9 @@ public sealed class MessageTemplateRulesTests
     public async Task PlaceholdersThatDontParse_AreRefused_UnlessTheTemplateIsPlainText()
     {
         // Act
-        var broken = await ValidateAsync(new MessageTemplate { Name = "Hi", Body = "Hi {{ Contact.DisplayName }" });
-        var plain = await ValidateAsync(new MessageTemplate { Name = "Hi", Body = "Hi {{ Contact.DisplayName }", IsPlainText = true });
-        var fine = await ValidateAsync(new MessageTemplate { Name = "Hi", Body = "Hi {{ Contact.DisplayName }}" });
+        var broken = await ValidateAsync(new MessageTemplate { Name = "Hi", Body = "Hi {{ Contact.DisplayName }", FillsPlaceholders = true });
+        var plain = await ValidateAsync(new MessageTemplate { Name = "Hi", Body = "Hi {{ Contact.DisplayName }" });
+        var fine = await ValidateAsync(new MessageTemplate { Name = "Hi", Body = "Hi {{ Contact.DisplayName }}", FillsPlaceholders = true });
 
         // Assert
         Assert.Contains(broken.Result.Errors, error => error.MemberNames.Contains(nameof(MessageTemplate.Body)));

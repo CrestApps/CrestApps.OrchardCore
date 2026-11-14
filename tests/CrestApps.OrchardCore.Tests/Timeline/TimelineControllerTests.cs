@@ -96,6 +96,24 @@ public sealed class TimelineControllerTests
     }
 
     [Fact]
+    public async Task ARefusedLongText_IsNotKept_SoTheCookieCantOutgrowTheRequestHeaders()
+    {
+        // Arrange: the most common refusal of all, a body over the length limit.
+        var timeline = new Mock<ITimelineService>();
+        timeline.Setup(service => service.AddAsync(It.IsAny<TimelineEntry>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TimelineResult { Errors = ["The text is too long."] });
+        var (controller, _) = Create(canAdd: true, timelineService: timeline.Object);
+        var body = new string('x', TimelineConstants.MaxBodyLength + 1);
+
+        // Act
+        var result = await controller.Add(_workOrder.ToString(), body, TimelineConstants.Kinds.Note, ReturnUrl, []);
+
+        // Assert
+        Assert.Equal(ReturnUrl, Assert.IsType<LocalRedirectResult>(result).Url);
+        Assert.False(controller.TempData.ContainsKey(TimelineViewComponent.DraftKey));
+    }
+
+    [Fact]
     public async Task AWayBackOffTheSite_GoesToTheAdminInstead()
     {
         // Arrange

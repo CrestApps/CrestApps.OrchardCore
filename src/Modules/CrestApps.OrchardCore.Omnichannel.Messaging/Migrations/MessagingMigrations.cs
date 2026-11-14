@@ -1,8 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
-using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
-using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
@@ -170,7 +167,7 @@ internal sealed class MessagingMigrations : DataMigration
         await CreateActivityIndexAsync();
         await CreateLookupIndexesAsync();
 
-        return 8;
+        return 7;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -299,31 +296,6 @@ internal sealed class MessagingMigrations : DataMigration
             collection: MessagingStorage.CollectionName);
 
         return 7;
-    }
-
-    /// <summary>
-    /// Marks the reply templates written before placeholders existed as plain text when their body has braces in it, so
-    /// an agent's typed <c>{{name}}</c> keeps being inserted as written instead of rendering empty.
-    /// </summary>
-    /// <returns>The migration version number.</returns>
-    public static int UpdateFrom7()
-    {
-        // The templates are documents; they are changed once this step's own transaction has committed.
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var templates = scope.ServiceProvider.GetRequiredService<IMessageTemplateStore>();
-
-            foreach (var template in await templates.GetAllAsync())
-            {
-                if (!template.IsPlainText && RestrictedLiquid.HasLiquid(template.Body))
-                {
-                    template.IsPlainText = true;
-                    await templates.UpdateAsync(template);
-                }
-            }
-        });
-
-        return 8;
     }
 
     private async Task CreateLookupIndexesAsync()

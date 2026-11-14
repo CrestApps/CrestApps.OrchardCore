@@ -78,20 +78,46 @@ public sealed class TimelineImportAndUpdateTests
         })).Entry.ItemId);
 
         // Act
-        var updated = await harness.RunAsync(async services =>
+        var updated = await harness.RunAsync(services => services.GetRequiredService<ITimelineService>().UpdateAsync(id, changes =>
         {
-            var timeline = services.GetRequiredService<ITimelineService>();
-            var entry = await timeline.FindAsync(id);
-            entry.ExternalId = "<msg-1@example.com>";
-
-            return await timeline.UpdateAsync(entry);
-        });
+            changes.ExternalId = "<msg-1@example.com>";
+            changes.Properties["DeliveryStatus"] = "Delivered";
+        }));
         var found = await harness.RunAsync(services => services.GetRequiredService<ITimelineService>().FindByExternalIdAsync("<msg-1@example.com>"), commit: false);
 
         // Assert
         Assert.True(updated.Succeeded);
         Assert.Equal(id, found?.ItemId);
+        Assert.Equal("Delivered", found.Properties["DeliveryStatus"]?.ToString());
         Assert.Contains("updated " + id, _heard);
+    }
+
+    [Fact]
+    public async Task TheBody_CantBeRewritten_EvenThroughTheTrackedInstanceFindReturns()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var id = await harness.RunAsync(async services => (await services.GetRequiredService<ITimelineService>().AddAsync(new TimelineEntry
+        {
+            Subject = _order,
+            Kind = TimelineConstants.Kinds.Note,
+            Body = "As written.",
+        })).Entry.ItemId);
+
+        // Act: a caller changes the body of the instance it read, then saves a change through the service.
+        await harness.RunAsync(async services =>
+        {
+            var timeline = services.GetRequiredService<ITimelineService>();
+            var tracked = await timeline.FindAsync(id);
+            tracked.Body = "Rewritten.";
+
+            await timeline.UpdateAsync(id, changes => changes.Channel = "Email");
+        });
+        var stored = await harness.RunAsync(services => services.GetRequiredService<ITimelineService>().FindAsync(id), commit: false);
+
+        // Assert
+        Assert.Equal("As written.", stored.Body);
+        Assert.Equal("Email", stored.Channel);
     }
 
     [Fact]

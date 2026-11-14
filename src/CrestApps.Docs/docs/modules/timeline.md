@@ -52,7 +52,7 @@ await timelineService.AddAsync(new TimelineEntry
 Other paths:
 
 - **`ImportAsync`** brings in history that happened elsewhere, such as notes an older version kept on a record. It checks and stamps an entry like `AddAsync` but keeps a long body whole and tells no handler, so nothing is announced. An entry whose id is already stored is left as it is: give the entry an id made from where it came from with `TimelineEntryIds.FromSource(...)`, and importing again adds nothing.
-- **`UpdateAsync`** saves a change that doesn't rewrite what an entry says, such as a delivery status a channel keeps in its properties or the `ExternalId` it was sent under; `FindByExternalIdAsync` finds the entry again.
+- **`UpdateAsync(entryId, change)`** saves a change that doesn't rewrite what an entry says: the `change` callback gets a `TimelineEntryChanges` with only the entry's properties (a delivery status a channel keeps), its channel and the `ExternalId` it was sent under; `FindByExternalIdAsync` finds the entry again. Entries read through `FindAsync`, `FindByExternalIdAsync` and `ListAsync` are copies, so changing one never reaches the stored entry.
 - **`DeleteAllAsync(subject)`** removes a deleted record's timeline and tells the handlers of each entry, so its files go too. A content item's timeline is deleted when the item is removed for good.
 
 ## Access
@@ -72,7 +72,7 @@ public sealed class WorkOrderTimelineAccess : ITimelineAccessProvider
 services.AddTimelineAccessProvider<WorkOrderTimelineAccess>();
 ```
 
-Content items (the record kind `Content`, such as accounts, contacts and leads) come with a provider. Staff, who read and write internal entries, are the people who may edit every item of the type: owning an item isn't enough, so on a type its owners may edit, an owner doesn't read the staff's notes. Public entries are read by everyone who may view the item, which on many sites is every registered user, so a content type's timeline takes them only when a module opts the type in:
+Content items (the record kind `Content`, such as accounts, contacts and leads) come with a provider. Staff, who read and write internal entries, are the people who may edit the item itself (so a rule that decides per item, such as content access control, is honored) and every item of the type: owning an item isn't enough, so on a type its owners may edit, an owner doesn't read the staff's notes. Public entries are read by everyone who may view the item, which on many sites is every registered user, so a content type's timeline takes them only when a module opts the type in:
 
 ```csharp
 services.AllowPublicTimelineEntries("Project");

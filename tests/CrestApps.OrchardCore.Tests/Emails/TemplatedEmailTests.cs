@@ -153,7 +153,7 @@ public sealed class TemplatedEmailTests
 
         siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(new SiteSettings { SiteName = "Test site" });
 
-        return new LiquidTemplatedEmailTemplates(sources, siteService.Object, NullLoggerFactory.Instance);
+        return new LiquidTemplatedEmailTemplates(sources, siteService.Object, LiquidTestClocks.In("UTC"), RecipeRoundTrip.Localizer<LiquidTemplatedEmailTemplates>(), NullLoggerFactory.Instance);
     }
 
     private static TemplatedEmailContext Context(string kind)

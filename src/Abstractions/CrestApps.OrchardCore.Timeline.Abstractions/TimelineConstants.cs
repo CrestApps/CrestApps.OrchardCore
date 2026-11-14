@@ -31,6 +31,12 @@ public static class TimelineConstants
     public const int MaxExternalIdLength = 255;
 
     /// <summary>
+    /// The longest text a refused post keeps for the next page. The draft travels in the TempData cookie, and a long
+    /// one would push the request headers past what servers and proxies accept and lock the user out of the site.
+    /// </summary>
+    public const int MaxKeptDraftLength = 2_000;
+
+    /// <summary>
     /// The record kind of a content item's timeline, such as an account, a contact or a lead; the record id is the
     /// content item id.
     /// </summary>

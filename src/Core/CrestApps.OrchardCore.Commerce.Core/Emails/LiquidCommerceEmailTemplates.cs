@@ -4,8 +4,10 @@ using CrestApps.OrchardCore.Core.Emails;
 using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Emails;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Commerce.Core.Emails;
@@ -29,7 +31,12 @@ public sealed class LiquidCommerceEmailTemplates : ICommerceEmailTemplates
     public LiquidCommerceEmailTemplates(IServiceProvider serviceProvider, ISiteService siteService, ILogger<LiquidCommerceEmailTemplates> logger)
     {
         // The store's templates keep their own constructor; the shared renderer needs no service locator.
-        _templates = new LiquidTemplatedEmailTemplates([new CommerceEmailTemplateSource(siteService)], siteService, serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance);
+        _templates = new LiquidTemplatedEmailTemplates(
+            [new CommerceEmailTemplateSource(siteService)],
+            siteService,
+            serviceProvider.GetRequiredService<ILocalClock>(),
+            serviceProvider.GetRequiredService<IStringLocalizer<LiquidTemplatedEmailTemplates>>(),
+            serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance);
     }
 
     /// <inheritdoc/>
