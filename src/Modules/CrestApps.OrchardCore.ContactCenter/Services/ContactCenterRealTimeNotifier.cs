@@ -91,16 +91,20 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
             await _hubContext.Clients.Group(UserGroup(notification.UserId)).OfferRevoked(notification);
         }
 
+        // The queue and its supervisors are told the offer is gone, never which record it was for: that is what a
+        // screen opens for an accepted offer, and only the agent who accepted it is taken to it.
+        var observerNotification = CreateObserverNotification(notification);
+
         if (!string.IsNullOrEmpty(notification.QueueId))
         {
-            await _hubContext.Clients.Group(QueueGroup(notification.QueueId)).OfferRevoked(notification);
+            await _hubContext.Clients.Group(QueueGroup(notification.QueueId)).OfferRevoked(observerNotification);
         }
 
         var supervisors = await GetOfferSupervisorGroupsAsync(notification.QueueId, notification.AgentId, notification.UserId, cancellationToken);
 
         if (supervisors.Count > 0)
         {
-            await _hubContext.Clients.Groups(supervisors).OfferRevoked(notification);
+            await _hubContext.Clients.Groups(supervisors).OfferRevoked(observerNotification);
         }
     }
 
@@ -262,6 +266,19 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
     private string UserGroup(string userId)
     {
         return TenantSignalRGroupName.ForUser(_tenantName, userId);
+    }
+
+    private static AgentOfferRevokedNotification CreateObserverNotification(AgentOfferRevokedNotification notification)
+    {
+        return new AgentOfferRevokedNotification
+        {
+            UserId = notification.UserId,
+            AgentId = notification.AgentId,
+            ReservationId = notification.ReservationId,
+            QueueId = notification.QueueId,
+            Reason = notification.Reason,
+            Kind = notification.Kind,
+        };
     }
 
     private static AgentOfferNotification CreateObserverNotification(AgentOfferNotification notification)
