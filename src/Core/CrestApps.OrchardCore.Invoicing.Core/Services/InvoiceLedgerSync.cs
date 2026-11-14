@@ -2,19 +2,21 @@ using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
-using YesSql;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Invoicing.Core.Services;
 
 /// <summary>
-/// Keeps an issued invoice in step with its transaction (<see cref="InvoiceLedgerMirror"/>): after the ledger records a
-/// payment, takes one back, refunds or settles, and when the invoice's page is opened, so a change missed while the
-/// invoice was busy is caught up.
+/// Keeps an issued invoice in step with its transaction (<see cref="InvoiceLedgerMirror"/>), once the ledger's change is
+/// saved: after the ledger records a payment or takes one back, after the request that changed its status, canceled or
+/// refunded it (<see cref="IInvoiceLedgerSyncScheduler"/>), and when the invoice's page is opened, so a change missed
+/// while the invoice was busy is caught up.
 /// </summary>
+/// <remarks>
+/// It queues the invoice's update in the session and never saves the session itself: the session may carry the work of
+/// the command that called it, which saves it (or the request does), and a conflict there is that work's to report.
+/// </remarks>
 public sealed class InvoiceLedgerSync
 {
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(2);
@@ -24,9 +26,8 @@ public sealed class InvoiceLedgerSync
     private readonly ICreditNoteStore _creditNotes;
     private readonly ITransactionManager _transactions;
     private readonly IDistributedLock _distributedLock;
-    private readonly ISession _session;
+    private readonly InvoiceCommandLocks _commandLocks;
     private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -35,23 +36,21 @@ public sealed class InvoiceLedgerSync
         ICreditNoteStore creditNotes,
         ITransactionManager transactions,
         IDistributedLock distributedLock,
-        ISession session,
+        InvoiceCommandLocks commandLocks,
         IClock clock,
-        ILogger<InvoiceLedgerSync> logger,
         IStringLocalizer<InvoiceLedgerSync> stringLocalizer)
     {
         _invoices = invoices;
         _creditNotes = creditNotes;
         _transactions = transactions;
         _distributedLock = distributedLock;
-        _session = session;
+        _commandLocks = commandLocks;
         _clock = clock;
-        _logger = logger;
         S = stringLocalizer;
     }
 
     /// <summary>
-    /// Mirrors a transaction onto the invoice that posted it, if one did.
+    /// Mirrors a saved transaction onto the invoice that posted it, if one did.
     /// </summary>
     public async Task SyncAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
@@ -63,6 +62,17 @@ public sealed class InvoiceLedgerSync
         }
 
         await SyncAsync(transaction.ReferenceId, transaction, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads a transaction and mirrors it onto the invoice that posted it, if one did.
+    /// </summary>
+    public async Task SyncTransactionAsync(string transactionId, CancellationToken cancellationToken = default)
+    {
+        if (!string.IsNullOrEmpty(transactionId))
+        {
+            await SyncAsync(await _transactions.FindByIdAsync(transactionId, cancellationToken), cancellationToken);
+        }
     }
 
     /// <summary>
@@ -82,8 +92,14 @@ public sealed class InvoiceLedgerSync
 
     private async Task<Invoice> SyncAsync(string invoiceId, Transaction transaction, CancellationToken cancellationToken)
     {
-        // Under the invoice's own lock. A command holding it (issue, void, write off) mirrors the ledger itself, so a
-        // change it causes is not mirrored twice; anything else missed is caught up when the invoice is next opened.
+        // An invoice command of this request holds the invoice: it mirrors what it causes itself, and waiting here for the
+        // lock it holds would only time out.
+        if (_commandLocks.IsHeld(invoiceId))
+        {
+            return null;
+        }
+
+        // Another request's command holds it: anything missed is caught up when the invoice is next opened.
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(DefaultInvoiceCommandService.LockPrefix + invoiceId, _lockTimeout, _lockExpiration);
 
         if (!locked)
@@ -105,22 +121,11 @@ public sealed class InvoiceLedgerSync
             .Where(creditNote => creditNote.Status == CreditNoteStatus.Issued)
             .Sum(creditNote => creditNote.Totals?.Total ?? 0m);
 
-        if (!InvoiceLedgerMirror.Apply(invoice, transaction, credited, S))
+        if (InvoiceLedgerMirror.Apply(invoice, transaction, credited, S))
         {
-            return invoice;
-        }
+            invoice.ModifiedUtc = _clock.UtcNow;
 
-        invoice.ModifiedUtc = _clock.UtcNow;
-
-        try
-        {
             await _invoices.UpdateAsync(invoice, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
-        }
-        catch (ConcurrencyException)
-        {
-            // The ledger is the record: the invoice is mirrored again the next time it is opened or its transaction changes.
-            _logger.LogWarning("Invoice '{InvoiceId}' was changed while its payments were being copied from the ledger; they are copied again next time.", invoiceId);
         }
 
         return invoice;

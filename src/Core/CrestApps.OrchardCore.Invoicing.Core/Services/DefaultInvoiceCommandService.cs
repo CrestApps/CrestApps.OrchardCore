@@ -429,6 +429,9 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
 
         await using var _ = locker;
 
+        // Ledger work this command causes sees the invoice is busy in this request and doesn't wait for its lock.
+        using var held = _serviceProvider.GetRequiredService<InvoiceCommandLocks>().Hold(invoiceId);
+
         var invoice = await _store.FindByIdAsync(invoiceId, cancellationToken);
 
         if (invoice is null)

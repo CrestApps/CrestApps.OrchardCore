@@ -105,6 +105,7 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
         }
 
         await using var _ = locker;
+        using var held = _serviceProvider.GetRequiredService<InvoiceCommandLocks>().Hold(invoiceId);
 
         var invoice = await _invoices.FindByIdAsync(invoiceId, cancellationToken);
 
@@ -197,6 +198,7 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
         }
 
         await using var _ = locker;
+        using var held = _serviceProvider.GetRequiredService<InvoiceCommandLocks>().Hold(found.InvoiceId);
 
         // Read again under the lock.
         var creditNote = await _creditNotes.FindByIdAsync(creditNoteId, cancellationToken);

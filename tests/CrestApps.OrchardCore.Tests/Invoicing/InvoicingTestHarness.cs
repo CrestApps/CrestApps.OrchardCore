@@ -108,13 +108,37 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     public bool FailNextTransaction { get; set; }
 
     /// <summary>
+    /// Runs when a transaction's status changes, while the ledger command still has it open: a seam a test uses to make a
+    /// concurrent change to the transaction.
+    /// </summary>
+    public Func<Transaction, Task> OnTransactionStatusChanged { get; set; }
+
+    /// <summary>
+    /// The transactions whose invoice mirror was deferred until the unit of work ended; run after each one, as the site
+    /// runs deferred work after a request.
+    /// </summary>
+    public AfterScopeSyncs Deferred { get; } = new();
+
+    /// <summary>
     /// Creates the harness. With <paramref name="realNumbers"/>, invoices are numbered by the site's generator over the
     /// number sequence kept in the store, whose series lock is <paramref name="numberLock"/> (the harness's lock when
     /// none is given); otherwise by <see cref="FakeNumberGenerator"/>.
     /// </summary>
-    public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null, bool realNumbers = false, IDistributedLock numberLock = null)
+    public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null, bool realNumbers = false, IDistributedLock numberLock = null, bool writeAheadLog = false)
     {
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-invoicing-{Guid.NewGuid():N}.db");
+
+        // In write-ahead-log mode another connection can commit while a unit of work has the database open, as two
+        // requests do on a server database.
+        if (writeAheadLog)
+        {
+            await using var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False");
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA journal_mode=WAL;";
+            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
 
         store.RegisterIndexes([new TransactionIndexProvider()], TransactionsConstants.CollectionName);
@@ -198,6 +222,8 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         }
         services.AddSingleton(_ => harness.Contacts.Object);
         services.AddSingleton(_ => harness.Credit.Object);
+        services.AddSingleton<IInvoiceLedgerSyncScheduler>(_ => harness.Deferred);
+        services.AddScoped<ITransactionEventHandler>(_ => new StatusHook(harness));
         services.AddSingleton<IBusinessDocumentPdfRenderer>(_ => harness.Pdf);
         services.AddSingleton(Mock.Of<IBusinessDocumentTemplateManager>());
         services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
@@ -226,13 +252,30 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
     public async Task<T> InScopeAsync<T>(Func<IServiceProvider, Task<T>> work)
     {
-        await using var scope = _provider.CreateAsyncScope();
+        T result;
 
-        var result = await work(scope.ServiceProvider);
+        await using (var scope = _provider.CreateAsyncScope())
+        {
+            result = await work(scope.ServiceProvider);
 
-        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+            await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await RunDeferredAsync();
 
         return result;
+    }
+
+    // The invoice mirrors deferred until the unit of work ended, each run in a scope of its own that saves what it changed.
+    private async Task RunDeferredAsync()
+    {
+        while (Deferred.TryTake(out var transactionId))
+        {
+            await using var scope = _provider.CreateAsyncScope();
+
+            await scope.ServiceProvider.GetRequiredService<InvoiceLedgerSync>().SyncTransactionAsync(transactionId, TestContext.Current.CancellationToken);
+            await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
     }
 
     /// <summary>
@@ -241,16 +284,23 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     /// </summary>
     public async Task<T> InRequestAsync<T>(Func<IServiceProvider, Task<T>> work)
     {
-        await using var scope = _provider.CreateAsyncScope();
-        var session = scope.ServiceProvider.GetRequiredService<ISession>();
-
         try
         {
-            return await work(scope.ServiceProvider);
+            await using var scope = _provider.CreateAsyncScope();
+            var session = scope.ServiceProvider.GetRequiredService<ISession>();
+
+            try
+            {
+                return await work(scope.ServiceProvider);
+            }
+            finally
+            {
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
         }
         finally
         {
-            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            await RunDeferredAsync();
         }
     }
 
@@ -308,6 +358,47 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         {
             Directory.Delete(ArchiveFolder, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// Holds the transactions whose invoice mirror waits for the unit of work to end.
+    /// </summary>
+    internal sealed class AfterScopeSyncs : IInvoiceLedgerSyncScheduler
+    {
+        private readonly System.Collections.Concurrent.ConcurrentQueue<string> _pending = new();
+
+        public int Scheduled { get; private set; }
+
+        public void Schedule(string transactionId)
+        {
+            Scheduled++;
+            _pending.Enqueue(transactionId);
+        }
+
+        public bool TryTake(out string transactionId)
+            => _pending.TryDequeue(out transactionId);
+    }
+
+    private sealed class StatusHook : ITransactionEventHandler
+    {
+        private readonly InvoicingTestHarness _harness;
+
+        public StatusHook(InvoicingTestHarness harness)
+        {
+            _harness = harness;
+        }
+
+        public Task StatusChangedAsync(Transaction transaction, TransactionStatus previous, TransactionStatus current, CancellationToken cancellationToken = default)
+            => _harness.OnTransactionStatusChanged?.Invoke(transaction) ?? Task.CompletedTask;
+
+        public Task CreatedAsync(Transaction transaction, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task CanceledAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     /// <summary>

@@ -47,6 +47,8 @@ public static class InvoicingServiceCollectionExtensions
 
         // An issued invoice follows its transaction: payments, payments taken back, refunds and settlement.
         services.TryAddScoped<InvoiceLedgerSync>();
+        services.TryAddScoped<InvoiceCommandLocks>();
+        services.TryAddScoped<IInvoiceLedgerSyncScheduler, DeferredInvoiceLedgerSyncScheduler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionPaymentHandler, InvoiceTransactionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionEventHandler, InvoiceTransactionHandler>());
 
