@@ -15,7 +15,9 @@ namespace CrestApps.OrchardCore.AI.Chat.Core.Services;
 /// (through <see cref="ClientNetworkKey"/>) instead of the first <c>X-Forwarded-For</c> value of the raw request. The
 /// package's resolver trusts that header, which any client can set, so a visitor could pick a new address for every
 /// message and never be counted by the address-keyed chat limits. Behind a proxy, enable Orchard Core's Reverse Proxy
-/// feature: it moves the forwarded address onto the connection.
+/// feature: it moves the forwarded address onto the connection. On the long-polling transport a hub call has no current
+/// request, so the address comes from the hub connection's own copy of it, through
+/// <see cref="ChatHubConnectionAddressFilter"/>.
 /// </summary>
 public sealed class ConnectionAddressAIVisitorIdentityResolver : IAIVisitorIdentityResolver
 {
@@ -49,13 +51,14 @@ public sealed class ConnectionAddressAIVisitorIdentityResolver : IAIVisitorIdent
     {
         var identity = _inner.Resolve();
         var httpContext = _httpContextAccessor.HttpContext;
+        var address = httpContext is null
+            ? ChatHubConnectionAddressFilter.CurrentAddress
+            : ClientNetworkKey.NetworkOnly(httpContext);
 
-        if (httpContext is null)
+        if (address is null)
         {
             return identity;
         }
-
-        var address = ClientNetworkKey.NetworkOnly(httpContext);
 
         if (string.Equals(address, ClientNetworkKey.Unknown, StringComparison.Ordinal))
         {

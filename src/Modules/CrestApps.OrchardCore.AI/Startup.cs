@@ -678,6 +678,10 @@ public sealed class ToolInstancesStartup : StartupBase
             )
         );
 
+        // The HTTP API Request tool and the documentation sources call addresses a tenant user types, so their clients
+        // refuse the site's own network at connect, redirects included.
+        services.AddAIEgressGuards();
+
         services.TryAddEnumerable(
         [
             ServiceDescriptor.Transient<IAIToolInstanceHandler, AlgoliaDocumentationToolInstanceExportHandler>(),

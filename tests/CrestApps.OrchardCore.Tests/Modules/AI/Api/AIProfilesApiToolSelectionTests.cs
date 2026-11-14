@@ -2,10 +2,12 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Endpoints.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -70,7 +72,96 @@ public sealed class AIProfilesApiToolSelectionTests
 
         // Assert
         Assert.IsType<Ok<AIProfile>>(result.Result);
-        manager.Verify(m => m.UpdateAsync(profile, body, It.IsAny<CancellationToken>()), Times.Once);
+        manager.Verify(m => m.UpdateAsync(profile, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("settings")]
+    [InlineData("SETTINGS")]
+    public async Task Update_RefusesPostSessionToolsSentUnderAKeyInAnotherCase(string settingsKey)
+    {
+        // Arrange (M4): the body is bound without regard to case, the profile's own JSON is not. The check read the old
+        // "Settings" of the merged copy while the package's handler saved the new "settings" from the body.
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        var manager = HandlerBackedManager(profile);
+        var body = BoundBody($$"""{ "{{settingsKey}}": { "AIProfilePostSessionSettings": { "ToolNames": ["sendEmail"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+
+        // Assert
+        var problem = Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Contains("sendEmail", problem.ProblemDetails.Errors["tools"][0], StringComparison.Ordinal);
+        Assert.Empty(profile.GetSettings<AIProfilePostSessionSettings>()?.ToolNames ?? []);
+    }
+
+    [Fact]
+    public async Task Update_RefusesToolsSentUnderALowerCasePropertiesKey()
+    {
+        // Arrange
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        var manager = HandlerBackedManager(profile);
+        var body = BoundBody("""{ "properties": { "FunctionInvocationMetadata": { "Names": ["enableFeature"] } } }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+
+        // Assert
+        Assert.IsType<ValidationProblem>(result.Result);
+        Assert.Empty(profile.GetOrCreate<FunctionInvocationMetadata>().Names ?? []);
+    }
+
+    [Fact]
+    public async Task Update_SavesAToolTheCallerMayUse_SentUnderALowerCaseKey()
+    {
+        // Arrange
+        var profile = new AIProfile { ItemId = "profile-1", Name = "support" };
+        var manager = HandlerBackedManager(profile);
+        var body = BoundBody("""{ "settings": { "AIProfilePostSessionSettings": { "ToolNames": ["listAIProfiles"] } }, "name": "renamed" }""");
+
+        // Act
+        var result = await AIProfilesApiEndpoints.UpdateAsync("profile-1", body, Context(), Authorization(), manager.Object, Evaluator("listAIProfiles"));
+
+        // Assert: saved as checked, and the name, which links point to, stays whatever its case.
+        Assert.IsType<Ok<AIProfile>>(result.Result);
+        Assert.Equal(["listAIProfiles"], profile.GetSettings<AIProfilePostSessionSettings>().ToolNames);
+        Assert.Equal("support", profile.Name);
+    }
+
+    // The minimal API binds a JsonObject body with the web defaults, which match property names without regard to case.
+    private static JsonObject BoundBody(string json)
+        => JsonSerializer.Deserialize<JsonObject>(json, JsonSerializerOptions.Web);
+
+    // A manager whose NewAsync and UpdateAsync run the package's own AIProfileHandler, as the real catalog manager does,
+    // so the copy that is checked and the update that is saved read the JSON the way production reads it.
+    private static Mock<IAIProfileManager> HandlerBackedManager(AIProfile existing)
+    {
+        var handlerType = typeof(CrestApps.Core.AI.Services.DefaultOAuth2TokenService).Assembly.GetType("CrestApps.Core.AI.Handlers.AIProfileHandler", throwOnError: true);
+        var handler = (ICatalogEntryHandler<AIProfile>)Activator.CreateInstance(
+            handlerType,
+            new HttpContextAccessor(),
+            TimeProvider.System,
+            Mock.Of<IAIProfileStore>(),
+            Mock.Of<IAIDeploymentStore>(),
+            null);
+
+        var manager = new Mock<IAIProfileManager>();
+        manager.Setup(m => m.FindByIdAsync("profile-1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        manager.Setup(m => m.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(async (JsonNode data, CancellationToken cancellationToken) =>
+            {
+                var profile = new AIProfile();
+                await handler.InitializingAsync(new InitializingContext<AIProfile>(profile, data), cancellationToken);
+
+                return profile;
+            });
+        manager.Setup(m => m.ValidateAsync(It.IsAny<AIProfile>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new ValidationResultDetails());
+        manager.Setup(m => m.UpdateAsync(It.IsAny<AIProfile>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(async (AIProfile profile, JsonNode data, CancellationToken cancellationToken) =>
+                await handler.UpdatingAsync(new UpdatingContext<AIProfile>(profile, data), cancellationToken));
+
+        return manager;
     }
 
     private static JsonObject PostSessionTools(params string[] names)

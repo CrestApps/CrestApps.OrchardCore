@@ -14,7 +14,9 @@ public sealed class McpStdioOptions
 
     /// <summary>
     /// Gets or sets the commands a local connection may start, compared without case and by file name, such as
-    /// <c>npx</c> or <c>uvx</c>. Empty means any command, which is the behavior of earlier versions.
+    /// <c>npx</c> or <c>uvx</c>. Empty means any command, which is the behavior of earlier versions. When set, a connection
+    /// may not set an environment variable that changes which program runs (<c>PATH</c>, <c>NODE_OPTIONS</c>,
+    /// <c>LD_PRELOAD</c> and the like). The arguments and the working directory are not limited.
     /// </summary>
     public string[] AllowedCommands { get; set; } = [];
 }

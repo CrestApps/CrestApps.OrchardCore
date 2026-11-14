@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances.Documentation;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -15,14 +16,18 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 /// </summary>
 internal sealed class SitemapDocumentationToolInstanceDisplayDriver : DisplayDriver<AIToolInstance>
 {
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SitemapDocumentationToolInstanceDisplayDriver"/> class.
     /// </summary>
+    /// <param name="endpointPolicy">The policy that keeps the instance's addresses off the site's own network.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public SitemapDocumentationToolInstanceDisplayDriver(IStringLocalizer<SitemapDocumentationToolInstanceDisplayDriver> stringLocalizer)
+    public SitemapDocumentationToolInstanceDisplayDriver(IAIEndpointPolicy endpointPolicy, IStringLocalizer<SitemapDocumentationToolInstanceDisplayDriver> stringLocalizer)
     {
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -64,12 +69,20 @@ internal sealed class SitemapDocumentationToolInstanceDisplayDriver : DisplayDri
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["The base URL must be an absolute HTTP or HTTPS URL."]);
         }
+        else if (!string.IsNullOrWhiteSpace(model.BaseUrl) && !_endpointPolicy.IsAllowed(model.BaseUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
 
         if (!string.IsNullOrWhiteSpace(model.SitemapUrl) &&
             (!Uri.TryCreate(model.SitemapUrl.Trim(), UriKind.Absolute, out var sitemapUrl) ||
             (sitemapUrl.Scheme != Uri.UriSchemeHttp && sitemapUrl.Scheme != Uri.UriSchemeHttps)))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SitemapUrl), S["The sitemap URL must be an absolute HTTP or HTTPS URL."]);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.SitemapUrl) && !_endpointPolicy.IsAllowed(model.SitemapUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SitemapUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         if (model.MaxResults.HasValue && model.MaxResults.Value <= 0)

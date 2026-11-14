@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.DataConnectors.Models;
+using CrestApps.OrchardCore.DataConnectors.Services;
 using CrestApps.OrchardCore.DataConnectors.SqlServer.Drivers;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Handlers;
@@ -29,5 +30,6 @@ public sealed class Startup : StartupBase
         services.Configure<SqlServerHostIdentityOptions>(_shellConfiguration.GetSection(SqlServerHostIdentityOptions.SectionName));
         services.AddDataConnector<SqlServerDataConnector>();
         services.AddDisplayDriver<DataConnection, SqlServerConnectionDisplayDriver>();
+        services.AddSingleton<IDataConnectionSecretTarget, SqlServerSecretTarget>();
     }
 }

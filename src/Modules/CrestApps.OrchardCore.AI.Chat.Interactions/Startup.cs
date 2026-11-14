@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Core;
+using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
@@ -18,6 +19,7 @@ using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
@@ -72,6 +74,9 @@ public sealed class Startup : StartupBase
         // Chat Interaction notification transport and hub options.
         services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
         services.ConfigureCrestAppsChatHubOptions<ChatInteractionHub>();
+
+        // On long polling a hub call has no current request; the filter gives the visitor resolver the connection's address.
+        services.Configure<HubOptions<ChatInteractionHub>>(options => options.AddFilter<ChatHubConnectionAddressFilter>());
 
         // Enables realtime (speech-to-speech) voice over the server-relay WebRTC transport, with automatic
         // WebSocket fallback. Idempotent when also registered by the AI Chat feature.

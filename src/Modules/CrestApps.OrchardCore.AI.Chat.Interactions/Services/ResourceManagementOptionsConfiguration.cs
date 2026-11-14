@@ -20,7 +20,7 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetCdnIntegrity(
                 "sha384-awq6g7NbJiHqVRJKqdIbf868iiV9O+sNQnzCnBYzFlsVNwefhZ6G+K6MH1lmvaxH",
                 "sha384-pUurVtvGuLP+5BD7oG/ekgAHdMRWaWgnln4nrx5ub8jLXZcnTGFeJDVyPVRIkt1r")
-            .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs", "dompurify", "realtime-audio", "chat-markers", "chat-image-carousel", "medium-zoom")
+            .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs", "dompurify", "chat-output-guard", "realtime-audio", "chat-markers", "chat-image-carousel", "medium-zoom")
             .SetVersion("2.0.0");
 
         _manifest

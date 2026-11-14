@@ -338,6 +338,44 @@ public sealed class DataConnectorHttpTests
         Assert.Throws<DataConnectorException>(() => DataConnectorHttpClient.GetBaseUri(new HttpConnectionSettings { BaseUrl = "ftp://api.example.com" }));
     }
 
+    [Theory]
+    [InlineData(@"\/attacker.example/c")]
+    [InlineData(@"/\/attacker.example/c")]
+    [InlineData(@"\\attacker.example\c")]
+    [InlineData(@"customers\..\..\x")]
+    public void Resolve_RefusesAPathThatWouldLeaveTheConnectionsServer(string resource)
+    {
+        // M5: on Windows \/attacker.example/c resolved to https://attacker.example/c, and a preview sent the connection's
+        // stored token there.
+        var settings = new HttpConnectionSettings { BaseUrl = "https://api.vendor.example/v1" };
+
+        Assert.Throws<DataConnectorException>(() => DataConnectorHttpClient.Resolve(settings, resource));
+    }
+
+    [Fact]
+    public void Resolve_KeepsADoubleSlashPathAndABackslashInTheQuery_OnTheConnectionsServer()
+    {
+        var settings = new HttpConnectionSettings { BaseUrl = "https://api.vendor.example/v1" };
+
+        Assert.Equal("api.vendor.example", DataConnectorHttpClient.Resolve(settings, "//attacker.example/c").Host);
+        Assert.Equal("api.vendor.example", DataConnectorHttpClient.Resolve(settings, @"/search?q=a\b").Host);
+    }
+
+    [Fact]
+    public async Task SendAsync_RefusesAnAddressOffTheConnectionsServer_BeforeSendingAnything()
+    {
+        // Arrange
+        var client = CreateClient(_ => new HttpResponseMessage(HttpStatusCode.OK), out var handler);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<DataConnectorException>(() =>
+            client.SendAsync(Settings(), new FakeSecrets(), "key", HttpMethod.Get, new Uri("https://attacker.example/c"), null, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains("isn't on the connection's server", exception.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+    }
+
     [Fact]
     public void CacheKey_ChangesWhenTheConnectionIsSaved()
     {

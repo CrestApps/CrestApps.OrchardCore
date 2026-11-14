@@ -180,12 +180,18 @@ internal static class AIProfilesApiEndpoints
             return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["Send the settings to change as JSON."] });
         }
 
+        // The body is bound without regard to case, while the profile's own JSON is not: its keys take the profile's
+        // spelling first, so the copy whose tools are checked and the update that is saved read the same values. A
+        // lower-case "settings" or "properties" key slipped new tools past the check that way.
+        var current = JsonSerializer.SerializeToNode(profile) as JsonObject ?? [];
+        var changes = AISourceCatalogApi.NormalizeKeys(body, current);
+
         // The id and the name are what links and tools point to, so they stay.
-        body.Remove(nameof(AIProfile.ItemId));
-        body.Remove(nameof(AIProfile.Name));
+        changes.Remove(nameof(AIProfile.ItemId));
+        changes.Remove(nameof(AIProfile.Name));
 
         // Validate a copy first: the manager saves as it updates.
-        var copy = await profileManager.NewAsync(JsonSerializer.SerializeToNode(profile) is JsonObject current ? AISourceCatalogApi.Merge(current, body) : body, httpContext.RequestAborted);
+        var copy = await profileManager.NewAsync(AISourceCatalogApi.Merge(current, changes), httpContext.RequestAborted);
         copy.ItemId = profile.ItemId;
         copy.Name = profile.Name;
 
@@ -201,7 +207,7 @@ internal static class AIProfilesApiEndpoints
             return AISourceCatalogApi.Invalid(validation);
         }
 
-        await profileManager.UpdateAsync(profile, body, httpContext.RequestAborted);
+        await profileManager.UpdateAsync(profile, changes, httpContext.RequestAborted);
 
         return TypedResults.Ok(profile);
     }

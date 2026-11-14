@@ -30,9 +30,10 @@ internal sealed class ChatSessionDocumentUploadOptions
     public const string RateLimitGroup = "ai-chat-documents";
 
     /// <summary>
-    /// The attempt policy that counts every upload a signed-in user makes, to a new session or an existing one. The
-    /// package's session-start limiter counts anonymous visitors only, and the hub lets a signed-in user start sessions
-    /// freely. Its limit can be changed under <c>CrestApps_Throttling:AttemptPolicies:ai-chat-document-uploads</c>.
+    /// The attempt policy that counts every upload, to a new session or an existing one: a signed-in user's by the user,
+    /// an anonymous visitor's by the visitor's network. The package's session-start limiter counts only the uploads that
+    /// start a session, and the hub lets a signed-in user start sessions freely. Its limit can be changed under
+    /// <c>CrestApps_Throttling:AttemptPolicies:ai-chat-document-uploads</c>.
     /// </summary>
     public const string UploadPolicyName = "ai-chat-document-uploads";
 
@@ -42,7 +43,8 @@ internal sealed class ChatSessionDocumentUploadOptions
     public int MaxFilesPerSession { get; set; } = 20;
 
     /// <summary>
-    /// The default number of uploads a signed-in user may make in <see cref="DefaultUploadWindow"/>.
+    /// The default number of uploads a signed-in user, or an anonymous visitor's network, may make in
+    /// <see cref="DefaultUploadWindow"/>.
     /// </summary>
     public const int DefaultUploadLimit = 60;
 
@@ -56,7 +58,7 @@ internal sealed class ChatSessionDocumentUploadOptions
 /// Runs in front of CrestApps.Core's chat session upload endpoint. That endpoint creates and saves a session for a
 /// profile id before it authorizes the caller, applies no session-start limit and accepts any number of files, so a
 /// script that posts uploads in a loop costs model, embedding and storage money without a ceiling. This filter
-/// authorizes first, counts every upload of a signed-in user, applies the chat session-start limiter to an upload that
+/// authorizes first, counts every upload (a signed-in user's by the user, an anonymous visitor's by network), applies the chat session-start limiter to an upload that
 /// starts a session, and caps the documents of a session.
 /// </summary>
 /// <remarks>
@@ -114,15 +116,17 @@ internal sealed class ChatSessionDocumentUploadGuard : IEndpointFilter
             return Results.BadRequest(S["A chat session can hold at most {0} documents.", options.MaxFilesPerSession].Value);
         }
 
-        // The package's session-start limiter counts anonymous visitors only, and the hub lets a signed-in user start
-        // sessions freely, so every upload of a signed-in user counts against a policy of its own, to a new session or
-        // an existing one: counting only the uploads that start a session left a loop of hub sessions, each given the
-        // most documents, without a ceiling.
-        if (httpContext.User?.Identity?.IsAuthenticated == true &&
-            httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } userId &&
-            services.GetService<IAttemptLimiter>() is { } attemptLimiter)
+        // Every upload counts against a policy of its own, to a new session or an existing one: counting only the uploads
+        // that start a session left a loop of hub sessions, each given the most documents, without a ceiling, and an
+        // anonymous visitor could upload, remove and upload again to one session, each upload running extraction and
+        // embeddings. A signed-in user is counted by the user, an anonymous visitor by the visitor's network.
+        if (services.GetService<IAttemptLimiter>() is { } attemptLimiter)
         {
-            var attempt = await attemptLimiter.AcquireAsync(ChatSessionDocumentUploadOptions.UploadPolicyName, "user:" + userId, httpContext.RequestAborted);
+            var key = httpContext.User?.Identity?.IsAuthenticated == true &&
+                httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } userId
+                    ? "user:" + userId
+                    : "network:" + ClientNetworkKey.NetworkOnly(httpContext);
+            var attempt = await attemptLimiter.AcquireAsync(ChatSessionDocumentUploadOptions.UploadPolicyName, key, httpContext.RequestAborted);
 
             if (!attempt.Allowed)
             {
