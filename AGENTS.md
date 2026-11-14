@@ -744,6 +744,26 @@ npm run check
 - Run `npm run lint` and `npm run check` before committing; CI fails on any error
 - Follow existing patterns for module-specific assets
 
+### UI Design Rules (avoid common AI design tells)
+Every view, theme, stylesheet and email template follows these rules. They apply to new UI and to any UI you touch.
+
+1. No thick coloured left border on cards or callouts for emphasis.
+2. No dotted or dashed dividers or borders added just for decoration.
+3. No gradient text, and no default purple-to-blue gradient anywhere.
+4. No sparkles (✨) as shorthand for "AI".
+5. No emoji in UI, headings or buttons.
+6. Don't put badges or pills on everything. A badge should carry a status the reader acts on.
+7. No row of "stat cards" at the top of every page by default.
+8. No cards inside cards, and don't wrap every section in a card.
+9. Don't put an icon in front of every heading or list item.
+10. No glassmorphism, heavy blur, glow or coloured shadows.
+11. No labels, captions or helper text that restate the obvious.
+12. No uniform grids of identical cards for content that isn't really a collection.
+13. Sentence case headings, not Title Case, and no ALL-CAPS eyebrow above every section.
+14. No hover effects that move the layout (scale or shift) on dense content.
+15. Take colours, type and radius from the theme's tokens, not one-off values or inline styles.
+16. No fake "live" indicators (pulsing dots and the like) for things that aren't real-time.
+
 ## Pull Request Guidelines
 
 ### Before Submitting

@@ -1,0 +1,70 @@
+@using OrchardCore.Themes.Services
+
+@inject IOptions<AdminOptions> AdminOptions
+@inject ThemeTogglerService ThemeTogglerService
+@inject CrestApps.OrchardCore.AdminTheme.Services.AdminColorSchemeService ColorSchemes
+
+@*
+    The layout of the log in, registration and password pages: the branding above a card holding the page, on the
+    theme's navy backdrop. The page keeps TheAdmin's 'auth-wrapper', so every page made for TheAdmin fits in it.
+*@
+
+@{
+    // Pre-rendered so that what the branding injects in the head (its favicon) is rendered there.
+    var brandingHtml = await DisplayAsync(await New.AdminBranding());
+}
+<!DOCTYPE html>
+<html lang="@Orchard.CultureName()" dir="@Orchard.CultureDir()" data-bs-theme="@await ThemeTogglerService.CurrentTheme()" data-tenant="@ThemeTogglerService.CurrentTenant" data-ca-scheme="@(await ColorSchemes.GetSchemeAttributeAsync())" data-admin-prefix="@Url.Content("~/" + AdminOptions.Value.AdminUrlPrefix)">
+<head>
+    <title>@RenderTitleSegments(Site.SiteName, "before")</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <!-- This script can't wait till the footer -->
+    <script asp-name="admin-main" version="1" at="Head"></script>
+
+    @if (Orchard.IsRightToLeft())
+    {
+        <style asp-name="bootstrap-rtl" version="5" at="Head"></style>
+        <style asp-name="TheAdminLogin" depends-on="bootstrap-rtl" asp-src="~/TheAdmin/css/login.min.css" debug-src="~/TheAdmin/css/login.css" at="Head"></style>
+    }
+    else
+    {
+        <style asp-name="bootstrap" version="5" at="Head"></style>
+        <style asp-name="TheAdminLogin" depends-on="bootstrap" asp-src="~/TheAdmin/css/login.min.css" debug-src="~/TheAdmin/css/login.css" at="Head"></style>
+    }
+
+    <style asp-name="font-awesome" at="Head" version="7"></style>
+    <style asp-name="crestapps-admin-theme-login" at="Head"></style>
+
+    <resources type="Header" />
+    @{
+        // The schemes admins added, after every other stylesheet so their rules apply over the built-in ones.
+        var customSchemesUrl = await ColorSchemes.GetStylesheetUrlAsync(Url);
+    }
+    @if (customSchemesUrl is not null)
+    {
+        <link rel="stylesheet" href="@customSchemesUrl" />
+    }
+    @await RenderSectionAsync("HeadMeta", required: false)
+</head>
+<body class="ca-auth">
+    <main class="ca-auth-page">
+        <div class="ca-auth-brand">
+            @brandingHtml
+        </div>
+
+        @await RenderSectionAsync("Header", required: false)
+        @await RenderSectionAsync("Messages", required: false)
+
+        <div class="auth-wrapper ca-auth-card">
+            @await RenderBodyAsync()
+        </div>
+    </main>
+
+    @await RenderSectionAsync("Footer", required: false)
+
+    <resources type="Footer" />
+</body>
+</html>

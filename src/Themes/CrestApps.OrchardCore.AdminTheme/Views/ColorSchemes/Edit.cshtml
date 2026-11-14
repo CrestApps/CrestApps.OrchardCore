@@ -1,0 +1,158 @@
+@using CrestApps.OrchardCore.AdminTheme.Controllers
+@model CrestApps.OrchardCore.AdminTheme.ViewModels.AdminColorSchemeViewModel
+
+@{
+    var title = Model.IsNew ? T["Add color scheme"] : T["Edit color scheme"];
+    var colors = new[]
+    {
+        (Name: nameof(Model.Primary), Label: T["Primary"], Value: Model.Primary, Hint: T["Buttons, links and the current page of the menu."]),
+        (Name: nameof(Model.Deep), Label: T["Deep"], Value: Model.Deep, Hint: T["Headings and the top of the menu. The tint of the page, borders and dark mode surfaces is taken from it."]),
+        (Name: nameof(Model.Ink), Label: T["Ink"], Value: Model.Ink, Hint: T["The bottom of the menu, the darkest surface."]),
+        (Name: nameof(Model.Accent), Label: T["Accent"], Value: Model.Accent, Hint: T["Links and highlights on dark surfaces, in the menu and in dark mode."]),
+    };
+    var optionalColors = new[]
+    {
+        (Name: nameof(Model.OnPrimary), Label: T["Text on primary"], Value: Model.OnPrimary, Hint: T["The text of buttons and of the current page. White, or a dark color on a light primary, when empty."]),
+        (Name: nameof(Model.Page), Label: T["Page"], Value: Model.Page, Hint: T["The page in light mode. A pale tone of the hue when empty."]),
+        (Name: nameof(Model.Toolbar), Label: T["List toolbar"], Value: Model.Toolbar, Hint: T["The bar above the records of a list. The primary when empty."]),
+        (Name: nameof(Model.Tint), Label: T["Page tint"], Value: Model.Tint, Hint: T["The color of both ends of the page's gradient in light mode. The primary and the accent when empty."]),
+        (Name: nameof(Model.TintDark), Label: T["Dark page tint"], Value: Model.TintDark, Hint: T["The color of both ends of the page's gradient in dark mode. The accent and the primary when empty."]),
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="AdminColorSchemesEdit" title="@title">
+        <breadcrumb-item id="AdminColorSchemes" action="Index" controller="ColorSchemes" area="CrestApps.OrchardCore.AdminTheme">@T["Color schemes"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="@(Model.IsNew ? "Create" : "Edit")" asp-route-id="@Model.Id" method="post" class="no-multisubmit"
+      data-color-scheme-editor data-preview-url="@Url.Action("Preview")">
+    <div asp-validation-summary="ModelOnly"></div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Scheme"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Name">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" autofocus />
+                    <span asp-validation-for="Name"></span>
+                    <span class="hint">@T["The name users see in the color scheme picker."]</span>
+                </div>
+            </div>
+
+            @foreach (var color in colors)
+            {
+                <div class="ocat-wrapper" asp-validation-class-for="@color.Name">
+                    <label for="@color.Name" class="ocat-label">@color.Label</label>
+                    <div class="ocat-end">
+                        <div class="ca-color-field">
+                            <input type="color" class="form-control form-control-color" value="@color.Value" data-color-picker="@color.Name" aria-label="@T["Pick the {0} color", color.Label.Value]" />
+                            <input type="text" id="@color.Name" name="@color.Name" class="form-control" value="@color.Value" maxlength="7" spellcheck="false" autocomplete="off" data-color-hex="@color.Name" pattern="^#[0-9a-fA-F]{6}$" required />
+                        </div>
+                        <span asp-validation-for="@color.Name"></span>
+                        <span class="hint">@color.Hint</span>
+                    </div>
+                </div>
+            }
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="LightMenu" class="form-check-input" type="checkbox" />
+                        <label asp-for="LightMenu" class="form-check-label">@T["Light menu"]</label>
+                        <span class="hint dashed">@T["A light gray menu with dark text, like Orchard Core's TheAdmin, in light mode. The menu is always dark in dark mode."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Advanced"]</div>
+        <div class="card-body">
+            <p class="hint">@T["Leave a setting empty to work it out from the four colors."]</p>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Hue">
+                <label asp-for="Hue" class="ocat-label">@T["Surface hue"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Hue" class="form-control" type="number" min="0" max="360" step="1" />
+                    <span asp-validation-for="Hue"></span>
+                    <span class="hint">@T["The hue of the page, borders and dark mode surfaces, from 0 to 360. The deep color's when empty."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Saturation">
+                <label asp-for="Saturation" class="ocat-label">@T["Surface saturation"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Saturation" class="form-control" type="number" min="0" max="1" step="0.01" />
+                    <span asp-validation-for="Saturation"></span>
+                    <span class="hint">@T["How colorful those surfaces are, from 0 (gray) to 1. Worked out from the deep color when empty."]</span>
+                </div>
+            </div>
+
+            @foreach (var color in optionalColors)
+            {
+                <div class="ocat-wrapper" asp-validation-class-for="@color.Name">
+                    <label for="@color.Name" class="ocat-label">@color.Label</label>
+                    <div class="ocat-end">
+                        <div class="ca-color-field">
+                            <input type="color" class="form-control form-control-color" value="@(string.IsNullOrEmpty(color.Value) ? "#ffffff" : color.Value)" data-color-picker="@color.Name" aria-label="@T["Pick the {0} color", color.Label.Value]" />
+                            <input type="text" id="@color.Name" name="@color.Name" class="form-control" value="@color.Value" maxlength="7" spellcheck="false" autocomplete="off" data-color-hex="@color.Name" pattern="^(#[0-9a-fA-F]{6})?$" placeholder="@T["Automatic"]" />
+                        </div>
+                        <span asp-validation-for="@color.Name"></span>
+                        <span class="hint">@color.Hint</span>
+                    </div>
+                </div>
+            }
+
+            <div class="ocat-wrapper" asp-validation-class-for="Position">
+                <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Position" class="form-control" type="number" min="0" step="1" />
+                    <span asp-validation-for="Position"></span>
+                    <span class="hint">@T["Where the scheme sits in the pickers, lowest first."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Preview"]</div>
+        <div class="card-body">
+            <p class="hint">@T["Where a color would be too faint for its text, the theme deepens it; the preview shows the result."]</p>
+            <div class="ca-scheme-previews">
+                @foreach (var mode in new[] { "light", "dark" })
+                {
+                    <div class="ca-scheme-preview" data-ca-scheme="@ColorSchemesController.PreviewSchemeId" data-bs-theme="@mode" role="img" aria-label="@(mode == "light" ? T["Preview in light mode"] : T["Preview in dark mode"])">
+                        <div class="ca-scheme-preview-menu">
+                            <div class="ca-scheme-preview-brand">@T["Site"]</div>
+                            <div>@T["Content"]</div>
+                            <div class="ca-scheme-preview-current">@T["Content items"]</div>
+                            <div>@T["Settings"]</div>
+                        </div>
+                        <div class="ca-scheme-preview-page">
+                            <div class="ca-scheme-preview-heading">@T["Page title"]</div>
+                            <div class="ca-scheme-preview-card">
+                                <div class="ca-scheme-preview-toolbar">@T["3 items"]</div>
+                                <div class="ca-scheme-preview-row"><span class="ca-scheme-preview-link">@T["A record"]</span><span class="ca-scheme-preview-muted">@T["Published"]</span></div>
+                                <div class="ca-scheme-preview-row"><span class="ca-scheme-preview-link">@T["Another record"]</span><span class="ca-scheme-preview-muted">@T["Draft"]</span></div>
+                            </div>
+                            <div class="ca-scheme-preview-label">@T["A field"]</div>
+                            <div class="ca-scheme-preview-field"></div>
+                            <div class="ca-scheme-preview-button">@T["Save"]</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script asp-name="crestapps-admin-theme-scheme-editor" at="Foot"></script>
