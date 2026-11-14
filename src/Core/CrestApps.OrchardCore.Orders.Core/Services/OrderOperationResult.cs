@@ -17,6 +17,12 @@ public sealed class OrderOperationResult
     public decimal Refunded { get; set; }
 
     /// <summary>
+    /// Gets what the operation put back on balances, such as a gift card, store credit or the cash a till sale was paid
+    /// with, by the key of the balance's tender provider.
+    /// </summary>
+    public Dictionary<string, decimal> ReturnedToBalances { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
     /// Gets why the operation, or part of it, failed.
     /// </summary>
     public List<string> Errors { get; } = [];

@@ -220,6 +220,10 @@ public sealed class OrderOperationsService : IOrderOperationsService
         _scope.Restock = restock;
         reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
 
+        // From here money moves. A request aborted after money went back must not stop before it is recorded, or a retry
+        // gives it back again, so nothing below takes the request's token.
+        cancellationToken = CancellationToken.None;
+
         if (asStoreCredit)
         {
             if (_serviceProvider.GetService<IOrderStoreCreditRefunder>() is not { } refunder || !await refunder.RefundAsync(order, left, reason, actorName, cancellationToken))
@@ -257,7 +261,7 @@ public sealed class OrderOperationsService : IOrderOperationsService
         left = await RefundTransactionsAsync(order, left, reason, result, cancellationToken);
 
         // The card is refunded first, up to what it paid; what a gift card or store credit paid goes back on it last.
-        left = await RefundTendersAsync(order, left, reason, cancellationToken);
+        left = await RefundTendersAsync(order, left, reason, result, cancellationToken);
 
         result.Refunded = Money.Round((amount ?? money.Refundable) - left, order.Currency);
 
@@ -434,19 +438,34 @@ public sealed class OrderOperationsService : IOrderOperationsService
         return left;
     }
 
-    private async Task<decimal> RefundTendersAsync(Order order, decimal left, string reason, CancellationToken cancellationToken)
+    private async Task<decimal> RefundTendersAsync(Order order, decimal left, string reason, OrderOperationResult result, CancellationToken cancellationToken)
     {
         if (left <= 0m || string.IsNullOrEmpty(order.CheckoutSessionId))
         {
             return left;
         }
 
-        var balances = string.Join(", ", (await _tenderLedger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken)).Select(hold => hold.Description).Distinct());
+        var before = await _tenderLedger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken);
+        var balances = string.Join(", ", before.Select(hold => hold.Description).Distinct());
         var returned = await _tenderLedger.ReturnAsync(order.CheckoutSessionId, left, reason ?? S["A refund of order {0}.", order.OrderNumber].Value, cancellationToken);
 
         if (returned <= 0m)
         {
             return left;
+        }
+
+        // What went back on each kind of balance, measured under the order's refund lock, so a till pays out only the cash
+        // this refund put back.
+        var after = await _tenderLedger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken);
+
+        foreach (var group in before.GroupBy(hold => hold.ProviderKey, StringComparer.Ordinal))
+        {
+            var put = group.Sum(hold => hold.Amount - hold.ReturnedAmount) - after.Where(hold => hold.ProviderKey == group.Key).Sum(hold => hold.Amount - hold.ReturnedAmount);
+
+            if (put > 0m)
+            {
+                result.ReturnedToBalances[group.Key] = put;
+            }
         }
 
         // Recorded as one of the order's refunds, like a card refund, so what was refunded adds up to its total.
