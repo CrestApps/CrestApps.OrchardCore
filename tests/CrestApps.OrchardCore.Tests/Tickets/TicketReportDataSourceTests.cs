@@ -134,11 +134,11 @@ public sealed class TicketReportDataSourceTests
         var manager = await ReadTimersAsync(harness, CalendarTestHarness.User("lead", ServiceLevelsPermissions.ManageServiceLevelPolicies.Name));
 
         // Assert
-        Assert.Equal(["s1"], ana.Select(row => (string)row["TimerId"]));
-        Assert.Equal(["s1", "s3", "s9"], manager.Select(row => (string)row["TimerId"]).Order());
+        Assert.Equal(["s1", "s2"], ana.Select(row => (string)row["TimerId"]).Order());
+        Assert.Equal(["s1", "s2", "s3", "s9"], manager.Select(row => (string)row["TimerId"]).Order());
     }
 
-    private static Task<CalendarTestHarness> CreateAsync()
+    internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
         => CalendarTestHarness.CreateAsync(
             services =>
             {
@@ -150,6 +150,7 @@ public sealed class TicketReportDataSourceTests
                 services.AddSingleton(Catalog(new TicketPriority { ItemId = "normal", Name = "Normal" }));
                 new TicketsDataSourcesStartup().ConfigureServices(services);
                 new ServiceLevelsDataSourcesStartup().ConfigureServices(services);
+                configure?.Invoke(services);
             },
             async schema =>
             {
@@ -161,7 +162,7 @@ public sealed class TicketReportDataSourceTests
             [new TicketIndexProvider(), new TicketBacklogIndexProvider(), new TimelineEntryIndexProvider(), new ServiceLevelTimerIndexProvider()],
             [TimelineConstants.CollectionName, ServiceLevelsConstants.CollectionName]);
 
-    private static Task SeedAsync(CalendarTestHarness harness)
+    internal static Task SeedAsync(CalendarTestHarness harness)
         => harness.RunAsync(async services =>
         {
             var now = CalendarTestHarness.Now;
@@ -177,7 +178,9 @@ public sealed class TicketReportDataSourceTests
             await session.SaveAsync(Ticket("t2", "support", "teamB", "ana", TicketStatusCategory.Open, now.AddHours(-10), dueUtc: now.AddHours(-1)));
             await session.SaveAsync(Ticket("t3", "support", "teamB", "ben", TicketStatusCategory.Pending, now.AddHours(-2)));
             await session.SaveAsync(Ticket("t4", "hr", "teamA", null, TicketStatusCategory.Open, now.AddHours(-4)));
-            await session.SaveAsync(Ticket("t5", "support", "teamA", "ana", TicketStatusCategory.Solved, now.AddDays(-2)));
+            var t5 = Ticket("t5", "support", "teamA", "ana", TicketStatusCategory.Solved, now.AddDays(-2));
+            t5.Alter<TicketPart>(part => part.SolvedUtc = now.AddDays(-1));
+            await session.SaveAsync(t5);
 
             await session.SaveAsync(Entry("e1", "t1", TicketsConstants.EntryKinds.Reply, now.AddHours(-1.5)), false, TimelineConstants.CollectionName);
             var e2 = Entry("e2", "t2", TicketsConstants.EntryKinds.Event, now.AddHours(-1));
@@ -200,6 +203,12 @@ public sealed class TicketReportDataSourceTests
             });
 
             await session.SaveAsync(Timer("s1", TicketsConstants.RecordKind, "t1", now.AddHours(-3)), false, ServiceLevelsConstants.CollectionName);
+            var s2 = Timer("s2", TicketsConstants.RecordKind, "t2", now.AddHours(-10));
+            s2.State = ServiceLevelTimerState.Completed;
+            s2.EndedUtc = now.AddHours(-1);
+            s2.BreachedUtc = now.AddHours(-9);
+            s2.ElapsedSeconds = 7200;
+            await session.SaveAsync(s2, false, ServiceLevelsConstants.CollectionName);
             await session.SaveAsync(Timer("s3", TicketsConstants.RecordKind, "t3", now.AddHours(-2)), false, ServiceLevelsConstants.CollectionName);
             await session.SaveAsync(Timer("s9", "WorkOrder", "w1", now.AddHours(-2)), false, ServiceLevelsConstants.CollectionName);
         });
@@ -267,7 +276,7 @@ public sealed class TicketReportDataSourceTests
         return clock.Object;
     }
 
-    private static ClaimsPrincipal User(string userId)
+    internal static ClaimsPrincipal User(string userId)
         => CalendarTestHarness.User(userId);
 
     private static ITicketAccessService Access()

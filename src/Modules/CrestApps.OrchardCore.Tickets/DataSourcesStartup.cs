@@ -1,5 +1,8 @@
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Tickets.Reports;
 using CrestApps.OrchardCore.Tickets.Reports.DataSources;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.DataSources;
 using OrchardCore.Modules;
 
@@ -15,13 +18,34 @@ public sealed class DataSourcesStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddScoped<TicketReportAccess>();
         services
             .AddDataSource<TicketReportDataSource>()
-            .AddScoped<TicketReportAccess>()
             .AddScoped<TicketsReportDataSet>()
             .AddScoped<TicketEntriesReportDataSet>()
             .AddScoped<TicketChangesReportDataSet>()
             .AddScoped<TicketLinksReportDataSet>()
             .AddScoped<TicketBacklogReportDataSet>();
+    }
+}
+
+/// <summary>
+/// The ticket reports under Reports: volume and backlog, response and resolution times, service-level compliance,
+/// agent and team performance, and distribution.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddScoped<TicketReportAccess>();
+        services.TryAddScoped<TicketReportData>();
+        services
+            .AddReport<TicketVolumeReport>()
+            .AddReport<TicketResponseTimesReport>()
+            .AddReport<TicketServiceLevelReport>()
+            .AddReport<TicketPerformanceReport>()
+            .AddReport<TicketDistributionReport>();
     }
 }

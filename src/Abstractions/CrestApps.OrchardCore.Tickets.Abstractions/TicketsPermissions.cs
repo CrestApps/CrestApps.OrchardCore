@@ -88,6 +88,13 @@ public static class TicketsPermissions
         LocalizationSource.Create("Delete tickets", typeof(TicketsPermissions)),
         isSecurityCritical: true);
 
+    /// <summary>
+    /// Open the ticket reports. Each report shows only the tickets the reader may view.
+    /// </summary>
+    public static readonly Permission ViewTicketReports = new(
+        "ViewTicketReports",
+        LocalizationSource.Create("View ticket reports", typeof(TicketsPermissions)));
+
     private static readonly PermissionTemplate _viewAll = new("ViewAllTickets_{0}", LocalizationSource.Create("View all tickets in {0}", typeof(TicketsPermissions)), ViewAllTickets);
 
     private static readonly PermissionTemplate _viewTeam = new("ViewTeamTickets_{0}", LocalizationSource.Create("View the tickets of my teams in {0}", typeof(TicketsPermissions)), ViewTeamTickets)

@@ -22,6 +22,7 @@ internal sealed class TicketsPermissionsProvider : IPermissionProvider
         TicketsPermissions.AssignTickets,
         TicketsPermissions.MergeTickets,
         TicketsPermissions.DeleteTickets,
+        TicketsPermissions.ViewTicketReports,
     ];
 
     private readonly ICatalog<TicketDesk> _desks;
