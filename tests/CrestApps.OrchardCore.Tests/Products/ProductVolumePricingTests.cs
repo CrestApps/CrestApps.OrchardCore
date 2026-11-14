@@ -39,8 +39,8 @@ public sealed class ProductVolumePricingTests
     [InlineData("JPY", 1999, 1799)]
     [InlineData("USD", 29.99, 26.99)]
     [InlineData("KWD", 1.235, 1.112)]
-    public void TheDiscountIsRoundedToTheCurrencysPrecision(string currency, decimal unitPrice, decimal expected)
-        => Assert.Equal(expected, ProductVolumePricing.Apply(unitPrice, 10m, currency));
+    public void TheDiscountIsRoundedToTheCurrencysPrecision(string currency, double unitPrice, double expected)
+        => Assert.Equal(DecimalConversion.FromDouble(expected), ProductVolumePricing.Apply(DecimalConversion.FromDouble(unitPrice), 10m, currency));
 
     [Fact]
     public void AYenPrice_IsFormattedInWholeYen()
