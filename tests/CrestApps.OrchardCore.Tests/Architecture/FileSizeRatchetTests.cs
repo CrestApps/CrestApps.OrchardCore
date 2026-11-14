@@ -35,7 +35,7 @@ public sealed class FileSizeRatchetTests
         ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/AgentCheckoutService.cs"] = 1642,
         ["src/Core/CrestApps.OrchardCore.Calendars.Core/Services/DefaultCalendarEventManager.cs"] = 1035,
         ["src/Core/CrestApps.OrchardCore.Carts.Core/Services/CartService.cs"] = 814,
-        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs"] = 1632,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs"] = 1490,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportDesignDocumentBuilder.cs"] = 1036,
         ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryEngine.cs"] = 1050,
         ["src/Core/CrestApps.OrchardCore.Scheduling.Core/Services/DefaultAppointmentService.cs"] = 845,

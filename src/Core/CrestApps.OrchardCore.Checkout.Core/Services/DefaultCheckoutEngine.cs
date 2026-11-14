@@ -33,7 +33,7 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// customer is never left having paid for half a purchase that was never fulfilled.</description></item>
 /// </list>
 /// </remarks>
-public sealed class DefaultCheckoutEngine : ICheckoutEngine
+public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 {
     internal const string SessionLockPrefix = "CHECKOUT_SESSION_";
 
@@ -840,12 +840,15 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             candidate.State is PaymentAttemptState.Created or PaymentAttemptState.Pending or PaymentAttemptState.Succeeded);
 
         // An attempt begun for a different total, before the buyer applied a gift card or a code, is not resumed: it
-        // would charge what the invoice no longer asks for. It's set aside, and a new one is made for the new total.
-        if (attempt?.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
-            !MatchesInvoice(attempt, invoice) &&
-            await TrySupersedeAsync(session, attempt, cancellationToken))
+        // would charge what the invoice no longer asks for. It's set aside, and a new one is made for the new total; one
+        // that can't be set aside is left, and no second payment is begun next to it.
+        if (attempt?.State is PaymentAttemptState.Created or PaymentAttemptState.Pending && !MatchesInvoice(attempt, invoice))
         {
-            existingAttempts.Remove(attempt);
+            if (!await TrySupersedeAsync(session, attempt, cancellationToken))
+            {
+                return (null, "A payment for this checkout is already under way. Finish it, or try again in a few minutes.", false, false, null);
+            }
+
             attempt = null;
         }
 
@@ -880,17 +883,14 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 attempt.IdempotencyKey = $"{options.IdempotencyKey.Trim()}_{obligationId}";
             }
 
-            // A declined attempt is final, so a new one for the same obligation is a genuinely new charge. It
-            // needs its own idempotency key: reusing the declined attempt's key would make the gateway replay the
-            // decline instead of trying the payment method it is now given.
-            var declinedBefore = existingAttempts.Count(candidate =>
-                string.Equals(candidate.ObligationId, obligationId, StringComparison.Ordinal) &&
-                string.Equals(candidate.ProviderKey, provider.Key, StringComparison.OrdinalIgnoreCase) &&
-                candidate.State == PaymentAttemptState.Failed);
+            // A declined or set-aside attempt is over, so a new one for the same obligation is a new charge with its own
+            // idempotency key: a declined one's key replays the decline, and a canceled one's names another attempt, which
+            // Stripe refuses as the same key with other parameters.
+            var endedBefore = CountEndedAttempts(existingAttempts, obligationId, provider.Key);
 
-            if (declinedBefore > 0)
+            if (endedBefore > 0)
             {
-                attempt.IdempotencyKey += "_retry" + declinedBefore;
+                attempt.IdempotencyKey += "_retry" + endedBefore;
             }
 
             // Persist BEFORE the provider is contacted. A crash between these two lines must leave a record
@@ -1068,148 +1068,6 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         }
 
         return null;
-    }
-
-    private static bool MatchesInvoice(PaymentAttempt attempt, CheckoutInvoice invoice)
-    {
-        var (amount, taxAmount) = GetObligationAmounts(invoice, attempt.ObligationId);
-
-        return attempt.ExpectedAmount == amount && attempt.ExpectedTaxAmount == taxAmount;
-    }
-
-    // An attempt the provider was already given is only set aside when the provider says nothing was paid, so a
-    // payment the buyer finished in another tab is never dropped.
-    private async Task<bool> TrySupersedeAsync(CheckoutSession session, PaymentAttempt attempt, CancellationToken cancellationToken)
-    {
-        if (attempt.State == PaymentAttemptState.Pending && _providerResolver.GetProvider(attempt.ProviderKey) is { } provider)
-        {
-            try
-            {
-                var verification = await provider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = attempt }, cancellationToken);
-
-                if (verification.Status == PaymentStatus.Succeeded)
-                {
-                    _logger.LogWarning("Attempt '{AttemptId}' of checkout '{SessionId}' was paid before the total changed, so it stands.", attempt.ItemId, session.SessionId);
-
-                    return false;
-                }
-            }
-            catch (Exception exception)
-            {
-                _logger.LogWarning(exception, "Could not check attempt '{AttemptId}' of checkout '{SessionId}' before setting it aside, so it stands.", attempt.ItemId, session.SessionId);
-
-                return false;
-            }
-        }
-
-        await SupersedeAsync(attempt, cancellationToken);
-
-        return true;
-    }
-
-    // Sets aside the live attempts other providers made for this obligation. Returns false, leaving everything as it
-    // is, when one of them was paid, can't be checked, or its provider won't confirm it's canceled.
-    private async Task<bool> TryReleaseOtherProvidersAsync(
-        CheckoutSession session,
-        string providerKey,
-        string obligationId,
-        List<PaymentAttempt> existingAttempts,
-        CancellationToken cancellationToken)
-    {
-        var others = existingAttempts
-            .Where(candidate =>
-                string.Equals(candidate.ObligationId, obligationId, StringComparison.Ordinal) &&
-                !string.Equals(candidate.ProviderKey, providerKey, StringComparison.OrdinalIgnoreCase) &&
-                !candidate.IsSuperseded &&
-                candidate.State is PaymentAttemptState.Created or PaymentAttemptState.Pending or PaymentAttemptState.Succeeded)
-            .ToList();
-
-        foreach (var other in others)
-        {
-            if (other.State == PaymentAttemptState.Succeeded || _providerResolver.GetProvider(other.ProviderKey) is not { } otherProvider)
-            {
-                return false;
-            }
-
-            // An attempt still Created, with no reference, is one whose begin may have ended without the provider's
-            // answer (a server error, a timeout): the provider may have charged it anyway. Until the provider can be
-            // expected to find it, nothing is set aside.
-            if (other.State == PaymentAttemptState.Created &&
-                string.IsNullOrEmpty(other.ProviderReference) &&
-                other.CreatedUtc != default &&
-                _clock.UtcNow - other.CreatedUtc < _unansweredBeginWindow)
-            {
-                return false;
-            }
-
-            try
-            {
-                if (other.State is PaymentAttemptState.Pending or PaymentAttemptState.Created)
-                {
-                    var verification = await otherProvider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = other }, cancellationToken);
-
-                    if (verification.Status == PaymentStatus.Succeeded)
-                    {
-                        _logger.LogWarning("Attempt '{AttemptId}' of checkout '{SessionId}' was paid through '{ProviderKey}', so no payment is begun with '{NewProviderKey}'.", other.ItemId, session.SessionId, other.ProviderKey, providerKey);
-
-                        return false;
-                    }
-                }
-
-                var canceled = await otherProvider.CancelAsync(
-                    new CancelPaymentContext
-                    {
-                        Session = session,
-                        Attempt = other,
-                        Reason = "The buyer paid with another payment method.",
-                    },
-                    cancellationToken);
-
-                if (!canceled.Succeeded)
-                {
-                    return false;
-                }
-            }
-            catch (Exception exception)
-            {
-                _logger.LogWarning(exception, "Could not set aside attempt '{AttemptId}' of checkout '{SessionId}', so no payment is begun with '{ProviderKey}'.", other.ItemId, session.SessionId, providerKey);
-
-                return false;
-            }
-
-            other.State = PaymentAttemptState.Canceled;
-            other.IsSuperseded = true;
-            other.FailureReason = "The buyer paid with another payment method.";
-
-            await _attemptStore.UpdateAsync(other, cancellationToken);
-            existingAttempts.Remove(other);
-        }
-
-        return true;
-    }
-
-    private async Task SupersedeAsync(PaymentAttempt attempt, CancellationToken cancellationToken)
-    {
-        attempt.State = PaymentAttemptState.Canceled;
-        attempt.IsSuperseded = true;
-        attempt.FailureReason = "The total changed before it was paid.";
-
-        await _attemptStore.UpdateAsync(attempt, cancellationToken);
-    }
-
-    // Attempts begun for obligations the invoice no longer has, such as a card payment begun before a gift card was
-    // applied that now pays everything, are set aside, so they neither keep the checkout waiting nor get charged.
-    private async Task SupersedeUnexpectedAttemptsAsync(CheckoutSession session, IReadOnlyCollection<string> expectedObligations, CancellationToken cancellationToken)
-    {
-        foreach (var attempt in await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken))
-        {
-            if (attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
-                !attempt.IsSuperseded &&
-                !expectedObligations.Contains(attempt.ObligationId))
-            {
-                await TrySupersedeAsync(session, attempt, cancellationToken);
-            }
-        }
     }
 
     private static PaymentAttempt CreateAttempt(CheckoutSession session, CheckoutInvoice invoice, string providerKey, string obligationId)

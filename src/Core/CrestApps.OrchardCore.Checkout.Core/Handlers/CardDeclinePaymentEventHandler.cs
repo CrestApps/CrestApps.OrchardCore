@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Handlers;
 
@@ -17,7 +18,9 @@ namespace CrestApps.OrchardCore.Checkout.Core.Handlers;
 /// reconciliation sweep sees it: the buyer can try card after card against one secret. Each failure counts for the
 /// card-testing protection. After a few on one payment, or once the network or customer it was begun from is blocked, the
 /// payment is canceled at the provider and the attempt failed, so the buyer must begin a new payment, which the gate can
-/// refuse. A subscription's first payment counts the same way, through the failed first invoice.
+/// refuse. A subscription's first payment counts the same way, through the failed first invoice. A decline against a
+/// payment set aside when the checkout changed, whose provider reference it names, counts too, and cancels that payment
+/// while it is unpaid: its client secret should be dead, and one that isn't must not take cards uncounted.
 /// </summary>
 public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
 {
@@ -37,6 +40,7 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
     private readonly IAttemptLimiter _limiter;
     private readonly ICheckoutPaymentProviderResolver _providerResolver;
     private readonly IDistributedLock _distributedLock;
+    private readonly ISession _session;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -49,7 +53,8 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
         IAttemptLimiter limiter,
         ICheckoutPaymentProviderResolver providerResolver,
         IDistributedLock distributedLock,
-        ILogger<CardDeclinePaymentEventHandler> logger)
+        ILogger<CardDeclinePaymentEventHandler> logger,
+        ISession session = null)
     {
         _attemptStore = attemptStore;
         _sessionStore = sessionStore;
@@ -57,6 +62,7 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
         _limiter = limiter;
         _providerResolver = providerResolver;
         _distributedLock = distributedLock;
+        _session = session;
         _logger = logger;
     }
 
@@ -87,8 +93,9 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
 
         var attempt = await _attemptStore.FindByIdAsync(attemptId, cancellationToken);
 
-        // Only a live attempt of this provider's payment: a stale or replayed event about a finished one counts nothing.
-        if (!IsLive(attempt, providerReference))
+        // Only a live attempt of this provider's payment, or a set-aside one whose payment it names: a stale or replayed
+        // event about a finished one counts nothing.
+        if (!IsLive(attempt, providerReference) && !IsSetAsideButOpen(attempt, providerReference))
         {
             return;
         }
@@ -109,12 +116,12 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
             await _limiter.RecordFailureAsync(CheckoutConstants.AttemptPolicies.PaymentDeclineAttempt, attempt.ItemId, cancellationToken);
         }
 
-        if (await MayTakeAnotherCardAsync(session, attempt, cancellationToken))
+        if (!attempt.IsSuperseded && await MayTakeAnotherCardAsync(session, attempt, cancellationToken))
         {
             return;
         }
 
-        await CancelAsync(session, attempt.ItemId, providerReference, cancellationToken);
+        await CancelAsync(session, attempt, providerReference, cancellationToken);
     }
 
     private static bool IsLive(PaymentAttempt attempt, string providerReference)
@@ -122,6 +129,13 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
             !attempt.IsSuperseded &&
             attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
             (string.IsNullOrEmpty(attempt.ProviderReference) || string.IsNullOrEmpty(providerReference) || string.Equals(attempt.ProviderReference, providerReference, StringComparison.Ordinal));
+
+    // A payment set aside when the checkout changed, whose decline names its own provider reference: its client secret
+    // is still taking cards at the provider.
+    private static bool IsSetAsideButOpen(PaymentAttempt attempt, string providerReference)
+        => attempt is { IsSuperseded: true } &&
+            !string.IsNullOrEmpty(attempt.ProviderReference) &&
+            string.Equals(attempt.ProviderReference, providerReference, StringComparison.Ordinal);
 
     private async Task<bool> IsFirstDeliveryAsync(string eventId, CancellationToken cancellationToken)
         => string.IsNullOrEmpty(eventId) ||
@@ -150,9 +164,11 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
 
     // Under the checkout's lock, the one the engine takes to complete a payment, so a payment being completed is not failed
     // at the same time. The provider cancels only a payment that took nothing: one the buyer paid with a later card, whose
-    // success was not processed yet, is left paid and never refunded from here.
-    private async Task CancelAsync(CheckoutSession session, string attemptId, string providerReference, CancellationToken cancellationToken)
+    // success was not processed yet, is left paid and never refunded from here. A set-aside payment is canceled and left
+    // as the edit that set it aside left it.
+    private async Task CancelAsync(CheckoutSession session, PaymentAttempt read, string providerReference, CancellationToken cancellationToken)
     {
+        var attemptId = read.ItemId;
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(DefaultCheckoutEngine.SessionLockPrefix + session.SessionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
@@ -164,9 +180,14 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
 
         await using (locker)
         {
-            var attempt = await _attemptStore.FindByIdAsync(attemptId, cancellationToken);
+            // Read again from the database: the session hands back the copy it read before the lock, and an edit that set the
+            // attempt aside since would be overwritten with "failed".
+            _session?.Detach(read);
 
-            if (!IsLive(attempt, providerReference) || _providerResolver.GetProvider(attempt.ProviderKey) is not { } provider)
+            var attempt = await _attemptStore.FindByIdAsync(attemptId, cancellationToken);
+            var setAside = IsSetAsideButOpen(attempt, providerReference);
+
+            if (!(setAside || IsLive(attempt, providerReference)) || _providerResolver.GetProvider(attempt.ProviderKey) is not { } provider)
             {
                 return;
             }
@@ -185,6 +206,13 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 _logger.LogWarning(exception, "Payment attempt '{AttemptId}' had too many declined cards and could not be canceled at the provider.", attempt.ItemId);
+
+                return;
+            }
+
+            if (setAside)
+            {
+                _logger.LogWarning("Payment attempt '{AttemptId}' of checkout '{SessionId}' was set aside but its payment took a card; it was canceled.", attempt.ItemId, attempt.SessionId);
 
                 return;
             }

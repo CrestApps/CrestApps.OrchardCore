@@ -207,6 +207,48 @@ public sealed class CardDeclineWebhookTests
         Assert.Equal(PaymentAttemptState.Failed, (await _attempts.FindByIdAsync("attempt-6", TestContext.Current.CancellationToken)).State);
     }
 
+    /// <summary>
+    /// M1 (final review): a payment set aside when the total changed kept its client secret at Stripe, and each decline
+    /// against it named a superseded attempt, so nothing was counted and the payment was never canceled. A decline that
+    /// names a superseded attempt and its own PaymentIntent now counts, and cancels the payment while it is unpaid.
+    /// </summary>
+    [Fact]
+    public async Task DeclinesAgainstASupersededPayment_AreCounted_AndItsClientSecretIsCanceled()
+    {
+        var (handler, gate) = Create();
+
+        for (var i = 1; i <= 5; i++)
+        {
+            await SeedAttemptAsync($"attempt-{i}", $"pi_{i}", Seed($"session-{i}"), PaymentAttemptState.Canceled, isSuperseded: true);
+            await handler.PaymentFailedAsync(Failed($"attempt-{i}", $"pi_{i}"), TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(["pi_1", "pi_2", "pi_3", "pi_4", "pi_5"], _canceledIntents);
+        Assert.True((await _attempts.FindByIdAsync("attempt-1", TestContext.Current.CancellationToken)).IsSuperseded);
+
+        var next = new CheckoutPaymentBeginningContext(new CheckoutFlow(Seed("session-next")), CardProvider);
+        await gate.BeginningAsync(next, TestContext.Current.CancellationToken);
+
+        Assert.True(next.IsRefused);
+    }
+
+    [Fact]
+    public async Task ADeclineNamingASupersededAttempt_ForAnotherPaymentIntent_CountsNothing()
+    {
+        var (handler, _) = Create();
+
+        await SeedAttemptAsync("attempt-1", "pi_1", Seed("session-1"), PaymentAttemptState.Canceled, isSuperseded: true);
+        _intentStatuses["pi_other"] = "requires_payment_method";
+
+        for (var i = 0; i < 6; i++)
+        {
+            await handler.PaymentFailedAsync(Failed("attempt-1", "pi_other"), TestContext.Current.CancellationToken);
+        }
+
+        Assert.Empty(_canceledIntents);
+        Assert.Empty(_issues);
+    }
+
     private static PaymentFailedContext Failed(string attemptId, string intentId, string eventId = null)
     {
         var context = new PaymentFailedContext { TransactionId = intentId, GatewayId = CardProvider, FailureCode = "card_declined", EventId = eventId ?? Guid.NewGuid().ToString("n") };
@@ -224,7 +266,7 @@ public sealed class CardDeclineWebhookTests
         return session;
     }
 
-    private Task SeedAttemptAsync(string attemptId, string reference, CheckoutSession session, PaymentAttemptState state = PaymentAttemptState.Pending, string obligationId = CheckoutObligations.OneTime)
+    private Task SeedAttemptAsync(string attemptId, string reference, CheckoutSession session, PaymentAttemptState state = PaymentAttemptState.Pending, string obligationId = CheckoutObligations.OneTime, bool isSuperseded = false)
     {
         // After a decline Stripe leaves the PaymentIntent waiting for another card.
         _intentStatuses[reference] = "requires_payment_method";
@@ -239,6 +281,7 @@ public sealed class CardDeclineWebhookTests
             ExpectedAmount = 30m,
             Currency = "USD",
             State = state,
+            IsSuperseded = isSuperseded,
         }).AsTask();
     }
 
