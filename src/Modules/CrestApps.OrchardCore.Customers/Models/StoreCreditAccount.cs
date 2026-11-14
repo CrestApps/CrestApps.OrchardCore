@@ -52,4 +52,9 @@ public sealed class StoreCreditAccount : CatalogItem, ITimestampedModel
 /// </summary>
 public sealed class StoreCreditActivity : BalanceLedgerEntry
 {
+    /// <summary>
+    /// Gets or sets what the change was made for, such as a transaction's payment, if anything. A change with a
+    /// reference is made only once: making it again finds this entry (<see cref="Services.StoreCreditService.TryChangeAsync"/>).
+    /// </summary>
+    public string Reference { get; set; }
 }
