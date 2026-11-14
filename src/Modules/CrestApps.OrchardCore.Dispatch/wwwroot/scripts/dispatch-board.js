@@ -386,6 +386,16 @@
 				queue.appendChild(card);
 			});
 		};
+		const markerLabel = (visit) => {
+			const label = element("div");
+			const link = element("a", null, visit.number);
+			link.href = visit.url;
+			label.appendChild(link);
+			label.appendChild(document.createTextNode(` ${visit.summary || ""}`));
+			label.appendChild(document.createElement("br"));
+			label.appendChild(document.createTextNode(visit.start ? `${visit.start}–${visit.end}` : texts.unscheduled));
+			return label;
+		};
 		const renderMap = () => {
 			const crestappsMap = window.crestappsMap;
 			if (!crestappsMap || typeof L === "undefined") return;
@@ -396,7 +406,7 @@
 			const markers = data.visits.concat(data.unscheduled).filter((visit) => visit.latitude !== null && visit.longitude !== null).map((visit) => ({
 				latitude: visit.latitude,
 				longitude: visit.longitude,
-				label: `<a href="${visit.url}">${visit.number}</a> ${(visit.summary || "").replace(/[<>&]/g, "")}<br>${visit.start ? `${visit.start}–${visit.end}` : texts.unscheduled}`
+				label: markerLabel(visit)
 			}));
 			markerLayer = crestappsMap.addMarkers(map, markers, { fit: first });
 			if (positionLayer) map.removeLayer(positionLayer);
@@ -406,7 +416,7 @@
 				weight: 2,
 				fillColor: "#0c8599",
 				fillOpacity: .95
-			}).bindTooltip(format(texts.position || "{0} at {1}", position.name || "", position.time)))).addTo(map);
+			}).bindTooltip(element("span", null, format(texts.position || "{0} at {1}", position.name || "", position.time))))).addTo(map);
 			if (first && markers.length === 0 && positionLayer.getLayers().length > 0) map.fitBounds(L.featureGroup(positionLayer.getLayers()).getBounds(), {
 				maxZoom: 13,
 				padding: [30, 30]

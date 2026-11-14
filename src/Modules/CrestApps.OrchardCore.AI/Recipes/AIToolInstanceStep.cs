@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -23,6 +24,7 @@ internal sealed class AIToolInstanceStep : CatalogRecipeStepBase<AIToolInstance>
     private readonly ISourceCatalogManager<AIToolInstance> _manager;
     private readonly INamedCatalog<AIToolInstance> _instancesCatalog;
     private readonly AIOptions _aiOptions;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -32,17 +34,20 @@ internal sealed class AIToolInstanceStep : CatalogRecipeStepBase<AIToolInstance>
     /// <param name="manager">The AI tool instance catalog manager.</param>
     /// <param name="instancesCatalog">The named catalog used to resolve instances by name.</param>
     /// <param name="aiOptions">The AI configuration options.</param>
+    /// <param name="endpointPolicy">The policy that keeps an instance's addresses off the site's own network.</param>
     /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public AIToolInstanceStep(
         ISourceCatalogManager<AIToolInstance> manager,
         INamedCatalog<AIToolInstance> instancesCatalog,
         IOptions<AIOptions> aiOptions,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<AIToolInstanceStep> stringLocalizer)
         : base(StepKey, "Instances")
     {
         _manager = manager;
         _instancesCatalog = instancesCatalog;
         _aiOptions = aiOptions.Value;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -80,8 +85,19 @@ internal sealed class AIToolInstanceStep : CatalogRecipeStepBase<AIToolInstance>
         return await _manager.NewAsync(source, token);
     }
 
-    protected override ValueTask<ValidationResultDetails> ValidateAsync(AIToolInstance entry)
-        => _manager.ValidateAsync(entry);
+    protected override async ValueTask<ValidationResultDetails> ValidateAsync(AIToolInstance entry)
+    {
+        var result = await _manager.ValidateAsync(entry);
+
+        // The editor refuses a base URL, token endpoint or documentation address on the site's own network; a recipe is
+        // held to the same rule.
+        if (AIRecipeEndpoints.FindRefused(entry, _endpointPolicy, includeUrls: true) is { } refused)
+        {
+            result.Fail(new System.ComponentModel.DataAnnotations.ValidationResult(S["The address '{0}' is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.", refused]));
+        }
+
+        return result;
+    }
 
     protected override ValueTask CreateAsync(AIToolInstance entry)
         => _manager.CreateAsync(entry);

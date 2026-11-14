@@ -68,6 +68,14 @@ public sealed partial class AgentFeedSftpPusher
                 return result;
             }
 
+            // Without the server's host key, any server answering for the host name would get the catalog and the login.
+            if (string.IsNullOrWhiteSpace(settings.HostKeyFingerprint))
+            {
+                result.Message = "The SFTP server's host key fingerprint isn't set. Enter it to push the feed.";
+
+                return result;
+            }
+
             var format = OpenAIProductFeedFormats.IsGzip(settings.Format) ? settings.Format : OpenAIProductFeedFormats.JsonLinesGzip;
             var feed = await _feeds.GetAsync(settings.Currency, fresh: true, cancellationToken);
             var shards = OpenAIProductFeedWriter.Shard(feed.Records, format);
@@ -75,13 +83,7 @@ public sealed partial class AgentFeedSftpPusher
 
             using var client = new SftpClient(CreateConnectionInfo(settings));
 
-            client.HostKeyReceived += (_, e) =>
-            {
-                var expected = settings.HostKeyFingerprint?.Trim();
-
-                e.CanTrust = string.IsNullOrEmpty(expected) ||
-                    string.Equals(NormalizeFingerprint(e.FingerPrintSHA256), NormalizeFingerprint(expected), StringComparison.Ordinal);
-            };
+            client.HostKeyReceived += (_, e) => e.CanTrust = SshHostKeyFingerprints.Matches(settings.HostKeyFingerprint, e.FingerPrintSHA256);
 
             await client.ConnectAsync(cancellationToken);
 
@@ -167,19 +169,6 @@ public sealed partial class AgentFeedSftpPusher
         {
             Timeout = _timeout,
         };
-    }
-
-    // "SHA256:abc=" and "abc" name the same key; the prefix and the base64 padding are left out.
-    private static string NormalizeFingerprint(string fingerprint)
-    {
-        var value = fingerprint?.Trim() ?? string.Empty;
-
-        if (value.StartsWith("SHA256:", StringComparison.OrdinalIgnoreCase))
-        {
-            value = value.Substring("SHA256:".Length);
-        }
-
-        return value.TrimEnd('=');
     }
 
     [GeneratedRegex(@"^products-\d{5}\.(jsonl|csv)\.gz$")]

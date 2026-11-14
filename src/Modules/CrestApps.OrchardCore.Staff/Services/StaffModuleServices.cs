@@ -99,6 +99,8 @@ internal sealed class StaffPersonalDataContributor : IPersonalDataContributor
 [BackgroundTask(
     Title = "Staff upkeep",
     Schedule = "15 * * * *",
+    LockTimeout = 5_000,
+    LockExpiration = 300_000,
     Description = "Terminates staff members whose last working day has passed, and keeps working staff in the Staff role.")]
 internal sealed class StaffTerminationBackgroundTask : IBackgroundTask
 {

@@ -103,61 +103,61 @@
         </tbody>
         <tfoot>
             <tr>
-                <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Subtotal"]</th>
-                <th colspan="2" class="text-end fw-normal d-sm-none">@T["Subtotal"]</th>
+                <th scope="row" colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Subtotal"]</th>
+                <th scope="row" colspan="2" class="text-end fw-normal d-sm-none">@T["Subtotal"]</th>
                 <td class="text-end text-nowrap">@Format(order.Subtotal)</td>
             </tr>
             @foreach (var (label, amount) in Model.Discounts)
             {
                 <tr>
-                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@label</th>
-                    <th colspan="2" class="text-end fw-normal d-sm-none">@label</th>
+                    <th scope="row" colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@label</th>
+                    <th scope="row" colspan="2" class="text-end fw-normal d-sm-none">@label</th>
                     <td class="text-end text-nowrap">&minus;@Format(amount)</td>
                 </tr>
             }
             @if (order.Shipping is not null)
             {
                 <tr>
-                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Shipping"]</th>
-                    <th colspan="2" class="text-end fw-normal d-sm-none">@T["Shipping"]</th>
+                    <th scope="row" colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Shipping"]</th>
+                    <th scope="row" colspan="2" class="text-end fw-normal d-sm-none">@T["Shipping"]</th>
                     <td class="text-end text-nowrap">@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</td>
                 </tr>
             }
             @if (order.TaxAmount > 0)
             {
                 <tr>
-                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Tax"]</th>
-                    <th colspan="2" class="text-end fw-normal d-sm-none">@T["Tax"]</th>
+                    <th scope="row" colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Tax"]</th>
+                    <th scope="row" colspan="2" class="text-end fw-normal d-sm-none">@T["Tax"]</th>
                     <td class="text-end text-nowrap">@Format(order.TaxAmount.Value)</td>
                 </tr>
             }
             <tr>
-                <th colspan="4" class="text-end d-none d-sm-table-cell">@T["Total"]</th>
-                <th colspan="2" class="text-end d-sm-none">@T["Total"]</th>
-                <th class="text-end text-nowrap">@Format(order.Total ?? order.Subtotal)</th>
+                <th scope="row" colspan="4" class="text-end d-none d-sm-table-cell">@T["Total"]</th>
+                <th scope="row" colspan="2" class="text-end d-sm-none">@T["Total"]</th>
+                <th scope="row" class="text-end text-nowrap">@Format(order.Total ?? order.Subtotal)</th>
             </tr>
             @foreach (var tender in order.Tenders ?? [])
             {
                 <tr>
-                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Paid with {0}", tender.Description]</th>
-                    <th colspan="2" class="text-end fw-normal d-sm-none">@T["Paid with {0}", tender.Description]</th>
+                    <th scope="row" colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Paid with {0}", tender.Description]</th>
+                    <th scope="row" colspan="2" class="text-end fw-normal d-sm-none">@T["Paid with {0}", tender.Description]</th>
                     <td class="text-end text-nowrap">@Format(tender.Amount)</td>
                 </tr>
             }
             @if (order.RefundedAmount > 0)
             {
                 <tr>
-                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Refunded"]</th>
-                    <th colspan="2" class="text-end fw-normal d-sm-none">@T["Refunded"]</th>
+                    <th scope="row" colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Refunded"]</th>
+                    <th scope="row" colspan="2" class="text-end fw-normal d-sm-none">@T["Refunded"]</th>
                     <td class="text-end text-nowrap">&minus;@Format(order.RefundedAmount)</td>
                 </tr>
             }
             @if (Model.AmountDue > 0)
             {
                 <tr>
-                    <th colspan="4" class="text-end d-none d-sm-table-cell">@T["Amount due"]</th>
-                    <th colspan="2" class="text-end d-sm-none">@T["Amount due"]</th>
-                    <th class="text-end text-nowrap">@Format(Model.AmountDue)</th>
+                    <th scope="row" colspan="4" class="text-end d-none d-sm-table-cell">@T["Amount due"]</th>
+                    <th scope="row" colspan="2" class="text-end d-sm-none">@T["Amount due"]</th>
+                    <th scope="row" class="text-end text-nowrap">@Format(Model.AmountDue)</th>
                 </tr>
             }
         </tfoot>

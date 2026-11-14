@@ -1,4 +1,3 @@
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Commerce.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -107,13 +106,13 @@ public sealed class StoreSetupController : Controller
                 progress.Skipped.Remove(step.Name);
             });
 
-            await _notifier.SuccessAsync(new LocalizedHtmlString(result.Message.Name, HtmlEncoder.Default.Encode(result.Message.Value)));
+            await _notifier.SuccessAsync(new LocalizedHtmlString(result.Message.Name, "{0}", false, result.Message.Value));
 
             // On to the next step.
             return RedirectToAction(nameof(Index));
         }
 
-        await _notifier.ErrorAsync(new LocalizedHtmlString(result.Message.Name, HtmlEncoder.Default.Encode(result.Message.Value)));
+        await _notifier.ErrorAsync(new LocalizedHtmlString(result.Message.Name, "{0}", false, result.Message.Value));
 
         return RedirectToAction(nameof(Index), new { step = step.Name });
     }

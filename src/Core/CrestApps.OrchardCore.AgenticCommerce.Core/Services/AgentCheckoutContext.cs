@@ -50,4 +50,10 @@ public sealed class AgentCheckoutContext
     /// Gets or sets protocol data kept with a new checkout, such as where a UCP platform's order updates go.
     /// </summary>
     public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the platform's published profile, when its protocol has one (UCP): the keys its signatures and
+    /// payment mandates are checked with.
+    /// </summary>
+    public System.Text.Json.Nodes.JsonObject PlatformProfile { get; set; }
 }

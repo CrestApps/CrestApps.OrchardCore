@@ -4,11 +4,33 @@ using CrestApps.OrchardCore.Diagnostics;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using CrestApps.OrchardCore.ContentTransfer.Models;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.ContentTransfer.OpenXml.Services;
 
 public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFileFormatProvider
 {
+    private readonly ContentImportOptions _options;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExcelContentTransferFileFormatProvider"/> class with the default
+    /// limits.
+    /// </summary>
+    public ExcelContentTransferFileFormatProvider()
+        : this(Options.Create(new ContentImportOptions()))
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExcelContentTransferFileFormatProvider"/> class.
+    /// </summary>
+    /// <param name="options">The import options, which hold the limits of a file.</param>
+    public ExcelContentTransferFileFormatProvider(IOptions<ContentImportOptions> options)
+    {
+        _options = options.Value;
+    }
+
     public string FileExtension => ".xlsx";
 
     public string ContentType => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -17,7 +39,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
         => Path.GetExtension(fileName).Equals(FileExtension, StringComparison.OrdinalIgnoreCase);
 
     public IContentTransferFileReader CreateReader(Stream stream)
-        => new ExcelFileReader(stream);
+        => new ExcelFileReader(stream, _options);
 
     public IContentTransferFileWriter CreateWriter(Stream stream, string sheetName)
         => new ExcelFileWriter(stream, sheetName);
@@ -44,9 +66,12 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
         private readonly List<string> _sharedStrings;
         private readonly List<string> _columnNames;
         private readonly int _rowCount;
+        private readonly int _maxCellLength;
 
-        public ExcelFileReader(Stream stream)
+        public ExcelFileReader(Stream stream, ContentImportOptions options)
         {
+            _maxCellLength = options.MaxCellLength;
+
             // Opening reads the shared strings and counts the rows of the sheet before the first row is imported.
             var startTimestamp = Stopwatch.GetTimestamp();
 
@@ -58,7 +83,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
                 ?? throw new InvalidOperationException(NoDataMessage);
 
             _worksheetPart = (WorksheetPart)workbookPart.GetPartById(firstSheet.Id);
-            _sharedStrings = ReadSharedStrings(workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault());
+            _sharedStrings = ReadSharedStrings(workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault(), options.MaxSharedStrings, _maxCellLength);
 
             Row headerRow;
             using (var reader = OpenXmlReader.Create(_worksheetPart))
@@ -72,6 +97,12 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
             {
                 var columnName = GetCellValue(cell)?.Trim() ?? string.Empty;
                 var columnIndex = GetColumnIndexFromCellReference(cell.CellReference);
+
+                // A header cell that names a far column would otherwise add a name for every column before it.
+                if (columnIndex < 0 || columnIndex >= options.MaxColumns)
+                {
+                    throw new InvalidOperationException($"The file has more than {options.MaxColumns} columns, the most an import may have.");
+                }
 
                 while (columnNames.Count < columnIndex)
                 {
@@ -88,6 +119,11 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
 
             _columnNames = columnNames;
             _rowCount = Math.Max(CountRows(_worksheetPart) - 1, 0);
+
+            if (_rowCount > options.MaxRows)
+            {
+                throw new InvalidOperationException($"The file has more than {options.MaxRows} rows, the most an import may have.");
+            }
             RecordOperation("open", startTimestamp);
         }
 
@@ -109,7 +145,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
                 {
                     var colIndex = GetColumnIndexFromCellReference(cell.CellReference);
 
-                    if (colIndex < columnCount)
+                    if (colIndex >= 0 && colIndex < columnCount)
                     {
                         values[colIndex] = GetCellValue(cell);
                     }
@@ -124,7 +160,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
             _document.Dispose();
         }
 
-        private static List<string> ReadSharedStrings(SharedStringTablePart sharedStringTablePart)
+        private static List<string> ReadSharedStrings(SharedStringTablePart sharedStringTablePart, int maxSharedStrings, int maxCellLength)
         {
             if (sharedStringTablePart == null)
             {
@@ -139,8 +175,21 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
             {
                 if (reader.ElementType == typeof(SharedStringItem) && reader.IsStartElement)
                 {
-                    // Loading one item keeps the text identical to the item's InnerText, rich-text runs included.
-                    sharedStrings.Add(reader.LoadCurrentElement().InnerText);
+                    if (sharedStrings.Count >= maxSharedStrings)
+                    {
+                        throw new InvalidOperationException($"The file has more than {maxSharedStrings} shared strings, the most an import may have.");
+                    }
+
+                    // Loading one item keeps the text identical to the item's InnerText, rich-text runs included. All of
+                    // them are held while the file is read, so each is held to the cell limit as well.
+                    var text = reader.LoadCurrentElement().InnerText;
+
+                    if (text.Length > maxCellLength)
+                    {
+                        throw new InvalidOperationException($"A cell of the file holds more than {maxCellLength} characters, the most an import may have.");
+                    }
+
+                    sharedStrings.Add(text);
                 }
             }
 
@@ -217,10 +266,22 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
 
         private string GetCellValue(Cell cell)
         {
+            var value = GetRawCellValue(cell);
+
+            if (value is not null && value.Length > _maxCellLength)
+            {
+                throw new InvalidOperationException($"A cell of the file holds more than {_maxCellLength} characters, the most an import may have.");
+            }
+
+            return value;
+        }
+
+        private string GetRawCellValue(Cell cell)
+        {
             if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString
                 && _sharedStrings != null)
             {
-                if (int.TryParse(cell.InnerText, out var index))
+                if (int.TryParse(cell.InnerText, out var index) && index >= 0 && index < _sharedStrings.Count)
                 {
                     return _sharedStrings[index];
                 }
@@ -231,13 +292,19 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
 
         private static int GetColumnIndexFromCellReference(string cellReference)
         {
-            var columnIndex = 0;
+            long columnIndex = 0;
 
-            foreach (var ch in cellReference)
+            foreach (var ch in cellReference ?? string.Empty)
             {
                 if (char.IsLetter(ch))
                 {
                     columnIndex = (columnIndex * 26) + (char.ToUpperInvariant(ch) - 'A' + 1);
+
+                    // A reference past any real column must not wrap around to a small or negative index.
+                    if (columnIndex > int.MaxValue)
+                    {
+                        return int.MaxValue;
+                    }
                 }
                 else
                 {
@@ -245,7 +312,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
                 }
             }
 
-            return columnIndex - 1;
+            return (int)columnIndex - 1;
         }
     }
 

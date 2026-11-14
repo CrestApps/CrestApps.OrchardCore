@@ -1,15 +1,9 @@
-namespace CrestApps.OrchardCore.Telephony.Extensions
-{
-    public static class TelephonyServiceCollectionExtensions
-    {
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddTelephonyProvider<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name)
-            where T :  class, CrestApps.OrchardCore.Telephony.ITelephonyProvider { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddTelephonyProviderOptionsConfiguration<TConfiguration>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-            where TConfiguration :  class, Microsoft.Extensions.Options.IConfigureOptions<CrestApps.OrchardCore.Telephony.TelephonyProviderOptions> { }
-    }
-}
 namespace CrestApps.OrchardCore.Telephony
 {
+    public static class CallerNumbers
+    {
+        public static string Sanitize(string value) { }
+    }
     public interface ICallQualityObserver
     {
         System.Threading.Tasks.Task ObserveAsync(CrestApps.OrchardCore.Telephony.Models.CallQualityObservation observation, System.Threading.CancellationToken cancellationToken = default);
@@ -391,6 +385,16 @@ namespace CrestApps.OrchardCore.Telephony
         public TelephonySettings() { }
         public System.Collections.Generic.IList<string> AllowedShortCodes { get; set; }
         public string DefaultProviderName { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Extensions
+{
+    public static class TelephonyServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddTelephonyProvider<T>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string name)
+            where T :  class, CrestApps.OrchardCore.Telephony.ITelephonyProvider { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddTelephonyProviderOptionsConfiguration<TConfiguration>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+            where TConfiguration :  class, Microsoft.Extensions.Options.IConfigureOptions<CrestApps.OrchardCore.Telephony.TelephonyProviderOptions> { }
     }
 }
 namespace CrestApps.OrchardCore.Telephony.Models

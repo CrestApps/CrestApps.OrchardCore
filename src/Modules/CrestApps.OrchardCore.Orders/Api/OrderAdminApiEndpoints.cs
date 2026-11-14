@@ -160,6 +160,9 @@ internal static class OrderAdminApiEndpoints
 
         var result = await operations.RefundAsync(order, request?.Amount, request?.Reason, request?.Restock == true, GetActorName(httpContext), request?.AsStoreCredit == true, httpContext.RequestAborted);
 
+        // The refund reads the order again under its lock; the answer shows that copy, with the refund on it.
+        order = await orders.FindByIdAsync(orderId, httpContext.RequestAborted) ?? order;
+
         return await RespondAsync(result, order, operations, httpContext);
     }
 
@@ -182,6 +185,10 @@ internal static class OrderAdminApiEndpoints
         }
 
         var result = await operations.CancelAsync(order, request?.Note, request?.Refund == true, request?.Restock == true, GetActorName(httpContext), httpContext.RequestAborted);
+
+        // A refund made with it reads the order again under its lock, so the copy read here is from before; the answer
+        // shows the order as it was left, refunded and canceled.
+        order = await orders.FindByIdAsync(orderId, httpContext.RequestAborted) ?? order;
 
         return await RespondAsync(result, order, operations, httpContext);
     }

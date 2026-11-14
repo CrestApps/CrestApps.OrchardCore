@@ -115,4 +115,11 @@ public sealed class ProductPart : ContentPart
     /// listing's "Recommended" sort, and products without one come after those with one.
     /// </summary>
     public int? Position { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether what the product delivers instantly (a download, a membership, a site) is
+    /// handed over before a promised payment (Pay Later, a bank transfer) arrives. Off by default: it is delivered once
+    /// the money is in.
+    /// </summary>
+    public bool DeliverBeforePayment { get; set; }
 }

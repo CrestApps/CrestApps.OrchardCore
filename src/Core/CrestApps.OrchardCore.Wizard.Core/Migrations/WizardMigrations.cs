@@ -38,4 +38,17 @@ public sealed class WizardMigrations : DataMigration
 
         return 1;
     }
+
+    /// <summary>
+    /// Adds the index the retention purge of abandoned sessions reads.
+    /// </summary>
+    /// <returns>The resulting schema version.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<WizardSessionIndex>(table => table
+            .CreateIndex("IDX_WizardSessionIndex_Status_Modified", "Status", "ModifiedUtc")
+        );
+
+        return 2;
+    }
 }

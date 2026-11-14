@@ -56,6 +56,8 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly ITenantPurchaseRulesProvider _rulesProvider;
+    private readonly ISubscriptionManager _subscriptionManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantProvisioningService"/> class.
@@ -70,6 +72,8 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     /// <param name="serviceProvider">The service provider used to resolve the optional workflow manager.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="rulesProvider">The rules a sold site is held to, checked again before it is set up.</param>
+    /// <param name="subscriptionManager">The subscriptions, which gain the entitlement to the site once it exists.</param>
     public TenantProvisioningService(
         ITenantProvisioningJobStore jobStore,
         ISiteService siteService,
@@ -81,8 +85,12 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         IServiceProvider serviceProvider,
         ISession session,
         IClock clock,
-        ILogger<TenantProvisioningService> logger)
+        ILogger<TenantProvisioningService> logger,
+        ITenantPurchaseRulesProvider rulesProvider,
+        ISubscriptionManager subscriptionManager)
     {
+        _rulesProvider = rulesProvider;
+        _subscriptionManager = subscriptionManager;
         _jobStore = jobStore;
         _siteService = siteService;
         _shellHost = shellHost;
@@ -177,6 +185,17 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             // The password was only needed to create the administrator. Keeping it afterwards means holding
             // a customer's secret for the life of the record for no reason.
             job.ProtectedAdminPassword = null;
+
+            try
+            {
+                await GrantEntitlementAsync(job, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                // The site exists and the customer has paid; a subscription that could not record the entitlement is an
+                // operator's to fix, not a reason to report the site as failed.
+                _logger.LogError(exception, "The tenant '{TenantName}' was created but its subscription entitlement could not be recorded for job '{JobId}'.", job.TenantName, job.ItemId);
+            }
         }
         else
         {
@@ -239,7 +258,13 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             return $"The site name '{job.TenantName}' is already in use.";
         }
 
-        var adminPassword = UnprotectAdminPassword(job);
+        // A sold site without a feature profile lets its buyer enable any feature the host has, including the ones
+        // that reach the host itself, so it is never created.
+        if (string.IsNullOrWhiteSpace(job.FeatureProfile))
+        {
+            return "The site has no feature profile, so it was not created. Choose a feature profile on the plan's tenant onboarding, then retry.";
+        }
+
         var recipes = await _setupService.GetSetupRecipesAsync();
 
         if (!recipes.Any())
@@ -247,16 +272,63 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             return "No setup recipes are available.";
         }
 
+        // The plan's recipe or nothing: falling back to another recipe would build a site the operator never offered.
+        var recipe = recipes.FirstOrDefault(candidate => string.Equals(candidate.Name, job.RecipeName, StringComparison.Ordinal));
+
+        if (recipe is null)
+        {
+            return $"The setup recipe '{job.RecipeName}' is not available, so the site was not created.";
+        }
+
+        // The recipe is compared with the one the plan named when it was bought, never with the job's own: a job
+        // recorded before the rule with a recipe the buyer chose, which exists on the host, must not be built with it.
+        var planRecipe = await _rulesProvider.GetPlanRecipeNameAsync(job.CheckoutSessionId);
+
+        if (string.IsNullOrEmpty(planRecipe))
+        {
+            return "The recipe the plan named can't be found on the checkout this site was bought with, so the site was not created.";
+        }
+
+        // Checked again here, so a purchase recorded before a rule existed can't create a site on a reserved prefix,
+        // the operator's own host, another recipe, or a feature profile that no longer exists.
+        var rules = await _rulesProvider.GetRulesAsync(planRecipe);
+        var errors = await _rulesProvider.ValidateAsync(
+            new TenantPurchaseRequest
+            {
+                TenantName = job.TenantName,
+                Prefix = job.Prefix,
+                Domains = job.Domains ?? [],
+                RecipeName = job.RecipeName,
+                FeatureProfile = job.FeatureProfile,
+            },
+            rules,
+            _shellHost.GetAllSettings() ?? [],
+            ignoreTenant: job.TenantName);
+
+        if (errors.Count > 0)
+        {
+            return "The site's address is not allowed by the store's onboarding rules (" +
+                string.Join(", ", errors.Select(error => $"{error.Field}: {error.Code}")) +
+                "), so it was not created. Correct the job, or the onboarding settings, then retry.";
+        }
+
+        var adminPassword = UnprotectAdminPassword(job);
+
         var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
 
-        using var shellSettings = CreateShellSettings(job, onboarding);
+        using var shellSettings = CreateShellSettings(job, onboarding, existing);
+
+        // Saved before setup runs, with its prefix or host, a secret and the plan's recipe. Orchard's setup reloads the
+        // tenant from storage when it fails, and a tenant that was never saved reloads with no prefix and no host: it then
+        // answered for the store's own root URL with the setup wizard, and with no secret the wizard asked for no token.
+        await _shellHost.UpdateShellSettingsAsync(shellSettings);
 
         var setupContext = new SetupContext
         {
             ShellSettings = shellSettings,
             EnabledFeatures = [],
             Errors = new Dictionary<string, string>(),
-            Recipe = recipes.FirstOrDefault(recipe => recipe.Name == job.RecipeName) ?? recipes.First(),
+            Recipe = recipe,
             Properties = new Dictionary<string, object>
             {
                 { SetupConstants.SiteName, string.IsNullOrEmpty(job.TenantTitle) ? job.TenantName : job.TenantTitle },
@@ -278,7 +350,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             : string.Join("; ", setupContext.Errors.Select(error => $"{error.Key}: {error.Value}"));
     }
 
-    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding)
+    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding, ShellSettings leftOver)
     {
         var settings = _shellSettingsManager
             .CreateDefaultSettings()
@@ -288,6 +360,17 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         settings.Name = job.TenantName;
         settings.RequestUrlPrefix = job.Prefix;
         settings.RequestUrlHost = job.Domains is { Length: > 0 } ? string.Join(',', job.Domains) : null;
+
+        // A retry keeps the identity of the tenant the previous attempt saved.
+        if (!string.IsNullOrEmpty(leftOver?.TenantId))
+        {
+            settings["TenantId"] = leftOver.TenantId;
+        }
+
+        // Orchard's setup wizard asks for a token signed with this secret, so the tenant left behind by a failed setup can
+        // only be finished by the host, and the recipe is the plan's.
+        settings["Secret"] = Guid.NewGuid().ToString();
+        settings["RecipeName"] = job.RecipeName;
 
         if (!string.IsNullOrEmpty(job.FeatureProfile))
         {
@@ -387,6 +470,56 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         }
 
         return string.IsNullOrEmpty(job.Prefix) ? null : "/" + job.Prefix;
+    }
+
+    // The site exists for as long as the subscription does, so the agreement gains an entitlement naming it and the job
+    // that created it, only now that it exists. That lets the site be suspended when the customer stops paying, and keeps
+    // the entitlement from ever reaching a tenant this job did not create.
+    private async Task GrantEntitlementAsync(TenantProvisioningJob job, CancellationToken cancellationToken)
+    {
+        var subscription = !string.IsNullOrEmpty(job.SubscriptionId)
+            ? await _subscriptionManager.FindByIdAsync(job.SubscriptionId, cancellationToken)
+            : null;
+
+        if (subscription is null && !string.IsNullOrEmpty(job.CheckoutSessionId))
+        {
+            var subscriptions = await _subscriptionManager.GetByCheckoutSessionAsync(job.CheckoutSessionId, cancellationToken);
+            subscription = subscriptions.Count > 0 ? subscriptions[0] : null;
+        }
+
+        if (subscription is null)
+        {
+            return;
+        }
+
+        job.SubscriptionId ??= subscription.ItemId;
+
+        if (subscription.Entitlements.Any(entitlement =>
+            entitlement.Kind == SubscriptionConstants.EntitlementKinds.Tenant &&
+            string.Equals(entitlement.Value, job.TenantName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        var data = new Dictionary<string, string>
+        {
+            [SubscriptionConstants.EntitlementData.ProvisioningJobId] = job.ItemId,
+        };
+
+        // The tenant's own id, so the entitlement can never reach a later site sold under the same name.
+        if (_shellHost.TryGetSettings(job.TenantName, out var created) && !string.IsNullOrEmpty(created.TenantId))
+        {
+            data[SubscriptionConstants.EntitlementData.TenantId] = created.TenantId;
+        }
+
+        subscription.Entitlements.Add(new SubscriptionEntitlement
+        {
+            Kind = SubscriptionConstants.EntitlementKinds.Tenant,
+            Value = job.TenantName,
+            Data = data,
+        });
+
+        await _subscriptionManager.UpdateAsync(subscription, cancellationToken: cancellationToken);
     }
 
     private async Task RaiseAsync(TenantProvisioningJob job, string failure)

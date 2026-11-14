@@ -532,9 +532,34 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
                         return;
                     }
 
-                    if (!await AuthorizeProfileAsync(services, parentProfile))
+                    // The template runs with its own system prompt, tools and data sources, so the caller must be
+                    // allowed to use it, not only the profile of the session it is sent from.
+                    if (!await AuthorizeProfileAsync(services, parentProfile) ||
+                        !await AuthorizeProfileAsync(services, profile))
                     {
                         await Clients.Caller.ReceiveError(GetNotAuthorizedMessage());
+
+                        return;
+                    }
+
+                    // Each template message is a model call, so it counts against the same per-message limit as a
+                    // typed message. The visitor's own prompt is not used here, so only the limit applies.
+                    // The session is a chat session of the parent profile, and the parent's limits apply to it, so the
+                    // parent must be a chat profile, as it must when a session starts from the base hub.
+                    if (parentProfile.Type != AIProfileType.Chat)
+                    {
+                        await Clients.Caller.ReceiveError(GetOnlyChatProfilesMessage());
+
+                        return;
+                    }
+
+                    var rateLimitResult = await EvaluateTemplateMessageRateLimitAsync(services, parentProfile, sessionId, cancellationToken);
+
+                    if (rateLimitResult.IsThrottled)
+                    {
+                        await Clients.Caller.ReceiveError(GetRateLimitedMessage(PromptSecurityResult.Blocked(
+                            S["Rate limit exceeded. Please wait {0} second(s) before sending another message.", rateLimitResult.RetryAfterSeconds].Value,
+                            detectionRule: PromptSecurityResult.RateLimitDetectionRule)));
 
                         return;
                     }
@@ -578,6 +603,33 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         }
 
         await base.HandleSendMessageAsync(writer, services, profileId, prompt, sessionId, sessionProfileId, cancellationToken);
+    }
+
+    // Not named EvaluateMessageRateLimitAsync: CrestApps.Core #322 adds a protected virtual member of that name and
+    // signature to the base hub, which a private method here would hide (CS0114). At that bump this method and the
+    // template branch of HandleSendMessageAsync are deleted, since the base hub then does both.
+    private async Task<RateLimitResult> EvaluateTemplateMessageRateLimitAsync(IServiceProvider services, AIProfile profile, string sessionId, CancellationToken cancellationToken)
+    {
+        var rateLimiter = services.GetService<IChatRateLimiter>();
+
+        if (rateLimiter is null)
+        {
+            return RateLimitResult.Allowed;
+        }
+
+        var visitorIdentity = services.GetService<IAIVisitorIdentityResolver>()?.Resolve() ?? new AIVisitorIdentity();
+
+        return await rateLimiter.EvaluateAsync(new PromptSecurityContext
+        {
+            SessionId = sessionId,
+            ProfileId = profile.ItemId,
+            Profile = profile,
+            User = Context.User,
+            ConnectionId = Context.ConnectionId,
+            VisitorId = visitorIdentity.VisitorId,
+            RemoteAddressHash = visitorIdentity.RemoteAddressHash,
+            RemoteAddress = visitorIdentity.RemoteAddress,
+        }, cancellationToken);
     }
 
     /// <summary>

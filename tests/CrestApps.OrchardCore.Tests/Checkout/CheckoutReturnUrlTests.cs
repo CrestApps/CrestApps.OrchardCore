@@ -379,6 +379,7 @@ public sealed class CheckoutReturnUrlTests
         return new CheckoutController(
             sessionStore,
             Mock.Of<ICheckoutEngine>(),
+            Mock.Of<CrestApps.OrchardCore.Checkout.Core.Services.ICheckoutPaymentReleaseService>(),
             Mock.Of<IDisplayManager<CheckoutFlow>>(),
             updateModelAccessor.Object,
             new ModelShapeFactory(),

@@ -18,6 +18,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using OrchardCore.ContentFields.Drivers;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentFields.Services;
@@ -27,6 +29,7 @@ using OrchardCore.Contents.Drivers;
 using OrchardCore.Contents.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Liquid;
@@ -205,9 +208,29 @@ public sealed class DisplayNameRecipesSchemaStartup : StartupBase
 [Feature(UsersConstants.Feature.EmailCodeSignIn)]
 public sealed class EmailCodeSignInStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailCodeSignInStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration.</param>
+    public EmailCodeSignInStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<EmailSignInCodes>();
+        services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
         services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
+        services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
+
+        // Counted on the shared attempt limiter, across nodes, whether or not Rate Limits is on.
+        services
+            .AddAttemptPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
+            .AddAttemptPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
+            .AddAttemptPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
+            .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(AttemptLimitOptions.SectionName));
     }
 }

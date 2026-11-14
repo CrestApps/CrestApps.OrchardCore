@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.FileTransfer.Core;
 using CrestApps.Core.AI.Ftp;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.FileSources.Ftp.Drivers;
@@ -19,5 +20,6 @@ public sealed class Startup : StartupBase
         services.AddCoreFtpIngestionConnector();
 
         services.AddDisplayDriver<FileSource, FtpFileSourceDisplayDriver>();
+        services.AddFileTransferHostOptions();
     }
 }

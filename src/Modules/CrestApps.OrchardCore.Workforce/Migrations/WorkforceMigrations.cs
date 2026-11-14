@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Core.Services;
+using Microsoft.AspNetCore.DataProtection;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;
@@ -15,14 +16,17 @@ internal sealed class WorkforceMigrations : DataMigration
     private readonly IStore _store;
     private readonly ISession _session;
     private readonly IShellFeaturesManager _shellFeaturesManager;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     public WorkforceMigrations(
         ActivityCodeSeeder activityCodeSeeder,
         IStore store,
         ISession session,
-        IShellFeaturesManager shellFeaturesManager)
+        IShellFeaturesManager shellFeaturesManager,
+        IDataProtectionProvider dataProtectionProvider)
     {
         _shellFeaturesManager = shellFeaturesManager;
+        _dataProtectionProvider = dataProtectionProvider;
         _activityCodeSeeder = activityCodeSeeder;
         _store = store;
         _session = session;
@@ -71,7 +75,8 @@ internal sealed class WorkforceMigrations : DataMigration
         }
 
         // Working staff with an account are put in the Staff role by the hourly staff upkeep, or when they are next saved.
-        await WorkforceWorkersMove.MoveAsync(SchemaBuilder, _store, _session);
+        // Feed secrets are hashed as the workers move: the portal's backfill ran on the start that turned Staff on.
+        await WorkforceWorkersMove.MoveAsync(SchemaBuilder, _store, _session, _dataProtectionProvider);
 
         return 3;
     }

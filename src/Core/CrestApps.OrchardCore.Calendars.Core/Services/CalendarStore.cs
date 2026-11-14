@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Calendars.Core.Indexes;
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -38,15 +39,20 @@ public sealed class CalendarStore : DocumentCatalog<Calendar, CalendarIndex>, IC
     }
 
     /// <inheritdoc />
-    public Task<Calendar> FindByFeedTokenAsync(string feedToken, CancellationToken cancellationToken = default)
+    public async Task<Calendar> FindByFeedTokenAsync(string feedToken, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(feedToken))
         {
-            return Task.FromResult<Calendar>(null);
+            return null;
         }
 
-        return Session.Query<Calendar, CalendarIndex>(index => index.FeedToken == feedToken, collection: CollectionName)
+        // The index holds the secret's hash. A row written before secrets were hashed holds the secret itself until the
+        // calendar is saved again (the upgrade does it), so it is looked for too; the stored hash must still match.
+        var hash = SecretTokens.Hash(feedToken);
+        var calendar = await Session.Query<Calendar, CalendarIndex>(index => index.FeedToken == hash || index.FeedToken == feedToken, collection: CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
+
+        return calendar is not null && SecretTokens.FixedTimeEquals(CalendarFeedTokens.GetHash(calendar), hash) ? calendar : null;
     }
 
     /// <inheritdoc />

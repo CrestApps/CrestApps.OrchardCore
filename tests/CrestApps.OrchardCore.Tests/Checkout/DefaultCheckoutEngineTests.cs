@@ -53,6 +53,24 @@ public sealed class DefaultCheckoutEngineTests
         Assert.Equal(1, attemptsAtProviderCall);
     }
 
+    [Fact]
+    public async Task BeginPaymentAsync_WithTheCallersIdempotencyKey_DerivesTheAttemptsKeyFromIt()
+    {
+        // Arrange
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var (engine, sessionStore) = CreateEngine(attemptStore, new RecordingProvider(ProviderKey));
+
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        // Act
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey, IdempotencyKey = "booking_balance_b1_1" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var attempt = Assert.Single(await attemptStore.GetBySessionAsync("session-1", TestContext.Current.CancellationToken));
+
+        Assert.StartsWith("booking_balance_b1_1_", attempt.IdempotencyKey, StringComparison.Ordinal);
+    }
+
     /// <summary>
     /// The provider's reference is the only way to find the remote resource again. Storing it immediately is
     /// what stops a later failure in the same checkout from orphaning a real charge.
@@ -711,6 +729,87 @@ public sealed class DefaultCheckoutEngineTests
         Assert.True(outcome.Succeeded);
         Assert.Equal(1, first.CancelCallCount);
         Assert.Equal(1, second.BeginCallCount);
+    }
+
+    /// <summary>
+    /// SEC-C1: a buyer begins a payment for one total, then changes the checkout (express shipping, an order bump, a
+    /// taxed address) without beginning again and confirms the old payment. The engine must not complete a purchase
+    /// that was paid for less than it now costs: it refunds what was taken and records an issue instead.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task TryCompleteAsync_WhenTheInvoiceGrewAfterThePaymentBegan_RefusesRefundsAndRecordsAnIssue(bool authoritativeAmount)
+    {
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var handler = new RecordingHandler();
+        var refunds = new RecordingRefundService();
+        var issues = new RecordingIssueRecorder();
+        var provider = new RecordingProvider(ProviderKey)
+        {
+            Verification = context => new PaymentVerificationResult
+            {
+                Status = PaymentStatus.Succeeded,
+                TransactionId = "txn-" + context.Attempt.ObligationId,
+                ReportsAuthoritativeAmount = authoritativeAmount,
+                Amount = authoritativeAmount ? context.Attempt.ExpectedAmount : 0m,
+                Currency = Currency,
+            },
+        };
+
+        var (engine, sessionStore) = CreateEngine(attemptStore, provider, handler, refunds, paymentIssues: issues);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        var begun = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        Assert.True(begun.Succeeded);
+
+        // The buyer switches to express shipping after the payment was begun for 30.
+        var session = await sessionStore.GetAsync("session-1", TestContext.Current.CancellationToken);
+        var invoice = session.GetOrCreate<CheckoutInvoice>();
+        invoice.InitialPaymentAmount = 45m;
+        invoice.DueNow = 45m;
+        invoice.GrandTotal = 45m;
+        session.Put(invoice);
+
+        var result = await engine.TryCompleteAsync("session-1", TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(CheckoutCompletionStatus.Completed, result.Status);
+        Assert.Equal(0, handler.CompletingCount);
+
+        var refund = Assert.Single(refunds.Requests);
+        Assert.Equal("txn-" + CheckoutObligations.OneTime, refund.OriginalTransactionId);
+
+        var issue = Assert.Single(issues.Issues);
+        Assert.Equal(PaymentIssueKinds.PaymentShortOfInvoice, issue.Kind);
+        Assert.Equal("session-1", issue.ReferenceId);
+    }
+
+    /// <summary>
+    /// A payment that covers the invoice as it is now still completes, so the check refuses only what is short.
+    /// </summary>
+    [Fact]
+    public async Task TryCompleteAsync_WhenTheInvoiceShrankAfterThePaymentBegan_StillCompletes()
+    {
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var handler = new RecordingHandler();
+        var (engine, sessionStore) = CreateEngine(attemptStore, ConfirmingProvider(), handler);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        var session = await sessionStore.GetAsync("session-1", TestContext.Current.CancellationToken);
+        var invoice = session.GetOrCreate<CheckoutInvoice>();
+
+        // A code came off after the payment was begun for 30: the invoice is 20 now.
+        invoice.InitialPaymentAmount = 20m;
+        invoice.DueNow = 20m;
+        invoice.GrandTotal = 20m;
+        session.Put(invoice);
+
+        var result = await engine.TryCompleteAsync("session-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(CheckoutCompletionStatus.Completed, result.Status);
+        Assert.Equal(1, handler.CompletingCount);
     }
 
     private static RecordingProvider ConfirmingProvider()

@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
@@ -17,6 +18,7 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly AIDataSourceConnectionPicker _connectionPicker;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -25,14 +27,17 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="connectionPicker">The data connection picker.</param>
+    /// <param name="endpointPolicy">The policy for the endpoints AI features call.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AzureAISearchAIDataSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         AIDataSourceConnectionPicker connectionPicker,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<AzureAISearchAIDataSourceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _connectionPicker = connectionPicker;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -114,6 +119,10 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
         if (string.IsNullOrWhiteSpace(model.Endpoint))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Azure AI Search endpoint is required."]);
+        }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint.Trim()))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.IndexName))

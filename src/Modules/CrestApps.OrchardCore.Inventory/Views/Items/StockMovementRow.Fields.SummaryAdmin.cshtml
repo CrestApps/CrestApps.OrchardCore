@@ -1,0 +1,30 @@
+@model ShapeViewModel<StockMovementRow>
+
+@{
+    var movement = Model.Value.Movement;
+}
+
+@* What happened, as plain text: a change of the stock history has no page of its own. *@
+<span>
+    @switch (movement.Kind)
+    {
+        case StockMovementKind.Received:
+            @T["Received"]
+            break;
+        case StockMovementKind.Adjusted:
+            @T["Adjusted"]
+            break;
+        case StockMovementKind.Counted:
+            @T["Counted"]
+            break;
+        case StockMovementKind.Sold:
+            @T["Sold"]
+            break;
+        case StockMovementKind.Transferred:
+            @(movement.Quantity < 0 ? T["Moved out"] : T["Moved in"])
+            break;
+        default:
+            @T["Returned"]
+            break;
+    }
+</span>

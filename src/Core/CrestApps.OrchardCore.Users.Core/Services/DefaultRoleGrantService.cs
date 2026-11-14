@@ -39,6 +39,14 @@ internal sealed class DefaultRoleGrantService : IRoleGrantService
         ArgumentException.ThrowIfNullOrEmpty(roleName);
         ArgumentException.ThrowIfNullOrEmpty(source);
 
+        // A grant never makes anyone an administrator, whatever a product, a recipe or an API write stored.
+        if (!RoleGrantRules.IsGrantable(roleName))
+        {
+            _logger.LogWarning("A grant from a {Source} asked for a role no grant may give, such as Administrator. It was refused.", source.ReplaceLineEndings(string.Empty));
+
+            return false;
+        }
+
         if (string.IsNullOrEmpty(userId) || await _userService.GetUserByUniqueIdAsync(userId) is not { } user)
         {
             return false;

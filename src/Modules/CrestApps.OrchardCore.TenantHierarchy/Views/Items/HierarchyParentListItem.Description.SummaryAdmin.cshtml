@@ -1,0 +1,14 @@
+@model ShapeViewModel<HierarchyParentListItem>
+
+@{
+    var settings = Model.Value.Parent.Settings;
+    var host = settings.GetPrimaryHost();
+}
+
+<div class="admin-list-secondary text-break">
+    <span class="text-muted">@settings.Name</span>
+    @if (!string.IsNullOrEmpty(host))
+    {
+        <span class="text-muted">·</span> <code>@host</code>
+    }
+</div>

@@ -26,6 +26,13 @@ Enabling a feature of this module enables the features it depends on:
 - `IContentImportManager` (CrestApps.OrchardCore.ContentTransfer.Abstractions): The main service that orchestrates the import and export of content items.
 - and 13 more contracts in the same projects.
 
+## Import safety
+
+- Imported HTML body text is sanitized as the HTML body editor sanitizes it, unless the type's HTML body settings turn sanitizing off.
+- CSV is written through the shared guarded `CsvWriter`: a value that starts like a formula is prefixed with `'`.
+- Spreadsheet imports are bounded by `ContentImportOptions`: `MaxColumns` (1,000), `MaxRows` (1,048,576), `MaxCellLength` (1,048,576 characters, which also bounds a CSV cell, so an unclosed quote fails the file instead of reading it whole) and `MaxSharedStrings` (2,000,000). The total size of a workbook's shared strings and the decompressed size of a workbook are not bounded yet.
+- Chunked uploads must arrive in order; the temporary file grows with the chunks and is never sized up front.
+
 ## Documentation
 
 See [Content Transfer](../../CrestApps.Docs/docs/modules/content-transfer.md) in the technical manual.

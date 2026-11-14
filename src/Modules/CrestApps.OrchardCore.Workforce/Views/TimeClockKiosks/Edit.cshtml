@@ -15,7 +15,7 @@
             <p class="mb-2"><strong>@T["The kiosk's address"]</strong></p>
             <div class="input-group mb-2">
                 <input type="text" class="form-control font-monospace" value="@Model.NewAddress" id="kiosk-address" readonly aria-label="@T["The kiosk's address"]" />
-                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('kiosk-address').value).then(() => { this.textContent = '@T["Copied"]'; })">@T["Copy"]</button>
+                <button type="button" class="btn btn-outline-secondary" data-copied="@T["Copied"]" onclick="navigator.clipboard.writeText(document.getElementById('kiosk-address').value).then(() => { this.textContent = this.dataset.copied; })">@T["Copy"]</button>
             </div>
             <p class="mb-0 small">@T["Open it on the device and keep it open. It is shown only now; if it is lost, give the kiosk a new address."]</p>
         </div>
@@ -42,6 +42,6 @@
     <form method="post" asp-action="Renew" asp-route-id="@Model.Id" class="mt-4">
         <h2 class="h5">@T["Address"]</h2>
         <p class="text-muted small">@T["Give the kiosk a new address when the old one is lost or seen by someone it shouldn't be. The old one stops working."]</p>
-        <button type="submit" class="btn btn-secondary" data-title="@T["New address"]" data-message="@T["The kiosk's current address stops working at once. Continue?"]">@T["Give it a new address"]</button>
+        <button type="submit" class="btn btn-secondary" data-url-af="RemoveUrl" data-title="@T["New address"]" data-message="@T["The kiosk's current address stops working at once. Continue?"]">@T["Give it a new address"]</button>
     </form>
 }

@@ -11,6 +11,8 @@
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <script asp-name="item-selector" depends-on="bootstrap-select" at="Foot"></script>
 <script asp-name="CrestApps.OrchardCore.Calendars.View" at="Foot"></script>
+@* The event editor opens in a modal; its Delete asks first (data-confirm) through these helpers. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
 
 <div id="calendar-view" class="row g-3" data-config="@Model.ConfigurationJson">
     <div class="col-lg-4 col-xl-3 col-xxl-2">
@@ -131,11 +133,11 @@
 
 <div id="calendar-antiforgery" class="d-none">@Html.AntiForgeryToken()</div>
 
-<div class="modal fade" id="calendar-event-modal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="calendar-event-modal" tabindex="-1" aria-hidden="true" aria-labelledby="calendar-event-modal-title">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" data-event-title></h5>
+                <h5 class="modal-title" id="calendar-event-modal-title" data-event-title></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
             </div>
             <div class="modal-body">
@@ -149,11 +151,11 @@
     </div>
 </div>
 
-<div class="modal fade" id="calendar-scope-modal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="calendar-scope-modal" tabindex="-1" aria-hidden="true" aria-labelledby="calendar-scope-modal-title">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@T["Move a repeating event"]</h5>
+                <h5 class="modal-title" id="calendar-scope-modal-title">@T["Move a repeating event"]</h5>
             </div>
             <div class="modal-body">
                 <p>@T["Which occurrences do you want to move?"]</p>
@@ -168,11 +170,11 @@
     </div>
 </div>
 
-<div class="modal fade" id="calendar-editor-modal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="calendar-editor-modal" tabindex="-1" aria-hidden="true" aria-labelledby="calendar-editor-modal-title">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-md-down">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" data-editor-title></h5>
+                <h5 class="modal-title" id="calendar-editor-modal-title" data-editor-title></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
             </div>
             <div class="modal-body" data-editor-body></div>

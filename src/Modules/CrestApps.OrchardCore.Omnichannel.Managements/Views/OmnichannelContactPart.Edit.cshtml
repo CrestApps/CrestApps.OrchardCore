@@ -44,7 +44,7 @@
                         @T["Do not call"]
                         @if (Model.DoNotCallUtc.HasValue)
                         {
-                            <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.DoNotCallUtc.Value, Format: "g"))">
+                            <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.DoNotCallUtc.Value, Format: "g"))">
                                 <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
                                 <time datetime="@Model.DoNotCallUtc.Value.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: Model.DoNotCallUtc.Value))</time>
                             </span>
@@ -61,7 +61,7 @@
                         @T["Do not SMS"]
                         @if (Model.DoNotSmsUtc.HasValue)
                         {
-                            <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.DoNotSmsUtc.Value, Format: "g"))">
+                            <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.DoNotSmsUtc.Value, Format: "g"))">
                                 <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
                                 <time datetime="@Model.DoNotSmsUtc.Value.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: Model.DoNotSmsUtc.Value))</time>
                             </span>
@@ -78,7 +78,7 @@
                         @T["Do not email"]
                         @if (Model.DoNotEmailUtc.HasValue)
                         {
-                            <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.DoNotEmailUtc.Value, Format: "g"))">
+                            <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.DoNotEmailUtc.Value, Format: "g"))">
                                 <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
                                 <time datetime="@Model.DoNotEmailUtc.Value.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: Model.DoNotEmailUtc.Value))</time>
                             </span>

@@ -4,6 +4,7 @@ namespace CrestApps.OrchardCore.Checkout.Services;
 /// Throttles payment attempts to mitigate automated abuse (for example card testing) of the anonymous
 /// payment endpoints.
 /// </summary>
+[Obsolete("Use CrestApps.OrchardCore.Throttling.IAttemptLimiter with a registered attempt policy. This contract is removed in the next release.")]
 public interface IPaymentAttemptLimiter
 {
     /// <summary>

@@ -123,6 +123,10 @@ public sealed class TestCheckoutPaymentProvider :
         // Its panel is shown on the page and needs no input. Claiming in-page collection is what lets the screens
         // that only offer in-page methods, such as an installment plan's down payment, offer it too.
         SupportsEmbeddedElements = true,
+
+        // It stands in for a gateway that takes a card online, so its declines count toward the card-testing protection
+        // and a store can try that protection without a real gateway.
+        IsCardNotPresent = true,
         SupportsCombinedOneTimeAndRecurring = true,
         CollectsTaxDynamically = false,
         SupportsRefunds = true,

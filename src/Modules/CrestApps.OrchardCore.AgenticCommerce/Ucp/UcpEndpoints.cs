@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -26,14 +27,16 @@ public static class UcpEndpoints
     public const string IdempotencyInFlightCode = "idempotency_in_flight";
 
     /// <summary>
-    /// The idempotency rules of UCP: a retry with the same key and body gets the first answer for two days, another
-    /// body with the same key gets 409.
+    /// The idempotency rules of UCP: every POST and PUT carries a key (UCP's OpenAPI requires it, and a request
+    /// signature without a created time relies on it against replays); a retry with the same key and body gets the
+    /// first answer for two days, another body with the same key gets 409.
     /// </summary>
     public static readonly IdempotencyPolicy Idempotency = new()
     {
         Lifetime = TimeSpan.FromHours(48),
         MaxKeyLength = 255,
         Fingerprint = httpContext => Convert.ToHexStringLower(SHA256.HashData(AgentRequest.Get(httpContext)?.Body ?? [])),
+        MissingKey = _ => UcpResults.Error(StatusCodes.Status400BadRequest, "invalid_request", "Send an Idempotency-Key header with every POST and PUT."),
         Conflict = _ => UcpResults.Error(StatusCodes.Status409Conflict, IdempotencyConflictCode, "This idempotency key was used for another request."),
         InFlight = _ => UcpResults.Error(StatusCodes.Status409Conflict, IdempotencyInFlightCode, "A request with this idempotency key is still running. Try again in a moment."),
         InvalidKey = _ => UcpResults.Error(StatusCodes.Status400BadRequest, "invalid_request", "An idempotency key is at most 255 characters."),
@@ -47,23 +50,23 @@ public static class UcpEndpoints
     {
         routes.MapGet("/" + UcpConstants.ProfilePath, (HttpContext httpContext, UcpProfileBuilder profiles) => ProfileAsync(httpContext, profiles, UcpConstants.Versions[0]))
             .AllowAnonymous()
-            .WithName("UcpProfile");
+            .WithName("UcpProfile").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         routes.MapGet("/" + UcpConstants.ProfilePath + "/{version}", (string version, HttpContext httpContext, UcpProfileBuilder profiles) => ProfileAsync(httpContext, profiles, version))
             .AllowAnonymous()
-            .WithName("UcpVersionProfile");
+            .WithName("UcpVersionProfile").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         var group = routes.MapGroup(UcpConstants.RoutePrefix)
             .AllowAnonymous()
             .DisableAntiforgery()
             .AddEndpointFilter<UcpRequestFilter>();
 
-        group.MapPost("checkout-sessions", CreateAsync).WithIdempotency(Idempotency).WithName("UcpCreateCheckout");
-        group.MapGet("checkout-sessions/{id}", GetAsync).WithName("UcpGetCheckout");
-        group.MapPut("checkout-sessions/{id}", UpdateAsync).WithIdempotency(Idempotency).WithName("UcpUpdateCheckout");
-        group.MapPost("checkout-sessions/{id}/complete", CompleteAsync).WithIdempotency(Idempotency).WithName("UcpCompleteCheckout");
-        group.MapPost("checkout-sessions/{id}/cancel", CancelAsync).WithIdempotency(Idempotency).WithName("UcpCancelCheckout");
-        group.MapGet("orders/{id}", GetOrderAsync).WithName("UcpGetOrder");
+        group.MapPost("checkout-sessions", CreateAsync).WithIdempotency(Idempotency).WithName("UcpCreateCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapGet("checkout-sessions/{id}", GetAsync).WithName("UcpGetCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPut("checkout-sessions/{id}", UpdateAsync).WithIdempotency(Idempotency).WithName("UcpUpdateCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPost("checkout-sessions/{id}/complete", CompleteAsync).WithIdempotency(Idempotency).WithName("UcpCompleteCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.CheckoutComplete);
+        group.MapPost("checkout-sessions/{id}/cancel", CancelAsync).WithIdempotency(Idempotency).WithName("UcpCancelCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapGet("orders/{id}", GetOrderAsync).WithName("UcpGetOrder").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         return routes;
     }

@@ -2,6 +2,8 @@ using System.Data;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.Html.Models;
+using OrchardCore.Html.Settings;
+using OrchardCore.Infrastructure.Html;
 
 namespace CrestApps.OrchardCore.ContentTransfer.Handlers;
 
@@ -15,9 +17,14 @@ public sealed class HtmlBodyPartContentImportHandler : ContentImportHandlerBase,
 
     internal readonly IStringLocalizer S;
 
-    public HtmlBodyPartContentImportHandler(IStringLocalizer<HtmlBodyPartContentImportHandler> localizer)
+    private readonly IHtmlSanitizerService _htmlSanitizerService;
+
+    public HtmlBodyPartContentImportHandler(
+        IStringLocalizer<HtmlBodyPartContentImportHandler> localizer,
+        IHtmlSanitizerService htmlSanitizerService)
     {
         S = localizer;
+        _htmlSanitizerService = htmlSanitizerService;
     }
 
     public IReadOnlyCollection<ImportColumn> GetColumns(ImportContentPartContext context)
@@ -54,6 +61,13 @@ public sealed class HtmlBodyPartContentImportHandler : ContentImportHandlerBase,
                 if (html == null)
                 {
                     continue;
+                }
+
+                // The HTML body editor sanitizes what it saves unless the type turns that off; an import must not be a
+                // way around it.
+                if (context.ContentTypePartDefinition?.GetSettings<HtmlBodyPartSettings>()?.SanitizeHtml != false)
+                {
+                    html = _htmlSanitizerService.Sanitize(html);
                 }
 
                 context.ContentItem.Alter<HtmlBodyPart>(part =>

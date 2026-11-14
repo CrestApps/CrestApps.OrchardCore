@@ -111,7 +111,7 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
             </div>
         }
 
-        <div id="documentsList-@Model.ItemId" class="document-list">
+        <div id="documentsList-@Model.ItemId" class="document-list" data-remove-title="@T["Remove file"]" data-remove-message="@T["Are you sure you want to remove this file?"]">
             @if (Model.Documents != null && Model.Documents.Any())
             {
                 foreach (var doc in Model.Documents)
@@ -162,6 +162,7 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
 
 <style asp-name="document-drop-zone" at="Head"></style>
 
+<script asp-name="crestapps-browser" at="Foot"></script>
 <script at="Foot">
     (function () {
         const itemId = '@Model.ItemId';
@@ -301,15 +302,16 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
                     formData.append('files', files[i]);
                 }
 
-                const response = await fetch(uploadUrl, {
-                    method: 'POST',
-                    body: formData
-                });
+                // The shared helper sends the antiforgery token with the post.
+                const response = await crestapps.http.request(uploadUrl, { method: 'POST', form: formData })
+                    .catch(async error => {
+                        if (error instanceof crestapps.http.HttpError) {
+                            const text = await error.response.text();
+                            throw new Error(stripHtml(text) || '@T["Upload failed"]');
+                        }
 
-                if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(stripHtml(error) || '@T["Upload failed"]');
-                }
+                        throw error;
+                    });
 
                 // An expired auth cookie answers a POST with the login page, and reading that as JSON
                 // throws "unexpected character at line 1 column 1" -- which tells a reader nothing about
@@ -415,10 +417,14 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
+        // All five of & < > " ', so the result is safe in an attribute (the download link) as well as in text.
         function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            return String(text === undefined || text === null ? '' : text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         async function readJson(response) {
@@ -451,11 +457,12 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
                 return trimmed;
             }
 
-            const div = document.createElement('div');
-            div.innerHTML = trimmed;
+            // An inert document: nothing in an error page runs or loads here, unlike markup set on a live element,
+            // where an image's onerror would run.
+            const page = new DOMParser().parseFromString(trimmed, 'text/html');
 
-            const preferredMessage = div.querySelector('.alert, .validation-summary-errors, main, title');
-            const text = (preferredMessage ? preferredMessage.textContent : div.textContent) || div.innerText || '';
+            const preferredMessage = page.querySelector('.alert, .validation-summary-errors, main, title');
+            const text = (preferredMessage ? preferredMessage.textContent : page.body.textContent) || '';
             const normalized = text.replace(/\s+/g, ' ').trim();
 
             if (!normalized || normalized.length > 280) {
@@ -471,18 +478,14 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
             if (!removeBtn) return;
 
             const documentId = removeBtn.getAttribute('data-document-id');
-            if (!confirm('@T["Are you sure you want to remove this file?"]')) return;
+            if (!(await crestapps.confirm(documentsList.dataset.removeTitle, documentsList.dataset.removeMessage))) return;
 
             try {
-                const response = await fetch(removeUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ itemId: itemId, documentId: documentId })
-                });
+                // The shared helper sends the antiforgery token with the post, and fails on an error status.
+                const response = await crestapps.http.request(removeUrl, { method: 'POST', json: { itemId: itemId, documentId: documentId } })
+                    .catch(() => null);
 
-                if (response.ok) {
+                if (response) {
                     const docItem = documentsList.querySelector(`[data-document-id="${documentId}"]`);
                     if (docItem) docItem.remove();
 

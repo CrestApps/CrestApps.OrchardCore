@@ -14,15 +14,10 @@ import { coalesceRefresh } from './shared/coalesced-refresh.js';
 import { agentStatusLabel, dialPhaseHint, dialPhaseLabel, normalizeDialPhase, showsDialProgress } from './shared/agent-presence.js';
 import { readOfferRefusal, showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
 import { acceptedOfferActivityToOpen, activityToAutoOpen, autoOpenWorkKey, isOfferForUser, readPoppedActivities, rememberPoppedActivity } from './shared/agent-bar-work.js';
+import { escapeHtml } from '../../../CrestApps.OrchardCore.Resources/Assets/js/browser/html.js';
 
 (function (window, document) {
     'use strict';
-
-    var escapeHtml = (window.telephonyClient && window.telephonyClient.escapeHtml) || function (value) {
-        var div = document.createElement('div');
-        div.textContent = value == null ? '' : String(value);
-        return div.innerHTML;
-    };
 
     // No local fallback: a second implementation only ever disagrees with this one, and the one here did - it
     // counted minutes upward past an hour while the shared timer switched to hours, so the same call read

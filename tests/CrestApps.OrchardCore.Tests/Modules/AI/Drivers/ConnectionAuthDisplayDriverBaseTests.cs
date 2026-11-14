@@ -84,6 +84,52 @@ public sealed class ConnectionAuthDisplayDriverBaseTests
         Assert.True(context.Updater.ModelState.ContainsKey(nameof(ConnectionAuthFieldsViewModel.OAuth2TokenEndpoint)));
     }
 
+    [Theory]
+    [InlineData("http://169.254.169.254/latest/meta-data/iam/security-credentials/")]
+    [InlineData("http://10.0.0.5/token")]
+    [InlineData("https://[::1]/token")]
+    public void ApplyAuthFields_RefusesATokenEndpointOnTheSitesOwnNetwork(string tokenEndpoint)
+    {
+        // Arrange: the server posts the client's credentials to the token endpoint and sends the token it answers with
+        // to the connection, so an internal token endpoint is server-side request forgery with the answer read back.
+        var metadata = new A2AConnectionMetadata();
+        var model = new ConnectionAuthFieldsViewModel
+        {
+            AuthenticationType = ClientAuthenticationType.OAuth2ClientCredentials,
+            OAuth2TokenEndpoint = tokenEndpoint,
+            OAuth2ClientId = "client",
+            OAuth2ClientSecret = "secret",
+        };
+        var context = CreateContext();
+
+        // Act
+        new TestDriver<A2AConnection>(_dataProtectionProvider).Apply(context, model, metadata);
+
+        // Assert
+        Assert.True(context.Updater.ModelState.ContainsKey(nameof(ConnectionAuthFieldsViewModel.OAuth2TokenEndpoint)));
+    }
+
+    [Fact]
+    public void ApplyAuthFields_AcceptsAPublicTokenEndpoint()
+    {
+        // Arrange
+        var metadata = new A2AConnectionMetadata();
+        var model = new ConnectionAuthFieldsViewModel
+        {
+            AuthenticationType = ClientAuthenticationType.OAuth2ClientCredentials,
+            OAuth2TokenEndpoint = "https://login.example.com/oauth2/token",
+            OAuth2ClientId = "client",
+            OAuth2ClientSecret = "secret",
+        };
+        var context = CreateContext();
+
+        // Act
+        new TestDriver<A2AConnection>(_dataProtectionProvider).Apply(context, model, metadata);
+
+        // Assert
+        Assert.False(context.Updater.ModelState.ContainsKey(nameof(ConnectionAuthFieldsViewModel.OAuth2TokenEndpoint)));
+    }
+
     private static UpdateEditorContext CreateContext()
         => new(null, string.Empty, false, string.Empty, null, null, new FakeUpdateModel(null));
 

@@ -14,4 +14,8 @@ public class PayLaterSettingsViewModel
     /// Gets or sets the number of days a Pay Later balance is allowed before it is due.
     /// </summary>
     public int NetTermDays { get; set; }
+
+    public bool RequireSignedIn { get; set; }
+
+    public decimal? MaxOrderAmount { get; set; }
 }

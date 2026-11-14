@@ -29,9 +29,10 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
     public const string PaymentMethodDataKey = "paymentMethodId";
 
     /// <summary>
-    /// The key the client script uses to reuse an existing Stripe customer rather than creating one.
+    /// The key of the Stripe customer to charge. Only server code sets it (it is server-only provider data): the customer
+    /// is otherwise resolved on the server for the checkout.
     /// </summary>
-    public const string CustomerDataKey = "customerId";
+    public const string CustomerDataKey = CheckoutPaymentDataKeys.ProviderCustomerReference;
 
     private readonly IStripeSubscriptionService _subscriptionService;
     private readonly IStripeCheckoutCustomerResolver _customerResolver;

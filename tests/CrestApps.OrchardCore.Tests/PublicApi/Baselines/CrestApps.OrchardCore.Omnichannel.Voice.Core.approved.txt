@@ -322,6 +322,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISecureKeypadCaptureStore
+    {
+        System.Threading.Tasks.Task ForgetAsync(string activityId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Voice.Services.SecureKeypadEntry> OfferAsync(string activityId, string digits, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StartAsync(string activityId, CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureField field, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITurnBasedCallerKeys
     {
         void Collect(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent);
@@ -410,6 +416,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public RealtimeVoiceConversationRunner(CrestApps.Core.AI.Realtime.IRealtimeOrchestrator orchestrator, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaProviderResolver mediaResolver, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelConversationContextFactory conversationContextFactory, CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallCommands voiceCallCommands, CrestApps.OrchardCore.AI.Core.Conversations.IAIConversationTurnNotifier turnNotifier, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationRunner> logger, OrchardCore.Environment.Shell.IShellHost shellHost = null, OrchardCore.Environment.Shell.ShellSettings shellSettings = null, CrestApps.Core.AI.Profiles.IAIProfileManager profileManager = null, System.TimeProvider timeProvider = null) { }
         public System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class SecureKeypadEntry : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Voice.Services.SecureKeypadEntry>
+    {
+        public static readonly CrestApps.OrchardCore.Omnichannel.Voice.Services.SecureKeypadEntry NotCapturing;
+        public SecureKeypadEntry(CrestApps.OrchardCore.Omnichannel.Voice.Services.SecureKeypadEntryState State, CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureField Field, string Value) { }
+        public bool Captured { get; }
+        public bool Ended { get; }
+        public CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureField Field { get; init; }
+        public CrestApps.OrchardCore.Omnichannel.Voice.Services.SecureKeypadEntryState State { get; init; }
+        public string Value { get; init; }
+        public override string ToString() { }
+    }
+    public enum SecureKeypadEntryState
+    {
+        NotCapturing = 0,
+        Collecting = 1,
+        Completed = 2,
+        Cancelled = 3,
+    }
     public static class StrandedVoiceCallPolicy
     {
         public static readonly System.TimeSpan QuietFor;
@@ -455,6 +479,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner realtimeRunner,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.ITurnBasedSilenceWatchdog silenceWatchdog,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.ITurnBasedCallerKeys callerKeys,
+                    CrestApps.OrchardCore.Omnichannel.Voice.Services.ISecureKeypadCaptureStore secureKeypadCaptures,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceSessionTracker sessionTracker,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceCallShutdown callShutdown,
                     OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager,
@@ -496,7 +521,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public static System.Collections.Generic.IReadOnlyList<string> ResolveSubjectDispositionIds(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
         public static bool ShouldConclude(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
     }
-    public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn
+    public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn, System.IDisposable
     {
         public VoiceCallEndTurn() { }
         public bool ClosingLineOwed { get; }
@@ -508,6 +533,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public int RequestCount { get; }
         public void AssistantSaid(string line) { }
         public void CustomerAnswered() { }
+        public void Dispose() { }
         public void RequestEndCall(string reason) { }
         public void RequestEndCall(string reason, bool reachedVoicemail) { }
         public void Reset() { }

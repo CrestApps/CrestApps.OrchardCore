@@ -33,6 +33,20 @@ bug to fix later:
   methods and recurring agreements, and simulates a decline (amounts ending in `.02`) or a payment that stays
   pending for the reconciliation sweep (amounts ending in `.05`). It is registered only in the Development
   environment unless `CrestApps:Checkout:TestProvider:AllowOutsideDevelopment` is `true`.
+- **Payment Rate Limits** (`CrestApps.OrchardCore.Checkout.RateLimits`) — request limits for the payment, status,
+  start and discount code routes as built-in group limits of Orchard Core's Rate Limits (which it enables), with a
+  JSON 429 and a `Retry-After` header. Enable it on every store, and behind a proxy, load balancer or CDN enable
+  Orchard Core's Reverse Proxy feature and trust only your own proxies, or every buyer shares the proxy's limit.
+
+## Card-testing protection
+
+Every store has it, with or without Payment Rate Limits: `PaymentVelocityGate` stops a network or a signed-in
+customer whose card payments were declined five times, and a checkout that has begun eight payments, before any
+provider is asked; `PaymentDeclineRecorder` counts each decline once; a run of declines across the store applies
+the **Payment protection** setting. Each stop records a payment issue. A payment provider where the buyer types a
+card online sets `PaymentProviderCapabilities.IsCardNotPresent`. The limits are `IAttemptLimiter` policies,
+overridable under `CrestApps_Throttling:AttemptPolicies` (see `ConfigurationSchema.json`). Docs:
+<https://docs.crestapps.com/docs/modules/commerce-rate-limits>.
 
 ## Key contracts
 

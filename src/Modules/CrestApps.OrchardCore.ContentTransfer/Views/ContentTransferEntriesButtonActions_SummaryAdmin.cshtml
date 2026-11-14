@@ -32,7 +32,7 @@
     && canProcessImport
     && canResumeImport)
 {
-    <a asp-action="ResumeImport" asp-controller="Admin" asp-route-area="@ContentTransferConstants.Feature.ModuleId" asp-route-entryId="@entry.EntryId" asp-route-returnUrl="@FullRequestPath" class="dropdown-item btn-sm">
+    <a asp-action="ResumeImport" asp-controller="Admin" asp-route-area="@ContentTransferConstants.Feature.ModuleId" asp-route-entryId="@entry.EntryId" asp-route-returnUrl="@FullRequestPath" data-url-af="UnsafeUrl" class="dropdown-item btn-sm">
         <i class="fa-solid fa-play text-primary" aria-hidden="true"></i> @T["Resume import"]
     </a>
 }

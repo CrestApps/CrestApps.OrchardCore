@@ -1,5 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
@@ -20,9 +19,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Protocols;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using Microsoft.IdentityModel.Tokens;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
@@ -110,7 +106,9 @@ internal static class AzureEventGridEndpoint
                 }
                 else
                 {
-                    isAuthorized = await ValidateAadTokenAsync(token, eventGridOptions, context.RequestAborted);
+                    // One cached configuration manager per metadata address, HTTPS only, and nothing fetched for a token
+                    // that isn't a JWT: an anonymous request must not cost an outbound request.
+                    isAuthorized = await context.RequestServices.GetRequiredService<EventGridAadTokenValidator>().ValidateAsync(token, eventGridOptions, context.RequestAborted);
                 }
             }
             catch (Exception ex)
@@ -481,34 +479,5 @@ internal static class AzureEventGridEndpoint
         token = authorizationHeader["Bearer ".Length..].Trim();
 
         return !string.IsNullOrEmpty(token);
-    }
-
-    private static async Task<bool> ValidateAadTokenAsync(
-        string token,
-        EventGridOptions options,
-        CancellationToken cancellationToken)
-    {
-        var configurationManager = new ConfigurationManager<OpenIdConnectConfiguration>(
-            options.AADMetadataAddress,
-            new OpenIdConnectConfigurationRetriever(),
-            new HttpDocumentRetriever
-            {
-                RequireHttps = options.AADMetadataAddress.StartsWith("https://", StringComparison.OrdinalIgnoreCase),
-            });
-        var openIdConfiguration = await configurationManager.GetConfigurationAsync(cancellationToken);
-        var validationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = options.AADIssuer,
-            ValidateAudience = true,
-            ValidAudience = options.AADAudience,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKeys = openIdConfiguration.SigningKeys,
-        };
-        var handler = new JwtSecurityTokenHandler();
-        var validationResult = await handler.ValidateTokenAsync(token, validationParameters);
-
-        return validationResult.IsValid;
     }
 }

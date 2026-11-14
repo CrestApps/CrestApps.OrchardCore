@@ -57,6 +57,7 @@ public sealed class CustomersRecipeStep : RecipeStepSchemaBase
                 ("LastName", NullableString("The person's last name.")),
                 ("CompanyName", NullableString("The company name of a business customer.")),
                 ("TaxId", NullableString("The tax identifier of a business customer.")),
+                ("TaxIdVerified", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether an administrator verified the tax identifier. Only a verified number lets a business customer's purchases be reverse charged.")),
                 ("IsTaxExempt", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the customer is exempt from tax.")),
                 ("TaxExemptionReason", NullableString("Why the customer is exempt from tax, such as a resale certificate number, for the store's records.")),
                 ("Email", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Format(Formats.Email).Description("The customer's email. A guest with the same email is updated rather than duplicated.")),

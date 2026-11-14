@@ -5,8 +5,11 @@ using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Orders.Controllers;
 
@@ -22,6 +25,7 @@ public sealed class OrderPayController : Controller
     private readonly ICheckoutSessionStore _sessions;
     private readonly IAuthorizationService _authorizationService;
     private readonly OrderPayLinks _payLinks;
+    private readonly IAttemptLimiter _limiter;
 
     public OrderPayController(
         IOrderStore orders,
@@ -29,7 +33,8 @@ public sealed class OrderPayController : Controller
         ICheckoutEngine engine,
         ICheckoutSessionStore sessions,
         IAuthorizationService authorizationService,
-        OrderPayLinks payLinks)
+        OrderPayLinks payLinks,
+        IAttemptLimiter limiter)
     {
         _orders = orders;
         _links = links;
@@ -37,9 +42,11 @@ public sealed class OrderPayController : Controller
         _sessions = sessions;
         _authorizationService = authorizationService;
         _payLinks = payLinks;
+        _limiter = limiter;
     }
 
     [HttpGet("orders/view/{token}/pay", Name = OrderConstants.RouteNames.Pay)]
+    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Start)]
     public async Task<IActionResult> Guest(string token)
     {
         var orderId = string.IsNullOrEmpty(token) ? null : _links.GetOrderId(token);
@@ -49,6 +56,7 @@ public sealed class OrderPayController : Controller
     }
 
     [HttpGet("account/orders/{orderId}/pay", Name = "AccountOrderPay")]
+    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Start)]
     public async Task<IActionResult> Account(string orderId)
     {
         var order = string.IsNullOrEmpty(orderId) ? null : await _orders.FindByIdAsync(orderId, HttpContext.RequestAborted);
@@ -75,6 +83,23 @@ public sealed class OrderPayController : Controller
             await _sessions.GetAsync(order.CheckoutSessionId, CheckoutSessionStatus.Pending) is { } open)
         {
             return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = open.SessionId });
+        }
+
+        // A link opened again (a second click) goes back to the checkout it opened. Only a checkout this browser or
+        // account owns is reused: one a link scanner, a mail preview or another device opened first belongs to that client,
+        // and sending the buyer to it would only show them a 404 until it expires.
+        if (await _sessions.GetByReferenceAsync(CheckoutReferenceTypes.Order, order.ItemId, cancellationToken: HttpContext.RequestAborted) is { Status: CheckoutSessionStatus.Pending } pending &&
+            await _sessions.GetAsync(pending.SessionId, CheckoutSessionStatus.Pending, HttpContext.RequestAborted) is { } owned)
+        {
+            return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = owned.SessionId, step = owned.CurrentStep });
+        }
+
+        // Every other open starts a checkout, so what keeps scanners from piling them up is a limit per network.
+        if (await _limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted) is { Allowed: false } refused)
+        {
+            await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(HttpContext, refused.RetryAfter, HttpContext.RequestAborted);
+
+            return new EmptyResult();
         }
 
         var session = await _engine.StartAsync(new StartCheckoutRequest

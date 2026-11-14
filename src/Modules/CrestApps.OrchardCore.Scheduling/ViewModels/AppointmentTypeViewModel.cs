@@ -63,6 +63,9 @@ public class AppointmentTypeViewModel
     /// <summary>Gets or sets whether bookings wait for confirmation.</summary>
     public bool RequiresConfirmation { get; set; }
 
+    /// <summary>Gets or sets whether customers confirm their own bookings from an e-mailed link.</summary>
+    public bool RequireEmailConfirmation { get; set; }
+
     /// <summary>Gets or sets how long a hold lasts, in minutes.</summary>
     public int HoldMinutes { get; set; } = 10;
 

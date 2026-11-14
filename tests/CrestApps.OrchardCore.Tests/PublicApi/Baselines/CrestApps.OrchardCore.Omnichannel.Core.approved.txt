@@ -1913,12 +1913,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public static string BuildHandoffInstructions(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
         public static bool IsHandoffEnabled(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
     }
-    public sealed class OmnichannelHandoffTurn : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn
+    public sealed class OmnichannelHandoffTurn : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn, System.IDisposable
     {
         public OmnichannelHandoffTurn() { }
         public bool HandoffRequested { get; }
         public System.Threading.CancellationToken HandoffRequestedToken { get; }
         public string Reason { get; }
+        public void Dispose() { }
         public void RequestHandoff(string reason) { }
         public void Reset() { }
     }

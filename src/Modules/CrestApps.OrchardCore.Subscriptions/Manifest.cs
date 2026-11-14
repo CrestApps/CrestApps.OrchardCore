@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Receipts.Core;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Users;
@@ -31,6 +32,9 @@ using OrchardCore.Modules.Manifest;
         // only path that takes a payment and the only ledger that records one.
         CheckoutConstants.Features.Area,
         ReceiptsConstants.Feature.Area,
+
+        // The account pages ask before canceling a subscription with the shared browser helpers.
+        ResourcesConstants.Feature.Area,
     ]
 )]
 

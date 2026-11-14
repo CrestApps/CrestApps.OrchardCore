@@ -17,6 +17,14 @@ public abstract class OrderGrantHandlerBase : OrderEventHandlerBase
         return GrantAsync(context.Order, cancellationToken);
     }
 
+    // The money for an order paid later arrived: what was held is granted now. Grants are idempotent per line.
+    public sealed override Task PaymentSettledAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        return GrantAsync(context.Order, cancellationToken);
+    }
+
     /// <inheritdoc />
     public sealed override Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
     {

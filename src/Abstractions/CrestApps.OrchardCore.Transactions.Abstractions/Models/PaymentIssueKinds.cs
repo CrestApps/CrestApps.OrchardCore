@@ -21,4 +21,28 @@ public static class PaymentIssueKinds
     /// A payment was settled and a discount provider could not record the redemption of its code.
     /// </summary>
     public const string DiscountRedemptionFailed = "DiscountRedemptionFailed";
+
+    /// <summary>
+    /// A payment settled for less than the checkout costs by the time it completed, such as when the buyer changed
+    /// shipping after the payment was begun. The checkout was not completed and the payment was refunded.
+    /// </summary>
+    public const string PaymentShortOfInvoice = "PaymentShortOfInvoice";
+
+    /// <summary>
+    /// One network or one customer had card payments declined until the card-testing protection stopped them. Someone
+    /// may be testing stolen cards on the store.
+    /// </summary>
+    public const string SuspectedCardTesting = "SuspectedCardTesting";
+
+    /// <summary>
+    /// Card payments were declined across the store far more often than usual, and the store's decline-spike action
+    /// applies for a while.
+    /// </summary>
+    public const string DeclineSpike = "DeclineSpike";
+
+    /// <summary>
+    /// A payment was collected for transactions that no longer owed it, such as a second tab of a pay link paid after
+    /// the first, so it was not applied to any of them and needs to be refunded or applied by hand.
+    /// </summary>
+    public const string PaymentNotApplied = "PaymentNotApplied";
 }

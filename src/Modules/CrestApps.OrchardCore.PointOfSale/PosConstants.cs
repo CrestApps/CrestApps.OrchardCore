@@ -2,6 +2,12 @@ namespace CrestApps.OrchardCore.PointOfSale;
 
 public static class PosConstants
 {
+    /// <summary>
+    /// The request group of Orchard Core's Rate Limits the till's payment and return routes are tagged with: 60 a minute
+    /// per user.
+    /// </summary>
+    public const string PaymentRateLimitGroup = "pos-payment";
+
     public const string Feature = "CrestApps.OrchardCore.PointOfSale";
 
     /// <summary>

@@ -21,14 +21,18 @@ internal sealed class CartesiaDeploymentDisplayDriver : DisplayDriver<AIDeployme
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     internal readonly IStringLocalizer S;
 
     public CartesiaDeploymentDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<CartesiaDeploymentDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         S = stringLocalizer;
+        _endpointPolicy = endpointPolicy;
     }
 
     public override IDisplayResult Edit(AIDeployment deployment, BuildEditorContext context)
@@ -65,6 +69,10 @@ internal sealed class CartesiaDeploymentDisplayDriver : DisplayDriver<AIDeployme
         else if (!Uri.TryCreate(model.Endpoint, UriKind.Absolute, out _))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint must be a valid address."]);
+        }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
         else
         {

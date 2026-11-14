@@ -13,6 +13,9 @@
     var currency = order.Currency ?? Model.Currency;
 }
 
+@* The buttons below submit another form or have their own formaction, so the crestapps-browser helpers ask their question (data-confirm). *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 <zone Name="Title">
     <breadcrumb name="PurchaseOrdersEdit" title="@T["Purchase order {0}", order.Number]">
         <breadcrumb-item id="PurchaseOrdersIndex" action="Index" controller="PurchaseOrdersAdmin" area="CrestApps.OrchardCore.Inventory" permission="@InventoryPermissions.ViewInventory.Name">@T["Purchase orders"]</breadcrumb-item>
@@ -38,11 +41,11 @@
             @if (order.IsDraft)
             {
                 <button type="submit" form="purchase-order-ordered" class="btn btn-sm btn-success" disabled="@(order.Lines.Count == 0)">@T["Mark as ordered"]</button>
-                <button type="submit" form="purchase-order-delete" class="btn btn-sm btn-danger" data-title="@T["Delete draft"]" data-message="@T["Delete this draft purchase order?"]">@T["Delete"]</button>
+                <button type="submit" form="purchase-order-delete" class="btn btn-sm btn-danger" data-confirm-title="@T["Delete draft"]" data-confirm="@T["Delete this draft purchase order?"]">@T["Delete"]</button>
             }
             else if (order.Status is not (PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled))
             {
-                <button type="submit" form="purchase-order-cancel" class="btn btn-sm btn-outline-danger" data-title="@T["Cancel purchase order"]" data-message="@T["Cancel what's still to come? What was received stays in stock."]">@T["Cancel order"]</button>
+                <button type="submit" form="purchase-order-cancel" class="btn btn-sm btn-outline-danger" data-confirm-title="@T["Cancel purchase order"]" data-confirm="@T["Cancel what's still to come? What was received stays in stock."]">@T["Cancel order"]</button>
             }
         </div>
     }
@@ -195,7 +198,7 @@
                     <tfoot>
                         <tr>
                             <th scope="row" colspan="4" class="text-end">@T["Total"]</th>
-                            <th class="text-end text-nowrap">@ProductPriceFormatter.Format(order.Total, currency)</th>
+                            <th scope="row" class="text-end text-nowrap">@ProductPriceFormatter.Format(order.Total, currency)</th>
                             @if (canReceive)
                             {
                                 <td></td>
@@ -242,7 +245,7 @@
             @if (canReceive)
             {
                 <button type="submit" class="btn btn-success" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId })">@T["Receive what arrived"]</button>
-                <button type="submit" class="btn btn-outline-success action-bar-secondary" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-title="@T["Receive everything"]" data-message="@T["Receive every item still to come, at {0}?", Model.LocationName]">@T["Receive everything still to come"]</button>
+                <button type="submit" class="btn btn-outline-success action-bar-secondary" formaction="@Url.Action("Receive", new { purchaseOrderId = order.ItemId, all = true })" data-confirm-title="@T["Receive everything"]" data-confirm="@T["Receive every item still to come, at {0}?", Model.LocationName]">@T["Receive everything still to come"]</button>
             }
         </div>
     }

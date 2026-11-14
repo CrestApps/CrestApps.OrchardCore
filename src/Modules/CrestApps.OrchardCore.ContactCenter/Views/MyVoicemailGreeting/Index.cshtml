@@ -55,15 +55,15 @@
 
         @if (Model.HasAudioGreeting)
         {
-            <form method="post" action="@clearUrl" class="d-inline ms-2" onsubmit="return confirm('@T["Remove your greeting?"]');">
+            <form method="post" action="@clearUrl" class="d-inline ms-2 no-multisubmit">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-danger">@T["Remove greeting"]</button>
+                <button type="submit" class="btn btn-outline-danger" data-url-af="RemoveUrl" data-title="@T["Remove greeting"]" data-message="@T["Remove your greeting?"]" data-ok-text="@T["Remove greeting"]" data-cancel-text="@T["Cancel"]">@T["Remove greeting"]</button>
             </form>
         }
     </div>
 </div>
 
-<script at="Foot" depends-on="jQuery">
+<script at="Foot">
 (function () {
     var root = document.querySelector('[data-vm-greeting]');
     if (!root) { return; }

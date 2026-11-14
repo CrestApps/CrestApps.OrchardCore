@@ -177,7 +177,7 @@
             </li>
         </ul>
 
-        <div class="messaging-thread-messages flex-grow-1 overflow-y-auto p-3" style="background: var(--bs-tertiary-bg);" data-thread>
+        <div class="messaging-thread-messages flex-grow-1 overflow-y-auto p-3" style="background: var(--bs-tertiary-bg);" data-thread role="log" aria-live="polite" aria-label="@T["Messages"]">
             @if (Model.HasEarlierMessages)
             {
                 <div class="text-center mb-3">

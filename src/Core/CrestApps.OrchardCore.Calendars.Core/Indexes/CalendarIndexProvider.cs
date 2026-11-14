@@ -30,7 +30,8 @@ public sealed class CalendarIndexProvider : IndexProvider<Calendar>
                 Visibility = calendar.Visibility,
                 Source = calendar.Source,
                 SourceId = calendar.SourceId,
-                FeedToken = calendar.FeedToken,
+                // The column holds the secret's hash, never the secret.
+                FeedToken = Services.CalendarFeedTokens.GetHash(calendar),
                 Enabled = calendar.Enabled,
             });
 

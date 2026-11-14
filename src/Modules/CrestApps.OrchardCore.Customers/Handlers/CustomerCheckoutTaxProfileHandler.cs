@@ -48,6 +48,7 @@ internal sealed class CustomerCheckoutTaxProfileHandler : ICheckoutTaxProfileHan
             known.CustomerId = customer.ItemId;
             known.TaxRegistrationNumber ??= customer.TaxId;
             known.VatNumber ??= customer.TaxId;
+            known.TaxRegistrationVerified |= IsVerified(customer);
             known.IsTaxExempt |= customer.IsTaxExempt;
             known.ExemptionCertificateIds = [.. (known.ExemptionCertificateIds ?? []).Union(await GetCertificateIdsAsync(customer.ItemId, cancellationToken))];
 
@@ -57,13 +58,21 @@ internal sealed class CustomerCheckoutTaxProfileHandler : ICheckoutTaxProfileHan
         profile.Customer = new CustomerTaxProfile
         {
             CustomerId = customer.ItemId,
-            CustomerType = customer.Kind == CustomerKind.Business ? CustomerTaxType.B2B : CustomerTaxType.B2C,
+            // The customer sets their own kind, and tax rules are scoped by it, so a self-declared business would step
+            // out of a consumer-only rule. Only a verified business number makes the buyer a business for tax; a store-
+            // managed business account says so through its own handler, before this one.
+            CustomerType = customer.Kind == CustomerKind.Business && IsVerified(customer) ? CustomerTaxType.B2B : CustomerTaxType.B2C,
             TaxRegistrationNumber = customer.TaxId,
             VatNumber = customer.TaxId,
+            TaxRegistrationVerified = IsVerified(customer),
             IsTaxExempt = customer.IsTaxExempt,
             ExemptionCertificateIds = await GetCertificateIdsAsync(customer.ItemId, cancellationToken),
         };
     }
+
+    // Only a number an administrator verified counts: the customer chooses their kind and types their number themselves.
+    private static bool IsVerified(Customer customer)
+        => customer.TaxIdVerified && !string.IsNullOrWhiteSpace(customer.TaxId);
 
     // Certificates are kept by the Taxation feature, which may be off.
     private async Task<IList<string>> GetCertificateIdsAsync(string customerId, CancellationToken cancellationToken)

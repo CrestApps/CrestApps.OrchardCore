@@ -9,6 +9,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Core;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
+using Microsoft.AspNetCore.SignalR;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
 using CrestApps.OrchardCore.AI.Chat.Handlers;
@@ -95,6 +96,9 @@ public sealed class Startup : StartupBase
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
 
+        // On long polling a hub call has no current request; the filter gives the visitor resolver the connection's address.
+        services.Configure<HubOptions<AIChatHub>>(options => options.AddFilter<ChatHubConnectionAddressFilter>());
+
         // Enables realtime (speech-to-speech) voice over the server-relay WebRTC transport, with automatic
         // WebSocket fallback. The realtime hubs advertise WebRTC to the browser when this is registered.
         services.AddWebRtcRealtimeTransport();
@@ -112,7 +116,9 @@ public sealed class Startup : StartupBase
 
         services.AddDataProtection();
         services.AddOptions<AIVisitorIdentityOptions>();
-        services.Replace(ServiceDescriptor.Singleton<IAIVisitorIdentityResolver, DefaultAIVisitorIdentityResolver>());
+        // The package's resolver takes the visitor's address from the first X-Forwarded-For value of the raw request,
+        // which a client sets at will; this one takes it from the connection. AI Chat Interactions registers it too.
+        services.AddConnectionAddressAIVisitorIdentityResolver();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -157,41 +163,6 @@ public sealed class AdminWidgetStartup : StartupBase
         {
             options.Filters.Add<AIChatAdminWidgetFilter>();
         });
-    }
-}
-
-/// <summary>
-/// Tells the admin chat widget which content item the user is editing, when Orchard Core's Contents feature is on.
-/// </summary>
-[Feature(AIConstants.Feature.ChatAdminWidget)]
-[RequireFeatures(OrchardCoreFeatureIds.Contents)]
-public sealed class AdminWidgetContentsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IAIChatPageContextProvider, ContentItemPageContextProvider>();
-    }
-}
-
-/// <summary>
-/// Maps the AG-UI endpoint, through which any AG-UI client runs the AI chat profiles over HTTP and Server-Sent
-/// Events, when the AI Chat API is on.
-/// </summary>
-[RequireFeatures(AIConstants.Feature.ChatApi)]
-public sealed class AGUIEndpointStartup : StartupBase
-{
-    /// <summary>
-    /// The route of the AG-UI endpoint, next to the other AI APIs.
-    /// </summary>
-    public const string RoutePattern = "api/ai/v1/agui";
-
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        // The hub authorizes the profile and the session; the endpoint only needs an authenticated API caller (an AI API
-        // key or a bearer token), and answers others with 401. It reads JSON only, which a cross-site page cannot send
-        // without the browser asking first, so it needs no antiforgery token. The chat UI and the widgets use the hub.
-        routes.MapAGUIChat<AIChatHub, CrestApps.OrchardCore.AI.Chat.Hubs.IAIChatHubClient>(RoutePattern)
-            .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes });
     }
 }
 

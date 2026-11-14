@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
@@ -27,6 +28,8 @@ internal static class ApiAIUtilityCompletionEndpoint
     public static IEndpointRouteBuilder AddApiAIUtilityCompletionEndpoint<T>(this IEndpointRouteBuilder builder)
     {
         _ = builder.MapPost("api/ai/completion/utility", HandleAsync<T>)
+            .AddEndpointFilter<AICompletionQuotaFilter>()
+            .WithRateLimitGroup(AICompletionQuotaFilter.RateLimitGroup)
             .DisableAntiforgery()
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes })
             .WithTags(AIConversationsApiEndpoints.ChatTag)

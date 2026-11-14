@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AgenticCommerce.Core.Security;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Services;
 using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using CrestApps.OrchardCore.AgenticCommerce.Services;
+using CrestApps.OrchardCore.Commerce.Api;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -48,16 +49,33 @@ public sealed class AcpRequestFilter : IEndpointFilter
         }
 
         var agentRequest = signIn.Request;
+        var signature = request.Headers[AcpRequestSignature.SignatureHeader].ToString();
         var signatureError = AcpSignatureCheck.Check(
             agentRequest.Platform,
             AcpRequestSignature.TryGetSigningInput(body, out var input) ? input : null,
-            request.Headers[AcpRequestSignature.SignatureHeader].ToString(),
+            signature,
             request.Headers[AcpRequestSignature.TimestampHeader].ToString(),
-            GetNow(httpContext));
+            request.Method,
+            $"{request.PathBase}{request.Path}",
+            GetNow(httpContext),
+            out var verified);
 
         if (signatureError is not null)
         {
             return AcpResults.Error(StatusCodes.Status401Unauthorized, AcpSignatureCheck.ErrorCode, signatureError);
+        }
+
+        // A verified signature is accepted once in its window; again only for the same idempotent request, which only an
+        // endpoint with the idempotency layer answers with its first result.
+        var idempotencyKey = httpContext.GetEndpoint()?.Metadata.GetMetadata<IdempotencyPolicy>() is not null
+            ? request.Headers["Idempotency-Key"].ToString()
+            : null;
+
+        if (await AcpSignatureCheck.UseAsync(httpContext, agentRequest.Platform, verified, idempotencyKey) is not AgentSignatureUse.Accepted and var use)
+        {
+            var refused = AcpSignatureCheck.RefusedUse(httpContext, use);
+
+            return Results.Json(refused.Body, statusCode: refused.StatusCode);
         }
 
         agentRequest.Set(httpContext);
@@ -134,7 +152,11 @@ public sealed class AcpRequestFilter : IEndpointFilter
                 ProtocolVersion = version,
                 TestMode = platform.TestMode,
                 AllowedPaymentHandlers = platform.AllowedPaymentHandlers ?? [],
-                UserId = authentication.UserId,
+
+                // A linked buyer is acted for only with the checkout scope their consent gave the token, as in UCP.
+                UserId = authentication.UserId is not null && (authentication.Scopes ?? []).Contains(Ucp.UcpIdentityScopes.CheckoutManage)
+                    ? authentication.UserId
+                    : null,
                 ClientAddress = httpContext.Connection.RemoteIpAddress?.ToString(),
             },
         };

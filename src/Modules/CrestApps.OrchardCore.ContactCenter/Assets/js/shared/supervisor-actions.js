@@ -13,6 +13,8 @@
  * import it directly.
  */
 
+import { escapeHtml } from '../../../../CrestApps.OrchardCore.Resources/Assets/js/browser/html.js';
+
 // The engagement modes, in the order they are offered.
 export var MONITOR_MODES = ['Monitor', 'Whisper', 'Barge'];
 
@@ -35,15 +37,6 @@ function format(template) {
     return String(template).replace(/\{(\d+)\}/g, function (match, index) {
         return args[index] !== undefined ? args[index] : match;
     });
-}
-
-function escapeHtml(value) {
-    return String(value === undefined || value === null ? '' : value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 function modeLabel(mode, labels) {

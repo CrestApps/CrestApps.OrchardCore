@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Addresses;
+using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Locking.Distributed;
@@ -47,8 +48,12 @@ public sealed class DefaultCustomerMergeService : ICustomerMergeService
 
     public async Task<int> MergeVerifiedGuestsAsync(string userId, CancellationToken cancellationToken = default)
     {
+        // EmailConfirmed alone is not proof: a site that doesn't ask users to confirm their email marks it confirmed at
+        // registration, so anyone could register with a guest buyer's address and take their orders. The user must have
+        // proved they control the mailbox by a round trip (a confirmation link, or a code emailed to them).
         if (string.IsNullOrEmpty(userId) ||
             await _userService.GetUserByUniqueIdAsync(userId) is not User { EmailConfirmed: true } user ||
+            !UserEmailOwnership.IsVerified(user.Properties, user.Email) ||
             string.IsNullOrWhiteSpace(user.Email))
         {
             return 0;

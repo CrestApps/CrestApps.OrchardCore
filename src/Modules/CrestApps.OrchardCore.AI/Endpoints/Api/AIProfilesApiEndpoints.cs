@@ -4,6 +4,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using Microsoft.AspNetCore.Authorization;
@@ -108,11 +109,12 @@ internal static class AIProfilesApiEndpoints
         return profile is null ? NotFound() : TypedResults.Ok(profile);
     }
 
-    private static async Task<Results<Created<AIProfile>, ValidationProblem, ProblemHttpResult>> CreateAsync(
+    internal static async Task<Results<Created<AIProfile>, ValidationProblem, ProblemHttpResult>> CreateAsync(
         JsonObject body,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IAIProfileManager profileManager)
+        IAIProfileManager profileManager,
+        IAIToolAccessEvaluator toolAccessEvaluator)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Profiles, AIPermissions.ManageAIProfiles))
         {
@@ -135,6 +137,12 @@ internal static class AIProfilesApiEndpoints
         }
 
         var profile = await profileManager.NewAsync(body, httpContext.RequestAborted);
+
+        if (await RefuseUnauthorizedToolsAsync(profile, existing: null, httpContext, toolAccessEvaluator) is { } toolsRefused)
+        {
+            return toolsRefused;
+        }
+
         var validation = await profileManager.ValidateAsync(profile, httpContext.RequestAborted);
 
         if (!validation.Succeeded)
@@ -147,12 +155,13 @@ internal static class AIProfilesApiEndpoints
         return TypedResults.Created($"/{AIConversationsApiEndpoints.RoutePrefix}/profiles/{profile.ItemId}", profile);
     }
 
-    private static async Task<Results<Ok<AIProfile>, ValidationProblem, ProblemHttpResult>> UpdateAsync(
+    internal static async Task<Results<Ok<AIProfile>, ValidationProblem, ProblemHttpResult>> UpdateAsync(
         string profileId,
         JsonObject body,
         HttpContext httpContext,
         IAuthorizationService authorizationService,
-        IAIProfileManager profileManager)
+        IAIProfileManager profileManager,
+        IAIToolAccessEvaluator toolAccessEvaluator)
     {
         if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Profiles, AIPermissions.ManageAIProfiles))
         {
@@ -171,14 +180,26 @@ internal static class AIProfilesApiEndpoints
             return TypedResults.ValidationProblem(new Dictionary<string, string[]> { ["body"] = ["Send the settings to change as JSON."] });
         }
 
+        // The body is bound without regard to case, while the profile's own JSON is not: its keys take the profile's
+        // spelling first, so the copy whose tools are checked and the update that is saved read the same values. A
+        // lower-case "settings" or "properties" key slipped new tools past the check that way.
+        var current = JsonSerializer.SerializeToNode(profile) as JsonObject ?? [];
+        var changes = AISourceCatalogApi.NormalizeKeys(body, current);
+
         // The id and the name are what links and tools point to, so they stay.
-        body.Remove(nameof(AIProfile.ItemId));
-        body.Remove(nameof(AIProfile.Name));
+        changes.Remove(nameof(AIProfile.ItemId));
+        changes.Remove(nameof(AIProfile.Name));
 
         // Validate a copy first: the manager saves as it updates.
-        var copy = await profileManager.NewAsync(JsonSerializer.SerializeToNode(profile) is JsonObject current ? AISourceCatalogApi.Merge(current, body) : body, httpContext.RequestAborted);
+        var copy = await profileManager.NewAsync(AISourceCatalogApi.Merge(current, changes), httpContext.RequestAborted);
         copy.ItemId = profile.ItemId;
         copy.Name = profile.Name;
+
+        if (await RefuseUnauthorizedToolsAsync(copy, profile, httpContext, toolAccessEvaluator) is { } toolsRefused)
+        {
+            return toolsRefused;
+        }
+
         var validation = await profileManager.ValidateAsync(copy, httpContext.RequestAborted);
 
         if (!validation.Succeeded)
@@ -186,7 +207,7 @@ internal static class AIProfilesApiEndpoints
             return AISourceCatalogApi.Invalid(validation);
         }
 
-        await profileManager.UpdateAsync(profile, body, httpContext.RequestAborted);
+        await profileManager.UpdateAsync(profile, changes, httpContext.RequestAborted);
 
         return TypedResults.Ok(profile);
     }
@@ -260,4 +281,32 @@ internal static class AIProfilesApiEndpoints
 
     private static ProblemHttpResult NotFound()
         => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Not found");
+
+    // The editors offer only the tools the caller may use; the API takes raw JSON, so the same rule is applied here to the
+    // profile's tools and to its post-session tools, which run after the session with no user, and a tool the caller may
+    // not use (and the profile did not already have) is a validation error.
+    private static async Task<ValidationProblem> RefuseUnauthorizedToolsAsync(
+        AIProfile profile,
+        AIProfile existing,
+        HttpContext httpContext,
+        IAIToolAccessEvaluator toolAccessEvaluator)
+    {
+        Func<string, Task<bool>> isAuthorized = tool => toolAccessEvaluator.IsAuthorizedAsync(httpContext.User, tool);
+        var refusedTools = await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(
+            profile.GetOrCreate<FunctionInvocationMetadata>().Names,
+            existing?.GetOrCreate<FunctionInvocationMetadata>().Names,
+            isAuthorized);
+        var refusedPostSessionTools = await AIToolSelectionFilter.GetUnauthorizedAdditionsAsync(
+            profile.GetSettings<AIProfilePostSessionSettings>()?.ToolNames,
+            existing?.GetSettings<AIProfilePostSessionSettings>()?.ToolNames,
+            isAuthorized);
+        var refused = refusedTools.Concat(refusedPostSessionTools).Distinct(StringComparer.Ordinal).ToList();
+
+        return refused.Count == 0
+            ? null
+            : TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["tools"] = [$"You may not give a profile these tools: {string.Join(", ", refused)}."],
+            });
+    }
 }

@@ -13,6 +13,9 @@
 
 @* The signed-in customer's subscriptions, the ones still running first, with a way to stop one from renewing. *@
 
+@* Asks before data-confirm forms and buttons submit (the crestapps-browser helpers). *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 @if (Model.Subscriptions.Count == 0)
 {
     <div class="card">
@@ -62,7 +65,7 @@ else
                         <span class="badge text-bg-@tone">@DisplayText.StatusName(subscription.Status)</span>
                         @if (canCancel)
                         {
-                            <form action="@Url.RouteUrl("AccountSubscriptionCancel", new { itemId = subscription.ItemId })" method="post" onsubmit="return confirm('@T["Stop {0} from renewing? You keep access until {1:d}.", subscription.Title, await LocalAsync(subscription.CurrentPeriodEndUtc)]');">
+                            <form action="@Url.RouteUrl("AccountSubscriptionCancel", new { itemId = subscription.ItemId })" method="post" data-confirm="@T["Stop {0} from renewing? You keep access until {1:d}.", subscription.Title, await LocalAsync(subscription.CurrentPeriodEndUtc)]" data-once>
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm btn-outline-danger">@T["Cancel"]</button>
                             </form>

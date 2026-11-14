@@ -73,4 +73,11 @@ public sealed class PaymentProviderCapabilities
     /// bank asked for authentication, it finishes that payment with the result rather than starting another.
     /// </summary>
     public bool AcceptsExternalAuthentication { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the buyer enters a card online, with no card present, so the provider can
+    /// be used to test stolen cards. The card-testing protection counts such a provider's declines and stops a network,
+    /// a customer or the store when they pile up. A card reader, a cash or cheque method, or a promise to pay later is not.
+    /// </summary>
+    public bool IsCardNotPresent { get; set; }
 }

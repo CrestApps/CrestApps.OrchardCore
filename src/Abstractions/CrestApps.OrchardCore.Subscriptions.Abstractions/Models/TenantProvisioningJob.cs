@@ -173,4 +173,9 @@ public enum TenantProvisioningStatus
     /// person has to resolve rather than one the site can clear on its own.
     /// </summary>
     Abandoned = 4,
+
+    /// <summary>
+    /// The site was bought with a promise to pay (Pay Later, a bank transfer) and is created once the payment arrives.
+    /// </summary>
+    AwaitingPayment = 5,
 }

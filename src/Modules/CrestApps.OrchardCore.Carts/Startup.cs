@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Carts.Api;
 using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Carts.Core.Indexes;
@@ -61,4 +63,16 @@ public sealed class ApiStartup : StartupBase
 {
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.MapCartApi();
+}
+
+/// <summary>
+/// The built-in limit of the cart routes, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(CartConstants.RateLimitGroup, 120, TimeSpan.FromMinutes(1)));
 }

@@ -171,10 +171,6 @@ public class OrderConfirmationViewModel
 public class OrderCreateAccountViewModel
 {
     public string Token { get; set; }
-
-    public string Password { get; set; }
-
-    public string ConfirmPassword { get; set; }
 }
 
 /// <summary>
@@ -281,6 +277,12 @@ public class AccountOrdersViewModel
 public class FindOrderViewModel
 {
     public string Email { get; set; }
+
+    /// <summary>
+    /// The store can't send email, so no link was sent. It says nothing about whether there are orders.
+    /// </summary>
+    [BindNever]
+    public bool EmailUnavailable { get; set; }
 }
 
 /// <summary>

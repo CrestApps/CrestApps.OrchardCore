@@ -1,10 +1,14 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Services;
@@ -16,23 +20,26 @@ namespace CrestApps.OrchardCore.Orders.Services;
 public sealed class GiftCardCheckoutService
 {
     private readonly IGiftCardStore _store;
-    private readonly IPaymentAttemptLimiter _limiter;
+    private readonly IAttemptLimiter _limiter;
     private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly IClock _clock;
+    private readonly IDistributedLock _distributedLock;
 
     internal readonly IStringLocalizer S;
 
     public GiftCardCheckoutService(
         IGiftCardStore store,
-        IPaymentAttemptLimiter limiter,
+        IAttemptLimiter limiter,
         CheckoutInvoiceBuilder invoiceBuilder,
         IClock clock,
+        IDistributedLock distributedLock,
         IStringLocalizer<GiftCardCheckoutService> stringLocalizer)
     {
         _store = store;
         _limiter = limiter;
         _invoiceBuilder = invoiceBuilder;
         _clock = clock;
+        _distributedLock = distributedLock;
         S = stringLocalizer;
     }
 
@@ -61,19 +68,38 @@ public sealed class GiftCardCheckoutService
             return S["This payment takes no gift cards."];
         }
 
-        // A gift card code is money, so how fast codes can be tried from one address is limited.
-        if (!await _limiter.AcquireAsync("gift-card-code", clientAddress ?? "unknown"))
+        // A gift card code is money, so wrong codes from one network are limited; a network that tried too many is refused
+        // before the code is even looked up.
+        // The check, the lookup and the count run under one lock per network, so parallel tries can't all pass the check
+        // before any wrong code is counted.
+        var network = ClientNetworkKey.FromAddress(clientAddress);
+        var (locker, locked) = await _distributedLock.TryAcquireAttemptLockAsync(OrderConstants.AttemptPolicies.GiftCardCode, network);
+
+        if (!locked)
         {
             return S["Too many codes were tried. Wait a few minutes, then try again."];
         }
 
-        var card = await _store.GetByCodeAsync(code);
-        var currency = flow.Session.TryGet<CheckoutInvoice>(out var invoice) ? invoice.Currency : (flow.Session as CheckoutSession)?.Currency;
+        GiftCard card;
 
-        if (card is null)
+        await using (locker)
         {
-            return S["That gift card code is not recognized."];
+            if (!(await _limiter.PeekAsync(OrderConstants.AttemptPolicies.GiftCardCode, network)).Allowed)
+            {
+                return S["Too many codes were tried. Wait a few minutes, then try again."];
+            }
+
+            card = await _store.GetByCodeAsync(code);
+
+            if (card is null)
+            {
+                await _limiter.RecordFailureAsync(OrderConstants.AttemptPolicies.GiftCardCode, network);
+
+                return S["That gift card code is not recognized."];
+            }
         }
+
+        var currency = flow.Session.TryGet<CheckoutInvoice>(out var invoice) ? invoice.Currency : (flow.Session as CheckoutSession)?.Currency;
 
         if (!card.IsEnabled)
         {

@@ -1,0 +1,491 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { escapeHtml } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js';
+import { format } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/text.js';
+import { HttpError, request } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/http.js';
+import { bindForms, bindRemoveLinks, confirmAction } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js';
+
+const toolkit = '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/index.js';
+
+// The one set of browser helpers every module uses (crestapps-browser, exposed as window.crestapps), instead of a copy
+// per module that each behaved a little differently.
+describe('crestapps.html.escape', () => {
+    it('escapes all five characters, so the result is safe in an attribute as well as in text', () => {
+        expect(escapeHtml(`<b class="x">Tom & Jerry's</b>`)).toBe('&lt;b class=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/b&gt;');
+    });
+
+    it('turns nothing into an empty string and other values into their text', () => {
+        expect(escapeHtml(null)).toBe('');
+        expect(escapeHtml(undefined)).toBe('');
+        expect(escapeHtml(0)).toBe('0');
+    });
+});
+
+describe('crestapps.text.format', () => {
+    it('fills numbered placeholders in any order, as often as they appear', () => {
+        expect(format('{1} of {0}, {1} again', 'ten', 'three')).toBe('three of ten, three again');
+    });
+
+    it('leaves a placeholder with no value as it is, and reads nothing as an empty template', () => {
+        expect(format('{0} and {1}', 'one')).toBe('one and {1}');
+        expect(format(null, 'x')).toBe('');
+    });
+});
+
+// A page reads the antiforgery token from the hidden input the form tag helper renders, or from a meta tag.
+function pageWithToken({ input, meta } = {}) {
+    return {
+        querySelector: selector => {
+            if (selector === 'input[name="__RequestVerificationToken"]') {
+                return input === undefined ? null : { value: input };
+            }
+
+            if (selector === 'meta[name="RequestVerificationToken"]') {
+                return meta === undefined ? null : { getAttribute: name => (name === 'content' ? meta : null) };
+            }
+
+            return null;
+        },
+    };
+}
+
+function response(status, headers = {}) {
+    return {
+        ok: status >= 200 && status < 300,
+        status,
+        statusText: `Status ${status}`,
+        headers: { get: name => headers[name.toLowerCase()] ?? null },
+    };
+}
+
+describe('crestapps.http.request', () => {
+    beforeEach(() => {
+        globalThis.fetch = vi.fn(async () => response(200));
+    });
+
+    afterEach(() => {
+        delete globalThis.fetch;
+        delete globalThis.document;
+    });
+
+    it('sends the antiforgery token from the page with a post', async () => {
+        globalThis.document = pageWithToken({ input: 'token-from-form' });
+
+        await request('/save', { method: 'POST', json: { a: 1 } });
+
+        const [url, init] = globalThis.fetch.mock.calls[0];
+
+        expect(url).toBe('/save');
+        expect(init.method).toBe('POST');
+        expect(init.credentials).toBe('same-origin');
+        expect(init.headers.RequestVerificationToken).toBe('token-from-form');
+        expect(init.headers['Content-Type']).toBe('application/json');
+        expect(init.body).toBe('{"a":1}');
+    });
+
+    // UX-8: the token belongs to this site; a post to another origin must not carry it.
+    it('sends the antiforgery token only to the page\'s own origin', async () => {
+        globalThis.document = pageWithToken({ input: 'token-from-form' });
+        globalThis.window = { location: { href: 'https://shop.test/admin/orders', origin: 'https://shop.test' } };
+
+        try {
+            await request('https://elsewhere.test/collect', { method: 'POST' });
+            await request('/admin/orders/refund', { method: 'POST' });
+            await request('https://shop.test/admin/orders/cancel', { method: 'POST' });
+        } finally {
+            delete globalThis.window;
+        }
+
+        const tokens = globalThis.fetch.mock.calls.map(([, init]) => init.headers.RequestVerificationToken);
+
+        expect(tokens).toEqual([undefined, 'token-from-form', 'token-from-form']);
+    });
+
+    it('falls back to the meta tag when the page has no form token', async () => {
+        globalThis.document = pageWithToken({ meta: 'token-from-meta' });
+
+        await request('/remove', { method: 'POST' });
+
+        expect(globalThis.fetch.mock.calls[0][1].headers.RequestVerificationToken).toBe('token-from-meta');
+    });
+
+    it('sends no token with a get', async () => {
+        globalThis.document = pageWithToken({ input: 'token-from-form' });
+
+        await request('/list');
+
+        expect(globalThis.fetch.mock.calls[0][1].method).toBe('GET');
+        expect(globalThis.fetch.mock.calls[0][1].headers.RequestVerificationToken).toBeUndefined();
+    });
+
+    it('posts a plain object as a form', async () => {
+        globalThis.document = pageWithToken();
+
+        await request('/save', { method: 'POST', form: { name: 'A & B', id: 7 } });
+
+        const init = globalThis.fetch.mock.calls[0][1];
+
+        expect(String(init.body)).toBe('name=A+%26+B&id=7');
+        expect(init.headers['Content-Type']).toBeUndefined();
+    });
+
+    it('returns the response when it succeeds', async () => {
+        globalThis.document = pageWithToken();
+        const ok = response(204);
+        globalThis.fetch = vi.fn(async () => ok);
+
+        await expect(request('/x', { method: 'DELETE' })).resolves.toBe(ok);
+    });
+
+    it('throws a typed error on a status outside 2xx, with the seconds to wait from Retry-After', async () => {
+        globalThis.document = pageWithToken();
+        const limited = response(429, { 'retry-after': '30' });
+        globalThis.fetch = vi.fn(async () => limited);
+
+        const error = await request('/pay', { method: 'POST' }).catch(caught => caught);
+
+        expect(error).toBeInstanceOf(HttpError);
+        expect(error).toBeInstanceOf(Error);
+        expect(error.status).toBe(429);
+        expect(error.retryAfter).toBe(30);
+        expect(error.response).toBe(limited);
+    });
+
+    it('reads a Retry-After date as the seconds until then, and no header as null', async () => {
+        globalThis.document = pageWithToken();
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-11-11T10:00:00Z'));
+        globalThis.fetch = vi.fn(async () => response(503, { 'retry-after': 'Wed, 11 Nov 2026 10:01:00 GMT' }));
+
+        expect((await request('/a').catch(caught => caught)).retryAfter).toBe(60);
+
+        globalThis.fetch = vi.fn(async () => response(500));
+
+        expect((await request('/a').catch(caught => caught)).retryAfter).toBeNull();
+        vi.useRealTimers();
+    });
+});
+
+// Final security review (low): the admin theme's dialog for a [data-url-af~="RemoveUrl"] element writes its data-title
+// and data-message into the page as markup, so a child tenant's name in the question ran as script. A question that
+// names a record is written in data-confirm, and handed to the theme escaped just before its own click listener reads it.
+describe('the [data-url-af~="RemoveUrl"][data-confirm] binding', () => {
+    function clickOn(element) {
+        let listener;
+        let capture;
+        bindRemoveLinks({ addEventListener: (type, handler, useCapture) => { listener = handler; capture = useCapture; } });
+        listener({ target: { closest: selector => (selector === '[data-url-af~="RemoveUrl"][data-confirm]' ? element : null) } });
+
+        return capture;
+    }
+
+    it('hands the theme the question and its title escaped, before the theme\'s own listener runs', () => {
+        const element = { dataset: { confirm: 'Suspend <img src=x onerror=alert(1)>?', confirmTitle: 'Suspend <b>x</b>' } };
+
+        const capture = clickOn(element);
+
+        expect(capture).toBe(true);
+        expect(element.dataset.message).toBe('Suspend &lt;img src=x onerror=alert(1)&gt;?');
+        expect(element.dataset.title).toBe('Suspend &lt;b&gt;x&lt;/b&gt;');
+    });
+
+    it('leaves the theme\'s own title alone when the question has none, and every other element alone', () => {
+        const element = { dataset: { confirm: 'Discard "x"?', title: 'Discard' } };
+
+        clickOn(element);
+        clickOn(null);
+
+        expect(element.dataset.message).toBe('Discard &quot;x&quot;?');
+        expect(element.dataset.title).toBe('Discard');
+    });
+});
+
+describe('crestapps.confirm', () => {
+    afterEach(() => {
+        delete globalThis.window;
+    });
+
+    it('asks through the admin theme\'s dialog when the page has it', async () => {
+        const confirmDialog = vi.fn(options => options.callback(true));
+        globalThis.window = { confirmDialog, confirm: vi.fn() };
+
+        await expect(confirmAction('Refund', 'Refund $10?')).resolves.toBe(true);
+        expect(confirmDialog).toHaveBeenCalledWith(expect.objectContaining({ title: 'Refund', message: 'Refund $10?' }));
+        expect(globalThis.window.confirm).not.toHaveBeenCalled();
+    });
+
+    // The admin dialog writes its title and message into the page as markup.
+    it('hands the admin dialog a question that names a record as text', async () => {
+        const confirmDialog = vi.fn(options => options.callback(false));
+        globalThis.window = { confirmDialog };
+
+        await expect(confirmAction('Stop <b>Gold</b>', 'Stop "Gold" & co?')).resolves.toBe(false);
+        expect(confirmDialog).toHaveBeenCalledWith(expect.objectContaining({
+            title: 'Stop &lt;b&gt;Gold&lt;/b&gt;',
+            message: 'Stop &quot;Gold&quot; &amp; co?',
+        }));
+    });
+
+    it('falls back to the browser\'s confirm elsewhere', async () => {
+        globalThis.window = { confirm: vi.fn(() => false) };
+
+        await expect(confirmAction('Cancel', 'Cancel this order?')).resolves.toBe(false);
+        expect(globalThis.window.confirm).toHaveBeenCalledWith('Cancel this order?');
+    });
+
+    // TheAdmin merges the options over its defaults ({ ...defaults, ...options }): a key passed as undefined replaces
+    // the default, and the dialog's buttons read "undefined".
+    it('passes the admin dialog only the texts it was given, so the theme\'s defaults stand for the rest', async () => {
+        const confirmDialog = vi.fn(options => options.callback(true));
+        globalThis.window = { confirmDialog };
+
+        await confirmAction(undefined, 'Remove this line?', { okText: undefined, cancelText: undefined });
+
+        const options = confirmDialog.mock.calls[0][0];
+
+        expect(Object.keys(options).sort()).toEqual(['callback', 'message']);
+        expect(options.message).toBe('Remove this line?');
+
+        await confirmAction('Stop', 'Stop renewing?', { okText: 'Stop', cancelText: 'Keep' });
+
+        expect(confirmDialog.mock.calls[1][0]).toEqual(expect.objectContaining({ title: 'Stop', okText: 'Stop', cancelText: 'Keep' }));
+    });
+});
+
+// Just enough of a page for the delegated submit listener: forms with data attributes and submit buttons. Like a
+// browser, requestSubmit sends the form's submit event at once, through the same listeners. What only a browser shows
+// (promise callbacks run between listeners, a submit asked for during another is ignored) is covered by
+// ConfirmFormBindingsTests in the Playwright suite, which drives the built bundle in Chromium with real clicks.
+function fakeForm(page, dataset, buttons = 1) {
+    const form = {
+        dataset,
+        submitted: [],
+        matches: selector => (selector === 'form[data-confirm]' && 'confirm' in dataset) || (selector === 'form[data-once]' && 'once' in dataset),
+        closest(selector) { return this.matches(selector) ? this : null; },
+        requestSubmit(submitter) {
+            const event = page.submit(this, submitter);
+
+            if (!event.defaultPrevented) {
+                this.submitted.push(submitter);
+            }
+        },
+        buttons: Array.from({ length: buttons }, () => ({ disabled: false, type: 'submit' })),
+        querySelectorAll(selector) { return selector === 'button[type="submit"], input[type="submit"], button:not([type])' ? this.buttons : []; },
+    };
+
+    return form;
+}
+
+function fakePage() {
+    const listeners = [];
+
+    return {
+        addEventListener: (type, listener, capture) => listeners.push({ type, listener, capture }),
+        listeners,
+        submit(form, submitter) {
+            const event = {
+                type: 'submit',
+                target: form,
+                submitter,
+                defaultPrevented: false,
+                propagationStopped: false,
+                preventDefault() { this.defaultPrevented = true; },
+                stopPropagation() { this.propagationStopped = true; },
+            };
+
+            listeners.filter(entry => entry.type === 'submit').forEach(entry => entry.listener(event));
+
+            return event;
+        },
+    };
+}
+
+// The admin theme's dialog: it answers later, when the person clicks OK or Cancel.
+function laterDialog() {
+    const asked = [];
+    const confirmDialog = vi.fn(options => asked.push(options));
+
+    return { confirmDialog, asked, answer: result => asked.shift().callback(result) };
+}
+
+describe('the [data-confirm] and [data-once] form bindings', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        delete globalThis.window;
+    });
+
+    // The browser's confirm answers at once, so the submit is decided inside the listener and simply goes on: holding it
+    // back and asking for it again would be ignored by a browser that is still sending the first one.
+    it('asks the browser\'s confirm inside the listener, and lets the submit the person agreed to go on', () => {
+        globalThis.window = { confirm: vi.fn(() => true) };
+        const page = fakePage();
+        const form = fakeForm(page, { confirm: 'Remove this address?' });
+
+        bindForms(page);
+
+        const sent = page.submit(form, form.buttons[0]);
+
+        expect(globalThis.window.confirm).toHaveBeenCalledWith('Remove this address?');
+        expect(sent.defaultPrevented).toBe(false);
+        expect(sent.propagationStopped).toBe(false);
+        expect(form.submitted).toEqual([]);
+
+        // The next submit is asked about again.
+        page.submit(form, form.buttons[0]);
+        expect(globalThis.window.confirm).toHaveBeenCalledTimes(2);
+    });
+
+    it('stops the submit, before the other listeners see it, when the browser\'s confirm is declined', () => {
+        globalThis.window = { confirm: vi.fn(() => false) };
+        const page = fakePage();
+        const form = fakeForm(page, { confirm: 'Cancel?' });
+
+        bindForms(page);
+        const declined = page.submit(form, form.buttons[0]);
+
+        expect(declined.defaultPrevented).toBe(true);
+        expect(declined.propagationStopped).toBe(true);
+        expect(page.listeners.find(entry => entry.type === 'submit').capture).toBe(true);
+    });
+
+    it('holds the submit back for the admin dialog, and submits once with the same button when OK is clicked', async () => {
+        const dialog = laterDialog();
+        globalThis.window = { confirmDialog: dialog.confirmDialog };
+        const page = fakePage();
+        const form = fakeForm(page, { confirm: 'Remove this address?' });
+        const button = form.buttons[0];
+
+        bindForms(page);
+
+        const asked = page.submit(form, button);
+
+        // Held back from the admin theme's no-multisubmit too, which would mark the form as submitting and drop the
+        // agreed submit that follows.
+        expect(asked.defaultPrevented).toBe(true);
+        expect(asked.propagationStopped).toBe(true);
+
+        dialog.answer(true);
+        await vi.runAllTimersAsync();
+
+        expect(form.submitted).toEqual([button]);
+        expect(dialog.confirmDialog).toHaveBeenCalledTimes(1);
+
+        // The agreement was for that submit only: the next one is asked about again.
+        expect(page.submit(form, button).defaultPrevented).toBe(true);
+        expect(dialog.confirmDialog).toHaveBeenCalledTimes(2);
+    });
+
+    // A button with its own formaction (or one that submits another form through form="...") asks its own question, and
+    // the form then goes where that button sends it.
+    it('asks the question of a [data-confirm] submit button, and submits with that button', async () => {
+        const dialog = laterDialog();
+        globalThis.window = { confirmDialog: dialog.confirmDialog };
+        const page = fakePage();
+        const form = fakeForm(page, {}, 2);
+        const [save, receiveAll] = form.buttons;
+        receiveAll.dataset = { confirm: 'Receive everything?' };
+        receiveAll.matches = selector => selector === '[data-confirm]';
+
+        bindForms(page);
+
+        expect(page.submit(form, save).defaultPrevented).toBe(false);
+        expect(page.submit(form, receiveAll).defaultPrevented).toBe(true);
+        expect(dialog.asked[0].message).toBe('Receive everything?');
+
+        dialog.answer(true);
+        await vi.runAllTimersAsync();
+
+        expect(dialog.confirmDialog).toHaveBeenCalledTimes(1);
+        expect(form.submitted).toEqual([receiveAll]);
+    });
+
+    it('does not submit when the admin dialog is cancelled', async () => {
+        const dialog = laterDialog();
+        globalThis.window = { confirmDialog: dialog.confirmDialog };
+        const page = fakePage();
+        const form = fakeForm(page, { confirm: 'Cancel?' });
+
+        bindForms(page);
+        page.submit(form, form.buttons[0]);
+        dialog.answer(false);
+        await vi.runAllTimersAsync();
+
+        expect(form.submitted).toEqual([]);
+    });
+
+    // An agreed submit the browser refuses (an invalid field stops it before the submit event) leaves nothing behind.
+    it('forgets an agreement whose submit did not happen, so the next click is asked about', async () => {
+        const dialog = laterDialog();
+        globalThis.window = { confirmDialog: dialog.confirmDialog };
+        const page = fakePage();
+        const form = fakeForm(page, { confirm: 'Refund?' });
+        form.requestSubmit = vi.fn();
+
+        bindForms(page);
+        page.submit(form, form.buttons[0]);
+        dialog.answer(true);
+        await vi.runAllTimersAsync();
+
+        expect(form.requestSubmit).toHaveBeenCalledTimes(1);
+        expect(page.submit(form, form.buttons[0]).defaultPrevented).toBe(true);
+        expect(dialog.confirmDialog).toHaveBeenCalledTimes(2);
+    });
+
+    it('disables the submit buttons of a [data-once] form after its first submit, keeping the clicked one in the post', async () => {
+        globalThis.window = {};
+        const page = fakePage();
+        const form = fakeForm(page, { once: '' }, 2);
+
+        bindForms(page);
+
+        expect(page.submit(form, form.buttons[0]).defaultPrevented).toBe(false);
+        // Not yet: a button disabled during the submit event would leave its name and value out of the post.
+        expect(form.buttons.map(button => button.disabled)).toEqual([false, false]);
+
+        await vi.runAllTimersAsync();
+
+        expect(form.buttons.map(button => button.disabled)).toEqual([true, true]);
+    });
+
+    it('leaves a [data-once] form alone when something else stopped the submit', async () => {
+        globalThis.window = {};
+        const page = fakePage();
+        const form = fakeForm(page, { once: '' });
+
+        bindForms(page);
+        const event = page.submit(form, form.buttons[0]);
+        event.preventDefault();
+        await vi.runAllTimersAsync();
+
+        expect(form.buttons[0].disabled).toBe(false);
+    });
+});
+
+describe('window.crestapps', () => {
+    afterEach(() => {
+        delete globalThis.window;
+        delete globalThis.document;
+    });
+
+    it('exposes the helpers and binds the forms of the page', async () => {
+        vi.resetModules();
+        const page = fakePage();
+        globalThis.window = {};
+        globalThis.document = page;
+        const added = vi.spyOn(page, 'addEventListener');
+
+        await import(toolkit);
+
+        expect(globalThis.window.crestapps.html.escape('"')).toBe('&quot;');
+        expect(globalThis.window.crestapps.text.format('{0}!', 'Hi')).toBe('Hi!');
+        expect(globalThis.window.crestapps.http.request.name).toBe('request');
+        expect(globalThis.window.crestapps.http.HttpError.name).toBe('HttpError');
+        expect(globalThis.window.crestapps.confirm.name).toBe('confirmAction');
+        expect(added).toHaveBeenCalledWith('submit', expect.any(Function), true);
+        expect(added).toHaveBeenCalledWith('click', expect.any(Function), true);
+    });
+});

@@ -43,7 +43,7 @@ public sealed class AgentFeedSftpSettings
     public string PrivateKeyPassphrase { get; set; }
 
     /// <summary>
-    /// Gets or sets the server's SHA-256 host key fingerprint the push checks before it signs in, or none to accept any.
+    /// Gets or sets the server's SHA-256 host key fingerprint the push checks before it signs in; the push doesn't run without it.
     /// </summary>
     public string HostKeyFingerprint { get; set; }
 

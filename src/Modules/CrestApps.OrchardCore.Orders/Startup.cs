@@ -1,3 +1,5 @@
+using OrchardCore.RateLimits;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Commerce.Core;
@@ -70,6 +72,24 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, AbandonedOrdersBackgroundTask>();
 
         services.AddScoped<ICheckoutHandler, OrderCheckoutHandler>();
+
+
+        // Wrong gift card codes, order lookups and accounts made from an order are limited per network (and per e-mail).
+
+        services
+
+            .AddAttemptPolicy(OrderConstants.AttemptPolicies.GiftCardCode, 5, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(30))
+
+            .AddAttemptPolicy(OrderConstants.AttemptPolicies.OrderLookupNetwork, 10, TimeSpan.FromMinutes(10))
+
+            .AddAttemptPolicy(OrderConstants.AttemptPolicies.OrderLookupEmail, 5, TimeSpan.FromHours(1))
+
+            .AddAttemptPolicy(OrderConstants.AttemptPolicies.OrderCreateAccount, 5, TimeSpan.FromHours(1));
+
+
+        // An order paid later delivers what it held back once its transaction is paid.
+
+        services.AddScoped<ITransactionEventHandler, OrderPaymentSettledTransactionHandler>();
         services.AddScoped<ICheckoutHandler, OrderConfirmationCheckoutHandler>();
         services.AddScoped<OrderConfirmationEmailBuilder>();
         services.AddScoped<OrderLinksEmailBuilder>();
@@ -313,4 +333,16 @@ public sealed class ReturnsProductFeedsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
         => services.AddScoped<IProductFeedItemContributor, ReturnsProductFeedContributor>();
+}
+
+/// <summary>
+/// The built-in limit of the order lookup, listed read-only under Tools &gt; Rate Limits.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(OrderConstants.FindRateLimitGroup, 10, TimeSpan.FromMinutes(10), networkOnly: true));
 }

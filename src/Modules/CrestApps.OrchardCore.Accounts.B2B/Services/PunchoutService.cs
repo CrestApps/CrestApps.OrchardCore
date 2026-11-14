@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.Accounts.B2B.Models;
 using CrestApps.OrchardCore.Carts.Core.Models;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using static CrestApps.OrchardCore.StringTruncation;
@@ -18,6 +19,11 @@ namespace CrestApps.OrchardCore.Accounts.B2B.Services;
 public sealed class PunchoutService
 {
     public const string CookieName = "punchout";
+
+    /// <summary>
+    /// The claim a punchout session carries, with the account's id, so the session can be recognized and limited.
+    /// </summary>
+    public const string ClaimType = "punchout";
 
     // A key is 32 random bytes, as base64url.
     private const int KeyBytes = 32;
@@ -36,11 +42,12 @@ public sealed class PunchoutService
     /// </summary>
     public static (string Key, string Hash) NewKey()
     {
-        var key = Convert.ToBase64String(RandomNumberGenerator.GetBytes(KeyBytes)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var key = SecretTokens.Create(KeyBytes);
 
         return (key, Hash(key));
     }
 
+    // Upper-case hex, as the stored hashes already are.
     public static string Hash(string key)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key ?? string.Empty)));
 

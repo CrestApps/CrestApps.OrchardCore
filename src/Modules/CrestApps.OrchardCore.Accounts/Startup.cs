@@ -102,36 +102,6 @@ public sealed class MembersStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the account team part and its editor.
-/// </summary>
-[Feature(AccountsConstants.TeamFeature)]
-public sealed class TeamStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddContentPart<AccountTeamPart>()
-            .UseDisplayDriver<AccountTeamPartDisplayDriver>();
-
-        services.AddDataMigration<AccountTeamMigrations>();
-    }
-}
-
-/// <summary>
-/// Describes the account team part to CrestApps Recipes.
-/// </summary>
-[Feature(AccountsConstants.TeamFeature)]
-[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
-public sealed class TeamRecipesSchemaStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentSchemaDefinition, AccountTeamPartSchemaDefinition>();
-    }
-}
-
-/// <summary>
 /// Registers the locations part and its editor.
 /// </summary>
 [Feature(AccountsConstants.LocationsFeature)]

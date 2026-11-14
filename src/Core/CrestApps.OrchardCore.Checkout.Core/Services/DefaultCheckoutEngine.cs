@@ -33,9 +33,9 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// customer is never left having paid for half a purchase that was never fulfilled.</description></item>
 /// </list>
 /// </remarks>
-public sealed class DefaultCheckoutEngine : ICheckoutEngine
+public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 {
-    private const string SessionLockPrefix = "CHECKOUT_SESSION_";
+    internal const string SessionLockPrefix = "CHECKOUT_SESSION_";
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
@@ -53,6 +53,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IPaymentIssueRecorder _paymentIssues;
+    private readonly IPaymentDeclineRecorder _declineRecorder;
 
     // How long a begin that ended without the provider's answer holds off another payment method: long enough for the
     // provider to find a payment it may have made anyway (Stripe's search lags up to a minute behind).
@@ -74,6 +75,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     /// <param name="logger">The logger.</param>
     /// <param name="paymentGates">The gates that hold what a purchase needs before it is paid for, such as a coupon's use.</param>
     /// <param name="paymentIssues">Records a refund that failed, for an operator to finish by hand.</param>
+    /// <param name="declineRecorder">Counts a declined card payment for the card-testing protection.</param>
     public DefaultCheckoutEngine(
         ICheckoutSessionStore sessionStore,
         IPaymentAttemptStore attemptStore,
@@ -87,9 +89,12 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         IClock clock,
         ILogger<DefaultCheckoutEngine> logger,
         IEnumerable<ICheckoutPaymentGate> paymentGates = null,
-        IPaymentIssueRecorder paymentIssues = null)
+        IPaymentIssueRecorder paymentIssues = null,
+        IPaymentDeclineRecorder declineRecorder = null)
     {
-        _paymentIssues = paymentIssues;
+        _declineRecorder = declineRecorder;
+        // A host without the payment issue store still records issues in the log, so no caller needs a null check.
+        _paymentIssues = paymentIssues ?? new LoggingPaymentIssueRecorder(logger);
         _sessionStore = sessionStore;
         _attemptStore = attemptStore;
         _providerResolver = providerResolver;
@@ -236,6 +241,17 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             if (provider is null || !await CheckoutPaymentMethodSelector.IsAvailableAsync(provider, session, cancellationToken))
             {
                 return Refused(telemetry, provider, "provider_unavailable", PaymentBeginOutcome.Failure("The selected payment method is not available."));
+            }
+
+            // The network the payment comes from is kept on the checkout, so the card-testing protection counts a decline
+            // reported later, by a webhook or the sweep, against it too.
+            if (!string.IsNullOrEmpty(options.ClientNetworkKey) &&
+                (!session.TryGet<CheckoutClientInfo>(out var client) || !string.Equals(client.NetworkKey, options.ClientNetworkKey, StringComparison.Ordinal)))
+            {
+                session.Put(new CheckoutClientInfo { NetworkKey = options.ClientNetworkKey });
+                session.ModifiedUtc = _clock.UtcNow;
+
+                await _sessionStore.SaveAsync(session, cancellationToken);
             }
 
             // What the purchase needs is held before any provider is contacted, so a buyer who can't have it, such as
@@ -495,6 +511,38 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 await _session.SaveChangesAsync(cancellationToken);
 
                 return pending;
+            }
+
+            // A payment is checked against the invoice when it begins, but the buyer can change the checkout afterwards
+            // (shipping, an order bump, a taxed address) and confirm the payment they already began. What settled is
+            // checked again against the invoice as it is now, so a purchase is never completed for less than it costs.
+            var shortfall = await FindShortfallAsync(session, invoice, reconciliation.SettledObligationIds, cancellationToken);
+
+            if (shortfall is not null)
+            {
+                _logger.LogWarning(
+                    "Obligation '{ObligationId}' of checkout '{SessionId}' settled {Paid} {Currency} but the invoice now asks {Due}; the checkout is not completed and the payment is refunded.",
+                    shortfall.Value.ObligationId,
+                    session.SessionId,
+                    shortfall.Value.Paid,
+                    invoice.Currency,
+                    shortfall.Value.Due);
+
+                await _paymentIssues.RecordAsync(new PaymentIssue
+                {
+                    Kind = PaymentIssueKinds.PaymentShortOfInvoice,
+                    Message = "The checkout changed after its payment was begun and the payment no longer covered it, so the checkout was not completed and the payment was refunded.",
+                    ReferenceType = "CheckoutSession",
+                    ReferenceId = session.SessionId,
+                    ProviderKey = shortfall.Value.ProviderKey,
+                    ProviderReference = shortfall.Value.TransactionId,
+                    Amount = shortfall.Value.Paid,
+                    Currency = invoice.Currency,
+                }, cancellationToken);
+
+                await CompensateAsync(session, reconciliation.SettledObligationIds, cancellationToken);
+
+                return await FailAsync(session, flow, "The checkout changed after the payment was started, so the payment was refunded. Please pay again for the new total.", cancellationToken);
             }
 
             // Every obligation is confirmed. That fact is committed before anything is fulfilled, so a
@@ -792,12 +840,15 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             candidate.State is PaymentAttemptState.Created or PaymentAttemptState.Pending or PaymentAttemptState.Succeeded);
 
         // An attempt begun for a different total, before the buyer applied a gift card or a code, is not resumed: it
-        // would charge what the invoice no longer asks for. It's set aside, and a new one is made for the new total.
-        if (attempt?.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
-            !MatchesInvoice(attempt, invoice) &&
-            await TrySupersedeAsync(session, attempt, cancellationToken))
+        // would charge what the invoice no longer asks for. It's set aside, and a new one is made for the new total; one
+        // that can't be set aside is left, and no second payment is begun next to it.
+        if (attempt?.State is PaymentAttemptState.Created or PaymentAttemptState.Pending && !MatchesInvoice(attempt, invoice))
         {
-            existingAttempts.Remove(attempt);
+            if (!await TrySupersedeAsync(session, attempt, cancellationToken))
+            {
+                return (null, "A payment for this checkout is already under way. Finish it, or try again in a few minutes.", false, false, null);
+            }
+
             attempt = null;
         }
 
@@ -825,17 +876,21 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             attempt = CreateAttempt(session, invoice, provider.Key, obligationId);
             attempt.CreatedUtc = _clock.UtcNow;
 
-            // A declined attempt is final, so a new one for the same obligation is a genuinely new charge. It
-            // needs its own idempotency key: reusing the declined attempt's key would make the gateway replay the
-            // decline instead of trying the payment method it is now given.
-            var declinedBefore = existingAttempts.Count(candidate =>
-                string.Equals(candidate.ObligationId, obligationId, StringComparison.Ordinal) &&
-                string.Equals(candidate.ProviderKey, provider.Key, StringComparison.OrdinalIgnoreCase) &&
-                candidate.State == PaymentAttemptState.Failed);
-
-            if (declinedBefore > 0)
+            // A caller that charges the same thing from more than one checkout gives its own key, so the provider sees
+            // one charge whichever checkout gets there.
+            if (!string.IsNullOrWhiteSpace(options?.IdempotencyKey))
             {
-                attempt.IdempotencyKey += "_retry" + declinedBefore;
+                attempt.IdempotencyKey = $"{options.IdempotencyKey.Trim()}_{obligationId}";
+            }
+
+            // A declined or set-aside attempt is over, so a new one for the same obligation is a new charge with its own
+            // idempotency key: a declined one's key replays the decline, and a canceled one's names another attempt, which
+            // Stripe refuses as the same key with other parameters.
+            var endedBefore = CountEndedAttempts(existingAttempts, obligationId, provider.Key);
+
+            if (endedBefore > 0)
+            {
+                attempt.IdempotencyKey += "_retry" + endedBefore;
             }
 
             // Persist BEFORE the provider is contacted. A crash between these two lines must leave a record
@@ -886,6 +941,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 // The gateway refused the money, so this attempt is over. Recording that, with the gateway's
                 // reason and reference, keeps the ledger truthful and stops a later begin from resuming an
                 // attempt that can never settle.
+                var previousState = attempt.State;
+
                 attempt.State = PaymentAttemptState.Failed;
                 attempt.FailureReason = result.ErrorMessage;
 
@@ -895,6 +952,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 }
 
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
+
+                if (_declineRecorder is not null && PaymentDeclineRecorder.IsNewDecline(previousState, attempt.State) && !CheckoutPaymentDataKeys.IsSet(options.ProviderData, CheckoutPaymentDataKeys.OffSession))
+                {
+                    await _declineRecorder.RecordAsync(session, attempt, cancellationToken);
+                }
             }
 
             return (null, result.ErrorMessage, result.Declined, result.Declined && result.RequiresAuthentication, result.CardBrand);
@@ -969,146 +1031,43 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private static BillingDurationKey TryGetRecurringInterval(CheckoutInvoice invoice, string obligationId)
         => CheckoutObligations.TryGetRecurringGroup(invoice, obligationId, out var interval, out _) ? interval : null;
 
-    private static bool MatchesInvoice(PaymentAttempt attempt, CheckoutInvoice invoice)
-    {
-        var (amount, taxAmount) = GetObligationAmounts(invoice, attempt.ObligationId);
-
-        return attempt.ExpectedAmount == amount && attempt.ExpectedTaxAmount == taxAmount;
-    }
-
-    // An attempt the provider was already given is only set aside when the provider says nothing was paid, so a
-    // payment the buyer finished in another tab is never dropped.
-    private async Task<bool> TrySupersedeAsync(CheckoutSession session, PaymentAttempt attempt, CancellationToken cancellationToken)
-    {
-        if (attempt.State == PaymentAttemptState.Pending && _providerResolver.GetProvider(attempt.ProviderKey) is { } provider)
-        {
-            try
-            {
-                var verification = await provider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = attempt }, cancellationToken);
-
-                if (verification.Status == PaymentStatus.Succeeded)
-                {
-                    _logger.LogWarning("Attempt '{AttemptId}' of checkout '{SessionId}' was paid before the total changed, so it stands.", attempt.ItemId, session.SessionId);
-
-                    return false;
-                }
-            }
-            catch (Exception exception)
-            {
-                _logger.LogWarning(exception, "Could not check attempt '{AttemptId}' of checkout '{SessionId}' before setting it aside, so it stands.", attempt.ItemId, session.SessionId);
-
-                return false;
-            }
-        }
-
-        await SupersedeAsync(attempt, cancellationToken);
-
-        return true;
-    }
-
-    // Sets aside the live attempts other providers made for this obligation. Returns false, leaving everything as it
-    // is, when one of them was paid, can't be checked, or its provider won't confirm it's canceled.
-    private async Task<bool> TryReleaseOtherProvidersAsync(
+    // Returns the first settled obligation whose confirmed payments add up to less than the invoice now asks for it,
+    // in minor units. A provider that reports no authoritative amount is held to what its attempt expected, which is
+    // what reconciliation records as its confirmed amount.
+    private async Task<(string ObligationId, decimal Paid, decimal Due, string ProviderKey, string TransactionId)?> FindShortfallAsync(
         CheckoutSession session,
-        string providerKey,
-        string obligationId,
-        List<PaymentAttempt> existingAttempts,
+        CheckoutInvoice invoice,
+        IEnumerable<string> settledObligationIds,
         CancellationToken cancellationToken)
     {
-        var others = existingAttempts
-            .Where(candidate =>
-                string.Equals(candidate.ObligationId, obligationId, StringComparison.Ordinal) &&
-                !string.Equals(candidate.ProviderKey, providerKey, StringComparison.OrdinalIgnoreCase) &&
-                !candidate.IsSuperseded &&
-                candidate.State is PaymentAttemptState.Created or PaymentAttemptState.Pending or PaymentAttemptState.Succeeded)
-            .ToList();
+        var settled = settledObligationIds.ToHashSet(StringComparer.Ordinal);
 
-        foreach (var other in others)
+        if (settled.Count == 0)
         {
-            if (other.State == PaymentAttemptState.Succeeded || _providerResolver.GetProvider(other.ProviderKey) is not { } otherProvider)
-            {
-                return false;
-            }
-
-            // An attempt still Created, with no reference, is one whose begin may have ended without the provider's
-            // answer (a server error, a timeout): the provider may have charged it anyway. Until the provider can be
-            // expected to find it, nothing is set aside.
-            if (other.State == PaymentAttemptState.Created &&
-                string.IsNullOrEmpty(other.ProviderReference) &&
-                other.CreatedUtc != default &&
-                _clock.UtcNow - other.CreatedUtc < _unansweredBeginWindow)
-            {
-                return false;
-            }
-
-            try
-            {
-                if (other.State is PaymentAttemptState.Pending or PaymentAttemptState.Created)
-                {
-                    var verification = await otherProvider.VerifyAsync(new VerifyPaymentContext { Session = session, Attempt = other }, cancellationToken);
-
-                    if (verification.Status == PaymentStatus.Succeeded)
-                    {
-                        _logger.LogWarning("Attempt '{AttemptId}' of checkout '{SessionId}' was paid through '{ProviderKey}', so no payment is begun with '{NewProviderKey}'.", other.ItemId, session.SessionId, other.ProviderKey, providerKey);
-
-                        return false;
-                    }
-                }
-
-                var canceled = await otherProvider.CancelAsync(
-                    new CancelPaymentContext
-                    {
-                        Session = session,
-                        Attempt = other,
-                        Reason = "The buyer paid with another payment method.",
-                    },
-                    cancellationToken);
-
-                if (!canceled.Succeeded)
-                {
-                    return false;
-                }
-            }
-            catch (Exception exception)
-            {
-                _logger.LogWarning(exception, "Could not set aside attempt '{AttemptId}' of checkout '{SessionId}', so no payment is begun with '{ProviderKey}'.", other.ItemId, session.SessionId, providerKey);
-
-                return false;
-            }
-
-            other.State = PaymentAttemptState.Canceled;
-            other.IsSuperseded = true;
-            other.FailureReason = "The buyer paid with another payment method.";
-
-            await _attemptStore.UpdateAsync(other, cancellationToken);
-            existingAttempts.Remove(other);
+            return null;
         }
 
-        return true;
-    }
+        var attempts = await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken);
 
-    private async Task SupersedeAsync(PaymentAttempt attempt, CancellationToken cancellationToken)
-    {
-        attempt.State = PaymentAttemptState.Canceled;
-        attempt.IsSuperseded = true;
-        attempt.FailureReason = "The total changed before it was paid.";
-
-        await _attemptStore.UpdateAsync(attempt, cancellationToken);
-    }
-
-    // Attempts begun for obligations the invoice no longer has, such as a card payment begun before a gift card was
-    // applied that now pays everything, are set aside, so they neither keep the checkout waiting nor get charged.
-    private async Task SupersedeUnexpectedAttemptsAsync(CheckoutSession session, IReadOnlyCollection<string> expectedObligations, CancellationToken cancellationToken)
-    {
-        foreach (var attempt in await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken))
+        foreach (var group in attempts
+            .Where(attempt => attempt.State == PaymentAttemptState.Succeeded &&
+                !string.IsNullOrEmpty(attempt.TransactionId) &&
+                settled.Contains(attempt.ObligationId))
+            .GroupBy(attempt => attempt.ObligationId, StringComparer.Ordinal))
         {
-            if (attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending &&
-                !attempt.IsSuperseded &&
-                !expectedObligations.Contains(attempt.ObligationId))
+            var (amount, taxAmount) = GetObligationAmounts(invoice, group.Key);
+            var due = amount + taxAmount;
+            var paid = group.Sum(attempt => attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount);
+
+            if (Money.ToMinorUnits(paid, invoice.Currency) < Money.ToMinorUnits(due, invoice.Currency))
             {
-                await TrySupersedeAsync(session, attempt, cancellationToken);
+                var last = group.Last();
+
+                return (group.Key, paid, due, last.ProviderKey, last.TransactionId);
             }
         }
+
+        return null;
     }
 
     private static PaymentAttempt CreateAttempt(CheckoutSession session, CheckoutInvoice invoice, string providerKey, string obligationId)
@@ -1230,6 +1189,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             ReturnUrl = options.ReturnUrl,
             CancelUrl = options.CancelUrl,
             ProviderData = providerData,
+            ClientNetworkKey = options.ClientNetworkKey,
+            IdempotencyKey = options.IdempotencyKey,
         };
     }
 
@@ -1421,21 +1382,18 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 // listed as a payment issue as well as logged.
                 _logger.LogError(exception, "Failed to compensate settled obligation '{ObligationId}' of checkout '{SessionId}'. This payment must be refunded manually.", attempt.ObligationId, session.SessionId);
 
-                if (_paymentIssues is not null)
+                await _paymentIssues.RecordAsync(new PaymentIssue
                 {
-                    await _paymentIssues.RecordAsync(new PaymentIssue
-                    {
-                        Kind = PaymentIssueKinds.RefundFailed,
-                        Message = "Refund this payment in the payment provider's dashboard: the checkout could not be completed and the automatic refund failed.",
-                        Error = exception.Message,
-                        ReferenceType = "CheckoutSession",
-                        ReferenceId = session.SessionId,
-                        ProviderKey = attempt.ProviderKey,
-                        ProviderReference = attempt.TransactionId,
-                        Amount = attempt.ConfirmedAmount > 0m ? attempt.ConfirmedAmount : attempt.ExpectedAmount,
-                        Currency = attempt.Currency,
-                    }, cancellationToken);
-                }
+                    Kind = PaymentIssueKinds.RefundFailed,
+                    Message = "Refund this payment in the payment provider's dashboard: the checkout could not be completed and the automatic refund failed.",
+                    Error = exception.Message,
+                    ReferenceType = "CheckoutSession",
+                    ReferenceId = session.SessionId,
+                    ProviderKey = attempt.ProviderKey,
+                    ProviderReference = attempt.TransactionId,
+                    Amount = attempt.ConfirmedAmount > 0m ? attempt.ConfirmedAmount : attempt.ExpectedAmount,
+                    Currency = attempt.Currency,
+                }, cancellationToken);
             }
         }
     }

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.ViewModels;
 
@@ -31,6 +32,12 @@ public class AccessGrantsViewModel
     /// </summary>
     [BindNever]
     public List<AccessGrant> InheritedGrants { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the rules listed: the grants shown, then the grants for every child tenant on the screen of one.
+    /// </summary>
+    [BindNever]
+    public AdminListContext List { get; set; }
 
     /// <summary>
     /// Gets or sets the roles of the parent tenant.

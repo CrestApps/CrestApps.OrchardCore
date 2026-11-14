@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
 /// <summary>
@@ -8,6 +10,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// Tokens rather than flags, for the same reason the end-call and transfer decisions reach the session as tokens:
 /// it is busy carrying audio in both directions, and the report arrives from a webhook request on another thread.
 /// </remarks>
+[SuppressMessage("Design", "CA1001:Types that own disposable fields should be disposable", Justification = "Its token sources are only cancelled: none has a timer, a link or a wait handle, so disposing them would free nothing.")]
 public sealed class AnsweringMachineSignal
 {
     private readonly CancellationTokenSource _machineDetected = new();

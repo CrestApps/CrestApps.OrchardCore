@@ -35,6 +35,7 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly string _protectionPurpose;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionAuthDisplayDriverBase{TModel}"/> class.
@@ -46,11 +47,29 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
         IDataProtectionProvider dataProtectionProvider,
         string protectionPurpose,
         IStringLocalizer stringLocalizer)
+        : this(dataProtectionProvider, protectionPurpose, stringLocalizer, endpointPolicy: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConnectionAuthDisplayDriverBase{TModel}"/> class.
+    /// </summary>
+    /// <param name="dataProtectionProvider">The provider the secrets are protected with.</param>
+    /// <param name="protectionPurpose">The purpose the secrets of this connection type are protected for.</param>
+    /// <param name="stringLocalizer">The localizer of the derived driver, which owns the validation messages.</param>
+    /// <param name="endpointPolicy">The policy an OAuth2 token endpoint is checked with, or <see langword="null"/> to
+    /// refuse every address on the site's own network.</param>
+    protected ConnectionAuthDisplayDriverBase(
+        IDataProtectionProvider dataProtectionProvider,
+        string protectionPurpose,
+        IStringLocalizer stringLocalizer,
+        IAIEndpointPolicy endpointPolicy)
     {
         ArgumentException.ThrowIfNullOrEmpty(protectionPurpose);
 
         _dataProtectionProvider = dataProtectionProvider;
         _protectionPurpose = protectionPurpose;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -189,6 +208,12 @@ public abstract class ConnectionAuthDisplayDriverBase<TModel> : DisplayDriver<TM
         else if (!Uri.TryCreate(model.OAuth2TokenEndpoint, UriKind.Absolute, out _))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.OAuth2TokenEndpoint), S["Invalid Token Endpoint URL."]);
+        }
+        else if (!(_endpointPolicy?.IsAllowed(model.OAuth2TokenEndpoint) ?? AIEgress.IsAllowedEndpoint(model.OAuth2TokenEndpoint, isDevelopment: false, options: null)))
+        {
+            // The server posts the client's credentials here and sends the token it answers with to the connection, so
+            // it is held to the same rule as the connection's own endpoint.
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.OAuth2TokenEndpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.OAuth2ClientId))

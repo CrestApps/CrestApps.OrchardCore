@@ -155,6 +155,13 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
             var now = _clock.UtcNow;
 
+            // A suspended agreement has no access left to run to. Canceling it "at period end" made it current again
+            // until then, which gave the subscriber back, by pressing Cancel, everything an operator had suspended.
+            if (subscription.Status == SubscriptionStatus.Paused)
+            {
+                atPeriodEnd = false;
+            }
+
             subscription.Status = SubscriptionStatus.Canceled;
             subscription.CancelAtPeriodEnd = atPeriodEnd;
             subscription.CanceledUtc = now;
@@ -186,12 +193,35 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
     public Task<Subscription> ResumeAsync(string subscriptionId, CancellationToken cancellationToken = default)
         => MutateAsync(SubscriptionsTelemetry.OperationResume, subscriptionId, subscription =>
         {
-            if (subscription.Status is not (SubscriptionStatus.PastDue or SubscriptionStatus.Paused))
+            // An expired offline agreement can be restored, for example once its overdue invoice was paid after the grace
+            // window. One a gateway billed is not: the gateway owns that schedule, and an agreement active here that the
+            // gateway no longer bills would be access given away.
+            var restorable = subscription.Status is SubscriptionStatus.PastDue or SubscriptionStatus.Paused or SubscriptionStatus.Incomplete ||
+                (subscription.Status == SubscriptionStatus.Expired &&
+                    string.IsNullOrEmpty(subscription.ProviderSubscriptionId) &&
+                    subscription.CanceledUtc is null &&
+                    !subscription.CancelAtPeriodEnd);
+
+            if (!restorable)
             {
                 return SubscriptionTransition.NoChange;
             }
 
             var now = _clock.UtcNow;
+
+            // One bought with a promise to pay starts when its first payment arrives; its schedule was set when it was made.
+            if (subscription.Status == SubscriptionStatus.Incomplete)
+            {
+                subscription.Status = SubscriptionStatus.Active;
+                subscription.Events.Add(new SubscriptionEvent
+                {
+                    CreatedUtc = now,
+                    Type = SubscriptionEventType.Resumed,
+                    Message = "The first payment was received, so the subscription is active.",
+                });
+
+                return SubscriptionTransition.Changed;
+            }
 
             subscription.Status = SubscriptionStatus.Active;
             subscription.PastDueSinceUtc = null;

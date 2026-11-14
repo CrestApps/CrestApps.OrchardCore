@@ -87,6 +87,6 @@ public sealed class AICompletionWithConfigMcpConnectionsDisplayDriver : DisplayD
 
         activity.Interaction = interaction;
 
-        return Edit(activity, context);
+        return await EditAsync(activity, context);
     }
 }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.BackgroundTasks;
@@ -34,6 +35,7 @@ public sealed class TimeClockStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWorkforceTimeClockCore();
+        services.AddSignedLinks();
         services.AddPersonalDataContributor<TimePunchPersonalDataContributor>();
         services.AddWorkforceTimeClockTimeTracker();
         services.AddOptions<TimeClockTimeTrackerOptions>()

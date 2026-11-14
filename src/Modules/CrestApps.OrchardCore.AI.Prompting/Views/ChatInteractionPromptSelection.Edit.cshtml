@@ -67,7 +67,12 @@
                 paramsList.innerHTML = '';
                 paramDescriptors[id].forEach(function (p) {
                     var li = document.createElement('li');
-                    li.innerHTML = '<strong>' + p.Name + '</strong>' + (p.Description ? ': ' + p.Description : '');
+                    var name = document.createElement('strong');
+                    name.textContent = p.Name;
+                    li.appendChild(name);
+                    if (p.Description) {
+                        li.appendChild(document.createTextNode(': ' + p.Description));
+                    }
                     paramsList.appendChild(li);
                 });
                 paramsInfo.classList.remove('d-none');

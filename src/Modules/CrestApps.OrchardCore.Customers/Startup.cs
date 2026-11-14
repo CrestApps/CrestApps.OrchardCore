@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Commerce;
@@ -26,9 +27,11 @@ using CrestApps.OrchardCore.Webhooks;
 using CrestApps.OrchardCore.Customers.Api;
 using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -64,8 +67,12 @@ public sealed class Startup : StartupBase
         // A guest's history joins their account once the account's email is verified.
         services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
         services.AddScoped<ILoginFormEvent, CustomerMergeLoginFormEvent>();
-        services.AddScoped<IRegistrationFormEvents, CustomerMergeRegistrationFormEvents>();
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
+
+        // Following a confirmation link is what proves the address above, so a link only confirms the address it was sent
+        // to: an old link must not confirm an address the user changed to afterwards.
+        services.AddTransient<EmailBoundConfirmationTokenProvider>();
+        services.AddTransient<IConfigureOptions<IdentityOptions>, EmailBoundConfirmationIdentityOptions>();
 
         services.AddScoped<CustomerAddressBook>();
 
@@ -203,6 +210,9 @@ public sealed class ReferralsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Referral codes generated per network.
+        services.AddAttemptPolicy(Controllers.ReferralController.ReferralAttemptPolicy, 20, TimeSpan.FromHours(1));
+
         services.AddDataMigration<ReferralMigrations>()
             .AddIndexProvider<Indexes.ReferralProfileIndexProvider>();
         services.AddScoped<IReferralStore, ReferralStore>();

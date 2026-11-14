@@ -48,6 +48,35 @@ public sealed class OfflinePaymentMethodsTests
         Assert.True(await provider.IsAvailableAsync(session, TestContext.Current.CancellationToken));
     }
 
+    /// <summary>
+    /// SEC-C5: the signed-in and largest-order rules applied to Pay Later only; a bank transfer and cash on delivery stayed
+    /// open to guests with no cap. The store can now hold them to the same rules.
+    /// </summary>
+    [Fact]
+    public async Task BankTransferAndCashOnDelivery_FollowTheSignedInAndLargestOrderRules()
+    {
+        var guest = new CheckoutSession { SessionId = "session-1", Currency = "USD" };
+        guest.Put(new CheckoutInvoice { Currency = "USD", GrandTotal = 40m, DueNow = 40m });
+        guest.Put(new CheckoutShippingInfo { Address = new Address { City = "Seattle", Country = "US" } });
+
+        var large = new CheckoutSession { SessionId = "session-2", OwnerId = "user-1", Currency = "USD" };
+        large.Put(new CheckoutInvoice { Currency = "USD", GrandTotal = 600m, DueNow = 600m });
+        large.Put(new CheckoutShippingInfo { Address = new Address { City = "Seattle", Country = "US" } });
+
+        _bankTransfer = new BankTransferSettings { Enabled = true, Instructions = "Contoso Bank", RequireSignedIn = true, MaxOrderAmount = 500m };
+        _cashOnDelivery = new CashOnDeliverySettings { Enabled = true, RequireSignedIn = true, MaxOrderAmount = 500m };
+
+        Assert.False(await BankTransfer().IsAvailableAsync(guest, TestContext.Current.CancellationToken));
+        Assert.False(await BankTransfer().IsAvailableAsync(large, TestContext.Current.CancellationToken));
+        Assert.False(await CashOnDelivery().IsAvailableAsync(guest, TestContext.Current.CancellationToken));
+        Assert.False(await CashOnDelivery().IsAvailableAsync(large, TestContext.Current.CancellationToken));
+
+        guest.OwnerId = "user-2";
+
+        Assert.True(await BankTransfer().IsAvailableAsync(guest, TestContext.Current.CancellationToken));
+        Assert.True(await CashOnDelivery().IsAvailableAsync(guest, TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task CashOnDeliveryIsOfferedOnlyForAnOrderThatIsDelivered()
     {
@@ -68,7 +97,7 @@ public sealed class OfflinePaymentMethodsTests
     public async Task PayLaterIsOffByDefault_AndCanBeTurnedOn()
     {
         var provider = PayLater();
-        var session = new CheckoutSession { SessionId = "session-1" };
+        var session = new CheckoutSession { SessionId = "session-1", OwnerId = "user-1" };
 
         _payLater = new PayLaterSettings();
         Assert.False(await provider.IsAvailableAsync(session, TestContext.Current.CancellationToken));
@@ -81,7 +110,7 @@ public sealed class OfflinePaymentMethodsTests
     public async Task TheSelectorKeepsOnlyAvailableProviders()
     {
         var gateway = new FakeCheckoutPaymentProvider("gateway", _ => new PaymentVerificationResult { Status = PaymentStatus.Succeeded });
-        var session = new CheckoutSession { SessionId = "session-1" };
+        var session = new CheckoutSession { SessionId = "session-1", OwnerId = "user-1" };
 
         var available = await CheckoutPaymentMethodSelector.GetAvailableAsync([gateway, BankTransfer(), CashOnDelivery(), PayLater()], session, TestContext.Current.CancellationToken);
 

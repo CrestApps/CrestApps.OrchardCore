@@ -1180,8 +1180,8 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
                 ProviderName = call.ProviderName,
                 UserId = userId,
                 UserName = userName,
-                From = call.From,
-                To = call.To,
+                From = CallerNumbers.Sanitize(call.From),
+                To = CallerNumbers.Sanitize(call.To),
                 Direction = call.Direction,
                 IsExtension = !string.IsNullOrEmpty(extensionNumber),
                 ExtensionNumber = extensionNumber,
@@ -1194,14 +1194,14 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
             return;
         }
 
-        if (!string.IsNullOrEmpty(call.To))
+        if (CallerNumbers.Sanitize(call.To) is { } to)
         {
-            existing.To = call.To;
+            existing.To = to;
         }
 
-        if (!string.IsNullOrEmpty(call.From))
+        if (CallerNumbers.Sanitize(call.From) is { } from)
         {
-            existing.From = call.From;
+            existing.From = from;
         }
 
         await store.UpdateAsync(existing, cancellationToken);

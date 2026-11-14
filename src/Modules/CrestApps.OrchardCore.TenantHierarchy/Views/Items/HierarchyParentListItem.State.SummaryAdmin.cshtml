@@ -1,0 +1,11 @@
+@model ShapeViewModel<HierarchyParentListItem>
+
+@{
+    var parent = Model.Value.Parent;
+}
+
+<partial name="_TenantStateBadge" model="parent.Settings" />
+@if (parent.Warnings.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@string.Join(" ", parent.Warnings)"><i class="fa-solid fa-triangle-exclamation text-warning" aria-hidden="true"></i> @T.Plural(parent.Warnings.Count, "1 problem", "{0} problems")</span>
+}

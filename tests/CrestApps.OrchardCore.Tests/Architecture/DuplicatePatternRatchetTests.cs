@@ -9,6 +9,9 @@ namespace CrestApps.OrchardCore.Tests.Architecture;
 /// <c>docs/engineering/reusability-audit-2026-11.md</c>, sections 2 and 6). Each pattern names the building block to use
 /// instead. The files that held a copy when the ratchet was set are listed with the number of copies each had; a listed
 /// file may lose copies but never gain one, and no other file may add one.
+/// <para>
+/// Each file is matched as a whole, with its comments blanked, so a call split over several lines is seen as well.
+/// </para>
 /// </summary>
 public sealed class DuplicatePatternRatchetTests
 {
@@ -49,6 +52,42 @@ public sealed class DuplicatePatternRatchetTests
             "private FixedTimeEquals",
             @"private\s+(?:static\s+)?bool\s+FixedTimeEquals\s*\(",
             "Call CryptographicOperations.FixedTimeEquals."),
+        new(
+            "Status429TooManyRequests",
+            @"\bStatus429TooManyRequests\b",
+            "Register an attempt policy (IAttemptLimiter) or a group limit (AddClientGroupRateLimit with AddJsonRejectionHandler), and answer with ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync or ApiProblems.TooManyRequests.",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Throttling/"),
+        new(
+            "RemoteIpAddress?.ToString()",
+            @"RemoteIpAddress\s*\??\s*\.\s*ToString\s*\(\s*\)",
+            "Key a limit with ClientNetworkKey (NetworkOnly, From or FromAddress), which masks IPv6 to its /64 and honors the Reverse Proxy feature.",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Throttling/"),
+        new(
+            "HMAC signature verified by hand",
+            @"\bHMACSHA(?:1|256|384|512)\b",
+            "Check a provider's signature with HmacWebhookSignatureValidator (an IWebhookSignatureValidator in CrestApps.OrchardCore.Webhooks.Core), which computes and compares in constant time (DRY-7).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Webhooks.Core/",
+            RequiredFileText: "FixedTimeEquals"),
+        new(
+            "secret token made and hashed by hand",
+            @"\bSHA256\.HashData\s*\(",
+            "Make a secret token with SecretTokens.Create and hash it with SecretTokens.Hash (CrestApps.OrchardCore.Core.Security) (DRY-2).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Security/",
+            RequiredFileText: "RandomNumberGenerator"),
+        new(
+            "time-limited protector by hand",
+            @"\.ToTimeLimitedDataProtector\s*\(",
+            "Sign a time-limited value with SignedTokenService (CrestApps.OrchardCore.Core.Services), with a purpose of its own (DRY-2).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/Services/SignedTokenService.cs"),
+        new(
+            "data protector outside Core",
+            @"\.CreateProtector\s*\(",
+            "Protect and read a stored secret with ProtectSetting and UnprotectSetting (ProtectedSettingExtensions in CrestApps.OrchardCore.Core.Security), and sign a value with SignedTokenService, each with a purpose of its own (DRY-12a, DRY-2).",
+            ExemptDirectory: "src/Core/CrestApps.OrchardCore.Core/"),
+        new(
+            "Untracked Task.Run",
+            @"(?:\b_\s*=|=>)\s*Task\s*\.\s*Run\s*\(",
+            "Nothing observes a discarded Task.Run: a fault is lost and a shutdown drops the work. Await it, hand it to a tracker that drains on shutdown (AIVoiceCallShutdown.TrackHandOn today), or queue it on ILeasedWorkQueue<T> when it must survive a restart."),
     ];
 
     /// <summary>
@@ -74,10 +113,116 @@ public sealed class DuplicatePatternRatchetTests
         {
             // Orchard's synchronous scripting contract: recipe expressions call renderAITemplate() and read its value.
             ["src/Modules/CrestApps.OrchardCore.AI/Recipes/AITemplateMethodProvider.cs"] = 1,
+
+            // The host's stopping callback is synchronous and has to wait for the drain; the drain tasks complete on the
+            // work's own threads, so blocking here cannot deadlock.
+            ["src/Modules/CrestApps.OrchardCore.ContactCenter/Services/ContactCenterShutdownDrain.cs"] = 1,
+        },
+        ["Untracked Task.Run"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/AIVoiceCallShutdown.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/AIVoiceSessionTracker.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/RealtimeVoiceConversationRunner.Guardrails.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/RealtimeVoiceConversationRunner.Handover.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/RealtimeVoiceConversationRunner.Supervision.cs"] = 4,
+            ["src/Modules/CrestApps.OrchardCore.Omnichannel.Voice/Services/RedisAIVoiceCallMessageBus.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Services/TelnyxAiVoiceRecordingHandler.cs"] = 1,
         },
         ["private FixedTimeEquals"] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/DelegatedEntryController.cs"] = 1,
+        },
+        ["data protector outside Core"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/MerchantSigningKeyService.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.AI.Chat.Core/Services/ConnectionAddressAIVisitorIdentityResolver.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Calendars.Core/Services/CalendarFeedTokens.cs"] = 3,
+            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/IdempotencyEndpointFilter.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/Twilio/TwilioWebhookEndpoint.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/Services/SecureKeypadCaptureStore.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Handlers/UserRegistrationCheckoutHandler.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Telnyx.Core/Services/TelnyxSmsOptionsConfiguration.cs"] = 2,
+            ["src/Core/CrestApps.OrchardCore.Webhooks.Core/Services/WebhookDispatcher.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultWebPushService.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultWorkerFeedService.cs"] = 2,
+            ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/WorkerFeedTokenBackfill.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Accounts.B2B/Services/PunchoutService.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Addresses/GooglePlaces/GooglePlacesAddressAutocompleteProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpOrderWebhookFormatter.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Controllers/AgentPlatformsController.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.A2A/Handlers/A2AConnectionSettingsHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.Chat.Claude/ClaudeOptionsConfiguration.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CopilotOptionsConfiguration.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/Services/AzureAISearchAIDataSourceSourceHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/Services/ElasticsearchAIDataSourceSourceHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI.DataSources.PostgreSQL/Services/PostgreSQLAIDataSourceSourceHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI/Services/AIWebhookImporter.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AI/Workflows/Models/SendSignedWebhookTask.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriClient.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskContactCenterVoiceMediaProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskPjsipDialogTerminator.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskRealtimeVoiceTenantEvents.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskSoftPhoneRegistrationConfigContributor.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskTelephonyProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AzureAIInference/Handlers/AzureAIInferenceConnectionHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AzureAIInference/Handlers/AzureAIInferenceConnectionSettingsHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.ContactCenter/Services/CallRecordingLinks.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/CanadaDnclRegistry.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/UsaFtcDncRegistry.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Downloads/Services/DownloadService.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Geo.AzureMaps/AzureMapsProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Geo.GoogleMaps/GoogleMapsProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Sms/Services/TwilioSmsMediaSender.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingAttachmentLinks.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.OpenAI.Azure/Handlers/AzureOpenAIConnectionHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.OpenAI.Azure/Handlers/AzureOpenAIConnectionSettingsHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.OpenAI/Handlers/OpenAIProviderConnectionHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.OpenAI/Handlers/OpenAIProviderConnectionSettingsHandler.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Services/AbstractApiPhoneNumberVerificationProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Services/TwilioPhoneNumberVerificationProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/Services/VeriphonePhoneNumberVerificationProvider.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telephony/Controllers/TelephonyOAuthController.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telephony/Services/DefaultTelephonyUserTokenStore.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Controllers/TelnyxConnectController.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Endpoints/TelnyxWebhookEndpoint.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Services/TelnyxOptionsConfigurations.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Wizard/Services/WizardResumeCookieManager.cs"] = 1,
+        },
+        ["secret token made and hashed by hand"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // A SIP credential's digest, a PKCE challenge and a six-digit one-time code: not secret tokens.
+            ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskPjsipCredentialIssuer.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telephony/Services/TelephonyPkceGenerator.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Users/Services/EmailSignInCodes.cs"] = 1,
+        },
+        ["Status429TooManyRequests"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // The API's problem helpers and the idempotency filter's "already in progress".
+            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/ApiProblems.cs"] = 1,
+            ["src/Core/CrestApps.OrchardCore.Commerce.Api.Core/IdempotencyEndpointFilter.cs"] = 1,
+
+            // The agent protocols' own error shapes.
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpCheckoutOperations.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpMcpIdempotency.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpOperationResult.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpCatalogEndpoints.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpOperations.cs"] = 1,
+
+            // The payment endpoints answer an attempt policy's refusal in their own JSON shape.
+            ["src/Modules/CrestApps.OrchardCore.Checkout/Api/CheckoutApiEndpoints.cs"] = 2,
+            ["src/Modules/CrestApps.OrchardCore.Checkout/Endpoints/PaymentEndpoints.cs"] = 2,
+
+            // The provider ingress limiters (a concurrency gate, not an attempt counter).
+            ["src/Modules/CrestApps.OrchardCore.ContactCenter/Endpoints/VoiceIngressEndpoint.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.Telnyx/Endpoints/TelnyxWebhookEndpoint.cs"] = 2,
+        },
+        ["RemoteIpAddress?.ToString()"] = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // Recorded for an audit trail or a signed request's context, never as a limit's key.
+            ["src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Services/TenantHierarchyBroker.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Acp/AcpRequestFilter.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpRequestFilter.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/ChildTenantManager.cs"] = 1,
+            ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/DelegatedAccessIssuer.cs"] = 1,
         },
     };
 
@@ -157,13 +302,25 @@ public sealed class DuplicatePatternRatchetTests
     [InlineData("GetAwaiter().GetResult()", "var value = await task;", 0)]
     [InlineData("private FixedTimeEquals", "    private static bool FixedTimeEquals(string a, string b)", 1)]
     [InlineData("private FixedTimeEquals", "    return CryptographicOperations.FixedTimeEquals(a, b);", 0)]
-    public void Count_MatchesDeclarationsAndCallsButNotComments(string patternName, string line, int expected)
+    [InlineData("GetAwaiter().GetResult()", "var value = task\n    .GetAwaiter()\n    .GetResult();", 1)]
+    [InlineData("GetAwaiter().GetResult()", "/* task.GetAwaiter().GetResult() */ var value = await task;", 0)]
+    [InlineData("Untracked Task.Run", "_ = Task.Run(() => WriteAsync());", 1)]
+    [InlineData("Untracked Task.Run", "_ = Task\n    .Run(() => WriteAsync());", 1)]
+    [InlineData("Untracked Task.Run", "subscriber.Subscribe(channel, (_, value) => Task.Run(() => handler(value)));", 1)]
+    [InlineData("Untracked Task.Run", "await Task.Run(() => Compute());", 0)]
+    [InlineData("Untracked Task.Run", "var work = Task.Run(() => Compute());", 0)]
+    [InlineData("Untracked Task.Run", "// _ = Task.Run(() => WriteAsync());", 0)]
+    [InlineData("data protector outside Core", "var protector = _dataProtectionProvider.CreateProtector(Purpose);", 1)]
+    [InlineData("data protector outside Core", "var protector = provider\n    .CreateProtector(\"A\")\n    .CreateProtector(\"B\");", 2)]
+    [InlineData("data protector outside Core", "settings.ApiKey = settings.ApiKey.ProtectSetting(_dataProtectionProvider, Purpose);", 0)]
+    [InlineData("RemoteIpAddress?.ToString()", "var key = httpContext.Connection\n    .RemoteIpAddress?\n    .ToString();", 1)]
+    public void Count_MatchesDeclarationsAndCallsButNotComments(string patternName, string code, int expected)
     {
         // Arrange
         var pattern = _patterns.Single(candidate => candidate.Name == patternName);
 
         // Act
-        var actual = pattern.Count([line]);
+        var actual = pattern.Count(CSharpSourceMask.Comments(code));
 
         // Assert
         Assert.Equal(expected, actual);
@@ -178,18 +335,13 @@ public sealed class DuplicatePatternRatchetTests
             StringComparer.Ordinal);
         var scanned = 0;
 
-        foreach (var file in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", IsExcludedDirectory))
         {
-            if (IsExcluded(file))
-            {
-                continue;
-            }
-
             scanned++;
 
             var relativePath = Path.GetRelativePath(repositoryRoot, file).Replace('\\', '/');
-            var lines = File.ReadAllLines(file);
-            string text = null;
+            var text = File.ReadAllText(file);
+            string code = null;
 
             foreach (var pattern in _patterns)
             {
@@ -198,17 +350,15 @@ public sealed class DuplicatePatternRatchetTests
                     continue;
                 }
 
-                if (pattern.RequiredFileText is not null)
+                if (pattern.RequiredFileText is not null && !text.Contains(pattern.RequiredFileText, StringComparison.Ordinal))
                 {
-                    text ??= string.Join('\n', lines);
-
-                    if (!text.Contains(pattern.RequiredFileText, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
+                    continue;
                 }
 
-                var count = pattern.Count(lines);
+                // Comments and XML documentation may name a pattern to warn against it.
+                code ??= CSharpSourceMask.Comments(text);
+
+                var count = pattern.Count(code);
 
                 if (count > 0)
                 {
@@ -222,18 +372,8 @@ public sealed class DuplicatePatternRatchetTests
         return result;
     }
 
-    private static bool IsExcluded(string path)
-    {
-        foreach (var folder in new[] { "bin", "obj", "node_modules" })
-        {
-            if (path.Contains($"{Path.DirectorySeparatorChar}{folder}{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    private static bool IsExcludedDirectory(string directory)
+        => SourceTreeFiles.IsBuildOutputDirectory(directory) || Path.GetFileName(directory) == "node_modules";
 
     private static string BuildMessage(string header, IEnumerable<string> lines)
     {
@@ -251,24 +391,10 @@ public sealed class DuplicatePatternRatchetTests
     {
         private readonly Regex _regex = new(Expression, RegexOptions.Compiled);
 
-        public int Count(IEnumerable<string> lines)
-        {
-            var count = 0;
-
-            foreach (var line in lines)
-            {
-                var code = line.TrimStart();
-
-                // Comments and XML documentation may name a pattern to warn against it.
-                if (code.StartsWith("//", StringComparison.Ordinal) || code.StartsWith('*'))
-                {
-                    continue;
-                }
-
-                count += _regex.Count(line);
-            }
-
-            return count;
-        }
+        /// <summary>
+        /// Counts the copies in a file's code, whose comments are already blanked.
+        /// </summary>
+        public int Count(string code)
+            => _regex.Count(code);
     }
 }

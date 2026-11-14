@@ -58,7 +58,6 @@ public sealed class SupervisionStartup : StartupBase
     {
         routes
             .AddSupervisorDashboardEndpoints()
-            .AddSupervisorAICallsEndpoints()
             .AddSupervisorInterventionEndpoints();
     }
 }

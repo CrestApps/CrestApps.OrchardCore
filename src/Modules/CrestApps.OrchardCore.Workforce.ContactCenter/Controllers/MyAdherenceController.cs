@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
+using CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -68,10 +69,17 @@ public sealed class MyAdherenceController : Controller
             .ListAsync(HttpContext.RequestAborted);
 
         // Days the worker wasn't scheduled say nothing about their adherence.
+        List<AdherenceDay> scheduled = [.. days.Where(day => day.ScheduledSeconds > 0).Take(Days)];
+
         return View(new MyAdherenceViewModel
         {
             Nav = await _portal.NavAsync(User, worker, "adherence", HttpContext.RequestAborted),
-            Days = [.. days.Where(day => day.ScheduledSeconds > 0).Take(Days)],
+            Days = scheduled,
+            List = new AdminListContext<MyAdherenceDayRow>
+            {
+                Source = scheduled.Select(day => new MyAdherenceDayRow { Day = day }).ToList(),
+                ShowSelectAll = false,
+            },
         });
     }
 }
@@ -90,6 +98,11 @@ public class MyAdherenceViewModel
     /// Gets or sets the latest saved days, newest first.
     /// </summary>
     public IList<AdherenceDay> Days { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the list of the latest saved days.
+    /// </summary>
+    public AdminListContext List { get; set; }
 }
 
 /// <summary>

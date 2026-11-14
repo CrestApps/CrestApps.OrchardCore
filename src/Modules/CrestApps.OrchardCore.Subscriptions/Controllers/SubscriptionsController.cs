@@ -63,7 +63,7 @@ public sealed class SubscriptionsController : Controller
     /// <param name="contentItemId">The content item identifier of the published plan.</param>
     /// <returns>A redirect into the checkout, or a not found result when the plan cannot be bought.</returns>
     [HttpGet("Subscription/Signup/{contentItemId}", Name = SubscriptionConstants.RouteName.Signup)]
-    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)]
+    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Start)]
     public async Task<IActionResult> Signup(string contentItemId, string priceId = null, int quantity = 1, decimal? customAmount = null)
     {
         if (string.IsNullOrEmpty(contentItemId))

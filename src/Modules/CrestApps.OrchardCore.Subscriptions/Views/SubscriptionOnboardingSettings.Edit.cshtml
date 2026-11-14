@@ -22,6 +22,63 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <div class="ocat-end ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowCustomPrefix" />
+            <label class="form-check-label" asp-for="AllowCustomPrefix">@T["Buyers may choose the URL prefix"]</label>
+            <span class="hint dashed">@T["When off, a sold site answers on a prefix equal to its name."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowCustomDomains" />
+            <label class="form-check-label" asp-for="AllowCustomDomains">@T["Buyers may use their own domains"]</label>
+            <span class="hint dashed">@T["Only turn this on if you check who controls a domain: a site answers every request to the domains it names."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowPrefixOnStoreHost" />
+            <label class="form-check-label" asp-for="AllowPrefixOnStoreHost">@T["Sell sites on a prefix of this site's own address"]</label>
+            <span class="hint dashed">@T["A site on a prefix (this-site.com/shop1) runs in this site's origin: script its owner adds can read this site's pages, the admin included, with the session of anybody who opens it, and it receives this site's cookies. Leave off and set a base domain, ideally a separate registrable domain, or let buyers use their own domains."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ReservedPrefixes">
+    <label asp-for="ReservedPrefixes" class="ocat-label">@T["Reserved prefixes"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReservedPrefixes" class="form-control" />
+        <span asp-validation-for="ReservedPrefixes"></span>
+        <span class="hint">@T["URL prefixes no sold site may take, separated by commas. The admin prefix is always reserved."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ReservedHosts">
+    <label asp-for="ReservedHosts" class="ocat-label">@T["Reserved host names"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReservedHosts" class="form-control" />
+        <span asp-validation-for="ReservedHosts"></span>
+        <span class="hint">@T["Your own domains, separated by commas: no sold site may take them or any name under them (operator.com covers www.operator.com). This site's base URL host and the host a buyer checks out on are always reserved. Required before buyers may use domains of their own."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="BaseDomain">
+    <label asp-for="BaseDomain" class="ocat-label">@T["Base domain"]</label>
+    <div class="ocat-end">
+        <input asp-for="BaseDomain" class="form-control" placeholder="sites.example.com" />
+        <span asp-validation-for="BaseDomain"></span>
+        <span class="hint">@T["Optional. Each sold site answers on its own host, the site name followed by this domain, instead of a prefix. Point a wildcard DNS record at this site first."]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="Schema">
     <label asp-for="Schema" class="ocat-label">@T["Schema"]</label>
     <div class="ocat-end">

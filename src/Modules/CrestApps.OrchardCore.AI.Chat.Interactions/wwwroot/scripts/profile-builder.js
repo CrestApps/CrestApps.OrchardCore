@@ -3,6 +3,34 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	function escapeHtml(value) {
+		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js
+	function hostWindow() {
+		return typeof window !== "undefined" ? window : {};
+	}
+	function hasValue(value) {
+		return value !== void 0 && value !== null && value !== "";
+	}
+	function dialogOptions(title, message, options, callback) {
+		const dialog = { callback };
+		if (hasValue(title)) dialog.title = escapeHtml(title);
+		if (hasValue(message)) dialog.message = escapeHtml(message);
+		if (hasValue(options.okText)) dialog.okText = options.okText;
+		if (hasValue(options.cancelText)) dialog.cancelText = options.cancelText;
+		return dialog;
+	}
+	function confirmAction(title, message, options = {}) {
+		const host = hostWindow();
+		if (typeof host.confirmDialog === "function") return new Promise((resolve) => {
+			host.confirmDialog(dialogOptions(title, message, options, (result) => resolve(Boolean(result))));
+		});
+		return Promise.resolve(typeof host.confirm === "function" ? Boolean(host.confirm(message || title || "")) : true);
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/Assets/js/profile-builder.js
 	(function(window, document) {
 		"use strict";
@@ -507,7 +535,7 @@
 			app.sendMessage();
 		}
 		async function restoreRevision(number) {
-			if (busy || !window.confirm(format(strings.restoreConfirm, number))) return;
+			if (busy || !await confirmAction("", format(strings.restoreConfirm, number))) return;
 			busy = true;
 			updateButtons();
 			try {

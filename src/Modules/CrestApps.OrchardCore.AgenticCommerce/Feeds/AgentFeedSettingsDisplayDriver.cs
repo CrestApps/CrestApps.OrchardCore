@@ -166,6 +166,12 @@ public sealed class AgentFeedSettingsDisplayDriver : SiteDisplayDriver<AgentFeed
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SftpHost), S["Enter the SFTP host, user name, and a password or private key to push the feed."]);
         }
 
+        // The push never runs without the server's host key, so turning it on without one would save and do nothing.
+        if (sftp.Enabled && sftp.HostKeyFingerprint is null)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SftpHostKeyFingerprint), S["Enter the SFTP server's host key fingerprint to push the feed."]);
+        }
+
         settings.FeedApiTargets = UpdateTargets(settings.FeedApiTargets ?? [], model.FeedApiTargets ?? [], context);
 
         return Edit(site, settings, context);

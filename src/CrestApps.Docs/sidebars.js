@@ -507,6 +507,7 @@ const sidebars = {
                 'modules/downloads',
                 'modules/reviews',
                 'modules/checkout',
+                'modules/commerce-rate-limits',
                 'modules/store-setup',
                 'modules/commerce-extensions',
                 'modules/commerce-api',

@@ -6,6 +6,67 @@ namespace CrestApps.OrchardCore.Checkout;
 public static class CheckoutConstants
 {
     /// <summary>
+    /// The attempt policies Checkout registers. Each can be overridden by name under
+    /// <c>CrestApps_Throttling:AttemptPolicies</c>.
+    /// </summary>
+    public static class AttemptPolicies
+    {
+        /// <summary>
+        /// Begin-payment calls per network across every checkout: 30 per 10 minutes.
+        /// </summary>
+        public const string PaymentBeginNetwork = "payment-begin-network";
+
+        /// <summary>
+        /// Begin-payment calls in one checkout's lifetime: 8 per 24 hours.
+        /// </summary>
+        public const string PaymentBeginCheckout = "payment-begin-checkout";
+
+        /// <summary>
+        /// Declined or failed card payments per network: 5 per 30 minutes, then blocked 30 minutes.
+        /// </summary>
+        public const string PaymentDeclineNetwork = "payment-decline-network";
+
+        /// <summary>
+        /// Declined or failed card payments per signed-in customer: 5 per hour, then blocked an hour.
+        /// </summary>
+        public const string PaymentDeclineCustomer = "payment-decline-customer";
+
+        /// <summary>
+        /// Declined or failed card payments store-wide: 30 per 10 minutes, then the store's decline-spike action applies
+        /// for 30 minutes.
+        /// </summary>
+        public const string PaymentDeclineStore = "payment-decline-store";
+
+        /// <summary>
+        /// Failed confirmations of one payment attempt, such as cards tried one after another against one Stripe client
+        /// secret: 3, then the attempt is canceled at the provider and the buyer must begin a new payment, which the gate can
+        /// refuse.
+        /// </summary>
+        public const string PaymentDeclineAttempt = "payment-decline-attempt";
+
+        /// <summary>
+        /// Provider failure events counted by the card-testing protection: each once within 3 days, so a redelivered
+        /// event counts no decline again.
+        /// </summary>
+        public const string PaymentDeclineEvent = "payment-decline-event";
+
+        /// <summary>
+        /// Status polls per network and checkout: 120 per 5 minutes.
+        /// </summary>
+        public const string PaymentStatus = "payment-status";
+
+        /// <summary>
+        /// Checkouts started per network: 60 per hour.
+        /// </summary>
+        public const string CheckoutStartNetwork = "checkout-start-network";
+
+        /// <summary>
+        /// Wrong discount codes per network: 10 per 10 minutes, then blocked 10 minutes.
+        /// </summary>
+        public const string CouponCode = "coupon-code";
+    }
+
+    /// <summary>
     /// The YesSql collection the coupon catalog is stored in.
     /// </summary>
     /// <summary>
@@ -55,6 +116,13 @@ public static class CheckoutConstants
         /// The core checkout feature that provides the provider-agnostic checkout and payment framework.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Checkout";
+
+        /// <summary>
+        /// Payment Rate Limits: the request limits of the payment, status, start and code routes, as an extension of
+        /// Orchard Core's Rate Limits feature (which it enables). The card-testing gate and the attempt policies work
+        /// without it.
+        /// </summary>
+        public const string RateLimits = "CrestApps.OrchardCore.Checkout.RateLimits";
 
         /// <summary>
         /// The development test payment provider. It confirms every payment without moving money, so it is only
@@ -124,6 +192,11 @@ public static class CheckoutConstants
         public const string Confirmation = "CheckoutConfirmation";
 
         /// <summary>
+        /// The discount link, <c>discount/{code}</c>, which keeps a code for the buyer's next checkout.
+        /// </summary>
+        public const string DiscountLink = "CheckoutDiscountLink";
+
+        /// <summary>
         /// The endpoint that begins payment with the selected provider.
         /// </summary>
         public const string BeginPayment = "CheckoutBeginPayment";
@@ -146,8 +219,25 @@ public static class CheckoutConstants
         public const string Checkout = "checkout";
 
         /// <summary>
-        /// The anonymous payment endpoints that talk to a payment provider.
+        /// Beginning a payment, in the browser and over the API: 30 per 5 minutes per network with the Payment Rate Limits
+        /// feature.
         /// </summary>
         public const string Payment = "checkout-payment";
+
+        /// <summary>
+        /// Polling a payment's status and completing a checkout over the API: 60 a minute per client. Kept apart from
+        /// <see cref="Payment"/>, so a limit tight enough to matter for payments doesn't break status polling.
+        /// </summary>
+        public const string PaymentStatus = "checkout-payment-status";
+
+        /// <summary>
+        /// Starting a checkout: 30 per 10 minutes per network.
+        /// </summary>
+        public const string Start = "checkout-start";
+
+        /// <summary>
+        /// Applying a discount code or a gift card, and the discount link: 20 per 5 minutes per client.
+        /// </summary>
+        public const string Code = "checkout-code";
     }
 }

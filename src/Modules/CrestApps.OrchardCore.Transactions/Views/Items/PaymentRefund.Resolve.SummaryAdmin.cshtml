@@ -14,9 +14,10 @@
     <button type="submit" class="btn btn-sm btn-secondary text-nowrap"
             data-url-af="RemoveUrl"
             data-title="@T["Mark settled"]"
-            data-message="@T["Record that {0} {1} was paid back to the customer outside the application? This cannot be undone.", refund.Currency, CurrencyScale.Format(refund.RefundGrossAmount, refund.Currency)]"
+            data-confirm="@T["Record that {0} {1} was paid back to the customer outside the application? This cannot be undone.", refund.Currency, CurrencyScale.Format(refund.RefundGrossAmount, refund.Currency)]"
             data-ok-text="@T["Mark settled"]"
             data-cancel-text="@T["Cancel"]">
         @T["Mark settled"]
     </button>
 </form>
+<script asp-name="crestapps-browser" at="Foot"></script>

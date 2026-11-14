@@ -31,7 +31,8 @@
         "CrestApps.OrchardCore.Orders",
         "CrestApps.OrchardCore.Customers",
         "CrestApps.OrchardCore.Downloads",
-        "CrestApps.OrchardCore.Checkout"
+        "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Checkout.RateLimits"
       ]
     },
     {

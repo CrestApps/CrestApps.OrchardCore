@@ -48,6 +48,12 @@ internal static class InventoryApiEndpoints
         }
 
         var counted = (await stockItems.ListByProductAsync(id, httpContext.RequestAborted)).Where(stock => !stock.Archived).ToArray();
+
+        // Shoppers see the store's own locations; stock kept in a van or with a technician (a location another record
+        // owns) is for staff who may see the inventory.
+        IReadOnlyList<InventoryLocation> listed = await authorizationService.AuthorizeAsync(httpContext.User, InventoryPermissions.ViewInventory)
+            ? await locations.GetLocationsAsync()
+            : [.. (await locations.GetLocationsAsync()).Where(location => string.IsNullOrEmpty(location.OwnerKind))];
         var item = Array.Find(counted, stock => string.Equals(stock.VariantId ?? string.Empty, variantId ?? string.Empty, StringComparison.Ordinal));
         var answer = new List<ApiLocationAvailability>();
 
@@ -62,7 +68,7 @@ internal static class InventoryApiEndpoints
                 ReleaseDateUtc = counted.Min(stock => stock.ReleaseDateUtc),
             };
 
-            foreach (var location in await locations.GetLocationsAsync())
+            foreach (var location in listed)
             {
                 var level = new StockLocationLevel
                 {
@@ -76,7 +82,7 @@ internal static class InventoryApiEndpoints
             return TypedResults.Ok<IReadOnlyList<ApiLocationAvailability>>(answer);
         }
 
-        foreach (var location in await locations.GetLocationsAsync())
+        foreach (var location in listed)
         {
             answer.Add(ToAvailability(location, item, item?.FindLevel(location.LocationId)));
         }

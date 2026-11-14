@@ -565,6 +565,7 @@ public sealed class CustomersAdminController : Controller
         customer.LastName = Trim(model.LastName);
         customer.CompanyName = Trim(model.CompanyName);
         customer.TaxId = Trim(model.TaxId);
+        customer.TaxIdVerified = model.TaxIdVerified && !string.IsNullOrWhiteSpace(customer.TaxId);
         customer.IsTaxExempt = model.IsTaxExempt;
         customer.TaxExemptionReason = model.IsTaxExempt ? Trim(model.TaxExemptionReason) : null;
         customer.Phone = Trim(model.Phone);
@@ -592,6 +593,7 @@ public sealed class CustomersAdminController : Controller
             LastName = customer.LastName,
             CompanyName = customer.CompanyName,
             TaxId = customer.TaxId,
+            TaxIdVerified = customer.TaxIdVerified,
             IsTaxExempt = customer.IsTaxExempt,
             TaxExemptionReason = customer.TaxExemptionReason,
             Email = customer.Email,
@@ -608,6 +610,7 @@ public sealed class CustomersAdminController : Controller
         to.LastName = from.LastName;
         to.CompanyName = from.CompanyName;
         to.TaxId = from.TaxId;
+        to.TaxIdVerified = from.TaxIdVerified;
         to.IsTaxExempt = from.IsTaxExempt;
         to.TaxExemptionReason = from.TaxExemptionReason;
         to.Phone = from.Phone;

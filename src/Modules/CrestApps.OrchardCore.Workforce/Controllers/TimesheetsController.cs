@@ -192,7 +192,8 @@ public sealed class TimesheetsController : Controller
 
         foreach (var id in itemIds ?? [])
         {
-            if (bulkAction != "Approve" || !await CanManageAsync(await _timesheets.FindAsync(id, HttpContext.RequestAborted)))
+            // The caller's own timesheet is skipped: it is someone else's to approve.
+            if (bulkAction != "Approve" || !await CanDecideAsync(await _timesheets.FindAsync(id, HttpContext.RequestAborted)))
             {
                 continue;
             }
@@ -325,8 +326,8 @@ public sealed class TimesheetsController : Controller
 
         var model = await _views.BuildAsync(timesheet, worker, HttpContext.RequestAborted);
 
-        model.CanApprove = true;
-        model.CanEditPunches = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.EditPunches);
+        model.CanApprove = await CanDecideAsync(timesheet);
+        model.CanEditPunches = model.CanApprove && await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.EditPunches);
 
         return View(model);
     }
@@ -349,7 +350,7 @@ public sealed class TimesheetsController : Controller
             return NotFound();
         }
 
-        if (!await CanManageAsync(timesheet))
+        if (!await CanDecideAsync(timesheet))
         {
             return Forbid();
         }
@@ -502,7 +503,7 @@ public sealed class TimesheetsController : Controller
             return NotFound();
         }
 
-        if (!await CanManageAsync(timesheet))
+        if (!await CanDecideAsync(timesheet))
         {
             return Forbid();
         }
@@ -541,7 +542,7 @@ public sealed class TimesheetsController : Controller
             return NotFound();
         }
 
-        if (!await CanManageAsync(timesheet))
+        if (!await CanDecideAsync(timesheet))
         {
             return Forbid();
         }
@@ -570,7 +571,7 @@ public sealed class TimesheetsController : Controller
             return NotFound();
         }
 
-        if (!await CanManageAsync(timesheet))
+        if (!await CanDecideAsync(timesheet))
         {
             return Forbid();
         }
@@ -653,7 +654,7 @@ public sealed class TimesheetsController : Controller
             return (null, null, NotFound());
         }
 
-        if (!await CanManageAsync(timesheet) || !await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.EditPunches))
+        if (!await CanDecideAsync(timesheet) || !await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.EditPunches))
         {
             return (null, null, Forbid());
         }
@@ -674,6 +675,11 @@ public sealed class TimesheetsController : Controller
 
         return scope.Covers(timesheet.TeamId);
     }
+
+    // Managing the timesheet, and it isn't the caller's own (unless they may decide on their own records).
+    private async Task<bool> CanDecideAsync(Timesheet timesheet)
+        => await CanManageAsync(timesheet) &&
+            await _scopeService.CanDecideForWorkerAsync(User, timesheet.WorkerId, HttpContext.RequestAborted);
 
     private async Task<IList<TimesheetRowViewModel>> RowsAsync(IReadOnlyList<Timesheet> timesheets)
     {

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using OrchardCore.ContentManagement;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
@@ -31,6 +32,7 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
     private readonly IEnumerable<ISubscriptionLifecycleHandler> _lifecycleHandlers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly ICheckoutPaymentProviderResolver _paymentProviderResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionActivationCheckoutHandler"/> class.
@@ -41,14 +43,17 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
     /// <param name="lifecycleHandlers">The handlers notified that the agreement now exists and is current.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="paymentProviderResolver">The payment providers, which say whether the checkout was paid by a promise.</param>
     public SubscriptionActivationCheckoutHandler(
         IPaymentAttemptStore attemptStore,
         ISubscriptionManager subscriptionManager,
         IContentManager contentManager,
         IEnumerable<ISubscriptionLifecycleHandler> lifecycleHandlers,
         IClock clock,
-        ILogger<SubscriptionActivationCheckoutHandler> logger)
+        ILogger<SubscriptionActivationCheckoutHandler> logger,
+        ICheckoutPaymentProviderResolver paymentProviderResolver)
     {
+        _paymentProviderResolver = paymentProviderResolver;
         _attemptStore = attemptStore;
         _subscriptionManager = subscriptionManager;
         _contentManager = contentManager;
@@ -85,6 +90,13 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
             .ToDictionary(attempt => attempt.ObligationId ?? string.Empty, StringComparer.Ordinal);
 
         var now = _clock.UtcNow;
+        var plan = await ReadPlanAsync(session);
+
+        // Paid by a promise (Pay Later, a bank transfer): the agreement waits for its first transaction to be paid before
+        // it grants anything, unless the plan is delivered before payment. Without this a buyer took the plan's roles and
+        // never paid, and with no due date the debt never became overdue either.
+        var awaitsPayment = CheckoutPaymentDeferral.IsDeferred(session, _paymentProviderResolver) &&
+            !(plan is not null && plan.TryGet<ProductPart>(out var product) && product.DeliverBeforePayment);
 
         foreach (var group in groups)
         {
@@ -106,7 +118,7 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
                 continue;
             }
 
-            var subscription = await BuildAsync(session, group.Key, group.Value, attempt, now);
+            var subscription = await BuildAsync(session, group.Key, group.Value, attempt, now, plan, awaitsPayment);
 
             await _subscriptionManager.CreateAsync(subscription);
 
@@ -130,7 +142,9 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
         CrestApps.OrchardCore.Checkout.BillingDurationKey interval,
         IList<CheckoutLineItem> lineItems,
         PaymentAttempt attempt,
-        DateTime now)
+        DateTime now,
+        ContentItem plan,
+        bool awaitsPayment)
     {
         var subscription = await _subscriptionManager.NewAsync();
 
@@ -193,6 +207,13 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
             subscription.NextBillingUtc = subscription.BillingCycleLimit == 1
                 ? null
                 : subscription.CurrentPeriodEndUtc;
+
+            if (awaitsPayment)
+            {
+                // Started, not current: SubscriptionFirstPaymentTransactionHandler makes it active once the transaction is
+                // paid. A trial above owes nothing yet, so it is not held.
+                subscription.Status = SubscriptionStatus.Incomplete;
+            }
         }
 
         subscription.CreatedUtc = now;
@@ -209,7 +230,7 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
             });
         }
 
-        await AddEntitlementsAsync(subscription, session);
+        AddEntitlements(subscription, plan);
 
         subscription.Events.Add(new SubscriptionEvent
         {
@@ -222,20 +243,16 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
         return subscription;
     }
 
-    // Copies what the plan grants onto the subscription rather than reading the plan later. Editing a plan
-    // afterwards must not silently change what an existing subscriber was sold.
-    private async Task AddEntitlementsAsync(Subscription subscription, CheckoutSession session)
+    private async Task<ContentItem> ReadPlanAsync(CheckoutSession session)
     {
         if (string.IsNullOrEmpty(session.ReferenceId))
         {
-            return;
+            return null;
         }
-
-        ContentItem plan;
 
         try
         {
-            plan = await _contentManager.GetAsync(session.ReferenceId);
+            return await _contentManager.GetAsync(session.ReferenceId);
         }
         catch (Exception exception)
         {
@@ -246,9 +263,14 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
                 _logger.LogDebug(exception, "Could not read the plan '{ReferenceId}' while creating a subscription.", session.ReferenceId);
             }
 
-            return;
+            return null;
         }
+    }
 
+    // Copies what the plan grants onto the subscription rather than reading the plan later. Editing a plan
+    // afterwards must not silently change what an existing subscriber was sold.
+    private static void AddEntitlements(Subscription subscription, ContentItem plan)
+    {
         if (plan is null || !plan.TryGet<SubscriptionEntitlementPart>(out var part))
         {
             return;

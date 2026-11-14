@@ -1,3 +1,4 @@
+using OrchardCore.Environment.Shell.Configuration;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -60,6 +61,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.RateLimits;
+using CrestApps.OrchardCore.Core.Throttling;
+using Microsoft.Extensions.Configuration;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -78,8 +82,29 @@ namespace CrestApps.OrchardCore.AI;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration, which the host's operator controls.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Which addresses AI connections, crawlers and providers may reach is the host operator's choice.
+        services.Configure<AIEgressOptions>(_shellConfiguration.GetSection(AIEgressOptions.SectionName));
+        services.AddScoped<IAIEndpointPolicy, AIEndpointPolicy>();
+
+        // Pages that render chat can limit where images and media may load from (opt in), so model output can't send data
+        // out in an image or audio URL. The tenant's media CDN is allowed without being listed.
+        services.Configure<ChatImageContentSecurityPolicyOptions>(_shellConfiguration.GetSection(ChatImageContentSecurityPolicyOptions.SectionName));
+        services.Configure<ChatImageContentSecurityPolicyOptions>(options => options.MediaCdnBaseUrl ??= _shellConfiguration["OrchardCore_Media:CdnBaseUrl"]);
+        services.AddSingleton<ChatImageContentSecurityPolicy>();
+
         // Data migrations that skip records show the people who manage AI profiles a warning on admin pages until it is dismissed.
         services.AddMigrationSkipLog();
         services.Configure<MvcOptions>(options => options.Filters.Add<MigrationSkipNoticeFilter>(order: -1000));
@@ -523,6 +548,26 @@ public sealed class ChatWorkflowsStartup : StartupBase
 [Feature(AIConstants.Feature.ChatApi)]
 public sealed class ApiChatStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ApiChatStartup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The shell configuration.</param>
+    public ApiChatStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Every API key, and every signed-in API caller, gets a quota of model calls on the completion routes; an
+        // operator changes it under CrestApps_Throttling:AttemptPolicies:ai-api-completions.
+        services
+            .AddAttemptPolicy(AICompletionQuotaFilter.PolicyName, AICompletionQuotaFilter.DefaultPermitLimit, AICompletionQuotaFilter.DefaultWindow)
+            .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(CrestApps.OrchardCore.Throttling.AttemptLimitOptions.SectionName));
+    }
+
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
@@ -530,6 +575,22 @@ public sealed class ApiChatStartup : StartupBase
             .AddApiAIUtilityCompletionEndpoint<ApiChatStartup>()
             .AddApiAICompletionEndpoint<ApiChatStartup>()
             .MapAIConversationsApi();
+    }
+}
+
+/// <summary>
+/// Holds each caller of the completion API to a burst limit when Orchard Core's Rate Limits feature is enabled, on top of
+/// the quota per API key.
+/// </summary>
+[Feature(AIConstants.Feature.ChatApi)]
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class ApiChatRateLimitsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(AICompletionQuotaFilter.RateLimitGroup, 60, TimeSpan.FromMinutes(1))
+            .AddJsonRejectionHandler("CompleteAIChat", "CompleteAIUtility"));
     }
 }
 
@@ -616,6 +677,10 @@ public sealed class ToolInstancesStartup : StartupBase
                 )
             )
         );
+
+        // The HTTP API Request tool and the documentation sources call addresses a tenant user types, so their clients
+        // refuse the site's own network at connect, redirects included.
+        services.AddAIEgressGuards();
 
         services.TryAddEnumerable(
         [

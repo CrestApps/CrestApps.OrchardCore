@@ -8,9 +8,13 @@ namespace CrestApps.OrchardCore.Tests.Architecture;
 /// helpers and the three roll-up implementations in this codebase came to exist.
 /// <para>
 /// This is a ratchet, not a bar: the files that are already too long are listed with their current size, and the
-/// test fails when a listed file grows or a new one crosses the line. Failing on the existing ten would mean
-/// either ten refactors before any unrelated change could land, or the whole rule being suppressed — and a
-/// suppressed rule stops anybody noticing the eleventh.
+/// test fails when a listed file grows or a new one crosses the line. Failing on the existing ones would mean
+/// either a refactor of each before any unrelated change could land, or the whole rule being suppressed — and a
+/// suppressed rule stops anybody noticing the next one.
+/// </para>
+/// <para>
+/// It began with the Contact Center, Telephony and Omnichannel projects and now reads every C# file under
+/// <c>src</c> (CQ-10 in <c>docs/engineering/review-2026-11/04-code-quality.md</c>).
 /// </para>
 /// </summary>
 public sealed class FileSizeRatchetTests
@@ -20,29 +24,47 @@ public sealed class FileSizeRatchetTests
     /// </summary>
     private const int MaximumLines = 800;
 
-    private static readonly string[] _scannedProjects =
-    [
-        Path.Combine("Core", "CrestApps.OrchardCore.ContactCenter.Core"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),
-        Path.Combine("Core", "CrestApps.OrchardCore.Telnyx.Core"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Telnyx"),
-        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Core"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging"),
-        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms"),
-        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Voice.Core"),
-        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Voice"),
-    ];
-
     /// <summary>
     /// The files that were already over the line when the ratchet was set, and the size each was at. A file may
     /// shrink freely — lowering its number here is the point — but it may not grow.
     /// </summary>
     private static readonly Dictionary<string, int> _existing = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.cs"] = 1237,
+        ["src/Abstractions/CrestApps.OrchardCore.Dispatch.Abstractions/Models/FieldModels.cs"] = 809,
+        ["src/Core/CrestApps.OrchardCore.AI.Core/Services/DataSourceIndexingService.cs"] = 1358,
+        ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/AgentCheckoutService.cs"] = 1642,
+        ["src/Core/CrestApps.OrchardCore.Calendars.Core/Services/DefaultCalendarEventManager.cs"] = 1035,
+        ["src/Core/CrestApps.OrchardCore.Carts.Core/Services/CartService.cs"] = 814,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs"] = 1490,
+        ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportDesignDocumentBuilder.cs"] = 1036,
+        ["src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryEngine.cs"] = 1050,
+        ["src/Core/CrestApps.OrchardCore.Scheduling.Core/Services/DefaultAppointmentService.cs"] = 845,
+        ["src/Core/CrestApps.OrchardCore.Subscriptions.Core/Services/DefaultInstallmentPlanService.cs"] = 1571,
+        ["src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/Services/TenantHierarchyBroker.cs"] = 1126,
+        ["src/Core/CrestApps.OrchardCore.WorkOrders.Core/Services/WorkOrderService.cs"] = 804,
+        ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs"] = 814,
+        ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriClient.cs"] = 930,
+        ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskTelephonyProviderBase.cs"] = 1348,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1148,
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs"] = 1630,
+        ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs"] = 1587,
+        ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/DefaultLocalDncListManager.cs"] = 1259,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs"] = 2223,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Reports/EnterpriseActivityReportProvider.cs"] = 891,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultContactActivityBatchLoader.cs"] = 1367,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/LeadConversionService.cs"] = 906,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Handlers/SmsOmnichannelEventHandler.cs"] = 1478,
+        ["src/Modules/CrestApps.OrchardCore.Products/Services/ProductListingService.cs"] = 1509,
+        ["src/Modules/CrestApps.OrchardCore.Recipes/Startup.cs"] = 1894,
+        ["src/Modules/CrestApps.OrchardCore.Reports/Designer/Services/ReportDesignRunner.cs"] = 964,
+        ["src/Modules/CrestApps.OrchardCore.Stripe/Endpoints/CreateWebhookEndpoint.cs"] = 871,
+        ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeCheckoutPaymentProvider.cs"] = 1024,
+        ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.cs"] = 1237,
+        ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/ChildTenantsController.cs"] = 893,
+        ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultTransactionCommandService.cs"] = 877,
+        ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrderSettingsController.cs"] = 874,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs"] = 1153,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 979,
     };
 
     [Fact]
@@ -120,29 +142,22 @@ public sealed class FileSizeRatchetTests
 
     private static IEnumerable<(string RelativePath, int Lines)> EnumerateSourceFiles(string repositoryRoot)
     {
-        foreach (var project in _scannedProjects)
+        var scanned = 0;
+
+        foreach (var file in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src"), "*.cs", IsSkippedDirectory))
         {
-            var root = Path.Combine(repositoryRoot, "src", project);
+            scanned++;
 
-            if (!Directory.Exists(root))
-            {
-                continue;
-            }
-
-            foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
-            {
-                if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
-                    file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                yield return (
-                    Path.GetRelativePath(repositoryRoot, file).Replace('\\', '/'),
-                    File.ReadAllLines(file).Length);
-            }
+            yield return (
+                Path.GetRelativePath(repositoryRoot, file).Replace('\\', '/'),
+                File.ReadAllLines(file).Length);
         }
+
+        Assert.True(scanned > 5000, $"Only {scanned} source files were scanned; the scan no longer matches the repository layout.");
     }
+
+    private static bool IsSkippedDirectory(string directory)
+        => SourceTreeFiles.IsBuildOutputDirectory(directory) || Path.GetFileName(directory) is "node_modules" or "wwwroot";
 
     private static string FindRepositoryRoot()
     {

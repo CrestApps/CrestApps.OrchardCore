@@ -43,7 +43,7 @@
             @* Grouped for reading rather than shown as stored: an agent reads this back to a customer mid-call,
                and a run of digits is a string to decode. The tel: href keeps the exact stored number. *@
             <a href="tel:@Model.Field.PhoneNumber">@PhoneNumberService.FormatForDisplay(Model.Field.PhoneNumber)</a>
-            <span class="phone-field-dial" data-phone-dial data-phone-number="@Model.Field.PhoneNumber"></span>
+            <span class="phone-field-dial" data-phone-dial data-phone-number="@Model.Field.PhoneNumber" data-dial-title="@T["Call with the soft phone"]"></span>
             <i class="@verificationIconClass" title="@verificationTitle" aria-label="@verificationTitle"></i>
         </div>
     </div>

@@ -15,6 +15,20 @@
     var extraSelected = options.Skip(visible).Any(option => option.Selected);
     var expanded = !Model.Collapsed || Model.HasSelection;
     var inputType = Model.Kind == ProductFacetKind.Radio ? "radio" : "checkbox";
+
+    void RenderOption(int index)
+    {
+        var option = options[index];
+        var optionId = $"{id}-{index}";
+
+        <div class="form-check product-facet-option">
+            <input class="form-check-input" type="@inputType" name="@Model.Key" value="@option.Value" id="@optionId" checked="@option.Selected" />
+            <label class="form-check-label" for="@optionId">
+                <span class="product-facet-option-label">@option.Label</span>
+                <span class="product-facet-count">@option.Count</span>
+            </label>
+        </div>
+    }
 }
 
 <section class="product-facet" data-facet="@Model.Key">
@@ -40,27 +54,18 @@
                     <label class="form-check-label" for="@id-any">@T["Any"]</label>
                 </div>
             }
-            @for (var i = 0; i < options.Count; i++)
+            @for (var i = 0; i < Math.Min(visible, options.Count); i++)
             {
-                var option = options[i];
-                var optionId = $"{id}-{i}";
-
-                if (i == visible)
-                {
-                    @Html.Raw($"<div class=\"collapse{(extraSelected ? " show" : string.Empty)}\" id=\"{id}-more\">")
-                }
-
-                <div class="form-check product-facet-option">
-                    <input class="form-check-input" type="@inputType" name="@Model.Key" value="@option.Value" id="@optionId" checked="@option.Selected" />
-                    <label class="form-check-label" for="@optionId">
-                        <span class="product-facet-option-label">@option.Label</span>
-                        <span class="product-facet-count">@option.Count</span>
-                    </label>
-                </div>
+                RenderOption(i);
             }
             @if (options.Count > visible)
             {
-                @Html.Raw("</div>")
+                <div class="collapse @(extraSelected ? "show" : null)" id="@id-more">
+                    @for (var i = visible; i < options.Count; i++)
+                    {
+                        RenderOption(i);
+                    }
+                </div>
                 <button type="button" class="product-facet-more btn btn-link btn-sm p-0 @(extraSelected ? null : "collapsed")" data-bs-toggle="collapse" data-bs-target="#@id-more" aria-expanded="@(extraSelected ? "true" : "false")" aria-controls="@id-more">
                     <span class="product-facet-more-show">@T["Show {0} more", options.Count - visible]</span>
                     <span class="product-facet-more-hide">@T["Show less"]</span>

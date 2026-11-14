@@ -264,14 +264,14 @@
 		} catch (error) {}
 	}
 	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js
+	function escapeHtml(value) {
+		return String(value === void 0 || value === null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-agent-bar.js
 	(function(window, document) {
 		"use strict";
-		var escapeHtml = window.telephonyClient && window.telephonyClient.escapeHtml || function(value) {
-			var div = document.createElement("div");
-			div.textContent = value == null ? "" : String(value);
-			return div.innerHTML;
-		};
 		var formatDuration = (window.telephonyClient || {}).formatDuration;
 		function formatPhone(value) {
 			if (!value) return "";

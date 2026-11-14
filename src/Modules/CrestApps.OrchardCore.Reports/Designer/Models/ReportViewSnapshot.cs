@@ -70,6 +70,13 @@ public sealed class ReportViewSnapshot
     /// Gets or sets when the last refresh failed, in UTC, or <see langword="null"/> when it succeeded.
     /// </summary>
     public DateTime? LastErrorUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a data set the refresh read returned only the rows the view's owner may see. Such a result
+    /// is served to the owner only; other readers run the view. <see langword="null"/> on a result stored before this was
+    /// recorded, which is treated as restricted until the next refresh.
+    /// </summary>
+    public bool? RowsRestricted { get; set; }
 }
 
 /// <summary>

@@ -65,7 +65,7 @@
                                 <tr>
                                     @for (var i = 0; i < block.Columns.Count; i++)
                                     {
-                                        <th class="@alignClasses[i] small">@block.Columns[i].Label</th>
+                                        <th scope="col" class="@alignClasses[i] small">@block.Columns[i].Label</th>
                                     }
                                 </tr>
                             </thead>

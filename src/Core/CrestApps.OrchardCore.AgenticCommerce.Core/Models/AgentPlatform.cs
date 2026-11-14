@@ -10,6 +10,12 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 public sealed class AgentPlatform : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
 {
     /// <summary>
+    /// The start of the id an unregistered UCP platform's checkouts are kept under. A registered platform's id never has
+    /// it, and every unregistered platform shares one allowance of open checkouts.
+    /// </summary>
+    public const string UnregisteredIdPrefix = "ucp-";
+
+    /// <summary>
     /// Gets or sets the platform's name.
     /// </summary>
     public string Name { get; set; }
@@ -113,6 +119,12 @@ public sealed class AgentPlatform : CatalogItem, INameAwareModel, IModifiedUtcAw
     /// when empty.
     /// </summary>
     public int? AcpSignatureClockSkewSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the platform's ACP signatures cover: 1 or empty, the body only (platforms set up before versions
+    /// existed); 2, the timestamp, method and path with the body. New platforms use 2.
+    /// </summary>
+    public int? AcpSignatureVersion { get; set; }
 
     /// <summary>
     /// Gets or sets when it was added.

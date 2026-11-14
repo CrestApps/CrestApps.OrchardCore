@@ -31,7 +31,7 @@ namespace CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
     Description = "Regularly check for imported files and process them, and resume imports that a restart interrupted.",
     LockTimeout = 3_000,
     LockExpiration = 30_000)]
-public sealed class ImportFilesBackgroundTask : IBackgroundTask
+public sealed partial class ImportFilesBackgroundTask : IBackgroundTask
 {
     private static readonly TimeSpan _importLockTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan _importLockExpiration = TimeSpan.FromMinutes(30);
@@ -1037,45 +1037,17 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             return false;
         }
 
-        if (existingRows.Count > 0)
-        {
-            var existingContentItems = (await contentManager.GetAsync(existingRows.Keys, VersionOptions.DraftRequired))
-                .ToDictionary(x => x.ContentItemId);
-
-            foreach (var existingRow in existingRows)
-            {
-                monitor.BeginRow(existingRow.Value.Key);
-
-                try
-                {
-                    var isNew = false;
-
-                    if (!existingContentItems.TryGetValue(existingRow.Key, out var contentItem))
-                    {
-                        contentItem = await contentManager.NewAsync(entry.ContentType);
-                        isNew = true;
-                    }
-
-                    await ProcessRowAsync(
-                        entry,
-                        contentItem,
-                        existingRow.Value.Key,
-                        existingRow.Value.Value,
-                        dataTable.Columns,
-                        contentTypeDefinition,
-                        contentManager,
-                        contentImportManager,
-                        progressPart,
-                        localizer,
-                        runTelemetry,
-                        isNew);
-                }
-                finally
-                {
-                    monitor.EndRow();
-                }
-            }
-        }
+        await ImportExistingRowsAsync(
+            entry,
+            dataTable,
+            existingRows,
+            contentTypeDefinition,
+            contentManager,
+            contentImportManager,
+            progressPart,
+            monitor,
+            localizer,
+            runTelemetry);
 
         foreach (var record in newRecords)
         {
@@ -1251,6 +1223,27 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             ? null
             : value;
 
+    /// <summary>
+    /// Whether an existing item an import row names is of the content type the import is for.
+    /// </summary>
+    internal static bool IsSameContentType(ContentItem contentItem, ContentTransferEntry entry)
+        => string.Equals(contentItem?.ContentType, entry?.ContentType, StringComparison.Ordinal);
+
+    /// <summary>
+    /// A new item belongs to the uploader. An item that already exists keeps its owner and author: an import that
+    /// updates it must not take it over.
+    /// </summary>
+    internal static void ApplyOwnership(ContentItem contentItem, ContentTransferEntry entry, bool isNew)
+    {
+        if (!isNew)
+        {
+            return;
+        }
+
+        contentItem.Owner = entry.Owner;
+        contentItem.Author = entry.Author;
+    }
+
     internal static string GetImportContentItemId(DataRow dataRow, int indexOfKeyColumn)
         => indexOfKeyColumn > -1
             ? dataRow[indexOfKeyColumn]?.ToString()?.Trim()
@@ -1294,8 +1287,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 return;
             }
 
-            mapContext.ContentItem.Owner = entry.Owner;
-            mapContext.ContentItem.Author = entry.Author;
+            ApplyOwnership(mapContext.ContentItem, entry, isNew);
 
             if (isNew)
             {

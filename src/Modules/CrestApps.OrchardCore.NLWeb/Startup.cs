@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.NLWeb.AI;
@@ -115,11 +116,10 @@ public sealed class RateLimitsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.Configure<RateLimitsOptions>(options => options.AddGroupRateLimit(
+        services.Configure<RateLimitsOptions>(options => options.AddClientGroupRateLimit(
             NLWebConstants.RateLimitGroup,
-            RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(
-                policyName: NLWebConstants.RateLimitGroup,
-                permitLimit: NLWebConstants.RequestsPerMinute,
-                window: TimeSpan.FromMinutes(1))));
+            NLWebConstants.RequestsPerMinute,
+            TimeSpan.FromMinutes(1),
+            networkOnly: true));
     }
 }

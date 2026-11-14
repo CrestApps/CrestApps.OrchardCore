@@ -75,6 +75,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
     private readonly ITurnBasedSilenceWatchdog _silenceWatchdog;
     private readonly ITurnBasedCallerKeys _callerKeys;
+    private readonly ISecureKeypadCaptureStore _secureKeypadCaptures;
     private readonly IAIVoiceSessionTracker _sessionTracker;
     private readonly IAIVoiceCallShutdown _callShutdown;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
@@ -112,6 +113,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IRealtimeVoiceConversationRunner realtimeRunner,
         ITurnBasedSilenceWatchdog silenceWatchdog,
         ITurnBasedCallerKeys callerKeys,
+        ISecureKeypadCaptureStore secureKeypadCaptures,
         IAIVoiceSessionTracker sessionTracker,
         IAIVoiceCallShutdown callShutdown,
         ILiquidTemplateManager liquidTemplateManager,
@@ -147,6 +149,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _realtimeRunner = realtimeRunner;
         _silenceWatchdog = silenceWatchdog;
         _callerKeys = callerKeys;
+        _secureKeypadCaptures = secureKeypadCaptures;
         _sessionTracker = sessionTracker;
         _callShutdown = callShutdown;
         _liquidTemplateManager = liquidTemplateManager;
@@ -557,6 +560,17 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _answeringMachineSignals.Forget(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
         _silenceWatchdog.Forget(voiceEvent.ActivityId);
         _callerKeys.Forget(voiceEvent.ActivityId);
+
+        // A secure entry the caller never finished ends with the call. Losing it to a cache that fails is not worth
+        // losing the call's conclusion and the queued caller's release for: the entry expires on its own.
+        try
+        {
+            await _secureKeypadCaptures.ForgetAsync(voiceEvent.ActivityId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "The secure keypad entry of AI voice activity '{ActivityId}' could not be removed at hangup; it expires on its own.", voiceEvent.ActivityId.SanitizeLogValue());
+        }
 
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 

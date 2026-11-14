@@ -1,11 +1,25 @@
 using System.Net;
 using System.Threading.RateLimiting;
 using CrestApps.OrchardCore.Addresses;
+using CrestApps.OrchardCore.Addresses.Core.Autocomplete;
 using CrestApps.OrchardCore.Addresses.Endpoints;
 using CrestApps.OrchardCore.Addresses.GooglePlaces;
+using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
+using CrestApps.OrchardCore.Throttling;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
+using OrchardCore.Modules;
 using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.Tests.Addresses;
@@ -103,6 +117,198 @@ public sealed class AddressSuggestionTests
         Assert.All(allowed, Assert.True);
         Assert.False(refused.IsAcquired);
         Assert.True(otherVisitor.IsAcquired);
+    }
+
+    [Fact]
+    public async Task ASuggestion_WithoutTheEditorToken_IsNotFound_AndThePaidProviderIsNotCalled()
+    {
+        // Arrange
+        var harness = new SuggestionHarness();
+
+        // Act
+        var missing = await harness.SuggestAsync(token: null);
+        var forged = await harness.SuggestAsync(token: "not-a-token");
+        var resolved = await harness.ResolveAsync(token: null);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status404NotFound, missing);
+        Assert.Equal(StatusCodes.Status404NotFound, forged);
+        Assert.Equal(StatusCodes.Status404NotFound, resolved);
+        harness.Provider.Verify(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.Provider.Verify(provider => provider.ResolveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AnExpiredEditorToken_IsNotFound()
+    {
+        // Arrange
+        var harness = new SuggestionHarness();
+        var token = harness.CreateToken();
+        harness.Clock.UtcNow = harness.Clock.UtcNow.AddDays(1);
+
+        // Act
+        var status = await harness.SuggestAsync(token);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status404NotFound, status);
+        harness.Provider.Verify(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TheRequestAfterTheMinuteLimit_GetsTooManyRequests_EvenWithRateLimitsOff()
+    {
+        // Arrange
+        var harness = new SuggestionHarness();
+        var token = harness.CreateToken();
+
+        // Act
+        var allowed = new List<int>();
+
+        for (var i = 0; i < AddressAutocompleteEndpoints.RequestsPerMinute; i++)
+        {
+            allowed.Add(await harness.SuggestAsync(token));
+        }
+
+        var refused = await harness.SuggestAsync(token);
+        var otherNetwork = await harness.SuggestAsync(token, address: "198.51.100.20");
+
+        // Assert
+        Assert.All(allowed, status => Assert.Equal(StatusCodes.Status200OK, status));
+        Assert.Equal(StatusCodes.Status429TooManyRequests, refused);
+        Assert.Equal(StatusCodes.Status200OK, otherNetwork);
+    }
+
+    [Fact]
+    public async Task AfterTheDailyLimit_ThePaidProviderIsNotCalled()
+    {
+        // Arrange
+        var harness = new SuggestionHarness(dailyRequestLimit: 3);
+        var token = harness.CreateToken();
+
+        // Act
+        var statuses = new List<int>();
+
+        for (var i = 0; i < 5; i++)
+        {
+            statuses.Add(await harness.SuggestAsync(token, address: "198.51.100." + i));
+        }
+
+        // Assert
+        Assert.Equal([200, 200, 200], statuses.Take(3));
+        Assert.All(statuses.Skip(3), status => Assert.Equal(StatusCodes.Status429TooManyRequests, status));
+        harness.Provider.Verify(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+    }
+
+    [Fact]
+    public async Task ADailyLimitOfZero_FailsClosed()
+    {
+        // Arrange
+        var harness = new SuggestionHarness(dailyRequestLimit: 0);
+
+        // Act
+        var status = await harness.SuggestAsync(harness.CreateToken());
+
+        // Assert
+        Assert.NotEqual(StatusCodes.Status200OK, status);
+        harness.Provider.Verify(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public void TheAddressesFeature_RegistersTheSignedTokenService_TheEditorTokenNeeds()
+    {
+        // The editor view and both endpoints take it from the tenant's services.
+        var services = new ServiceCollection();
+
+        new Startup().ConfigureServices(services);
+
+        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(SignedTokenService));
+    }
+
+    private sealed class SuggestionHarness
+    {
+        private readonly ServiceProvider _services;
+
+        public SuggestionHarness(int? dailyRequestLimit = null)
+        {
+            Provider.Setup(provider => provider.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+            Provider.Setup(provider => provider.SuggestAsync(It.IsAny<AddressSuggestionRequest>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([new AddressSuggestion("a", "1 Main Street")]);
+
+            var services = new ServiceCollection();
+            new Startup().ConfigureServices(services);
+            services.AddSingleton<IDistributedCache>(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())));
+            services.AddSingleton<IDistributedLock>(new LocalLock(NullLogger<LocalLock>.Instance));
+            services.AddSingleton(new ShellSettings { Name = "Default" });
+            services.AddSingleton<IClock>(Clock);
+            services.AddLogging();
+
+            if (dailyRequestLimit is { } limit)
+            {
+                services.Configure<AddressAutocompleteOptions>(options => options.DailyRequestLimit = limit);
+            }
+
+            _services = services.BuildServiceProvider();
+            Tokens = SignedLinkDoubles.Tokens(new EphemeralDataProtectionProvider(), Clock);
+        }
+
+        public TestClock Clock { get; } = new(DateTime.UtcNow);
+
+        public Mock<IAddressAutocompleteProvider> Provider { get; } = new();
+
+        public SignedTokenService Tokens { get; }
+
+        public string CreateToken() => AddressAutocompleteEndpoints.CreateEditorToken(Tokens);
+
+        public async Task<int> SuggestAsync(string token, string address = "203.0.113.7")
+        {
+            using var scope = _services.CreateScope();
+            var httpContext = Request(address, scope.ServiceProvider);
+            var result = await AddressAutocompleteEndpoints.SuggestAsync(
+                token,
+                "1 Main",
+                "US",
+                "session-1",
+                httpContext,
+                [Provider.Object],
+                Tokens,
+                scope.ServiceProvider.GetRequiredService<IAttemptLimiter>(),
+                scope.ServiceProvider.GetRequiredService<IOptions<AddressAutocompleteOptions>>());
+
+            return await StatusOfAsync(result, httpContext);
+        }
+
+        public async Task<int> ResolveAsync(string token)
+        {
+            using var scope = _services.CreateScope();
+            var httpContext = Request("203.0.113.7", scope.ServiceProvider);
+            var result = await AddressAutocompleteEndpoints.ResolveAsync(
+                token,
+                "place-1",
+                "session-1",
+                httpContext,
+                [Provider.Object],
+                Tokens,
+                scope.ServiceProvider.GetRequiredService<IAttemptLimiter>(),
+                scope.ServiceProvider.GetRequiredService<IOptions<AddressAutocompleteOptions>>());
+
+            return await StatusOfAsync(result, httpContext);
+        }
+
+        private static DefaultHttpContext Request(string address, IServiceProvider services)
+        {
+            var httpContext = new DefaultHttpContext { RequestServices = services };
+            httpContext.Connection.RemoteIpAddress = IPAddress.Parse(address);
+            httpContext.Response.Body = new MemoryStream();
+
+            return httpContext;
+        }
+
+        private static async Task<int> StatusOfAsync(IResult result, DefaultHttpContext httpContext)
+        {
+            await result.ExecuteAsync(httpContext);
+
+            return httpContext.Response.StatusCode;
+        }
     }
 
     private static RateLimiter Limiter(GroupRateLimit limit, string address)

@@ -1,6 +1,10 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.PayLater.Services;
 using CrestApps.OrchardCore.Payments.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
+using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -124,6 +128,68 @@ public sealed class PayLaterRenewalBackgroundTaskTests
         Assert.Single(store.Transactions);
     }
 
+    /// <summary>
+    /// SEC-C5: with no payment terms (<c>NetTermDays = 0</c>) a renewal had no due date, and a transaction without one never
+    /// becomes overdue, so after the first payment the agreement never lapsed. It is now due on the first day of the
+    /// period it bills.
+    /// </summary>
+    [Fact]
+    public async Task DoWorkAsync_WithNoPaymentTerms_DatesTheNextCycleOnItsFirstDay()
+    {
+        // Arrange
+        var store = new FakeTransactionStore();
+        await store.CreateAsync(CreateRecurringTransaction(periodEndUtc: _now.AddDays(-1)), TestContext.Current.CancellationToken);
+
+        var (task, services) = CreateTask(store, netTermDays: 0);
+
+        // Act
+        await task.DoWorkAsync(services, TestContext.Current.CancellationToken);
+
+        // Assert
+        var next = store.Transactions.Single(t => t.Recurrence.CycleNumber == 2);
+
+        Assert.Equal(_now.AddDays(-1), next.DueUtc);
+    }
+
+    /// <summary>
+    /// SEC-C5: the sweep asked nothing about the subscription a transaction bills, so one still waiting for its first
+    /// payment (incomplete) was invoiced again every cycle, and a canceled one kept being invoiced. A subscription that
+    /// waits holds the schedule; one that ended stops it.
+    /// </summary>
+    [Theory]
+    [InlineData(SubscriptionStatus.Incomplete, false, false, false)]
+    [InlineData(SubscriptionStatus.Paused, false, false, false)]
+    [InlineData(SubscriptionStatus.Canceled, false, false, true)]
+    [InlineData(SubscriptionStatus.Expired, false, false, true)]
+    [InlineData(SubscriptionStatus.Active, true, false, true)]
+    [InlineData(SubscriptionStatus.Active, false, true, false)]
+    [InlineData(SubscriptionStatus.PastDue, false, true, false)]
+    public async Task DoWorkAsync_FollowsTheSubscriptionItBills(SubscriptionStatus status, bool cancelAtPeriodEnd, bool renews, bool stops)
+    {
+        // Arrange
+        var store = new FakeTransactionStore();
+        await store.CreateAsync(CreateRecurringTransaction(periodEndUtc: _now.AddDays(-1)), TestContext.Current.CancellationToken);
+
+        var subscriptions = new InMemorySubscriptionStore(new Subscription
+        {
+            ItemId = "subscription-1",
+            CheckoutSessionId = "session-1",
+            ObligationId = "ob-1",
+            Status = status,
+            CancelAtPeriodEnd = cancelAtPeriodEnd,
+        });
+        var manager = new SubscriptionManager(subscriptions, [], NullLogger<CatalogManager<Subscription>>.Instance);
+
+        var (task, services) = CreateTask(store, filter: new SubscriptionTransactionRenewalFilter(manager));
+
+        // Act
+        await task.DoWorkAsync(services, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(renews ? 2 : 1, store.Transactions.Count);
+        Assert.Equal(stops, store.Transactions.Single(t => t.ItemId == "transaction-1").Recurrence.Canceled);
+    }
+
     private static Transaction CreateRecurringTransaction(DateTime periodEndUtc)
         => new()
         {
@@ -156,14 +222,19 @@ public sealed class PayLaterRenewalBackgroundTaskTests
             },
         };
 
-    private static (PayLaterRenewalBackgroundTask Task, IServiceProvider Services) CreateTask(FakeTransactionStore store)
+    private static (PayLaterRenewalBackgroundTask Task, IServiceProvider Services) CreateTask(FakeTransactionStore store, int netTermDays = 30, ITransactionRenewalFilter filter = null)
     {
         var services = new ServiceCollection();
 
         services.AddLogging();
 
+        if (filter is not null)
+        {
+            services.AddSingleton(filter);
+        }
+
         services.AddSingleton<ITransactionManager>(TransactionManagerFactory.Create(store));
-        services.AddSingleton(SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = 30 }));
+        services.AddSingleton(SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = netTermDays }));
         services.AddSingleton<IDistributedLock, LocalLock>();
         services.AddSingleton<IClock>(new TestClock(_now));
         var localClock = new Mock<ILocalClock>();

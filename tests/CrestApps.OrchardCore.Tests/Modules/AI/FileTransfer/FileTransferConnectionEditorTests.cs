@@ -30,7 +30,7 @@ public sealed class FileTransferConnectionEditorTests
         var resource = new McpResource { Source = FtpResourceConstants.Type };
         resource.Put(new FtpConnectionMetadata { Host = "old.example.com", Password = stored });
 
-        var driver = new FtpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<FtpResourceDisplayDriver>());
+        var driver = new FtpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<FtpResourceDisplayDriver>(), Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.FileTransfer.Core.FileTransferHostOptions()));
         var context = CreateContext(new FtpConnectionFieldsViewModel { Host = " ftp.example.com ", Port = 21 });
 
         // Act
@@ -48,7 +48,7 @@ public sealed class FileTransferConnectionEditorTests
     {
         // Arrange
         var resource = new McpResource { Source = FtpResourceConstants.Type };
-        var driver = new FtpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<FtpResourceDisplayDriver>());
+        var driver = new FtpResourceDisplayDriver(_dataProtectionProvider, new PassThroughLocalizer<FtpResourceDisplayDriver>(), Microsoft.Extensions.Options.Options.Create(new CrestApps.OrchardCore.AI.FileTransfer.Core.FileTransferHostOptions()));
         var context = CreateContext(new FtpConnectionFieldsViewModel { Host = "ftp.example.com", Port = 70000 });
 
         // Act

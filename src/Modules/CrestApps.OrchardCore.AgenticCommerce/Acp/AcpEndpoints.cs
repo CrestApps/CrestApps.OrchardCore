@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
@@ -45,18 +46,18 @@ public static class AcpEndpoints
     /// <param name="routes">The endpoint route builder.</param>
     public static IEndpointRouteBuilder MapAcp(this IEndpointRouteBuilder routes)
     {
-        routes.MapGet("/" + AcpConstants.DiscoveryPath, DiscoveryAsync).AllowAnonymous().WithName("AcpDiscovery");
+        routes.MapGet("/" + AcpConstants.DiscoveryPath, DiscoveryAsync).AllowAnonymous().WithName("AcpDiscovery").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         var group = routes.MapGroup(AcpConstants.RoutePrefix)
             .AllowAnonymous()
             .DisableAntiforgery()
             .AddEndpointFilter<AcpRequestFilter>();
 
-        group.MapPost("checkout_sessions", CreateAsync).WithIdempotency(Idempotency).WithName("AcpCreateCheckout");
-        group.MapGet("checkout_sessions/{id}", GetAsync).WithName("AcpGetCheckout");
-        group.MapPost("checkout_sessions/{id}", UpdateAsync).WithIdempotency(Idempotency).WithName("AcpUpdateCheckout");
-        group.MapPost("checkout_sessions/{id}/complete", CompleteAsync).WithIdempotency(Idempotency).WithName("AcpCompleteCheckout");
-        group.MapPost("checkout_sessions/{id}/cancel", CancelAsync).WithIdempotency(Idempotency).WithName("AcpCancelCheckout");
+        group.MapPost("checkout_sessions", CreateAsync).WithIdempotency(Idempotency).WithName("AcpCreateCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapGet("checkout_sessions/{id}", GetAsync).WithName("AcpGetCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPost("checkout_sessions/{id}", UpdateAsync).WithIdempotency(Idempotency).WithName("AcpUpdateCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
+        group.MapPost("checkout_sessions/{id}/complete", CompleteAsync).WithIdempotency(Idempotency).WithName("AcpCompleteCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.CheckoutComplete);
+        group.MapPost("checkout_sessions/{id}/cancel", CancelAsync).WithIdempotency(Idempotency).WithName("AcpCancelCheckout").WithRateLimitGroup(AgenticCommerceConstants.RateLimitGroups.Checkout);
 
         return routes;
     }

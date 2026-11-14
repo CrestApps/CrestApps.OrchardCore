@@ -8,6 +8,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
@@ -177,6 +178,7 @@ public sealed class NamedRecipeStepHandlerTests
             "CrestApps.OrchardCore.AI.Recipes.AIProviderConnectionsStep, CrestApps.OrchardCore.AI",
             manager.Object,
             Options.Create(new AIOptions()),
+            AllowAnyEndpoint(),
             null);
 
         var context = CreateContext("AIProviderConnections", new JsonObject
@@ -222,6 +224,7 @@ public sealed class NamedRecipeStepHandlerTests
             "CrestApps.OrchardCore.AI.Recipes.AIDeploymentStep, CrestApps.OrchardCore.AI",
             manager.Object,
             Options.Create(new AIOptions()),
+            AllowAnyEndpoint(),
             null);
 
         var context = CreateContext("AIDeployment", new JsonObject
@@ -523,10 +526,14 @@ public sealed class NamedRecipeStepHandlerTests
 
         var options = Options.Create(new McpClientAIOptions());
 
+        // No one is signed in (a startup recipe) on the default tenant: the host may change a local connection.
         var handler = CreateHandler(
             "CrestApps.OrchardCore.AI.Mcp.Recipes.McpConnectionStep, CrestApps.OrchardCore.AI.Mcp",
             manager.Object,
             options,
+            new global::OrchardCore.Environment.Shell.ShellSettings { Name = global::OrchardCore.Environment.Shell.ShellSettings.DefaultShellName },
+            Mock.Of<Microsoft.AspNetCore.Authorization.IAuthorizationService>(),
+            new Microsoft.AspNetCore.Http.HttpContextAccessor(),
             null);
 
         var context = CreateContext("McpConnection", new JsonObject
@@ -688,6 +695,10 @@ public sealed class NamedRecipeStepHandlerTests
         session.Verify(x => x.SaveAsync(It.IsAny<object>(), false, null, It.IsAny<CancellationToken>()), Times.Never);
         session.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // The steps refuse endpoints on the site's own network; these tests are about update versus create.
+    private static IAIEndpointPolicy AllowAnyEndpoint()
+        => Mock.Of<IAIEndpointPolicy>(policy => policy.IsAllowed(It.IsAny<string>()));
 
     private static object CreateHandler(string typeName, params object[] arguments)
     {

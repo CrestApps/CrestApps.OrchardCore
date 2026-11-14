@@ -53,6 +53,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
     private async Task RenewDueAsync(IServiceProvider serviceProvider, MeasuredTaskRun run, CancellationToken cancellationToken)
     {
         var transactionManager = serviceProvider.GetRequiredService<ITransactionManager>();
+        var filters = serviceProvider.GetServices<ITransactionRenewalFilter>();
         var siteService = serviceProvider.GetRequiredService<ISiteService>();
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
         var localizer = serviceProvider.GetRequiredService<IStringLocalizer<PayLaterRenewalBackgroundTask>>();
@@ -86,7 +87,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
 
             try
             {
-                run.AddItems(1, await RenewAsync(transactionManager, distributedLock, localizer, localClock, settings, transaction, now, cancellationToken)
+                run.AddItems(1, await RenewAsync(transactionManager, filters, distributedLock, localizer, localClock, settings, transaction, now, cancellationToken)
                     ? "renewed"
                     : "skipped");
             }
@@ -103,6 +104,7 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
     // Returns whether the next cycle was created.
     private static async Task<bool> RenewAsync(
         ITransactionManager transactionManager,
+        IEnumerable<ITransactionRenewalFilter> filters,
         IDistributedLock distributedLock,
         IStringLocalizer localizer,
         ILocalClock localClock,
@@ -140,6 +142,11 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
             return false;
         }
 
+        if (!await MayRenewAsync(transactionManager, filters, localizer, current, now, cancellationToken))
+        {
+            return false;
+        }
+
         var next = await BuildNextCycleAsync(transactionManager, localizer, localClock, settings, current, now);
 
         // The source is marked before the new cycle is created so a crash between the two leaves the
@@ -157,6 +164,45 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         await transactionManager.CreateAsync(next, cancellationToken: cancellationToken);
 
         return true;
+    }
+
+    // The agreement may live in another module, such as a subscription still waiting for its first payment, or one that was
+    // canceled; invoicing it regardless billed what the customer no longer owed. Any filter that stops it stops the
+    // schedule for good; otherwise any that holds it leaves the cycle for a later sweep.
+    private static async Task<bool> MayRenewAsync(
+        ITransactionManager transactionManager,
+        IEnumerable<ITransactionRenewalFilter> filters,
+        IStringLocalizer localizer,
+        Transaction current,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var decision = TransactionRenewalDecision.Renew;
+
+        foreach (var filter in filters)
+        {
+            var answer = await filter.DecideAsync(current, cancellationToken);
+
+            if (answer > decision)
+            {
+                decision = answer;
+            }
+        }
+
+        if (decision == TransactionRenewalDecision.Stop)
+        {
+            current.Recurrence.Canceled = true;
+            current.Events.Add(new TransactionEvent
+            {
+                CreatedUtc = now,
+                Type = TransactionEventType.Note,
+                Message = localizer["The agreement this balance belongs to has ended, so no further billing period is invoiced."].Value,
+            });
+
+            await transactionManager.UpdateAsync(current, cancellationToken: cancellationToken);
+        }
+
+        return decision == TransactionRenewalDecision.Renew;
     }
 
     private static async Task<Transaction> BuildNextCycleAsync(
@@ -200,7 +246,9 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         next.Status = TransactionStatus.Outstanding;
         next.CreatedUtc = now;
         next.UpdatedUtc = now;
-        next.DueUtc = settings.NetTermDays > 0 ? periodStart.AddDays(settings.NetTermDays) : null;
+        // A renewal always has a due date, or it never becomes overdue and the agreement never lapses. With no payment
+        // terms it is due on the first day of the period it bills.
+        next.DueUtc = periodStart.AddDays(Math.Max(0, settings.NetTermDays));
 
         next.Recurrence = new TransactionRecurrence
         {

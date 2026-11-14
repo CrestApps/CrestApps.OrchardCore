@@ -1,0 +1,68 @@
+namespace CrestApps.OrchardCore.Tests.Architecture;
+
+public sealed partial class ConfigurationSchemaCoverageTests
+{
+    /// <summary>
+    /// The configuration sections a module bound without describing them in its ConfigurationSchema.json when the
+    /// ratchet was set, keyed by module and section path. Delete an entry when the schema describes it; never add one.
+    /// </summary>
+    private static readonly Dictionary<string, int> _knownUndescribedSections = new(StringComparer.Ordinal)
+    {
+        ["CrestApps.OrchardCore.AI.A2A: CrestApps:A2AHost"] = 1,
+        ["CrestApps.OrchardCore.AI.A2A: CrestApps:AI:A2AHost"] = 1,
+        ["CrestApps.OrchardCore.AI.Chat.Claude: CrestApps:AI:Claude"] = 1,
+        ["CrestApps.OrchardCore.AI.Chat.Copilot: CrestApps:AI:Copilot"] = 1,
+        ["CrestApps.OrchardCore.AI.Chat.Interactions: CrestApps:AI:ChatInteractions:BatchProcessing"] = 1,
+        ["CrestApps.OrchardCore.AI.DataSources.Elasticsearch: CrestApps:AI:DataSources:Elasticsearch"] = 1,
+        ["CrestApps.OrchardCore.AI.DataSources.Elasticsearch: CrestApps:Elasticsearch"] = 1,
+        ["CrestApps.OrchardCore.AI.DataSources.PostgreSQL: CrestApps:AI:DataSources:PostgreSQL"] = 1,
+        ["CrestApps.OrchardCore.AI.DataSources.PostgreSQL: CrestApps:PostgreSQL"] = 1,
+        ["CrestApps.OrchardCore.AI.FileSources: CrestApps:AI:FileSources"] = 1,
+        ["CrestApps.OrchardCore.AI.Mcp: CrestApps:AI:Mcp:FileResources"] = 1,
+        ["CrestApps.OrchardCore.AI.Mcp: CrestApps:AI:Mcp:Stdio"] = 1,
+        ["CrestApps.OrchardCore.AI.Mcp: CrestApps:AI:McpServer"] = 1,
+        ["CrestApps.OrchardCore.AI.Mcp: CrestApps:McpServer"] = 1,
+        ["CrestApps.OrchardCore.AI.WebMcp: CrestApps:AI:WebMcp"] = 1,
+        ["CrestApps.OrchardCore.AI.WebMcp: CrestApps:AI:WebMcp:Chat"] = 1,
+        ["CrestApps.OrchardCore.AI: CrestApps:AI:Egress"] = 1,
+        ["CrestApps.OrchardCore.AI: CrestApps_AI:Chat:ContentSecurityPolicy"] = 1,
+        ["CrestApps.OrchardCore.AI: CrestApps_Throttling:AttemptPolicies"] = 1,
+        ["CrestApps.OrchardCore.Asterisk: CrestApps:Asterisk:Coordination"] = 1,
+        ["CrestApps.OrchardCore.Asterisk: CrestApps:Asterisk:Default"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:Availability"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:BaseVoiceVerification"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:Compliance"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:Compliance:ManualDialing"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:Coordination"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:DialerPacing"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:FeatureLifecycle"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:HealthChecks"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:IntervalStatistics"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:PredictiveDialing"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:Reporting"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:Retention"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:Topology"] = 1,
+        ["CrestApps.OrchardCore.ContactCenter: CrestApps:ContactCenter:WebhookIngress"] = 1,
+        ["CrestApps.OrchardCore.ContentTransfer: CrestApps:BackgroundWork:Pacing"] = 1,
+        ["CrestApps.OrchardCore.ContentTransfer: CrestApps:ContentTransfer"] = 1,
+        ["CrestApps.OrchardCore.DataConnectors.SqlServer: CrestApps:DataConnectors:SqlServer"] = 1,
+        ["CrestApps.OrchardCore.DataConnectors: CrestApps:DataConnectors"] = 1,
+        ["CrestApps.OrchardCore.DataConnectors: CrestApps:DataConnectors:Network"] = 1,
+        ["CrestApps.OrchardCore.DncRegistry: CrestApps:BackgroundWork:Pacing"] = 1,
+        ["CrestApps.OrchardCore.Geo.Osrm: CrestApps:Geo:Osrm"] = 1,
+        ["CrestApps.OrchardCore.Omnichannel.EventGrid: CrestApps:Omnichannel:EventGrid"] = 1,
+        ["CrestApps.OrchardCore.Omnichannel.Managements: CrestApps:Omnichannel:Automation"] = 1,
+        ["CrestApps.OrchardCore.Omnichannel.Messaging.Sms: CrestApps:Omnichannel:Messaging:Sms:KeywordReplies"] = 1,
+        ["CrestApps.OrchardCore.Omnichannel.Messaging: CrestApps:Omnichannel:Messaging"] = 1,
+        ["CrestApps.OrchardCore.Omnichannel.Messaging: CrestApps:Omnichannel:Messaging:RoutedDistribution"] = 1,
+        ["CrestApps.OrchardCore.OpenAI.Azure: CrestApps:AI:AzureClient"] = 1,
+        ["CrestApps.OrchardCore.Reports: CrestApps:Reports:Builder:Limits"] = 1,
+        ["CrestApps.OrchardCore.Reports: CrestApps:Reports:Builder:Versions"] = 1,
+        ["CrestApps.OrchardCore.Stripe: CrestApps_Stripe"] = 1,
+        ["CrestApps.OrchardCore.Telephony: CrestApps_Telephony:Commands"] = 1,
+        ["CrestApps.OrchardCore.Telephony: CrestApps_Telephony:Coordination"] = 1,
+        ["CrestApps.OrchardCore.Transactions: CrestApps:Transactions:CustomerPages"] = 1,
+        ["CrestApps.OrchardCore.WebSockets: CrestApps:WebSockets"] = 1,
+        ["CrestApps.OrchardCore.Workforce: CrestApps_Workforce:WebPush"] = 1,
+    };
+}

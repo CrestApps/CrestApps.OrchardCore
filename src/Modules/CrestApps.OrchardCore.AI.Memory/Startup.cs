@@ -79,6 +79,5 @@ public sealed class UserMemoryStartup : StartupBase
     {
         services.AddScoped<IDisplayDriver<User>, UserMemoryDisplayDriver>();
         services.AddPermissionProvider<AIMemoryPermissionsProvider>();
-        services.AddScoped<IAuthorizationHandler, AIMemoryAuthorizationHandler>();
     }
 }

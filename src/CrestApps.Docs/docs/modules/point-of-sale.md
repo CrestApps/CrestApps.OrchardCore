@@ -87,7 +87,7 @@ It commits that, then starts the order's checkout with `ICheckoutEngine.StartAsy
 
 ## API
 
-`PosApiEndpoints` maps these into the commerce JSON API at `api/commerce/v1`, under the tag **Point of Sale**. Each needs a signed-in caller who may sell at the register concerned (`PosShiftService.MaySellAtAsync`: the register is on, the caller has **Sell at a register**, and is in one of its roles or has **Manage registers and shifts**); another register answers `404`.
+`PosApiEndpoints` maps these into the commerce JSON API at `api/commerce/v1`, under the tag **Point of Sale**. Each needs a signed-in caller who may sell at the register concerned (`PosShiftService.MaySellAtAsync`: the register is on, the caller has **Sell at a register**, and is in one of its roles or has **Manage registers and shifts**); another register answers `404`. A return (`pos/returns`) also needs **Refund at a register** (`RefundAtRegister`, implied by **Manage registers and shifts**; `403` without it), and returns only a counter sale of the register's own store (the order's location, or its register's) unless the caller also has **Manage orders**.
 
 | Method | Path | What it does |
 | --- | --- | --- |
@@ -388,10 +388,11 @@ The `Registers` recipe step (`RegistersStep`) creates or updates registers, with
 
 | Permission | Allows |
 | --- | --- |
-| **Sell at a register** (`SellAtRegister`) | The point-of-sale API and the web register at the registers the user's roles may use: shifts, sales, payments, receipts and returns. The web register is an admin page, so its users also need **Access admin panel**. |
-| **Manage registers and shifts** (`ManageRegisters`) | The registers, shifts and departments admin pages, selling at every register, and pairing Stripe readers. |
+| **Sell at a register** (`SellAtRegister`) | The point-of-sale API and the web register at the registers the user's roles may use: shifts, sales, payments and receipts. It does not cover returns. The web register is an admin page, so its users also need **Access admin panel**. |
+| **Refund at a register** (`RefundAtRegister`) | Returns at the till (`pos/returns`), which pay money back, cash out of the drawer included: a counter sale of the register's own store, at a register the user may sell at. A sale of another store, or an online order, also needs **Manage orders**. |
+| **Manage registers and shifts** (`ManageRegisters`) | The registers, shifts and departments admin pages, selling at every register, pairing Stripe readers, and refunding at a register (it implies **Refund at a register**). |
 
-Administrators have both by default.
+Administrators have all three by default. Give **Refund at a register** only to the staff who may take returns; a cashier with **Sell at a register** alone can't refund.
 
 ## Report Builder data source
 

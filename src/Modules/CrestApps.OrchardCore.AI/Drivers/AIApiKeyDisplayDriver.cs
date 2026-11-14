@@ -2,6 +2,8 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Calendars;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -10,6 +12,7 @@ using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Security.Services;
 
 namespace CrestApps.OrchardCore.AI.Drivers;
@@ -19,7 +22,12 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 /// </summary>
 public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
 {
+    // Orchard Core's permission to manage roles; holding it means the editor may give any role.
+    private static readonly Permission _manageRoles = new("ManageRoles");
+
     private readonly IRoleService _roleService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
     private readonly IAIProfileManager _profileManager;
     private readonly ILocalClock _localClock;
 
@@ -36,9 +44,13 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
         IRoleService roleService,
         IAIProfileManager profileManager,
         ILocalClock localClock,
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
         IStringLocalizer<AIApiKeyDisplayDriver> stringLocalizer)
     {
         _roleService = roleService;
+        _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
         _profileManager = profileManager;
         _localClock = localClock;
         S = stringLocalizer;
@@ -160,6 +172,21 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
             if (roles.Count == 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Roles), S["Choose the roles whose permissions the key acts with."]);
+            }
+
+            // A key acts with its roles' permissions, so giving it a role is granting that role: an editor may give only
+            // roles they hold, unless they may manage roles.
+            var user = _httpContextAccessor.HttpContext?.User;
+            var refused = AIApiKeyRoleRules.GetRefusedRoles(
+                roles,
+                key.Roles,
+                await _roleService.GetRoleNamesAsync(),
+                role => user?.IsInRole(role) == true,
+                user is not null && await _authorizationService.AuthorizeAsync(user, _manageRoles));
+
+            if (refused.Count > 0)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Roles), S["You can't give a key the role(s) {0}: you may only give roles you hold.", string.Join(", ", refused)]);
             }
 
             key.Scopes = scopes;

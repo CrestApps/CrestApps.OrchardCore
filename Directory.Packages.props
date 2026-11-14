@@ -113,7 +113,9 @@
     <PackageVersion Include="OrchardCore.SignalR.Redis" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Feeds.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Settings" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Sitemaps.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Settings.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Taxonomies" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Tenants" Version="$(OrchardCoreVersion)" />
@@ -201,6 +203,10 @@
     <PackageVersion Include="PublicApiGenerator" Version="11.5.4" />
     <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Analyzer Packages: 5.0.0 matches the Roslyn of the .NET 10 SDK, so every 10.0 feature band can load it. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Benchmark Packages -->

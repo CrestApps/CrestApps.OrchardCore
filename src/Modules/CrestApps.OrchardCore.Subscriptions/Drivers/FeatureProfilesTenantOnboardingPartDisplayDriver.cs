@@ -47,8 +47,10 @@ public sealed class FeatureProfilesTenantOnboardingPartDisplayDriver : ContentPa
             var profiles = await _featureProfilesService.GetFeatureProfilesAsync();
 
             model.FeatureProfile = part.FeatureProfile;
-            model.FeatureProfiles = profiles.Values
-                .Select(profile => new SelectListItem(profile.Name, profile.Id))
+            // The value is the profiles document's key, the name Orchard Core resolves a tenant's profile by; a profile's own
+            // Id can differ from it when the profile came from a recipe.
+            model.FeatureProfiles = profiles
+                .Select(profile => new SelectListItem(string.IsNullOrEmpty(profile.Value?.Name) ? profile.Key : profile.Value.Name, profile.Key))
                 .ToArray();
         }).Location("Content:5");
     }
@@ -65,11 +67,17 @@ public sealed class FeatureProfilesTenantOnboardingPartDisplayDriver : ContentPa
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!string.IsNullOrEmpty(model.FeatureProfile))
+        // A sold site with no feature profile lets its buyer enable any feature the host has, including the ones that
+        // reach the host itself, so the profile is required.
+        if (string.IsNullOrEmpty(model.FeatureProfile))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.FeatureProfile), S["Choose the feature profile that limits what the buyer's site may enable."]);
+        }
+        else
         {
             var profiles = await _featureProfilesService.GetFeatureProfilesAsync();
 
-            if (!profiles.Values.Any(recipe => recipe.Id == model.FeatureProfile))
+            if (!profiles.ContainsKey(model.FeatureProfile))
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.FeatureProfile), S["Invalid Features Profile."]);
             }

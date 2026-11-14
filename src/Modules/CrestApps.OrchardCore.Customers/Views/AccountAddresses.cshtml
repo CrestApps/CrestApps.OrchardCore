@@ -2,6 +2,9 @@
 
 @* The signed-in customer's address book on the storefront account: each saved address, with its defaults. *@
 
+@* Asks before data-confirm forms and buttons submit (the crestapps-browser helpers). *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 @if (Model.Addresses.Count == 0)
 {
     <div class="card">
@@ -46,7 +49,7 @@ else
                     </div>
                     <div class="card-footer d-flex gap-2">
                         <a class="btn btn-sm btn-outline-primary" href="@Url.RouteUrl("AccountAddressEdit", new { addressId = address.AddressId })">@T["Edit"]</a>
-                        <form action="@Url.RouteUrl("AccountAddressDelete", new { addressId = address.AddressId })" method="post" onsubmit="return confirm('@T["Delete this address? Orders that used it keep their own copy."]');">
+                        <form action="@Url.RouteUrl("AccountAddressDelete", new { addressId = address.AddressId })" method="post" data-confirm="@T["Delete this address? Orders that used it keep their own copy."]" data-once>
                             @Html.AntiForgeryToken()
                             <button type="submit" class="btn btn-sm btn-outline-danger">@T["Delete"]</button>
                         </form>

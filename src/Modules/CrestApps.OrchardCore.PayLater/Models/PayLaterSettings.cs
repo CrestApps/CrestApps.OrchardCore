@@ -17,4 +17,15 @@ public sealed class PayLaterSettings
     /// drives the reminder cadence. A value of 0 leaves the balance without a due date. Defaults to 30.
     /// </summary>
     public int NetTermDays { get; set; } = 30;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether only a signed-in buyer may pay later. On by default: a guest who never pays
+    /// can't be followed up.
+    /// </summary>
+    public bool RequireSignedIn { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the largest order total that may be paid later, or <see langword="null"/> for no limit.
+    /// </summary>
+    public decimal? MaxOrderAmount { get; set; }
 }

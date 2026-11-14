@@ -878,7 +878,7 @@ See [Messaging Workspace](omnichannel/messaging-workspace.md).
 | **Section** | `CrestApps:Omnichannel:EventGrid` |
 | **Controls** | How the Event Grid webhook authenticates incoming events |
 
-Keys: `EventGridSasKey`, `AADIssuer`, `AADAudience`, `AADMetadataAddress`.
+Keys: `EventGridSasKey`, `AADIssuer`, `AADAudience`, `AADMetadataAddress`. `AADMetadataAddress` must be an `https://` address. The endpoint keeps one OpenID configuration manager per metadata address, which caches the metadata and signing keys, and refuses a bearer value that isn't a JWT before fetching anything, so an anonymous request never causes an outbound fetch of its own.
 
 ```json
 {
@@ -1940,6 +1940,43 @@ TenantHierarchy__DatabasePools__firms__DatabaseProvider=Postgres
 
 A parent's policy is set on the platform's **Policy** screen and stored in the parent's shell settings. See
 [Tenant Hierarchy](modules/tenant-hierarchy.md#configuration).
+
+## Outbound calls through a proxy
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Egress` |
+| **Controls** | Whether the egress-guarded clients go through the host's proxy |
+
+The egress guard keeps the calls made to addresses an administrator, a workflow or a request supplies off the site's own
+network: webhooks, web push, calendar feeds, MCP and A2A connections, the web crawler, OAuth2 token requests, OSRM, UCP
+and agent feeds, and recording downloads. It checks the address it connects to, so by default it never goes through a
+proxy, where it would see the proxy's address instead of the destination's.
+
+On a host whose only way out is an HTTP proxy, set `UseSystemProxy` to `true` (default `false`). The guarded clients then
+go through the system proxy (`HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, or the system's settings on Windows), connect
+to the proxy whatever its address, and check each destination's own DNS answer before the proxy is asked to reach it,
+on every request and every redirect. For an https destination that is the host the client asks the proxy to tunnel to
+(the `Host` of its `CONNECT` request). The proxy resolves the name again, so keep egress rules on the proxy too: a name
+that answers differently each time can still reach what the proxy lets it reach.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Egress": {
+        "UseSystemProxy": true
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Egress__UseSystemProxy=true
+```
+
+See [Webhooks](modules/webhooks.md#outbound-calls-through-a-proxy).
 
 ## Observability
 

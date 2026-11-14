@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Checkout.Core.Api;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Endpoints;
@@ -27,26 +29,31 @@ internal static class CheckoutApiEndpoints
 
         group.MapGet("checkout/{id}", GetAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("GetCheckout")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Gets a checkout: its steps, what's saved on them, and the invoice with what's left to pay.");
 
         group.MapPost("checkout/{id}/codes", ApplyCodeAsync)
             .AllowGuests()
-            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Payment)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Code)
             .WithName("ApplyCheckoutCode")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .WithSummary("Puts a discount code on the checkout.");
+            .WithSummary("Puts a discount code on the checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapDelete("checkout/{id}/codes/{code}", RemoveCodeAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("RemoveCheckoutCode")
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .WithSummary("Takes a discount code off the checkout.");
+            .WithSummary("Takes a discount code off the checkout.")
+            .AddEndpointFilter<ReleaseLivePaymentEndpointFilter>();
 
         group.MapGet("checkout/{id}/payment-methods", GetPaymentMethodsAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("ListCheckoutPaymentMethods")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Lists the ways the checkout can be paid, with what a client needs to collect each payment itself.");
@@ -63,7 +70,7 @@ internal static class CheckoutApiEndpoints
 
         group.MapPost("checkout/{id}/complete", CompleteAsync)
             .AllowGuests()
-            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Payment)
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.PaymentStatus)
             .WithName("CompleteCheckout")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
@@ -71,6 +78,7 @@ internal static class CheckoutApiEndpoints
 
         group.MapDelete("checkout/{id}", CancelAsync)
             .AllowGuests()
+            .WithRateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)
             .WithName("CancelCheckout")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Cancels a checkout that isn't paid.");
@@ -185,15 +193,17 @@ internal static class CheckoutApiEndpoints
         HttpContext httpContext,
         ICheckoutSessionStore store,
         ICheckoutEngine engine,
-        IPaymentAttemptLimiter limiter)
+        IAttemptLimiter limiter)
     {
         if (string.IsNullOrWhiteSpace(request?.PaymentMethod))
         {
             return ApiProblems.Validation("paymentMethod", "Choose how to pay.");
         }
 
-        if (!await limiter.AcquireAsync("api-checkout-begin", GetDiscriminator(httpContext, id)))
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, GetBeginPaymentKey(httpContext), httpContext.RequestAborted) is { Allowed: false } begun)
         {
+            PaymentEndpoints.SetRetryAfter(httpContext, begun.RetryAfter);
+
             return ApiProblems.TooManyRequests("Too many payment attempts. Wait a moment and try again.");
         }
 
@@ -210,6 +220,7 @@ internal static class CheckoutApiEndpoints
 
             // What a client may pass a provider is bounded, and never says to keep a card or charge a kept one.
             ProviderData = PaymentEndpoints.SanitizeProviderData(request.ProviderData),
+            ClientNetworkKey = GetBeginPaymentKey(httpContext),
         }, httpContext.RequestAborted);
 
         if (!outcome.Succeeded)
@@ -229,11 +240,13 @@ internal static class CheckoutApiEndpoints
         HttpContext httpContext,
         ICheckoutSessionStore store,
         ICheckoutEngine engine,
-        IPaymentAttemptLimiter limiter)
+        IAttemptLimiter limiter)
     {
         // Polled while a provider settles, so it's throttled: a stuck client mustn't hammer the provider through it.
-        if (!await limiter.AcquireAsync("api-checkout-complete", GetDiscriminator(httpContext, id)))
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, GetStatusKey(httpContext, id), httpContext.RequestAborted) is { Allowed: false } polled)
         {
+            PaymentEndpoints.SetRetryAfter(httpContext, polled.RetryAfter);
+
             return ApiProblems.TooManyRequests("Too many status checks. Wait a moment and try again.");
         }
 
@@ -266,9 +279,14 @@ internal static class CheckoutApiEndpoints
     }
 
     private static string GetClientAddress(HttpContext httpContext)
-        => httpContext.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+        => ClientNetworkKey.NetworkOnly(httpContext);
 
-    private static string GetDiscriminator(HttpContext httpContext, string id)
+    // Beginning a payment is counted per caller across every checkout, so starting a new checkout gives no new budget.
+    internal static string GetBeginPaymentKey(HttpContext httpContext)
+        => GetClientAddress(httpContext);
+
+    // Completion polling is counted per caller per checkout.
+    internal static string GetStatusKey(HttpContext httpContext, string id)
         => $"{GetClientAddress(httpContext)}:{id}";
 }
 

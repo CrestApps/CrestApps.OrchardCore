@@ -3,6 +3,8 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.OrchardCore.AI.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Workflows.Abstractions.Models;
@@ -23,6 +25,7 @@ public sealed class RerunConversationAnalysisTask : TaskActivity<RerunConversati
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAIProfileManager _profileManager;
     private readonly AIChatSessionPostCloseProcessor _postCloseProcessor;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -35,6 +38,7 @@ public sealed class RerunConversationAnalysisTask : TaskActivity<RerunConversati
     /// <param name="promptStore">The store of a session's turns.</param>
     /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="postCloseProcessor">The processor that runs the analysis.</param>
+    /// <param name="httpContextAccessor">The current request, whose user the analysis never runs as.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public RerunConversationAnalysisTask(
@@ -43,6 +47,7 @@ public sealed class RerunConversationAnalysisTask : TaskActivity<RerunConversati
         IAIChatSessionPromptStore promptStore,
         IAIProfileManager profileManager,
         AIChatSessionPostCloseProcessor postCloseProcessor,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<RerunConversationAnalysisTask> logger,
         IStringLocalizer<RerunConversationAnalysisTask> stringLocalizer)
     {
@@ -51,6 +56,7 @@ public sealed class RerunConversationAnalysisTask : TaskActivity<RerunConversati
         _promptStore = promptStore;
         _profileManager = profileManager;
         _postCloseProcessor = postCloseProcessor;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -99,7 +105,9 @@ public sealed class RerunConversationAnalysisTask : TaskActivity<RerunConversati
         try
         {
             var prompts = await _promptStore.GetPromptsAsync(session.SessionId);
-            await _postCloseProcessor.ProcessAsync(profile, session, prompts);
+            // The analysis's tools act on what a visitor wrote, so they never run with the rights of whoever's request
+            // runs the workflow.
+            await PostSessionCaller.RunAsNoOneAsync(_httpContextAccessor?.HttpContext, () => _postCloseProcessor.ProcessAsync(profile, session, prompts));
         }
         finally
         {

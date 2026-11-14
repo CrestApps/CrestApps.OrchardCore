@@ -821,6 +821,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "TableExistsAsync",
             "64cd2bd40c01ec80",
             "Read-only table existence probe. Both branches only read metadata to test whether a table is present: SQLite runs a parameterized 'SELECT COUNT(1) FROM sqlite_master' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.TABLES'. Neither statement can create, alter, or drop any object."),
+        new ReviewedDynamicSqlEntry(
+            "src/Modules/CrestApps.OrchardCore.Subscriptions/Migrations/TenantOnboardingMigrations.cs",
+            "TenantOnboardingMigrations",
+            "UpdateFrom1",
+            "4c99b64503848adf",
+            "Not SQL text at all: a YesSql LINQ query, in a deferred task, that reads the tenant provisioning jobs once to decide whether an existing store keeps offering custom prefixes and domains. It only reads documents and saves the site settings; it never creates, alters or drops a schema object."),
     ];
 
     /// <summary>

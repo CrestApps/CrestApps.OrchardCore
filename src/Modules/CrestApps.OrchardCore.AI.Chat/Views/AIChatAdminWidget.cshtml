@@ -17,6 +17,11 @@
 @inject ShellSettings ShellSettings
 @inject IAIDeploymentManager AIDeploymentManager
 @inject CrestApps.OrchardCore.AI.Chat.Services.AIChatUIConfiguration ChatUIConfiguration
+@inject CrestApps.OrchardCore.AI.Core.Services.ChatImageContentSecurityPolicy ChatImageContentSecurityPolicy
+@{
+    // Model output is rendered as Markdown here; images may load only from the site and the configured sources.
+    ChatImageContentSecurityPolicy.Apply(Context);
+}
 @{
     var profile = (AIProfile)Model.Profile;
     IEnumerable<AIChatSessionEntry> sessions = Model.Sessions;
@@ -190,6 +195,7 @@
                realtime module inserts its settings popover after the voice button, which puts the gear on the
                far right of the row. *@
             <button id="@buttonHtmlId"
+                    aria-label="@T["Send"]" title="@T["Send"]"
                     disabled
                     data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
                     data-stop-icon="<i class='fa-solid fa-stop'></i>">
@@ -235,7 +241,7 @@
             <div class="ai-chat-widget-history-panel" id="@historyPanelId">
                 <div class="history-header">
                     <h5>@T["Chat History"]</h5>
-                    <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId">
+                    <button class="btn btn-sm btn-link text-secondary" id="@closeHistoryBtnId" aria-label="@T["Close history"]" title="@T["Close history"]">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>

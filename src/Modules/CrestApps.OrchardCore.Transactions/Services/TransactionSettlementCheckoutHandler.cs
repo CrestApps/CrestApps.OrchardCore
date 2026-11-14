@@ -190,8 +190,23 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 
         var transaction = await _transactionManager.FindByIdAsync(session.ReferenceId);
 
-        if (transaction is null || transaction.Status == TransactionStatus.Paid)
+        if (transaction is null)
         {
+            return;
+        }
+
+        if (transaction.Status == TransactionStatus.Paid)
+        {
+            // Paid by another checkout meanwhile: what this one collected isn't owed by anyone, so the store must see it.
+            var collected = (await GetCollectingAttemptsAsync(session))
+                .Where(attempt => attempt.State == PaymentAttemptState.Succeeded)
+                .ToList();
+
+            if (collected.Count > 0 && !transaction.Events.Any(evt => evt.Type == TransactionEventType.PaymentRecorded && collected.Any(attempt => string.Equals(attempt.ItemId, evt.PaymentAttemptId, StringComparison.Ordinal))))
+            {
+                await RecordUnappliedAsync(session, collected[0], collected.Sum(attempt => attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount), transaction.Currency);
+            }
+
             return;
         }
 
@@ -398,7 +413,30 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
         if (unapplied > 0m)
         {
             _logger.LogWarning("Checkout session '{SessionId}' collected {Amount} more than its transactions still owed; it is not applied to any transaction and may need to be refunded.", session.SessionId, unapplied);
+
+            await RecordUnappliedAsync(session, attempts.FirstOrDefault(attempt => left.TryGetValue(attempt.ItemId, out var amount) && amount > 0m), unapplied, session.Currency);
         }
+    }
+
+    // Money collected that no transaction owed is put in front of the store, to refund or apply by hand.
+    private async Task RecordUnappliedAsync(CheckoutSession session, PaymentAttempt attempt, decimal amount, string currency)
+    {
+        if (_serviceProvider.GetService<IPaymentIssueRecorder>() is not { } issues)
+        {
+            return;
+        }
+
+        await issues.RecordAsync(new PaymentIssue
+        {
+            Kind = PaymentIssueKinds.PaymentNotApplied,
+            Message = "Refund this payment, or apply it by hand: it was collected for a balance that was already paid or had changed, so it was not applied to any transaction.",
+            ReferenceType = "CheckoutSession",
+            ReferenceId = session.SessionId,
+            ProviderKey = attempt?.ProviderKey,
+            ProviderReference = attempt?.TransactionId,
+            Amount = amount,
+            Currency = currency,
+        });
     }
 
     // The attempts that may settle a transaction: a promise to pay later collects nothing, so counting it would mark the

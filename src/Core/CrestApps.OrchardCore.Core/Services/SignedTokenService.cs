@@ -11,6 +11,10 @@ namespace CrestApps.OrchardCore.Core.Services;
 /// <remarks>
 /// A token is the value protected with the tenant's data protection keys, for one purpose, with an expiry. It cannot be
 /// forged, altered to name another value, used for another purpose, or used after it expires.
+/// <para>
+/// The expiry is set from <see cref="IClock"/>, and the protector checks it against the system clock as well, so the
+/// clock can shorten a token's life but never lengthen it: a test can't move time forward or back with a mock clock.
+/// </para>
 /// </remarks>
 public sealed class SignedTokenService
 {
@@ -21,7 +25,7 @@ public sealed class SignedTokenService
     /// Initializes a new instance of the <see cref="SignedTokenService"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The tenant's data protection provider.</param>
-    /// <param name="clock">The clock that sets and checks the expiry.</param>
+    /// <param name="clock">The clock that sets the expiry and checks it again after the protector's own check.</param>
     public SignedTokenService(
         IDataProtectionProvider dataProtectionProvider,
         IClock clock)

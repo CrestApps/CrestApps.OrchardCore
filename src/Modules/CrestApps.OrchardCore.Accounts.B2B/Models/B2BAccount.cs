@@ -215,6 +215,13 @@ public sealed class AccountPunchout
     public string KeyHash { get; set; }
 
     public DateTime? KeyCreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the procurement system may open the store with a link (OCI "link" mode,
+    /// a GET with the key in the address). Off by default: the key then has to be posted, so it never lands in access
+    /// logs or referrers, and another site can't sign a visitor in with a link.
+    /// </summary>
+    public bool AllowLinkSignIn { get; set; }
 }
 
 /// <summary>

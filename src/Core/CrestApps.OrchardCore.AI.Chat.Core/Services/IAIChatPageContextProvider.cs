@@ -14,6 +14,7 @@ public interface IAIChatPageContextProvider
     /// Adds context entries for the page.
     /// </summary>
     /// <param name="context">The page and the entries collected so far.</param>
+    /// <param name="cancellationToken">The token that cancels the work when the page request is aborted.</param>
     /// <returns>A task that completes when the entries are added.</returns>
-    Task PopulateAsync(AIChatPageContext context);
+    Task PopulateAsync(AIChatPageContext context, CancellationToken cancellationToken = default);
 }

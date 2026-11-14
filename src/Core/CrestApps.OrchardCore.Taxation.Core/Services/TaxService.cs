@@ -365,7 +365,11 @@ public sealed class TaxService : ITaxService
                 continue;
             }
 
-            if (rule.ReverseCharge && context.Customer?.CustomerType == CustomerTaxType.B2B)
+            // Reverse charge needs a business whose registration number the store verified. A shopper can set their kind to
+            // business on their own, so the kind alone would let anyone stop paying the tax.
+            if (rule.ReverseCharge &&
+                context.Customer is { CustomerType: CustomerTaxType.B2B, TaxRegistrationVerified: true } customer &&
+                (!string.IsNullOrWhiteSpace(customer.VatNumber) || !string.IsNullOrWhiteSpace(customer.TaxRegistrationNumber)))
             {
                 zeroRated.Add(new ZeroRatedRule(rule, TaxTreatment.ReverseCharge, S["Reverse charge — the customer accounts for the tax."]));
 

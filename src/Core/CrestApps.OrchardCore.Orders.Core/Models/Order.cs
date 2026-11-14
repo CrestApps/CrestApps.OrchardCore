@@ -196,6 +196,25 @@ public sealed class Order : CatalogItem
     public DateTime? PaidUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the order was paid by a promise to pay (Pay Later, a bank transfer, cash on
+    /// delivery) rather than by money collected at checkout. What it buys that delivers instantly waits for
+    /// <see cref="PaymentSettledUtc"/>, unless the product is delivered before payment.
+    /// </summary>
+    public bool PaymentDeferred { get; set; }
+
+    /// <summary>
+    /// Gets or sets when a deferred payment was received, or <see langword="null"/> while it is still owed.
+    /// </summary>
+    public DateTime? PaymentSettledUtc { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the money for the order is in: always for an order paid at checkout, and once the
+    /// promised payment arrives for one paid later.
+    /// </summary>
+    public bool IsPaymentCollected
+        => !PaymentDeferred || PaymentSettledUtc.HasValue;
+
+    /// <summary>
     /// Gets or sets when the order confirmation was emailed to the customer, so it is sent once.
     /// </summary>
     public DateTime? ConfirmationSentUtc { get; set; }

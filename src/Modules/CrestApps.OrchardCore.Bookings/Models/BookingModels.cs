@@ -208,6 +208,12 @@ public sealed class BookingBalance : CatalogItem
 
     public int Attempts { get; set; }
 
+    /// <summary>
+    /// Gets or sets how many charges were ever begun for the balance. Unlike <see cref="Attempts"/>, "Charge now" never
+    /// resets it, so each charge gets an idempotency key the gateway has not answered before.
+    /// </summary>
+    public int ChargeCount { get; set; }
+
     public DateTime? LastAttemptUtc { get; set; }
 
     public DateTime? NextAttemptUtc { get; set; }

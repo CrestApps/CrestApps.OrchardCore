@@ -3,6 +3,7 @@ namespace CrestApps.OrchardCore.Checkout.Services;
 /// <summary>
 /// Options for the fixed-window <see cref="IPaymentAttemptLimiter"/>.
 /// </summary>
+[Obsolete("Configure attempt policies by name under CrestApps_Throttling:AttemptPolicies. This type is removed in the next release.")]
 public sealed class PaymentRateLimitOptions
 {
     /// <summary>

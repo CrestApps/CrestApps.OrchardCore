@@ -25,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Liquid;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.AI.Endpoints.Api;
 
@@ -40,6 +41,8 @@ internal static class ApiAICompletionEndpoint
     {
         _ = builder.MapPost("api/ai/completion/chat", HandleAsync<T>)
             .AddEndpointFilter(ScopeLogsAsync<T>)
+            .AddEndpointFilter<AICompletionQuotaFilter>()
+            .WithRateLimitGroup(AICompletionQuotaFilter.RateLimitGroup)
             .DisableAntiforgery()
             .RequireAuthorization(new AuthorizeAttribute { AuthenticationSchemes = AIApiKeys.ApiSchemes })
             .WithTags(AIConversationsApiEndpoints.ChatTag)
@@ -126,6 +129,12 @@ internal static class ApiAICompletionEndpoint
             if (parentProfile is null)
             {
                 return TypedResults.NotFound();
+            }
+
+            // The session is the parent profile's, so the caller must be allowed to use it as well as the template.
+            if (!await authorizationService.AuthorizeAsync(httpContextAccessor.HttpContext.User, AIPermissions.QueryAnyAIProfile, parentProfile))
+            {
+                return TypedResults.Forbid();
             }
 
             (chatSession, isNew) = await GetSessionsAsync(sessionManager, requestData.SessionId, parentProfile, completionService, userPrompt: profile.Name, completionContextBuilder, aiTemplateService, deploymentManager);

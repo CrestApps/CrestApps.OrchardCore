@@ -78,8 +78,8 @@ public sealed class WorkerFeedIndexProvider : IndexProvider<StaffMember>
     public override void Describe(DescribeContext<StaffMember> context)
     {
         context.For<WorkerFeedIndex>()
-            .Map(worker => worker.TryGet<WorkerPortalSettings>(out var settings) && !string.IsNullOrEmpty(settings.FeedToken)
-                ? new WorkerFeedIndex { WorkerId = worker.ItemId, TokenHash = PortalSecrets.Hash(settings.FeedToken) }
+            .Map(worker => worker.TryGet<WorkerPortalSettings>(out var settings) && DefaultWorkerFeedService.GetHash(settings) is { } hash
+                ? new WorkerFeedIndex { WorkerId = worker.ItemId, TokenHash = hash }
                 : null);
     }
 }

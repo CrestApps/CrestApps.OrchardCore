@@ -280,6 +280,17 @@ public class AdherenceRuleEditViewModel
 }
 
 /// <summary>
+/// A row of the My Work list of adherence days: one saved day of the worker.
+/// </summary>
+public sealed class MyAdherenceDayRow
+{
+    /// <summary>
+    /// Gets or sets the saved day.
+    /// </summary>
+    public AdherenceDay Day { get; set; }
+}
+
+/// <summary>
 /// A row of the agents list: an agent and its worker.
 /// </summary>
 public sealed class AgentWorkerRow

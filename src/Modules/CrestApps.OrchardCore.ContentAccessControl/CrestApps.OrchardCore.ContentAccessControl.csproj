@@ -22,6 +22,10 @@
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Contents.Core" />
+    <PackageReference Include="OrchardCore.Feeds.Abstractions" />
+    <PackageReference Include="OrchardCore.Indexing.Abstractions" />
+    <PackageReference Include="OrchardCore.Search.Abstractions" />
+    <PackageReference Include="OrchardCore.Sitemaps.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

@@ -18,18 +18,23 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureAIInferenceConnectionDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="endpointPolicy">The policy for the endpoints AI features call.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AzureAIInferenceConnectionDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<AzureAIInferenceConnectionDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -74,6 +79,10 @@ internal sealed class AzureAIInferenceConnectionDisplayDriver : DisplayDriver<AI
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out var uri))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["Endpoint is required field."]);
+        }
+        else if (!_endpointPolicy.IsAllowed(model.Endpoint))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
         else
         {

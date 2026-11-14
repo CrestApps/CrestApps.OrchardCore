@@ -19,6 +19,13 @@ Enable a feature under **Configuration > Features**, or with the `Feature` step 
 - `IWizardFlowSession` (CrestApps.OrchardCore.Wizard.Abstractions): The read/write surface of a wizard session that the flow navigation and step drivers operate on.
 - and 2 more contracts in the same projects.
 
+## Sessions and limits
+
+- Opening a wizard stores nothing: the session is created on the first valid submission of its first step.
+- A wizard started with a `definitionId` that no `IWizardAccessPolicy.IsKnownDefinitionAsync` recognizes answers 404. A policy that owns instances of a wizard type (the content wizard does) must implement it.
+- Pending sessions untouched for 30 days are removed by the platform retention task (`WizardSessionRetentionPolicy`).
+- With Orchard Core's Rate Limits feature on, the wizard routes carry the `wizard` rate-limit group (60 requests a minute per visitor by default).
+
 ## Documentation
 
 See [Wizard (Stepper) Feature](../../CrestApps.Docs/docs/modules/wizard.md) in the technical manual.

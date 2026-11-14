@@ -165,8 +165,9 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
-        // Keys typed while the keypad is private are secure data, never the caller's turn.
-        var secureEntry = SecureKeypadCaptures.Offer(voiceEvent.ActivityId, digits, _clock.UtcNow);
+        // Keys typed while the keypad is private are secure data, never the caller's turn, on any node. This is the one
+        // way in for keys: the realtime session hears them only through the command sent below.
+        var secureEntry = await _secureKeypadCaptures.OfferAsync(voiceEvent.ActivityId, digits);
 
         if (secureEntry.Captured)
         {

@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Extensions;
+﻿using OrchardCore.Security.Permissions;
+using CrestApps.Core.AI.Extensions;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,12 +16,23 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
 
     public override string Name => TheName;
 
+    // A recipe runs every step it carries, so the narrower permission is held to the workflow step: without the list,
+    // ManageWorkflows would import a Roles, Users or settings step too.
+    private static readonly string[] _allowedSteps = ["WorkflowType"];
+
+    protected override Permission RequiredPermission => OrchardCorePermissions.ManageWorkflows;
+
     public override string Description => "Creates or updates a workflow types.";
 
     protected override async ValueTask<object> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        if (!await IsCallerAuthorizedAsync(arguments.Services))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateWorkflowTool>>();
 
@@ -41,6 +53,6 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
         }
 
-        return await ProcessRecipeAsync(arguments.Services, recipe, logger, cancellationToken);
+        return await ProcessRecipeAsync(arguments.Services, recipe, logger, _allowedSteps, cancellationToken);
     }
 }

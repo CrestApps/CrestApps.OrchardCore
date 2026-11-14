@@ -149,6 +149,15 @@
         <div class="ocat-wrapper">
             <div class="ocat-end-offset">
                 <div class="form-check">
+                    <input asp-for="PunchoutAllowLinkSignIn" type="checkbox" class="form-check-input" />
+                    <label asp-for="PunchoutAllowLinkSignIn" class="form-check-label">@T["Allow link sign-in (OCI link mode)"]</label>
+                    <span class="hint dashed">@T["Only for a procurement system that can't post the key. The key is then sent in the address, so it appears in web server logs and browser history; make a new key if it leaks."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
                     <input asp-for="NewPunchoutKey" type="checkbox" class="form-check-input" />
                     <label asp-for="NewPunchoutKey" class="form-check-label">@T["Make a new key"]</label>
                     <span class="hint dashed">@T["The old key stops working. A key is made the first time punchout is turned on; it's shown once, after saving."]</span>

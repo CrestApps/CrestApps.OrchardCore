@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Mcp;
+﻿using CrestApps.Core.AI.Mcp.Services;
+using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -21,10 +22,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -57,6 +61,7 @@ public sealed class Startup : StartupBase
             .AddCoreAIMcpClientStoresYesSql()
             .AddDataMigration<McpConnectionClientsMigrations>()
             .AddCoreAISseMcpClientTransport()
+            .AddAIEgressGuards()
             .AddDisplayDriver<AIProfile, AIProfileMcpConnectionsDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMcpConnectionsDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionMcpConnectionsDisplayDriver>()
@@ -65,6 +70,15 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpConnection>, McpConnectionHandler>()
             .AddDisplayDriver<McpConnection, McpConnectionDisplayDriver>()
             .AddDisplayDriver<McpConnection, SseMcpConnectionDisplayDriver>();
+
+        // The package's HTTP transport makes its own HttpClient, which reaches any address; this one uses the guarded
+        // client, so an MCP endpoint (or a redirect from it) on the site's own network is refused at connect.
+        foreach (var descriptor in services.Where(d => d.ServiceType == typeof(IMcpClientTransportProvider) && d.ImplementationType == typeof(SseClientTransportProvider)).ToList())
+        {
+            services.Remove(descriptor);
+        }
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IMcpClientTransportProvider, GuardedSseClientTransportProvider>());
     }
 }
 
@@ -74,22 +88,52 @@ public sealed class Startup : StartupBase
 [Feature(McpPermissions.Feature.Stdio)]
 public sealed class StdIoStartup : StartupBase
 {
+    private readonly ShellSettings _shellSettings;
+    private readonly IShellConfiguration _shellConfiguration;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StdIoStartup"/> class.
     /// </summary>
+    /// <param name="shellSettings">The settings of the current tenant.</param>
+    /// <param name="shellConfiguration">The tenant's configuration, which the host's operator controls.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public StdIoStartup(IStringLocalizer<StdIoStartup> stringLocalizer)
+    public StdIoStartup(
+        ShellSettings shellSettings,
+        IShellConfiguration shellConfiguration,
+        IStringLocalizer<StdIoStartup> stringLocalizer)
     {
+        _shellSettings = shellSettings;
+        _shellConfiguration = shellConfiguration;
         S = stringLocalizer;
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services
-            .AddCoreAIStdIoMcpClientTransport()
-            .AddDisplayDriver<McpConnection, StdioMcpConnectionDisplayDriver>();
+        // A local connection starts a process on the server, which only the host's operator may do. The feature is
+        // default-tenant-only; a child tenant that enabled it before that keeps it enabled but gets no transport, so
+        // it can neither create a local connection nor start one.
+        if (!_shellSettings.IsDefaultShell())
+        {
+            return;
+        }
+
+        services.Configure<McpStdioOptions>(_shellConfiguration.GetSection(McpStdioOptions.SectionName));
+
+        // The package's transport is replaced by one that checks the tenant and the host's allowed commands before it
+        // starts anything.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IMcpClientTransportProvider, GuardedStdioClientTransportProvider>());
+        services.Configure<McpClientAIOptions>(options =>
+        {
+            options.AddTransportType(McpConstants.TransportTypes.StdIo, entry =>
+            {
+                entry.DisplayName = S["Standard Input/Output"];
+                entry.Description = S["Uses standard input/output streams to communicate with a locally running model process. Ideal for local subprocess integration."];
+            });
+        });
+
+        services.AddDisplayDriver<McpConnection, StdioMcpConnectionDisplayDriver>();
     }
 }
 
@@ -127,14 +171,18 @@ public sealed class McpServerStartup : StartupBase
 {
     private const string McpServerPolicyName = "McpServerPolicy";
 
+    private readonly IShellConfiguration _shellConfiguration;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpServerStartup"/> class.
     /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public McpServerStartup(IStringLocalizer<McpServerStartup> stringLocalizer)
+    public McpServerStartup(IShellConfiguration shellConfiguration, IStringLocalizer<McpServerStartup> stringLocalizer)
     {
+        _shellConfiguration = shellConfiguration;
         S = stringLocalizer;
     }
 
@@ -176,14 +224,15 @@ public sealed class McpServerStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<McpResource>, McpResourceHandler>()
             .AddDisplayDriver<McpResource, McpResourceDisplayDriver>();
 
-        // Register the file provider resolver.
+        // File resources read only the tenant's own folder (App_Data/Sites/{tenant}/mcp-files), never the content root.
         services.AddScoped<IMcpFileProviderResolver, DefaultMcpFileProviderResolver>();
+        services.Configure<McpFileResourceOptions>(_shellConfiguration.GetSection(McpFileResourceOptions.SectionName));
 
         // Register built-in File resource type handler.
         services.AddCoreAIMcpResourceType<FileResourceTypeHandler>(FileResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["File"];
-            entry.Description = S["Reads content from file providers."];
+            entry.Description = S["Reads files from this tenant's MCP files folder (App_Data/Sites/{tenant}/mcp-files)."];
             entry.SupportedVariables =
             [
                 new McpResourceVariable("providerName") { Description = S["The name of the file provider to use."] },
@@ -300,7 +349,7 @@ public sealed class McpContentResourceStartup : StartupBase
         services.AddCoreAIMcpResourceType<ContentByIdResourceTypeHandler>(ContentByIdResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["Content Item"];
-            entry.Description = S["Retrieves a specific content item by its ID or version ID."];
+            entry.Description = S["Retrieves a published content item the caller may view, by its ID or published version ID."];
             entry.SupportedVariables =
             [
                 new McpResourceVariable("contentItemId") { Description = S["The content item ID to retrieve."] },
@@ -311,10 +360,11 @@ public sealed class McpContentResourceStartup : StartupBase
         services.AddCoreAIMcpResourceType<ContentByTypeResourceTypeHandler>(ContentByTypeResourceTypeHandler.TypeName, entry =>
         {
             entry.DisplayName = S["Content Type"];
-            entry.Description = S["Lists all published content items of a given content type."];
+            entry.Description = S["Lists the published content items of a given content type that the caller may view, {0} at a time.", ContentByTypeResourceTypeHandler.PageSize];
             entry.SupportedVariables =
             [
                 new McpResourceVariable("contentType") { Description = S["The content type to query."] },
+                new McpResourceVariable("page") { Description = S["The page to list, starting at 1."] },
             ];
         });
     }

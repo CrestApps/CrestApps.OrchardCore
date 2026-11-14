@@ -66,11 +66,19 @@ public sealed class MyOffersController : Controller
             return Redirect("~/Admin/my-work");
         }
 
+        var offers = await _intradayService.OpenForAsync(worker, HttpContext.RequestAborted);
+        var timeZoneId = await _timeZones.GetAsync(worker, null, HttpContext.RequestAborted);
+
         return View(new MyOffersViewModel
         {
             Nav = await _portal.NavAsync(User, worker, "offers", HttpContext.RequestAborted),
-            Offers = await _intradayService.OpenForAsync(worker, HttpContext.RequestAborted),
-            TimeZoneId = await _timeZones.GetAsync(worker, null, HttpContext.RequestAborted),
+            Offers = offers,
+            List = new AdminListContext<MyOfferRow>
+            {
+                Source = offers.Select(offer => new MyOfferRow { Offer = offer, TimeZoneId = timeZoneId }).ToList(),
+                ShowSelectAll = false,
+            },
+            TimeZoneId = timeZoneId,
             Message = message,
             IsError = error,
         });

@@ -93,6 +93,10 @@ Because presence alone already gates routing, losing a connection does not sign 
 - `CrestApps.OrchardCore.SignalR` — for real-time features
 - `OrchardCore.Workflows` — for the Workflows feature
 
+## Secure Data Capture and card-data scope
+
+The Secure Data Capture page collects card data in this application's own inputs, so a deployment that registers an `ISecureCaptureTokenSink` handles raw cardholder data and is in PCI-DSS scope for the capture path. Keep the sink a thin forwarder to a PCI-DSS-compliant vault, never log or store the raw values. The page runs no script, sends a strict Content Security Policy with a per-response style nonce, and uses the `cc-number`, `cc-exp` and `cc-csc` autocomplete tokens. See the agent desktop documentation for details.
+
 ## Documentation
 
 See the [Contact Center documentation](https://orchardcore.crestapps.com/contact-center/) for architecture, routing, agent desktop, reporting, and deployment guidance.

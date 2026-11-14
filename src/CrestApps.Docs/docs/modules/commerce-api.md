@@ -207,9 +207,11 @@ A conflict:
 | `out-of-stock` | Something ran out, or a location hasn't that many. | Show `detail`, and let the buyer change the cart. |
 | `not-available` | The change isn't possible now, such as a product no longer sold, an order that can't be refunded, or a return already received. | Show `detail`. |
 | `invoice-changed` | The total changed since the buyer last saw it. | Get the checkout again, show the new total, and ask the buyer to pay again. |
+| `payment-in-progress` | A change to the checkout (shipping, contact, a code, a balance, an account payment) came while a payment begun for it was already taken, or the provider would not cancel it. | Wait for the payment to finish, get the checkout again, and don't change it while it is being paid. |
 | `concurrency` | Somebody else changed the same thing at the same moment. | Read it again, and retry. |
 | `unsupported` | This checkout doesn't take that, such as a code on a checkout that refuses discounts, or a gift card on a subscription. | Hide that option. |
 | `idempotency-in-progress` | A request with the same idempotency key is still running. | Wait a moment, and send it again. |
+| `idempotency-key-reused` | The idempotency key was already used for a different request. | Don't retry: send the request with a new key. |
 
 The point of sale adds `shift-open` and `shift-closed`; see [Point of Sale](point-of-sale.md#api).
 

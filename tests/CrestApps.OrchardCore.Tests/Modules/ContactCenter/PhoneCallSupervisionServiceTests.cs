@@ -483,6 +483,25 @@ public sealed class PhoneCallSupervisionServiceTests
     }
 
     [Fact]
+    public async Task EndCall_RefusesACallThatIsNotTheNamedAgents()
+    {
+        // Arrange: the key names an agent the supervisor oversees, but the call of someone outside their queues.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fixture = new Fixture().WithKeypadCall();
+        fixture.ActiveCalls.Add(Call("outsider-leg", "outsider-user", CallDirection.Outbound, to: "+17025550199"));
+        const string ForgedKey = "phone:agent-user:outsider-leg";
+
+        // Act
+        var authorized = await fixture.Service.IsAuthorizedAsync(Fixture.Principal, "sup-user", ForgedKey, cancellationToken);
+        var ended = await fixture.Service.EndCallAsync(ForgedKey, "sup-user", Fixture.Principal, cancellationToken);
+
+        // Assert: the agent segment authorizes, so the call segment must be that agent's call.
+        Assert.True(authorized);
+        Assert.False(ended.Succeeded);
+        fixture.Telephony.Verify(value => value.HangupAsync(It.IsAny<CallReference>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ASupervisorMayActOnAnAgent_WhoWorksAQueueTheyOversee()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -492,6 +511,22 @@ public sealed class PhoneCallSupervisionServiceTests
         Assert.False(await fixture.Service.IsAuthorizedAsync(Fixture.Principal, "other-supervisor", Key, cancellationToken));
         Assert.False(await fixture.Service.IsAuthorizedAsync(Fixture.Principal, "sup-user", "phone:unknown-user:leg", cancellationToken));
         Assert.False(await fixture.Service.IsAuthorizedAsync(Fixture.Principal, "sup-user", "interaction-1", cancellationToken));
+    }
+
+    [Fact]
+    public async Task AnAICallsKey_IsRefused_UnlessTheSupervisorListensToItOrMayMonitorEveryAICall()
+    {
+        // Arrange: a supervisor with Intervene in calls posts the key of an AI call they never opened through the
+        // scoped AI-call dashboard.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var fixture = new Fixture();
+        var aiKey = "phone:" + ContactCenterPhoneCallSupervisionService.AICallUserMarker + ":v3:ai-leg";
+
+        // Act
+        var authorized = await fixture.Service.IsAuthorizedAsync(Fixture.Principal, "sup-user", aiKey, cancellationToken);
+
+        // Assert
+        Assert.False(authorized);
     }
 
     [Fact]

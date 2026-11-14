@@ -53,8 +53,8 @@ public interface ISubscriptionStore : ICatalog<Subscription>
     Task<IReadOnlyList<Subscription>> GetDueForRenewalAsync(DateTime asOfUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns the past-due subscriptions whose grace period has elapsed, so they can be expired instead of
-    /// staying past due forever.
+    /// Returns the past-due subscriptions whose grace period has elapsed, and the canceled subscriptions whose paid period
+    /// has ended, so they can be expired instead of keeping what they granted forever.
     /// </summary>
     /// <param name="asOfUtc">The UTC time to evaluate against.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>

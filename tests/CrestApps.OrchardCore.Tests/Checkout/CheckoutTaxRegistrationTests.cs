@@ -13,11 +13,11 @@ public sealed class CheckoutTaxRegistrationTests
 {
     [Fact]
     public void TheTaxationAwareService_Wins_WhenTheTaxationStartupRunsFirst()
-        => Assert.Equal(typeof(CheckoutTaxService), Resolve(new CrestApps.OrchardCore.Checkout.TaxationStartup(), new CrestApps.OrchardCore.Checkout.Startup()));
+        => Assert.Equal(typeof(CheckoutTaxService), Resolve(new CrestApps.OrchardCore.Checkout.TaxationStartup(), new CrestApps.OrchardCore.Checkout.Startup(new global::OrchardCore.Environment.Shell.Configuration.ShellConfiguration())));
 
     [Fact]
     public void TheTaxationAwareService_Wins_WhenTheTaxationStartupRunsLast()
-        => Assert.Equal(typeof(CheckoutTaxService), Resolve(new CrestApps.OrchardCore.Checkout.Startup(), new CrestApps.OrchardCore.Checkout.TaxationStartup()));
+        => Assert.Equal(typeof(CheckoutTaxService), Resolve(new CrestApps.OrchardCore.Checkout.Startup(new global::OrchardCore.Environment.Shell.Configuration.ShellConfiguration()), new CrestApps.OrchardCore.Checkout.TaxationStartup()));
 
     private static Type Resolve(params StartupBase[] startups)
     {

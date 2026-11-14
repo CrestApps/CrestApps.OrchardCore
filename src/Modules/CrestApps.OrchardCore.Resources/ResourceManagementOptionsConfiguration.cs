@@ -196,6 +196,15 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetDependencies("leaflet")
             .SetVersion("1.0.0");
 
+        // The shared browser helpers, exposed as window.crestapps: html.escape, text.format, http.request (with the
+        // antiforgery token) and confirm, which also binds <form data-confirm> and <form data-once>.
+        _manifest
+            .DefineScript("crestapps-browser")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/crestapps-browser.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/crestapps-browser.js")
+            .SetVersion("1.0.0");
+
         _manifest
             .DefineScript("d3")
             .SetUrl(
@@ -404,6 +413,19 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-qkbjJ222M8XtPCHtcuKeK5N06UlmuJ0JXRTRtlN+KtvhaaxGIMc+cX0WTUF5LzK6")
             .SetDependencies("chart.js")
             .SetVersion("2.0.0");
+
+        // Keeps a model's answer from carrying a chat configuration that the chat apps would start (and whose template
+        // Vue would compile): DOMPurify drops the chat attributes and ids from answers, and anything added inside a
+        // mounted chat loses its auto-start attributes before the apps' watchers see it. It is this repository's own
+        // script, so it applies whether the chat apps load locally or from the CDN. The AIChatApp and
+        // ChatInteractionApp scripts depend on it, so it always loads before them.
+        _manifest
+            .DefineScript("chat-output-guard")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/chat-output-guard.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/chat-output-guard.js")
+            .SetDependencies("dompurify")
+            .SetVersion("1.0.0");
 
         // Shared image carousel (window.CoreAIChatImageCarousel), consumed by the AI chat and chat interaction
         // apps. When an answer shows two or more pictures in a row -- the slides, sheets or pages a document

@@ -109,6 +109,7 @@ public sealed class ImportRecipeBaseToolTests
             .AddSingleton(recipeSchemaService)
             .AddSingleton(recipeExecutionService)
             .AddSingleton<ILogger<ImportRecipeBaseTool>>(NullLogger<ImportRecipeBaseTool>.Instance)
+            .AddAuthorizedCaller()
             .BuildServiceProvider();
     }
 

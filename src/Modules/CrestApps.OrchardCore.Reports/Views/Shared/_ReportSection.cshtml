@@ -100,7 +100,7 @@
                             <tr class="report-header-group">
                                 @foreach (var headerCell in headerRow.Cells)
                                 {
-                                    <th colspan="@Math.Max(1, headerCell.Span)" class="text-center@(string.IsNullOrEmpty(headerCell.Label) ? " border-0" : null)">@headerCell.Label</th>
+                                    <th scope="col" colspan="@Math.Max(1, headerCell.Span)" class="text-center@(string.IsNullOrEmpty(headerCell.Label) ? " border-0" : null)">@headerCell.Label</th>
                                 }
                             </tr>
                         }
@@ -109,7 +109,7 @@
                             {
                                 var headerStyle = reportSection.Columns[i].HeaderStyle?.ToInlineCss();
 
-                                <th class="@alignClasses[i]" style="@headerStyle">@reportSection.Columns[i].Label</th>
+                                <th scope="col" class="@alignClasses[i]" style="@headerStyle">@reportSection.Columns[i].Label</th>
                             }
                         </tr>
                     </thead>

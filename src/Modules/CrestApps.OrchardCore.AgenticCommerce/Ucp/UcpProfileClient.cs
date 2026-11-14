@@ -1,14 +1,16 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Caching.Memory;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
 
 /// <summary>
 /// Fetches agent platforms' UCP profiles, through the egress guard (no hosts on the site's own network, no redirects),
-/// and keeps them as long as their cache headers allow.
+/// reads at most <c>MaxProfileLength</c> bytes of each, and keeps them in a bounded cache as long as their cache headers
+/// allow. A profile that can't be read is remembered as such for half a minute, so a caller can't make the store
+/// repeat a slow outbound call on every request.
 /// </summary>
 public sealed class UcpProfileClient
 {
@@ -21,20 +23,21 @@ public sealed class UcpProfileClient
 
     private static readonly TimeSpan _minimumLifetime = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan _maximumLifetime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan _failureLifetime = TimeSpan.FromSeconds(30);
 
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IMemoryCache _cache;
+    private readonly UcpProfileCache _cache;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UcpProfileClient"/> class.
     /// </summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
-    /// <param name="cache">The memory cache.</param>
+    /// <param name="cache">The bounded profile cache.</param>
     /// <param name="logger">The logger.</param>
     public UcpProfileClient(
         IHttpClientFactory httpClientFactory,
-        IMemoryCache cache,
+        UcpProfileCache cache,
         ILogger<UcpProfileClient> logger)
     {
         _httpClientFactory = httpClientFactory;
@@ -50,16 +53,15 @@ public sealed class UcpProfileClient
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<(JsonObject Profile, string Error)> GetAsync(string profileUrl, CancellationToken cancellationToken = default)
     {
-        if (!Uri.TryCreate(profileUrl, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        // A profile holds the keys a platform's signatures are checked with, so it is read over https only.
+        if (!Uri.TryCreate(profileUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
         {
             return (null, "invalid_profile_url");
         }
 
-        var cacheKey = "ucp-profile:" + uri.AbsoluteUri;
-
-        if (_cache.TryGetValue(cacheKey, out JsonObject cached))
+        if (_cache.TryGet(uri.AbsoluteUri, out var cached, out var failure))
         {
-            return (cached, null);
+            return (cached, failure);
         }
 
         try
@@ -74,37 +76,66 @@ public sealed class UcpProfileClient
 
             if (!response.IsSuccessStatusCode)
             {
-                return (null, "profile_unreachable");
+                return Fail(uri, "profile_unreachable");
             }
 
             if (response.Content.Headers.ContentLength > MaxProfileLength)
             {
-                return (null, "profile_malformed");
+                return Fail(uri, "profile_malformed");
             }
 
-            var body = await response.Content.ReadAsByteArrayAsync(timeout.Token);
+            // A chunked body has no length to check first, so the read itself stops past the limit.
+            var body = await ReadBoundedAsync(response.Content, timeout.Token);
 
-            if (body.Length > MaxProfileLength || JsonNode.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
+            if (body is null || JsonNode.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
             {
-                return (null, "profile_malformed");
+                return Fail(uri, "profile_malformed");
             }
 
             var lifetime = response.Headers.CacheControl?.MaxAge ?? _minimumLifetime;
 
-            _cache.Set(cacheKey, profile, lifetime < _minimumLifetime ? _minimumLifetime : lifetime > _maximumLifetime ? _maximumLifetime : lifetime);
+            _cache.Set(uri.AbsoluteUri, profile, body.Length, lifetime < _minimumLifetime ? _minimumLifetime : lifetime > _maximumLifetime ? _maximumLifetime : lifetime);
 
             return (profile, null);
         }
         catch (JsonException)
         {
-            return (null, "profile_malformed");
+            return Fail(uri, "profile_malformed");
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException && !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(exception, "The UCP profile at '{Host}' couldn't be read.", uri.Host);
 
-            return (null, "profile_unreachable");
+            return Fail(uri, "profile_unreachable");
         }
+    }
+
+    private (JsonObject Profile, string Error) Fail(Uri uri, string error)
+    {
+        _cache.SetFailure(uri.AbsoluteUri, error, _failureLifetime);
+
+        return (null, error);
+    }
+
+    // Reads at most MaxProfileLength bytes, or returns null for a longer body without reading the rest.
+    private static async Task<byte[]> ReadBoundedAsync(HttpContent content, CancellationToken cancellationToken)
+    {
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken);
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int read;
+
+        while ((read = await stream.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > MaxProfileLength)
+            {
+                return null;
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return buffer.ToArray();
     }
 
     /// <summary>
@@ -130,11 +161,20 @@ public sealed class UcpProfileClient
     }
 
     /// <summary>
-    /// Returns the made-up id an unregistered platform's checkouts are kept under, from its profile's address.
+    /// Returns the made-up id an unregistered platform's checkouts are kept under, from its profile's origin: scheme, host
+    /// and port, in lower case. The path and query are left out, so a caller can't be a new platform for each spelling of
+    /// its profile's address.
     /// </summary>
     /// <param name="profileUrl">The profile's address.</param>
     public static string GetUnregisteredPlatformId(string profileUrl)
-        => $"ucp-{Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(profileUrl ?? string.Empty)).AsSpan(0, 11))}";
+        => AgentPlatform.UnregisteredIdPrefix + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(GetOrigin(profileUrl) ?? profileUrl ?? string.Empty)).AsSpan(0, 11));
+
+    /// <summary>
+    /// Returns an address's origin (scheme, host and port, in lower case), or <see langword="null"/> when it isn't one.
+    /// </summary>
+    /// <param name="url">The address.</param>
+    public static string GetOrigin(string url)
+        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.IdnHost}:{uri.Port}".ToLowerInvariant() : null;
 
     /// <summary>
     /// The storage key of where a UCP platform's order updates go, on an agent checkout.

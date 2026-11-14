@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using System.Text.RegularExpressions;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
@@ -17,14 +18,17 @@ namespace CrestApps.OrchardCore.AI.WebCrawlers.Drivers;
 /// </summary>
 internal sealed class SitemapWebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
 {
+    private readonly IAIEndpointPolicy _endpointPolicy;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SitemapWebCrawlerDisplayDriver"/> class.
     /// </summary>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public SitemapWebCrawlerDisplayDriver(IStringLocalizer<SitemapWebCrawlerDisplayDriver> stringLocalizer)
+    public SitemapWebCrawlerDisplayDriver(IAIEndpointPolicy endpointPolicy, IStringLocalizer<SitemapWebCrawlerDisplayDriver> stringLocalizer)
     {
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -71,10 +75,18 @@ internal sealed class SitemapWebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["The base URL must be an absolute URL, for example https://example.com."]);
         }
+        else if (!string.IsNullOrWhiteSpace(model.BaseUrl) && !_endpointPolicy.IsAllowed(model.BaseUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
+        }
 
         if (!string.IsNullOrWhiteSpace(model.SitemapUrl) && !Uri.TryCreate(model.SitemapUrl.Trim(), UriKind.Absolute, out _))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SitemapUrl), S["The sitemap URL must be an absolute URL, for example https://example.com/sitemap.xml."]);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.SitemapUrl) && !_endpointPolicy.IsAllowed(model.SitemapUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SitemapUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         ValidatePatterns(context, nameof(model.IncludeUrlPatterns), model.IncludeUrlPatterns);

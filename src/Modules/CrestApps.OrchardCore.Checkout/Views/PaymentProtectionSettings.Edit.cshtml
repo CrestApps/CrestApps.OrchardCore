@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model PaymentProtectionSettingsViewModel
+
+<h4 class="mt-4">@T["Payment protection"]</h4>
+<p class="hint">@T["Card payments are always protected from card testing: a network or a signed-in customer whose card payments are declined five times is stopped for a while, and a checkout can begin at most eight payments. Each stop records a payment issue."]</p>
+
+<div class="ocat-wrapper" asp-validation-class-for="OnDeclineSpike">
+    <label asp-for="OnDeclineSpike" class="ocat-label">@T["When card payments are declined across the store"]</label>
+    <div class="ocat-end">
+        <select asp-for="OnDeclineSpike" class="form-select">
+            <option value="@DeclineSpikeAction.Notify">@T["Record a payment issue only"]</option>
+            <option value="@DeclineSpikeAction.RequireSignIn">@T["Ask guests to sign in to pay by card"]</option>
+            <option value="@DeclineSpikeAction.PauseGuestCards">@T["Pause card payments for guests"]</option>
+        </select>
+        <span class="hint">@T["Card testers rotate networks, so declines from many networks at once (30 within 10 minutes) are their sign. The choice applies for 30 minutes; signed-in customers always pay as usual."]</span>
+    </div>
+</div>

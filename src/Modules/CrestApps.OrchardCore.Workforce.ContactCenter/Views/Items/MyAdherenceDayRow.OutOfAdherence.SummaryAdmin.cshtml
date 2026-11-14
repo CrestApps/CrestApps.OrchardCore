@@ -1,0 +1,8 @@
+@model ShapeViewModel<MyAdherenceDayRow>
+
+@{
+    var day = Model.Value.Day;
+    var outMinutes = Math.Max(0, Math.Round((day.ScheduledSeconds - day.ExceptionSeconds - day.InAdherenceSeconds) / 60));
+}
+
+<span class="badge ta-badge fw-normal" title="@T["Out of adherence"]"><i class="fa-regular fa-clock text-info" aria-hidden="true"></i> @T["{0} min out", outMinutes]</span>

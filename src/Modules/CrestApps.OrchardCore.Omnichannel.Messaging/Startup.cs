@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -31,6 +33,7 @@ using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -177,11 +180,18 @@ public sealed class Startup : StartupBase
                 serviceProvider.GetRequiredService<IDataProtectionProvider>());
         });
         services.AddHttpContextAccessor();
+        services.AddSignedLinks();
         services.AddScoped<MessagingAttachmentLinks>();
         services.AddScoped<MessagingAttachmentUploads>();
         services.AddScoped<IMessagingAttachmentUrlProvider>(serviceProvider => serviceProvider.GetRequiredService<MessagingAttachmentLinks>());
         services.AddScoped<IMessagingInboundMediaIngestor, MessagingInboundMediaIngestor>();
-        services.AddHttpClient(MessagingInboundMediaIngestor.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
+        // Media addresses come from provider webhooks and redirect to the provider's storage, so the client follows
+        // redirects, and every hop is checked at connect: none reaches the site's own network.
+        services.AddHttpClient(MessagingInboundMediaIngestor.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
+            .ConfigurePrimaryHttpMessageHandler(serviceProvider => EgressNetwork.CreateHandler(
+                serviceProvider.GetService<IHostEnvironment>()?.IsDevelopment() == true,
+                allowPrivateNetwork: false,
+                allowRedirects: true, EgressNetwork.GetProxy(serviceProvider)));
 
         // Resolve the CRM contact behind a contact address, through the address's own channel. The contact content
         // types are read from the content definitions, so contact search works without the Omnichannel Management

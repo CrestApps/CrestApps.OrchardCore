@@ -3,6 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Shipping.Models;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Core.Signatures;
+using CrestApps.OrchardCore.Webhooks.Models;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Shipping.Services;
@@ -15,6 +18,9 @@ public sealed class EasyPostTrackingUpdater
 {
     private const int MaxEvents = 50;
     private const string SignaturePrefix = "hmac-sha256-hex=";
+
+    // EasyPost signs the body with HMAC-SHA256, sent as "hmac-sha256-hex=<lowercase hex>".
+    private static readonly HmacWebhookSignatureValidator _signature = new("easypost-hmac-sha256-hex", HashAlgorithmName.SHA256, WebhookSignatureEncoding.Hex, SignaturePrefix);
 
     private readonly IShipmentStore _shipments;
     private readonly IShipmentService _shipmentService;
@@ -32,15 +38,18 @@ public sealed class EasyPostTrackingUpdater
     /// </summary>
     public static bool IsSigned(string body, string signature, string secret)
     {
-        if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(signature) || !signature.StartsWith(SignaturePrefix, StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrEmpty(secret) || string.IsNullOrEmpty(signature))
         {
             return false;
         }
 
-        var key = Encoding.UTF8.GetBytes(secret.Normalize(NormalizationForm.FormKD));
-        var expected = Convert.ToHexStringLower(HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(body ?? string.Empty)));
-
-        return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(signature[SignaturePrefix.Length..].ToLowerInvariant()));
+        // EasyPost normalizes the secret (NFKD) before keying the HMAC.
+        return _signature.IsValid(new WebhookSignatureValidationContext
+        {
+            Secret = secret.Normalize(NormalizationForm.FormKD),
+            Signature = signature,
+            SignedContent = body ?? string.Empty,
+        });
     }
 
     /// <summary>
@@ -61,19 +70,27 @@ public sealed class EasyPostTrackingUpdater
         }
 
         var status = tracker["status"]?.GetValue<string>();
+        var events = (tracker["tracking_details"] as JsonArray ?? [])
+            .OfType<JsonObject>()
+            .Select(ToEvent)
+            .OfType<ShipmentTrackingEvent>()
+            .OrderByDescending(entry => entry.Utc)
+            .Take(MaxEvents)
+            .ToList();
+
+        // EasyPost retries and may deliver late: an update older than what the shipment already shows (an earlier one
+        // arriving last) doesn't move the parcel back, and the same update sent again, with nothing newer and the same
+        // status, changes nothing.
+        if (shipment.TrackingEvents is { Count: > 0 } known &&
+            (events.Count == 0 ||
+            events[0].Utc < known.Max(entry => entry.Utc) ||
+            (events[0].Utc == known.Max(entry => entry.Utc) && string.Equals(Describe(status), shipment.TrackingStatus, StringComparison.Ordinal))))
+        {
+            return false;
+        }
 
         shipment.TrackingStatus = Describe(status);
-        shipment.TrackingEvents = [.. (tracker["tracking_details"] as JsonArray ?? [])
-            .OfType<JsonObject>()
-            .Select(detail => new ShipmentTrackingEvent
-            {
-                Utc = DateTime.TryParse(detail["datetime"]?.GetValue<string>(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var utc) ? utc : _clock.UtcNow,
-                Status = Describe(detail["status"]?.GetValue<string>()),
-                Message = detail["message"]?.GetValue<string>(),
-                Location = string.Join(", ", new[] { detail["tracking_location"]?["city"]?.GetValue<string>(), detail["tracking_location"]?["state"]?.GetValue<string>() }.Where(part => !string.IsNullOrWhiteSpace(part))),
-            })
-            .OrderByDescending(entry => entry.Utc)
-            .Take(MaxEvents)];
+        shipment.TrackingEvents = events;
 
         if (tracker["public_url"]?.GetValue<string>() is { Length: > 0 } url && string.IsNullOrEmpty(shipment.TrackingUrl))
         {
@@ -94,6 +111,19 @@ public sealed class EasyPostTrackingUpdater
 
         return true;
     }
+
+    // A detail with no time can't be placed in the history. Stamped with the time it arrived, it would look newer on every
+    // delivery and let a replay through, so it's left out.
+    private static ShipmentTrackingEvent ToEvent(JsonObject detail)
+        => DateTime.TryParse(detail["datetime"]?.GetValue<string>(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var utc)
+            ? new ShipmentTrackingEvent
+            {
+                Utc = utc,
+                Status = Describe(detail["status"]?.GetValue<string>()),
+                Message = detail["message"]?.GetValue<string>(),
+                Location = string.Join(", ", new[] { detail["tracking_location"]?["city"]?.GetValue<string>(), detail["tracking_location"]?["state"]?.GetValue<string>() }.Where(part => !string.IsNullOrWhiteSpace(part))),
+            }
+            : null;
 
     // EasyPost's statuses are codes, such as "in_transit" or "out_for_delivery".
     internal static string Describe(string status)

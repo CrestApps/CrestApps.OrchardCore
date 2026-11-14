@@ -8,6 +8,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
@@ -17,6 +18,7 @@ internal sealed class BusinessHoursCalendarDisplayDriver : DisplayDriver<Busines
     private const int _defaultCloseMinute = 1020;
 
     private readonly IClock _clock;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
@@ -25,12 +27,15 @@ internal sealed class BusinessHoursCalendarDisplayDriver : DisplayDriver<Busines
     /// </summary>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="clock">The clock, which lists the time zones.</param>
+    /// <param name="siteService">The site settings, whose time zone a new calendar starts in.</param>
     public BusinessHoursCalendarDisplayDriver(
         IStringLocalizer<BusinessHoursCalendarDisplayDriver> stringLocalizer,
-        IClock clock)
+        IClock clock,
+        ISiteService siteService)
     {
         S = stringLocalizer;
         _clock = clock;
+        _siteService = siteService;
     }
 
     /// <inheritdoc/>
@@ -63,8 +68,13 @@ internal sealed class BusinessHoursCalendarDisplayDriver : DisplayDriver<Busines
     }
 
     /// <inheritdoc/>
-    public override IDisplayResult Edit(BusinessHoursCalendar calendar, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(BusinessHoursCalendar calendar, BuildEditorContext context)
     {
+        // A new calendar starts in the site's time zone rather than UTC; a saved one keeps what it has, empty included.
+        var timeZoneId = context.IsNew && string.IsNullOrWhiteSpace(calendar.TimeZoneId)
+            ? (await _siteService.GetSiteSettingsAsync()).TimeZoneId
+            : calendar.TimeZoneId;
+
         // Grouped in cards: the calendar itself, its week, and its holidays. Every card edits the same model under the
         // same prefix, so the one form still posts all of them together.
         void Populate(BusinessHoursCalendarViewModel model)
@@ -72,13 +82,13 @@ internal sealed class BusinessHoursCalendarDisplayDriver : DisplayDriver<Busines
             model.Id = calendar.ItemId;
             model.Name = calendar.Name;
             model.Description = calendar.Description;
-            model.TimeZoneId = calendar.TimeZoneId;
+            model.TimeZoneId = timeZoneId;
             model.Enabled = calendar.Enabled;
             model.Days = BuildDays(calendar.WeeklySchedule);
             model.HolidaysText = calendar.Holidays is { Count: > 0 }
                 ? string.Join(Environment.NewLine, calendar.Holidays.OrderBy(date => date).Select(date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)))
                 : null;
-            model.TimeZoneOptions = BuildTimeZoneOptions(calendar.TimeZoneId);
+            model.TimeZoneOptions = BuildTimeZoneOptions(timeZoneId);
         }
 
         return Combine(
@@ -131,7 +141,7 @@ internal sealed class BusinessHoursCalendarDisplayDriver : DisplayDriver<Busines
         calendar.WeeklySchedule = BuildSchedule(model.Days);
         calendar.Holidays = ParseHolidays(model.HolidaysText);
 
-        return Edit(calendar, context);
+        return await EditAsync(calendar, context);
     }
 
     private static List<BusinessHoursDayViewModel> BuildDays(IList<BusinessHoursDay> schedule)

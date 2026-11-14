@@ -10,6 +10,9 @@
     var settled = attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount;
 }
 
+@* The buttons below ask with data-confirm (the crestapps-browser helpers), which lets the browser check the fields first. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
 <zone Name="Title">
     <breadcrumb name="TransactionsPaymentsRefund" title="@T["Refund payment"]">
         <breadcrumb-item id="TransactionsPayments" action="Index" controller="PaymentsAdmin" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ManageRefunds.Name">@T["Payments"]</breadcrumb-item>
@@ -34,7 +37,7 @@
     </div>
 </div>
 
-<form asp-action="Refund" asp-route-itemId="@attempt.ItemId" method="post">
+<form asp-action="Refund" asp-route-itemId="@attempt.ItemId" method="post" class="no-multisubmit">
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
     <div class="ocat-limited-wrapper" asp-validation-class-for="Amount">
@@ -58,7 +61,7 @@
 
     <div class="action-bar-bottom">
         <button type="submit" class="btn btn-primary"
-                data-url-af="RemoveUrl" data-title="@T["Refund the customer"]" data-message="@T["Send this refund to the customer's original payment method? It cannot be undone."]" data-ok-text="@T["Refund"]" data-cancel-text="@T["Cancel"]">
+                data-confirm-title="@T["Refund the customer"]" data-confirm="@T["Send this refund to the customer's original payment method? It cannot be undone."]" data-confirm-ok="@T["Refund"]" data-confirm-cancel="@T["Cancel"]">
             @T["Refund"]
         </button>
         <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>

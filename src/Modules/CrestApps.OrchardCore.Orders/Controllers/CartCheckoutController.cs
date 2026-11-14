@@ -30,7 +30,7 @@ public sealed class CartCheckoutController : Controller
 
     [HttpPost("cart/checkout", Name = CartConstants.RouteNames.Checkout)]
     [ValidateAntiForgeryToken]
-    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)]
+    [RateLimitGroup(CheckoutConstants.RateLimitGroups.Start)]
     public async Task<IActionResult> Checkout()
     {
         var result = await _cartCheckout.StartAsync(User, HttpContext.RequestAborted);

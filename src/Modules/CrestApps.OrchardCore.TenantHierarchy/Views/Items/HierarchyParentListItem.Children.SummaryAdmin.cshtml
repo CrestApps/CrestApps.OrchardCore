@@ -1,0 +1,34 @@
+@model ShapeViewModel<HierarchyParentListItem>
+@using OrchardCore.Environment.Shell.Models
+
+@{
+    var parent = Model.Value.Parent;
+}
+
+@* The first child tenants of the parent, each opening its site while it runs; the parent's screen lists them all. *@
+<div class="admin-list-secondary">
+    <i class="fa-solid fa-turn-up fa-rotate-90 text-muted small me-1" aria-hidden="true"></i>
+    @foreach (var child in parent.Children.Take(HierarchyParentListItem.ChildrenShown))
+    {
+        var isRunning = child.Settings.State == TenantState.Running;
+
+        <span class="text-nowrap me-2" title="@child.Settings.Name">
+            @if (isRunning && !string.IsNullOrEmpty(child.Address))
+            {
+                <a href="@child.Address" target="_blank" rel="noopener noreferrer">@child.DisplayName</a>
+            }
+            else
+            {
+                <span>@child.DisplayName</span>
+            }
+            @if (!isRunning)
+            {
+                <partial name="_TenantStateBadge" model="child.Settings" />
+            }
+        </span>
+    }
+    @if (parent.Children.Count > HierarchyParentListItem.ChildrenShown)
+    {
+        <a class="text-nowrap" asp-controller="Platform" asp-action="Parent" asp-route-id="@parent.Settings.Name">@T["Show all {0} child tenants of {1}", parent.Children.Count, parent.DisplayName]</a>
+    }
+</div>

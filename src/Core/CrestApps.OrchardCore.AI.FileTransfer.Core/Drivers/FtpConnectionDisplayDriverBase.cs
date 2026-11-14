@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -19,17 +20,21 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
     where TModel : class
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly FileTransferHostOptions _hostOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FtpConnectionDisplayDriverBase{TModel}"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The provider the password is protected with.</param>
     /// <param name="stringLocalizer">The localizer of the derived driver, which owns the validation messages.</param>
+    /// <param name="hostOptions">What the host's operator allows, such as accepting any FTP server certificate.</param>
     protected FtpConnectionDisplayDriverBase(
         IDataProtectionProvider dataProtectionProvider,
-        IStringLocalizer stringLocalizer)
+        IStringLocalizer stringLocalizer,
+        IOptions<FileTransferHostOptions> hostOptions)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _hostOptions = hostOptions?.Value ?? new FileTransferHostOptions();
         S = stringLocalizer;
     }
 
@@ -79,6 +84,13 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
         if (model.Port is < 1 or > 65535)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Port), S["The port must be between 1 and 65535."]);
+        }
+
+        // Accepting any certificate lets anyone on the network path read the credentials and the files, so only the
+        // host's operator can allow it (CrestApps_AI:FileTransfer:AllowAnyFtpCertificate).
+        if (model.ValidateAnyCertificate && !_hostOptions.AllowAnyFtpCertificate)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ValidateAnyCertificate), S["Accepting any server certificate is turned off on this site. Use a server with a trusted certificate."]);
         }
 
         return new FtpConnectionMetadata

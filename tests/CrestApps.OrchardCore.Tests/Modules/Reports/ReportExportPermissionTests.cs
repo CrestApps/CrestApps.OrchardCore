@@ -98,13 +98,44 @@ public sealed class ReportExportPermissionTests
         Assert.Equal(expected, ReportsController.GetFileName("guarded", range));
     }
 
+    private static readonly string Manage = CrestApps.OrchardCore.Reports.Subscriptions.ReportSubscriptionPermissions.ManageReportSubscriptions.Name;
+
+    // SEC-A13: a subscription kept sending the report after the person who saved it lost access to it. At send time the
+    // author must still exist, be enabled, and hold the report's permission and Manage report subscriptions; otherwise
+    // the subscription is turned off and says why.
+    [Theory]
+    [InlineData("gone")]
+    [InlineData("no-view")]
+    [InlineData("no-manage")]
+    public async Task ASubscription_StopsAndSaysWhy_WhenItsAuthorLostAccess(string author)
+    {
+        var email = new Mock<IEmailService>();
+        var subscription = Subscription(modifiedBy: author);
+        subscription.AttachmentFormat = null;
+
+        var service = SubscriptionService(email, grants: new()
+        {
+            ["no-view"] = [Manage],
+            ["no-manage"] = [_viewPermission.Name],
+        });
+
+        var sent = await service.SendAsync(subscription, DateTime.UtcNow, reschedule: true, TestContext.Current.CancellationToken);
+
+        Assert.False(sent);
+        Assert.False(subscription.IsEnabled);
+        Assert.Null(subscription.NextRunUtc);
+        Assert.Contains(author, subscription.LastError);
+        Assert.Empty(_runs);
+        email.VerifyNoOtherCalls();
+    }
+
     [Fact]
     public async Task ASubscription_DoesNotSendTheExport_WhileWhoSavedItLacksTheExportPermission()
     {
         var email = new Mock<IEmailService>();
         var subscription = Subscription(modifiedBy: "viewer");
 
-        var sent = await SubscriptionService(email, grants: new() { ["viewer"] = [_viewPermission.Name] }).SendAsync(subscription, DateTime.UtcNow, reschedule: false, TestContext.Current.CancellationToken);
+        var sent = await SubscriptionService(email, grants: new() { ["viewer"] = [_viewPermission.Name, Manage] }).SendAsync(subscription, DateTime.UtcNow, reschedule: false, TestContext.Current.CancellationToken);
 
         Assert.False(sent);
         Assert.Contains("viewer may not export this report", subscription.LastError);
@@ -131,7 +162,7 @@ public sealed class ReportExportPermissionTests
         // The creator could only view it; the person who last saved it may export it.
         var subscription = Subscription(modifiedBy: "exporter");
 
-        var sent = await SubscriptionService(email, grants: new() { ["viewer"] = [_viewPermission.Name], ["exporter"] = [_viewPermission.Name, _exportPermission.Name] })
+        var sent = await SubscriptionService(email, grants: new() { ["viewer"] = [_viewPermission.Name, Manage], ["exporter"] = [_viewPermission.Name, _exportPermission.Name, Manage] })
             .SendAsync(subscription, DateTime.UtcNow, reschedule: false, TestContext.Current.CancellationToken);
 
         Assert.True(sent, subscription.LastError);

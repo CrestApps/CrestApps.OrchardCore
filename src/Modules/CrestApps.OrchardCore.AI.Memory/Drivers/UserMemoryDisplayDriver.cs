@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Memory.Services;
 using System.Security.Claims;
 using CrestApps.Core.AI.Memory;
 using CrestApps.OrchardCore.AI.Core;
@@ -41,7 +42,7 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
             var currentUser = httpContext?.User;
 
             if (currentUser == null ||
-                !await _authorizationService.AuthorizeAsync(currentUser, AIPermissions.ClearAIMemory, (object)user.UserId))
+                !await _authorizationService.AuthorizeAsync(currentUser, ClearAIMemoryPermission.For(currentUser, user.UserId)))
             {
                 return;
             }

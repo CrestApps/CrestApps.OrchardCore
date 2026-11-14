@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
 using CrestApps.OrchardCore.Telephony.Services;
@@ -57,21 +58,36 @@ public sealed class Startup : StartupBase
                 options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(5);
             });
 
-        // The typed client every Telnyx call now goes through. It is registered against the same named client so
-        // it inherits the resilience handler above; its own retry policy sits inside it and decides per command
-        // whether repeating is safe, which the transport cannot know.
+        // The typed client every Telnyx call-control command goes through. Its name is its type, so the handler above
+        // never reached it: it gets the same timeouts and circuit breaker here, but no transport retry. Its own retry
+        // policy sits inside it and decides per command whether repeating is safe, which the transport cannot know, so
+        // a transport retry would repeat a GET at both layers.
         services.AddHttpClient<TelnyxApiClient>((serviceProvider, client) =>
         {
-            // Read as it is now: this runs for every client created, so a saved API base URL applies to the next one.
+            // Read as it is now: this runs for every client created, so a saved API base URL applies to the next one. Only
+            // an https address on telnyx.com is used: the API key goes to it as a bearer token.
             var options = serviceProvider.GetRequiredService<IOptionsMonitor<TelnyxOptions>>().CurrentValue;
 
-            if (!string.IsNullOrWhiteSpace(options.ApiBaseUrl))
+            client.BaseAddress = new Uri(TelnyxApiAddress.Resolve(options.ApiBaseUrl));
+        })
+            .AddResilienceHandler("TelnyxApiClient", pipeline =>
             {
-                client.BaseAddress = new Uri(options.ApiBaseUrl);
-            }
-        });
+                pipeline.AddTimeout(TimeSpan.FromSeconds(30));
+                pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+                {
+                    FailureRatio = 0.1,
+                    SamplingDuration = TimeSpan.FromSeconds(30),
+                    MinimumThroughput = 100,
+                    BreakDuration = TimeSpan.FromSeconds(5),
+                });
+                pipeline.AddTimeout(TimeSpan.FromSeconds(10));
+            });
 
         services.AddSingleton<TelnyxApiRetryPolicy>();
+
+        // A recording is downloaded from the address Telnyx gives for it (a storage link that may redirect), so the
+        // client never reaches the site's own network, on any hop.
+        services.AddEgressGuardedHttpClient(TelnyxConstants.RecordingDownloadHttpClientName, client => client.Timeout = TimeSpan.FromMinutes(5), allowRedirects: true);
 
         services
             .AddOptions<TelnyxOptions>()

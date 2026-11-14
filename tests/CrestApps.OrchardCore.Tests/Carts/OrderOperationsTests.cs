@@ -26,6 +26,7 @@ public sealed class OrderOperationsTests
     private static readonly DateTime _now = new(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly InMemoryOrderStore _orders = new();
+    private readonly global::OrchardCore.Locking.Distributed.IDistributedLock _locks = new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance);
     private readonly RecordingHandler _handler = new();
 
     [Fact]
@@ -82,6 +83,65 @@ public sealed class OrderOperationsTests
         Assert.Equal(50m, refund.Amount);
         Assert.Equal("pi_1", refund.OriginalTransactionId);
         Assert.Equal("Scratched strap", refund.Reason);
+    }
+
+    [Fact]
+    public async Task TwoRefundsOfTheSameOrderAtOnce_GiveTheCreditOnce()
+    {
+        // Arrange: a double submit of "refund as store credit".
+        var order = PaidOrder();
+        var started = new TaskCompletionSource();
+        var finish = new TaskCompletionSource();
+        var credited = 0;
+        var refunder = new Mock<IOrderStoreCreditRefunder>();
+
+        refunder.Setup(value => value.CanRefundAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        refunder.Setup(value => value.RefundAsync(It.IsAny<Order>(), It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(async () =>
+            {
+                if (Interlocked.Increment(ref credited) == 1)
+                {
+                    started.TrySetResult();
+                    await finish.Task;
+                }
+
+                return true;
+            });
+
+        var attempts = new Mock<IPaymentAttemptStore>();
+        attempts
+            .Setup(value => value.GetBySessionAsync("session-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new PaymentAttempt { ItemId = "a1", SessionId = "session-1", State = PaymentAttemptState.Succeeded, TransactionId = "pi_1", ProviderKey = "test", ConfirmedAmount = 215m, ConfirmedTaxAmount = 21.50m, Currency = "USD", CreatedUtc = _now }]);
+
+        var refundStore = new Mock<IPaymentRefundStore>();
+        refundStore.Setup(value => value.GetByOriginalTransactionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        var services = new ServiceCollection()
+            .AddSingleton(refunder.Object)
+            .AddSingleton(NoTenders())
+            .AddSingleton(attempts.Object)
+            .AddSingleton(refundStore.Object)
+            .BuildServiceProvider();
+        var operations = Operations(services);
+
+        // Act
+        var first = operations.RefundAsync(order, 200m, "Damaged", restock: false, "admin", asStoreCredit: true, TestContext.Current.CancellationToken);
+
+        await Task.WhenAny(started.Task, first);
+        Assert.True(started.Task.IsCompleted, "The first refund didn't reach the store credit.");
+
+        var secondTask = operations.RefundAsync(order, 200m, "Damaged", restock: false, "admin", asStoreCredit: true, TestContext.Current.CancellationToken);
+
+        await Task.WhenAny(secondTask, Task.Delay(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken));
+        finish.SetResult();
+
+        var second = await secondTask;
+
+        await first;
+
+        // Assert
+        Assert.False(second.Succeeded);
+        Assert.Equal(1, credited);
     }
 
     [Fact]
@@ -171,6 +231,7 @@ public sealed class OrderOperationsTests
             services.GetService<IPaymentAttemptStore>() ?? Mock.Of<IPaymentAttemptStore>(),
             services.GetService<IPaymentRefundStore>() ?? Mock.Of<IPaymentRefundStore>(),
             services.GetService<ICheckoutPaymentProviderResolver>() ?? Mock.Of<ICheckoutPaymentProviderResolver>(),
+            _locks,
             Clock(),
             services,
             NullLogger<OrderOperationsService>.Instance,

@@ -30,8 +30,13 @@ public sealed class TaxTreatmentTests
             ReverseCharge = true,
         });
 
-        // The buyer is in Germany, where the VAT rule applies.
-        var context = TaxTestData.Context(100m, destination: Germany(), customer: new CustomerTaxProfile { CustomerType = CustomerTaxType.B2B });
+        // The buyer is in Germany, where the VAT rule applies, and is a business with a verified VAT number.
+        var context = TaxTestData.Context(100m, destination: Germany(), customer: new CustomerTaxProfile
+        {
+            CustomerType = CustomerTaxType.B2B,
+            VatNumber = "DE123456789",
+            TaxRegistrationVerified = true,
+        });
         var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);
@@ -40,6 +45,43 @@ public sealed class TaxTreatmentTests
         Assert.Equal(TaxTreatment.ReverseCharge, line.Treatment);
         Assert.False(string.IsNullOrEmpty(line.TreatmentReason));
         Assert.Equal(0m, result.TaxAmount);
+    }
+
+    /// <summary>
+    /// SEC-C4: any shopper could set their kind to business and stop paying VAT. Reverse charge now needs a registration
+    /// number an administrator verified; a business without one is taxed like anyone else.
+    /// </summary>
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("DE123456789", false)]
+    [InlineData(null, true)]
+    public async Task ReverseChargeRule_ForABusinessWithoutAVerifiedNumber_ChargesTaxNormally(string vatNumber, bool verified)
+    {
+        var harness = CreateHarness();
+        var jurisdictionId = await TaxTestData.AddJurisdictionAsync(harness, "Germany", "DE", null);
+
+        await TaxTestData.AddRuleAsync(harness, new TaxRule
+        {
+            Name = "VAT",
+            TaxType = TaxTypeNames.Vat,
+            JurisdictionId = jurisdictionId,
+            Source = TaxCalculationMethodNames.Percentage,
+            Rate = 0.19m,
+            ReverseCharge = true,
+        });
+
+        var context = TaxTestData.Context(100m, destination: Germany(), customer: new CustomerTaxProfile
+        {
+            CustomerType = CustomerTaxType.B2B,
+            VatNumber = vatNumber,
+            TaxRegistrationVerified = verified,
+        });
+        var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
+
+        var line = Assert.Single(result.Lines);
+
+        Assert.Equal(19m, line.TaxAmount);
+        Assert.Equal(TaxTreatment.Taxable, line.Treatment);
     }
 
     [Fact]

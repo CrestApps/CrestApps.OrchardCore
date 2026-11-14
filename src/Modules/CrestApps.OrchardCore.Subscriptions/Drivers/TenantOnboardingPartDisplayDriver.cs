@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Setup.Services;
 
@@ -16,6 +17,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver<TenantOnboardingPart>
 {
     private readonly ISetupService _setupService;
+    private readonly IEnumerable<IFeatureProfilesService> _featureProfilesServices;
 
     internal readonly IStringLocalizer S;
 
@@ -26,9 +28,11 @@ public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver
     /// <param name="stringLocalizer">The localizer used for validation messages.</param>
     public TenantOnboardingPartDisplayDriver(
         ISetupService setupService,
+        IEnumerable<IFeatureProfilesService> featureProfilesServices,
         IStringLocalizer<TenantOnboardingPartDisplayDriver> stringLocalizer)
     {
         _setupService = setupService;
+        _featureProfilesServices = featureProfilesServices;
         S = stringLocalizer;
     }
 
@@ -72,6 +76,13 @@ public sealed class TenantOnboardingPartDisplayDriver : ContentPartDisplayDriver
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.RecipeName), S["Invalid recipe name."]);
             }
+        }
+
+        // A sold site with no feature profile lets its buyer enable any feature the host has, so a plan can't be saved
+        // without one. The profile is chosen in the editor the Feature Profiles feature adds.
+        if (!_featureProfilesServices.Any())
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.RecipeName), S["A plan that sells sites needs a feature profile, which limits the features the buyer can enable. Enable the Feature Profiles feature and choose one."]);
         }
 
         part.RecipeName = model.RecipeName;

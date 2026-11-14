@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
@@ -95,27 +96,25 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId);
+        var selectedToolKeys = model.Tools?.Values?.SelectMany(x => x).Where(x => x.IsSelected).Select(x => x.ItemId) ?? [];
 
-        var metadata = new FunctionInvocationMetadata();
-
-        if (selectedToolKeys is null || !selectedToolKeys.Any())
+        // The editor shows only the tools the user may use, but a request can post any key: the same rule applies on
+        // save, and tools already on the profile that the user can't see are kept.
+        var metadata = new FunctionInvocationMetadata
         {
-            metadata.Names = [];
-        }
-        else
-        {
-            metadata.Names = _toolDefinitions.GetSelectableTools().Keys
-                .Intersect(selectedToolKeys)
-                .ToArray();
-        }
+            Names = await AIToolSelectionFilter.FilterAsync(
+                selectedToolKeys,
+                GetSelectedToolNames(profile),
+                _toolDefinitions.GetSelectableTools().Keys,
+                tool => _toolAccessEvaluator.IsAuthorizedAsync(_httpContextAccessor.HttpContext?.User, tool)),
+        };
 
         profile.Put(metadata);
 
         // Remove the legacy property key if it exists to complete migration.
         profile.Properties.Remove("AIProfileFunctionInvocationMetadata");
 
-        return Edit(profile, context);
+        return await EditAsync(profile, context);
     }
 
     /// <summary>

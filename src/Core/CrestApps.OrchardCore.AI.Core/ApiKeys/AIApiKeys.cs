@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore;
@@ -60,6 +61,9 @@ public static class AIApiKeys
 
     private const int PrefixLength = 12;
 
+    // The hash of an empty key, as before: an empty key never matches a stored hash.
+    private const string EmptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
     /// <summary>
     /// Makes a new key.
     /// </summary>
@@ -68,7 +72,7 @@ public static class AIApiKeys
     public static (string Key, string Prefix, string Hash) Generate(AIApiKeyKind kind)
     {
         var start = kind == AIApiKeyKind.Browser ? BrowserKeyStart : ServerKeyStart;
-        var key = start + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4)) + "_" + Base64Url(RandomNumberGenerator.GetBytes(24));
+        var key = start + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4)) + "_" + SecretTokens.Create(24);
 
         return (key, GetPrefix(key), Hash(key));
     }
@@ -95,7 +99,7 @@ public static class AIApiKeys
     /// <param name="key">The key.</param>
     /// <returns>The lowercase hex SHA-256 hash.</returns>
     public static string Hash(string key)
-        => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(key ?? string.Empty)));
+        => string.IsNullOrEmpty(key) ? EmptyHash : SecretTokens.Hash(key);
 
     /// <summary>
     /// Checks a key against the one stored.
@@ -220,8 +224,6 @@ public static class AIApiKeys
         => !string.IsNullOrEmpty(profileId) &&
             user?.HasClaim(ProfileClaimType, profileId) == true;
 
-    private static string Base64Url(byte[] bytes)
-        => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     /// <summary>
     /// The areas of the AI API. In OpenID scopes and on keys they read <c>ai.</c> and the area, such as <c>ai.calls</c>.

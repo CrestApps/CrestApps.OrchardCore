@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Models;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
@@ -11,16 +12,20 @@ internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServe
 {
     private readonly ISiteService _siteService;
     private readonly IShellConfiguration _shellConfiguration;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="McpServerOptionsConfiguration"/> class.
     /// </summary>
     /// <param name="siteService">The site service.</param>
     /// <param name="shellConfiguration">The shell configuration.</param>
+    /// <param name="dataProtectionProvider">The data protection provider the stored API key is protected with.</param>
     public McpServerOptionsConfiguration(
         ISiteService siteService,
-        IShellConfiguration shellConfiguration)
+        IShellConfiguration shellConfiguration,
+        IDataProtectionProvider dataProtectionProvider)
     {
+        _dataProtectionProvider = dataProtectionProvider;
         _siteService = siteService;
         _shellConfiguration = shellConfiguration;
     }
@@ -35,7 +40,7 @@ internal sealed class McpServerOptionsConfiguration : IConfigureOptions<McpServe
         var settings = _siteService.GetSettings<McpServerSettings>();
 
         options.AuthenticationType = settings.AuthenticationType;
-        options.ApiKey = settings.ApiKey;
+        options.ApiKey = McpServerApiKeyProtection.Read(_dataProtectionProvider, settings.ApiKey);
         options.RequireAccessPermission = settings.RequireAccessPermission;
         options.ExposeAllTools = settings.ExposeAllTools;
         options.Tools = settings.Tools is null

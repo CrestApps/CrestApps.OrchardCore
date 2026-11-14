@@ -1,0 +1,965 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Orders.Core.Handlers
+{
+    public sealed class OrderCheckoutHandler : CrestApps.OrchardCore.Checkout.Handlers.CheckoutHandlerBase
+    {
+        public OrderCheckoutHandler(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore orderStore, CrestApps.OrchardCore.Orders.Core.Services.IOrderService orderService, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Services.IOrderEventHandler> orderHandlers, CrestApps.OrchardCore.Carts.Core.Services.ICartStore cartStore, CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProviderResolver paymentProviderResolver, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Handlers.OrderCheckoutHandler> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Orders.Core.Handlers.OrderCheckoutHandler> stringLocalizer) { }
+        public override System.Threading.Tasks.Task ActivatingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowActivatingContext context) { }
+        public override System.Threading.Tasks.Task CanceledAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowCanceledContext context) { }
+        public override System.Threading.Tasks.Task CompletingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowCompletingContext context) { }
+        public override System.Threading.Tasks.Task ExpiredAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowExpiredContext context) { }
+        public override System.Threading.Tasks.Task FailedAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowFailedContext context) { }
+        public override System.Threading.Tasks.Task InitializingAsync(CrestApps.OrchardCore.Checkout.CheckoutFlowInitializingContext context) { }
+        public static CrestApps.OrchardCore.Checkout.BillingItem ToBillingItem(CrestApps.OrchardCore.Orders.Core.Models.CheckoutOrderBump bump) { }
+    }
+    public sealed class OrderPaymentSettledTransactionHandler : CrestApps.OrchardCore.Transactions.Services.TransactionEventHandlerBase
+    {
+        public OrderPaymentSettledTransactionHandler(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore orderStore, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Services.IOrderEventHandler> orderHandlers, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Handlers.OrderPaymentSettledTransactionHandler> logger) { }
+        public override System.Threading.Tasks.Task StatusChangedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Transactions.Models.TransactionStatus previous, CrestApps.OrchardCore.Transactions.Models.TransactionStatus current, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace CrestApps.OrchardCore.Orders.Core.Indexes
+{
+    public sealed class GiftCardIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public GiftCardIndex() { }
+        public decimal Balance { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public System.DateTime? ExpiresUtc { get; set; }
+        public bool IsEnabled { get; set; }
+        public string LastCharacters { get; set; }
+        public string NormalizedCode { get; set; }
+        public string OrderId { get; set; }
+        public string RecipientEmail { get; set; }
+    }
+    public sealed class GiftCardIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>
+    {
+        public GiftCardIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Orders.Core.Models.GiftCard> context) { }
+    }
+    public sealed class OrderIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public OrderIndex() { }
+        public string AccountId { get; set; }
+        public System.DateTime? AnonymizedUtc { get; set; }
+        public string CartId { get; set; }
+        public string Channel { get; set; }
+        public string CheckoutSessionId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string CustomerEmail { get; set; }
+        public string CustomerId { get; set; }
+        public string LocationId { get; set; }
+        public string OrderNumber { get; set; }
+        public string PurchaseOrderNumber { get; set; }
+        public string ShiftId { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderStatus Status { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class OrderIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Orders.Core.Models.Order>
+    {
+        public OrderIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Orders.Core.Models.Order> context) { }
+    }
+    public sealed class OrderReturnIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public OrderReturnIndex() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Number { get; set; }
+        public string OrderId { get; set; }
+        public string OrderNumber { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderReturnStatus Status { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class OrderReturnIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn>
+    {
+        public OrderReturnIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn> context) { }
+    }
+}
+namespace CrestApps.OrchardCore.Orders.Core.Models
+{
+    public sealed class CheckoutOrderBump
+    {
+        public const string BillingItemId = "order-bump";
+        public CheckoutOrderBump() { }
+        public string[] CategoryIds { get; set; }
+        public string ContentItemId { get; set; }
+        public string ContentItemVersionId { get; set; }
+        public string ContentType { get; set; }
+        public decimal ListPrice { get; set; }
+        public CrestApps.OrchardCore.Products.Core.Models.ProductType ProductType { get; set; }
+        public string Sku { get; set; }
+        public string TaxCategoryCode { get; set; }
+        public string TaxClassificationCode { get; set; }
+        public string Title { get; set; }
+        public decimal UnitPrice { get; set; }
+    }
+    public sealed class GiftCard : CrestApps.Core.Models.CatalogItem, CrestApps.OrchardCore.Models.ITimestampedModel
+    {
+        public GiftCard() { }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.GiftCardActivity> Activity { get; set; }
+        public decimal Balance { get; set; }
+        public string Code { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public System.DateTime? ExpiresUtc { get; set; }
+        public long Id { get; set; }
+        public decimal InitialValue { get; set; }
+        public bool IsEnabled { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string LastCharacters { get; }
+        public string Note { get; set; }
+        public string OrderId { get; set; }
+        public string OrderNumber { get; set; }
+        public string RecipientEmail { get; set; }
+        public string RecipientName { get; set; }
+        public System.DateTime UpdatedUtc { get; set; }
+        public bool CanPay(System.DateTime utcNow, string currency = null) { }
+        public void ChangeBalance(decimal amount, string reason, System.DateTime utcNow, string sessionId = null, string actor = null) { }
+    }
+    public sealed class GiftCardActivity : CrestApps.OrchardCore.Payments.BalanceLedgerEntry
+    {
+        public GiftCardActivity() { }
+    }
+    public static class GiftCardCodes
+    {
+        public const int Length = 16;
+        public static string Format(string code) { }
+        public static string Generate() { }
+        public static string Normalize(string code) { }
+    }
+    public sealed class GiftCardPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public GiftCardPart() { }
+    }
+    public sealed class Order : CrestApps.Core.Models.CatalogItem
+    {
+        public Order() { }
+        public string AccountId { get; set; }
+        public System.DateTime? AnonymizedUtc { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderApproval Approval { get; set; }
+        public CrestApps.OrchardCore.Addresses.Models.Address BillingAddress { get; set; }
+        public string CancelNote { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason? CancelReason { get; set; }
+        public System.DateTime? CanceledUtc { get; set; }
+        public string CartId { get; set; }
+        public string Channel { get; set; }
+        public System.Text.Json.Nodes.JsonObject CheckoutDetails { get; set; }
+        public string CheckoutSessionId { get; set; }
+        public System.DateTime? ConfirmationSentUtc { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Culture { get; set; }
+        public string Currency { get; set; }
+        public string CustomerEmail { get; set; }
+        public string CustomerId { get; set; }
+        public string CustomerName { get; set; }
+        public string CustomerPhone { get; set; }
+        public decimal DiscountTotal { get; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderDiscount> Discounts { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderDispute> Disputes { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderFulfillmentStatus? FulfillmentStatus { get; set; }
+        public bool HasOpenDispute { get; }
+        public long Id { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderInvoice Invoice { get; set; }
+        public bool IsPaymentCollected { get; }
+        public int ItemCount { get; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderLine> Lines { get; set; }
+        public string LocationId { get; set; }
+        public System.DateTime ModifiedUtc { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderNote> Notes { get; set; }
+        public string OrderNumber { get; set; }
+        public System.DateTime? PaidUtc { get; set; }
+        public bool PaymentDeferred { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderPaymentRisk PaymentRisk { get; set; }
+        public System.DateTime? PaymentSettledUtc { get; set; }
+        public string PurchaseOrderNumber { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderQuote Quote { get; set; }
+        public System.DateTime? RecoveryEmailSentUtc { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderRefundStatus RefundStatus { get; }
+        public decimal RefundedAmount { get; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderRefund> Refunds { get; set; }
+        public string RegisterId { get; set; }
+        public string RegisterName { get; set; }
+        public System.DateTime? ReviewRequestSentUtc { get; set; }
+        public string ShiftId { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderShipping Shipping { get; set; }
+        public CrestApps.OrchardCore.Addresses.Models.Address ShippingAddress { get; set; }
+        public string StaffName { get; set; }
+        public string StaffUserId { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderStatus Status { get; set; }
+        public decimal Subtotal { get; set; }
+        public decimal? TaxAmount { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Taxation.Models.TaxLine> TaxLines { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderTender> Tenders { get; set; }
+        public decimal? Total { get; set; }
+        public string UserId { get; set; }
+        public void Anonymize(System.DateTime now) { }
+    }
+    public sealed class OrderApproval
+    {
+        public OrderApproval() { }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; }
+        public string DecidedBy { get; set; }
+        public System.DateTime? DecidedUtc { get; set; }
+        public string Note { get; set; }
+        public string Reason { get; set; }
+        public string RequestedBy { get; set; }
+        public System.DateTime RequestedUtc { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderApprovalStatus Status { get; set; }
+        public bool Covers(decimal total, string currency) { }
+    }
+    public enum OrderApprovalStatus
+    {
+        Pending = 0,
+        Approved = 1,
+        Rejected = 2,
+    }
+    public enum OrderCancelReason
+    {
+        Replaced = 1,
+        PaymentFailed = 2,
+        CheckoutCanceled = 3,
+        CheckoutExpired = 4,
+        Abandoned = 5,
+        Unavailable = 6,
+        CanceledByStore = 7,
+        Declined = 8,
+        Rejected = 9,
+    }
+    public static class OrderChannels
+    {
+        public const string Agent = "agent";
+        public const string Draft = "draft";
+        public const string Online = "online";
+        public const string PointOfSale = "pos";
+        public static bool IsCounterSale(CrestApps.OrchardCore.Orders.Core.Models.Order order) { }
+    }
+    public sealed class OrderDiscount
+    {
+        public OrderDiscount() { }
+        public decimal Amount { get; set; }
+        public string Code { get; set; }
+        public string Description { get; set; }
+        public string ProviderKey { get; set; }
+        public CrestApps.OrchardCore.Checkout.Models.DiscountTarget Target { get; set; }
+    }
+    public sealed class OrderDispute
+    {
+        public OrderDispute() { }
+        public decimal Amount { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public string Gateway { get; set; }
+        public bool IsClosed { get; set; }
+        public string Reason { get; set; }
+        public string Reference { get; set; }
+        public string Status { get; set; }
+        public System.DateTime UpdatedUtc { get; set; }
+    }
+    public enum OrderFulfillmentStatus
+    {
+        Unfulfilled = 0,
+        PartiallyFulfilled = 1,
+        Fulfilled = 2,
+    }
+    public sealed class OrderInvoice
+    {
+        public OrderInvoice() { }
+        public string AddsToOrderId { get; set; }
+        public string AddsToOrderNumber { get; set; }
+        public string CreatedBy { get; set; }
+        public System.DateTime? DueUtc { get; set; }
+        public string Note { get; set; }
+        public System.DateTime? SentUtc { get; set; }
+    }
+    public sealed class OrderLine
+    {
+        public OrderLine() { }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderLineAddOn> AddOns { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderLineBundleItem> BundleItems { get; set; }
+        public string[] CategoryIds { get; set; }
+        public string ContentItemId { get; set; }
+        public string ContentItemVersionId { get; set; }
+        public string ContentType { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderLineDetail> DetailLines { get; set; }
+        public System.Collections.Generic.Dictionary<string, string> Details { get; set; }
+        public bool ExcludeFromDiscounts { get; set; }
+        public string LineId { get; set; }
+        public decimal LineTotal { get; set; }
+        public string PriceId { get; set; }
+        public string PriceName { get; set; }
+        public CrestApps.OrchardCore.Products.Core.Models.ProductType ProductType { get; set; }
+        public int Quantity { get; set; }
+        public decimal? QuotedUnitPrice { get; set; }
+        public System.DateTime? ShipsFromUtc { get; set; }
+        public string Sku { get; set; }
+        public string TaxCategoryCode { get; set; }
+        public string TaxClassificationCode { get; set; }
+        public string Title { get; set; }
+        public decimal UnitPrice { get; set; }
+        public string VariantId { get; set; }
+        public string VariantTitle { get; set; }
+    }
+    public sealed class OrderLineAddOn
+    {
+        public OrderLineAddOn() { }
+        public string AddOnId { get; set; }
+        public string Label { get; set; }
+        public decimal Price { get; set; }
+        public string Value { get; set; }
+    }
+    public sealed class OrderLineBundleItem
+    {
+        public OrderLineBundleItem() { }
+        public string ContentItemId { get; set; }
+        public int Quantity { get; set; }
+        public string Title { get; set; }
+    }
+    public sealed class OrderLineDetail
+    {
+        public OrderLineDetail() { }
+        public string Key { get; set; }
+        public string Label { get; set; }
+        public string Value { get; set; }
+    }
+    public sealed class OrderLineGrantContext<TPart>
+        where TPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public OrderLineGrantContext(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderLine line, OrchardCore.ContentManagement.ContentItem contentItem, TPart part) { }
+        public OrchardCore.ContentManagement.ContentItem ContentItem { get; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderLine Line { get; }
+        public CrestApps.OrchardCore.Orders.Core.Models.Order Order { get; }
+        public TPart Part { get; }
+    }
+    public sealed class OrderNote
+    {
+        public OrderNote() { }
+        public string AuthorName { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Id { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderNoteKind Kind { get; set; }
+        public string Text { get; set; }
+    }
+    public enum OrderNoteKind
+    {
+        Note = 0,
+        Event = 1,
+    }
+    public sealed class OrderPaymentRisk
+    {
+        public OrderPaymentRisk() { }
+        public string Gateway { get; set; }
+        public bool IsElevated { get; }
+        public string Level { get; set; }
+        public int? Score { get; set; }
+    }
+    public sealed class OrderQuote
+    {
+        public OrderQuote() { }
+        public System.DateTime? ExpiresUtc { get; set; }
+        public string Message { get; set; }
+        public System.DateTime RequestedUtc { get; set; }
+        public System.DateTime? RespondedUtc { get; set; }
+        public System.DateTime? SentUtc { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderQuoteStatus Status { get; set; }
+        public bool CanAccept(System.DateTime utcNow) { }
+    }
+    public enum OrderQuoteStatus
+    {
+        Requested = 0,
+        Sent = 1,
+        Accepted = 2,
+        Declined = 3,
+    }
+    public sealed class OrderRefund
+    {
+        public OrderRefund() { }
+        public decimal Amount { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public string Reason { get; set; }
+        public string RefundId { get; set; }
+    }
+    public enum OrderRefundStatus
+    {
+        None = 0,
+        PartiallyRefunded = 1,
+        Refunded = 2,
+    }
+    public sealed class OrderReturn : CrestApps.Core.Models.CatalogItem
+    {
+        public OrderReturn() { }
+        public System.DateTime? ApprovedUtc { get; set; }
+        public System.DateTime? ClosedUtc { get; set; }
+        public string Comment { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Currency { get; set; }
+        public string CustomerEmail { get; set; }
+        public string CustomerName { get; set; }
+        public string ExchangeFor { get; set; }
+        public long Id { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsActive { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsOpen { get; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderReturnLine> Lines { get; set; }
+        public System.DateTime ModifiedUtc { get; set; }
+        public string Number { get; set; }
+        public string OrderId { get; set; }
+        public string OrderNumber { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int Quantity { get; }
+        public System.DateTime? ReceivedUtc { get; set; }
+        public decimal RefundedAmount { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderReturnResolution Resolution { get; set; }
+        public string RestockLocationId { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderReturnStatus Status { get; set; }
+        public string StoreMessage { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class OrderReturnLine
+    {
+        public OrderReturnLine() { }
+        public string LineId { get; set; }
+        public int Quantity { get; set; }
+        public string Reason { get; set; }
+        public bool Restocked { get; set; }
+        public string Sku { get; set; }
+        public string Title { get; set; }
+        public decimal UnitPrice { get; set; }
+    }
+    public enum OrderReturnResolution
+    {
+        Refund = 0,
+        Exchange = 1,
+    }
+    public enum OrderReturnStatus
+    {
+        Requested = 0,
+        Approved = 1,
+        Received = 2,
+        Completed = 3,
+        Rejected = 4,
+        Canceled = 5,
+    }
+    public enum OrderRevokeReason
+    {
+        Canceled = 1,
+        Refunded = 2,
+    }
+    public sealed class OrderSettings
+    {
+        public OrderSettings() { }
+        public bool AllowQuoteRequests { get; set; }
+        public string OrderBumpHeadline { get; set; }
+        public decimal? OrderBumpPercentOff { get; set; }
+        public string OrderBumpProductId { get; set; }
+        public int RecoveryDelayHours { get; set; }
+        public bool SendConfirmations { get; set; }
+        public bool SendRecoveryEmails { get; set; }
+    }
+    public sealed class OrderShipping
+    {
+        public const string PickupProviderName = "Pickup";
+        public OrderShipping() { }
+        public decimal Amount { get; set; }
+        public string Description { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsPickup { get; }
+        public string LocationId { get; set; }
+        public string MethodId { get; set; }
+        public string Name { get; set; }
+        public string ProviderName { get; set; }
+        public string RateId { get; set; }
+        public string ZoneId { get; set; }
+    }
+    public enum OrderStatus
+    {
+        Draft = 0,
+        AwaitingPayment = 1,
+        Paid = 2,
+        Canceled = 3,
+    }
+    public sealed class OrderTender
+    {
+        public OrderTender() { }
+        public decimal Amount { get; set; }
+        public string Description { get; set; }
+        public string ProviderKey { get; set; }
+        public string Reference { get; set; }
+    }
+    public sealed class ReturnSettings
+    {
+        public static readonly System.Collections.Generic.IReadOnlyList<string> DefaultReasons;
+        public ReturnSettings() { }
+        public bool AllowExchanges { get; set; }
+        public string Instructions { get; set; }
+        public System.Collections.Generic.List<string> Reasons { get; set; }
+        public int WindowDays { get; set; }
+        public System.Collections.Generic.IReadOnlyList<string> GetReasons() { }
+    }
+}
+namespace CrestApps.OrchardCore.Orders.Core
+{
+    public static class OrderConstants
+    {
+        public const string CheckoutStepKey = "Order";
+        public const string CollectionName = "Orders";
+        public const string FindRateLimitGroup = "find-order";
+        public const string GiftCardContentType = "GiftCard";
+        public const string GiftCardTenderKey = "gift-card";
+        public const string ReturnsSettingsGroupId = "returns";
+        public const string SettingsGroupId = "orders";
+        public static class AttemptPolicies
+        {
+            public const string GiftCardCode = "gift-card-code";
+            public const string OrderCreateAccount = "order-create-account";
+            public const string OrderLookupEmail = "order-lookup-email";
+            public const string OrderLookupNetwork = "order-lookup-network";
+        }
+        public static class DisplayTypes
+        {
+            public const string Detail = "Detail";
+            public const string DetailAdmin = "DetailAdmin";
+        }
+        public static class Features
+        {
+            public const string Api = "CrestApps.OrchardCore.Orders.Api";
+            public const string GiftCards = "CrestApps.OrchardCore.Orders.GiftCards";
+            public const string Orders = "CrestApps.OrchardCore.Orders";
+            public const string Returns = "CrestApps.OrchardCore.Orders.Returns";
+        }
+        public static class RouteNames
+        {
+            public const string Find = "OrdersFind";
+            public const string MyOrder = "MyOrder";
+            public const string MyOrders = "MyOrders";
+            public const string Pay = "GuestOrderPay";
+            public const string View = "OrdersView";
+        }
+    }
+}
+namespace CrestApps.OrchardCore.Orders.Core.Services
+{
+    public sealed class AbandonedOrderSweeper
+    {
+        public AbandonedOrderSweeper(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore orderStore, CrestApps.OrchardCore.Orders.Core.Services.IOrderService orderService, CrestApps.OrchardCore.Checkout.ICheckoutSessionStore sessionStore, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Services.AbandonedOrderSweeper> logger) { }
+        public System.Threading.Tasks.Task<int> SweepAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class FulfillmentLocation : System.IEquatable<CrestApps.OrchardCore.Orders.Core.Services.FulfillmentLocation>
+    {
+        public FulfillmentLocation(string LocationId, string Name) { }
+        public string LocationId { get; init; }
+        public string Name { get; init; }
+    }
+    public sealed class GiftCardQuery
+    {
+        public GiftCardQuery() { }
+        public string Search { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Services.GiftCardStatusFilter Status { get; set; }
+    }
+    public sealed class GiftCardService
+    {
+        public GiftCardService(CrestApps.OrchardCore.Orders.Core.Services.IGiftCardStore store, YesSql.ISession session, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Models.GiftCard> AdjustAsync(string itemId, decimal amount, string reason, string actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Models.GiftCard> IssueAsync(decimal value, string currency, string reason, System.Action<CrestApps.OrchardCore.Orders.Core.Models.GiftCard> configure = null, string code = null, string actor = null, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public enum GiftCardStatusFilter
+    {
+        All = 0,
+        Active = 1,
+        UsedUp = 2,
+        Expired = 3,
+        Disabled = 4,
+    }
+    public sealed class GiftCardStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Orders.Core.Models.GiftCard, CrestApps.OrchardCore.Orders.Core.Indexes.GiftCardIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>, CrestApps.OrchardCore.Orders.Core.Services.IGiftCardStore
+    {
+        public GiftCardStore(YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Models.GiftCard> GetByCodeAsync(string code, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>> ListByOrderAsync(string orderId, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Cards"})]
+        public System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>>> PageAsync(CrestApps.OrchardCore.Orders.Core.Services.GiftCardQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class GiftCardTenderProvider : CrestApps.OrchardCore.Checkout.Services.ICheckoutTenderProvider
+    {
+        public GiftCardTenderProvider(CrestApps.OrchardCore.Orders.Core.Services.IGiftCardStore store, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Orders.Core.Services.GiftCardTenderProvider> stringLocalizer) { }
+        public string Key { get; }
+        public System.Threading.Tasks.Task CreditAsync(string reference, decimal amount, string currency, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DebitAsync(string reference, decimal amount, string currency, CrestApps.OrchardCore.Checkout.CheckoutFlow flow, System.Threading.CancellationToken cancellationToken = default) { }
+        public string Describe(CrestApps.OrchardCore.Orders.Core.Models.GiftCard card) { }
+        public System.Threading.Tasks.Task<decimal?> GetBalanceAsync(string reference, string currency, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Checkout.Models.TenderLine>> GetTendersAsync(CrestApps.OrchardCore.Checkout.Services.CheckoutTenderContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public interface IFulfillmentLocationProvider
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Services.FulfillmentLocation>> GetLocationsAsync();
+    }
+    public interface IGiftCardStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Models.GiftCard> GetByCodeAsync(string code, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>> ListByOrderAsync(string orderId, System.Threading.CancellationToken cancellationToken = default);
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Cards"})]
+        System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.GiftCard>>> PageAsync(CrestApps.OrchardCore.Orders.Core.Services.GiftCardQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderEmailSectionProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Services.OrderEmailSection> GetSectionAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderEventHandler
+    {
+        System.Threading.Tasks.Task CanceledAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderCanceledContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task CreatedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderCreatedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task LinesChangedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderLinesChangedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaidAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderPaidContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task PaymentSettledAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderPaidContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RefundedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderRefundedContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ReturnedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderReturnedContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderLinkService
+    {
+        System.Threading.Tasks.Task<string> CreatePayUrlAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order);
+        System.Threading.Tasks.Task<string> CreateUrlAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order);
+        string GetOrderId(string token);
+    }
+    public interface IOrderOperationsService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Services.OrderOperationResult> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, string note, bool refund, bool restock, string actorName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Services.OrderMoney> GetMoneyAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> IsOwedAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Services.OrderOperationResult> RefundAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, decimal? amount, string reason, bool restock, string actorName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Services.OrderOperationResult> RefundAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, decimal? amount, string reason, bool restock, string actorName, bool asStoreCredit, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> ResendConfirmationAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, string actorName, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderRefunder
+    {
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Refundable",
+                "Outstanding"})]
+        System.Threading.Tasks.Task<System.ValueTuple<decimal, decimal>> GetMoneyAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Refunded",
+                "Errors"})]
+        System.Threading.Tasks.Task<System.ValueTuple<decimal, System.Collections.Generic.IReadOnlyList<string>>> RefundAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, decimal amount, string reason, string actorName, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderRequestService
+    {
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Order",
+                "Problems"})]
+        System.Threading.Tasks.Task<System.ValueTuple<CrestApps.OrchardCore.Orders.Core.Models.Order, System.Collections.Generic.IReadOnlyList<string>>> RequestAsync(System.Security.Claims.ClaimsPrincipal user, string message, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderReturnStore
+    {
+        System.Threading.Tasks.ValueTask CreateAsync(CrestApps.OrchardCore.Orders.Core.Models.OrderReturn orderReturn, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn> FindByIdAsync(string id, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn>> ListByOrderAsync(string orderId, System.Threading.CancellationToken cancellationToken = default);
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Returns"})]
+        System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn>>> PageAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderReturnQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask UpdateAsync(CrestApps.OrchardCore.Orders.Core.Models.OrderReturn orderReturn, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderService
+    {
+        System.Threading.Tasks.Task AddNoteAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, string text, CrestApps.OrchardCore.Orders.Core.Models.OrderNoteKind kind, string authorName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason, bool restock, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Services.OrderCreationResult> CreateFromCartAsync(CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Services.OrderCreationResult> CreateFromCartAsync(CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing, System.Action<CrestApps.OrchardCore.Orders.Core.Models.Order> configure, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RecordRefundAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderRefund refund, bool restock, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ReplaceLinesAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderStore
+    {
+        System.Threading.Tasks.ValueTask CreateAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.Orders.Core.Models.Order> FindByIdAsync(string orderId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Models.Order> FindByNumberAsync(string orderNumber, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.Order>> ListUnpaidByCartAsync(string cartId, System.Threading.CancellationToken cancellationToken = default);
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Orders"})]
+        System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.Order>>> PageAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask UpdateAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOrderStoreCreditRefunder
+    {
+        System.Threading.Tasks.Task<bool> CanRefundAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RefundAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, decimal amount, string reason, string actor, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class OrderCanceledContext
+    {
+        public OrderCanceledContext(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason) { }
+        public CrestApps.OrchardCore.Orders.Core.Models.Order Order { get; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason Reason { get; }
+        public bool Restock { get; set; }
+    }
+    public sealed class OrderCreatedContext
+    {
+        public OrderCreatedContext(CrestApps.OrchardCore.Orders.Core.Models.Order order) { }
+        public CrestApps.OrchardCore.Orders.Core.Models.Order Order { get; }
+        public System.Collections.Generic.IReadOnlyList<string> Problems { get; }
+        public void Refuse(string problem) { }
+    }
+    public sealed class OrderCreationResult
+    {
+        public OrderCreationResult(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Collections.Generic.IReadOnlyList<string> problems) { }
+        public CrestApps.OrchardCore.Orders.Core.Models.Order Order { get; }
+        public System.Collections.Generic.IReadOnlyList<string> Problems { get; }
+        public bool Succeeded { get; }
+    }
+    public static class OrderCulture
+    {
+        public static string Current() { }
+        public static System.IDisposable Use(string culture) { }
+    }
+    public static class OrderEmailKinds
+    {
+        public const string Confirmation = "order-confirmation";
+        public const string GiftCard = "gift-card";
+        public const string Invoice = "order-invoice";
+        public const string Quote = "order-quote";
+        public const string Recovery = "checkout-recovery";
+        public const string Return = "order-return";
+        public const string Shipped = "order-shipped";
+    }
+    public sealed class OrderEmailLink : System.IEquatable<CrestApps.OrchardCore.Orders.Core.Services.OrderEmailLink>
+    {
+        public OrderEmailLink(string Text, string Url, string Note = null) { }
+        public string Note { get; init; }
+        public string Text { get; init; }
+        public string Url { get; init; }
+    }
+    public static class OrderEmailModels
+    {
+        public const string OrderName = "Order";
+        public static System.Collections.Generic.IReadOnlyDictionary<string, object> For(CrestApps.OrchardCore.Orders.Core.Models.Order order) { }
+    }
+    public sealed class OrderEmailSection
+    {
+        public OrderEmailSection() { }
+        public string Intro { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Orders.Core.Services.OrderEmailLink> Links { get; set; }
+        public string Title { get; set; }
+    }
+    public abstract class OrderEventHandlerBase : CrestApps.OrchardCore.Orders.Core.Services.IOrderEventHandler
+    {
+        protected OrderEventHandlerBase() { }
+        public virtual System.Threading.Tasks.Task CanceledAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderCanceledContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task CreatedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderCreatedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task LinesChangedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderLinesChangedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaidAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderPaidContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task PaymentSettledAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderPaidContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task RefundedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderRefundedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public virtual System.Threading.Tasks.Task ReturnedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderReturnedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public abstract class OrderGrantHandlerBase : CrestApps.OrchardCore.Orders.Core.Services.OrderEventHandlerBase
+    {
+        protected OrderGrantHandlerBase() { }
+        public override sealed System.Threading.Tasks.Task CanceledAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderCanceledContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        protected abstract System.Threading.Tasks.Task GrantAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken);
+        public override sealed System.Threading.Tasks.Task PaidAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderPaidContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public override sealed System.Threading.Tasks.Task PaymentSettledAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderPaidContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public override sealed System.Threading.Tasks.Task RefundedAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderRefundedContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        protected abstract System.Threading.Tasks.Task RevokeAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderRevokeReason reason, System.Threading.CancellationToken cancellationToken);
+    }
+    public static class OrderLineContentExtensions
+    {
+        public static System.Threading.Tasks.Task<OrchardCore.ContentManagement.ContentItem> GetPurchasedAsync(this OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Orders.Core.Models.OrderLine line) { }
+    }
+    public abstract class OrderLineGrantHandlerBase<TPart> : CrestApps.OrchardCore.Orders.Core.Services.OrderGrantHandlerBase
+        where TPart : OrchardCore.ContentManagement.ContentPart
+    {
+        protected OrderLineGrantHandlerBase(OrchardCore.ContentManagement.IContentManager contentManager) { }
+        protected virtual System.Threading.Tasks.Task<bool> CanGrantAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.Task<System.Collections.Generic.ISet<string>> GetGrantedLineIdsAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken);
+        protected override sealed System.Threading.Tasks.Task GrantAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.Task<bool> GrantLineAsync(CrestApps.OrchardCore.Orders.Core.Models.OrderLineGrantContext<TPart> context, System.Threading.CancellationToken cancellationToken);
+        protected virtual System.Threading.Tasks.Task GrantedAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, int granted, System.Threading.CancellationToken cancellationToken) { }
+        protected override sealed System.Threading.Tasks.Task RevokeAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderRevokeReason reason, System.Threading.CancellationToken cancellationToken) { }
+        protected abstract System.Threading.Tasks.Task RevokeLineAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderLine line, CrestApps.OrchardCore.Orders.Core.Models.OrderRevokeReason reason, System.Threading.CancellationToken cancellationToken);
+    }
+    public static class OrderLineText
+    {
+        public static string Describe(CrestApps.OrchardCore.Orders.Core.Models.OrderLine line) { }
+        public static string DescribeAddOn(CrestApps.OrchardCore.Orders.Core.Models.OrderLineAddOn addOn) { }
+        public static string DescribeBundle(CrestApps.OrchardCore.Orders.Core.Models.OrderLine line) { }
+        public static string DescribeDetail(CrestApps.OrchardCore.Orders.Core.Models.OrderLineDetail detail) { }
+        public static string DescribeForPacking(CrestApps.OrchardCore.Orders.Core.Models.OrderLine line) { }
+    }
+    public static class OrderLines
+    {
+        public static System.Collections.Generic.List<CrestApps.OrchardCore.Orders.Core.Models.OrderLine> FromPricing(CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing) { }
+    }
+    public sealed class OrderLinesChangedContext
+    {
+        public OrderLinesChangedContext(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.OrderLine> previousLines) { }
+        public CrestApps.OrchardCore.Orders.Core.Models.Order Order { get; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.OrderLine> PreviousLines { get; }
+        public System.Collections.Generic.IReadOnlyList<string> Problems { get; }
+        public void Refuse(string problem) { }
+    }
+    public sealed class OrderOperationScope
+    {
+        public OrderOperationScope() { }
+        public string ActorName { get; set; }
+        public bool Restock { get; set; }
+    }
+    public sealed class OrderPaidContext
+    {
+        public OrderPaidContext(CrestApps.OrchardCore.Orders.Core.Models.Order order) { }
+        public CrestApps.OrchardCore.Orders.Core.Models.Order Order { get; }
+    }
+    public sealed class OrderQuery
+    {
+        public OrderQuery() { }
+        public string AccountId { get; set; }
+        public string Channel { get; set; }
+        public System.DateTime? CreatedBefore { get; set; }
+        public System.DateTime? CreatedOnOrAfter { get; set; }
+        public string CustomerEmail { get; set; }
+        public string CustomerId { get; set; }
+        public bool GuestsOnly { get; set; }
+        public string LocationId { get; set; }
+        public bool NotAnonymized { get; set; }
+        public string Search { get; set; }
+        public string ShiftId { get; set; }
+        public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Orders.Core.Models.OrderStatus> Statuses { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class OrderRefundedContext
+    {
+        public OrderRefundedContext(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderRefund refund) { }
+        public CrestApps.OrchardCore.Orders.Core.Models.Order Order { get; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderRefund Refund { get; }
+        public bool Restock { get; set; }
+    }
+    public sealed class OrderReportReader
+    {
+        public OrderReportReader(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore orderStore) { }
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachine(typeof(CrestApps.OrchardCore.Orders.Core.Services.OrderReportReader.<ReadPaidAsync>d__4))]
+        public System.Collections.Generic.IAsyncEnumerable<CrestApps.OrchardCore.Orders.Core.Models.Order> ReadPaidAsync(System.DateTime fromUtc, System.DateTime toUtc, [System.Runtime.CompilerServices.EnumeratorCancellation] System.Threading.CancellationToken cancellationToken = default) { }
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachine(typeof(CrestApps.OrchardCore.Orders.Core.Services.OrderReportReader.<ReadUnfulfilledAsync>d__5))]
+        public System.Collections.Generic.IAsyncEnumerable<CrestApps.OrchardCore.Orders.Core.Models.Order> ReadUnfulfilledAsync([System.Runtime.CompilerServices.EnumeratorCancellation] System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class OrderReturnPolicy
+    {
+        public static decimal GetItemsValue(CrestApps.OrchardCore.Orders.Core.Models.OrderReturn orderReturn) { }
+        public static System.Collections.Generic.IReadOnlyDictionary<string, int> GetReturnable(CrestApps.OrchardCore.Orders.Core.Models.Order order, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn> returns) { }
+        public static bool IsOpen(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.ReturnSettings settings, System.DateTime utcNow) { }
+        public static decimal UnitPriceOf(CrestApps.OrchardCore.Orders.Core.Models.OrderLine line, string currency = null) { }
+    }
+    public sealed class OrderReturnQuery
+    {
+        public OrderReturnQuery() { }
+        public bool All { get; set; }
+        public string Search { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderReturnStatus? Status { get; set; }
+    }
+    public sealed class OrderReturnStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn, CrestApps.OrchardCore.Orders.Core.Indexes.OrderReturnIndex>, CrestApps.OrchardCore.Orders.Core.Services.IOrderReturnStore
+    {
+        public OrderReturnStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn>> ListByOrderAsync(string orderId, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Returns"})]
+        public System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.OrderReturn>>> PageAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderReturnQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class OrderReturnedContext
+    {
+        public OrderReturnedContext(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderReturn orderReturn, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Services.OrderReturnedLine> lines) { }
+        public string ActorId { get; set; }
+        public string ActorName { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Services.OrderReturnedLine> Lines { get; }
+        public string LocationId { get; set; }
+        public CrestApps.OrchardCore.Orders.Core.Models.Order Order { get; }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderReturn Return { get; }
+    }
+    public sealed class OrderReturnedLine : System.IEquatable<CrestApps.OrchardCore.Orders.Core.Services.OrderReturnedLine>
+    {
+        public OrderReturnedLine(CrestApps.OrchardCore.Orders.Core.Models.OrderLine Line, int Quantity, bool Restock) { }
+        public CrestApps.OrchardCore.Orders.Core.Models.OrderLine Line { get; init; }
+        public int Quantity { get; init; }
+        public bool Restock { get; init; }
+    }
+    public sealed class OrderService : CrestApps.OrchardCore.Orders.Core.Services.IOrderService
+    {
+        public const string OrderNumberSeries = "Orders.Order";
+        public OrderService(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore store, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Services.IOrderEventHandler> handlers, CrestApps.OrchardCore.Numbering.INumberSequence numberSequence, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Services.OrderService> logger) { }
+        public System.Threading.Tasks.Task AddNoteAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, string text, CrestApps.OrchardCore.Orders.Core.Models.OrderNoteKind kind, string authorName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> CancelAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason, bool restock, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Services.OrderCreationResult> CreateFromCartAsync(CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Services.OrderCreationResult> CreateFromCartAsync(CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing, System.Action<CrestApps.OrchardCore.Orders.Core.Models.Order> configure, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> RecordRefundAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Orders.Core.Models.OrderRefund refund, bool restock, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ReplaceLinesAsync(CrestApps.OrchardCore.Orders.Core.Models.Order order, CrestApps.OrchardCore.Carts.Core.Models.CartPricing pricing, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class OrderStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Orders.Core.Models.Order, CrestApps.OrchardCore.Orders.Core.Indexes.OrderIndex>, CrestApps.OrchardCore.Orders.Core.Services.IOrderStore
+    {
+        public OrderStore(YesSql.ISession session, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService> phoneNumberServices = null) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Orders.Core.Models.Order> FindByNumberAsync(string orderNumber, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.Order>> ListUnpaidByCartAsync(string cartId, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Count",
+                "Orders"})]
+        public System.Threading.Tasks.Task<System.ValueTuple<int, System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Orders.Core.Models.Order>>> PageAsync(CrestApps.OrchardCore.Orders.Core.Services.OrderQuery query, int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        protected override System.Threading.Tasks.ValueTask SavingAsync(CrestApps.OrchardCore.Orders.Core.Models.Order record) { }
+    }
+    public static class ProductCategories
+    {
+        public static string[] GetIds(OrchardCore.ContentManagement.ContentItem contentItem) { }
+    }
+}
+namespace CrestApps.OrchardCore.Orders.Core.Telemetry
+{
+    public static class OrdersTelemetry
+    {
+        public const string ResultCreated = "created";
+        public const string ResultUnavailable = "unavailable";
+        public const string SourceName = "CrestApps.OrchardCore.Orders";
+        public static System.Diagnostics.Metrics.Counter<long> Cancelled { get; }
+        public static System.Diagnostics.Metrics.Counter<long> Created { get; }
+        public static System.Diagnostics.Metrics.Meter Meter { get; }
+        public static string GetChannelTag(string channel) { }
+        public static string GetReasonTag(CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason) { }
+        public static void RecordCancelled(CrestApps.OrchardCore.Orders.Core.Models.OrderCancelReason reason) { }
+        public static void RecordCreated(string channel, bool unavailable) { }
+    }
+}
+namespace CrestApps.OrchardCore.Orders
+{
+    public static class OrderPermissions
+    {
+        public static readonly OrchardCore.Security.Permissions.Permission ManageGiftCards;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageOrders;
+        public static readonly OrchardCore.Security.Permissions.Permission ViewOwnOrders;
+    }
+}
+namespace CrestApps.OrchardCore.Orders.Services
+{
+    public sealed class OrderMoney
+    {
+        public OrderMoney() { }
+        public bool CanRefundAsStoreCredit { get; set; }
+        public string Currency { get; set; }
+        public decimal Outstanding { get; set; }
+        public decimal Refundable { get; set; }
+    }
+    public sealed class OrderOperationResult
+    {
+        public OrderOperationResult() { }
+        public System.Collections.Generic.List<string> Errors { get; }
+        public System.Collections.Generic.List<string> Messages { get; }
+        public decimal Refunded { get; set; }
+        public System.Collections.Generic.Dictionary<string, decimal> ReturnedToBalances { get; }
+        public bool Succeeded { get; }
+    }
+}

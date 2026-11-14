@@ -7,7 +7,10 @@
     </breadcrumb>
 </zone>
 
-<form asp-action="Create" method="post">
+@* The form keeps its own validation (required fields), so the question is asked by the crestapps-browser helpers. *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
+<form asp-action="Create" method="post" class="no-multisubmit" data-confirm-title="@T["Issue gift card"]" data-confirm="@T["Issue this gift card? Its balance can be spent at once."]" data-confirm-ok="@T["Issue"]" data-confirm-cancel="@T["Cancel"]">
     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
     <div class="ocat-limited-wrapper" asp-validation-class-for="Value">

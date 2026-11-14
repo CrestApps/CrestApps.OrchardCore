@@ -52,4 +52,28 @@ public sealed class ContentImportOptions
     /// uploads older than this value are purged by a background task. Defaults to 1 hour.
     /// </summary>
     public TimeSpan TemporaryFileLifetime { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// The most columns an imported spreadsheet may have. A header cell beyond it fails the file before its rows are
+    /// read. Defaults to 1,000.
+    /// </summary>
+    public int MaxColumns { get; set; } = 1_000;
+
+    /// <summary>
+    /// The most data rows an imported spreadsheet may have. Defaults to 1,048,576, Excel's own limit.
+    /// </summary>
+    public int MaxRows { get; set; } = 1_048_576;
+
+    /// <summary>
+    /// The most characters a cell of an imported file (CSV or spreadsheet) may hold, which bounds the memory one cell
+    /// takes. Defaults to 1,048,576. It is above Excel's own 32,767 because the module's export writes a long HTML or
+    /// Markdown body into one cell, and that file must import again.
+    /// </summary>
+    public int MaxCellLength { get; set; } = 1_048_576;
+
+    /// <summary>
+    /// The most shared strings an imported workbook may hold. They are read into memory when the file opens. Defaults
+    /// to 2,000,000.
+    /// </summary>
+    public int MaxSharedStrings { get; set; } = 2_000_000;
 }

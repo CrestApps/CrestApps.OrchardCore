@@ -1,20 +1,38 @@
-using CrestApps.OrchardCore.Roles.Core.Models;
+using CrestApps.OrchardCore.ContentAccessControl.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Contents;
 using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.ContentAccessControl.Handlers;
 
 /// <summary>
-/// Handles events for role based content item authorization.
+/// Refuses a restricted content item to whoever isn't in one of its roles: viewing it, previewing it and cloning it (a
+/// preview or a clone shows everything the item holds).
 /// </summary>
 public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
+    // Compared by name: a permission object isn't the same instance in every module.
+    private static readonly HashSet<string> _guardedPermissions = new(StringComparer.Ordinal)
+    {
+        CommonPermissions.ViewContent.Name,
+        CommonPermissions.ViewOwnContent.Name,
+        CommonPermissions.PreviewContent.Name,
+        CommonPermissions.PreviewOwnContent.Name,
+        CommonPermissions.CloneContent.Name,
+        CommonPermissions.CloneOwnContent.Name,
+    };
+
+    // The permissions a member of the item's roles is granted by this handler.
+    private static readonly HashSet<string> _viewPermissions = new(StringComparer.Ordinal)
+    {
+        CommonPermissions.ViewContent.Name,
+        CommonPermissions.ViewOwnContent.Name,
+    };
+
     private readonly IServiceProvider _serviceProvider;
 
     /// <summary>
@@ -28,7 +46,7 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
-        // It runs even when the View content permission was already granted, as it is to everyone, anonymous visitors
+        // It runs even when the permission was already granted, as View content is to everyone, anonymous visitors
         // included: a restricted item is refused to whoever isn't in its roles, whatever else allowed it.
         var user = context?.User;
 
@@ -37,85 +55,30 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
             return;
         }
 
-        if (context.Resource == null || requirement.Permission != CommonPermissions.ViewContent)
+        if (context.Resource is not ContentItem contentItem || requirement.Permission is null || !_guardedPermissions.Contains(requirement.Permission.Name))
         {
             return;
         }
 
-        var contentItem = context.Resource as ContentItem;
+        var roleNames = await ContentAccessRestrictions.GetRoleNamesAsync(contentItem, _serviceProvider.GetService<IContentDefinitionManager>());
 
-        if (contentItem == null)
+        if (roleNames.Count == 0)
         {
             return;
         }
 
-        var contentDefinitionManager = _serviceProvider.GetService<IContentDefinitionManager>();
-
-        if (contentDefinitionManager is null)
+        if (roleNames.Any(user.IsInRole))
         {
-            return;
-        }
-
-        var definition = await contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
-
-        if (definition is null)
-        {
-            return;
-        }
-
-        var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // RolePickerPart is reusable by default. Look in the content type definition for the part.
-        foreach (var partDefinition in definition.Parts)
-        {
-            var settings = partDefinition.GetSettings<RolePickerPartContentAccessControlSettings>();
-
-            if (!settings.IsContentRestricted)
-            {
-                continue;
-            }
-
-            if (partDefinition.IsNamedPart())
-            {
-                var rolePickerPart = contentItem.Get<RolePickerPart>(partDefinition.Name);
-
-                if (rolePickerPart?.RoleNames is null)
-                {
-                    continue;
-                }
-
-                foreach (var roleName in rolePickerPart.RoleNames)
-                {
-                    roleNames.Add(roleName);
-                }
-            }
-            else
-            {
-                if (!contentItem.TryGet<RolePickerPart>(out var rolePickerPart) || rolePickerPart.RoleNames is null)
-                {
-                    continue;
-                }
-
-                foreach (var roleName in rolePickerPart.RoleNames)
-                {
-                    roleNames.Add(roleName);
-                }
-            }
-        }
-
-        foreach (var roleName in roleNames)
-        {
-            if (user.IsInRole(roleName))
+            // Being in one of the item's roles is what viewing it takes. Previewing (the latest draft) and cloning still
+            // need their own permission, which this handler never grants.
+            if (_viewPermissions.Contains(requirement.Permission.Name))
             {
                 context.Succeed(requirement);
-
-                return;
             }
+
+            return;
         }
 
-        if (roleNames.Count > 0)
-        {
-            context.Fail(new AuthorizationFailureReason(this, "User is not in any of the required roles for this content item."));
-        }
+        context.Fail(new AuthorizationFailureReason(this, "User is not in any of the required roles for this content item."));
     }
 }

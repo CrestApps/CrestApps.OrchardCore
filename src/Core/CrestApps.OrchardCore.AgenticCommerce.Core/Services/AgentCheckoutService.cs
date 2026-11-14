@@ -49,6 +49,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
     private readonly IEnumerable<ICheckoutContactStep> _contactSteps;
     private readonly IEnumerable<ICheckoutFulfillmentStep> _fulfillmentSteps;
     private readonly IEnumerable<IAgentPaymentHandler> _paymentHandlers;
+    private readonly IEnumerable<IAgentCheckoutCompletionGate> _completionGates;
     private readonly ICheckoutPaymentProviderResolver _providers;
     private readonly IAgentItemResolver _items;
     private readonly ISiteService _siteService;
@@ -74,6 +75,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
     /// <param name="contactSteps">The Contact step, when a module offers one.</param>
     /// <param name="fulfillmentSteps">The Shipping step, when a module offers one.</param>
     /// <param name="paymentHandlers">The payment handlers.</param>
+    /// <param name="completionGates">The gates every completion passes, such as AP2's mandate check.</param>
     /// <param name="providers">The checkout payment providers, for what they can do.</param>
     /// <param name="items">The item id resolver.</param>
     /// <param name="siteService">The site service.</param>
@@ -95,6 +97,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         IEnumerable<ICheckoutContactStep> contactSteps,
         IEnumerable<ICheckoutFulfillmentStep> fulfillmentSteps,
         IEnumerable<IAgentPaymentHandler> paymentHandlers,
+        IEnumerable<IAgentCheckoutCompletionGate> completionGates,
         ICheckoutPaymentProviderResolver providers,
         IAgentItemResolver items,
         ISiteService siteService,
@@ -116,6 +119,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         _contactSteps = contactSteps;
         _fulfillmentSteps = fulfillmentSteps;
         _paymentHandlers = paymentHandlers;
+        _completionGates = completionGates;
         _providers = providers;
         _items = items;
         _siteService = siteService;
@@ -259,8 +263,21 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                 return await ContinueAuthenticationAsync(checkout, context, payment, cancellationToken);
             }
 
+            var completion = new AgentCheckoutCompletionContext
+            {
+                Context = context,
+                Checkout = checkout,
+                Payment = payment,
+                Update = update,
+            };
+
             if (update is not null && !await IsBeingPaidAsync(checkout, cancellationToken))
             {
+                if (await AgentCheckoutCompletionGates.CheckChangesAsync(_completionGates, completion, cancellationToken) is { } changeRefusal)
+                {
+                    return await RefuseAsync(checkout, context, changeRefusal, cancellationToken);
+                }
+
                 Apply(checkout, update);
             }
 
@@ -280,6 +297,15 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                 };
             }
 
+            // Checked here, after the request's changes and the final sync, so every transport (REST, MCP, A2A) passes
+            // the same gates on the checkout exactly as it will be paid.
+            completion.View = view;
+
+            if (await AgentCheckoutCompletionGates.CheckAsync(_completionGates, completion, cancellationToken) is { } refused)
+            {
+                return refused;
+            }
+
             await PayAsync(checkout, context, view, payment, cancellationToken);
 
             return new AgentCheckoutResult
@@ -289,8 +315,19 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             };
         }, cancellationToken);
 
+    // A completion a gate refused: nothing the request asked for is applied, and the reason is in the messages.
+    private async Task<AgentCheckoutResult> RefuseAsync(AgentCheckout checkout, AgentCheckoutContext context, AgentCheckoutMessage refusal, CancellationToken cancellationToken)
+    {
+        var view = await SyncAsync(checkout, context, cancellationToken);
+
+        view.Messages.Add(refusal);
+
+        return AgentCheckoutResult.Fail(AgentCheckoutFailure.Refused, error: null, checkout, view);
+    }
+
     // Finishes a payment the bank asked the buyer to approve, with the result of the 3-D Secure the agent ran. The same
-    // payment attempt is resumed, so the provider confirms the payment it began rather than making a second one.
+    // payment attempt is resumed, so the provider confirms the payment it began rather than making a second one. The
+    // gates check the checkout again as it will be paid, so an AP2 checkout is paid only with its mandate.
     private async Task<AgentCheckoutResult> ContinueAuthenticationAsync(AgentCheckout checkout, AgentCheckoutContext context, AgentPayment payment, CancellationToken cancellationToken)
     {
         var result = payment.Authentication;
@@ -338,7 +375,14 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                 };
         }
 
-        await PayAsync(checkout, context, await SyncAsync(checkout, context, cancellationToken), payment, cancellationToken);
+        var current = await SyncAsync(checkout, context, cancellationToken);
+
+        if (await AgentCheckoutCompletionGates.CheckAsync(_completionGates, new AgentCheckoutCompletionContext { Context = context, Checkout = checkout, Payment = payment, View = current }, cancellationToken) is { } refused)
+        {
+            return refused;
+        }
+
+        await PayAsync(checkout, context, current, payment, cancellationToken);
 
         return new AgentCheckoutResult
         {
@@ -476,8 +520,11 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
         {
             var checkout = await _store.FindByIdAsync(id, cancellationToken);
 
-            // A platform only sees its own checkouts; the store's background work sees all of them.
-            if (checkout is null || (context is not null && !string.Equals(checkout.PlatformId, context.PlatformId, StringComparison.Ordinal)))
+            // A platform only sees its own checkouts; the store's background work sees all of them. A cart is not a
+            // checkout: taking its id here would make it a store checkout (with stock held) outside the platform's cap.
+            if (checkout is null ||
+                (context is not null && !string.Equals(checkout.PlatformId, context.PlatformId, StringComparison.Ordinal)) ||
+                (context is not null && string.Equals(checkout.GetProperty(AgentCheckout.KindProperty), AgentCheckout.CartKind, StringComparison.Ordinal)))
             {
                 return AgentCheckoutResult.Fail(AgentCheckoutFailure.NotFound, S["There is no such checkout."]);
             }

@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// The scoped <see cref="IVoiceCallEndTurn"/>: one instance per call, holding whatever the end-call tool
 /// recorded while that call was live.
 /// </summary>
-public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
+public sealed class VoiceCallEndTurn : IVoiceCallEndTurn, IDisposable
 {
     private CancellationTokenSource _requested = new();
 
@@ -117,4 +117,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
         _requested = new CancellationTokenSource();
         previous.Dispose();
     }
+
+    /// <inheritdoc/>
+    public void Dispose() => _requested.Dispose();
 }

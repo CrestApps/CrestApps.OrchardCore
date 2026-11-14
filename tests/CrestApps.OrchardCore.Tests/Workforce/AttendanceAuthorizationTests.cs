@@ -114,6 +114,11 @@ public sealed class AttendanceAuthorizationTests
             .Setup(service => service.GetManagedScopeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new WorkforceScope(false, new HashSet<string>([ManagedTeam], StringComparer.Ordinal)));
 
+        // The caller isn't the worker of any exception here.
+        scopes
+            .Setup(service => service.CanDecideForWorkerAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
         var htmlLocalizer = new Mock<IHtmlLocalizer<AttendanceController>>();
 
         htmlLocalizer.Setup(localizer => localizer[It.IsAny<string>()]).Returns((string name) => new LocalizedHtmlString(name, name));

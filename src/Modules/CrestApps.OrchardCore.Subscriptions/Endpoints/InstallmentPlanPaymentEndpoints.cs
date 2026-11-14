@@ -1,3 +1,4 @@
+using OrchardCore.RateLimits;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Subscriptions.Controllers;
@@ -28,11 +29,13 @@ internal static class InstallmentPlanPaymentEndpoints
 
         builder.MapPost($"{adminUrlPrefix}/installment-plans/BeginPayment/{{itemId}}", BeginPaymentAsync)
             .RequireAuthorization()
-            .WithName(SubscriptionConstants.InstallmentPlans.BeginPaymentRouteName);
+            .WithName(SubscriptionConstants.InstallmentPlans.BeginPaymentRouteName)
+            .WithRateLimitGroup(SubscriptionConstants.RateLimitGroups.InstallmentPayment);
 
         builder.MapPost($"{adminUrlPrefix}/installment-plans/PaymentStatus/{{itemId}}", PaymentStatusAsync)
             .RequireAuthorization()
-            .WithName(SubscriptionConstants.InstallmentPlans.PaymentStatusRouteName);
+            .WithName(SubscriptionConstants.InstallmentPlans.PaymentStatusRouteName)
+            .WithRateLimitGroup(SubscriptionConstants.RateLimitGroups.InstallmentPayment);
 
         return builder;
     }

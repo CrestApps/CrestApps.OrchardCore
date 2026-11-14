@@ -1,9 +1,12 @@
 using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Users;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Handlers;
+using OrchardCore.Modules;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Customers.Handlers;
@@ -20,7 +23,8 @@ internal static class CustomerMerge
 {
     public static async Task RunAsync(IServiceProvider serviceProvider, IUser user, ILogger logger)
     {
-        if (user is not User { UserId: { Length: > 0 } userId, EmailConfirmed: true })
+        // Only a user who proved they control their mailbox by a round trip gets the guests that bought with it.
+        if (user is not User { UserId: { Length: > 0 } userId, EmailConfirmed: true } account || !UserEmailOwnership.IsVerified(account.Properties, account.Email))
         {
             return;
         }
@@ -56,22 +60,6 @@ public sealed class CustomerMergeLoginFormEvent : LoginFormEventBase
         => CustomerMerge.RunAsync(_serviceProvider, user, _logger);
 }
 
-public sealed class CustomerMergeRegistrationFormEvents : RegistrationFormEventsBase
-{
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger _logger;
-
-    public CustomerMergeRegistrationFormEvents(IServiceProvider serviceProvider, ILogger<CustomerMergeRegistrationFormEvents> logger)
-    {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-    }
-
-    // A site that does not ask users to confirm their email marks it confirmed at registration.
-    public override Task RegisteredAsync(IUser user)
-        => CustomerMerge.RunAsync(_serviceProvider, user, _logger);
-}
-
 public sealed class CustomerMergeUserEventHandler : UserEventHandlerBase
 {
     private readonly IServiceProvider _serviceProvider;
@@ -83,6 +71,16 @@ public sealed class CustomerMergeUserEventHandler : UserEventHandlerBase
         _logger = logger;
     }
 
-    public override Task ConfirmedAsync(UserConfirmContext context)
-        => CustomerMerge.RunAsync(_serviceProvider, context.User, _logger);
+    // Following the confirmation link is the round trip that proves the user controls the mailbox, so it is recorded
+    // before the guests that bought with the address are merged.
+    public override async Task ConfirmedAsync(UserConfirmContext context)
+    {
+        if (context.User is User user && !UserEmailOwnership.IsVerified(user.Properties, user.Email))
+        {
+            UserEmailOwnership.MarkVerified(user.Properties, user.Email, _serviceProvider.GetRequiredService<IClock>().UtcNow);
+            await _serviceProvider.GetRequiredService<UserManager<IUser>>().UpdateAsync(user);
+        }
+
+        await CustomerMerge.RunAsync(_serviceProvider, context.User, _logger);
+    }
 }

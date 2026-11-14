@@ -60,7 +60,7 @@ public sealed class OsrmSettingsDisplayDriver : SiteDisplayDriver<OsrmSettings>
 
         var url = model.BaseUrl?.Trim().TrimEnd('/');
 
-        if (!string.IsNullOrEmpty(url) && (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")))
+        if (!string.IsNullOrEmpty(url) && (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(uri.UserInfo)))
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.BaseUrl), S["The OSRM server's address must start with http:// or https://."]);
         }

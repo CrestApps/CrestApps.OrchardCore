@@ -13,6 +13,8 @@
  * - runs simulated conversations round by round: each round is one request, and when the coach rewrote the
  *   instructions after a round, the next round tests them, until the run is finished or the author stops it.
  */
+import { confirmAction } from '../../../CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js';
+
 (function (window, document) {
     'use strict';
 
@@ -784,7 +786,7 @@
     }
 
     async function restoreRevision(number) {
-        if (busy || !window.confirm(format(strings.restoreConfirm, number))) {
+        if (busy || !(await confirmAction('', format(strings.restoreConfirm, number)))) {
             return;
         }
 

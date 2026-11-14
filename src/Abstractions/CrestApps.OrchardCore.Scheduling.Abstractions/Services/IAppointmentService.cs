@@ -28,6 +28,16 @@ public interface IAppointmentService
     Task<AppointmentResult> ConfirmAsync(Appointment appointment, string actor = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records that the customer confirmed a self-service booking from the link e-mailed to them: a held appointment
+    /// becomes requested when its type waits for staff to confirm it, and confirmed otherwise.
+    /// </summary>
+    /// <param name="appointment">The held appointment.</param>
+    /// <param name="actor">Who confirmed it, usually the customer's e-mail address.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The outcome.</returns>
+    Task<AppointmentResult> ConfirmContactAsync(Appointment appointment, string actor = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Moves an appointment to another time.
     /// </summary>
     /// <param name="appointment">The appointment.</param>

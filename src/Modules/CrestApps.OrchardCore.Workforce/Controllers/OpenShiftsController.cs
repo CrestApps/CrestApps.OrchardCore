@@ -335,6 +335,12 @@ public sealed class OpenShiftsController : Controller
             return denied;
         }
 
+        // A manager doesn't give an open shift to themselves.
+        if (!await _scopeService.CanDecideForWorkerAsync(User, workerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
+        }
+
         var result = await _openShiftService.AssignAsync(shift.ItemId, workerId, User.Identity?.Name, HttpContext.RequestAborted);
 
         await NotifyAsync(result.Errors, H["The shift has been given to the worker and put on the calendar."]);
@@ -382,6 +388,11 @@ public sealed class OpenShiftsController : Controller
         if (denied is not null)
         {
             return denied;
+        }
+
+        if (!await _scopeService.CanDecideForWorkerAsync(User, workerId, HttpContext.RequestAborted))
+        {
+            return Forbid();
         }
 
         var result = await _openShiftService.DeclineClaimAsync(shift.ItemId, workerId, note, User.Identity?.Name, HttpContext.RequestAborted);

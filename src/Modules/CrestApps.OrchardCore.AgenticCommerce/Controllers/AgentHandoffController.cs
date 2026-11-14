@@ -70,8 +70,10 @@ public sealed class AgentHandoffController : Controller
             : null;
 
         // The checkout goes to the browser the agent sends the buyer to, the way the store gives out a new checkout: to
-        // the signed-in user, or to a guest who holds its token. A checkout already made for a linked buyer stays theirs.
-        if (string.IsNullOrEmpty(session.OwnerId) || session.OwnerId.StartsWith(AgentPrincipal.OwnerPrefix, StringComparison.Ordinal))
+        // the signed-in user, or to a guest who holds its token. It is given once: the link opened again, by anyone who
+        // got hold of it, doesn't hand the checkout over a second time. A checkout made for a linked buyer stays theirs.
+        if ((string.IsNullOrEmpty(session.OwnerId) && string.IsNullOrEmpty(session.GuestTokenHash)) ||
+            session.OwnerId?.StartsWith(AgentPrincipal.OwnerPrefix, StringComparison.Ordinal) == true)
         {
             var userId = User.Identity?.IsAuthenticated == true ? User.FindFirstValue(ClaimTypes.NameIdentifier) : null;
 

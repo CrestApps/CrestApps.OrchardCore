@@ -149,14 +149,19 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
         // Those are internal routing endpoints, not user-facing numbers -- an internal extension call already
         // recorded the friendly extension/target as To, and formatting a SIP URI as a phone number renders it
         // as a garbage number in the in-call display and the Recent list.
-        if (!keepCaller && !string.IsNullOrWhiteSpace(providerEvent.FromAddress) && !IsSipUri(providerEvent.FromAddress))
+        //
+        // The caller id is chosen by whoever places the call, and the recent calls and voicemail lists render it, so only
+        // what a dialable number can contain is stored.
+        if (!keepCaller && !string.IsNullOrWhiteSpace(providerEvent.FromAddress) && !IsSipUri(providerEvent.FromAddress) &&
+            CallerNumbers.Sanitize(providerEvent.FromAddress) is { } from)
         {
-            interaction.From = providerEvent.FromAddress;
+            interaction.From = from;
         }
 
-        if (!string.IsNullOrWhiteSpace(providerEvent.ToAddress) && !IsSipUri(providerEvent.ToAddress))
+        if (!string.IsNullOrWhiteSpace(providerEvent.ToAddress) && !IsSipUri(providerEvent.ToAddress) &&
+            CallerNumbers.Sanitize(providerEvent.ToAddress) is { } to)
         {
-            interaction.To = providerEvent.ToAddress;
+            interaction.To = to;
         }
 
         // On the call, or past it: either way it is no longer ringing the user.

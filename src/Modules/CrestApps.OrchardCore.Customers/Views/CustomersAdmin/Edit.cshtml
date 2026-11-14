@@ -81,6 +81,15 @@
         <div class="ocat-wrapper" data-customer-business>
             <div class="ocat-end-offset">
                 <div class="form-check">
+                    <input asp-for="TaxIdVerified" type="checkbox" class="form-check-input" />
+                    <label asp-for="TaxIdVerified" class="form-check-label">@T["Tax id verified"]</label>
+                    <span class="hint dashed">@T["Check once you have confirmed the number belongs to this business. Only a verified number lets its purchases be reverse charged; the customer can't set this, and changing the number on their own profile clears it."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" data-customer-business>
+            <div class="ocat-end-offset">
+                <div class="form-check">
                     <input asp-for="IsTaxExempt" type="checkbox" class="form-check-input" />
                     <label asp-for="IsTaxExempt" class="form-check-label">@T["Exempt from tax"]</label>
                 </div>

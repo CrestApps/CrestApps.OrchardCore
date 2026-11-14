@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Reports.DataSources;
 using System.Diagnostics;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
@@ -237,9 +238,10 @@ public sealed class ReportViewSnapshotRefresher
             try
             {
                 var maxRows = Math.Max(1, _limits.MaxRowsPerDataSet);
-                var result = await RunAsOwnerAsync(view, maxRows, cancellationToken);
+                var (result, rowsRestricted) = await RunAsOwnerAsync(view, maxRows, cancellationToken);
 
                 ReportViewSnapshotData.Fill(snapshot, result.Table, maxRows);
+                snapshot.RowsRestricted = rowsRestricted;
                 snapshot.Warnings = result.Warnings;
                 snapshot.RefreshedUtc = utcNow;
                 snapshot.DurationMilliseconds = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
@@ -294,7 +296,7 @@ public sealed class ReportViewSnapshotRefresher
         }
     }
 
-    private async Task<ReportViewRunResult> RunAsOwnerAsync(ReportView view, int maxRows, CancellationToken cancellationToken)
+    private async Task<(ReportViewRunResult Result, bool RowsRestricted)> RunAsOwnerAsync(ReportView view, int maxRows, CancellationToken cancellationToken)
     {
         // Nobody reads the view during a scheduled refresh, so it reads its data with its owner's current access.
         var owner = await _owners.ResolveAsync(view.OwnerId) ??
@@ -305,7 +307,11 @@ public sealed class ReportViewSnapshotRefresher
             throw new ReportQueryException(S["The owner of the view '{0}' can no longer read it.", view.DisplayText]);
         }
 
-        return await _runner.RunAsync(view, new DataSourceContext { User = owner }, maxRows, cancellationToken);
+        var context = new DataSourceContext { User = owner };
+        var result = await _runner.RunAsync(view, context, maxRows, cancellationToken);
+
+        // When a data set returned only the owner's rows, the stored result is the owner's alone.
+        return (result, ReportRowScope.IsRestricted(context));
     }
 
     private static string LockKey(string viewId)

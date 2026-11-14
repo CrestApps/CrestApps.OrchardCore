@@ -108,8 +108,11 @@ public sealed class MessagingAttachmentLinksTests
         var siteService = new Mock<ISiteService>();
         siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
 
+        var protection = new EphemeralDataProtectionProvider();
+
         return new MessagingAttachmentLinks(
-            new EphemeralDataProtectionProvider(),
+            protection,
+            CrestApps.OrchardCore.Tests.Doubles.SignedLinkDoubles.Tokens(protection),
             siteService.Object,
             new HttpContextAccessor(),
             new OptionsWrapper<MessagingWorkspaceOptions>(new MessagingWorkspaceOptions()),

@@ -174,6 +174,7 @@ public sealed class LocalDncRegistryAdminController : Controller
     /// </summary>
     /// <param name="listId">The list identifier to process.</param>
     /// <param name="returnUrl">The URL to return to.</param>
+    [HttpPost]
     public async Task<IActionResult> ProcessNow(string listId, string returnUrl)
     {
         if (!await _authorizationService.AuthorizeAsync(User, DncRegistryPermissions.ManageDncRegistrySettings))
@@ -211,6 +212,7 @@ public sealed class LocalDncRegistryAdminController : Controller
     /// </summary>
     /// <param name="listId">The list identifier to pause.</param>
     /// <param name="returnUrl">The URL to return to.</param>
+    [HttpPost]
     public async Task<IActionResult> PauseImport(string listId, string returnUrl)
     {
         if (!await _authorizationService.AuthorizeAsync(User, DncRegistryPermissions.ManageDncRegistrySettings))
@@ -244,6 +246,7 @@ public sealed class LocalDncRegistryAdminController : Controller
     /// </summary>
     /// <param name="listId">The list identifier to delete.</param>
     /// <param name="returnUrl">The URL to return to.</param>
+    [HttpPost]
     public async Task<IActionResult> Delete(string listId, string returnUrl)
     {
         if (!await _authorizationService.AuthorizeAsync(User, DncRegistryPermissions.ManageDncRegistrySettings))

@@ -176,7 +176,7 @@ public sealed class AIChatAdminWidgetFilter : IAsyncResultFilter
         {
             try
             {
-                await provider.PopulateAsync(pageContext);
+                await provider.PopulateAsync(pageContext, context.HttpContext.RequestAborted);
             }
             catch (Exception ex)
             {

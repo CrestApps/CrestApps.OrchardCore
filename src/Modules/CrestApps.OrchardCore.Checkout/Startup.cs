@@ -1,3 +1,8 @@
+using OrchardCore.Settings.Deployment;
+using OrchardCore.RateLimits;
+using OrchardCore.Environment.Shell.Configuration;
+using CrestApps.OrchardCore.Throttling;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Commerce;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -47,12 +52,24 @@ namespace CrestApps.OrchardCore.Checkout;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant's configuration, which can override attempt policies by name.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<ICheckoutSessionStore, CheckoutSessionStore>();
         services.AddScoped<IStoreSetupStep, CurrencySetupStep>();
+        services.AddScoped<IStoreSetupStep, ProtectPaymentsSetupStep>();
         services.AddScoped<ICheckoutSessionAnonymizer, CheckoutSessionAnonymizer>();
         services.AddScoped<IPaymentAttemptStore, PaymentAttemptStore>();
         services.AddScoped<IPaymentRefundStore, PaymentRefundStore>();
@@ -63,6 +80,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<PaymentIssueIndexProvider>();
         services.AddScoped<ICheckoutReconciliationService, CheckoutReconciliationService>();
         services.AddScoped<ICheckoutEngine, DefaultCheckoutEngine>();
+
+        // An edit sets aside a payment begun for the old total, so the buyer pays the new one.
+        services.AddScoped<ICheckoutPaymentReleaseService, CheckoutPaymentReleaseService>();
         services.AddScoped<ICheckoutPaymentProviderResolver, CheckoutPaymentProviderResolver>();
         services.AddScoped<ICheckoutRecurringPaymentProviderResolver, CheckoutRecurringPaymentProviderResolver>();
 
@@ -89,6 +109,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, DiscountLinkCheckoutHandler>();
         services.AddScoped<ICouponRedemptionService, CouponRedemptionService>();
+        // The card-testing protection runs first: a refused payment holds no coupon use or balance.
+        services.AddScoped<IPaymentDeclineRecorder, PaymentDeclineRecorder>();
+        services.AddScoped<ICheckoutPaymentGate, PaymentVelocityGate>();
+        services.AddSiteDisplayDriver<PaymentProtectionSettingsDisplayDriver>();
         services.AddScoped<ICheckoutPaymentGate, CouponHoldPaymentGate>();
 
         // Balances such as gift cards and store credit pay after tax. The seam does nothing until a feature registers
@@ -111,7 +135,28 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutRefundService, DefaultCheckoutRefundService>();
         services.AddScoped<ICheckoutRefundReconciliationService, DefaultCheckoutRefundReconciliationService>();
         services.AddScoped<IPaymentEvent, RefundReconciliationPaymentEventHandler>();
+        // A provider that confirms the card in the browser (Stripe) reports a decline only by webhook; it counts there.
+        services.AddScoped<IPaymentEvent, CardDeclinePaymentEventHandler>();
+        // The attempt policies are always on and need no middleware: card testing and code guessing are stopped whether
+        // or not Orchard Core's Rate Limits feature is enabled. Each can be overridden by name in configuration.
+        services
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, 30, TimeSpan.FromMinutes(10))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginCheckout, 8, TimeSpan.FromHours(24))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, 5, TimeSpan.FromMinutes(30), blockDuration: TimeSpan.FromMinutes(30))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer, 5, TimeSpan.FromHours(1), blockDuration: TimeSpan.FromHours(1))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineStore, 30, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(30))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineAttempt, 3, TimeSpan.FromHours(24), blockDuration: TimeSpan.FromHours(24))
+            // Stripe redelivers an event for up to three days.
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineEvent, 1, TimeSpan.FromDays(3))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentStatus, 120, TimeSpan.FromMinutes(5))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, 60, TimeSpan.FromHours(1))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CouponCode, 10, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(10))
+            .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(AttemptLimitOptions.SectionName));
+
+#pragma warning disable CS0618 // The obsolete limiter stays registered for one release for code outside this repository.
+        services.AddAttemptPolicy(PaymentAttemptLimiter.LegacyPolicyName, 20, TimeSpan.FromMinutes(5));
         services.AddScoped<IPaymentAttemptLimiter, PaymentAttemptLimiter>();
+#pragma warning restore CS0618
         services.AddScoped<PaymentSessionCache>();
         services.AddScoped<CheckoutInvoiceBuilder>();
         services.AddScoped<ICheckoutHandler, PaymentCheckoutHandler>();
@@ -171,6 +216,19 @@ public sealed class CouponDeploymentStartup : StartupBase
         => services.AddDeployment<CouponsDeploymentSource, CouponsDeploymentStep, CouponsDeploymentStepDisplayDriver>();
 }
 
+/// <summary>
+/// Exports the payment protection settings with a deployment; Orchard Core's Settings recipe step imports them.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
+public sealed class PaymentProtectionDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddSiteSettingsPropertyDeploymentStep<PaymentProtectionSettings, PaymentProtectionDeploymentStartup>(
+            S => S["Payment protection settings"],
+            S => S["What the store does when card payments are declined across the store."]);
+}
+
 [Feature(CheckoutConstants.Features.Api)]
 public sealed class ApiStartup : StartupBase
 {
@@ -178,5 +236,32 @@ public sealed class ApiStartup : StartupBase
     {
         routes.MapCheckoutApi();
         routes.MapCouponAdminApi();
+    }
+}
+
+/// <summary>
+/// Payment Rate Limits: Checkout's built-in group limits for Orchard Core's Rate Limits, and one JSON 429 body with a
+/// Retry-After header for the routes they cover. They show read-only under Tools &gt; Rate Limits.
+/// </summary>
+[Feature(CheckoutConstants.Features.RateLimits)]
+public sealed class PaymentRateLimitsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.Payment, 30, TimeSpan.FromMinutes(5), networkOnly: true)
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.PaymentStatus, 60, TimeSpan.FromMinutes(1))
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.Start, 30, TimeSpan.FromMinutes(10), networkOnly: true)
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.Checkout, 120, TimeSpan.FromMinutes(1))
+            .AddClientGroupRateLimit(CheckoutConstants.RateLimitGroups.Code, 20, TimeSpan.FromMinutes(5))
+            .AddJsonRejectionHandler(
+                CheckoutConstants.RouteNames.BeginPayment,
+                CheckoutConstants.RouteNames.PaymentStatus,
+                "BeginCheckoutPayment",
+                "CompleteCheckout",
+                "ApplyCheckoutCode",
+                "ApplyCheckoutGiftCard",
+                "StartCheckout"));
     }
 }

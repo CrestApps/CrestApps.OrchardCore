@@ -46,7 +46,7 @@ public sealed class MembershipsPortabilityTests
 
         users.Setup(value => value.GetUserAsync("ana")).ReturnsAsync(new User { UserId = "target-user-id", UserName = "ana" });
 
-        var step = new MembershipsStep(target, users.Object, grants.Object, RecipeRoundTrip.Localizer<MembershipsStep>());
+        var step = new MembershipsStep(target, users.Object, grants.Object, CreateMembershipService(target, users.Object, grants.Object, new MembershipSettings()), RecipeRoundTrip.Localizer<MembershipsStep>());
 
         // Act
         var exported = await RecipeRoundTrip.ExportAsync(new MembershipsDeploymentSource(source), new MembershipsDeploymentStep());
@@ -77,7 +77,7 @@ public sealed class MembershipsPortabilityTests
     {
         // Arrange
         var target = new InMemoryMembershipStore();
-        var step = new MembershipsStep(target, Mock.Of<IUserService>(), Mock.Of<IRoleGrantService>(), RecipeRoundTrip.Localizer<MembershipsStep>());
+        var step = new MembershipsStep(target, Mock.Of<IUserService>(), Mock.Of<IRoleGrantService>(), CreateMembershipService(target, Mock.Of<IUserService>(), Mock.Of<IRoleGrantService>(), new MembershipSettings()), RecipeRoundTrip.Localizer<MembershipsStep>());
         var recipe = JsonNode.Parse("""
             { "name": "Memberships", "Memberships": [ { "UserName": "nobody", "ContentItemId": "gold-product", "StartsUtc": "2026-01-01T00:00:00Z" } ] }
             """).AsObject();
@@ -89,6 +89,39 @@ public sealed class MembershipsPortabilityTests
         Assert.Equal(["There's no user named nobody."], errors);
         Assert.Empty(target.Entries);
     }
+
+    /// <summary>
+    /// SEC-C10: the recipe step granted a membership's roles directly, past the store's grantable roles and the roles no
+    /// grant may give, so an import could make its member an administrator.
+    /// </summary>
+    [Fact]
+    public async Task Memberships_Import_GrantsOnlyTheRolesAPurchaseMayGrant()
+    {
+        // Arrange
+        var target = new InMemoryMembershipStore();
+        var users = new Mock<IUserService>();
+        var grants = new Mock<IRoleGrantService>();
+
+        users.Setup(value => value.GetUserAsync("ana")).ReturnsAsync(new User { UserId = "user-1", UserName = "ana" });
+
+        var service = CreateMembershipService(target, users.Object, grants.Object, new MembershipSettings { GrantableRoles = ["Gold member"] });
+        var step = new MembershipsStep(target, users.Object, grants.Object, service, RecipeRoundTrip.Localizer<MembershipsStep>());
+        var recipe = JsonNode.Parse("""
+            { "name": "Memberships", "Memberships": [ { "UserName": "ana", "ContentItemId": "gold-product", "RoleNames": [ "Gold member", "Administrator", "Editor" ], "StartsUtc": "2026-01-01T00:00:00Z", "Status": "Active" } ] }
+            """).AsObject();
+
+        // Act
+        var errors = await RecipeRoundTrip.RunAsync(step, recipe);
+
+        // Assert
+        Assert.Empty(errors);
+        grants.Verify(value => value.GrantAsync("user-1", "Gold member", MembershipRoleGrantSource.SourceName, It.IsAny<string>()), Times.Once);
+        grants.Verify(value => value.GrantAsync(It.IsAny<string>(), "Administrator", It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        grants.Verify(value => value.GrantAsync(It.IsAny<string>(), "Editor", It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    private static CrestApps.OrchardCore.Memberships.Services.MembershipService CreateMembershipService(IMembershipStore store, IUserService users, IRoleGrantService grants, MembershipSettings settings)
+        => new(store, users, grants, CrestApps.OrchardCore.Tests.Telephony.Doubles.SiteServiceFactory.Create(settings), Mock.Of<global::OrchardCore.Modules.IClock>());
 
     private sealed class InMemoryMembershipStore : InMemoryCatalog<Membership>, IMembershipStore
     {

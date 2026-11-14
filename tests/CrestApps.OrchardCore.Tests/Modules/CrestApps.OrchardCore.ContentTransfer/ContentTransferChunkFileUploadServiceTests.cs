@@ -272,6 +272,48 @@ public sealed class ContentTransferChunkFileUploadServiceTests
         Assert.Equal("0123456789", completedContent);
     }
 
+    // SEC-A17: each upload id used to preallocate the size the client declared, up to the upload limit, before a byte
+    // arrived; a chunk that starts past the end did the same by seeking. Chunks must now arrive in order.
+    [Fact]
+    public async Task ProcessRequestAsync_FirstChunk_DoesNotPreallocateTheDeclaredSize()
+    {
+        var service = CreateService(new ContentImportOptions { MaxUploadChunkSize = 1024, MaxUploadFileSize = 1_000_000 });
+        var uploadId = Guid.NewGuid();
+        var file = CreateFormFile("hello", "prealloc.csv");
+        var context = CreateContext("bytes 0-4/900000", uploadId, file);
+
+        await service.ProcessRequestAsync(context.Request, (_, _, _) => Ok(), _ => Ok(), _ => Invalid());
+
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('|', uploadId.ToString("N"), file.FileName, file.Name))));
+        var tempFile = new FileInfo(Path.Combine(Path.GetTempPath(), "CrestAppsContentTransferUploads", "Default_" + hash));
+
+        try
+        {
+            Assert.Equal(5, tempFile.Length);
+        }
+        finally
+        {
+            tempFile.Delete();
+        }
+    }
+
+    [Fact]
+    public async Task ProcessRequestAsync_ChunkThatStartsPastTheEnd_IsRefused()
+    {
+        var service = CreateService(new ContentImportOptions { MaxUploadChunkSize = 1024, MaxUploadFileSize = 1_000_000 });
+        var context = CreateContext("bytes 899995-899999/900000", Guid.NewGuid(), CreateFormFile("hello", "gap.csv"));
+        ContentTransferUploadError? invalidError = null;
+
+        await service.ProcessRequestAsync(context.Request, (_, _, _) => Ok(), _ => Ok(), error =>
+        {
+            invalidError = error;
+
+            return Invalid();
+        });
+
+        Assert.Equal(ContentTransferUploadError.InvalidRequest, invalidError);
+    }
+
     private static ContentTransferChunkFileUploadService CreateService(ContentImportOptions options)
         => new(
             new ShellSettings { Name = "Default" },
