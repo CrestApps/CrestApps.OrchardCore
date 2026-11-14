@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -170,15 +171,7 @@ public sealed class TransactionDisplayText
     /// </summary>
     /// <param name="method">The stored payment method.</param>
     public string OfflinePaymentMethodName(string method)
-        => method switch
-        {
-            TransactionsConstants.OfflinePaymentMethods.Cash => S["Cash"],
-            TransactionsConstants.OfflinePaymentMethods.Check => S["Check"],
-            TransactionsConstants.OfflinePaymentMethods.BankTransfer => S["Bank transfer"],
-            TransactionsConstants.OfflinePaymentMethods.CardTerminal => S["Card terminal"],
-            TransactionsConstants.OfflinePaymentMethods.Other => S["Other"],
-            _ => method,
-        };
+        => OfflinePaymentMethodText.Name(method, S);
 
     /// <summary>
     /// Turns what staff entered as the payment method into what is stored: the key of a common method when they picked

@@ -114,6 +114,30 @@ With **Deployment** enabled, the **Invoices** and **Credit notes** deployment st
 
 Issuing passes over a number an imported document already holds, so the site's series never gives it twice (`UnusedDocumentNumbers`; the issue fails after 1,000 held numbers in a row). Import the invoices before their credit notes. Payment terms, document templates, number series settings and invoicing settings have their own steps (Payment Terms, Business Document Templates, and the Settings step with the `NumberSeriesSettings` and `InvoicingSettings` schemas). With CrestApps Recipes, each step has its schema.
 
+## Reports and the data source
+
+With **Data Pipelines Core** enabled (Report Builder, data pipelines), the **Invoicing** data source (`CommerceReportDataSets.InvoicingSource`) has four data sets, each needing **View invoices**:
+
+| Data set | One row per |
+| --- | --- |
+| **Invoices** | Invoice: number, kind, status, payment status, delivery, reference, purchase order, term, totals, paid, credited and still due, bill-to, issue and due dates, and when it was created, issued, sent, viewed and voided. `TransactionId` refers to the Transactions data set. |
+| **Invoice lines** | Line of an issued invoice, with the invoice's number, status, currency, issue date and bill-to. |
+| **Invoice taxes** | Tax of an issued invoice at one rate: amount taxed and tax. |
+| **Credit notes** | Credit note: number, the invoice it credits, how it was given back, totals and the amounts applied, refunded and kept as credit. |
+
+With **Reports** enabled, six coded reports under **Reports > Commerce**, each needing **View invoices** and summing per currency:
+
+| Report | Shows |
+| --- | --- |
+| **Receivables aging** | What open invoices still owe today (in the site's time zone), per customer: not due yet, 1 to 30, 31 to 60, 61 to 90 and over 90 days past the due date (the issue date when there is none). |
+| **Invoice register** | Every invoice issued in the period, by issue date and number, with its status, tax, total, paid, credited and still due. |
+| **Payments collected** | The payments recorded in the period on the transactions invoices posted, by method, and each payment and refund; a payment taken back doesn't count. |
+| **Invoiced sales by customer** | Invoiced before and after tax per customer, less the credit notes issued in the period. |
+| **Invoiced sales by item** | Quantity and amount before tax per product, SKU or line name, after discounts and less credit note lines. |
+| **Invoiced tax summary** | Amount taxed and tax per tax and rate, less what credit notes gave back; untaxed lines appear at 0%. |
+
+The period reports default to the last 30 days. Voided invoices count for nothing in the sales and tax reports. The documents are read 500 at a time through the index columns (`IssuedUtc`, `Status` and `AmountDue`, and the transactions' `ReferenceType` and `UpdatedUtc`). The name of an offline payment method comes from `OfflinePaymentMethodText` (Transactions.Core), shared with the Transactions pages.
+
 ## Tax
 
 The calculator asks the `IDocumentTaxProvider`s in order for the lines' taxes; without one, the taxes typed on the lines are used. With **Taxation** enabled, a `[RequireFeatures]` startup registers `TaxationDocumentTaxProvider`: it builds a `TaxCalculationContext` from the lines (the line discount as an amount, services as `Service` items), the bill-to's party tax profile (`IPartyTaxProfileService`) and its shipping address, and maps the tax lines back, the rate in percent. Charges keep the taxes typed on them. Invoicing resolves nothing of Taxation's when it is off.

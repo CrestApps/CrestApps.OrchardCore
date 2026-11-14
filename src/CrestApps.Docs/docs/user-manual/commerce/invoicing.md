@@ -117,6 +117,18 @@ For example, to thank customers when they pay, start a workflow with **Invoice P
 
 With **Commerce Webhooks** enabled, the same moments can be sent to another system: tick the events under **Invoicing** when you add a webhook under **Configuration > Webhooks** (see [Webhooks](webhooks.md)).
 
+## See how invoicing is doing
+
+With **Reports** enabled, **Reports > Commerce** has six invoicing reports. Each shows amounts per currency.
+
+- **Receivables aging**: what customers still owe today and how late it is, from not due yet to over 90 days.
+- **Invoice register**: every invoice issued in a period, with what was paid and what is still due.
+- **Payments collected**: the payments received toward invoices in a period, by method, and the refunds.
+- **Invoiced sales by customer** and **Invoiced sales by item**: what was invoiced in a period, less credit notes.
+- **Invoiced tax summary**: the tax invoiced per tax and rate, less what credit notes gave back.
+
+Pick the period at the top of a report; it starts on the last 30 days. To build your own report or export, use the **Invoicing** data source in the Report Builder or a data pipeline.
+
 ## Move invoices to another site
 
 Under **Tools > Deployments > Plans**, add the **Invoices** and **Credit notes** steps to a plan to take every invoice and credit note to another site. Issued invoices keep their numbers there and don't change what customers owe: bring their balances with the transactions. An invoice the other site already issued is left as it is, and one whose number the other site already uses is not imported. New invoices on the other site skip the numbers that came in.

@@ -8,6 +8,9 @@ using CrestApps.OrchardCore.Invoicing.Migrations;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Navigation;
 using CrestApps.OrchardCore.Invoicing.Recipes;
+using CrestApps.OrchardCore.Invoicing.Reports;
+using CrestApps.OrchardCore.Reports;
+using OrchardCore.DataSources;
 using CrestApps.OrchardCore.Invoicing.Deployments;
 using OrchardCore.Deployment;
 using OrchardCore.Recipes;
@@ -191,6 +194,44 @@ public sealed class WebhooksStartup : StartupBase
         services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoiceOverdue, "Invoice overdue", "Invoicing");
         services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoiceVoided, "Invoice voided", "Invoicing");
         services.AddWebhookEvent(InvoicingConstants.WebhookEvents.CreditNoteIssued, "Credit note issued", "Invoicing");
+    }
+}
+
+/// <summary>
+/// Exposes invoices, their lines and taxes, and credit notes as a data source for reports and data pipelines.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
+public sealed class DataSourcesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddDataSource<InvoicingReportDataSource>()
+            .AddScoped<IInvoicingReportDataSet, InvoicesReportDataSet>()
+            .AddScoped<IInvoicingReportDataSet, InvoiceLinesReportDataSet>()
+            .AddScoped<IInvoicingReportDataSet, InvoiceTaxesReportDataSet>()
+            .AddScoped<IInvoicingReportDataSet, CreditNotesReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Adds the invoicing reports to Reports > Commerce.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<InvoicingReportReader>();
+        services
+            .AddReport<ReceivablesAgingReport>()
+            .AddReport<InvoiceRegisterReport>()
+            .AddReport<PaymentsCollectedReport>()
+            .AddReport<SalesByCustomerReport>()
+            .AddReport<SalesByItemReport>()
+            .AddReport<TaxSummaryReport>();
     }
 }
 

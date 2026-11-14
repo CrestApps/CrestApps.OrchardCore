@@ -50,6 +50,8 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.FileStorage.Core\CrestApps.OrchardCore.FileStorage.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Invoicing.Core\CrestApps.OrchardCore.Invoicing.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Transactions.Core\CrestApps.OrchardCore.Transactions.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
     <!-- Carried for the feature dependencies only: Invoicing's code uses their Abstractions and Core projects. -->
     <ProjectReference Include="..\CrestApps.OrchardCore.Transactions\CrestApps.OrchardCore.Transactions.csproj" />
