@@ -316,7 +316,12 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
         var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
 
-        using var shellSettings = CreateShellSettings(job, onboarding);
+        using var shellSettings = CreateShellSettings(job, onboarding, existing);
+
+        // Saved before setup runs, with its prefix or host, a secret and the plan's recipe. Orchard's setup reloads the
+        // tenant from storage when it fails, and a tenant that was never saved reloads with no prefix and no host: it then
+        // answered for the store's own root URL with the setup wizard, and with no secret the wizard asked for no token.
+        await _shellHost.UpdateShellSettingsAsync(shellSettings);
 
         var setupContext = new SetupContext
         {
@@ -345,7 +350,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             : string.Join("; ", setupContext.Errors.Select(error => $"{error.Key}: {error.Value}"));
     }
 
-    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding)
+    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding, ShellSettings leftOver)
     {
         var settings = _shellSettingsManager
             .CreateDefaultSettings()
@@ -355,6 +360,17 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         settings.Name = job.TenantName;
         settings.RequestUrlPrefix = job.Prefix;
         settings.RequestUrlHost = job.Domains is { Length: > 0 } ? string.Join(',', job.Domains) : null;
+
+        // A retry keeps the identity of the tenant the previous attempt saved.
+        if (!string.IsNullOrEmpty(leftOver?.TenantId))
+        {
+            settings["TenantId"] = leftOver.TenantId;
+        }
+
+        // Orchard's setup wizard asks for a token signed with this secret, so the tenant left behind by a failed setup can
+        // only be finished by the host, and the recipe is the plan's.
+        settings["Secret"] = Guid.NewGuid().ToString();
+        settings["RecipeName"] = job.RecipeName;
 
         if (!string.IsNullOrEmpty(job.FeatureProfile))
         {
