@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <PackageReference Include="CrestApps.Core.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
 </Project>

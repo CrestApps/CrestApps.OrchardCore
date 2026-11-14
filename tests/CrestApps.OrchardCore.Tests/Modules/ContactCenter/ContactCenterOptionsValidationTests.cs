@@ -228,10 +228,10 @@ public sealed class ContactCenterOptionsValidationTests
     }
 
     [Fact]
-    public void ValidateOnStart_DoesNotValidateWhenTheContainerIsBuilt()
+    public async Task ValidateOnStart_DoesNotValidateWhenTheContainerIsBuilt()
     {
         // Pins the reason TenantOptionsStartupValidator exists. ValidateOnStart records its rules against
-        // IStartupValidator, which only the generic host invokes, and only against the root container. Orchard
+        // IAsyncStartupValidator, which only the generic host invokes, and only against the root container. Orchard
         // builds a container per tenant, so without an explicit invocation the rule never fires at start.
         var services = new ServiceCollection();
         services
@@ -242,11 +242,11 @@ public sealed class ContactCenterOptionsValidationTests
         using var serviceProvider = services.BuildServiceProvider();
 
         // Building the container is not enough.
-        Assert.NotNull(serviceProvider.GetRequiredService<IStartupValidator>());
+        Assert.NotNull(serviceProvider.GetRequiredService<IAsyncStartupValidator>());
 
         // Only an explicit invocation surfaces the failure.
-        Assert.Throws<OptionsValidationException>(
-            () => serviceProvider.GetRequiredService<IStartupValidator>().Validate());
+        await Assert.ThrowsAsync<OptionsValidationException>(
+            () => serviceProvider.GetRequiredService<IAsyncStartupValidator>().ValidateAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]

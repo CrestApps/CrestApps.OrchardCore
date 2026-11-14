@@ -482,7 +482,7 @@ public static class ReportIndexAggregator
 
         if (type == typeof(decimal) || type == typeof(double) || type == typeof(float))
         {
-            return Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+            return DecimalConversion.FromObject(value);
         }
 
         if (type == typeof(DateTime))

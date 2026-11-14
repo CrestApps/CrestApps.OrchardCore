@@ -773,7 +773,7 @@ public class NumberFieldImportHandlerTests
 
         var field = part.Get<NumericField>("Price");
         Assert.NotNull(field);
-        Assert.Equal((decimal)expected, field.Value);
+        Assert.Equal(DecimalConversion.FromDouble(expected), field.Value);
     }
 
     [Theory]
