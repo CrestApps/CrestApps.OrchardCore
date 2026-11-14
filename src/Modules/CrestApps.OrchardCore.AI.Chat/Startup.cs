@@ -9,6 +9,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Core;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
+using Microsoft.AspNetCore.SignalR;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Filters;
 using CrestApps.OrchardCore.AI.Chat.Handlers;
@@ -94,6 +95,9 @@ public sealed class Startup : StartupBase
 
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
+
+        // On long polling a hub call has no current request; the filter gives the visitor resolver the connection's address.
+        services.Configure<HubOptions<AIChatHub>>(options => options.AddFilter<ChatHubConnectionAddressFilter>());
 
         // Enables realtime (speech-to-speech) voice over the server-relay WebRTC transport, with automatic
         // WebSocket fallback. The realtime hubs advertise WebRTC to the browser when this is registered.

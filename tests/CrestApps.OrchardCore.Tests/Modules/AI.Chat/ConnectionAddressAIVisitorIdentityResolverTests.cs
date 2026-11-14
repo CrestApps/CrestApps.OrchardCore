@@ -59,6 +59,45 @@ public sealed class ConnectionAddressAIVisitorIdentityResolverTests
         Assert.Equal(typeof(ConnectionAddressAIVisitorIdentityResolver), registered.ImplementationType);
     }
 
+    /// <summary>
+    /// CrestApps.Core finding carried here: on the long-polling transport a hub call runs after the request that opened
+    /// the connection ended, so the request accessor is empty and the session-start limiter got no key. The hub filter
+    /// gives the resolver the address of SignalR's own copy of the connection's request.
+    /// </summary>
+    [Fact]
+    public async Task Resolve_DuringAHubCallWithNoCurrentRequest_TakesTheConnectionsAddress()
+    {
+        // Arrange: the accessor is empty, as it is on long polling; the hub connection keeps its own request.
+        var connectionRequest = new DefaultHttpContext();
+        connectionRequest.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.7");
+        var features = new Microsoft.AspNetCore.Http.Features.FeatureCollection();
+        features.Set<Microsoft.AspNetCore.Http.Connections.Features.IHttpContextFeature>(new HttpContextFeature { HttpContext = connectionRequest });
+        var callerContext = Mock.Of<Microsoft.AspNetCore.SignalR.HubCallerContext>(context => context.Features == features);
+        var invocation = new Microsoft.AspNetCore.SignalR.HubInvocationContext(callerContext, new ServiceCollection().BuildServiceProvider(), Mock.Of<Microsoft.AspNetCore.SignalR.Hub>(), typeof(object).GetMethod(nameof(ToString)), []);
+        var resolver = new ConnectionAddressAIVisitorIdentityResolver(
+            new FixedHttpContextAccessor(),
+            Options.Create(new AIVisitorIdentityOptions { RemoteAddressMode = AIVisitorRemoteAddressMode.Hashed }),
+            Mock.Of<IHostEnvironment>(env => env.ApplicationName == "Tests"),
+            new EphemeralDataProtectionProvider());
+        AIVisitorIdentity duringCall = null;
+
+        // Act
+        await new ChatHubConnectionAddressFilter().InvokeMethodAsync(invocation, _ =>
+        {
+            duringCall = resolver.Resolve();
+
+            return ValueTask.FromResult<object>(null);
+        });
+
+        var outsideCall = resolver.Resolve();
+
+        // Assert
+        Assert.NotNull(duringCall.RemoteAddressHash);
+        Assert.Equal(CreateResolver(AIVisitorRemoteAddressMode.Hashed, "203.0.113.7", forwardedFor: null).Resolve().RemoteAddressHash, duringCall.RemoteAddressHash);
+        Assert.Null(outsideCall.RemoteAddressHash);
+        Assert.Null(ChatHubConnectionAddressFilter.CurrentAddress);
+    }
+
     private static ConnectionAddressAIVisitorIdentityResolver CreateResolver(AIVisitorRemoteAddressMode mode, string remoteAddress, string forwardedFor)
     {
         var httpContext = new DefaultHttpContext();
@@ -75,6 +114,11 @@ public sealed class ConnectionAddressAIVisitorIdentityResolverTests
     }
 
     private sealed class FixedHttpContextAccessor : IHttpContextAccessor
+    {
+        public HttpContext HttpContext { get; set; }
+    }
+
+    private sealed class HttpContextFeature : Microsoft.AspNetCore.Http.Connections.Features.IHttpContextFeature
     {
         public HttpContext HttpContext { get; set; }
     }
