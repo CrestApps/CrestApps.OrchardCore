@@ -58,7 +58,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.AI/Migrations/AIDeploymentIndexMigrations.cs: ImportLegacyDeploymentsAsync"] = 168,
         ["src/Modules/CrestApps.OrchardCore.AI/Migrations/AIDeploymentV1DocumentMigrations.cs: ImportLegacyDeploymentsAsync"] = 155,
         ["src/Modules/CrestApps.OrchardCore.AI/Services/AIProfileTemplateApplicator.cs: Apply"] = 186,
-        ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpRequestFilter.cs: InvokeAsync"] = 178,
+        ["src/Modules/CrestApps.OrchardCore.AgenticCommerce/Ucp/UcpRequestFilter.cs: InvokeAsync"] = 177,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Drivers/AsteriskSettingsDisplayDriver.cs: UpdateAsync"] = 237,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskContactCenterVoiceProvider.Conference.cs: AddAgentToConversationAsync"] = 184,
         ["src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskContactCenterVoiceProvider.Monitoring.cs: EngageAsync"] = 192,

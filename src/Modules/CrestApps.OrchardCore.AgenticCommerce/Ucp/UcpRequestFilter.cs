@@ -33,6 +33,11 @@ public sealed class UcpRequestFilter : IEndpointFilter
             return Fail(httpContext, body, StatusCodes.Status413PayloadTooLarge, "request_too_large", "The request is too large.");
         }
 
+        if (body.Length > 0 && AgentRequestBody.Parse(body) is null)
+        {
+            return Fail(httpContext, body, StatusCodes.Status400BadRequest, "invalid_request", "Send the request as JSON, with each property named once.");
+        }
+
         string profileUrl = null;
         string requestedVersion = null;
         var agentHeader = request.Headers[UcpConstants.AgentHeader].ToString();
@@ -49,10 +54,16 @@ public sealed class UcpRequestFilter : IEndpointFilter
                 ?? (agent.TryGetValue("profile", out var profileMember) && profileMember.Item?.Parameters is { } parameters && parameters.TryGetValue("version", out var version) ? version as string : null);
 
             // A profile that isn't a web address (a placeholder such as "...") names nothing to read: the platform signs
-            // in with its key, and the version it asks for is agreed with everything the store offers.
-            profileUrl = Uri.TryCreate(profile, UriKind.Absolute, out var profileUri) && (profileUri.Scheme == Uri.UriSchemeHttps || profileUri.Scheme == Uri.UriSchemeHttp)
-                ? profile
-                : null;
+            // in with its key, and the version it asks for is agreed with everything the store offers. A profile holds the
+            // keys signatures are checked with, so it is read over https only.
+            var isWebAddress = Uri.TryCreate(profile, UriKind.Absolute, out var profileUri) && (profileUri.Scheme == Uri.UriSchemeHttps || profileUri.Scheme == Uri.UriSchemeHttp);
+
+            if (isWebAddress && profileUri.Scheme != Uri.UriSchemeHttps)
+            {
+                return Fail(httpContext, body, StatusCodes.Status400BadRequest, "invalid_profile_url", "The UCP-Agent profile must be an https:// address.");
+            }
+
+            profileUrl = isWebAddress ? profile : null;
         }
 
         // The caller is authenticated before anything is fetched: an anonymous request must not make the store read
@@ -78,19 +89,7 @@ public sealed class UcpRequestFilter : IEndpointFilter
         }
         else if (signed && profileUrl is not null)
         {
-            var platform = await services.GetRequiredService<IAgentPlatformStore>().FindByProfileUrlAsync(profileUrl, httpContext.RequestAborted);
-
-            if (platform is null && (await services.GetRequiredService<ISiteService>().GetSettingsAsync<AgenticCommerceSettings>()).AllowUnregisteredUcpPlatforms)
-            {
-                platform = new AgentPlatform
-                {
-                    ItemId = UcpProfileClient.GetUnregisteredPlatformId(profileUrl),
-                    Name = profileUrl,
-                    Enabled = true,
-                    Protocols = [AgenticCommerceConstants.Protocols.Ucp],
-                    ProfileUrl = profileUrl,
-                };
-            }
+            var platform = await FindSigningPlatformAsync(services, profileUrl, httpContext.RequestAborted);
 
             if (platform is null)
             {
@@ -198,6 +197,35 @@ public sealed class UcpRequestFilter : IEndpointFilter
         httpContext.User = AgentPrincipal.Create(signedIn.ItemId);
 
         return await next(context);
+    }
+
+    // The platform of a request signed in by its signature alone: the one registered with its profile's address, or, when
+    // the store sells to platforms it doesn't know, an unregistered one known by the profile's origin. A profile on the host
+    // of a registered platform is that platform's or no one's, so a disabled or restricted platform can't come back as an
+    // unregistered one by changing its address.
+    private static async Task<AgentPlatform> FindSigningPlatformAsync(IServiceProvider services, string profileUrl, CancellationToken cancellationToken)
+    {
+        var platforms = services.GetRequiredService<IAgentPlatformStore>();
+
+        if (await platforms.FindByProfileUrlAsync(profileUrl, cancellationToken) is { } registered)
+        {
+            return registered;
+        }
+
+        if (!(await services.GetRequiredService<ISiteService>().GetSettingsAsync<AgenticCommerceSettings>()).AllowUnregisteredUcpPlatforms ||
+            await platforms.FindByProfileHostAsync(new Uri(profileUrl).IdnHost, cancellationToken) is not null)
+        {
+            return null;
+        }
+
+        return new AgentPlatform
+        {
+            ItemId = UcpProfileClient.GetUnregisteredPlatformId(profileUrl),
+            Name = UcpProfileClient.GetOrigin(profileUrl),
+            Enabled = true,
+            Protocols = [AgenticCommerceConstants.Protocols.Ucp],
+            ProfileUrl = profileUrl,
+        };
     }
 
     // A signed request is checked against the key it names in the platform's profile, and its body against its digest;

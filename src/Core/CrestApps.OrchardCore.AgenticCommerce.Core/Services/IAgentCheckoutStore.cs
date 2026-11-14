@@ -35,5 +35,7 @@ public interface IAgentCheckoutStore : ICatalog<AgentCheckout>
     /// </summary>
     /// <param name="platformId">The platform's id.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <remarks>Unregistered UCP platforms (ids that start with <see cref="AgentPlatform.UnregisteredIdPrefix"/>) share one
+    /// allowance, so the count for any of them is the count for all of them.</remarks>
     Task<int> CountOpenAsync(string platformId, CancellationToken cancellationToken = default);
 }

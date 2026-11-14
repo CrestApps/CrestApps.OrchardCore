@@ -98,6 +98,12 @@ public static class AcpMcpEndpoints
         }
 
         var message = AgentRequestBody.Parse(body) as JsonObject;
+
+        if (message is null && body.Length > 0)
+        {
+            return Results.Json(Error(null, -32700, "Send a JSON-RPC request as JSON, with each property named once."), statusCode: StatusCodes.Status400BadRequest);
+        }
+
         var id = message?["id"]?.DeepClone();
 
         // The connection signs in, as the REST binding does; authorization isn't part of a tool's arguments.
