@@ -325,6 +325,10 @@ While the invoice is still due, its page also has **Pay now**. **Back to my tran
 
 Your site's designer can change how these pages look, or show the same documents inside the site's own customer area.
 
+## Move transactions to another site
+
+Under **Tools > Deployments > Plans**, add the **Transactions** step to a plan to take every transaction, with its timeline, payments, refunds and payment issues, to another site. They arrive as they were: nothing is charged, numbered or e-mailed again, and a transaction the other site already has is left as it is. Payments and refunds need **Checkout** enabled on the other site.
+
 ## Related pages
 
 - [Invoices and Receipts](invoices-and-receipts.md): invoice numbers, pay links, printable invoices and receipts.

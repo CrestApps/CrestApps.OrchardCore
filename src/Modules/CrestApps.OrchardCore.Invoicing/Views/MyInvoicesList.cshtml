@@ -3,7 +3,7 @@
 
 @{
     var model = (MyInvoicesViewModel)Model.Invoices;
-    var payable = model.Invoices.Any(invoice => invoice.Status == InvoiceStatus.Open && invoice.AmountDue > 0m);
+    var payable = model.Payable.Count > 0;
 }
 
 @* The customer's invoices; those still owed can be ticked and paid together in one checkout. *@
@@ -34,7 +34,7 @@ else
                 <tbody>
                     @foreach (var invoice in model.Invoices)
                     {
-                        var owed = invoice.Status == InvoiceStatus.Open && invoice.AmountDue > 0m;
+                        var owed = model.Payable.Contains(invoice.ItemId);
 
                         <tr>
                             @if (payable)

@@ -263,6 +263,7 @@ public sealed class DeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<InvoicesDeploymentSource, InvoicesDeploymentStep>();
+        services.AddDisplayDriver<DeploymentStep, InvoicesDeploymentStepDisplayDriver>();
         services.AddDeployment<CreditNotesDeploymentSource, CreditNotesDeploymentStep>();
     }
 }

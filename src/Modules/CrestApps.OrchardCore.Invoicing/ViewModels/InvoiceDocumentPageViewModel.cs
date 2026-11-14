@@ -17,4 +17,6 @@ public class InvoiceDocumentPageViewModel
     public string PayUrl { get; set; }
 
     public string BackUrl { get; set; }
+
+    public bool CanPay { get; set; }
 }

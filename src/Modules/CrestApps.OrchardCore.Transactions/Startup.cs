@@ -22,6 +22,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Recipes;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
@@ -54,6 +55,9 @@ public sealed class Startup : StartupBase
             .AddCustomersCore()
             .AddDataMigration<TransactionMigrations>()
             .AddIndexProvider<TransactionIndexProvider>();
+
+        // The ledger travels between sites in the Transactions recipe step.
+        services.AddRecipeExecutionStep<CrestApps.OrchardCore.Transactions.Recipes.TransactionLedgerRecipeStep>();
 
         services
             .AddNavigationProvider<TransactionsAdminMenu>()

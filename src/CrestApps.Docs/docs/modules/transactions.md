@@ -533,6 +533,14 @@ The terms travel with recipes and deployment plans: the step is `PaymentTerms`, 
 
 The recipe step and the deployment step have schemas for the CrestApps Recipes feature.
 
+## Moving the ledger between sites
+
+With **Deployment** enabled, the **Transactions** deployment step exports the whole ledger in one `Transactions` recipe step: every transaction with its timeline (`Events`), and, while Checkout keeps them, the payment attempts and refunds, and the payment issues, under `Transactions`, `PaymentAttempts`, `PaymentRefunds` and `PaymentIssues`. Each record carries everything but the storing site's document id, including when it was made and last changed.
+
+`TransactionLedgerImporter` (Transactions.Core) imports the step. Records are written to their stores as they are, never through the ledger's commands: nothing is posted, numbered, e-mailed or announced to the event handlers, workflows or webhooks. A record the site already has (by `ItemId`) is kept as it is, so a recipe never rewrites a ledger. Payment attempts and refunds need the Checkout feature on the importing site; without it the step reports an error and imports the rest. `TransactionLedgerExporter.ExportAsync(ids)` writes the same step for a set of transactions with the attempts made toward them and their refunds: the Invoicing deployment step uses it to carry the transactions of the invoices it exports. With CrestApps Recipes, the recipe and deployment steps have schemas.
+
+Receipt numbers on imported payments are kept; the importing site's receipt series does not know them.
+
 ## Registering a transaction source
 
 The `Source` stored on a transaction is a technical key. To have it appear with a friendly, localizable name in the report table and its **source** filter dropdown, register the source from a module's `Startup` using `AddTransactionSource`:

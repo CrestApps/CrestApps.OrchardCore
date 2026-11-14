@@ -106,11 +106,22 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
                 await _authorizationService.AuthorizeAsync(user, TransactionsPermissions.ManageTransactions),
         };
 
+        if (_serviceProvider.GetService<InvoiceLedgerAvailability>() is { } availability && await availability.IsMissingAsync(invoice))
+        {
+            // Voiding, writing off and crediting change the transaction, which is not here.
+            model.LedgerMissing = true;
+            model.CanOpenTransaction = false;
+            model.CanVoid = false;
+            model.CanWriteOff = false;
+            model.CanReinstate = false;
+        }
+
         // Credit notes, once the invoice is issued: those already made, and a way to make one while something is creditable.
         IReadOnlyList<CreditNote> creditNotes = invoice.IssuedUtc.HasValue && _serviceProvider.GetService<ICreditNoteStore>() is { } creditNoteStore
             ? await creditNoteStore.ListByInvoiceAsync(invoice.ItemId)
             : [];
-        var canCredit = invoice.Status is InvoiceStatus.Open or InvoiceStatus.Uncollectible &&
+        var canCredit = !model.LedgerMissing &&
+            invoice.Status is InvoiceStatus.Open or InvoiceStatus.Uncollectible &&
             CreditNoteRules.GetCreditable(invoice, creditNotes).Total > 0m &&
             await _authorizationService.AuthorizeAsync(user, InvoicingPermissions.ManageCreditNotes);
 
@@ -152,6 +163,7 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
             card.CanReinstate = model.CanReinstate;
             card.CanDelete = model.CanDelete;
             card.CanOpenTransaction = model.CanOpenTransaction;
+            card.LedgerMissing = model.LedgerMissing;
         });
 
     // The name typed on the invoice, else the bill-to party's.

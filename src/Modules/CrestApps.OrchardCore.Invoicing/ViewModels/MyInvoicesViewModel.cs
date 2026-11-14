@@ -9,6 +9,8 @@ public class MyInvoicesViewModel
 {
     public IReadOnlyList<Invoice> Invoices { get; set; } = [];
 
+    public IReadOnlySet<string> Payable { get; set; } = new HashSet<string>();
+
     public int Count { get; set; }
 
     public int Page { get; set; }

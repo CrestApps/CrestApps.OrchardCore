@@ -9,7 +9,7 @@
 
 @{
     var invoice = (Invoice)Model.Source;
-    var owed = invoice.Status == InvoiceStatus.Open && invoice.AmountDue > 0m;
+    var owed = Model.CanPay;
 }
 
 <style>

@@ -95,6 +95,16 @@
                 </dd>
             }
 
+            @if (Model.LedgerMissing)
+            {
+                <dt class="col-sm-4">@T["Ledger"]</dt>
+                <dd class="col-sm-8">
+                    <div class="alert alert-warning mb-0" role="status">
+                        @T["Payments are not available on this site: the transaction this invoice posted (ID {0}) is not here, so it can't be paid, reminded or kept in step. Import it with the Transactions step of a deployment plan.", invoice.TransactionId]
+                    </div>
+                </dd>
+            }
+
             @if (Model.CanOpenTransaction)
             {
                 <dt class="col-sm-4">@T["Ledger"]</dt>

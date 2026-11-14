@@ -112,6 +112,10 @@ With **Deployment** enabled, the **Invoices** and **Credit notes** deployment st
 - a draft the site has is replaced, in the same stored document;
 - a document whose number another document of the site holds is refused, as is an issued one without a number, and the step reports a recipe error.
 
+The **Invoices** step's **Also export the transactions the invoices posted** option (`IncludeTransactions`, on by default) writes a Transactions step (see [Transactions](transactions#moving-the-ledger-between-sites)) with those transactions, their payment attempts and refunds, before the invoices, so an open invoice can be paid where it is imported. The two steps import in either order: neither needs the other to be there first.
+
+An open invoice whose transaction is not on the site (`InvoiceLedgerAvailability`) can't be paid, reminded or mirrored there. Its admin page says so, with the transaction's id, and offers no void, write-off or credit note, which change the transaction; My invoices, its page and its share link show no way to pay, and paying several leaves it out; the e-mail has no pay link. It is logged once per transaction while the site runs, and nothing throws. Importing the transaction makes it payable.
+
 Issuing passes over a number an imported document already holds, so the site's series never gives it twice (`UnusedDocumentNumbers`; the issue fails after 1,000 held numbers in a row). Import the invoices before their credit notes. Payment terms, document templates, number series settings and invoicing settings have their own steps (Payment Terms, Business Document Templates, and the Settings step with the `NumberSeriesSettings` and `InvoicingSettings` schemas). With CrestApps Recipes, each step has its schema.
 
 ## Reports and the data source

@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Invoicing.Deployments
+
+@model InvoicesDeploymentStepViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeTransactions" type="checkbox" class="form-check-input" />
+            <label asp-for="IncludeTransactions" class="form-check-label">@T["Also export the transactions the invoices posted"]</label>
+            <span class="hint dashed">@T["They come before the invoices, so an open invoice can be paid on the site it is imported into. Every invoice is exported with its number, lines, totals and history."]</span>
+        </div>
+    </div>
+</div>

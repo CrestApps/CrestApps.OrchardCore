@@ -58,9 +58,12 @@ public sealed class MyInvoicesController : Controller
         var query = await _visibility.CreateQueryAsync(userId, HttpContext.RequestAborted);
         var result = await _invoices.PageAsync(Math.Max(1, page), _pageSize, query, HttpContext.RequestAborted);
 
+        var invoices = result.Entries.ToList();
+
         return View(new MyInvoicesViewModel
         {
-            Invoices = [.. result.Entries],
+            Invoices = invoices,
+            Payable = await HttpContext.RequestServices.GetRequiredService<InvoiceLedgerAvailability>().PayableAsync(invoices, HttpContext.RequestAborted),
             Count = result.Count,
             Page = Math.Max(1, page),
             PageSize = _pageSize,
@@ -86,6 +89,7 @@ public sealed class MyInvoicesController : Controller
             Document = await builder.BuildAsync(invoice, HttpContext.RequestAborted),
             PdfUrl = Url.Action(nameof(Pdf), new { itemId }),
             BackUrl = Url.RouteUrl(InvoicingConstants.RouteNames.MyInvoices),
+            CanPay = await HttpContext.RequestServices.GetRequiredService<InvoiceLedgerAvailability>().CanPayAsync(invoice, HttpContext.RequestAborted),
         });
     }
 
@@ -120,13 +124,14 @@ public sealed class MyInvoicesController : Controller
         }
 
         var transactionIds = new List<string>();
+        var availability = HttpContext.RequestServices.GetRequiredService<InvoiceLedgerAvailability>();
 
         foreach (var itemId in (itemIds ?? []).Distinct(StringComparer.Ordinal))
         {
             var invoice = await _invoices.FindByIdAsync(itemId, HttpContext.RequestAborted);
 
             // Only what the customer may see and still owes is paid; anything else is left out, never refused loudly.
-            if (invoice is { Status: InvoiceStatus.Open, AmountDue: > 0m } && !string.IsNullOrEmpty(invoice.TransactionId) &&
+            if (await availability.CanPayAsync(invoice, HttpContext.RequestAborted) &&
                 await _visibility.CanViewAsync(invoice, userId, HttpContext.RequestAborted))
             {
                 transactionIds.Add(invoice.TransactionId);

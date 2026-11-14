@@ -48,7 +48,7 @@ public sealed class InvoiceController : Controller
 
         string payUrl = null;
 
-        if (invoice.Status == InvoiceStatus.Open && invoice.AmountDue > 0m && !string.IsNullOrEmpty(invoice.TransactionId) &&
+        if (await HttpContext.RequestServices.GetRequiredService<InvoiceLedgerAvailability>().CanPayAsync(invoice, HttpContext.RequestAborted) &&
             HttpContext.RequestServices.GetService<ITransactionPayLinkService>() is { } payLinks &&
             await HttpContext.RequestServices.GetRequiredService<ITransactionManager>().FindByIdAsync(invoice.TransactionId, HttpContext.RequestAborted) is { } transaction)
         {

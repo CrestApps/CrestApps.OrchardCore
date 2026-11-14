@@ -135,7 +135,7 @@ When you download or erase a customer's data under **Commerce > Customers**, the
 
 ## Move invoices to another site
 
-Under **Tools > Deployments > Plans**, add the **Invoices** and **Credit notes** steps to a plan to take every invoice and credit note to another site. Issued invoices keep their numbers there and don't change what customers owe: bring their balances with the transactions. An invoice the other site already issued is left as it is, and one whose number the other site already uses is not imported. New invoices on the other site skip the numbers that came in.
+Under **Tools > Deployments > Plans**, add the **Invoices** and **Credit notes** steps to a plan to take every invoice and credit note to another site. Leave **Also export the transactions the invoices posted** ticked on the Invoices step, so what customers owe comes along and open invoices can be paid on the other site. Issued invoices keep their numbers there. An open invoice that arrives without its transaction says **Payments are not available on this site** on its page, and customers see no way to pay it until the transaction is imported. An invoice the other site already issued is left as it is, and one whose number the other site already uses is not imported. New invoices on the other site skip the numbers that came in.
 
 ## Related pages
 

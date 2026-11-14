@@ -38,6 +38,10 @@ public static class TransactionsServiceCollectionExtensions
         services.TryAddScoped<IFinancialDocumentNumberGenerator, SequentialFinancialDocumentNumberGenerator>();
         services.TryAddScoped<ITransactionInvoiceService, TransactionInvoiceService>();
 
+        // The ledger travels between sites in the Transactions recipe step, written and read as it is.
+        services.TryAddScoped<TransactionLedgerExporter>();
+        services.TryAddScoped<TransactionLedgerImporter>();
+
         // A signed-in user sees the transactions they own and those owed by the parties they act for.
         services.AddPartyMembership();
         services.TryAddScoped<ITransactionVisibilityService, DefaultTransactionVisibilityService>();

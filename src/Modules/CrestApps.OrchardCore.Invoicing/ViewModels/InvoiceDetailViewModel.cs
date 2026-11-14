@@ -24,4 +24,6 @@ public class InvoiceDetailViewModel
     public bool CanDelete { get; set; }
 
     public bool CanOpenTransaction { get; set; }
+
+    public bool LedgerMissing { get; set; }
 }
