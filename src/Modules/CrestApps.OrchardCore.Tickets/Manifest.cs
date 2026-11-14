@@ -30,3 +30,14 @@ using OrchardCore.Modules.Manifest;
         OrchardCoreFeatureIds.Title,
     ]
 )]
+
+[assembly: Feature(
+    Id = TicketsConstants.Features.Api,
+    Name = "Tickets API",
+    Description = "Lets other systems list, read, open, change, reply to and add notes to tickets over a JSON API, api/tickets/v1, with the caller's ticket permissions. Enable OpenAPI to document it.",
+    Category = "Service Desk",
+    Dependencies =
+    [
+        TicketsConstants.Features.Tickets,
+    ]
+)]
