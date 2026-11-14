@@ -22,6 +22,7 @@ internal sealed class DataConnectionStep : NamedRecipeStepHandler
     private readonly IDataConnectionStore _connectionStore;
     private readonly IDataConnectorManager _connectorManager;
     private readonly IDataConnectionSecretManager _secretManager;
+    private readonly IEnumerable<IDataConnectionSecretTarget> _secretTargets;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -38,6 +39,7 @@ internal sealed class DataConnectionStep : NamedRecipeStepHandler
         IDataConnectionStore connectionStore,
         IDataConnectorManager connectorManager,
         IDataConnectionSecretManager secretManager,
+        IEnumerable<IDataConnectionSecretTarget> secretTargets,
         IClock clock,
         IStringLocalizer<DataConnectionStep> stringLocalizer)
         : base(StepKey)
@@ -45,6 +47,7 @@ internal sealed class DataConnectionStep : NamedRecipeStepHandler
         _connectionStore = connectionStore;
         _connectorManager = connectorManager;
         _secretManager = secretManager;
+        _secretTargets = secretTargets;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -117,11 +120,22 @@ internal sealed class DataConnectionStep : NamedRecipeStepHandler
             connection.Description = string.IsNullOrWhiteSpace(model.Description) ? null : model.Description.Trim();
 
             var stored = isNew ? null : connection.GetOrCreate<HttpConnectionSettings>();
+            var storedTarget = isNew ? null : DescribeTarget(connection);
 
             connection.Properties ??= new Dictionary<string, object>();
             DataConnectorRecipeJson.MergeProperties(connection.Properties, model.Properties);
 
             DropSecretsSentElsewhere(connection, stored);
+
+            if (!isNew && !string.Equals(storedTarget, DescribeTarget(connection), StringComparison.Ordinal))
+            {
+                // The editor's rule for other connectors: a recipe that re-points a connection or signs in another way
+                // can't hand it the stored secrets.
+                foreach (var secret in connection.Secrets?.Keys.ToList() ?? [])
+                {
+                    _secretManager.Remove(connection, secret);
+                }
+            }
 
             foreach (var secret in model.Secrets ?? [])
             {
@@ -143,6 +157,9 @@ internal sealed class DataConnectionStep : NamedRecipeStepHandler
             }
         }
     }
+
+    private string DescribeTarget(DataConnection connection)
+        => _secretTargets.FirstOrDefault(target => string.Equals(target.Connector, connection.Connector, StringComparison.OrdinalIgnoreCase))?.Describe(connection);
 
     // The editor's rule: a stored secret was given for one host and one way of signing in. When the entry sends the
     // requests or the token requests of an existing connection to another host, or signs in another way, the stored

@@ -414,7 +414,61 @@ public sealed class DataConnectorRecipeTests
             [member] = new JsonArray([.. entries]),
         };
 
-    private static async Task<List<string>> RunAsync(Harness harness, JsonObject step)
+    [Fact]
+    public async Task DataConnectionStep_ReimportingAConnectionToAnotherServer_DropsItsStoredPassword()
+    {
+        // Arrange (Low, Data): a recipe could re-point an existing SQL Server connection and keep its password. The
+        // connector's secret target says where the password may go; the test connector reads its server the same way.
+        await using var harness = await Harness.CreateAsync();
+        var target = new ServerSecretTarget();
+
+        await RunAsync(harness, Step("DataConnection", "Connections", SqlConnection("sql.example.com", new JsonObject { ["Password"] = "stored-secret" })), [target]);
+
+        // Act
+        var errors = await RunAsync(harness, Step("DataConnection", "Connections", SqlConnection("attacker.example", secrets: null)), [target]);
+        var connection = await FindConnectionAsync(harness, "Warehouse");
+
+        // Assert
+        Assert.Empty(errors);
+        Assert.False(connection.Secrets?.ContainsKey("Password") ?? false);
+    }
+
+    [Fact]
+    public async Task DataConnectionStep_ReimportingAConnectionToTheSameServer_KeepsItsStoredPassword()
+    {
+        await using var harness = await Harness.CreateAsync();
+        var target = new ServerSecretTarget();
+
+        await RunAsync(harness, Step("DataConnection", "Connections", SqlConnection("sql.example.com", new JsonObject { ["Password"] = "stored-secret" })), [target]);
+        await RunAsync(harness, Step("DataConnection", "Connections", SqlConnection("sql.example.com", secrets: null)), [target]);
+        var connection = await FindConnectionAsync(harness, "Warehouse");
+
+        Assert.Equal("stored-secret", await ReadSecretAsync(harness, connection, "Password"));
+    }
+
+    private static JsonObject SqlConnection(string server, JsonObject secrets)
+        => new()
+        {
+            ["Name"] = "Warehouse",
+            ["Connector"] = "Test",
+            ["Properties"] = new JsonObject
+            {
+                ["SqlServerConnectionSettings"] = new JsonObject { ["Server"] = server, ["Authentication"] = 0 },
+            },
+            ["Secrets"] = secrets,
+        };
+
+    // Describes a connection by the server in its SQL Server settings, as the SQL Server connector's target does.
+    private sealed class ServerSecretTarget : IDataConnectionSecretTarget
+    {
+        public string Connector
+            => "Test";
+
+        public string Describe(DataConnection connection)
+            => (connection.Properties.TryGetValue("SqlServerConnectionSettings", out var settings) ? JsonSerializer.SerializeToNode(settings)?["Server"]?.GetValue<string>() : null)?.ToUpperInvariant();
+    }
+
+    private static async Task<List<string>> RunAsync(Harness harness, JsonObject step, IDataConnectionSecretTarget[] secretTargets = null)
     {
         var context = new RecipeExecutionContext
         {
@@ -429,6 +483,7 @@ public sealed class DataConnectorRecipeTests
                     provider.GetRequiredService<IDataConnectionStore>(),
                     provider.GetRequiredService<IDataConnectorManager>(),
                     provider.GetRequiredService<IDataConnectionSecretManager>(),
+                    secretTargets ?? provider.GetServices<IDataConnectionSecretTarget>(),
                     harness.Clock,
                     new PassThroughStringLocalizer<DataConnectionStep>())
                 : new ConnectedDataSetStep(

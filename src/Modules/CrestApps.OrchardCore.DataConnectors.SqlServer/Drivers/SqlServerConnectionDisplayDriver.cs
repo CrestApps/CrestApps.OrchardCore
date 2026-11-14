@@ -97,6 +97,16 @@ internal sealed class SqlServerConnectionDisplayDriver : DisplayDriver<DataConne
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectTimeoutSeconds), S["The connect timeout must be between 1 and 300 seconds."]);
         }
 
+        // The stored password was given for one server and one way of signing in. When either changes it is dropped and
+        // must be entered again, so an edit can't send it to a server of the editor's own.
+        var stored = connection.GetOrCreate<SqlServerConnectionSettings>();
+
+        if (_secretManager.Has(connection, SqlServerDataConnector.PasswordSecret) &&
+            !string.Equals(SqlServerSecretTarget.Describe(stored.Server, stored.Authentication), SqlServerSecretTarget.Describe(model.Server, model.Authentication), StringComparison.Ordinal))
+        {
+            _secretManager.Remove(connection, SqlServerDataConnector.PasswordSecret);
+        }
+
         connection.Put(new SqlServerConnectionSettings
         {
             Server = model.Server?.Trim(),
