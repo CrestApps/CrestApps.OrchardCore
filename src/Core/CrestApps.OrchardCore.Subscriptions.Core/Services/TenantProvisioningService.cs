@@ -292,7 +292,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         // Checked again here, so a purchase recorded before a rule existed can't create a site on a reserved prefix,
         // the operator's own host, another recipe, or a feature profile that no longer exists.
         var rules = await _rulesProvider.GetRulesAsync(planRecipe);
-        var errors = TenantPurchaseValidator.Validate(
+        var errors = await _rulesProvider.ValidateAsync(
             new TenantPurchaseRequest
             {
                 TenantName = job.TenantName,
@@ -316,7 +316,12 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
         var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
 
-        using var shellSettings = CreateShellSettings(job, onboarding);
+        using var shellSettings = CreateShellSettings(job, onboarding, existing);
+
+        // Saved before setup runs, with its prefix or host, a secret and the plan's recipe. Orchard's setup reloads the
+        // tenant from storage when it fails, and a tenant that was never saved reloads with no prefix and no host: it then
+        // answered for the store's own root URL with the setup wizard, and with no secret the wizard asked for no token.
+        await _shellHost.UpdateShellSettingsAsync(shellSettings);
 
         var setupContext = new SetupContext
         {
@@ -345,7 +350,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             : string.Join("; ", setupContext.Errors.Select(error => $"{error.Key}: {error.Value}"));
     }
 
-    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding)
+    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding, ShellSettings leftOver)
     {
         var settings = _shellSettingsManager
             .CreateDefaultSettings()
@@ -355,6 +360,17 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         settings.Name = job.TenantName;
         settings.RequestUrlPrefix = job.Prefix;
         settings.RequestUrlHost = job.Domains is { Length: > 0 } ? string.Join(',', job.Domains) : null;
+
+        // A retry keeps the identity of the tenant the previous attempt saved.
+        if (!string.IsNullOrEmpty(leftOver?.TenantId))
+        {
+            settings["TenantId"] = leftOver.TenantId;
+        }
+
+        // Orchard's setup wizard asks for a token signed with this secret, so the tenant left behind by a failed setup can
+        // only be finished by the host, and the recipe is the plan's.
+        settings["Secret"] = Guid.NewGuid().ToString();
+        settings["RecipeName"] = job.RecipeName;
 
         if (!string.IsNullOrEmpty(job.FeatureProfile))
         {
@@ -485,14 +501,22 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             return;
         }
 
+        var data = new Dictionary<string, string>
+        {
+            [SubscriptionConstants.EntitlementData.ProvisioningJobId] = job.ItemId,
+        };
+
+        // The tenant's own id, so the entitlement can never reach a later site sold under the same name.
+        if (_shellHost.TryGetSettings(job.TenantName, out var created) && !string.IsNullOrEmpty(created.TenantId))
+        {
+            data[SubscriptionConstants.EntitlementData.TenantId] = created.TenantId;
+        }
+
         subscription.Entitlements.Add(new SubscriptionEntitlement
         {
             Kind = SubscriptionConstants.EntitlementKinds.Tenant,
             Value = job.TenantName,
-            Data = new Dictionary<string, string>
-            {
-                [SubscriptionConstants.EntitlementData.ProvisioningJobId] = job.ItemId,
-            },
+            Data = data,
         });
 
         await _subscriptionManager.UpdateAsync(subscription, cancellationToken: cancellationToken);

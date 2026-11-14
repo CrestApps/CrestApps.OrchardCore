@@ -84,6 +84,26 @@ public sealed class SubscriptionLifecycleBackgroundTaskTests
         Assert.Equal(1, converted.CyclesBilled);
     }
 
+    /// <summary>
+    /// M9 (final security review): a subscription canceled at period end kept what it granted, a sold site included, once
+    /// the period ended, because no sweep ever looked at it again.
+    /// </summary>
+    [Fact]
+    public async Task DoWorkAsync_ExpiresACanceledSubscriptionWhosePaidPeriodEnded()
+    {
+        var subscription = CreateDue("Stripe");
+        subscription.Status = SubscriptionStatus.Canceled;
+        subscription.CancelAtPeriodEnd = true;
+        subscription.NextBillingUtc = null;
+        subscription.CurrentPeriodEndUtc = _now.AddHours(-1);
+
+        var (task, services, store) = CreateTask(subscription, isGateway: true);
+
+        await task.DoWorkAsync(services, TestContext.Current.CancellationToken);
+
+        Assert.Equal(SubscriptionStatus.Expired, Assert.Single(store.Subscriptions).Status);
+    }
+
     private static Subscription CreateDue(string providerKey)
         => new()
         {

@@ -57,7 +57,8 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
         await RenewDueAsync(subscriptionManager, lifecycleService, providerResolver, run, now, cancellationToken);
     }
 
-    // A past-due agreement whose grace window ran out is over. Leaving it past due would give away the plan.
+    // A past-due agreement whose grace window ran out is over, and so is a canceled one whose paid period ended. Leaving
+    // either as it is would give away the plan: nothing else revokes what it granted, such as a sold site.
     private async Task ExpireLapsedAsync(
         ISubscriptionManager subscriptionManager,
         ISubscriptionLifecycleService lifecycleService,
@@ -78,7 +79,9 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
             {
                 await lifecycleService.ExpireAsync(
                     subscription.ItemId,
-                    "The grace period for the unpaid renewal elapsed.",
+                    subscription.Status == SubscriptionStatus.Canceled
+                        ? "The subscription was canceled and the period it was paid for ended."
+                        : "The grace period for the unpaid renewal elapsed.",
                     cancellationToken);
 
                 run.AddItems(1, "expired");

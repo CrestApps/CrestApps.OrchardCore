@@ -42,7 +42,7 @@ internal sealed class TenantOnboardingMigrations : DataMigration
             .WithDescription("Provides the key properties for tenant onboarding subscription.")
         );
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -73,5 +73,28 @@ internal sealed class TenantOnboardingMigrations : DataMigration
         });
 
         return 2;
+    }
+
+    /// <summary>
+    /// A store that could sell sites on a prefix of its own address keeps doing so, now that new stores don't (M10 of the
+    /// final security review); the operator reviews the choice under Tenant onboarding.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public static int UpdateFrom2()
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
+            var site = await siteService.LoadSiteSettingsAsync();
+            var settings = site.GetOrCreate<SubscriptionOnboardingSettings>();
+
+            if (SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(settings))
+            {
+                site.Put(settings);
+                await siteService.UpdateSiteSettingsAsync(site);
+            }
+        });
+
+        return 3;
     }
 }

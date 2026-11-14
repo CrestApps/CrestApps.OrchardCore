@@ -8,7 +8,8 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 public sealed class SubscriptionOnboardingSettings
 {
     /// <summary>
-    /// The prefixes reserved by default, because the host's own routes use them.
+    /// The prefixes reserved by default, because the host's own routes use them. The first segment of every route the
+    /// store registers, and of every page path it has, is refused as well, whatever this list says.
     /// </summary>
     public static readonly string[] DefaultReservedPrefixes =
     [
@@ -21,7 +22,35 @@ public sealed class SubscriptionOnboardingSettings
         "checkout",
         "cart",
         "orders",
+        "account",
+        "subscription",
+        "subscriptions",
+        "transactions",
+        "downloads",
+        "wizard",
+        "book",
+        "bookings",
+        "listings",
+        "products",
+        "reviews",
+        "feeds",
+        "me",
+        "pos",
+        "checkout_sessions",
+        "register",
+        "resetpassword",
+        "logoff",
+        "users",
     ];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a sold site may answer on a prefix of this store's own address, with no
+    /// host of its own. Such a site runs in the store's origin: script its owner puts on it can read the store's pages,
+    /// the store's admin included, with the session of anybody who opens the site, and it receives the store's cookies.
+    /// Off for new stores, so sites are sold on a base domain or the buyer's own domain; an upgrade turns it on for
+    /// stores that already sold sites this way.
+    /// </summary>
+    public bool AllowPrefixOnStoreHost { get; set; }
 
     public string DatabaseProvider { get; set; }
 
@@ -89,6 +118,7 @@ public sealed class SubscriptionOnboardingSettings
             ReservedHosts = (ReservedHosts ?? []).Concat(hostNames ?? []).ToArray(),
             BaseDomain = BaseDomain,
             AdminPrefix = adminPrefix,
+            RequireOwnHost = !AllowPrefixOnStoreHost,
         };
 
     public const string DefaultDatabaseProvider = "Sqlite";

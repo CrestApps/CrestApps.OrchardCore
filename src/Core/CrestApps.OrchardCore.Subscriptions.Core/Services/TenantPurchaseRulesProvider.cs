@@ -28,6 +28,22 @@ public interface ITenantPurchaseRulesProvider
     /// <param name="checkoutSessionId">The checkout the site was bought with.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<string> GetPlanRecipeNameAsync(string checkoutSessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns every reason the purchase is refused: <see cref="TenantPurchaseValidator.Validate"/>, and a prefix whose
+    /// URLs this store already serves itself (the first segment of one of its routes or of one of its pages' paths).
+    /// </summary>
+    /// <param name="request">The normalized request.</param>
+    /// <param name="rules">The rules.</param>
+    /// <param name="tenants">The settings of every tenant on the host.</param>
+    /// <param name="ignoreTenant">A tenant to leave out of the uniqueness checks.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<IReadOnlyList<TenantPurchaseError>> ValidateAsync(
+        TenantPurchaseRequest request,
+        TenantPurchaseRules rules,
+        IEnumerable<ShellSettings> tenants,
+        string ignoreTenant = null,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -43,6 +59,7 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
     private readonly AdminOptions _adminOptions;
     private readonly ITenantFeatureProfileCatalog _featureProfiles;
     private readonly ICheckoutSessionStore _sessionStore;
+    private readonly StoreRouteSegments _storeRoutes;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantPurchaseRulesProvider"/> class.
@@ -53,13 +70,15 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
     /// <param name="adminOptions">The admin options, for the admin prefix.</param>
     /// <param name="featureProfiles">The feature profiles a sold site may be given.</param>
     /// <param name="sessionStore">The checkouts, which record the plan's recipe.</param>
+    /// <param name="storeRoutes">The URLs this store serves itself.</param>
     public TenantPurchaseRulesProvider(
         ISiteService siteService,
         IShellHost shellHost,
         IHttpContextAccessor httpContextAccessor,
         IOptions<AdminOptions> adminOptions,
         ITenantFeatureProfileCatalog featureProfiles,
-        ICheckoutSessionStore sessionStore)
+        ICheckoutSessionStore sessionStore,
+        StoreRouteSegments storeRoutes)
     {
         _siteService = siteService;
         _shellHost = shellHost;
@@ -67,6 +86,31 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
         _adminOptions = adminOptions.Value;
         _featureProfiles = featureProfiles;
         _sessionStore = sessionStore;
+        _storeRoutes = storeRoutes;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TenantPurchaseError>> ValidateAsync(
+        TenantPurchaseRequest request,
+        TenantPurchaseRules rules,
+        IEnumerable<ShellSettings> tenants,
+        string ignoreTenant = null,
+        CancellationToken cancellationToken = default)
+    {
+        var errors = TenantPurchaseValidator.Validate(request, rules, tenants, ignoreTenant).ToList();
+        var prefix = request.Prefix?.Trim().Trim('/');
+
+        // A site on a prefix of the store's own address takes every URL under it. The reserved list can't name every route
+        // a module adds, nor the store's own pages, so a prefix the store already answers on is refused here too.
+        if (!string.IsNullOrEmpty(prefix) &&
+            request.Domains is not { Length: > 0 } &&
+            !errors.Any(error => error.Field == nameof(TenantPurchaseRequest.Prefix)) &&
+            await _storeRoutes.IsTakenAsync(prefix, cancellationToken))
+        {
+            errors.Add(new TenantPurchaseError(nameof(TenantPurchaseRequest.Prefix), TenantPurchaseErrorCode.ReservedPrefix, prefix));
+        }
+
+        return errors;
     }
 
     /// <inheritdoc/>

@@ -255,6 +255,7 @@ public sealed class TenantProvisioningStartup : StartupBase
         services.AddScoped<ITenantProvisioningJobStore, TenantProvisioningJobStore>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         services.AddScoped<ITenantPurchaseRulesProvider, TenantPurchaseRulesProvider>();
+        services.AddScoped<StoreRouteSegments>();
 
         // Without Orchard Core's Feature Profiles no profile can be confirmed, so no site is sold (SEC-C18).
         services.TryAddScoped<ITenantFeatureProfileCatalog, UnavailableTenantFeatureProfileCatalog>();

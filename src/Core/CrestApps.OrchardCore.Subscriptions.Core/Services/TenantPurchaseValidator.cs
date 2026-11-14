@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Net;
 using System.Text.RegularExpressions;
 using OrchardCore.Environment.Shell;
 
@@ -81,6 +83,18 @@ public sealed class TenantPurchaseRules
     /// purchase may name only one of these.
     /// </summary>
     public IReadOnlyCollection<string> KnownFeatureProfiles { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a sold tenant must answer on a host of its own (the base domain's or the
+    /// buyer's), so a tenant on a prefix of the store's own address is refused. A tenant on a prefix runs in the store's
+    /// origin and receives its cookies, so this is what the operator gets unless they choose prefix tenants explicitly.
+    /// </summary>
+    public bool RequireOwnHost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most host names one tenant may name.
+    /// </summary>
+    public int MaxDomains { get; set; } = TenantPurchaseValidator.DefaultMaxDomains;
 }
 
 /// <summary>
@@ -103,6 +117,8 @@ public enum TenantPurchaseErrorCode
     RecipeNotAllowed,
     FeatureProfileRequired,
     FeatureProfileNotFound,
+    TooManyDomains,
+    OwnHostRequired,
 }
 
 /// <summary>
@@ -122,6 +138,11 @@ public readonly record struct TenantPurchaseError(string Field, TenantPurchaseEr
 /// </summary>
 public static partial class TenantPurchaseValidator
 {
+    /// <summary>
+    /// The most host names one sold tenant may name unless the rules say otherwise.
+    /// </summary>
+    public const int DefaultMaxDomains = 5;
+
     /// <summary>
     /// Fills in what the buyer may not choose: the prefix from the name, and the host from the base domain.
     /// </summary>
@@ -254,6 +275,15 @@ public static partial class TenantPurchaseValidator
             return;
         }
 
+        // A tenant on a prefix with no host of its own answers on the store's address, so its pages run in the store's
+        // origin and receive the store's cookies. That is the operator's explicit choice, never the default.
+        if (rules.RequireOwnHost && !hasDomains)
+        {
+            errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.OwnHostRequired, prefix));
+
+            return;
+        }
+
         if (!PrefixRegex().IsMatch(prefix))
         {
             errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.InvalidPrefix, prefix));
@@ -303,6 +333,13 @@ public static partial class TenantPurchaseValidator
             return;
         }
 
+        if (domains.Length > Math.Max(1, rules.MaxDomains))
+        {
+            errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.TooManyDomains, rules.MaxDomains.ToString(CultureInfo.InvariantCulture)));
+
+            return;
+        }
+
         var reserved = new HashSet<string>((rules.ReservedHosts ?? []).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => host.Trim().Trim('.')), StringComparer.OrdinalIgnoreCase)
         {
             "localhost",
@@ -314,8 +351,10 @@ public static partial class TenantPurchaseValidator
 
         foreach (var domain in domains)
         {
-            // A wildcard would claim every subdomain, the operator's included; a port or a path is not a host name.
-            if (!HostRegex().IsMatch(domain) || domain.Length > 253)
+            // A wildcard would claim every subdomain, the operator's included; a port or a path is not a host name. An IP
+            // address is not a domain anybody can own, and a site on one answers every request addressed to the server by
+            // address, health probes included.
+            if (!HostRegex().IsMatch(domain) || domain.Length > 253 || IsIpAddress(domain))
             {
                 errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.InvalidHost, domain));
 
@@ -336,12 +375,22 @@ public static partial class TenantPurchaseValidator
                 continue;
             }
 
-            if (takenHosts.Contains(domain))
+            // A name under another tenant's host, or a parent of one, belongs with that host: its owner points the names
+            // around it at the platform too (www.v.com next to v.com), and a buyer who could claim them would serve them.
+            if (takenHosts.Contains(domain) || (!derived && takenHosts.Any(host => IsUnderOrAbove(domain, host))))
             {
                 errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.HostTaken, domain));
             }
         }
     }
+
+    private static bool IsUnderOrAbove(string domain, string host)
+        => domain.EndsWith("." + host, StringComparison.OrdinalIgnoreCase) ||
+            host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
+
+    // The host pattern accepts dotted digits, so 203.0.113.10 passes it. No top-level domain is all digits.
+    private static bool IsIpAddress(string domain)
+        => IPAddress.TryParse(domain, out _) || domain[(domain.LastIndexOf('.') + 1)..].All(char.IsAsciiDigit);
 
     private static bool IsReservedPrefix(string prefix, TenantPurchaseRules rules)
     {

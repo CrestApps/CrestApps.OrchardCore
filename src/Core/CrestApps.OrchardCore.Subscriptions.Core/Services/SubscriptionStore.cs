@@ -100,7 +100,8 @@ public sealed class SubscriptionStore : DocumentCatalog<Subscription, Subscripti
     {
         var records = await Session
             .Query<Subscription, SubscriptionRecordIndex>(
-                x => x.Status == SubscriptionStatus.PastDue && x.GraceEndsUtc != null && x.GraceEndsUtc <= asOfUtc,
+                x => (x.Status == SubscriptionStatus.PastDue && x.GraceEndsUtc != null && x.GraceEndsUtc <= asOfUtc) ||
+                    (x.Status == SubscriptionStatus.Canceled && x.CurrentPeriodEndUtc <= asOfUtc),
                 collection: CollectionName)
             .ListAsync(cancellationToken);
 

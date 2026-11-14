@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout;
@@ -9,14 +10,18 @@ using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Json;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
+using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
@@ -40,6 +45,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
     private readonly ITenantPurchaseRulesProvider _rulesProvider;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly DocumentJsonSerializerOptions _jsonOptions;
+    private readonly UserManager<IUser> _userManager;
 
     internal readonly IStringLocalizer S;
 
@@ -47,9 +53,11 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
     /// Initializes a new instance of the <see cref="TenantProvisioningStepDisplayDriver"/> class.
     /// </summary>
     /// <param name="shellHost">The shell host used to check availability.</param>
-    /// <param name="setupService">The setup service used to list the site templates on offer.</param>
+    /// <param name="siteService">The site service, which holds the onboarding settings.</param>
+    /// <param name="rulesProvider">The rules a sold site is held to.</param>
     /// <param name="dataProtectionProvider">The provider used to protect the administrator password.</param>
     /// <param name="jsonOptions">The serializer options used for persisted step data.</param>
+    /// <param name="userManager">The user manager, whose identity rules the administrator is held to.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TenantProvisioningStepDisplayDriver(
         IShellHost shellHost,
@@ -57,8 +65,10 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
         ITenantPurchaseRulesProvider rulesProvider,
         IDataProtectionProvider dataProtectionProvider,
         IOptions<DocumentJsonSerializerOptions> jsonOptions,
+        UserManager<IUser> userManager,
         IStringLocalizer<TenantProvisioningStepDisplayDriver> stringLocalizer)
     {
+        _userManager = userManager;
         _shellHost = shellHost;
         _siteService = siteService;
         _rulesProvider = rulesProvider;
@@ -118,11 +128,13 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
             FeatureProfile = GetStepData(flow, "FeatureProfile"),
         }, rules);
 
-        foreach (var error in TenantPurchaseValidator.Validate(request, rules, _shellHost.GetAllSettings()))
+        foreach (var error in await _rulesProvider.ValidateAsync(request, rules, _shellHost.GetAllSettings()))
         {
             var field = error.Field switch
             {
                 nameof(TenantPurchaseRequest.Domains) => nameof(model.Domains),
+                nameof(TenantPurchaseRequest.Prefix) when error.Code == TenantPurchaseErrorCode.OwnHostRequired
+                    => rules.AllowCustomDomains ? nameof(model.Domains) : nameof(model.TenantName),
                 nameof(TenantPurchaseRequest.Prefix) => nameof(model.Prefix),
                 _ => nameof(model.TenantName),
             };
@@ -132,28 +144,7 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
 
         var tenantName = request.TenantName;
 
-        if (string.IsNullOrWhiteSpace(model.AdminUsername))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AdminUsername), S["An administrator user name is required."]);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.AdminEmail))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AdminEmail), S["An administrator email address is required."]);
-        }
-
-        // A password already captured on a previous visit stays valid, so the customer is not forced to
-        // retype it every time they step back through the checkout.
-        var hasExistingPassword = ProtectedSettingExtensions.HasSecret(saved?.ProtectedAdminPassword);
-
-        if (string.IsNullOrEmpty(model.AdminPassword) && !hasExistingPassword)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AdminPassword), S["An administrator password is required."]);
-        }
-        else if (!string.IsNullOrEmpty(model.AdminPassword) && model.AdminPassword != model.ConfirmPassword)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConfirmPassword), S["The passwords do not match."]);
-        }
+        await ValidateAdministratorAsync(model, saved, context.Updater);
 
         if (context.Updater.ModelState.IsValid)
         {
@@ -179,6 +170,68 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
         }
 
         return await EditStepAsync(flow, context);
+    }
+
+    // The administrator is created by Orchard's setup after the payment, with the same identity rules. A user name, e-mail
+    // address or password they refuse made setup fail on a site already paid for, so they are checked here, while the buyer
+    // can still change them, as the account step checks its own.
+    private async Task ValidateAdministratorAsync(TenantProvisioningStepViewModel model, TenantProvisioningStep saved, IUpdateModel updater)
+    {
+        var userName = model.AdminUsername?.Trim();
+        var email = model.AdminEmail?.Trim();
+        var allowedCharacters = _userManager.Options?.User?.AllowedUserNameCharacters;
+
+        if (string.IsNullOrWhiteSpace(userName))
+        {
+            updater.ModelState.AddModelError(Prefix, nameof(model.AdminUsername), S["An administrator user name is required."]);
+        }
+        else if (!string.IsNullOrEmpty(allowedCharacters) && userName.Any(character => !allowedCharacters.Contains(character)))
+        {
+            updater.ModelState.AddModelError(Prefix, nameof(model.AdminUsername), S["The user name may only contain these characters: {0}", allowedCharacters]);
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            updater.ModelState.AddModelError(Prefix, nameof(model.AdminEmail), S["An administrator email address is required."]);
+        }
+        else if (!MailAddress.TryCreate(email, out var address) || !string.Equals(address.Address, email, StringComparison.OrdinalIgnoreCase))
+        {
+            updater.ModelState.AddModelError(Prefix, nameof(model.AdminEmail), S["The email address is not valid."]);
+        }
+
+        // A password already captured on a previous visit stays valid, so the customer is not forced to
+        // retype it every time they step back through the checkout.
+        var hasExistingPassword = ProtectedSettingExtensions.HasSecret(saved?.ProtectedAdminPassword);
+
+        if (string.IsNullOrEmpty(model.AdminPassword))
+        {
+            if (!hasExistingPassword)
+            {
+                updater.ModelState.AddModelError(Prefix, nameof(model.AdminPassword), S["An administrator password is required."]);
+            }
+
+            return;
+        }
+
+        if (model.AdminPassword != model.ConfirmPassword)
+        {
+            updater.ModelState.AddModelError(Prefix, nameof(model.ConfirmPassword), S["The passwords do not match."]);
+
+            return;
+        }
+
+        // A validator may compare the password with the user name or e-mail address, so it is given the administrator.
+        var user = new User { UserName = userName, Email = email };
+
+        foreach (var validator in _userManager.PasswordValidators)
+        {
+            var result = await validator.ValidateAsync(_userManager, user, model.AdminPassword);
+
+            foreach (var error in result.Errors)
+            {
+                updater.ModelState.AddModelError(Prefix, nameof(model.AdminPassword), error.Description);
+            }
+        }
     }
 
     private TenantProvisioningStep ReadSaved(CheckoutFlow flow)
@@ -236,6 +289,8 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
             TenantPurchaseErrorCode.InvalidHost => S["'{0}' is not a domain name a site can use.", error.Value],
             TenantPurchaseErrorCode.ReservedHost => S["The domain '{0}' is reserved.", error.Value],
             TenantPurchaseErrorCode.HostTaken => S["The domain '{0}' belongs to another site.", error.Value],
+            TenantPurchaseErrorCode.TooManyDomains => S["A site may answer on at most {0} domains.", error.Value],
+            TenantPurchaseErrorCode.OwnHostRequired => S["Enter a domain for your site: this store doesn't sell sites on its own address."],
             TenantPurchaseErrorCode.RecipeNotAllowed => S["This plan can't be bought yet: the store hasn't finished setting it up."],
             TenantPurchaseErrorCode.FeatureProfileRequired or TenantPurchaseErrorCode.FeatureProfileNotFound => S["This plan can't be bought yet: the store hasn't finished setting it up."],
             _ => S["The details of your new site are not accepted."],

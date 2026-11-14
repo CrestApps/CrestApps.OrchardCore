@@ -78,6 +78,7 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
             model.Schema = settings.Schema;
             model.AllowCustomPrefix = settings.AllowCustomPrefix;
             model.AllowCustomDomains = settings.AllowCustomDomains;
+            model.AllowPrefixOnStoreHost = settings.AllowPrefixOnStoreHost;
             model.ReservedPrefixes = string.Join(", ", settings.ReservedPrefixes ?? SubscriptionOnboardingSettings.DefaultReservedPrefixes);
             model.ReservedHosts = string.Join(", ", settings.ReservedHosts ?? []);
             model.BaseDomain = settings.BaseDomain;
@@ -119,6 +120,7 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
         // Where a sold site may answer. The admin prefix and the default tenant's hosts are reserved whatever is typed here.
         settings.AllowCustomPrefix = model.AllowCustomPrefix;
         settings.AllowCustomDomains = model.AllowCustomDomains;
+        settings.AllowPrefixOnStoreHost = model.AllowPrefixOnStoreHost;
         settings.ReservedPrefixes = SplitList(model.ReservedPrefixes);
         settings.ReservedHosts = SplitList(model.ReservedHosts);
         settings.BaseDomain = string.IsNullOrWhiteSpace(model.BaseDomain) ? null : model.BaseDomain.Trim().Trim('.').ToLowerInvariant();

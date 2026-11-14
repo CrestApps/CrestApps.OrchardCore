@@ -97,6 +97,17 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
             return;
         }
 
+        // A site removed and sold again under the same name is another tenant, with another id.
+        if (context.Entitlement.Data is not null &&
+            context.Entitlement.Data.TryGetValue(SubscriptionConstants.EntitlementData.TenantId, out var tenantId) &&
+            !string.IsNullOrEmpty(tenantId) &&
+            !string.Equals(tenantId, settings.TenantId, StringComparison.Ordinal))
+        {
+            _logger.LogWarning("A tenant entitlement of subscription '{SubscriptionId}' names a tenant that was replaced since. It was ignored.", context.Subscription?.ItemId);
+
+            return;
+        }
+
         // An uninitialized tenant has never been set up, so enabling it would present a setup screen to
         // somebody who bought a finished site.
         if (settings.IsUninitialized() || settings.State == state)
@@ -104,7 +115,17 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
             return;
         }
 
+        var suspendedByBilling = string.Equals(settings[SubscriptionConstants.SuspendedBySubscriptionSetting], "true", StringComparison.OrdinalIgnoreCase);
+
+        // Only a site billing took down comes back with billing. One an operator disabled stays disabled, whatever the
+        // subscriber does: canceling at period end makes the agreement current, and that used to switch the site back on.
+        if (state == TenantState.Running && !suspendedByBilling)
+        {
+            return;
+        }
+
         settings.State = state;
+        settings[SubscriptionConstants.SuspendedBySubscriptionSetting] = state == TenantState.Disabled ? "true" : null;
 
         await _shellHost.UpdateShellSettingsAsync(settings);
 
@@ -128,6 +149,15 @@ public sealed class TenantSubscriptionEntitlementApplier : ISubscriptionEntitlem
             !string.IsNullOrEmpty(jobId))
         {
             job = await _jobStore.FindByIdAsync(jobId);
+
+            // After a site is removed its name can be sold again. The tenant answering to the name is then the newest
+            // job's, and an entitlement recorded before it carried the tenant's id must not reach it.
+            var newest = job is null ? null : await _jobStore.GetByTenantNameAsync(tenantName);
+
+            if (newest is not null && !string.Equals(newest.ItemId, job.ItemId, StringComparison.Ordinal))
+            {
+                return false;
+            }
         }
         else
         {
