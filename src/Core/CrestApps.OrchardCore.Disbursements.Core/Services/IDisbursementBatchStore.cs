@@ -45,4 +45,15 @@ public interface IDisbursementBatchStore : ICatalog<DisbursementBatch>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The count and the page.</returns>
     Task<(int Count, IReadOnlyList<DisbursementBatch> Batches)> ListPageAsync(DisbursementBatchStatus? status, int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads a page of batches the filter allows, newest first, with their count.
+    /// </summary>
+    /// <param name="status">The status, or <see langword="null"/> for every status.</param>
+    /// <param name="access">The batches the reader may act on.</param>
+    /// <param name="skip">How many to skip.</param>
+    /// <param name="take">How many to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The count and the page.</returns>
+    Task<(int Count, IReadOnlyList<DisbursementBatch> Batches)> ListPageAsync(DisbursementBatchStatus? status, CrestApps.OrchardCore.SourceAccess.SourceAccessFilter access, int skip, int take, CancellationToken cancellationToken = default);
 }

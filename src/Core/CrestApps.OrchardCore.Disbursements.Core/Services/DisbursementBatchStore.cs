@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Disbursements.Core.Indexes;
 using CrestApps.OrchardCore.Disbursements.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
+using CrestApps.OrchardCore.SourceAccess;
+using CrestApps.OrchardCore.YesSql.Core.SourceAccess;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Disbursements.Core.Services;
@@ -54,9 +56,19 @@ public sealed class DisbursementBatchStore : DocumentCatalog<DisbursementBatch, 
     }
 
     /// <inheritdoc />
-    public async Task<(int Count, IReadOnlyList<DisbursementBatch> Batches)> ListPageAsync(DisbursementBatchStatus? status, int skip, int take, CancellationToken cancellationToken = default)
+    public Task<(int Count, IReadOnlyList<DisbursementBatch> Batches)> ListPageAsync(DisbursementBatchStatus? status, int skip, int take, CancellationToken cancellationToken = default)
+        => ListPageAsync(status, SourceAccessFilter.Unrestricted, skip, take, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<(int Count, IReadOnlyList<DisbursementBatch> Batches)> ListPageAsync(DisbursementBatchStatus? status, SourceAccessFilter access, int skip, int take, CancellationToken cancellationToken = default)
     {
         var batches = Session.Query<DisbursementBatch, DisbursementBatchIndex>(collection: CollectionName);
+
+        // The count and the page both read only the batches the person may act on.
+        if (SourceAccessExpressions.Restrict<DisbursementBatchIndex>(access ?? SourceAccessFilter.Unrestricted) is { } restrict)
+        {
+            batches = batches.Where(restrict);
+        }
 
         if (status is { } value)
         {

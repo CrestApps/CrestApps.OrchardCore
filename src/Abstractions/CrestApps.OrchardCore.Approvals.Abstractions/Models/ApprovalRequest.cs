@@ -122,6 +122,29 @@ public sealed class ApprovalRequest : CatalogItem, IModifiedUtcAwareModel
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets who may decide, copied from the policy when the request was made, so a later change of the policy
+    /// never changes who decides a request already asked.
+    /// </summary>
+    public List<ApproverRule> Approvers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the requester may approve, copied from the policy when the request was made.
+    /// </summary>
+    public bool AllowRequesterToApprove { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a person may decide a request about themselves, copied from the policy when the request was
+    /// made.
+    /// </summary>
+    public bool AllowSubjectToDecide { get; set; }
+
+    /// <summary>
+    /// Gets or sets the version of the subject the request is about, such as a fingerprint of its totals, from the
+    /// caller. A request about another version replaces it, and the subject handler can refuse a stale approval.
+    /// </summary>
+    public string SubjectVersion { get; set; }
+
+    /// <summary>
     /// Gets the number of approvals made.
     /// </summary>
     public int ApprovalCount

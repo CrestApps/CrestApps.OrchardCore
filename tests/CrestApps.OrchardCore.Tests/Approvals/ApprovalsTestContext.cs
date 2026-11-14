@@ -38,10 +38,12 @@ internal sealed class ApprovalsTestContext
             .ReturnsAsync((string name, CancellationToken _) => Policies.FirstOrDefault(policy => policy.Name == name));
 
         PolicyManager = policies.Object;
-        Service = new ApprovalService(Manager, PolicyManager, Directory, Handlers, Observers, clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
+        Service = new ApprovalService(Manager, PolicyManager, Directory, Handlers, Observers, Locks, new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
     }
 
     public DateTime Now { get; set; } = new(2026, 11, 13, 15, 0, 0, DateTimeKind.Utc);
+
+    public KeyedDistributedLock Locks { get; } = new();
 
     public InMemoryApprovalRequestStore Store { get; }
 
@@ -167,4 +169,10 @@ internal sealed class RecordingSubjectHandler : IApprovalSubjectHandler
 
         return Task.CompletedTask;
     }
+}
+
+internal sealed class NoopApprovalCommitter : IApprovalCommitter
+{
+    public Task CommitAsync(CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

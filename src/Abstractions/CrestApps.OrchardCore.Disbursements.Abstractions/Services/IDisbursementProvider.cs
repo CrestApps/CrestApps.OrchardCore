@@ -7,6 +7,10 @@ namespace CrestApps.OrchardCore.Disbursements.Services;
 /// Sends a batch of disbursements one way: a bank file, checks, a payment provider's payouts, or by hand. Register one
 /// with <see cref="DisbursementsServiceCollectionExtensions.AddDisbursementProvider{TProvider}"/>.
 /// </summary>
+/// <remarks>
+/// <see cref="SubmitAsync"/> is called once per batch: the batch is persisted as Releasing before the call, so a
+/// provider that talks to an API uses the batch id (or each disbursement's idempotency key) as its idempotency key.
+/// </remarks>
 public interface IDisbursementProvider
 {
     /// <summary>

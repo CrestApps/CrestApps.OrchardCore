@@ -40,7 +40,7 @@ public sealed class DisbursementStoreTests : IAsyncLifetime
         {
             var transaction = await session.BeginTransactionAsync(cancellationToken);
 
-            Assert.Equal(1, await new DisbursementsMigrations { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync());
+            Assert.Equal(2, await new DisbursementsMigrations { SchemaBuilder = new SchemaBuilder(_store.Configuration, transaction) }.CreateAsync());
 
             await transaction.CommitAsync(cancellationToken);
         }
@@ -53,6 +53,8 @@ public sealed class DisbursementStoreTests : IAsyncLifetime
             await session.SaveAsync(Disbursement("groupB", "PayStatement", "groupB", 10m), false, DisbursementsConstants.CollectionName, cancellationToken);
             await session.SaveAsync(new DisbursementBatch { ItemId = "old", Provider = "Nacha", Status = DisbursementBatchStatus.Released, ReleasedUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc), CreatedUtc = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc) }, false, DisbursementsConstants.CollectionName, cancellationToken);
             await session.SaveAsync(new DisbursementBatch { ItemId = "new", Provider = "Nacha", Status = DisbursementBatchStatus.Released, ReleasedUtc = new DateTime(2026, 11, 12, 0, 0, 0, DateTimeKind.Utc), CreatedUtc = new DateTime(2026, 11, 12, 0, 0, 0, DateTimeKind.Utc) }, false, DisbursementsConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new DisbursementBatch { ItemId = "batchA", Provider = "Nacha", Status = DisbursementBatchStatus.Open, SourceKind = "PayStatement", AccessScope = "groupA", CreatedUtc = new DateTime(2026, 11, 13, 0, 0, 0, DateTimeKind.Utc) }, false, DisbursementsConstants.CollectionName, cancellationToken);
+            await session.SaveAsync(new DisbursementBatch { ItemId = "batchB", Provider = "Nacha", Status = DisbursementBatchStatus.Open, SourceKind = "PayStatement", AccessScope = "groupB", CreatedUtc = new DateTime(2026, 11, 13, 0, 0, 0, DateTimeKind.Utc) }, false, DisbursementsConstants.CollectionName, cancellationToken);
             await session.SaveChangesAsync(cancellationToken);
         }
     }
@@ -118,6 +120,23 @@ public sealed class DisbursementStoreTests : IAsyncLifetime
 
         // Assert
         Assert.Equal("old", Assert.Single(batches).ItemId);
+    }
+
+    [Theory]
+    [InlineData("pat", new[] { "batchA", "new", "old" })]
+    [InlineData("lee", new[] { "new", "old" })]
+    public async Task BatchListPageAsync_CountsAndReadsOnlyTheBatchesThePersonMayActOn(string userName, string[] expected)
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var filter = await Access().GetFilterAsync(TestSecurity.User(userName), SourceAccessLevel.Manage, TestContext.Current.CancellationToken);
+
+        // Act
+        var (count, page) = await new DisbursementBatchStore(session).ListPageAsync(null, filter, 0, 50, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected.Length, count);
+        Assert.Equal(expected, page.Select(entry => entry.ItemId).Order(StringComparer.Ordinal));
     }
 
     private static SourceAccessService Access()

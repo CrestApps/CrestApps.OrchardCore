@@ -41,6 +41,11 @@ public sealed class NachaFileRequest
     public DateOnly EffectiveDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the entry description of the batch, such as PAYROLL, or <see langword="null"/> for the settings' own.
+    /// </summary>
+    public string EntryDescription { get; set; }
+
+    /// <summary>
     /// Gets or sets the credits.
     /// </summary>
     public IList<NachaEntry> Entries { get; set; } = [];

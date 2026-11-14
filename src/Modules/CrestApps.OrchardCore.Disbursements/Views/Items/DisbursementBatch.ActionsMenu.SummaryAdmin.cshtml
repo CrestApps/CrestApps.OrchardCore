@@ -10,6 +10,10 @@
     <a asp-action="Release" asp-route-id="@batch.ItemId" class="dropdown-item" data-title="@T["Release"]" data-message="@T["Release the batch of {0} disbursements? A bank file is written, checks are issued, or the payments are recorded.", batch.Count]" data-url-af="UnsafeUrl">@T["Release"]</a>
     <a asp-action="Cancel" asp-route-id="@batch.ItemId" class="dropdown-item text-danger" data-title="@T["Cancel"]" data-message="@T["Cancel the batch? Its disbursements become pending again."]" data-url-af="UnsafeUrl">@T["Cancel"]</a>
 }
+@if (batch.Status == DisbursementBatchStatus.Releasing)
+{
+    <a asp-action="Reopen" asp-route-id="@batch.ItemId" class="dropdown-item text-danger" data-title="@T["Reopen"]" data-message="@T["Reopen the batch? Do it only once you checked with the provider or the bank that nothing of it was sent: the next release sends it again."]" data-url-af="UnsafeUrl">@T["Reopen after checking"]</a>
+}
 @if (batch.HasFile)
 {
     <a asp-action="Download" asp-route-id="@batch.ItemId" class="dropdown-item">@T["Download the bank file"]</a>

@@ -67,6 +67,9 @@ internal sealed class DisbursementsTestContext
             Providers,
             [Observer, new NachaPrenoteObserver(Banking.Manager, Banking.Service)],
             Banking.HttpContextAccessor,
+            Locks,
+            new NoopDisbursementCommitter(),
+            Checks.LocalClock,
             clock.Object,
             RecipeRoundTrip.Localizer<DisbursementService>());
 
@@ -75,6 +78,11 @@ internal sealed class DisbursementsTestContext
     }
 
     public ChecksTestContext Checks { get; }
+
+    /// <summary>
+    /// Gets the locks of keys and batches, held in memory.
+    /// </summary>
+    public KeyedDistributedLock Locks { get; } = new();
 
     /// <summary>
     /// Gets the providers the service sends batches through: the built-in ones and those the test gave.
@@ -167,8 +175,23 @@ internal sealed class DisbursementsTestContext
 /// </summary>
 internal sealed class InMemoryDisbursementStore : InMemoryCatalog<Disbursement>, IDisbursementStore
 {
-    public Task<Disbursement> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken = default)
-        => Task.FromResult(Entries.FirstOrDefault(entry => entry.IdempotencyKey == key));
+    /// <summary>
+    /// Gets or sets how long a read by key waits first, so a test can run two requests into each other.
+    /// </summary>
+    public TimeSpan FindDelay { get; set; }
+
+    public async Task<Disbursement> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken = default)
+    {
+        if (FindDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(FindDelay, cancellationToken);
+        }
+
+        lock (Entries)
+        {
+            return Entries.FirstOrDefault(entry => entry.IdempotencyKey == key);
+        }
+    }
 
     public Task<Disbursement> FindByTraceNumberAsync(string traceNumber, CancellationToken cancellationToken = default)
         => Task.FromResult(Entries.FirstOrDefault(entry => entry.TraceNumber == traceNumber));
@@ -211,8 +234,13 @@ internal sealed class InMemoryDisbursementBatchStore : InMemoryCatalog<Disbursem
         => Task.FromResult<IReadOnlyList<DisbursementBatch>>(Entries.Where(entry => entry.Status == DisbursementBatchStatus.Released && entry.ReleasedUtc < releasedBeforeUtc).Take(take).ToList());
 
     public Task<(int Count, IReadOnlyList<DisbursementBatch> Batches)> ListPageAsync(DisbursementBatchStatus? status, int skip, int take, CancellationToken cancellationToken = default)
+        => ListPageAsync(status, global::CrestApps.OrchardCore.SourceAccess.SourceAccessFilter.Unrestricted, skip, take, cancellationToken);
+
+    // The database runs SourceAccessExpressions on the batch index; DisbursementStoreTests proves it agrees on SQLite.
+    public Task<(int Count, IReadOnlyList<DisbursementBatch> Batches)> ListPageAsync(DisbursementBatchStatus? status, global::CrestApps.OrchardCore.SourceAccess.SourceAccessFilter access, int skip, int take, CancellationToken cancellationToken = default)
     {
-        var matching = Entries.Where(entry => status is null || entry.Status == status).OrderByDescending(entry => entry.CreatedUtc).ToList();
+        var filter = access ?? global::CrestApps.OrchardCore.SourceAccess.SourceAccessFilter.Unrestricted;
+        var matching = Entries.Where(entry => (status is null || entry.Status == status) && (string.IsNullOrEmpty(entry.SourceKind) || filter.Allows(entry.SourceKind, entry.AccessScope))).OrderByDescending(entry => entry.CreatedUtc).ToList();
 
         return Task.FromResult<(int, IReadOnlyList<DisbursementBatch>)>((matching.Count, matching.Skip(skip).Take(take).ToList()));
     }
@@ -249,4 +277,13 @@ internal sealed class RecordingDisbursementObserver : IDisbursementObserver
 
         return Task.CompletedTask;
     }
+}
+
+/// <summary>
+/// Nothing to commit: the stores are in memory.
+/// </summary>
+internal sealed class NoopDisbursementCommitter : IDisbursementCommitter
+{
+    public Task CommitAsync(CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

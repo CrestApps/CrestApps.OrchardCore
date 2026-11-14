@@ -5,6 +5,7 @@
     var (status, icon) = batch.Status switch
     {
         DisbursementBatchStatus.Released => (T["Released"], "fa-solid fa-paper-plane text-info"),
+        DisbursementBatchStatus.Releasing => (T["Being sent: check with the provider"], "fa-solid fa-triangle-exclamation text-danger"),
         DisbursementBatchStatus.Settled => (T["Settled"], "fa-solid fa-circle-check text-success"),
         DisbursementBatchStatus.Canceled => (T["Cancelled"], "fa-solid fa-ban text-secondary"),
         _ => (T["Open"], "fa-solid fa-folder-open text-warning"),

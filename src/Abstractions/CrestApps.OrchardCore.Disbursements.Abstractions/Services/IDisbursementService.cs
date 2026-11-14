@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Disbursements.Models;
+using CrestApps.OrchardCore.SourceAccess;
 
 namespace CrestApps.OrchardCore.Disbursements.Services;
 
@@ -14,7 +15,10 @@ public interface IDisbursementService
     IReadOnlyList<IDisbursementProvider> Providers { get; }
 
     /// <summary>
-    /// Records a disbursement, or returns the one its idempotency key already gave.
+    /// Records a disbursement, or returns the one its idempotency key already gave. The key is the attempt: asking
+    /// again with it and the same payee, amount, method and destination gives the same disbursement; asking with it and
+    /// anything else is refused; and once that disbursement failed, was cancelled, returned or reversed, a new attempt
+    /// needs a new key, and asking with the old one says so.
     /// </summary>
     /// <param name="request">What to pay.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -107,4 +111,45 @@ public interface IDisbursementService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>What was applied.</returns>
     Task<DisbursementImportResult> ApplyChangeNoticesAsync(IEnumerable<DisbursementChangeNotice> notices, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Batches pending disbursements with the entry description a bank file prints for them, such as PAYROLL.
+    /// </summary>
+    /// <param name="providerName">The provider that sends the batch.</param>
+    /// <param name="disbursementIds">The disbursements, in the order they are sent.</param>
+    /// <param name="effectiveDate">The day the money should arrive: today or later.</param>
+    /// <param name="entryDescription">The entry description, or <see langword="null"/> for the bank account's own.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The batch, or <see langword="null"/>, and what was left out and why.</returns>
+    Task<(DisbursementBatch Batch, IReadOnlyList<string> Problems)> CreateBatchAsync(string providerName, IEnumerable<string> disbursementIds, DateOnly effectiveDate, string entryDescription, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies a bank's returns to the disbursements the filter allows; the others are reported as not found.
+    /// </summary>
+    /// <param name="returns">The returns.</param>
+    /// <param name="access">The disbursements the person may act on.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>What was applied.</returns>
+    Task<DisbursementImportResult> ApplyReturnsAsync(IEnumerable<DisbursementReturn> returns, SourceAccessFilter access, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies a bank's notices of change to the disbursements the filter allows, when the person may change bank
+    /// accounts; otherwise each is reported for someone who may.
+    /// </summary>
+    /// <param name="notices">The notices.</param>
+    /// <param name="access">The disbursements the person may act on.</param>
+    /// <param name="canChangeBankAccounts">Whether the person may change bank accounts.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>What was applied.</returns>
+    Task<DisbursementImportResult> ApplyChangeNoticesAsync(IEnumerable<DisbursementChangeNotice> notices, SourceAccessFilter access, bool canChangeBankAccounts, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reopens a batch left <see cref="DisbursementBatchStatus.Releasing"/>, once someone checked with the provider that
+    /// nothing was sent. The next release sends it again.
+    /// </summary>
+    /// <param name="batch">The batch.</param>
+    /// <param name="reason">What was checked.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="false"/> when the batch is not being released.</returns>
+    Task<bool> ReopenReleasingBatchAsync(DisbursementBatch batch, string reason, CancellationToken cancellationToken = default);
 }

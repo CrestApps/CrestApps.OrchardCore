@@ -41,6 +41,33 @@ public sealed class DisbursementBatch : CatalogItem, IModifiedUtcAwareModel
     public List<string> Sources { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the kind of record the batch's disbursements pay, or <see langword="null"/>. A batch holds the
+    /// disbursements of one source kind and access scope, so who may see it is one rule.
+    /// </summary>
+    public string SourceKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the access scope of the batch's disbursements within <see cref="SourceKind"/>.
+    /// </summary>
+    public string AccessScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the entry description a bank file prints for the batch, such as PAYROLL; empty for the bank
+    /// account's own.
+    /// </summary>
+    public string EntryDescription { get; set; }
+
+    /// <summary>
+    /// Gets or sets when a data pipeline last delivered the batch's file.
+    /// </summary>
+    public DateTime? DeliveredUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the data pipeline that last delivered the batch's file.
+    /// </summary>
+    public string DeliveredBy { get; set; }
+
+    /// <summary>
     /// Gets or sets how many disbursements the batch holds.
     /// </summary>
     public int Count { get; set; }

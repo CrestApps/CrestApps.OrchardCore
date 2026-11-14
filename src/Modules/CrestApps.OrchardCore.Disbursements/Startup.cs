@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Banking.Models;
+using CrestApps.OrchardCore.Disbursements.AuditTrail;
 using CrestApps.OrchardCore.Checks;
 using CrestApps.OrchardCore.Core.FileStorage;
 using CrestApps.OrchardCore.Disbursements.Core;
@@ -18,6 +19,8 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataPipelines.Steps;
@@ -46,6 +49,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<DisbursementBatchIndexProvider>();
 
         services.AddDisbursementsCore();
+        services.AddScoped<DisbursementFileRecorder>();
         services.AddHttpContextAccessor();
         services.AddTenantFileStore<IDisbursementFileStore>(
             DisbursementsConstants.FileStoreFolder,
@@ -187,5 +191,18 @@ public sealed class DataSourcesStartup : StartupBase
     {
         services.AddDataSource<DisbursementsReportDataSource>();
         services.AddScoped<IDisbursementsReportDataSet, DisbursementsReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Writes each bank file that leaves the site to the Audit Trail.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
+public sealed class AuditTrailStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransient<IConfigureOptions<AuditTrailOptions>, DisbursementsAuditTrailEvents>();
     }
 }

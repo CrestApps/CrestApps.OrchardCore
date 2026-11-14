@@ -32,6 +32,7 @@ public static class ApprovalsCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ApprovalRequest>, ApprovalRequestHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ApprovalPolicy>, ApprovalPolicyHandler>());
         services.TryAddScoped<IApproverDirectory, ApproverDirectory>();
+        services.TryAddScoped<IApprovalCommitter, YesSqlApprovalCommitter>();
         services.TryAddScoped<IApprovalService, ApprovalService>();
 
         return services;

@@ -6,7 +6,9 @@ using CrestApps.OrchardCore.Disbursements.Core.Nacha;
 using CrestApps.OrchardCore.Disbursements.Models;
 using CrestApps.OrchardCore.Disbursements.Services;
 using Microsoft.AspNetCore.Http;
+using CrestApps.OrchardCore.SourceAccess;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Disbursements.Core.Services;
@@ -18,6 +20,9 @@ public sealed class DisbursementService : IDisbursementService
 {
     private const int SettleBatchSize = 50;
 
+    private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
+
     private readonly IDisbursementManager _manager;
     private readonly IDisbursementBatchManager _batches;
     private readonly IDisbursementBatchStore _batchStore;
@@ -26,6 +31,9 @@ public sealed class DisbursementService : IDisbursementService
     private readonly IBankAccountService _bankAccountService;
     private readonly IEnumerable<IDisbursementObserver> _observers;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IDistributedLock _locks;
+    private readonly IDisbursementCommitter _committer;
+    private readonly ILocalClock _localClock;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -54,6 +62,9 @@ public sealed class DisbursementService : IDisbursementService
         IEnumerable<IDisbursementProvider> providers,
         IEnumerable<IDisbursementObserver> observers,
         IHttpContextAccessor httpContextAccessor,
+        IDistributedLock locks,
+        IDisbursementCommitter committer,
+        ILocalClock localClock,
         IClock clock,
         IStringLocalizer<DisbursementService> stringLocalizer)
     {
@@ -66,6 +77,9 @@ public sealed class DisbursementService : IDisbursementService
         Providers = providers.ToArray();
         _observers = observers;
         _httpContextAccessor = httpContextAccessor;
+        _locks = locks;
+        _committer = committer;
+        _localClock = localClock;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -89,12 +103,58 @@ public sealed class DisbursementService : IDisbursementService
             return new DisbursementResult { Errors = [S["Give the record the disbursement pays, or a key that identifies it."]] };
         }
 
-        // Asking twice gives the same disbursement, so a retried pay run never pays twice.
-        if (await _manager.FindByIdempotencyKeyAsync(key, cancellationToken) is { } existing)
+        // One request at a time per key, from the read to the commit, so two at once never both create.
+        var (locker, locked) = await _locks.TryAcquireLockAsync("Disbursements:Key:" + key, _lockTimeout, _lockExpiration);
+
+        if (!locked)
         {
-            return new DisbursementResult { Disbursement = existing, AlreadyExisted = true };
+            return new DisbursementResult { Errors = [S["Another request is recording this disbursement. Try again in a moment."]] };
         }
 
+        await using (locker)
+        {
+            // Asking twice gives the same disbursement, so a retried pay run never pays twice.
+            if (await _manager.FindByIdempotencyKeyAsync(key, cancellationToken) is { } existing)
+            {
+                return Repeat(existing, request);
+            }
+
+            var result = await CreateNewAsync(request, key, cancellationToken);
+
+            if (result.Succeeded)
+            {
+                await _committer.CommitAsync(cancellationToken);
+            }
+
+            return result;
+        }
+    }
+
+    // The same key again: the same disbursement when it asks for the same payment, a refusal otherwise.
+    private DisbursementResult Repeat(Disbursement existing, DisbursementRequest request)
+    {
+        var currency = string.IsNullOrWhiteSpace(request.Currency) ? existing.Currency : request.Currency.Trim();
+        var same = existing.Payee == request.Payee
+            && existing.Amount == CurrencyScale.Round(request.Amount, existing.Currency)
+            && string.Equals(existing.Currency, currency, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(existing.Method, request.Method, StringComparison.Ordinal)
+            && string.Equals(existing.DestinationBankAccountId ?? string.Empty, request.DestinationBankAccountId ?? string.Empty, StringComparison.Ordinal);
+
+        if (!same)
+        {
+            return new DisbursementResult { Disbursement = existing, Errors = [S["The key was already used for a different disbursement: another payee, amount, method or destination."]] };
+        }
+
+        if (existing.Status is DisbursementStatus.Failed or DisbursementStatus.Canceled or DisbursementStatus.Returned or DisbursementStatus.Reversed)
+        {
+            return new DisbursementResult { Disbursement = existing, Errors = [S["The disbursement of this key is {0}. A new attempt needs a new key.", existing.Status.ToString()]] };
+        }
+
+        return new DisbursementResult { Disbursement = existing, AlreadyExisted = true };
+    }
+
+    private async Task<DisbursementResult> CreateNewAsync(DisbursementRequest request, string key, CancellationToken cancellationToken)
+    {
         var errors = new List<string>();
 
         if (string.IsNullOrWhiteSpace(request.Method) || !Providers.Any(provider => provider.Method == request.Method))
@@ -237,11 +297,20 @@ public sealed class DisbursementService : IDisbursementService
     }
 
     /// <inheritdoc />
-    public async Task<(DisbursementBatch Batch, IReadOnlyList<string> Problems)> CreateBatchAsync(string providerName, IEnumerable<string> disbursementIds, DateOnly effectiveDate, CancellationToken cancellationToken = default)
+    public Task<(DisbursementBatch Batch, IReadOnlyList<string> Problems)> CreateBatchAsync(string providerName, IEnumerable<string> disbursementIds, DateOnly effectiveDate, CancellationToken cancellationToken = default)
+        => CreateBatchAsync(providerName, disbursementIds, effectiveDate, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<(DisbursementBatch Batch, IReadOnlyList<string> Problems)> CreateBatchAsync(string providerName, IEnumerable<string> disbursementIds, DateOnly effectiveDate, string entryDescription, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(disbursementIds);
 
         var problems = new List<string>();
+
+        if (effectiveDate < await TodayAsync())
+        {
+            return (null, [S["The arrival date is in the past. Choose today or a later day."]]);
+        }
         var provider = Providers.FirstOrDefault(entry => string.Equals(entry.Name, providerName, StringComparison.Ordinal));
 
         if (provider is null)
@@ -267,6 +336,11 @@ public sealed class DisbursementService : IDisbursementService
             else if (chosen.Count > 0 && (!string.Equals(chosen[0].SourceBankAccountId, disbursement.SourceBankAccountId, StringComparison.Ordinal) || chosen[0].Currency != disbursement.Currency))
             {
                 problems.Add(S["{0} to {1} leaves from another bank account or in another currency: batch it separately.", CurrencyScale.Format(disbursement.Amount, disbursement.Currency), disbursement.PayeeName]);
+            }
+            else if (chosen.Count > 0 && !string.Equals(SourceAccessFilter.KeyOf(chosen[0].SourceKind, chosen[0].AccessScope), SourceAccessFilter.KeyOf(disbursement.SourceKind, disbursement.AccessScope), StringComparison.Ordinal))
+            {
+                // One source per batch, so who may see and release it is one rule the list can query.
+                problems.Add(S["{0} to {1} pays a record of another kind or scope: batch it separately.", CurrencyScale.Format(disbursement.Amount, disbursement.Currency), disbursement.PayeeName]);
             }
             else
             {
@@ -294,6 +368,9 @@ public sealed class DisbursementService : IDisbursementService
             .Select(entry => entry.SourceKind + "/" + entry.AccessScope)
             .Distinct(StringComparer.Ordinal)
             .ToList();
+        batch.SourceKind = chosen[0].SourceKind;
+        batch.AccessScope = chosen[0].AccessScope;
+        batch.EntryDescription = string.IsNullOrWhiteSpace(entryDescription) ? null : entryDescription.Trim().ToUpperInvariant();
         batch.Count = chosen.Count;
         batch.Currency = chosen[0].Currency;
         batch.TotalAmount = CurrencyScale.Round(chosen.Sum(entry => entry.Amount), batch.Currency);
@@ -321,6 +398,42 @@ public sealed class DisbursementService : IDisbursementService
     {
         ArgumentNullException.ThrowIfNull(batch);
 
+        // One release at a time per batch: two clicks, or two people, send once.
+        var (locker, locked) = await _locks.TryAcquireLockAsync("Disbursements:Batch:" + batch.ItemId, _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return [S["The batch is being released by someone else."]];
+        }
+
+        await using (locker)
+        {
+            // Read again inside the lock: the copy the caller holds may be from before another release.
+            var current = await _batches.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
+
+            var errors = await ReleaseLockedAsync(current, cancellationToken);
+
+            if (!ReferenceEquals(current, batch))
+            {
+                batch.Status = current.Status;
+                batch.HasFile = current.HasFile;
+                batch.FileName = current.FileName;
+                batch.ReleasedUtc = current.ReleasedUtc;
+                batch.ReleasedBy = current.ReleasedBy;
+                batch.ProviderReference = current.ProviderReference;
+            }
+
+            return errors;
+        }
+    }
+
+    private async Task<IReadOnlyList<string>> ReleaseLockedAsync(DisbursementBatch batch, CancellationToken cancellationToken)
+    {
+        if (batch.Status == DisbursementBatchStatus.Releasing)
+        {
+            return [S["The batch was being sent when something failed. Check with the provider what it received, then reopen the batch to send it again."]];
+        }
+
         if (batch.Status != DisbursementBatchStatus.Open)
         {
             return [S["The batch was already released or cancelled."]];
@@ -343,10 +456,19 @@ public sealed class DisbursementService : IDisbursementService
             return [S["The batch has no disbursement left to send."]];
         }
 
+        // Saved before the provider is called: a throw after it may have sent leaves the batch Releasing, never Open.
+        batch.Status = DisbursementBatchStatus.Releasing;
+        await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
+        await _committer.CommitAsync(cancellationToken);
+
         var result = await provider.SubmitAsync(batch, disbursements, cancellationToken);
 
         if (!result.Succeeded)
         {
+            // The provider says nothing was sent, so the batch can be released again.
+            batch.Status = DisbursementBatchStatus.Open;
+            await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
+
             return result.Errors.Count > 0 ? result.Errors : [S["The batch could not be sent."]];
         }
 
@@ -393,8 +515,40 @@ public sealed class DisbursementService : IDisbursementService
         batch.ReleasedBy = Actor().Name;
 
         await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
+        await _committer.CommitAsync(cancellationToken);
 
         return [];
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> ReopenReleasingBatchAsync(DisbursementBatch batch, string reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+
+        var (locker, locked) = await _locks.TryAcquireLockAsync("Disbursements:Batch:" + batch.ItemId, _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return false;
+        }
+
+        await using (locker)
+        {
+            var current = await _batches.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
+
+            if (current.Status != DisbursementBatchStatus.Releasing)
+            {
+                return false;
+            }
+
+            current.Status = DisbursementBatchStatus.Open;
+            current.ProviderReference = string.IsNullOrWhiteSpace(reason) ? current.ProviderReference : "Reopened: " + reason.Trim();
+            await _batches.UpdateAsync(current, cancellationToken: cancellationToken);
+            await _committer.CommitAsync(cancellationToken);
+            batch.Status = current.Status;
+
+            return true;
+        }
     }
 
     /// <inheritdoc />
@@ -411,7 +565,7 @@ public sealed class DisbursementService : IDisbursementService
         {
             if (disbursement.BatchId == batch.ItemId && disbursement.Status == DisbursementStatus.Batched)
             {
-                await MoveAsync(disbursement, DisbursementStatus.Pending, DisbursementChangeKind.Batched, cancellationToken, moved =>
+                await MoveAsync(disbursement, DisbursementStatus.Pending, DisbursementChangeKind.Unbatched, cancellationToken, moved =>
                 {
                     moved.BatchId = null;
                     moved.Provider = null;
@@ -457,18 +611,35 @@ public sealed class DisbursementService : IDisbursementService
         ArgumentOutOfRangeException.ThrowIfLessThan(ageInDays, 1);
 
         var before = _clock.UtcNow.AddDays(-ageInDays);
+        var today = await TodayAsync();
         var count = 0;
+        var skip = 0;
 
         while (true)
         {
-            var batches = await _batchStore.ListToSettleAsync(before, SettleBatchSize, cancellationToken);
+            // Batches not due yet stay first in the list, in release order, so each round reads past them.
+            var batches = await _batchStore.ListToSettleAsync(before, SettleBatchSize + skip, cancellationToken);
+            var window = batches.Skip(skip).ToList();
 
-            foreach (var batch in batches)
+            foreach (var batch in window)
             {
+                // Counted from the later of the arrival day and the release day: money released early has not moved yet.
+                var released = batch.ReleasedUtc is { } releasedUtc
+                    ? DateOnly.FromDateTime((await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(releasedUtc, DateTimeKind.Utc)))).DateTime)
+                    : batch.EffectiveDate;
+                var from = batch.EffectiveDate > released ? batch.EffectiveDate : released;
+
+                if (from.AddDays(ageInDays) > today)
+                {
+                    skip++;
+
+                    continue;
+                }
+
                 count += await SettleBatchAsync(batch, cancellationToken);
             }
 
-            if (batches.Count < SettleBatchSize)
+            if (window.Count < SettleBatchSize)
             {
                 return count;
             }
@@ -502,9 +673,15 @@ public sealed class DisbursementService : IDisbursementService
     }
 
     /// <inheritdoc />
-    public async Task<DisbursementImportResult> ApplyReturnsAsync(IEnumerable<DisbursementReturn> returns, CancellationToken cancellationToken = default)
+    public Task<DisbursementImportResult> ApplyReturnsAsync(IEnumerable<DisbursementReturn> returns, CancellationToken cancellationToken = default)
+        => ApplyReturnsAsync(returns, SourceAccessFilter.Unrestricted, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<DisbursementImportResult> ApplyReturnsAsync(IEnumerable<DisbursementReturn> returns, SourceAccessFilter access, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(returns);
+
+        access ??= SourceAccessFilter.Unrestricted;
 
         var result = new DisbursementImportResult();
 
@@ -512,11 +689,12 @@ public sealed class DisbursementService : IDisbursementService
         {
             var disbursement = string.IsNullOrEmpty(entry.TraceNumber) ? null : await _manager.FindByTraceNumberAsync(entry.TraceNumber, cancellationToken);
 
-            if (disbursement is null)
+            // A return of a disbursement the person may not act on reads as one this site doesn't have.
+            if (disbursement is null || !access.Allows(disbursement.SourceKind, disbursement.AccessScope))
             {
-                result.Problems.Add(S["No disbursement has the trace number {0}.", entry.TraceNumber]);
+                result.Problems.Add(S["No disbursement you may act on has the trace number {0}.", entry.TraceNumber]);
             }
-            else if (await MarkClosedAsync(disbursement, DisbursementStatus.Returned, entry.Code, entry.Description, cancellationToken))
+            else if (await MarkClosedAsync(disbursement, DisbursementStatus.Returned, entry.Code, null, cancellationToken))
             {
                 result.Returned++;
             }
@@ -530,15 +708,30 @@ public sealed class DisbursementService : IDisbursementService
     }
 
     /// <inheritdoc />
-    public async Task<DisbursementImportResult> ApplyChangeNoticesAsync(IEnumerable<DisbursementChangeNotice> notices, CancellationToken cancellationToken = default)
+    public Task<DisbursementImportResult> ApplyChangeNoticesAsync(IEnumerable<DisbursementChangeNotice> notices, CancellationToken cancellationToken = default)
+        => ApplyChangeNoticesAsync(notices, SourceAccessFilter.Unrestricted, true, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<DisbursementImportResult> ApplyChangeNoticesAsync(IEnumerable<DisbursementChangeNotice> notices, SourceAccessFilter access, bool canChangeBankAccounts, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notices);
+
+        access ??= SourceAccessFilter.Unrestricted;
 
         var result = new DisbursementImportResult();
 
         foreach (var notice in notices)
         {
-            var disbursement = string.IsNullOrEmpty(notice.TraceNumber) ? null : await _manager.FindByTraceNumberAsync(notice.TraceNumber, cancellationToken);
+            var found = string.IsNullOrEmpty(notice.TraceNumber) ? null : await _manager.FindByTraceNumberAsync(notice.TraceNumber, cancellationToken);
+            var disbursement = found is not null && access.Allows(found.SourceKind, found.AccessScope) ? found : null;
+
+            if (disbursement is not null && !canChangeBankAccounts)
+            {
+                // A notice rewrites a payee's bank numbers: only someone who may change bank accounts applies it.
+                result.Problems.Add(S["The notice of change {0} for trace number {1} corrects a payee's bank account: someone who may manage bank accounts imports it.", notice.Code, notice.TraceNumber]);
+
+                continue;
+            }
             var account = disbursement is null || string.IsNullOrEmpty(disbursement.DestinationBankAccountId)
                 ? null
                 : await _bankAccounts.FindByIdAsync(disbursement.DestinationBankAccountId, cancellationToken);
@@ -617,6 +810,9 @@ public sealed class DisbursementService : IDisbursementService
             await observer.OnChangedAsync(change, cancellationToken);
         }
     }
+
+    private async Task<DateOnly> TodayAsync()
+        => DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
 
     private (string Name, string Id) Actor()
     {

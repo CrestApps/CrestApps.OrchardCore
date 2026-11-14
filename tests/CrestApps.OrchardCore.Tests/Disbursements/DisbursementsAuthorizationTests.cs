@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Tests.Checks;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement;
@@ -243,6 +244,7 @@ public sealed class DisbursementsAuthorizationTests
             grant is null ? TestSecurity.Granting(DisbursementsPermissions.ManageDisbursements, DisbursementsPermissions.ViewDisbursements) : TestSecurity.Granting(grant),
             features.Object,
             new RecordingNotifier(),
+            new global::CrestApps.OrchardCore.Disbursements.Services.DisbursementFileRecorder(new ServiceCollection().BuildServiceProvider(), Microsoft.Extensions.Logging.Abstractions.NullLogger<global::CrestApps.OrchardCore.Disbursements.Services.DisbursementFileRecorder>.Instance),
             new EchoHtmlLocalizer<DisbursementBatchesController>());
 
         controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = TestSecurity.User(userName) } };

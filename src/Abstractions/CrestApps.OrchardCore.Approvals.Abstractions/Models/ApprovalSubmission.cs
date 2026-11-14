@@ -54,4 +54,10 @@ public sealed class ApprovalSubmission
     /// Gets or sets the currency of the amount.
     /// </summary>
     public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the version of the subject, such as a fingerprint of its totals. A pending request about another
+    /// version is withdrawn and replaced.
+    /// </summary>
+    public string SubjectVersion { get; set; }
 }

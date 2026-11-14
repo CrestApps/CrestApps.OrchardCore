@@ -166,3 +166,17 @@ public sealed class DataSourcesStartup : StartupBase
         services.AddScoped<IApprovalsReportDataSet, ApprovalRequestsReportDataSet>();
     }
 }
+
+/// <summary>
+/// Writes approval policy changes to the Audit Trail.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
+public sealed class AuditTrailStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransient<Microsoft.Extensions.Options.IConfigureOptions<global::OrchardCore.AuditTrail.Services.Models.AuditTrailOptions>, AuditTrail.ApprovalsAuditTrailEvents>();
+        services.AddScoped<CrestApps.Core.Services.ICatalogEntryHandler<ApprovalPolicy>, AuditTrail.ApprovalPolicyAuditTrailHandler>();
+    }
+}

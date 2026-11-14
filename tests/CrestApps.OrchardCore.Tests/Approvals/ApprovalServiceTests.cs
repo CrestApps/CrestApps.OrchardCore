@@ -67,11 +67,12 @@ public sealed class ApprovalServiceTests
         var context = new ApprovalsTestContext();
         var policy = context.Policy();
         var request = await context.RequestAsync(requester: "riley");
-
-        // Act
-        var refused = await context.Service.GetEligibilityAsync(request, TestSecurity.User("riley"), TestContext.Current.CancellationToken);
         policy.AllowRequesterToApprove = true;
-        var allowed = await context.Service.GetEligibilityAsync(request, TestSecurity.User("riley"), TestContext.Current.CancellationToken);
+        var underLooserPolicy = await context.RequestAsync(requester: "riley", subjectId: "run-2");
+
+        // Act: a request keeps the rules it was made with.
+        var refused = await context.Service.GetEligibilityAsync(request, TestSecurity.User("riley"), TestContext.Current.CancellationToken);
+        var allowed = await context.Service.GetEligibilityAsync(underLooserPolicy, TestSecurity.User("riley"), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(refused.CanDecide);
@@ -86,11 +87,12 @@ public sealed class ApprovalServiceTests
         var context = new ApprovalsTestContext();
         var policy = context.Policy();
         var request = await context.RequestAsync(subjectUserIds: ["pat-id"]);
-
-        // Act
-        var refused = await context.Service.GetEligibilityAsync(request, TestSecurity.User("pat"), TestContext.Current.CancellationToken);
         policy.AllowSubjectToDecide = true;
-        var allowed = await context.Service.GetEligibilityAsync(request, TestSecurity.User("pat"), TestContext.Current.CancellationToken);
+        var underLooserPolicy = await context.RequestAsync(subjectId: "run-2", subjectUserIds: ["pat-id"]);
+
+        // Act: a request keeps the rules it was made with.
+        var refused = await context.Service.GetEligibilityAsync(request, TestSecurity.User("pat"), TestContext.Current.CancellationToken);
+        var allowed = await context.Service.GetEligibilityAsync(underLooserPolicy, TestSecurity.User("pat"), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(refused.CanDecide);

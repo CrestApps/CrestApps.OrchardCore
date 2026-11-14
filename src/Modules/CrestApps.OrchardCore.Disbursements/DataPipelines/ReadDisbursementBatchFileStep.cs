@@ -61,6 +61,7 @@ public sealed class ReadDisbursementBatchFileStep : DataPipelineStepType<ReadDis
         var access = await services.GetRequiredService<ISourceAccessService>().GetFilterAsync(context.Run.User, SourceAccessLevel.Manage, context.CancellationToken);
         var since = context.GetState<DateTime?>(WatermarkKey) ?? DateTime.MinValue;
         var last = since;
+        var delivered = new List<string>();
 
         foreach (var batch in await batches.ListReleasedAsync(DisbursementsConstants.Providers.Nacha, since, context.CancellationToken))
         {
@@ -91,6 +92,7 @@ public sealed class ReadDisbursementBatchFileStep : DataPipelineStepType<ReadDis
 
             await File.WriteAllBytesAsync(file.Path, content, context.CancellationToken);
             await output.WriteFileAsync(file, context.CancellationToken);
+            delivered.Add(batch.ItemId);
 
             if (batch.ReleasedUtc is { } released && released > last)
             {
@@ -102,6 +104,30 @@ public sealed class ReadDisbursementBatchFileStep : DataPipelineStepType<ReadDis
         if (!context.Run.IsPreview && last > since)
         {
             context.SetState(WatermarkKey, (DateTime?)last);
+        }
+
+        // Once the run succeeds, each batch shows when and by which pipeline its file went out, and it is recorded.
+        if (!context.Run.IsPreview && delivered.Count > 0)
+        {
+            var pipeline = context.Run.PipelineName;
+
+            context.Run.OnSucceeded(async (scope, cancellationToken) =>
+            {
+                var manager = scope.GetRequiredService<IDisbursementBatchManager>();
+                var recorder = scope.GetRequiredService<DisbursementFileRecorder>();
+                var now = scope.GetRequiredService<global::OrchardCore.Modules.IClock>().UtcNow;
+
+                foreach (var id in delivered)
+                {
+                    if (await manager.FindByIdAsync(id, cancellationToken) is { } stamped)
+                    {
+                        stamped.DeliveredUtc = now;
+                        stamped.DeliveredBy = pipeline;
+                        await manager.UpdateAsync(stamped, cancellationToken: cancellationToken);
+                        await recorder.RecordAsync(stamped, "delivered by a data pipeline", null, pipeline);
+                    }
+                }
+            });
         }
     }
 

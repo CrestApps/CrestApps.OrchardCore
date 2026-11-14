@@ -70,7 +70,7 @@ public static class NachaReturnFileReader
 
             if (type == "99")
             {
-                returns.Add(new DisbursementReturn(trace, code, _returnReasons.GetValueOrDefault(code, code)));
+                returns.Add(new DisbursementReturn(trace, code, null));
             }
             else if (type == "98")
             {

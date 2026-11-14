@@ -16,6 +16,11 @@ public enum DisbursementChangeKind
     Batched,
 
     /// <summary>
+    /// Back to pending: its open batch was cancelled or reopened.
+    /// </summary>
+    Unbatched,
+
+    /// <summary>
     /// It was sent.
     /// </summary>
     Submitted,

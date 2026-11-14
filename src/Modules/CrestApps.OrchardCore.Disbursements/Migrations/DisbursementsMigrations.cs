@@ -1,5 +1,8 @@
 using CrestApps.OrchardCore.Disbursements.Core.Indexes;
+using CrestApps.OrchardCore.Disbursements.Services;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Disbursements.Migrations;
@@ -64,6 +67,8 @@ internal sealed class DisbursementsMigrations : DataMigration
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Provider", column => column.WithLength(50))
             .Column<string>("Status", column => column.WithLength(30))
+            .Column<string>("SourceKind", column => column.Nullable().WithLength(100))
+            .Column<string>("AccessKey", column => column.Nullable().WithLength(255))
             .Column<string>("SourceBankAccountId", column => column.Nullable().WithLength(26))
             .Column<DateTime>("EffectiveDate")
             .Column<DateTime>("CreatedUtc")
@@ -78,6 +83,48 @@ internal sealed class DisbursementsMigrations : DataMigration
             .CreateIndex("IDX_DisbursementBatchIndex_Released", "Status", "ReleasedUtc", "DocumentId"),
             collection: DisbursementsConstants.CollectionName);
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<DisbursementBatchIndex>(table => table
+            .CreateIndex("IDX_DisbursementBatchIndex_Access", "SourceKind", "AccessKey", "DocumentId"),
+            collection: DisbursementsConstants.CollectionName);
+
+        return 2;
+    }
+
+    // A batch has one source kind and access scope, which the list filters by in the database.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<DisbursementBatchIndex>(table => table
+            .AddColumn<string>("SourceKind", column => column.Nullable().WithLength(100)),
+            collection: DisbursementsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<DisbursementBatchIndex>(table => table
+            .AddColumn<string>("AccessKey", column => column.Nullable().WithLength(255)),
+            collection: DisbursementsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<DisbursementBatchIndex>(table => table
+            .CreateIndex("IDX_DisbursementBatchIndex_Access", "SourceKind", "AccessKey", "DocumentId"),
+            collection: DisbursementsConstants.CollectionName);
+
+        // Batches made before kept their sources in a list; one with a single source takes it, and each is saved
+        // again so its index row has the columns. Done once the tenant's scope ends, through the manager.
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var manager = scope.ServiceProvider.GetRequiredService<IDisbursementBatchManager>();
+
+            foreach (var batch in await manager.GetAllAsync())
+            {
+                if (string.IsNullOrEmpty(batch.SourceKind) && batch.Sources is { Count: 1 } sources)
+                {
+                    var separator = sources[0].IndexOf('/', StringComparison.Ordinal);
+
+                    batch.SourceKind = separator < 0 ? sources[0] : sources[0][..separator];
+                    batch.AccessScope = separator < 0 || separator == sources[0].Length - 1 ? null : sources[0][(separator + 1)..];
+                }
+
+                await manager.UpdateAsync(batch);
+            }
+        });
+
+        return 2;
     }
 }

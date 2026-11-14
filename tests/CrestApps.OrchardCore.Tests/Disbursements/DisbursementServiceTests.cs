@@ -25,8 +25,9 @@ public sealed class DisbursementServiceTests
         var first = await context.AchAsync(origin, payee);
         var again = await context.Service.CreateAsync(new DisbursementRequest
         {
+            Payee = payee.Owner,
             PayeeName = "Pat Doe",
-            Amount = 999,
+            Amount = 1250.50m,
             Method = "Ach",
             SourceBankAccountId = origin.ItemId,
             DestinationBankAccountId = payee.ItemId,
@@ -219,13 +220,16 @@ public sealed class DisbursementServiceTests
         var (batch, _) = await context.Service.CreateBatchAsync("Nacha", [ach.ItemId], new DateOnly(2026, 11, 16), TestContext.Current.CancellationToken);
         await context.Service.ReleaseBatchAsync(batch, TestContext.Current.CancellationToken);
 
-        // Act
+        // Act: three days are counted from the arrival day (the 16th), the later of it and the release.
         var tooSoon = await context.Service.SettleReleasedBatchesAsync(3, TestContext.Current.CancellationToken);
         context.Banking.Now = context.Banking.Now.AddDays(4);
+        var stillTooSoon = await context.Service.SettleReleasedBatchesAsync(3, TestContext.Current.CancellationToken);
+        context.Banking.Now = context.Banking.Now.AddDays(3);
         var settled = await context.Service.SettleReleasedBatchesAsync(3, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, tooSoon);
+        Assert.Equal(0, stillTooSoon);
         Assert.Equal(1, settled);
         Assert.Equal(DisbursementStatus.Settled, ach.Status);
     }

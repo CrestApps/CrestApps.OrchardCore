@@ -71,7 +71,7 @@ internal sealed class NachaOriginSettingsDisplayDriver : DisplayDriver<BankAccou
             ImmediateOriginName = Clean(model.ImmediateOriginName),
             CompanyName = Clean(model.CompanyName),
             CompanyIdentification = Clean(model.CompanyIdentification),
-            CompanyEntryDescription = Clean(model.CompanyEntryDescription) ?? "PAYMENT",
+            CompanyEntryDescription = Clean(model.CompanyEntryDescription)?.ToUpperInvariant(),
             IncludeOffset = model.IncludeOffset,
         };
 
@@ -81,10 +81,7 @@ internal sealed class NachaOriginSettingsDisplayDriver : DisplayDriver<BankAccou
             Require(context, settings.CompanyName, nameof(model.CompanyName), 16, S["Enter the company name, sixteen characters at most."]);
             Require(context, settings.CompanyIdentification, nameof(model.CompanyIdentification), 10, S["Enter the company identification your bank gave you, ten characters at most."]);
 
-            if (settings.CompanyEntryDescription.Length > 10)
-            {
-                context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.CompanyEntryDescription), S["The description is ten characters at most."]);
-            }
+            Require(context, settings.CompanyEntryDescription, nameof(model.CompanyEntryDescription), 10, S["Enter the company entry description, such as PAYROLL or VENDOR PAY, ten characters at most."]);
 
             if (settings.ImmediateDestination is { } destination && (destination.Length != 9 || !destination.All(char.IsAsciiDigit)))
             {

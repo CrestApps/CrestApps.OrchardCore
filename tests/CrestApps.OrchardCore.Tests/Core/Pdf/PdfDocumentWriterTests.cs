@@ -112,10 +112,10 @@ public sealed class PdfDocumentWriterTests
         var image = Assert.Single(document.GetPage(1).GetImages());
 
         Assert.True(drawn);
-        Assert.Equal(72, image.Bounds.Left, 1);
-        Assert.Equal(792 - 144 - 40, image.Bounds.Bottom, 1);
-        Assert.Equal(100, image.Bounds.Width, 1);
-        Assert.Equal(40, image.Bounds.Height, 1);
+        Assert.Equal(72, image.BoundingBox.Left, 1);
+        Assert.Equal(792 - 144 - 40, image.BoundingBox.Bottom, 1);
+        Assert.Equal(100, image.BoundingBox.Width, 1);
+        Assert.Equal(40, image.BoundingBox.Height, 1);
     }
 
     [Theory]

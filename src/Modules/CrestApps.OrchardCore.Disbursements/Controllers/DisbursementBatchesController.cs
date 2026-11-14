@@ -36,6 +36,7 @@ public sealed class DisbursementBatchesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly INotifier _notifier;
+    private readonly DisbursementFileRecorder _fileRecorder;
 
     internal readonly IHtmlLocalizer H;
 
@@ -48,8 +49,10 @@ public sealed class DisbursementBatchesController : Controller
         IAuthorizationService authorizationService,
         IShellFeaturesManager shellFeaturesManager,
         INotifier notifier,
+        DisbursementFileRecorder fileRecorder,
         IHtmlLocalizer<DisbursementBatchesController> htmlLocalizer)
     {
+        _fileRecorder = fileRecorder;
         _batches = batches;
         _batchStore = batchStore;
         _disbursementService = disbursementService;
@@ -74,12 +77,15 @@ public sealed class DisbursementBatchesController : Controller
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var access = await _access.GetFilterAsync(User, SourceAccessLevel.Manage, HttpContext.RequestAborted);
+
+        // The store reads only the batches the person may act on, so the count and the pages agree.
         var (count, batches) = await _batchStore.ListPageAsync(
             Enum.TryParse<DisbursementBatchStatus>(filter.Status, out var status) ? status : null,
+            access,
             pager.GetStartIndex(),
             pager.PageSize,
             HttpContext.RequestAborted);
-        var access = await _access.GetFilterAsync(User, SourceAccessLevel.Manage, HttpContext.RequestAborted);
         var routeData = new RouteData();
 
         if (!string.IsNullOrEmpty(filter.Status))
@@ -144,8 +150,9 @@ public sealed class DisbursementBatchesController : Controller
             return NotFound();
         }
 
-        // The file holds every payee's account number: never cached.
+        // The file holds every payee's account number: never cached, and each download is recorded.
         Response.Headers.CacheControl = "no-store";
+        await _fileRecorder.RecordAsync(batch, "downloaded", User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, User.Identity?.Name);
 
         return File(file, "text/plain", batch.FileName ?? $"batch-{batch.ItemId}.txt");
     }
@@ -233,14 +240,44 @@ public sealed class DisbursementBatchesController : Controller
         }
 
         var (returns, notices, problems) = NachaReturnFileReader.Read(text);
-        var result = await _disbursementService.ApplyReturnsAsync(returns, HttpContext.RequestAborted);
-        var corrections = await _disbursementService.ApplyChangeNoticesAsync(notices, HttpContext.RequestAborted);
+
+        // Only the disbursements the person may act on; a correction of bank numbers also needs Manage bank accounts.
+        var access = await _access.GetFilterAsync(User, SourceAccessLevel.Manage, HttpContext.RequestAborted);
+        var canChangeBankAccounts = await _authorizationService.AuthorizeAsync(User, Banking.BankingPermissions.ManageBankAccounts);
+        var result = await _disbursementService.ApplyReturnsAsync(returns, access, HttpContext.RequestAborted);
+        var corrections = await _disbursementService.ApplyChangeNoticesAsync(notices, access, canChangeBankAccounts, HttpContext.RequestAborted);
 
         result.Corrected = corrections.Corrected;
         result.Problems.AddRange(problems);
         result.Problems.AddRange(corrections.Problems);
 
         return View(new DisbursementReturnsViewModel { Result = result });
+    }
+
+    [HttpPost]
+    [Admin("banking/disbursement-batches/reopen/{id}", "DisbursementBatchesReopen")]
+    public async Task<IActionResult> Reopen(string id, string reason)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, DisbursementsPermissions.ManageDisbursements))
+        {
+            return Forbid();
+        }
+
+        if (await FindManagedAsync(id) is not { } batch)
+        {
+            return NotFound();
+        }
+
+        if (await _disbursementService.ReopenReleasingBatchAsync(batch, string.IsNullOrWhiteSpace(reason) ? H["Checked with the provider: nothing was sent."].Value : reason, HttpContext.RequestAborted))
+        {
+            await _notifier.SuccessAsync(H["The batch is open again. Release it to send it."]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["Only a batch left being sent can be reopened."]);
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     private async Task<DisbursementBatch> FindManagedAsync(string id)

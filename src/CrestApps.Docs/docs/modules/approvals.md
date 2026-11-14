@@ -25,7 +25,7 @@ An `ApprovalPolicy` (named catalog entry, `INamedCatalogManager<ApprovalPolicy>`
 | `Manager` | none | The managers up the chain of the staff member the request is about (`SubjectStaffMemberId`, through Staff's `IStaffHierarchy`) |
 | `Staff` | Staff member ids, comma separated | The users of those staff members |
 
-A person any rule names may decide. Two rules are built in and on by default: the requester can't approve (`AllowRequesterToApprove`), and a person listed in the request's `SubjectUserIds` can't decide it (`AllowSubjectToDecide`). A person decides a request once. One rejection rejects; a request is approved once `RequiredApprovals` different approvers approved. A request keeps the number of approvals it needed when the policy changes later.
+A request copies the policy's rules (approvers, the two built-in rules, the number of approvals) when it is made, so a later change of the policy never changes who decides a request already asked. Policy changes are written to the Audit Trail (**Approval policy added, changed, removed**), and saving a policy whose rules name fewer people today than it needs shows a warning. A person any rule names may decide. Two rules are built in and on by default: the requester can't approve (`AllowRequesterToApprove`), and a person listed in the request's `SubjectUserIds` can't decide it (`AllowSubjectToDecide`). A person decides a request once. One rejection rejects; a request is approved once `RequiredApprovals` different approvers approved. A request keeps the number of approvals it needed when the policy changes later.
 
 ## Requests
 
@@ -50,9 +50,9 @@ var result = await approvalService.RequestAsync(new ApprovalSubmission
 
 | Method | Does |
 | --- | --- |
-| `RequestAsync(submission, requester)` | Asks under a policy (id or name). Asking again while a request about the subject is pending under the policy returns that request. |
+| `RequestAsync(submission, requester)` | Asks under a policy (id or name). Asking again while a request about the subject is pending under the policy returns that request; asking with another `SubjectVersion` (a fingerprint of the subject from the caller) withdraws the pending one and makes a new one, so an approval of a stale version is never used. One request at a time per subject (a lock). |
 | `GetEligibilityAsync(request, user)` | Whether the person may decide, and why not. |
-| `DecideAsync(request, user, kind, note)` | Approves or rejects; rejecting needs a note. |
+| `DecideAsync(request, user, kind, note)` | Approves or rejects; rejecting needs a note. One decision at a time per request, on a fresh read, so two approvers at once both count. |
 | `CancelAsync(request, reason)` | Withdraws a pending request. |
 | `GetApproverUserIdsAsync(request)` | The users who may still decide, for notices. |
 

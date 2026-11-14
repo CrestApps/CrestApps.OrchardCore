@@ -128,11 +128,11 @@ public sealed class NachaPrenoteObserver : IDisbursementObserver
 
         if (change.Kind == DisbursementChangeKind.Settled)
         {
-            await _bankAccountService.ChangeStatusAsync(account, BankAccountStatus.Verified, "Test entry settled without a return", NachaPrenoteVerifier.VerifierName, cancellationToken);
+            await _bankAccountService.ChangeStatusAsync(account, BankAccountStatus.Verified, null, NachaPrenoteVerifier.VerifierName, cancellationToken);
         }
         else
         {
-            await _bankAccountService.ChangeStatusAsync(account, BankAccountStatus.Failed, $"Test entry returned: {disbursement.FailureCode} {disbursement.FailureReason}".Trim(), NachaPrenoteVerifier.VerifierName, cancellationToken);
+            await _bankAccountService.ChangeStatusAsync(account, BankAccountStatus.Failed, disbursement.FailureCode ?? disbursement.FailureReason, NachaPrenoteVerifier.VerifierName, cancellationToken);
         }
     }
 }

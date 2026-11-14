@@ -8,6 +8,9 @@
     var released = batch.ReleasedUtc is { } releasedUtc
         ? (await LocalClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(releasedUtc, DateTimeKind.Utc)))).ToString("g")
         : null;
+    var delivered = batch.DeliveredUtc is { } deliveredUtc
+        ? (await LocalClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(deliveredUtc, DateTimeKind.Utc)))).ToString("g")
+        : null;
 }
 
 <div class="admin-list-secondary">
@@ -15,5 +18,13 @@
     @if (released is not null)
     {
         <span> · @T["released {0} by {1}", released, batch.ReleasedBy]</span>
+    }
+    @if (delivered is not null)
+    {
+        <span> · @T["file delivered {0} by {1}", delivered, batch.DeliveredBy]</span>
+    }
+    @if (!string.IsNullOrEmpty(batch.EntryDescription))
+    {
+        <span> · @batch.EntryDescription</span>
     }
 </div>

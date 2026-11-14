@@ -89,6 +89,16 @@ public sealed class NachaDisbursementProvider : IDisbursementProvider
             return DisbursementSubmitResult.Failed(S["A bank file (ACH) pays United States dollars only."]);
         }
 
+        if (string.IsNullOrWhiteSpace(batch.EntryDescription) && string.IsNullOrWhiteSpace(settings.CompanyEntryDescription))
+        {
+            return DisbursementSubmitResult.Failed(S["Enter the company entry description in Bank file (ACH) on {0}, such as PAYROLL.", source.Name]);
+        }
+
+        if (batch.EffectiveDate < DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime))
+        {
+            return DisbursementSubmitResult.Failed(S["The arrival date of the batch is in the past. Cancel the batch and batch its disbursements again with a later date."]);
+        }
+
         var reason = S["Written to the bank file of batch {0}", batch.ItemId].Value;
         var numbers = new Dictionary<string, string>(StringComparer.Ordinal);
         var accounts = new Dictionary<string, BankAccount>(StringComparer.Ordinal);
@@ -112,6 +122,7 @@ public sealed class NachaDisbursementProvider : IDisbursementProvider
             OriginIsSavings = source.Kind == BankAccountKind.Savings,
             CreatedLocal = (await _localClock.GetLocalNowAsync()).DateTime,
             EffectiveDate = batch.EffectiveDate,
+            EntryDescription = batch.EntryDescription,
         };
 
         if (settings.IncludeOffset)
@@ -150,6 +161,13 @@ public sealed class NachaDisbursementProvider : IDisbursementProvider
             if (string.IsNullOrEmpty(number))
             {
                 errors.Add(S["The account number of {0} can't be read on this site.", disbursement.PayeeName]);
+
+                continue;
+            }
+
+            if (number.Replace(" ", string.Empty, StringComparison.Ordinal).Length > NachaFileWriter.MaxAccountNumberLength)
+            {
+                errors.Add(S["The account number of {0} is longer than {1} characters, which a bank file can't hold. Pay it another way.", disbursement.PayeeName, NachaFileWriter.MaxAccountNumberLength]);
 
                 continue;
             }

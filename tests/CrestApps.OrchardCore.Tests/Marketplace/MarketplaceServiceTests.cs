@@ -210,6 +210,7 @@ public sealed class MarketplaceServiceTests
     private MarketplaceService Create(MarketplaceSettings settings, bool withDisbursements, params IVendorPayoutProvider[] otherProviders)
     {
         _disbursements = new DisbursementsTestContext([_provider, .. otherProviders]);
+        _disbursements.Banking.Now = _now;
 
         var mug = new ContentItem { ContentItemId = "mug" };
 

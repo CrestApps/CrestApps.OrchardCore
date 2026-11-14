@@ -16,6 +16,11 @@ public static class NachaFileWriter
     public const int RecordLength = 94;
 
     /// <summary>
+    /// The longest account number an entry holds: a longer one is refused, never cut.
+    /// </summary>
+    public const int MaxAccountNumberLength = 17;
+
+    /// <summary>
     /// The number of records in a block.
     /// </summary>
     public const int BlockingFactor = 10;
@@ -37,6 +42,17 @@ public static class NachaFileWriter
         ArgumentNullException.ThrowIfNull(request.Settings);
 
         var settings = request.Settings;
+
+        if (string.IsNullOrWhiteSpace(request.EntryDescription) && string.IsNullOrWhiteSpace(settings.CompanyEntryDescription))
+        {
+            throw new ArgumentException("The company entry description is required.", nameof(request));
+        }
+
+        if (request.Entries.FirstOrDefault(entry => Clean(entry.AccountNumber).Replace(" ", string.Empty, StringComparison.Ordinal).Length > MaxAccountNumberLength) is { } tooLong)
+        {
+            throw new ArgumentException($"The account number of {tooLong.Key} is longer than {MaxAccountNumberLength} characters.", nameof(request));
+        }
+
         var originRouting = Digits(request.OriginRoutingNumber, 9, "origin routing number");
         var odfi = originRouting[..8];
         var destination = string.IsNullOrWhiteSpace(settings.ImmediateDestination) ? originRouting : Digits(settings.ImmediateDestination, 9, "immediate destination");
@@ -94,7 +110,7 @@ public static class NachaFileWriter
                 Left(string.Empty, 20),
                 Left(Clean(settings.CompanyIdentification), 10),
                 sec,
-                Left(Clean(settings.CompanyEntryDescription), 10),
+                Left(Clean(string.IsNullOrWhiteSpace(request.EntryDescription) ? settings.CompanyEntryDescription : request.EntryDescription), 10),
                 Left(string.Empty, 6),
                 request.EffectiveDate.ToString("yyMMdd", CultureInfo.InvariantCulture),
                 Left(string.Empty, 3),

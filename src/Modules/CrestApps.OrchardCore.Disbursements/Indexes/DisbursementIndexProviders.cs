@@ -55,6 +55,8 @@ internal sealed class DisbursementBatchIndexProvider : IndexProvider<Disbursemen
                 ItemId = batch.ItemId,
                 Provider = batch.Provider,
                 Status = batch.Status.ToString(),
+                SourceKind = batch.SourceKind,
+                AccessKey = string.IsNullOrEmpty(batch.SourceKind) ? null : CrestApps.OrchardCore.SourceAccess.SourceAccessFilter.KeyOf(batch.SourceKind, batch.AccessScope),
                 SourceBankAccountId = batch.SourceBankAccountId,
                 EffectiveDate = batch.EffectiveDate.ToDateTime(TimeOnly.MinValue),
                 CreatedUtc = batch.CreatedUtc,

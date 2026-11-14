@@ -39,6 +39,7 @@ public static class DisbursementsCoreServiceCollectionExtensions
         services.TryAddScoped<ICatalogManager<DisbursementBatch>>(serviceProvider => serviceProvider.GetRequiredService<IDisbursementBatchManager>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Disbursement>, DisbursementHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<DisbursementBatch>, DisbursementBatchHandler>());
+        services.TryAddScoped<IDisbursementCommitter, YesSqlDisbursementCommitter>();
         services.TryAddScoped<IDisbursementService, DisbursementService>();
         services.AddDisbursementProvider<ManualDisbursementProvider>();
         services.AddBankAccountUsage<DisbursementBankAccountUsage>();

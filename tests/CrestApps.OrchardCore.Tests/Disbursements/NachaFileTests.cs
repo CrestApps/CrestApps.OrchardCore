@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Disbursements.Core.Nacha;
 
+using CrestApps.OrchardCore.Tests.Doubles;
+
 namespace CrestApps.OrchardCore.Tests.Disbursements;
 
 /// <summary>
@@ -176,7 +178,8 @@ public sealed class NachaFileTests
         var returned = Assert.Single(returns);
         Assert.Equal("900000000000001", returned.TraceNumber);
         Assert.Equal("R03", returned.Code);
-        Assert.Contains("can't be found", returned.Description, StringComparison.Ordinal);
+        Assert.Null(returned.Description);
+        Assert.Contains("can't be found", NachaReasonCodes.Describe(returned.Code, RecipeRoundTrip.Localizer<NachaFileTests>()).Value, StringComparison.Ordinal);
         var notice = Assert.Single(notices);
         Assert.Equal("C01", notice.Code);
         Assert.Equal("900000000000002", notice.TraceNumber);
@@ -205,7 +208,7 @@ public sealed class NachaFileTests
     public void ChangeCorrection_AnUnknownCode_IsNotApplied()
         => Assert.Null(NachaChangeCorrection.Parse("C09", "anything"));
 
-    private static NachaFileRequest Request(params NachaEntry[] entries)
+    internal static NachaFileRequest Request(params NachaEntry[] entries)
         => new()
         {
             Settings = _settings,
@@ -216,7 +219,7 @@ public sealed class NachaFileTests
             Entries = entries,
         };
 
-    private static NachaEntry Person(string key, string routing, long cents, bool business = false, bool prenote = false, bool savings = false, string name = "Pat Doe")
+    internal static NachaEntry Person(string key, string routing, long cents, bool business = false, bool prenote = false, bool savings = false, string name = "Pat Doe")
         => new()
         {
             Key = key,
@@ -229,6 +232,13 @@ public sealed class NachaFileTests
             IndividualId = "staff-" + key,
             Name = name,
         };
+
+    // A bank return file with one return of the entry with the given trace number.
+    internal static string ReturnFile(string traceNumber, string code)
+        => string.Join("\r\n",
+            Pad("101 900000001 112345678926111315300A094101FIRST BANK"),
+            Pad("621021000021123456789        00001250500000000000     PAT DOE                1" + traceNumber),
+            Pad("799" + code + traceNumber + "      02100002                                            021000020000001"));
 
     private static List<string> Lines(NachaFileResult file)
         => file.Text.Split(NachaFileWriter.LineBreak, StringSplitOptions.RemoveEmptyEntries).ToList();

@@ -79,7 +79,7 @@ A print run lays out the check line of every check before it draws anything, so 
 | Permission | Allows |
 | --- | --- |
 | `ManageCheckLayouts` | **Banking > Check Layouts**. Security critical. |
-| `ManageChecks` | **Write a check**, print (the list's bulk action **Print with {layout}**), reprint, void, reissue, stop payment, mark cleared, **Next numbers**. Security critical. |
+| `ManageChecks` | **Write a check**, print (the list's bulk action **Print with** and the layout's name), reprint, void, reissue, stop payment, mark cleared, **Next numbers**. Security critical. |
 | `ViewCheckRegister` | **Banking > Checks**, the register, filtered by bank account and status and searched by payee or number. |
 
 A print returns one PDF (`Cache-Control: no-store`) and records the checks as printed in one print run (`PrintRunId`). The bulk print refuses a check already printed: **Reprint** in its menu asks for the layout and a reason, prints it, and records a `Reprinted` change. A spoiled sheet can also be reissued from the check's menu. A new check is dated today in the site's time zone, and **Mark cleared** records today's date in that zone.

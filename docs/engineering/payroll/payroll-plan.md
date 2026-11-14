@@ -388,9 +388,9 @@ The whole plan adds three pipeline steps and no file format: **Mark pay inputs e
 
 ## 8. Slices
 
-Three pull requests, a commit per slice, each slice test-first (decision 7).
+One pull request for the whole plan, a commit per slice, each slice test-first (decision 7, changed by Mike on 2026-11-14 from three pull requests). The three groups below stay as the order of work and the points where the end-of-group checks run.
 
-**PR 1: building blocks**
+**Group 1: building blocks**
 
 | Slice | Scope | Exit gate |
 | --- | --- | --- |
@@ -403,7 +403,7 @@ Three pull requests, a commit per slice, each slice test-first (decision 7).
 | F7 | Address on a team; Compensation additions; Workforce's rate editor removed | A site team has a structured address; one pay editor; pay changes in history |
 | F8 | Marketplace payouts on Disbursements | Stripe test-mode payout, refusal and retry |
 
-**PR 2: Payroll**
+**Group 2: Payroll**
 
 | Slice | Scope | Exit gate |
 | --- | --- | --- |
@@ -418,7 +418,7 @@ Three pull requests, a commit per slice, each slice test-first (decision 7).
 | P9 | My Pay | An employee sees only their own statements |
 | P10 | Steps and schemas, workflow activities and the scheduled-run workflow recipe, data sets, reports and widgets, notification types, webhook events, the pay calendar type, Audit Trail, personal data, docs, catalog entries, a `crestapps-payroll` skill | Architecture guards pass; UI pass on a fresh site |
 
-**PR 3: compliance and depth**
+**Group 3: compliance and depth**
 
 | Slice | Scope |
 | --- | --- |
@@ -476,7 +476,7 @@ Decided 2026-11-13: the option in bold in every row.
 | 4 | Compliance posture | **Calculate, generate documents and files; the business funds and files.** Or integrate a full-service provider behind the same seams |
 | 5 | The legal entity | **A Payroll `Employer` record, registered as a party kind.** Or a new shared Legal Entities block now (Commerce's `StoreProfileSettings` would move onto it). Accounts and Teams do not fit: accounts are the business's customers, and a team is a group, with a closed kind list |
 | 6 | New building blocks | **Pdf, Banking, Checks, Disbursements, Approvals as in section 4; Marketplace payouts move onto Disbursements in this plan (F8); the six existing approval copies move in a follow-up plan.** Or fewer blocks, kept private to Payroll |
-| 7 | Pull requests | **Three (blocks, Payroll, compliance), a commit per slice.** Or one |
+| 7 | Pull requests | **One pull request for the whole plan, a commit per slice** (Mike, 2026-11-14; first approved as three: blocks, Payroll, compliance). The planning session pushes and opens it once everything is implemented and validated |
 | 8 | Countries | **United States pack first, neutral core.** |
 | 9 | The export to an outside payroll system | **A data set and a ready-made Data Pipeline; Workforce's export page, column settings and `IPayrollExportProvider` are removed (section 3).** Or keep the page as a thin screen over the same data set. Or move the export code to Payroll unchanged (it then repeats what Data Pipelines does) |
 
@@ -551,7 +551,7 @@ The review of F3 and F4 found 13 items; all are fixed in one commit, test-first.
 Rules A to E are carried into F5 and later slices: Disbursements gets the source access seam, deployment permission checks, a bank account usage, local dates and authorization tests from the start.
 
 - Also fixed: the full Architecture run found the static-state guard failing on the status tables of Banking and Checks since F3/F4 (`public static TransitionTable<T> Transitions { get; } = new(...)` reads as a static collection to the line scan); they are now `private static readonly` fields behind the property, as the Contact Center lifecycles do.
-- Open items for Mike: the positive pay pipeline's second run (owed until the SQLite paging fix, in its own worktree on branch `ma/eloquent-mccarthy-198dc5`, is merged); run the **Checks: positive pay file** pipeline twice on a SQLite site after that merge and confirm the second file holds only the changed checks.
+- Open items for Mike: the positive pay pipeline's second run (owed until the SQLite paging fix is merged; it stays in its own branch, `ma/report-index-pages-sqlite-decimals`, commit a8600b3f6, and is not cherry-picked here); run the **Checks: positive pay file** pipeline twice on a SQLite site after that merge and confirm the second file holds only the changed checks.
 - Tests: Banking, Checks and Parties 138, all pass. Architecture 308: 307 passed and the static-state guard failed as above; after the fix its class passes. `npx vitest run tests/js/lint` (21) passes.
 - Browser (test site, admin): the register lists through the new store query; the bulk print refuses printed check 20001 with the reprint hint; **Reprint** asks for a reason and returns the PDF (`no-store`); the Audit Trail entry of the account number read carries the user id, and the site log names the check range and the print run; **Mark cleared** on reissued check 1001 shows **Paid after reissue**; **Write a check** starts on today's local date; deleting the bank account checks are drawn on is refused with the reason; the owner picker reads its URL from the route; **Mark Stale Checks** is in the workflow toolbox under Checks; the positive pay recipe ran and published (see item 8 for the run).
 
@@ -616,3 +616,30 @@ Rules A to E are carried into F5 and later slices: Disbursements gets the source
 - Browser (test site, admin): the Stripe Connect feature lists Disbursements among its dependencies and turned on; **Record a disbursement** lists **Stripe Connect transfer**; a disbursement by it to a payee that is not a vendor was batched and released and came back **Failed** with "The vendor has no Stripe account." (the provider's refusal path, with no call to Stripe).
 - Owed (decided earlier): a Stripe test-mode payout and refusal against a real Stripe account, since outbound calls are blocked on the test site and no Stripe test keys are configured here. Open item for Mike.
 - Seen, not changed: on the narrow browser pane the disbursement list's bulk Actions button is hidden after ticking a row; the form posts fine. Worth a look in the admin list layout at small widths.
+
+### End-of-group checks, building blocks (2026-11-14)
+
+- Release build of the tests project (every module) with `-warnaserror`: passes after one fix, the F2 PDF test read PdfPig's obsolete `IPdfImage.Bounds` (now `BoundingBox`).
+- Full Architecture namespace (Release): 311 pass. Staff 37, Workforce 214, Marketplace 27, Checkout 460, Reports 74 and 5: pass. JS view lint: 21 pass. Manuals check: 161 user and 190 technical pages pass.
+- Docs build: passes after two fixes (MDX read `{layout}` and `{provider}` in the Checks and Disbursements permission tables as code). The build needs `SWC_NATIVE_BINDING_CACHE` set to a folder under the profile in this sandbox, a known environment quirk.
+- Mike, 2026-11-14: one pull request for the whole plan, a commit per slice (section 8 and decision 7 updated); the planning session pushes and opens it. The SQLite paging fix stays in its own branch and is not cherry-picked.
+
+### Review fixes for Disbursements and Approvals (2026-11-14)
+
+The planning session's review of c38c82027 and e85af38f3, all thirteen items, test-first.
+
+- 1, one disbursement per key: `CreateAsync` holds an Orchard `IDistributedLock` on the key from the read to the commit (`IDisbursementCommitter`, the session's `SaveChangesAsync` inside the lock, as Checkout's tender ledger does). The key is the attempt: the same key with another payee, amount, currency, method or destination is refused; once its disbursement failed, was cancelled, returned or reversed, a new attempt needs a new key and the error says so. F8's retry already follows it (a refusal bumps the key) and P8 will. Tests: two concurrent calls create once; another amount or payee is refused; a retry after cancel says a new key is needed.
+- 2, one release per batch: a lock per batch, the batch read again inside it, and a new `Releasing` status saved and committed before the provider is called; the provider gets the batch (its id, or each disbursement's key, is the idempotency key, documented on `IDisbursementProvider`). A refusal reopens the batch; a throw leaves it `Releasing`, which a release refuses until `ReopenReleasingBatchAsync` (**Reopen after checking** on the batch list) after someone checked with the provider. Tests: two concurrent releases call the provider once; a provider that throws leaves the batch Releasing, the next release is refused, and only a reopen sends it again.
+- 3, returns page: returns and notices of change apply only to disbursements the person's source access (Manage) allows; the others read as not found. A notice of change also needs `ManageBankAccounts`; without it it is reported for someone who may. The account still goes back to unverified and its observers are told (tested with the Banking observer).
+- 4, approval rules frozen: a request copies the policy's approvers and the two built-in rules when it is made (as it did the count) and is decided by its own copy; a request made before falls back to the policy. Policy changes go to the Audit Trail (**Approval policy added, changed, removed**, with the rules). Test: loosening the policy while a request waits does not let the requester approve it. Two earlier tests that loosened the live policy now make a second request under the looser one.
+- 5, subject version: `ApprovalSubmission.SubjectVersion` and `ApprovalRequest.SubjectVersion`; a pending request about another version is withdrawn ("Replaced: the record changed after approval was asked", so the subject handler hears it) and replaced; the same version reuses it. A lock per subject keeps two requests from both creating.
+- 6, concurrent decisions: `DecideAsync` and `CancelAsync` hold a lock per request and work on a fresh read; the caller's copy is brought up to date. Test: two approvers at once both count.
+- 7, settling: counted in the site's days from the later of the arrival date and the release, so a batch released early is not marked paid before the money moves. The earlier settle test now waits until the arrival day plus the age.
+- 8, bank file records: each download writes the batch id and who (never a number) to the log and, with Audit Trail on, a **Bank file sent** event (`DisbursementFileRecorder`). The pipeline step stamps each delivered batch with when and by which pipeline once the run succeeds (`Run.OnSucceeded`), shown on the batch list ("file delivered ... by ...").
+- 9, batch list: a batch holds the disbursements of one source kind and access scope (others are left pending with a problem), the batch index has `SourceKind` and `AccessKey` (migration `UpdateFrom1`, which re-saves existing batches after activation), and the store filters by source access before counting and paging. SQLite test: Pat sees batch A and the unrestricted ones, Lee only the unrestricted, with matching counts.
+- 10, cancelling a batch reports its disbursements as `Unbatched`, a new change kind.
+- 11, bank file: the company entry description is required (the setting, or the batch's own: `CreateBatchAsync(..., entryDescription)` prints it, such as PAYROLL); an account number over 17 characters is refused, never cut; an arrival date before the site's today is refused when batching and when releasing. Tests for each.
+- 12, reason codes: a return stores its code only (`FailureCode`); the text is localized where it shows (`NachaReasonCodes.Describe`). A prenote that settles or is returned passes no English text to the bank account: the return code, or nothing. Deviation: the bank account's status reason shows the bare code (such as R03), since Banking does not know bank file codes.
+- 13, policies: saving one whose rules name fewer people today than it needs shows a warning (`IApproverDirectory.CountPeopleAsync`; a manager rule depends on each request, so it is not counted).
+- Tests: `DisbursementReviewFixesTests` (13), `ApprovalReviewFixesTests` (4), the SQLite batch filter. Disbursements 72, Approvals 38, Marketplace 27, Banking 56, Checks 73 pass; the quick architecture guards (274) and the JS lint pass.
+- Browser (test site): the batch list reads after the migration; a manual disbursement released by two requests at once settled once; downloading a bank file wrote **Bank file sent** to the Audit Trail; raising Expense approval to three approvals with one eligible person saved with the warning and wrote **Approval policy changed** to the Audit Trail.

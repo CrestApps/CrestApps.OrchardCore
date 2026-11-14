@@ -1,10 +1,13 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Approvals.Core.Services;
 using CrestApps.OrchardCore.Approvals.Models;
 using CrestApps.OrchardCore.Approvals.ViewModels;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -16,11 +19,22 @@ namespace CrestApps.OrchardCore.Approvals.Drivers;
 /// </summary>
 internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy>
 {
-    internal readonly IStringLocalizer S;
+    private readonly IApproverDirectory _directory;
+    private readonly INotifier _notifier;
 
-    public ApprovalPolicyDisplayDriver(IStringLocalizer<ApprovalPolicyDisplayDriver> stringLocalizer)
+    internal readonly IStringLocalizer S;
+    internal readonly IHtmlLocalizer H;
+
+    public ApprovalPolicyDisplayDriver(
+        IApproverDirectory directory,
+        INotifier notifier,
+        IStringLocalizer<ApprovalPolicyDisplayDriver> stringLocalizer,
+        IHtmlLocalizer<ApprovalPolicyDisplayDriver> htmlLocalizer)
     {
+        _directory = directory;
+        _notifier = notifier;
         S = stringLocalizer;
+        H = htmlLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(ApprovalPolicy policy, BuildDisplayContext context)
@@ -105,6 +119,12 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
         else
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DueAfterHours), S["Enter a number of hours, or leave it empty."]);
+        }
+
+        // A policy no one can satisfy is saved, with a warning: the people may come later.
+        if (context.Updater.ModelState.IsValid && policy.Approvers.Count > 0 && await _directory.CountPeopleAsync(policy) is { } people && people < policy.RequiredApprovals)
+        {
+            await _notifier.WarningAsync(H["The policy needs {0} approvals, but only {1} can decide under its rules today. Requests under it can't be approved until more people can.", policy.RequiredApprovals, people]);
         }
 
         return Edit(policy, context);

@@ -18,6 +18,16 @@ public sealed class DisbursementBatchIndex : CatalogItemIndex
     public string Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of record the batch's disbursements pay.
+    /// </summary>
+    public string SourceKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the source kind and access scope, so lists read only the batches a person may act on.
+    /// </summary>
+    public string AccessKey { get; set; }
+
+    /// <summary>
     /// Gets or sets the business's bank account the money leaves from.
     /// </summary>
     public string SourceBankAccountId { get; set; }
