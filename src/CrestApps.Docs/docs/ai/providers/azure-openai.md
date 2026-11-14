@@ -309,7 +309,7 @@ brew install gstreamer
 Add GStreamer installation to your `Dockerfile` before the application layer:
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS base
 
 # Install GStreamer for Azure Speech SDK compressed audio support
 RUN apt-get update && \
