@@ -97,10 +97,30 @@ public sealed class WorkOrderIntegrationTests
     [Fact]
     public async Task AnAccountsWorkOrder_IsOwedByTheAccount_AndNeverUsesTheAccountIdAsAUser()
     {
+        var created = await InvoiceWithoutUserAsync();
+
+        Assert.Equal(new PartyRef(PartyKinds.Account, "account-1"), created.GetPayer());
+        Assert.Equal(CustomerOwnerKind.Guest, created.OwnerKind);
+        Assert.Equal("wo-2", created.OwnerId);
+        Assert.Equal("lee@contoso.example", created.PayerContact.Email);
+        Assert.Equal(("Lee", "lee@contoso.example"), (created.GetGuestContact().DisplayName, created.GetGuestContact().Email));
+    }
+
+    /// <summary>
+    /// Invoices an account's work order that names no customer user, as completing it does: the transaction is owned as
+    /// a guest and reached at the work order's contact.
+    /// </summary>
+    internal static async Task<Transaction> InvoiceWithoutUserAsync()
+    {
         var created = new Transaction();
         var transactions = new Mock<ITransactionManager>();
 
-        transactions.Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(created);
+        transactions.Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(() =>
+        {
+            created.ItemId = "tx-wo-2";
+
+            return created;
+        });
 
         var clock = new Mock<IClock>();
         clock.Setup(item => item.UtcNow).Returns(new DateTime(2026, 11, 2, 12, 0, 0, DateTimeKind.Utc));
@@ -110,10 +130,7 @@ public sealed class WorkOrderIntegrationTests
 
         await billing.InvoiceAsync(workOrder, 900m, "USD", TestContext.Current.CancellationToken);
 
-        Assert.Equal(new PartyRef(PartyKinds.Account, "account-1"), created.GetPayer());
-        Assert.Equal(CustomerOwnerKind.Guest, created.OwnerKind);
-        Assert.Equal("wo-2", created.OwnerId);
-        Assert.Equal("lee@contoso.example", created.PayerContact.Email);
+        return created;
     }
 
     [Fact]

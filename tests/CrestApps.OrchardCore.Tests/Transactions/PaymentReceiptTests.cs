@@ -325,7 +325,7 @@ public sealed class PaymentReceiptTests
             new PassThroughStringLocalizer<TransactionReceiptBuilder>());
     }
 
-    private static PaymentReceiptTransactionPaymentHandler CreateHandler(FakeTransactionStore store, INotificationService notifications, IUserService userService, IEmailService email = null, IPaymentAttemptStore attempts = null, IFinancialDocumentNumberGenerator numbers = null)
+    internal static PaymentReceiptTransactionPaymentHandler CreateHandler(FakeTransactionStore store, INotificationService notifications, IUserService userService, IEmailService email = null, IPaymentAttemptStore attempts = null, IFinancialDocumentNumberGenerator numbers = null)
     {
         var services = new ServiceCollection();
 
