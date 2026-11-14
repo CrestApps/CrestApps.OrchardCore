@@ -16,6 +16,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.WorkOrders;
+using CrestApps.OrchardCore.WorkOrders.Services;
 using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.PageSections;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -130,6 +132,17 @@ public sealed class AccountsStartup : StartupBase
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Invoices, _sectionTitle, "fa-solid fa-file-invoice-dollar", AccountPageTabs.GetPosition(AccountPageTabs.Invoices));
         services.AddScoped<IContentDisplayDriver, AccountInvoicesDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Bills completed work orders as invoices when Work Orders is on.
+/// </summary>
+[RequireFeatures(WorkOrdersConstants.Features.WorkOrders)]
+public sealed class WorkOrdersStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IWorkOrderBilling, InvoicingWorkOrderBilling>();
 }
 
 [RequireFeatures(TaxationConstants.Feature.Taxation)]
