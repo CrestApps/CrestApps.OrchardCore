@@ -16,6 +16,7 @@ namespace CrestApps.OrchardCore.Accounts
         public const string PageName = "Account";
         public const string Records = "Records";
         public const string Service = "Service";
+        public const string Tickets = "Tickets";
         public static string EditorLocation(string tab, string position = "1") { }
         public static int GetPosition(string tab) { }
         public static string Location(string tab, string position = "1") { }

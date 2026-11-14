@@ -3,6 +3,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tickets.BackgroundTasks;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Tickets.Core.Handlers;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Deployments;
+using CrestApps.OrchardCore.Tickets.Integrations;
 using CrestApps.OrchardCore.Tickets.Drivers;
 using CrestApps.OrchardCore.Tickets.Migrations;
 using CrestApps.OrchardCore.Tickets.Models;
@@ -59,6 +61,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IContentHandler, TicketContentCleanup>();
         services.AddTimelineAccessProvider<TicketTimelineAccess>();
         services.AddRecordSource<TicketRecordSource>();
+        services.AddPersonalDataContributor<TicketPersonalDataContributor>();
         services.AddContentPart<TicketPart>()
             .UseDisplayDriver<TicketPartDisplayDriver>();
         services.AddDisplayDriver<TicketRow, TicketRowDisplayDriver>();

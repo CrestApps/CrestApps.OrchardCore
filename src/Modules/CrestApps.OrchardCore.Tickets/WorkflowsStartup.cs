@@ -1,5 +1,8 @@
+using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Tickets.Drivers;
 using CrestApps.OrchardCore.Tickets.Integrations;
 using CrestApps.OrchardCore.Tickets.Recipes.Workflows;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -10,6 +13,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Helpers;
 
@@ -141,5 +146,19 @@ public sealed class StaffStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddStaffLifecycleObserver<TicketStaffLifecycleObserver>();
+    }
+}
+
+/// <summary>
+/// The Tickets tab of an account's page.
+/// </summary>
+[RequireFeatures(AccountsConstants.Feature)]
+public sealed class AccountsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentDisplayDriver, AccountTicketsTabDisplayDriver>();
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Tickets, LocalizationSource.Create<AccountsStartup>("Tickets"), "fa-solid fa-ticket", AccountPageTabs.GetPosition(AccountPageTabs.Tickets));
     }
 }

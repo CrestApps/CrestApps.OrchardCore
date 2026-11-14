@@ -66,6 +66,11 @@ public static class AccountPageTabs
     public const string Orders = "Orders";
 
     /// <summary>
+    /// The account's help desk tickets.
+    /// </summary>
+    public const string Tickets = "Tickets";
+
+    /// <summary>
     /// How the account buys as a business: its terms, its buyers and what it owes.
     /// </summary>
     public const string Business = "Business";
@@ -96,6 +101,7 @@ public static class AccountPageTabs
         [Activities] = 40,
         [Notes] = 45,
         [Orders] = 50,
+        [Tickets] = 55,
         [Business] = 60,
         [Invoices] = 70,
         [Service] = 80,

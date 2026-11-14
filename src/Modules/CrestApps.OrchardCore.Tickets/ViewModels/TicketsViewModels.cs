@@ -538,3 +538,39 @@ public class TicketMacroViewModel
     [BindNever]
     public List<SelectListItem> Priorities { get; set; } = [];
 }
+
+/// <summary>
+/// The Tickets tab of an account's page.
+/// </summary>
+public class AccountTicketsTabViewModel
+{
+    public string AccountId { get; set; }
+
+    public int Total { get; set; }
+
+    public int Open { get; set; }
+
+    public bool CanCreate { get; set; }
+
+    public IReadOnlyList<AccountTicketRow> Tickets { get; set; } = [];
+}
+
+/// <summary>
+/// A ticket on an account's Tickets tab.
+/// </summary>
+public sealed class AccountTicketRow
+{
+    public string Id { get; set; }
+
+    public string Number { get; set; }
+
+    public string Subject { get; set; }
+
+    public string Status { get; set; }
+
+    public string StatusColor { get; set; }
+
+    public string Priority { get; set; }
+
+    public DateTime? ModifiedUtc { get; set; }
+}

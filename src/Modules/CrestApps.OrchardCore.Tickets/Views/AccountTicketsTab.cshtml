@@ -1,0 +1,59 @@
+@model AccountTicketsTabViewModel
+
+<div class="card mb-3">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            @T.Plural(Model.Total, "1 ticket", "{0} tickets")
+            @if (Model.Open > 0)
+            {
+                <span class="badge text-bg-primary ms-1">@T.Plural(Model.Open, "1 open", "{0} open")</span>
+            }
+        </span>
+        @if (Model.CanCreate)
+        {
+            <a class="btn btn-sm btn-primary" href="@Url.RouteUrl("TicketsCreate", new { area = "CrestApps.OrchardCore.Tickets", accountId = Model.AccountId })">
+                <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New ticket"]
+            </a>
+        }
+    </div>
+    @if (Model.Tickets.Count == 0)
+    {
+        <div class="card-body text-body-secondary">@T["No tickets for the account that you can see."]</div>
+    }
+    else
+    {
+        <ul class="list-group list-group-flush">
+            @foreach (var ticket in Model.Tickets)
+            {
+                <li class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span class="d-flex flex-wrap align-items-center gap-2">
+                        <a class="fw-semibold" href="@Url.RouteUrl("TicketsDisplay", new { area = "CrestApps.OrchardCore.Tickets", id = ticket.Id })">@ticket.Number</a>
+                        <span>@ticket.Subject</span>
+                        @if (!string.IsNullOrEmpty(ticket.Status))
+                        {
+                            <span class="badge text-bg-light">
+                                @if (!string.IsNullOrEmpty(ticket.StatusColor))
+                                {
+                                    <i class="fa-solid fa-circle me-1" style="color: @ticket.StatusColor" aria-hidden="true"></i>
+                                }
+                                @ticket.Status
+                            </span>
+                        }
+                        @if (!string.IsNullOrEmpty(ticket.Priority))
+                        {
+                            <span class="text-body-secondary small">@ticket.Priority</span>
+                        }
+                    </span>
+                    @if (ticket.ModifiedUtc is { } modified)
+                    {
+                        <span class="text-body-secondary small text-nowrap">@await DisplayAsync(await New.DateTime(Utc: modified, Format: "g"))</span>
+                    }
+                </li>
+            }
+        </ul>
+        @if (Model.Total > Model.Tickets.Count)
+        {
+            <div class="card-footer small text-body-secondary">@T["Showing the latest {0} of {1}.", Model.Tickets.Count, Model.Total]</div>
+        }
+    }
+</div>

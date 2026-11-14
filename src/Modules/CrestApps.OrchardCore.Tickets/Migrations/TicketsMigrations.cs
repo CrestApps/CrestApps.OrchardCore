@@ -70,7 +70,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -95,6 +95,19 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds the requester's e-mail to the ticket index, so a person's tickets are found by their e-mail.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table
+            .AddColumn<string>("RequesterEmail", column => column.Nullable().WithLength(TicketIndexProvider.EmailLength)));
+        await TicketIndexSchema.CreateRequesterEmailIndexAsync(SchemaBuilder);
+
+        return 4;
     }
 
     private async Task SeedAsync()

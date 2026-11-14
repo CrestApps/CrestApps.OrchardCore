@@ -69,6 +69,12 @@ public sealed class TicketIndex : MapIndex
     public string Requester { get; set; }
 
     /// <summary>
+    /// Gets or sets the e-mail of a requester kept as a contact snapshot, in lower case, so a person's tickets are found
+    /// by their e-mail.
+    /// </summary>
+    public string RequesterEmail { get; set; }
+
+    /// <summary>
     /// Gets or sets the account.
     /// </summary>
     public string AccountId { get; set; }

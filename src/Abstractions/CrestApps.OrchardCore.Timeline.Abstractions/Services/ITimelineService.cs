@@ -85,4 +85,16 @@ public interface ITimelineService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>How many entries were deleted.</returns>
     Task<int> DeleteAllAsync(RecordRef subject, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rewrites the text of every entry on a record's timeline, for a request to erase a person's data: the body, the
+    /// author's name and the values of recorded field changes go through <paramref name="scrub"/>, which replaces what
+    /// identifies the person. Nothing else of an entry changes.
+    /// </summary>
+    /// <param name="subject">The record.</param>
+    /// <param name="scrub">Gives the text to keep for a text.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many entries changed.</returns>
+    Task<int> ScrubAsync(RecordRef subject, Func<string, string> scrub, CancellationToken cancellationToken = default)
+        => Task.FromResult(0);
 }

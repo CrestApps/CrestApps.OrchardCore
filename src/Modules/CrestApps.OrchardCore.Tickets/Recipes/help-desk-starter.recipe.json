@@ -1,0 +1,195 @@
+{
+  "name": "HelpDeskStarter",
+  "displayName": "Help desk starter",
+  "description": "Sets up a help desk: tickets with their statuses and priorities, the Support desk and an IT desk on weekday business hours, a standard service level for first response and resolution, and two example workflows (escalate a ticket whose target is breached, and add a note when a requester reopens a solved ticket). The workflows start turned off; turn them on under Workflows.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "help desk"
+  ],
+  "tags": [
+    "help desk",
+    "tickets",
+    "service levels",
+    "sample"
+  ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.BusinessHours",
+        "CrestApps.OrchardCore.ServiceLevels",
+        "CrestApps.OrchardCore.Tickets",
+        "OrchardCore.Workflows"
+      ]
+    },
+    {
+      "name": "BusinessHoursSchedules",
+      "Schedules": [
+        {
+          "ItemId": "44fy8z1wfv91trshefx9dqcsyj",
+          "Name": "Help desk hours",
+          "Enabled": true,
+          "Hours": {
+            "TimeZoneId": "America/New_York",
+            "Windows": [
+              { "Day": 1, "OpenMinute": 480, "CloseMinute": 1080 },
+              { "Day": 2, "OpenMinute": 480, "CloseMinute": 1080 },
+              { "Day": 3, "OpenMinute": 480, "CloseMinute": 1080 },
+              { "Day": 4, "OpenMinute": 480, "CloseMinute": 1080 },
+              { "Day": 5, "OpenMinute": 480, "CloseMinute": 1080 }
+            ],
+            "DateExceptions": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "ServiceLevelPolicies",
+      "Policies": [
+        {
+          "ItemId": "47bpbxt94eb7qbn8wjb9rg9eb3",
+          "Name": "Standard help desk",
+          "Scope": "Tickets",
+          "HoursScheduleId": "44fy8z1wfv91trshefx9dqcsyj",
+          "WarningPercent": 75,
+          "Targets": [
+            { "Metric": "FirstResponse", "Priority": "Urgent", "Minutes": 60 },
+            { "Metric": "Resolution", "Priority": "Urgent", "Minutes": 480 },
+            { "Metric": "FirstResponse", "Priority": "High", "Minutes": 120 },
+            { "Metric": "Resolution", "Priority": "High", "Minutes": 960 },
+            { "Metric": "FirstResponse", "Priority": "Normal", "Minutes": 240 },
+            { "Metric": "Resolution", "Priority": "Normal", "Minutes": 1920 },
+            { "Metric": "FirstResponse", "Priority": "Low", "Minutes": 480 },
+            { "Metric": "Resolution", "Priority": "Low", "Minutes": 4800 }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "TicketDesks",
+      "Desks": [
+        {
+          "Name": "Support",
+          "Description": "Questions and problems from customers.",
+          "Audience": "Customers",
+          "HoursScheduleId": "44fy8z1wfv91trshefx9dqcsyj",
+          "ServiceLevelPolicyId": "47bpbxt94eb7qbn8wjb9rg9eb3",
+          "ReopenWindowDays": 7,
+          "AutoCloseDays": 4,
+          "AssignmentStrategy": "LeastLoaded",
+          "NotifyRequester": true,
+          "NotifyAssignee": true
+        },
+        {
+          "ItemId": "49vyvps9npqdzz9mz7xfwqgdzx",
+          "Name": "IT",
+          "Description": "Requests and problems from employees: accounts, devices and software.",
+          "Audience": "Internal",
+          "HoursScheduleId": "44fy8z1wfv91trshefx9dqcsyj",
+          "ServiceLevelPolicyId": "47bpbxt94eb7qbn8wjb9rg9eb3",
+          "ReopenWindowDays": 7,
+          "AutoCloseDays": 4,
+          "AssignmentStrategy": "RoundRobin",
+          "NotifyRequester": true,
+          "NotifyAssignee": true
+        }
+      ]
+    },
+    {
+      "name": "WorkflowType",
+      "data": [
+        {
+          "WorkflowTypeId": "4c1rmcvv9gpqb07sbwv77fw9da",
+          "Name": "Escalate a ticket whose target is breached",
+          "IsEnabled": false,
+          "IsSingleton": false,
+          "LockTimeout": 0,
+          "LockExpiration": 0,
+          "DeleteFinishedWorkflows": true,
+          "Activities": [
+            {
+              "ActivityId": "4hhw431jq6wm939h26zwkyj5vc",
+              "Name": "TicketServiceLevelBreached",
+              "X": 20,
+              "Y": 40,
+              "IsStart": true,
+              "Properties": {
+                "ActivityMetadata": { "Title": "A target was breached" },
+                "DeskIds": []
+              }
+            },
+            {
+              "ActivityId": "4qjq2k0hjabbrbgf7s11gdk2gh",
+              "Name": "EscalateTicketTask",
+              "X": 320,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": { "Title": "Escalate" },
+                "TicketIdExpression": "{{ Workflow.Input.TicketId }}"
+              }
+            },
+            {
+              "ActivityId": "4v2a3qqthkgssqakyxsaxvt6bd",
+              "Name": "AddTicketNoteTask",
+              "X": 620,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": { "Title": "Say why" },
+                "TicketIdExpression": "{{ Workflow.Input.TicketId }}",
+                "Body": "Escalated: the {{ Workflow.Input.Metric }} target of {{ Workflow.Input.Number }} was breached."
+              }
+            }
+          ],
+          "Transitions": [
+            { "Id": 0, "SourceActivityId": "4hhw431jq6wm939h26zwkyj5vc", "SourceOutcomeName": "Done", "DestinationActivityId": "4qjq2k0hjabbrbgf7s11gdk2gh" },
+            { "Id": 0, "SourceActivityId": "4qjq2k0hjabbrbgf7s11gdk2gh", "SourceOutcomeName": "Done", "DestinationActivityId": "4v2a3qqthkgssqakyxsaxvt6bd" }
+          ],
+          "Properties": {}
+        },
+        {
+          "WorkflowTypeId": "4awr024wex4ncq1e6y7dk7hhga",
+          "Name": "Note a ticket reopened by its requester",
+          "IsEnabled": false,
+          "IsSingleton": false,
+          "LockTimeout": 0,
+          "LockExpiration": 0,
+          "DeleteFinishedWorkflows": true,
+          "Activities": [
+            {
+              "ActivityId": "4r46yx70tgm4wprkyx8bg1e754",
+              "Name": "TicketReopened",
+              "X": 20,
+              "Y": 40,
+              "IsStart": true,
+              "Properties": {
+                "ActivityMetadata": { "Title": "The ticket was reopened" },
+                "DeskIds": []
+              }
+            },
+            {
+              "ActivityId": "4g4r95ctm5vrj73fk5w7w6s5xx",
+              "Name": "AddTicketNoteTask",
+              "X": 320,
+              "Y": 40,
+              "IsStart": false,
+              "Properties": {
+                "ActivityMetadata": { "Title": "Flag it" },
+                "TicketIdExpression": "{{ Workflow.Input.TicketId }}",
+                "Body": "Reopened after it was solved. Check whether the first answer missed something."
+              }
+            }
+          ],
+          "Transitions": [
+            { "Id": 0, "SourceActivityId": "4r46yx70tgm4wprkyx8bg1e754", "SourceOutcomeName": "Done", "DestinationActivityId": "4g4r95ctm5vrj73fk5w7w6s5xx" }
+          ],
+          "Properties": {}
+        }
+      ]
+    }
+  ]
+}

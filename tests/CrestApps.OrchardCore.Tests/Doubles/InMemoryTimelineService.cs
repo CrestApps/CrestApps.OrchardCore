@@ -85,4 +85,18 @@ public sealed class InMemoryTimelineService : ITimelineService
 
     public Task<int> DeleteAllAsync(RecordRef subject, CancellationToken cancellationToken = default)
         => Task.FromResult(Entries.RemoveAll(entry => entry.Subject == subject));
+
+    public Task<int> ScrubAsync(RecordRef subject, Func<string, string> scrub, CancellationToken cancellationToken = default)
+    {
+        var changed = 0;
+
+        foreach (var entry in Entries.Where(entry => entry.Subject == subject))
+        {
+            entry.Body = scrub(entry.Body);
+            entry.AuthorName = scrub(entry.AuthorName);
+            changed++;
+        }
+
+        return Task.FromResult(changed);
+    }
 }

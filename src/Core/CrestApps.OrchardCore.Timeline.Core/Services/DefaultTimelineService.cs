@@ -210,6 +210,39 @@ public sealed class DefaultTimelineService : ITimelineService
         return entries.Count;
     }
 
+    /// <inheritdoc/>
+    public async Task<int> ScrubAsync(RecordRef subject, Func<string, string> scrub, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scrub);
+
+        var changed = 0;
+
+        foreach (var entry in await _store.ListBySubjectAsync(subject, cancellationToken))
+        {
+            var body = scrub(entry.Body);
+            var authorName = scrub(entry.AuthorName);
+            var fieldChanges = (entry.Changes ?? [])
+                .Select(change => new TimelineFieldChange { Field = change.Field, From = scrub(change.From), To = scrub(change.To) })
+                .ToList();
+
+            if (body == entry.Body
+                && authorName == entry.AuthorName
+                && fieldChanges.Zip(entry.Changes ?? []).All(pair => pair.First.From == pair.Second.From && pair.First.To == pair.Second.To))
+            {
+                continue;
+            }
+
+            entry.Body = body;
+            entry.AuthorName = authorName;
+            entry.Changes = fieldChanges;
+
+            await _store.UpdateAsync(entry, cancellationToken);
+            changed++;
+        }
+
+        return changed;
+    }
+
     // The rules every stored entry meets. Only a new entry written here is held to the body limit; history is never cut.
     private List<string> Check(TimelineEntry entry, bool limitBody)
     {

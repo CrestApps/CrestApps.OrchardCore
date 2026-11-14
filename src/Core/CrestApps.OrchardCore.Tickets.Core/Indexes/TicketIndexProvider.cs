@@ -15,6 +15,8 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
     /// </summary>
     public const int SubjectLength = 255;
 
+    public const int EmailLength = 254;
+
     /// <inheritdoc/>
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<TicketIndex>()
@@ -37,6 +39,7 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
                     TeamId = part.TeamId,
                     AssigneeId = part.AssigneeId,
                     Requester = part.Requester.IsEmpty ? null : part.Requester.ToString(),
+                    RequesterEmail = NormalizeEmail(part.RequesterContact?.Email),
                     AccountId = part.AccountId,
                     Channel = part.Channel,
                     MergedIntoId = part.MergedIntoId,
@@ -48,4 +51,12 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
                     ClosedUtc = part.ClosedUtc,
                 };
             });
+
+    /// <summary>
+    /// Gets an e-mail as the index keeps it.
+    /// </summary>
+    /// <param name="email">The e-mail.</param>
+    /// <returns>The e-mail trimmed and in lower case, or <see langword="null"/> when it is empty or too long.</returns>
+    public static string NormalizeEmail(string email)
+        => email?.Trim().ToLowerInvariant() is { Length: > 0 and <= EmailLength } normalized ? normalized : null;
 }

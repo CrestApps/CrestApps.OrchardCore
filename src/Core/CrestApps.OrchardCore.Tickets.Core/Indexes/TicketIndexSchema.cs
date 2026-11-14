@@ -29,6 +29,7 @@ public static class TicketIndexSchema
             .Column<string>("TeamId", column => column.Nullable().WithLength(26))
             .Column<string>("AssigneeId", column => column.Nullable().WithLength(26))
             .Column<string>("Requester", column => column.Nullable().WithLength(128))
+            .Column<string>("RequesterEmail", column => column.Nullable().WithLength(TicketIndexProvider.EmailLength))
             .Column<string>("AccountId", column => column.Nullable().WithLength(26))
             .Column<string>("Channel", column => column.Nullable().WithLength(64))
             .Column<string>("MergedIntoId", column => column.Nullable().WithLength(26))
@@ -53,7 +54,17 @@ public static class TicketIndexSchema
         });
 
         await CreateAssignedIndexAsync(schemaBuilder);
+        await CreateRequesterEmailIndexAsync(schemaBuilder);
     }
+
+    /// <summary>
+    /// Creates the index that finds a person's tickets by their e-mail.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static Task CreateRequesterEmailIndexAsync(ISchemaBuilder schemaBuilder)
+        => schemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table
+            .CreateIndex("IDX_TicketIndex_RequesterEmail", "RequesterEmail", "DocumentId"));
 
     /// <summary>
     /// Creates the index team assignment reads to take turns: the latest assignment of each assignee.
