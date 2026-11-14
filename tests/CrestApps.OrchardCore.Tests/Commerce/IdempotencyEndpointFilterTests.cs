@@ -71,6 +71,40 @@ public sealed class IdempotencyEndpointFilterTests
         Assert.Equal(StatusCodes.Status409Conflict, IdempotencyEndpointFilter.Capture(retryResult).StatusCode);
     }
 
+    /// <summary>
+    /// L-checkout-idempotency-scope (final review): the caller was the user id, else the raw cart or checkout token, else
+    /// the network, with nothing saying which. An anonymous request whose cart token was a user's id landed in that user's
+    /// scope and was answered with the user's stored response, before any ownership check.
+    /// </summary>
+    [Fact]
+    public async Task AGuestWhoseCartTokenIsAUsersId_IsNotAnsweredFromThatUsersRequests()
+    {
+        // Arrange
+        var filter = new IdempotencyEndpointFilter();
+        var calls = 0;
+
+        ValueTask<object> Next(EndpointFilterInvocationContext context)
+        {
+            calls++;
+
+            return ValueTask.FromResult<object>(TypedResults.Ok(new { id = "order-of-user-1" }));
+        }
+
+        var user = Request();
+        user.Request.Headers.Remove(CommerceApi.CartTokenHeader);
+        user.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "user-1")], "test"));
+
+        var guest = Request();
+        guest.Request.Headers[CommerceApi.CartTokenHeader] = "user-1";
+
+        // Act
+        await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(user), Next);
+        await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(guest), Next);
+
+        // Assert
+        Assert.Equal(2, calls);
+    }
+
     private DefaultHttpContext Request()
     {
         var httpContext = new DefaultHttpContext { RequestServices = _services };
