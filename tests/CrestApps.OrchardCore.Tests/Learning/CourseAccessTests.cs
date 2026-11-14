@@ -53,6 +53,57 @@ public sealed class CourseAccessTests
     }
 
     [Fact]
+    public async Task ALessonOutsideACourse_IsClosed_ToEveryoneButCourseManagersAndPeopleWhoMayEditIt()
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        var orphan = courses.AddOrphan("orphan", part => part.FreePreview = true);
+
+        // Act
+        Task<AuthorizationHandlerContext> Check(ClaimsPrincipal user)
+            => harness.RunAsync(async services =>
+            {
+                var handler = ActivatorUtilities.CreateInstance<LearningContentAccessHandler>(services);
+                var context = new AuthorizationHandlerContext([new PermissionRequirement(CommonPermissions.ViewContent)], user, orphan);
+
+                await handler.HandleAsync(context);
+
+                return context;
+            }, commit: false);
+
+        var anonymous = await Check(new ClaimsPrincipal(new ClaimsIdentity()));
+        var reader = await Check(CalendarTestHarness.User("reader", CommonPermissions.ViewContent.Name));
+        var editor = await Check(CalendarTestHarness.User("editor", CommonPermissions.EditContent.Name));
+        var manager = await Check(CalendarTestHarness.User("manager", LearningPermissions.ManageCourses.Name));
+
+        // Assert
+        Assert.True(anonymous.HasFailed);
+        Assert.True(reader.HasFailed);
+        Assert.True(editor.HasSucceeded);
+        Assert.True(manager.HasSucceeded);
+    }
+
+    [Fact]
+    public async Task AFreePreview_OpensOnlyWhenItIsInTheOutlineOfThePublishedCourse()
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        var placed = courses.AddItem("course1", "placed", configure: part => part.FreePreview = true);
+        var unplaced = courses.AddItem("course1", "unplaced", configure: part => part.FreePreview = true, sectionId: null);
+
+        // Act
+        Task<CourseItemAccess> Access(ContentItem item)
+            => harness.RunAsync(services => services.GetRequiredService<ICourseAccessService>().GetItemAccessAsync(new ClaimsPrincipal(new ClaimsIdentity()), item), commit: false);
+
+        // Assert
+        Assert.Equal(CourseItemAccessReason.FreePreview, (await Access(placed)).Reason);
+        Assert.False((await Access(unplaced)).Allowed);
+    }
+
+    [Fact]
     public async Task GetItemAccessAsync_ForACompletedEnrollment_OpensOnlyItemsInTheOutline()
     {
         // Arrange

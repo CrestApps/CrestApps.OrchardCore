@@ -54,4 +54,9 @@ public enum CourseItemAccessReason
     /// The item's release rules are not met yet.
     /// </summary>
     NotReleased,
+
+    /// <summary>
+    /// A course item that is not in a course; only course managers and people who may edit it open it.
+    /// </summary>
+    NotInCourse,
 }

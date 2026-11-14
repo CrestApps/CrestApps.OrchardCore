@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
 using OrchardCore.ContentManagement;
+using OrchardCore.Contents;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Core.Services;
@@ -53,8 +54,10 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
         var access = await DecideAsync(user, item);
 
         // A free preview opens for anyone, but a learner with access is still a learner there, so their progress counts.
-        if (access.Reason is not (CourseItemAccessReason.NotACourseItem or CourseItemAccessReason.Staff or CourseItemAccessReason.Enrolled)
-            && item.Get<CourseItemPart>(nameof(CourseItemPart))?.FreePreview == true)
+        // It opens only when the item is in the outline of the published course.
+        if (access.Reason is not (CourseItemAccessReason.NotACourseItem or CourseItemAccessReason.NotInCourse or CourseItemAccessReason.Staff or CourseItemAccessReason.Enrolled)
+            && item.Get<CourseItemPart>(nameof(CourseItemPart))?.FreePreview == true
+            && await IsInPublishedOutlineAsync(access.CourseId, item))
         {
             access.Reason = CourseItemAccessReason.FreePreview;
             access.LockedReason = null;
@@ -67,25 +70,33 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
     private async Task<CourseItemAccess> DecideAsync(ClaimsPrincipal user, ContentItem item)
     {
         var part = item?.Get<CourseItemPart>(nameof(CourseItemPart));
-        var courseId = part is null ? null : _courseStructure.GetCourseId(item);
 
-        if (courseId is null)
+        if (part is null)
         {
             return new CourseItemAccess { Reason = CourseItemAccessReason.NotACourseItem };
         }
 
+        var courseId = _courseStructure.GetCourseId(item);
         var access = new CourseItemAccess { CourseId = courseId };
         var authenticated = user?.Identity?.IsAuthenticated == true;
         var userId = authenticated ? user.FindFirstValue(ClaimTypes.NameIdentifier) : null;
 
-        if (authenticated)
+        if (authenticated
+            && (await _authorizationService.Value.AuthorizeAsync(user, LearningPermissions.ManageCourses)
+                || (courseId is not null && await _courseStructure.IsCourseStaffAsync(userId, courseId))
+                || await _authorizationService.Value.AuthorizeAsync(user, CommonPermissions.EditContent, item)))
         {
-            if (await _authorizationService.Value.AuthorizeAsync(user, LearningPermissions.ManageCourses) || await _courseStructure.IsCourseStaffAsync(userId, courseId))
-            {
-                access.Reason = CourseItemAccessReason.Staff;
+            access.Reason = CourseItemAccessReason.Staff;
 
-                return access;
-            }
+            return access;
+        }
+
+        // A course item that is not in a course fails closed: it is not public because ordinary View content allows it.
+        if (courseId is null)
+        {
+            access.Reason = CourseItemAccessReason.NotInCourse;
+
+            return access;
         }
 
         if (string.IsNullOrEmpty(userId))
@@ -183,5 +194,17 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
         access.Reason = CourseItemAccessReason.Enrolled;
 
         return access;
+    }
+
+    private async Task<bool> IsInPublishedOutlineAsync(string courseId, ContentItem item)
+    {
+        if (string.IsNullOrEmpty(courseId))
+        {
+            return false;
+        }
+
+        var course = await _courseStructure.GetCourseAsync(courseId);
+
+        return course is not null && (await _courseStructure.GetOutlineAsync(course)).Find(item.ContentItemId) is not null;
     }
 }

@@ -77,6 +77,24 @@ internal sealed class InMemoryCourses : ICourseStructureService
         return item;
     }
 
+    public ContentItem AddOrphan(string id, Action<CourseItemPart> configure = null)
+    {
+        var item = new ContentItem
+        {
+            ContentItemId = id,
+            ContentItemVersionId = id + "-v1",
+            ContentType = LearningConstants.ContentTypes.PageLesson,
+            DisplayText = "Item " + id,
+            Published = true,
+            Latest = true,
+        };
+
+        item.Alter<CourseItemPart>(part => configure?.Invoke(part));
+        _items[id] = item;
+
+        return item;
+    }
+
     public ContentItem Get(string id)
         => _items[id];
 
