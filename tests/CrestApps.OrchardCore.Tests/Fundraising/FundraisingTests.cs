@@ -23,8 +23,8 @@ public sealed class FundraisingTests
     [InlineData("25", 25)]
     [InlineData(" 40.5 ", 40.5)]
     [InlineData("10.555", 10.56)]
-    public void AnAmount_IsReadInTheInvariantCulture(string value, decimal expected)
-        => Assert.Equal(expected, DonationAmounts.Parse(value));
+    public void AnAmount_IsReadInTheInvariantCulture(string value, double expected)
+        => Assert.Equal(DecimalConversion.FromDouble(expected), DonationAmounts.Parse(value));
 
     [Theory]
     [InlineData(null)]
