@@ -231,6 +231,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
+| `CrestApps.OrchardCore.Approvals` | Approvals | [Approvals](./modules/approvals) |
 | `CrestApps.OrchardCore.Banking` | Banking | [Banking](./modules/banking) |
 | `CrestApps.OrchardCore.Checks` | Checks | [Checks](./modules/checks) |
 | `CrestApps.OrchardCore.Disbursements` | Disbursements | [Disbursements](./modules/disbursements) |

@@ -63,6 +63,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Memory.Elasticsearch/CrestApps.OrchardCore.AI.Memory.Elasticsearch.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.Prompting/CrestApps.OrchardCore.AI.Prompting.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AI.WebCrawlers/CrestApps.OrchardCore.AI.WebCrawlers.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Approvals/CrestApps.OrchardCore.Approvals.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Asterisk/CrestApps.OrchardCore.Asterisk.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.AzureAIInference/CrestApps.OrchardCore.AzureAIInference.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Banking/CrestApps.OrchardCore.Banking.csproj" PrivateAssets="none" />

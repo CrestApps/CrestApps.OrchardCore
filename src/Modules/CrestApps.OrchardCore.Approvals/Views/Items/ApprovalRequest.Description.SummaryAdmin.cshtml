@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Currencies
+@model ShapeViewModel<ApprovalRequest>
+
+@{
+    var request = Model.Value;
+}
+
+<div class="admin-list-secondary">
+    @request.PolicyTitle
+    <span> · @(string.IsNullOrEmpty(request.RequesterName) ? T["asked by a workflow"] : T["asked by {0}", request.RequesterName])</span>
+    @if (request.Amount is { } amount && !string.IsNullOrEmpty(request.Currency))
+    {
+        <span> · @CurrencyScale.Format(amount, request.Currency)</span>
+    }
+    <span> · @T["{0} of {1} approvals", request.ApprovalCount, request.RequiredApprovals]</span>
+</div>

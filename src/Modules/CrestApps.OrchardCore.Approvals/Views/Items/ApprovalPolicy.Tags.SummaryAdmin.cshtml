@@ -1,0 +1,22 @@
+@model ShapeViewModel<ApprovalPolicy>
+
+@{
+    var policy = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Approvals needed"]"><i class="fa-solid fa-user-check text-secondary me-1" aria-hidden="true"></i>@(policy.RequiredApprovals == 1 ? T["1 approval"] : T["{0} approvals", policy.RequiredApprovals])</span>
+@foreach (var rule in policy.Approvers)
+{
+    var label = rule.Kind switch
+    {
+        ApproverKind.Permission => T["Permission: {0}", rule.Value],
+        ApproverKind.Role => T["Role: {0}", rule.Value],
+        ApproverKind.Manager => T["The manager"],
+        _ => T["Named staff"],
+    };
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@label</span>
+}
+@if (policy.DueAfterHours is { } hours)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Due after"]"><i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@(hours == 1 ? T["Due in 1 hour"] : T["Due in {0} hours", hours])</span>
+}

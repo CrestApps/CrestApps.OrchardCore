@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ApprovalRequestedEvent>
+
+<header><h4><i class="fa-solid fa-hand" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Approval Requested"])</h4></header>
+<p class="hint">@T["Starts when someone asks for an approval. The workflow's correlation id is the request id. Input: RequestId, SubjectKind, SubjectId, Title, PolicyId, PolicyTitle, Status, Change, RequesterName, ApproverUserNames (comma separated, for Notify User Task), Decider, Note and DueUtc."]</p>

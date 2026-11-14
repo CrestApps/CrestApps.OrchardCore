@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ApprovalRejectedEvent>
+
+<p class="hint">@T["Starts when an approver rejects a request. Input: RequestId, SubjectKind, SubjectId, Title, PolicyId, PolicyTitle, Status, Change, RequesterName, ApproverUserNames (comma separated, for Notify User Task), Decider, Note and DueUtc."]</p>

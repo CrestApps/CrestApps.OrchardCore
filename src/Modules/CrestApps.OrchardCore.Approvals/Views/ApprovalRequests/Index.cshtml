@@ -1,0 +1,35 @@
+@model ApprovalRequestsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ApprovalRequests" title="@T["Approvals"]" />
+</zone>
+
+<form asp-action="Index" method="get" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 gy-2 align-items-center">
+                <div class="col">
+                    <select asp-for="Status" class="form-select" onchange="this.form.submit()" aria-label="@T["Status"]">
+                        <option value="Pending">@T["Waiting for a decision"]</option>
+                        <option value="Approved">@T["Approved"]</option>
+                        <option value="Rejected">@T["Rejected"]</option>
+                        <option value="Canceled">@T["Withdrawn"]</option>
+                        <option value="All">@T["All requests"]</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<admin-list name="ApprovalRequests" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No approval request matches."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Request" position="10" title="@T["Request"]" />
+        <admin-list-column name="Details" position="20" title="@T["Details"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

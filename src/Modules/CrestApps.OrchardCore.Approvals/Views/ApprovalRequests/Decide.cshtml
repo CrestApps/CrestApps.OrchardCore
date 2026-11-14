@@ -1,0 +1,123 @@
+@using CrestApps.OrchardCore.Currencies
+@model ApprovalDecideViewModel
+
+@{
+    var request = Model.Request;
+}
+
+<zone Name="Title">
+    <breadcrumb name="ApprovalRequestsDecide" title="@(string.IsNullOrEmpty(request.Title) ? T["Approval request"] : T["Request: {0}", request.Title])">
+        <breadcrumb-item id="ApprovalRequests" action="Index" controller="ApprovalRequests" area="CrestApps.OrchardCore.Approvals" permission="@ApprovalsPermissions.ViewApprovalRequests.Name">@T["Approvals"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["The request"]</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">@T["Asked"]</dt>
+                <dd class="col-sm-9">@request.Title</dd>
+                <dt class="col-sm-3">@T["Policy"]</dt>
+                <dd class="col-sm-9">@request.PolicyTitle</dd>
+                <dt class="col-sm-3">@T["Requested by"]</dt>
+                <dd class="col-sm-9">
+                    @if (string.IsNullOrEmpty(request.RequesterName))
+                    {
+                        @T["A workflow"]
+                    }
+                    else
+                    {
+                        @request.RequesterName
+                    }
+                    · @Model.CreatedLocal.ToString("g")
+                </dd>
+                @if (request.Amount is { } amount && !string.IsNullOrEmpty(request.Currency))
+                {
+                    <dt class="col-sm-3">@T["Amount"]</dt>
+                    <dd class="col-sm-9">@CurrencyScale.Format(amount, request.Currency)</dd>
+                }
+                @if (Model.DueLocal is { } due)
+                {
+                    <dt class="col-sm-3">@T["Due"]</dt>
+                    <dd class="col-sm-9">@due.ToString("g")</dd>
+                }
+                <dt class="col-sm-3">@T["Status"]</dt>
+                <dd class="col-sm-9">
+                    @(request.Status switch
+                    {
+                        ApprovalStatus.Approved => T["Approved"],
+                        ApprovalStatus.Rejected => T["Rejected"],
+                        ApprovalStatus.Canceled => string.IsNullOrEmpty(request.CancelReason) ? T["Withdrawn"] : T["Withdrawn: {0}", request.CancelReason],
+                        _ => T["Waiting: {0} of {1} approvals", request.ApprovalCount, request.RequiredApprovals],
+                    })
+                </dd>
+                @if (!string.IsNullOrEmpty(request.SubjectUrl))
+                {
+                    <dt class="col-sm-3">@T["Subject"]</dt>
+                    <dd class="col-sm-9"><a href="@Url.Content(request.SubjectUrl)">@T["Open what this is about"]</a></dd>
+                }
+            </dl>
+        </div>
+    </div>
+
+    @if (request.Decisions.Count > 0)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Decisions"]</div>
+            <ul class="list-group list-group-flush">
+                @for (var i = 0; i < request.Decisions.Count; i++)
+                {
+                    var decision = request.Decisions[i];
+                    <li class="list-group-item">
+                        <i class="fa-solid @(decision.Kind == ApprovalDecisionKind.Approve ? "fa-circle-check text-success" : "fa-circle-xmark text-danger") me-1" aria-hidden="true"></i>
+                        @(decision.Kind == ApprovalDecisionKind.Approve ? T["{0} approved", decision.UserName] : T["{0} rejected", decision.UserName])
+                        <span class="text-muted small">· @Model.DecisionTimes[i].ToString("g")</span>
+                        @if (!string.IsNullOrEmpty(decision.Note))
+                        {
+                            <div class="small">@decision.Note</div>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (request.Status == ApprovalStatus.Pending)
+    {
+        @if (Model.Eligibility.CanDecide)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Your decision"]</div>
+                <div class="card-body">
+                    <div class="ocat-wrapper" asp-validation-class-for="Note">
+                        <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+                        <div class="ocat-end">
+                            <textarea asp-for="Note" class="form-control" rows="3"></textarea>
+                            <span class="hint">@T["Required to reject: the requester sees it."]</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Model.Eligibility.Reason))
+        {
+            <div class="alert alert-info">@Model.Eligibility.Reason</div>
+        }
+    }
+
+    <div class="action-bar-bottom">
+        @if (request.Status == ApprovalStatus.Pending && Model.Eligibility.CanDecide)
+        {
+            <button class="btn btn-success" type="submit" name="decision" value="Approve">@T["Approve"]</button>
+            <button class="btn btn-danger" type="submit" name="decision" value="Reject">@T["Reject"]</button>
+        }
+        @if (Model.CanCancel)
+        {
+            <button class="btn btn-outline-secondary action-bar-secondary" type="submit" asp-action="Cancel" asp-route-id="@request.ItemId" data-title="@T["Withdraw"]" data-message="@T["Withdraw this request? Its approvers are no longer asked."]">@T["Withdraw"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Back"]</a>
+    </div>
+</form>

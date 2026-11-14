@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Approvals Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for approvals: the request store and index, the policy rules, who may decide (a permission, a
+      role, the subject's manager or named staff), the two built-in rules, and the notices to approvers through
+      Orchard Notifications.
+    </Description>
+    <PackageTags>$(PackageTags) Approvals Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Approvals" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Core" />
+    <PackageReference Include="OrchardCore.Roles.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Abstractions" />
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="CrestApps.Core.Data.YesSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Approvals.Abstractions\CrestApps.OrchardCore.Approvals.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Staff.Abstractions\CrestApps.OrchardCore.Staff.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,129 @@
+using CrestApps.Core;
+using CrestApps.Core.Models;
+
+namespace CrestApps.OrchardCore.Approvals.Models;
+
+/// <summary>
+/// The record of a decision someone asked for about a subject (an open kind and id, such as a pay run), with the
+/// policy that says who may decide it and the decisions made.
+/// </summary>
+public sealed class ApprovalRequest : CatalogItem, IModifiedUtcAwareModel
+{
+    /// <summary>
+    /// Gets or sets the kind of the subject, such as <c>PayRun</c>.
+    /// </summary>
+    public string SubjectKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the id of the subject.
+    /// </summary>
+    public string SubjectId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the access scope within the subject kind, such as an employer; the <c>ISourceAccess</c> of the
+    /// subject kind decides who sees the requests of each scope.
+    /// </summary>
+    public string AccessScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the page of the subject, application-relative (<c>~/...</c>), for the approver's notice.
+    /// </summary>
+    public string SubjectUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user ids of the people the subject is about, such as the employee of a pay change: none of
+    /// them may decide unless the policy allows it.
+    /// </summary>
+    public List<string> SubjectUserIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the staff member the subject is about, for a policy whose approver is the manager.
+    /// </summary>
+    public string SubjectStaffMemberId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what is asked, such as "Pay run 42, November 1 to 15".
+    /// </summary>
+    public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount, when there is one.
+    /// </summary>
+    public decimal? Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currency of the amount.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the policy's id.
+    /// </summary>
+    public string PolicyId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the policy's title when the request was made.
+    /// </summary>
+    public string PolicyTitle { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many approvals the request needs, copied from the policy when it was made.
+    /// </summary>
+    public int RequiredApprovals { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the requester's user id, or <see langword="null"/> when a workflow asked.
+    /// </summary>
+    public string RequesterUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the requester's name.
+    /// </summary>
+    public string RequesterName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status.
+    /// </summary>
+    public ApprovalStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the decisions made.
+    /// </summary>
+    public List<ApprovalDecision> Decisions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets why it was cancelled.
+    /// </summary>
+    public string CancelReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was made.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it is due, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? DueUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was decided or cancelled.
+    /// </summary>
+    public DateTime? ClosedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether it was imported as history.
+    /// </summary>
+    public bool IsHistorical { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it last changed.
+    /// </summary>
+    public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets the number of approvals made.
+    /// </summary>
+    public int ApprovalCount
+        => Decisions.Count(decision => decision.Kind == ApprovalDecisionKind.Approve);
+}

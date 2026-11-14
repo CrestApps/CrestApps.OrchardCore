@@ -20,6 +20,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Accounts.Abstractions/CrestApps.OrchardCore.Accounts.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Addresses.Abstractions/CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Approvals.Abstractions/CrestApps.OrchardCore.Approvals.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Banking.Abstractions/CrestApps.OrchardCore.Banking.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Checkout.Abstractions/CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Checks.Abstractions/CrestApps.OrchardCore.Checks.Abstractions.csproj" />
@@ -71,6 +72,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.AI.FileTransfer.Core/CrestApps.OrchardCore.AI.FileTransfer.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Accounts.Core/CrestApps.OrchardCore.Accounts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Addresses.Core/CrestApps.OrchardCore.Addresses.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Approvals.Core/CrestApps.OrchardCore.Approvals.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Banking.Core/CrestApps.OrchardCore.Banking.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Carts.Core/CrestApps.OrchardCore.Carts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
@@ -130,6 +132,7 @@
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CrestApps.OrchardCore.Accounts/CrestApps.OrchardCore.Accounts.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Addresses/CrestApps.OrchardCore.Addresses.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Approvals/CrestApps.OrchardCore.Approvals.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Assets/CrestApps.OrchardCore.Assets.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Banking/CrestApps.OrchardCore.Banking.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Checks/CrestApps.OrchardCore.Checks.csproj" />

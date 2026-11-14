@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Approvals.Workflows
+
+@model ApprovalTaskViewModel
+
+<p class="hint">@T["Asks for an approval under a policy."]</p>
+<div class="mb-3">
+    <label asp-for="Policy" class="form-label">@T["Policy (id or technical name)"]</label>
+    <input asp-for="Policy" class="form-control code" />
+    <span class="hint">@T["Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="SubjectKind" class="form-label">@T["Subject kind"]</label>
+    <input asp-for="SubjectKind" class="form-control code" />
+    <span class="hint">@T["Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="SubjectId" class="form-label">@T["Subject id"]</label>
+    <input asp-for="SubjectId" class="form-control code" />
+    <span class="hint">@T["Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="AccessScope" class="form-label">@T["Access scope"]</label>
+    <input asp-for="AccessScope" class="form-control code" />
+    <span class="hint">@T["Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Title" class="form-label">@T["Title"]</label>
+    <input asp-for="Title" class="form-control code" />
+    <span class="hint">@T["Liquid."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="SubjectUrl" class="form-label">@T["Subject page"]</label>
+    <input asp-for="SubjectUrl" class="form-control code" />
+    <span class="hint">@T["Liquid."]</span>
+</div>
