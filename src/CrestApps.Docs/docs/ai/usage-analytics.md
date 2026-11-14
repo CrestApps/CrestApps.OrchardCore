@@ -307,14 +307,14 @@ A measurement that the engine of the call cannot make is empty, as described in 
 
 ### Cost per call
 
-Each AI call's summary carries an estimated cost when prices are set under **Settings > Artificial Intelligence**, in **Costs**:
+Each AI call's summary carries an estimated cost when prices are set on the **Costs** tab of **Settings > Communication > Telephony**:
 
-- the **Currency** of the carrier's prices;
-- the carrier's price of a **Phone call, per minute** and of a **Text message**.
+- the **Currency** of the carrier's price;
+- the carrier's price of a **Phone call, per minute**.
 
 The AI part of the cost comes from the [prices of the deployment](#deployment-pricing) that answered the call: its text, audio and cached tokens at the token prices, and the call's length at an **Audio duration** price for a model billed by the minute.
 
-The cost is the call's minutes at the carrier's price, plus its tokens or minutes at its deployment's prices. When the carrier's prices and the deployment's prices are in different currencies, they cannot be added, and the summary keeps the AI part in the deployment's currency. It is written when the call ends, with the prices of that moment, so a price change applies to later calls only. It is an estimate: to match an invoice, see [Turning usage into cost](#turning-usage-into-cost).
+The cost is the call's minutes at the carrier's price, plus its tokens or minutes at its deployment's prices. When the carrier's price and the deployment's prices are in different currencies, they cannot be added, and the summary keeps the AI part in the deployment's currency. It is written when the call ends, with the prices of that moment, so a price change applies to later calls only. It is an estimate: to match an invoice, see [Turning usage into cost](#turning-usage-into-cost).
 
 ### Cost per model
 
