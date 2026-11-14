@@ -53,4 +53,25 @@ public interface ITicketObserver
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
     Task DeletedAsync(ContentItem ticket, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// A ticket was given to another assignee, or unassigned. Raised by every change that does it (an agent, team
+    /// assignment, a workflow), after the ticket is saved.
+    /// </summary>
+    /// <param name="ticket">The ticket; its <see cref="Models.TicketPart.AssigneeId"/> is the new assignee, if any.</param>
+    /// <param name="previousAssigneeId">Who had it before, if anyone.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task AssignedAsync(ContentItem ticket, string previousAssigneeId, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// A ticket moved to another status: solved, reopened, closed or any other move. Raised by every change that does
+    /// it, after the ticket is saved.
+    /// </summary>
+    /// <param name="ticket">The ticket.</param>
+    /// <param name="previous">The status it had, if it still exists.</param>
+    /// <param name="current">The status it has now.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task StatusChangedAsync(ContentItem ticket, Models.TicketStatus previous, Models.TicketStatus current, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

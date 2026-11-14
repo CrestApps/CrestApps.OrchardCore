@@ -1,7 +1,10 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Omnichannel.Messaging;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tickets.BackgroundTasks;
 using CrestApps.OrchardCore.Tickets.Core;
 using CrestApps.OrchardCore.Tickets.Core.Handlers;
@@ -13,9 +16,9 @@ using CrestApps.OrchardCore.Tickets.Migrations;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Navigation;
 using CrestApps.OrchardCore.Tickets.Recipes;
+using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using CrestApps.OrchardCore.Timeline;
-using CrestApps.OrchardCore.Records;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -26,10 +29,12 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tickets;
 
@@ -58,6 +63,13 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<TicketRow, TicketRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, TicketAutoCloseBackgroundTask>();
 
+        services
+            .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Received, LocalizationSource.Create<Startup>("Ticket received"))
+            .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Reply, LocalizationSource.Create<Startup>("Reply from an agent"), LocalizationSource.Create<Startup>("{{ Reply.Body }}, {{ Reply.AuthorName }}"))
+            .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Solved, LocalizationSource.Create<Startup>("Ticket solved"));
+        services.AddSiteDisplayDriver<TicketEmailSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(TicketEmailSettingsDisplayDriver.GroupId, TicketsPermissions.ManageTicketSettings);
+
         // The settings records' rules come with the feature that imports them.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketStatus>, TicketSettingsRecordHandler<TicketStatus>>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketPriority>, TicketSettingsRecordHandler<TicketPriority>>());
@@ -71,6 +83,35 @@ public sealed class Startup : StartupBase
 
         services.AddPermissionProvider<TicketsPermissionsProvider>();
         services.AddNavigationProvider<TicketsAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Offers Messaging's reply templates of the Tickets scope in the ticket composer, with what using one changes on the
+/// ticket.
+/// </summary>
+[RequireFeatures(MessagingConstants.Feature.Workspace)]
+public sealed class MessagingStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddMessageTemplateScope(TicketsConstants.ReplyTemplateScope, LocalizationSource.Create<MessagingStartup>("Tickets"));
+        services.TryAddScoped<ITicketReplyTemplateSource, MessagingTicketReplyTemplateSource>();
+        services.AddDisplayDriver<MessageTemplate, TicketMacroDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Tells agents through Orchard's notifications when a ticket is assigned to them.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class NotificationsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketAssignmentNotifier>());
     }
 }
 

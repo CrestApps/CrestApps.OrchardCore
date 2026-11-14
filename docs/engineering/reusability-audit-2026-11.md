@@ -211,6 +211,7 @@ Each row is one concept built more than once. "Canonical" is where the concept s
 
 | Concept | Copies today | Canonical | Action |
 | --- | --- | --- | --- |
+| E-mail template editors | Orders' `OrderEmailTemplateSettingsDisplayDriver` and view edit the store's templates by hand; Tickets uses the shared `TemplatedEmailTemplatesEditor` (Core) and its shape (Resources) | `TemplatedEmailTemplatesEditor` | Candidate: move Orders onto it (its settings keep `CommerceEmailTemplate`, so a small mapping) |
 | Resumable data upgrades | `ResumableSteps` (`C/YesSql.Core/Upgrades`) runs the Work Orders and Orders upgrades; Omnichannel's `OmnichannelBackfillState` keeps its own cursor and done flag for the same idea | `ResumableSteps` / `IResumableStep` | Candidate: move the Omnichannel backfills onto it (not in the Tickets PR) |
 | Audit stamping on catalog records | `C/Core/Handlers/AuditedCatalogEntryHandlerBase.cs` is used by 6 handlers (Shipping, Taxation); 17 other `CatalogEntryHandlerBase` subclasses copy its created/owner/author stamping, 10 byte-identical (AI.Core 3, AI.Mcp 3, AI.A2A 1, Omnichannel.Managements 7, Assets, Products, TimeZones) | `AuditedCatalogEntryHandlerBase` | Adopt it |
 | Created/updated timestamps in stores | The same `SavingAsync` hook in 11 stores across 5 projects (`CouponStore.cs:225`, `GiftCardStore.cs:124`, `SubscriptionStore.cs:167`, `TransactionStore.cs:174`, …) | A hook in the `DocumentCatalog` base | |

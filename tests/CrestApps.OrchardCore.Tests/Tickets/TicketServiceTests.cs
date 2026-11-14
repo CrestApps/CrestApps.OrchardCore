@@ -332,6 +332,22 @@ public sealed class TicketServiceTests
         Assert.Null(_items[pulled.ContentItemId].GetOrCreate<TicketPart>().AssigneeId);
     }
 
+    [Fact]
+    public async Task EveryPathThatAssignsOrMovesATicket_TellsTheObservers_Once()
+    {
+        // Arrange
+        var service = Create();
+        var ticket = (await service.CreateAsync(new TicketCreateRequest { Subject = "Printer jams", Requester = _requester, AssigneeId = "agent-1" }, TestContext.Current.CancellationToken)).Ticket;
+
+        // Act
+        await service.UpdateAsync(ticket.ContentItemId, new TicketUpdate { AssigneeId = "agent-2" }, cancellationToken: TestContext.Current.CancellationToken);
+        await service.ReplyAsync(ticket.ContentItemId, new TicketReply { Body = "Fixed.", Author = _agent, SetStatusId = "solved" }, TestContext.Current.CancellationToken);
+        await service.UpdateAsync(ticket.ContentItemId, new TicketUpdate { PriorityId = "urgent" }, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["assigned - -> agent-1", "assigned agent-1 -> agent-2", "status new -> solved"], _observed.Where(line => line.StartsWith("assigned", StringComparison.Ordinal) || line.StartsWith("status", StringComparison.Ordinal)));
+    }
+
     private static RecordRef Subject(ContentItem ticket)
         => new(TicketsConstants.RecordKind, ticket.ContentItemId);
 
@@ -378,6 +394,12 @@ public sealed class TicketServiceTests
         observer.Setup(value => value.CreatedAsync(It.IsAny<ContentItem>(), It.IsAny<CancellationToken>())).Callback(() => _observed.Add("created")).Returns(Task.CompletedTask);
         observer.Setup(value => value.MergedAsync(It.IsAny<ContentItem>(), It.IsAny<ContentItem>(), It.IsAny<CancellationToken>())).Callback(() => _observed.Add("merged")).Returns(Task.CompletedTask);
         observer.Setup(value => value.DeletedAsync(It.IsAny<ContentItem>(), It.IsAny<CancellationToken>())).Callback(() => _observed.Add("deleted")).Returns(Task.CompletedTask);
+        observer.Setup(value => value.AssignedAsync(It.IsAny<ContentItem>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((ContentItem item, string previous, CancellationToken _) => _observed.Add($"assigned {previous ?? "-"} -> {item.GetOrCreate<TicketPart>().AssigneeId}"))
+            .Returns(Task.CompletedTask);
+        observer.Setup(value => value.StatusChangedAsync(It.IsAny<ContentItem>(), It.IsAny<TicketStatus>(), It.IsAny<TicketStatus>(), It.IsAny<CancellationToken>()))
+            .Callback((ContentItem _, TicketStatus previous, TicketStatus current, CancellationToken _) => _observed.Add($"status {previous?.ItemId} -> {current?.ItemId}"))
+            .Returns(Task.CompletedTask);
 
         return new DefaultTicketService(
             contentManager.Object,

@@ -57,6 +57,10 @@ public sealed class DefaultTicketService : ITicketService
     private readonly IEnumerable<ITicketObserver> _observers;
     private readonly ILogger _logger;
 
+    // What each ticket changed under this service's lock was when it was loaded, so a save can tell observers that it
+    // was assigned or its status changed, whichever path made the change.
+    private readonly Dictionary<string, (string AssigneeId, string StatusId)> _snapshots = new(StringComparer.Ordinal);
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -268,13 +272,21 @@ public sealed class DefaultTicketService : ITicketService
         ticket.Apply(part);
         await _contentManager.UpdateAsync(ticket);
 
+        // The ticket starts in its first status, unassigned as far as observers are concerned.
+        _snapshots[ticket.ContentItemId] = (null, part.StatusId);
+
+        await NotifyAsync(observer => observer.CreatedAsync(ticket, cancellationToken));
+
+        if (!string.IsNullOrEmpty(part.AssigneeId))
+        {
+            await RaiseChangesAsync(ticket, part, cancellationToken);
+        }
+
         // A desk without a strategy leaves new tickets for an agent to take.
         if (string.IsNullOrEmpty(part.AssigneeId) && !string.IsNullOrEmpty(part.TeamId) && !string.IsNullOrEmpty(desk.AssignmentStrategy))
         {
             await AssignToTeamMemberAsync(ticket, part, settings, desk.AssignmentStrategy, TicketActor.Site, cancellationToken);
         }
-
-        await NotifyAsync(observer => observer.CreatedAsync(ticket, cancellationToken));
 
         return new TicketResult { Ticket = ticket };
     }
@@ -1092,6 +1104,9 @@ public sealed class DefaultTicketService : ITicketService
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            var loaded = ticket.GetOrCreate<TicketPart>();
+            _snapshots[ticket.ContentItemId] = (loaded.AssigneeId, loaded.StatusId);
+
             return await work(ticket);
         }
     }
@@ -1101,6 +1116,31 @@ public sealed class DefaultTicketService : ITicketService
         part.NextDueUtc = await GetNextDueAsync(ticket.ContentItemId, cancellationToken);
         ticket.Apply(part);
         await _contentManager.UpdateAsync(ticket);
+        await RaiseChangesAsync(ticket, part, cancellationToken);
+    }
+
+    // Tells observers a ticket was assigned or moved to another status since it was loaded (or created).
+    private async Task RaiseChangesAsync(ContentItem ticket, TicketPart part, CancellationToken cancellationToken)
+    {
+        if (!_snapshots.TryGetValue(ticket.ContentItemId, out var before))
+        {
+            return;
+        }
+
+        _snapshots[ticket.ContentItemId] = (part.AssigneeId, part.StatusId);
+
+        if (!string.Equals(before.AssigneeId, part.AssigneeId, StringComparison.Ordinal))
+        {
+            await NotifyAsync(observer => observer.AssignedAsync(ticket, before.AssigneeId, cancellationToken));
+        }
+
+        if (!string.Equals(before.StatusId, part.StatusId, StringComparison.Ordinal))
+        {
+            var previous = string.IsNullOrEmpty(before.StatusId) ? null : await _statuses.FindByIdAsync(before.StatusId, cancellationToken);
+            var current = await _statuses.FindByIdAsync(part.StatusId, cancellationToken);
+
+            await NotifyAsync(observer => observer.StatusChangedAsync(ticket, previous, current, cancellationToken));
+        }
     }
 
     private async Task<DateTime?> GetNextDueAsync(string ticketId, CancellationToken cancellationToken)

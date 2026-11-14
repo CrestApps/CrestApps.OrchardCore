@@ -37,6 +37,8 @@
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Title" />
+    <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="OrchardCore.Notifications.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,6 +49,8 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Tickets.Core\CrestApps.OrchardCore.Tickets.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Omnichannel.Messaging.Core\CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions\CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Teams\CrestApps.OrchardCore.Teams.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" />

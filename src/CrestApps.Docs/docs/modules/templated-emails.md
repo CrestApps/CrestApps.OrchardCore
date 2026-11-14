@@ -46,7 +46,11 @@ services
 
 The module keeps the site's templates where it likes, such as its settings, and returns them from its `ITemplatedEmailTemplateSource`: the kind's template when it's on, the group's layout and any values every template of the group reads. `LiquidTemplatedEmailTemplates` asks the sources in turn and renders what the first one that knows the kind gives; a kind no source knows goes as built.
 
-In a template the built HTML is `{{ Content }}`, the subject `{{ Subject }}`, the site's name `{{ SiteName }}`, each model by its name with its properties as written (`{{ Inspection.Number }}`), and each value by its name. A template's body replaces the built HTML, and the text part follows it; a layout goes around the HTML. Templates render with restricted Liquid: they read only these values, never Orchard's request, user or site objects or its own filters, and need no Liquid feature. A template that doesn't parse or fails to render gives the built e-mail.
+In a template the built HTML is `{{ Content }}`, the subject `{{ Subject }}`, the site's name `{{ SiteName }}`, each model by its name with its properties as written (`{{ Inspection.Number }}`), and each value by its name. A template's body replaces the built HTML, and the text part follows it; a layout goes around the HTML. Templates render with restricted Liquid: they read only these values, never Orchard's request, user or site objects, and need no Liquid feature. Dates show in the site's (or the user's) time zone and culture: `date`, `format_date` and `local` move a stored UTC time there, and `t` localizes a text with its arguments. Fluid's standard filters are kept; a template that uses any other filter is refused when it is saved. A template that doesn't parse or fails to render gives the built e-mail.
+
+## Editing a module's templates
+
+A module whose site templates live in its settings uses the shared editor rather than writing its own: its settings driver fills a `TemplatedEmailTemplatesEditorViewModel` with `TemplatedEmailTemplatesEditor.Build` (one template per kind of its group, and the layout), renders the `TemplatedEmailTemplatesEditor` shape (Resources), and reads it back with `TemplatedEmailTemplatesEditor.Apply`, which keeps the templates of kinds no feature registers now and reports each part that can't be used by its field name. Tickets edits its e-mails this way (**Settings > Tickets > E-mails**).
 
 ## Commerce
 

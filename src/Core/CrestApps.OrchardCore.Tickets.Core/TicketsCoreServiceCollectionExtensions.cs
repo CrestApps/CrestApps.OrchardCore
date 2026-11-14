@@ -25,6 +25,8 @@ public static class TicketsCoreServiceCollectionExtensions
         services.TryAddScoped<ITicketAccessService, DefaultTicketAccessService>();
         services.TryAddScoped<TicketAutoCloser>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberLoadSource, TicketTeamMemberLoadSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketEmailObserver>());
+        services.AddTemplatedEmailTemplateSource<TicketEmailTemplateSource>();
         services.AddServiceLevelScope<TicketServiceLevelScope>();
 
         return services;

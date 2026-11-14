@@ -422,6 +422,9 @@ public sealed class TicketsController : Controller
             IsReadOnly = readOnly,
             Draft = TempData?.Peek(DraftKey) is string draft && draft.StartsWith(id + "\n", StringComparison.Ordinal) ? PopDraft(id) : null,
             MergedInto = string.IsNullOrEmpty(part.MergedIntoId) ? null : await _tickets.GetAsync(part.MergedIntoId),
+            ReplyTemplates = !readOnly && _serviceProvider.GetService<ITicketReplyTemplateSource>() is { } replyTemplates
+                ? await replyTemplates.ListAsync(ticket, cancellationToken)
+                : [],
             FollowUpOf = string.IsNullOrEmpty(part.FollowUpOfId) ? null : await _tickets.GetAsync(part.FollowUpOfId),
         };
 
@@ -436,10 +439,11 @@ public sealed class TicketsController : Controller
     /// <param name="isInternal">Whether it's an internal note.</param>
     /// <param name="setStatusId">The status to set with it, if any.</param>
     /// <param name="files">The files to attach.</param>
+    /// <param name="replyTemplateId">The reply template used, whose changes to the ticket are applied with the reply.</param>
     /// <returns>The ticket page.</returns>
     [HttpPost]
     [Admin("tickets/{id}/reply", "TicketsReply")]
-    public async Task<IActionResult> Reply(string id, string body, bool isInternal, string setStatusId, List<IFormFile> files)
+    public async Task<IActionResult> Reply(string id, string body, bool isInternal, string setStatusId, List<IFormFile> files, string replyTemplateId = null)
     {
         var cancellationToken = HttpContext.RequestAborted;
 
@@ -486,6 +490,7 @@ public sealed class TicketsController : Controller
         }
 
         await _notifier.SuccessAsync(isInternal ? H["The note was added."] : H["The reply was sent."]);
+        await ApplyReplyTemplateAsync(result.Ticket ?? ticket, replyTemplateId, statusAlreadySet: !string.IsNullOrEmpty(setStatusId), cancellationToken);
 
         return RedirectToAction(nameof(Display), new { id });
     }
@@ -753,6 +758,37 @@ public sealed class TicketsController : Controller
         await NotifyAsync(await _tickets.DeleteAsync(id, cancellationToken), H["Ticket {0} was deleted.", ticket.GetOrCreate<TicketPart>().Number]);
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // Applies what the reply template used changes on the ticket (a macro), as far as the user may change it.
+    private async Task ApplyReplyTemplateAsync(ContentItem ticket, string replyTemplateId, bool statusAlreadySet, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(replyTemplateId) || _serviceProvider.GetService<ITicketReplyTemplateSource>() is not { } source
+            || await source.FindAsync(replyTemplateId, ticket, cancellationToken) is not { } template)
+        {
+            return;
+        }
+
+        var canEdit = await _access.CanAsync(User, ticket, TicketOperation.Edit, cancellationToken);
+        var canAssign = await _access.CanAsync(User, ticket, TicketOperation.Assign, cancellationToken);
+        var update = new TicketUpdate
+        {
+            StatusId = canEdit && !statusAlreadySet ? template.StatusId : null,
+            PriorityId = canEdit ? template.PriorityId : null,
+            TeamId = canAssign ? template.TeamId : null,
+        };
+
+        if (update.StatusId is null && update.PriorityId is null && update.TeamId is null)
+        {
+            return;
+        }
+
+        var result = await _tickets.UpdateAsync(ticket.ContentItemId, update, Actor(), cancellationToken);
+
+        foreach (var error in result.Errors)
+        {
+            await _notifier.WarningAsync(H["{0}", error]);
+        }
     }
 
     // Fills the new-ticket form's choices; false when the type isn't a ticket type or the user may create in no desk.

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -10,6 +11,12 @@ namespace CrestApps.OrchardCore.Tickets.Navigation;
 /// </summary>
 internal sealed class TicketsAdminMenu : AdminNavigationProvider
 {
+    private static readonly RouteValueDictionary _emailRouteValues = new()
+    {
+        { "area", "OrchardCore.Settings" },
+        { "groupId", Drivers.TicketEmailSettingsDisplayDriver.GroupId },
+    };
+
     private readonly ITicketAccessService _access;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -64,6 +71,10 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
                         .LocalNav())
                     .Add(S["Views"], S["Views"].PrefixPosition("4"), views => views
                         .Action("Index", "TicketViews", TicketsConstants.Features.Tickets)
+                        .Permission(TicketsPermissions.ManageTicketSettings)
+                        .LocalNav())
+                    .Add(S["E-mails"], S["E-mails"].PrefixPosition("5"), emails => emails
+                        .Action("Index", "Admin", _emailRouteValues)
                         .Permission(TicketsPermissions.ManageTicketSettings)
                         .LocalNav())));
 

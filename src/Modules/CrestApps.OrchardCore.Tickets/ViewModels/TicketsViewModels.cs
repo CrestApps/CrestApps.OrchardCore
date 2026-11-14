@@ -326,6 +326,11 @@ public sealed class TicketPageViewModel
     public bool IsReadOnly { get; set; }
 
     /// <summary>
+    /// Gets or sets the reply templates the composer offers, filled in for the ticket.
+    /// </summary>
+    public IReadOnlyList<TicketReplyTemplate> ReplyTemplates { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the text a refused reply kept.
     /// </summary>
     public string Draft { get; set; }
@@ -494,4 +499,37 @@ public sealed class TicketLinkView
     /// Gets or sets the linked record's admin address, if any.
     /// </summary>
     public string Url { get; set; }
+}
+
+/// <summary>
+/// What using a reply template on a ticket also changes.
+/// </summary>
+public class TicketMacroViewModel
+{
+    /// <summary>
+    /// Gets or sets the status the ticket moves to.
+    /// </summary>
+    public string StatusId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the priority the ticket gets.
+    /// </summary>
+    public string PriorityId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the team the ticket goes to.
+    /// </summary>
+    public string TeamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the statuses.
+    /// </summary>
+    [BindNever]
+    public List<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the priorities.
+    /// </summary>
+    [BindNever]
+    public List<SelectListItem> Priorities { get; set; } = [];
 }

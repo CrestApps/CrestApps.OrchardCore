@@ -114,6 +114,27 @@ public static class TicketsConstants
     }
 
     /// <summary>
+    /// The kinds of e-mail Tickets sends requesters, in the <see cref="EmailGroup"/> group.
+    /// </summary>
+    public static class EmailKinds
+    {
+        /// <summary>
+        /// The ticket was received.
+        /// </summary>
+        public const string Received = "ticket-received";
+
+        /// <summary>
+        /// An agent replied.
+        /// </summary>
+        public const string Reply = "ticket-reply";
+
+        /// <summary>
+        /// The ticket was solved.
+        /// </summary>
+        public const string Solved = "ticket-solved";
+    }
+
+    /// <summary>
     /// The display types of a ticket.
     /// </summary>
     public static class DisplayTypes
