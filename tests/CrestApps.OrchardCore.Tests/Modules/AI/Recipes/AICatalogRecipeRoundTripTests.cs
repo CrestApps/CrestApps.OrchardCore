@@ -5,6 +5,7 @@ using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.AI.Tooling.Instances;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.Deployments;
@@ -192,7 +193,7 @@ public sealed class AICatalogRecipeRoundTripTests
 
         var options = new AIOptions();
         options.AddToolInstanceSource("http-api-request", _ => { });
-        var handler = new AIToolInstanceStep(manager.Object, Mock.Of<INamedCatalog<AIToolInstance>>(), Options.Create(options), new PassThroughLocalizer<AIToolInstanceStep>());
+        var handler = new AIToolInstanceStep(manager.Object, Mock.Of<INamedCatalog<AIToolInstance>>(), Options.Create(options), Policy(), new PassThroughLocalizer<AIToolInstanceStep>());
         var context = CreateContext(JsonNode.Parse(ToolInstanceRecipe)!.AsObject());
 
         // Act
@@ -201,6 +202,38 @@ public sealed class AICatalogRecipeRoundTripTests
         // Assert
         Assert.Empty(context.Errors);
         manager.Verify(x => x.CreateAsync(It.Is<AIToolInstance>(i => i.Name == "Order Lookup API"), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AIToolInstanceStep_RefusesAnHttpApiRequestWhoseBaseUrlIsOnTheSitesOwnNetwork()
+    {
+        // Arrange (H4): the editor refuses this base URL; a recipe could still save it and have the model call it.
+        var manager = new Mock<ISourceCatalogManager<AIToolInstance>>();
+        manager
+            .Setup(x => x.NewAsync("http-api-request", It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns((string source, JsonNode data, CancellationToken _) =>
+            {
+                var instance = new AIToolInstance { Source = source, Name = data[nameof(AIToolInstance.Name)]!.GetValue<string>() };
+
+                instance.Put(new HttpApiRequestToolSettings { BaseUrl = "http://169.254.169.254/latest/meta-data/" });
+
+                return ValueTask.FromResult(instance);
+            });
+        manager
+            .Setup(x => x.ValidateAsync(It.IsAny<AIToolInstance>(), It.IsAny<CancellationToken>()))
+            .Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+
+        var options = new AIOptions();
+        options.AddToolInstanceSource("http-api-request", _ => { });
+        var handler = new AIToolInstanceStep(manager.Object, Mock.Of<INamedCatalog<AIToolInstance>>(), Options.Create(options), Policy(), new PassThroughLocalizer<AIToolInstanceStep>());
+        var context = CreateContext(JsonNode.Parse(ToolInstanceRecipe)!.AsObject());
+
+        // Act
+        await handler.ExecuteAsync(context);
+
+        // Assert
+        Assert.NotEmpty(context.Errors);
+        manager.Verify(x => x.CreateAsync(It.IsAny<AIToolInstance>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

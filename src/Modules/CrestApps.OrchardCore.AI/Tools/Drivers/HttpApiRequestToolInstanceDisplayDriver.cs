@@ -2,6 +2,7 @@ using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.AI.Tooling.Instances;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
@@ -23,6 +24,7 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
     private static readonly string[] _httpMethods = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -30,12 +32,15 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
     /// Initializes a new instance of the <see cref="HttpApiRequestToolInstanceDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider used to protect stored credentials.</param>
+    /// <param name="endpointPolicy">The policy that keeps the base URL and token endpoint off the site's own network.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public HttpApiRequestToolInstanceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IAIEndpointPolicy endpointPolicy,
         IStringLocalizer<HttpApiRequestToolInstanceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _endpointPolicy = endpointPolicy;
         S = stringLocalizer;
     }
 
@@ -91,6 +96,10 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
             (baseUrl.Scheme != Uri.UriSchemeHttp && baseUrl.Scheme != Uri.UriSchemeHttps))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["The base URL must be an absolute HTTP or HTTPS URL."]);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.BaseUrl) && !_endpointPolicy.IsAllowed(model.BaseUrl))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.BaseUrl), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
         }
 
         if (model.TimeoutSeconds.HasValue && model.TimeoutSeconds.Value <= 0)
@@ -165,6 +174,10 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
                 if (string.IsNullOrEmpty(settings.TokenEndpoint))
                 {
                     context.Updater.ModelState.AddModelError(Prefix, nameof(model.TokenEndpoint), S["The token endpoint is required."]);
+                }
+                else if (!_endpointPolicy.IsAllowed(settings.TokenEndpoint))
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.TokenEndpoint), S["This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections."]);
                 }
 
                 if (string.IsNullOrEmpty(settings.ClientId))

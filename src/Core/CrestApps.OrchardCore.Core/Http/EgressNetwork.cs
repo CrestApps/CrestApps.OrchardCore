@@ -38,6 +38,17 @@ public static class EgressNetwork
     /// </summary>
     public const string UseSystemProxyKey = "CrestApps:Egress:UseSystemProxy";
 
+    // Cloud metadata and platform services that answer outside the link-local range, refused even where a private
+    // network is allowed: AWS over IPv6 (fd00:ec2::254), the Azure host (168.63.129.16), Alibaba Cloud
+    // (100.100.100.200) and Oracle Cloud (192.0.0.192).
+    private static readonly IPAddress[] _metadataServices =
+    [
+        IPAddress.Parse("fd00:ec2::254"),
+        IPAddress.Parse("168.63.129.16"),
+        IPAddress.Parse("100.100.100.200"),
+        IPAddress.Parse("192.0.0.192"),
+    ];
+
     /// <summary>
     /// Returns whether an address is on the site's own network: loopback, private, link-local, shared (carrier-grade
     /// NAT), IETF protocol assignments (192.0.0.0/24), benchmarking (198.18.0.0/15), multicast, reserved, broadcast or
@@ -177,8 +188,8 @@ public static class EgressNetwork
     /// </summary>
     /// <param name="allowLoopback">Whether loopback addresses are allowed (development only).</param>
     /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed, for hosts that run local
-    /// services on purpose (a local model host). Link-local addresses, the cloud metadata service among them, are refused
-    /// even then.</param>
+    /// services on purpose (a local model host). Link-local addresses and the cloud metadata services are refused even
+    /// then.</param>
     /// <param name="allowRedirects">Whether redirects are followed. Each hop is checked at connect.</param>
     public static SocketsHttpHandler CreateHandler(bool allowLoopback, bool allowPrivateNetwork, bool allowRedirects)
         => CreateHandler(allowLoopback, allowPrivateNetwork, allowRedirects, proxy: null);
@@ -233,7 +244,8 @@ public static class EgressNetwork
     /// </summary>
     /// <param name="address">The address.</param>
     /// <param name="allowLoopback">Whether loopback addresses are allowed.</param>
-    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed (never link-local).</param>
+    /// <param name="allowPrivateNetwork">Whether private and loopback addresses are allowed (never link-local, never a
+    /// cloud metadata service).</param>
     public static bool IsRefused(IPAddress address, bool allowLoopback, bool allowPrivateNetwork)
     {
         ArgumentNullException.ThrowIfNull(address);
@@ -243,12 +255,39 @@ public static class EgressNetwork
             return false;
         }
 
-        if (IsLinkLocal(address))
+        if (IsLinkLocal(address) || IsMetadataService(address))
         {
             return true;
         }
 
         return !allowPrivateNetwork && !(allowLoopback && IPAddress.IsLoopback(address));
+    }
+
+    /// <summary>
+    /// Whether the address is a cloud metadata or platform service that answers outside the link-local range
+    /// (<c>fd00:ec2::254</c>, <c>168.63.129.16</c>, <c>100.100.100.200</c>, <c>192.0.0.192</c>), directly or embedded in a
+    /// mapped, NAT64 or 6to4 address. Like a link-local address, it is never allowed, even on a private network.
+    /// </summary>
+    /// <param name="address">The address.</param>
+    public static bool IsMetadataService(IPAddress address)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetworkV6 && TryGetEmbeddedIPv4(address.GetAddressBytes(), out var embedded))
+        {
+            address = embedded;
+        }
+
+        address = address.AddressFamily == AddressFamily.InterNetworkV6 && address.ScopeId != 0
+            ? new IPAddress(address.GetAddressBytes())
+            : address;
+
+        return _metadataServices.Contains(address);
     }
 
     /// <summary>
