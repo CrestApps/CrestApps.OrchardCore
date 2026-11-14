@@ -94,7 +94,6 @@ public static class AIEgress
 
         foreach (var name in GuardedClientNames)
         {
-            services.AddHttpClient(name);
             services.PostConfigure<HttpClientFactoryOptions>(name, options => options.HttpMessageHandlerBuilderActions.Add(builder =>
             {
                 var serviceProvider = builder.Services;

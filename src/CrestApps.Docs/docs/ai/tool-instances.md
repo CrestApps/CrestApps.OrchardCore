@@ -42,6 +42,8 @@ The feature always registers the built-in `http-api-request` source, so a usable
 
 All secrets (API key, token, password, and client secret) are encrypted with ASP.NET Core data protection before they are stored. When you edit an existing instance, leaving a secret field empty keeps the previously stored value.
 
+The base URL and the OAuth 2.0 token endpoint may not be on the site's own network (loopback, private, link-local, the cloud metadata services), in the editor, in the `AIToolInstances` recipe step and when a host name resolves to such an address. The request is sent through the AI egress guard, which checks every address it connects to, redirects included. A host that runs internal APIs on purpose sets `CrestApps:AI:Egress:AllowPrivateNetwork` to `true`; the cloud metadata services stay refused.
+
 ## The documentation search sources
 
 The feature also registers four built-in sources that turn a public documentation site into a searchable tool instance, so the AI model can answer questions from product or framework documentation without indexing it into a vector store. Each configured instance binds one site and is exposed to the model as its own function, so you can offer "search the CrestApps docs" and "search the Orchard Core docs" as two distinct tools.
