@@ -316,7 +316,7 @@ public sealed class PayrollColumnsViewModel
 }
 
 /// <summary>
-/// A worker's time clock page: their kiosk PIN, pay rates and attendance points.
+/// A worker's time clock page: their kiosk PIN, attendance points and, read only, their pay rates.
 /// </summary>
 public sealed class WorkerTimeClockViewModel
 {
@@ -347,14 +347,5 @@ public sealed class WorkerTimeClockViewModel
     [BindNever]
     public IReadOnlyDictionary<string, string> ActivityNames { get; set; }
 
-    [BindNever]
-    public IList<SelectListItem> ActivityOptions { get; set; } = [];
-
     public string Pin { get; set; }
-
-    public DateOnly? RateFrom { get; set; }
-
-    public decimal? HourlyRate { get; set; }
-
-    public string RateActivityCodeId { get; set; }
 }

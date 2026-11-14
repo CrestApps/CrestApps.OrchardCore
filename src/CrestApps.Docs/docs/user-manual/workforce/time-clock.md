@@ -118,7 +118,7 @@ Several timesheets can be approved at once from the list. **Make this period's t
 
 Under **Workforce > Time Management > Payroll Export**, choose the pay period. The counts show how many timesheets are open, submitted, approved and locked. **Export locked timesheets** writes a CSV file with a row per worker and pay code, which you download from the list of exports. Each timesheet is exported once; tick **Export again the ones already exported** to include them again.
 
-**Choose the CSV columns** sets the file's columns and headings: payroll id, employee number, name, pay code, day, hours, rate, amount, period, activity and job. A day, activity or job column gives a row per day, activity or job. Rates come from the worker's **pay rates** under **Workers > Actions > Time clock** (people with the View pay rates permission see them): a rate an hour from a day on, for all work or one activity. The amount is the hours times the rate and the code's multiplier, or the hours times a differential's premium.
+**Choose the CSV columns** sets the file's columns and headings: payroll id, employee number, name, pay code, day, hours, rate, amount, period, activity and job. A day, activity or job column gives a row per day, activity or job. Rates come from the staff member's **Pay** card (Staff Compensation): a rate an hour from a day on, for all work or one activity. People with the View pay rates permission see them, read only, under **Workers > Actions > Time clock**; people who manage staff pay change them in the **Pay** card. The amount is the hours times the rate and the code's multiplier, or the hours times a differential's premium.
 
 ## Pay codes
 

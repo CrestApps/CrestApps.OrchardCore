@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Staff.ViewModels;
 using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -27,6 +28,7 @@ internal sealed class StaffProfileDisplayDriver : DisplayDriver<StaffMember>
     private readonly StaffTeamReader _teams;
     private readonly ILocalClock _localClock;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
 
     public StaffProfileDisplayDriver(
         IStaffHierarchy hierarchy,
@@ -36,8 +38,10 @@ internal sealed class StaffProfileDisplayDriver : DisplayDriver<StaffMember>
         IUserSearchService userSearchService,
         StaffTeamReader teams,
         ILocalClock localClock,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService)
     {
+        _authorizationService = authorizationService;
         _hierarchy = hierarchy;
         _historyService = historyService;
         _directory = directory;
@@ -111,14 +115,17 @@ internal sealed class StaffProfileDisplayDriver : DisplayDriver<StaffMember>
         };
 
         var rows = new List<StaffHistoryRowViewModel>(history.Count);
+        var user = _httpContextAccessor.HttpContext?.User;
+        var seesPay = user is not null && history.Any(entry => entry.Field == StaffHistoryFields.Pay)
+            && await _authorizationService.AuthorizeAsync(user, StaffPermissions.ManageStaffPay);
 
         foreach (var entry in history)
         {
             rows.Add(new StaffHistoryRowViewModel
             {
                 Field = entry.Field,
-                From = Show(entry.Field, entry.From),
-                To = Show(entry.Field, entry.To),
+                From = entry.Field == StaffHistoryFields.Pay && !seesPay ? null : Show(entry.Field, entry.From),
+                To = entry.Field == StaffHistoryFields.Pay && !seesPay ? null : Show(entry.Field, entry.To),
                 ChangedBy = entry.ChangedByUserId is { } userId ? users.GetValueOrDefault(userId, userId) : null,
                 ChangedLocal = (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(entry.ChangedUtc, DateTimeKind.Utc))).DateTime,
             });

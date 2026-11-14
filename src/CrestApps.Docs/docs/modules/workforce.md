@@ -359,7 +359,7 @@ The **Workforce API** feature maps `api/workforce/v1` with the API authenticatio
 | `ApproveTimesheets` (Approve timesheets) | Approving timesheets, attendance exceptions and punch corrections of the teams the user manages. |
 | `EditPunches` (Edit punches) | Adding, changing and removing punches. |
 | `ExportPayroll` (Export payroll) | Locking periods and exporting payroll. |
-| `ViewPayRates` (View pay rates) | Workers' pay rates. |
+| `ViewPayRates` (View pay rates) | Workers' pay rates, read only, on the worker's time clock page. Rates are edited only in the Staff Compensation **Pay** card, under `ManageStaffPay`. |
 | `PunchTime` (Clock in and out) | The time clock and timesheet in My Work. Authenticated users have it by default. |
 | `UseWorkforcePortal` (Use the My Work portal) | The My Work portal. Authenticated users have it by default. |
 | `RequestTimeOff` (Request time off) | Requesting one's own time off, in the self-service portal. Not implied by Manage the whole workforce. |

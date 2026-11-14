@@ -6,7 +6,7 @@ user_manual:
   - user-manual/workforce/teams
 ---
 
-The **Teams** module keeps one team hierarchy for the site, so Workforce, Contact Center and any other module that organizes people use the same teams. A team has a name, a kind (`Organization`, `Region`, `Site`, `Department`, `Team` or `Crew`), an optional parent, a description, a linked role, a time zone and whether it is in use. A module that needs more about a team keeps it on the team itself and adds its own section to the team editor.
+The **Teams** module keeps one team hierarchy for the site, so Workforce, Contact Center and any other module that organizes people use the same teams. A team has a name, a kind (`Organization`, `Region`, `Site`, `Department`, `Team` or `Crew`), an optional parent, a description, a linked role, a time zone, an optional structured address (`Address`, from the Addresses building block) and whether it is in use. With Addresses on, the team editor has an **Address** card laid out for the address's country; the `Teams` recipe and deployment steps carry the address. A module that needs more about a team keeps it on the team itself and adds its own section to the team editor.
 
 The admin screens are described in the User Manual: [Teams](../user-manual/workforce/teams.md).
 
@@ -41,7 +41,7 @@ Register the services with `services.AddTeamsCore()`. The call is safe to repeat
 | `ITeamDeletionGuard` | `ITeamManager.GetDeletionBlockersAsync`, which the **Delete** action calls first. | Refusing to delete a team the module still uses. Return the reason, shown to the person deleting it, or `null`. Register it with `services.AddTeamDeletionGuard<TGuard>()`. |
 | `DisplayDriver<Team>` | The team editor, and the rows of the team list. | Adding a section to the editor (a shape in the `Content` zone, after the Teams card at `Content:1`) or actions to a row's menu (between **Add a team under it** at `ActionsMenu:5` and **Delete** at `ActionsMenu:100`). |
 
-A module keeps its own data on the team with `team.Put(settings)` and `team.TryGet<TSettings>(out var settings)`, as on any catalog item. Workforce adds `WorkforceTeamSettings` (the site address and coordinates, the calendar, the crew lead, and the open shift, trade, time off and time clock policies) with the helpers `team.GetWorkforceSettings()` and `team.AlterWorkforceSettings(settings => ...)`.
+A module keeps its own data on the team with `team.Put(settings)` and `team.TryGet<TSettings>(out var settings)`, as on any catalog item. Workforce adds `WorkforceTeamSettings` (the site's geofence coordinates, geocoded from the team's address when left empty, the calendar, the crew lead, and the open shift, trade, time off and time clock policies) with the helpers `team.GetWorkforceSettings()` and `team.AlterWorkforceSettings(settings => ...)`.
 
 ```csharp
 public sealed class RosterTeamDisplayDriver : DisplayDriver<Team>

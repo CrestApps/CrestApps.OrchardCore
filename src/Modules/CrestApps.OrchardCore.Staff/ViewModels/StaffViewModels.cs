@@ -322,6 +322,12 @@ public class AddStaffCertificateViewModel
 
 public class StaffPayProfileViewModel
 {
+    public StaffPayBasis PayBasis { get; set; }
+
+    public string Currency { get; set; }
+
+    public IList<CrestApps.OrchardCore.Staff.Drivers.StaffSalaryRowViewModel> Salaries { get; set; } = [];
+
     public decimal? CurrentRate { get; set; }
 
     public decimal? AnnualSalary { get; set; }

@@ -5,6 +5,8 @@ using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;
 using CrestApps.OrchardCore.Staff;
 using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.Teams.Services;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Workforce.Migrations;
@@ -15,13 +17,16 @@ internal sealed class WorkforceMigrations : DataMigration
     private readonly IStore _store;
     private readonly ISession _session;
     private readonly IShellFeaturesManager _shellFeaturesManager;
+    private readonly ShellSettings _shellSettings;
 
     public WorkforceMigrations(
         ActivityCodeSeeder activityCodeSeeder,
         IStore store,
         ISession session,
-        IShellFeaturesManager shellFeaturesManager)
+        IShellFeaturesManager shellFeaturesManager,
+        ShellSettings shellSettings)
     {
+        _shellSettings = shellSettings;
         _shellFeaturesManager = shellFeaturesManager;
         _activityCodeSeeder = activityCodeSeeder;
         _store = store;
@@ -34,7 +39,7 @@ internal sealed class WorkforceMigrations : DataMigration
         await _activityCodeSeeder.SeedAsync();
 
         // Teams live in the Teams module and workers are staff members from the start, so there is nothing to move.
-        return 3;
+        return 4;
     }
 
     // Teams were kept in the Workforce collection before they had their own module.
@@ -74,5 +79,19 @@ internal sealed class WorkforceMigrations : DataMigration
         await WorkforceWorkersMove.MoveAsync(SchemaBuilder, _store, _session);
 
         return 3;
+    }
+
+    // A team's address moved from Workforce's one line to the team's own structured address. The move runs once the
+    // tenant's scope ends, through the team manager, so it never opens a second connection during activation.
+    public int UpdateFrom3()
+    {
+        if (_shellSettings.IsInitializing())
+        {
+            return 4;
+        }
+
+        ShellScope.AddDeferredTask(scope => WorkforceTeamAddressMove.MoveAsync(scope.ServiceProvider.GetRequiredService<ITeamManager>()));
+
+        return 4;
     }
 }

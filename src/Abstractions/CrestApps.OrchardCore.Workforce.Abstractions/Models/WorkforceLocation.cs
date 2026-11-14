@@ -1,15 +1,11 @@
 namespace CrestApps.OrchardCore.Workforce.Models;
 
 /// <summary>
-/// A place: an address and, when known, its coordinates.
+/// The point a site's time clock geofence is measured from. The address itself is the team's own
+/// (<c>Team.Address</c>); this point is geocoded from it, or set by hand when the entrance is elsewhere.
 /// </summary>
 public sealed class WorkforceLocation
 {
-    /// <summary>
-    /// Gets or sets the address as one line.
-    /// </summary>
-    public string Address { get; set; }
-
     /// <summary>
     /// Gets or sets the latitude, or <see langword="null"/> when unknown.
     /// </summary>
