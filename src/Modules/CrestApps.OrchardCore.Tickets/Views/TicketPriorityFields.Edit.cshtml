@@ -1,0 +1,20 @@
+@model TicketPriorityViewModel
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label ocat-label-required">@T["Name"]</label>
+    <input asp-for="Name" class="form-control" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+    <span class="hint">@T["Service-level targets are set per priority name."]</span>
+</div>
+
+<div class="row">
+    <div class="mb-3 col-md-6">
+        <label asp-for="Rank" class="form-label">@T["Rank"]</label>
+        <input asp-for="Rank" class="form-control" type="number" />
+        <span class="hint">@T["Higher is more urgent; lists sorted by priority put the highest first."]</span>
+    </div>
+    <div class="mb-3 col-md-6">
+        <label asp-for="Color" class="form-label">@T["Color"]</label>
+        <input asp-for="Color" class="form-control form-control-color" type="color" />
+    </div>
+</div>

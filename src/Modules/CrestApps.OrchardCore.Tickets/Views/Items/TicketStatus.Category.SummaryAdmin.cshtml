@@ -1,0 +1,19 @@
+@model ShapeViewModel<TicketStatus>
+
+@{
+    var category = Model.Value.Category switch
+    {
+        TicketStatusCategory.New => T["New"],
+        TicketStatusCategory.Open => T["Open"],
+        TicketStatusCategory.Pending => T["Pending"],
+        TicketStatusCategory.OnHold => T["On hold"],
+        TicketStatusCategory.Solved => T["Solved"],
+        _ => T["Closed"],
+    };
+}
+
+<span class="badge ta-badge fw-normal">@category</span>
+@if (Model.Value.PausesTimers)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Service-level timers stop in this status"]"><i class="fa-solid fa-pause me-1" aria-hidden="true"></i>@T["Pauses timers"]</span>
+}

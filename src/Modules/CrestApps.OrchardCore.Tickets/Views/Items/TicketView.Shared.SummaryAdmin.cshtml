@@ -1,0 +1,3 @@
+@model ShapeViewModel<TicketView>
+
+<span class="badge ta-badge fw-normal">@(string.IsNullOrEmpty(Model.Value.OwnerId) ? T["Everyone"].Value : T["Its owner"].Value)</span>

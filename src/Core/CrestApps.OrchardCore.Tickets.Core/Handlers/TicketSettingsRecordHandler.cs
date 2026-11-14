@@ -1,0 +1,98 @@
+using System.ComponentModel.DataAnnotations;
+using CrestApps.Core.Handlers;
+using CrestApps.Core.Models;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Tickets.Models;
+using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.Tickets.Core.Handlers;
+
+/// <summary>
+/// Keeps a ticket settings record (a status, a priority, a desk or a saved view) tidy: a recipe's JSON is applied, the
+/// time stamps are set, and the name is required and unique.
+/// </summary>
+/// <typeparam name="T">The record.</typeparam>
+public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
+    where T : CatalogItem, ITicketSettingsRecord
+{
+    private readonly ICatalog<T> _store;
+    private readonly IClock _clock;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketSettingsRecordHandler{T}"/> class.
+    /// </summary>
+    /// <param name="store">The records.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TicketSettingsRecordHandler(ICatalog<T> store, IClock clock, IStringLocalizer<TicketSettingsRecordHandler<T>> stringLocalizer)
+    {
+        _store = store;
+        _clock = clock;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override Task InitializingAsync(InitializingContext<T> context, CancellationToken cancellationToken = default)
+    {
+        // A recipe creates the record from its JSON; the editor hands none.
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task CreatingAsync(CreatingContext<T> context, CancellationToken cancellationToken = default)
+    {
+        context.Model.Name = context.Model.Name?.Trim();
+
+        if (context.Model.CreatedUtc == default)
+        {
+            context.Model.CreatedUtc = _clock.UtcNow;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task UpdatingAsync(UpdatingContext<T> context, CancellationToken cancellationToken = default)
+    {
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+        context.Model.Name = context.Model.Name?.Trim();
+        context.Model.ModifiedUtc = _clock.UtcNow;
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override async Task ValidatingAsync(ValidatingContext<T> context, CancellationToken cancellationToken = default)
+    {
+        var name = context.Model.Name?.Trim();
+
+        if (string.IsNullOrEmpty(name))
+        {
+            context.Result.Fail(new ValidationResult(S["The name is required."], [nameof(ITicketSettingsRecord.Name)]));
+
+            return;
+        }
+
+        // Saved views are per owner, so two people may each have one called "My open tickets".
+        if (context.Model is TicketView)
+        {
+            return;
+        }
+
+        foreach (var other in await _store.GetAllAsync(cancellationToken))
+        {
+            if (!string.Equals(other.ItemId, context.Model.ItemId, StringComparison.Ordinal) && string.Equals(other.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Result.Fail(new ValidationResult(S["Another one is already called {0}.", name], [nameof(ITicketSettingsRecord.Name)]));
+
+                return;
+            }
+        }
+    }
+}

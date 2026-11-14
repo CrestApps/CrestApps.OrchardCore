@@ -1,0 +1,110 @@
+using CrestApps.OrchardCore.Tickets.Models;
+using YesSql.Indexes;
+
+namespace CrestApps.OrchardCore.Tickets.Core.Indexes;
+
+/// <summary>
+/// The columns ticket lists, saved views and reports filter and sort on.
+/// </summary>
+public sealed class TicketIndex : MapIndex
+{
+    /// <summary>
+    /// Gets or sets the ticket's content item id.
+    /// </summary>
+    public string ContentItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ticket type.
+    /// </summary>
+    public string ContentType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ticket number.
+    /// </summary>
+    public string Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subject, cut to the column's length.
+    /// </summary>
+    public string Subject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the desk.
+    /// </summary>
+    public string DeskId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status.
+    /// </summary>
+    public string StatusId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status's category.
+    /// </summary>
+    public TicketStatusCategory StatusCategory { get; set; }
+
+    /// <summary>
+    /// Gets or sets the priority.
+    /// </summary>
+    public string PriorityId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the priority's rank, for sorting.
+    /// </summary>
+    public int PriorityRank { get; set; }
+
+    /// <summary>
+    /// Gets or sets the team.
+    /// </summary>
+    public string TeamId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the assignee.
+    /// </summary>
+    public string AssigneeId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the requester, as <c>Kind:Id</c>.
+    /// </summary>
+    public string Requester { get; set; }
+
+    /// <summary>
+    /// Gets or sets the account.
+    /// </summary>
+    public string AccountId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel it came in on.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ticket it was merged into.
+    /// </summary>
+    public string MergedIntoId { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was opened, in UTC.
+    /// </summary>
+    public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it last changed, in UTC.
+    /// </summary>
+    public DateTime ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the earliest due time of its running service-level timers, in UTC.
+    /// </summary>
+    public DateTime? NextDueUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was last solved, in UTC.
+    /// </summary>
+    public DateTime? SolvedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was closed, in UTC.
+    /// </summary>
+    public DateTime? ClosedUtc { get; set; }
+}

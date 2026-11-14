@@ -1,0 +1,63 @@
+@model TicketViewViewModel
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label ocat-label-required">@T["Name"]</label>
+    <input asp-for="Name" class="form-control" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+
+<div class="row">
+    <div class="mb-3 col-md-6">
+        <label class="form-label">@T["Status categories"]</label>
+        @foreach (var category in Enum.GetValues<TicketStatusCategory>())
+        {
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Categories)" value="@category" id="category-@category" checked="@Model.Categories.Contains(category)" />
+                <label class="form-check-label" for="category-@category">@category</label>
+            </div>
+        }
+        <span class="hint">@T["Leave all unchecked to list every category."]</span>
+    </div>
+    <div class="mb-3 col-md-6">
+        <label asp-for="DeskIds" class="form-label">@T["Desks"]</label>
+        <select asp-for="DeskIds" asp-items="Model.Desks" class="form-select" multiple size="4"></select>
+        <span class="hint">@T["Leave none selected to list every desk the user may see."]</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="mb-3 col-md-4">
+        <label asp-for="Assignee" class="form-label">@T["Assigned to"]</label>
+        <select asp-for="Assignee" class="form-select">
+            <option value="">@T["Anybody"]</option>
+            <option value="@TicketAssignees.Me">@T["The user looking"]</option>
+            <option value="@TicketAssignees.Unassigned">@T["Nobody"]</option>
+        </select>
+    </div>
+    <div class="mb-3 col-md-4">
+        <label asp-for="DueWithinHours" class="form-label">@T["Due within (hours)"]</label>
+        <input asp-for="DueWithinHours" class="form-control" type="number" min="0" />
+        <span class="hint">@T["Only tickets with a service-level target due within this many hours, or overdue."]</span>
+    </div>
+    <div class="mb-3 col-md-4">
+        <label asp-for="Sort" class="form-label">@T["Order"]</label>
+        <select asp-for="Sort" class="form-select">
+            <option value="@TicketSort.Updated">@T["Recently updated first"]</option>
+            <option value="@TicketSort.Created">@T["Newest first"]</option>
+            <option value="@TicketSort.Due">@T["Soonest due first"]</option>
+            <option value="@TicketSort.Priority">@T["Most urgent first"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="mb-3 col-md-6">
+        <label class="form-label">@T["Shared with"]</label>
+        @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.SharedWithTeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.SharedWithTeamId) ? Array.Empty<string>() : new[] { Model.SharedWithTeamId } })
+        <span class="hint">@T["Leave empty to share the view with everybody."]</span>
+    </div>
+    <div class="mb-3 col-md-6">
+        <label asp-for="Order" class="form-label">@T["Order"]</label>
+        <input asp-for="Order" class="form-control" type="number" />
+    </div>
+</div>

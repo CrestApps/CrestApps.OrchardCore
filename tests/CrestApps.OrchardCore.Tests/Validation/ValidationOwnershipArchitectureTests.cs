@@ -44,7 +44,7 @@ public class ValidationOwnershipArchitectureTests
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.Multiline);
 
     private static readonly Regex _handlerRegistrationRegex = new(
-        @"ICatalogEntryHandler<\s*(?<entity>\w+)\s*>\s*,\s*(?<implementation>\w+)\s*>",
+        @"ICatalogEntryHandler<\s*(?<entity>\w+)\s*>\s*,\s*(?<implementation>\w+(?:<\s*\w+\s*>)?)\s*>",
         RegexOptions.Compiled);
 
     private static readonly Regex _featureAttributeRegex = new(

@@ -35,6 +35,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.ServiceLevels.Abstractions/CrestApps.OrchardCore.ServiceLevels.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Attachments.Abstractions/CrestApps.OrchardCore.Attachments.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Timeline.Abstractions/CrestApps.OrchardCore.Timeline.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Tickets.Abstractions/CrestApps.OrchardCore.Tickets.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Teams.Abstractions/CrestApps.OrchardCore.Teams.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Assets.Abstractions/CrestApps.OrchardCore.Assets.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Geo.Abstractions/CrestApps.OrchardCore.Geo.Abstractions.csproj" />
@@ -88,6 +89,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.ServiceLevels.Core/CrestApps.OrchardCore.ServiceLevels.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Attachments.Core/CrestApps.OrchardCore.Attachments.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Timeline.Core/CrestApps.OrchardCore.Timeline.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Tickets.Core/CrestApps.OrchardCore.Tickets.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Teams.Core/CrestApps.OrchardCore.Teams.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Assets.Core/CrestApps.OrchardCore.Assets.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Geo.Core/CrestApps.OrchardCore.Geo.Core.csproj" />
@@ -227,6 +229,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.ServiceLevels/CrestApps.OrchardCore.ServiceLevels.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Attachments/CrestApps.OrchardCore.Attachments.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Timeline/CrestApps.OrchardCore.Timeline.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Tickets/CrestApps.OrchardCore.Tickets.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Teams/CrestApps.OrchardCore.Teams.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Workforce/CrestApps.OrchardCore.Workforce.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Workforce.ContactCenter/CrestApps.OrchardCore.Workforce.ContactCenter.csproj" />

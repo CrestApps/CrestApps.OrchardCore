@@ -1,0 +1,3 @@
+@model ShapeViewModel<TicketDesk>
+
+<span class="badge ta-badge fw-normal">@(Model.Value.Audience == TicketDeskAudience.Internal ? T["Internal"] : T["Customers"])</span>

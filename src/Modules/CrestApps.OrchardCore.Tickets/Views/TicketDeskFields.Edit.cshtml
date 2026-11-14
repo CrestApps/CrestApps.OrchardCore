@@ -1,0 +1,72 @@
+@model TicketDeskViewModel
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label ocat-label-required">@T["Name"]</label>
+    <input asp-for="Name" class="form-control" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Description" class="form-label">@T["Description"]</label>
+    <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Audience" class="form-label">@T["Serves"]</label>
+    <select asp-for="Audience" class="form-select">
+        <option value="@TicketDeskAudience.Customers">@T["Customers"]</option>
+        <option value="@TicketDeskAudience.Internal">@T["People inside the organization"]</option>
+    </select>
+</div>
+
+<div class="row">
+    <div class="mb-3 col-md-6">
+        <label class="form-label">@T["Default team"]</label>
+        @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.DefaultTeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.DefaultTeamId) ? Array.Empty<string>() : new[] { Model.DefaultTeamId } })
+        <span class="hint">@T["New tickets go to this team when their type names none, and are assigned to its members."]</span>
+    </div>
+    <div class="mb-3 col-md-6">
+        <label class="form-label">@T["Business hours"]</label>
+        @await Component.InvokeAsync("HoursSchedulePicker", new { name = Html.NameFor(m => m.HoursScheduleId).ToString(), selectedValue = Model.HoursScheduleId, emptyText = T["Around the clock"].Value })
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ServiceLevelPolicyId" class="form-label">@T["Service-level policy"]</label>
+    <select asp-for="ServiceLevelPolicyId" asp-items="Model.Policies" class="form-select">
+        <option value="">@T["None"]</option>
+    </select>
+    <span class="hint">@T["Used when the ticket's type names no policy. Policies are written under Configuration › Service Levels for tickets."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="TicketTypes" class="form-label">@T["Ticket types"]</label>
+    <select asp-for="TicketTypes" asp-items="Model.TicketTypeOptions" class="form-select" multiple size="4"></select>
+    <span class="hint">@T["Leave none selected to offer every ticket type."]</span>
+</div>
+
+<div class="row">
+    <div class="mb-3 col-md-6">
+        <label asp-for="ReopenWindowDays" class="form-label">@T["Reopen window (days)"]</label>
+        <input asp-for="ReopenWindowDays" class="form-control" type="number" min="0" />
+        <span class="hint">@T["A reply from the requester inside this many days after solving reopens the ticket; a later one opens a follow-up."]</span>
+    </div>
+    <div class="mb-3 col-md-6">
+        <label asp-for="AutoCloseDays" class="form-label">@T["Close solved tickets after (days)"]</label>
+        <input asp-for="AutoCloseDays" class="form-control" type="number" min="0" />
+        <span class="hint">@T["0 keeps solved tickets until someone closes them."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="NotifyRequester" class="form-check-input" type="checkbox" />
+        <label asp-for="NotifyRequester" class="form-check-label">@T["E-mail the requester"]</label>
+        <span class="hint dashed">@T["When their ticket is received, answered and solved."]</span>
+    </div>
+    <div class="form-check">
+        <input asp-for="NotifyAssignee" class="form-check-input" type="checkbox" />
+        <label asp-for="NotifyAssignee" class="form-check-label">@T["Tell the assignee"]</label>
+        <span class="hint dashed">@T["When a ticket is assigned to them."]</span>
+    </div>
+</div>
