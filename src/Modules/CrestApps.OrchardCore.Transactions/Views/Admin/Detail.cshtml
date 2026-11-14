@@ -172,7 +172,7 @@
                         <form asp-action="SendReminder" method="post">
                             <input type="hidden" name="itemId" value="@transaction.ItemId" />
                             <button type="submit" class="btn btn-primary" disabled="@(!canSendReminder)"
-                                    data-url-af="RemoveUrl" data-title="@T["Send reminder"]" data-message="@T["Send the owner a reminder about the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send reminder"]" data-cancel-text="@T["Cancel"]">
+                                    data-url-af="RemoveUrl" data-title="@T["Send reminder"]" data-confirm="@T["Send the owner a reminder about the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send reminder"]" data-cancel-text="@T["Cancel"]">
                                 @T["Send reminder"]
                             </button>
                         </form>
@@ -188,7 +188,7 @@
                             <form asp-action="SendInvoice" method="post">
                                 <input type="hidden" name="itemId" value="@transaction.ItemId" />
                                 <button type="submit" class="btn btn-primary" disabled="@(!canSendInvoice)"
-                                        data-url-af="RemoveUrl" data-title="@T["Send invoice"]" data-message="@T["Send the owner the invoice for the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send invoice"]" data-cancel-text="@T["Cancel"]">
+                                        data-url-af="RemoveUrl" data-title="@T["Send invoice"]" data-confirm="@T["Send the owner the invoice for the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send invoice"]" data-cancel-text="@T["Cancel"]">
                                     @T["Send invoice"]
                                 </button>
                             </form>

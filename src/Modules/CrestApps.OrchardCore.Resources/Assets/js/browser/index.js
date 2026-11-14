@@ -7,8 +7,9 @@
 //   crestapps.confirm(title, message)            the admin theme's dialog in the admin, the browser's confirm elsewhere
 //
 // It also binds <form data-confirm="..."> and <button type="submit" data-confirm="..."> (asks before submitting, with
-// data-confirm-title, data-confirm-ok and data-confirm-cancel optional) and <form data-once> (submits once).
-import { bindForms, confirmAction } from './confirm.js';
+// data-confirm-title, data-confirm-ok and data-confirm-cancel optional), <form data-once> (submits once), and gives the
+// admin theme's dialog the data-confirm question of a [data-url-af~="RemoveUrl"] link or button escaped.
+import { bindForms, bindRemoveLinks, confirmAction } from './confirm.js';
 import { escapeHtml } from './html.js';
 import { antiforgeryToken, HttpError, request } from './http.js';
 import { format } from './text.js';
@@ -29,4 +30,5 @@ import { format } from './text.js';
     });
 
     bindForms(document);
+    bindRemoveLinks(document);
 })(window, document);

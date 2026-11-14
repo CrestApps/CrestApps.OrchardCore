@@ -62,7 +62,8 @@ public interface ISecureKeypadCaptureStore
 /// The window is opened in a scope of its own and committed at once, on a fresh read of the activity, and tried again
 /// when another write wins. On a live call the entry is asked for from the call's scope, which holds the copy of the
 /// activity it read when the call began; a second entry saved onto that copy lost to the keypad event that closed the
-/// first one, and the call swallowed the conflict, so the second entry had no window.
+/// first one, and the call swallowed the conflict, so the second entry had no window. On a turn-based call the request
+/// that asks is committed first, so the window's own write never waits on it.
 /// </para>
 /// </remarks>
 internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCaptureStore
@@ -75,6 +76,7 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
 
     private readonly IDistributedCache _cache;
     private readonly IOmnichannelActivityStore _activityStore;
+    private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
     private readonly IDataProtector _protector;
     private readonly Func<Func<IServiceProvider, Task>, Task> _inScopeOfItsOwn;
@@ -85,13 +87,14 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
     public DistributedSecureKeypadCaptureStore(
         IDistributedCache cache,
         IOmnichannelActivityStore activityStore,
+        ISession session,
         IDistributedLock distributedLock,
         IDataProtectionProvider dataProtectionProvider,
         IShellHost shellHost,
         ShellSettings shellSettings,
         IClock clock,
         ILogger<DistributedSecureKeypadCaptureStore> logger)
-        : this(cache, activityStore, distributedLock, dataProtectionProvider, InShellScope(shellHost, shellSettings), shellSettings, clock, logger)
+        : this(cache, activityStore, session, distributedLock, dataProtectionProvider, InShellScope(shellHost, shellSettings), shellSettings, clock, logger)
     {
     }
 
@@ -101,6 +104,7 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
     internal DistributedSecureKeypadCaptureStore(
         IDistributedCache cache,
         IOmnichannelActivityStore activityStore,
+        ISession session,
         IDistributedLock distributedLock,
         IDataProtectionProvider dataProtectionProvider,
         Func<Func<IServiceProvider, Task>, Task> inScopeOfItsOwn,
@@ -110,6 +114,7 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
     {
         _cache = cache;
         _activityStore = activityStore;
+        _session = session;
         _distributedLock = distributedLock;
         _protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
         _inScopeOfItsOwn = inScopeOfItsOwn;
@@ -124,6 +129,8 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
         ArgumentException.ThrowIfNullOrEmpty(activityId);
 
         var now = _clock.UtcNow;
+
+        await CommitTheAskingScopeAsync(activityId, cancellationToken);
 
         // The window goes on the activity first, committed: once it is there no node hands the keys on, whatever its
         // cache holds.
@@ -320,6 +327,24 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
                 // Another write won; the next attempt reads what it wrote.
             }
         }
+    }
+
+    // A turn-based call asks for an entry from the request of the caller's turn, and that request may hold a write it has
+    // not committed: the keypad event that finished the entry before closed its window there, and the turn stored the
+    // caller's words. Its transaction then holds the activity's row (on SQLite, the whole database), and the window's
+    // write in a scope of its own would wait on the request that is waiting for it. So what the request did so far is
+    // committed first. A live call is left alone: its scope commits after each turn under a lock of its own, from other
+    // threads, and holds no write across the response.
+    private async Task CommitTheAskingScopeAsync(string activityId, CancellationToken cancellationToken)
+    {
+        var activity = await _activityStore.FindByIdAsync(activityId, cancellationToken);
+
+        if (activity is not null && activity.TryGet<AILiveCall>(out var liveCall) && liveCall.IsRealtime)
+        {
+            return;
+        }
+
+        await _session.SaveChangesAsync(cancellationToken);
     }
 
     // Closes the window, through the scope that finished the entry: the keypad event's request, which commits when it

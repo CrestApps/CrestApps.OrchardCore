@@ -50,10 +50,11 @@
        class="dropdown-item btn-sm"
        data-url-af="UnsafeUrl RemoveUrl"
        data-title="@T["Delete list"]"
-       data-message="@T["Are you sure you want to delete the list '{0}'? This will remove all {1} phone numbers.", entry.Name, entry.PhoneNumberCount]"
+       data-confirm="@T["Are you sure you want to delete the list '{0}'? This will remove all {1} phone numbers.", entry.Name, entry.PhoneNumberCount]"
        data-ok-text="@T["Yes, delete"]"
        data-cancel-text="@T["Cancel"]"
        data-ok-class="btn-danger">
         @T["Delete"]
     </a>
 }
+<script asp-name="crestapps-browser" at="Foot"></script>

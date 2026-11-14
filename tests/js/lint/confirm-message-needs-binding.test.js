@@ -57,4 +57,22 @@ describe('a declared confirmation message', () => {
 
         expect(unbound).toEqual([]);
     });
+
+    // Final security review (low): the admin theme writes data-title and data-message into its dialog as markup, so a
+    // record's name filled into either (a child tenant's, by whoever may name one) ran as script in the session of the
+    // administrator who clicked. A question with a value in it goes in data-confirm (and data-confirm-title), which the
+    // crestapps-browser script hands to the dialog escaped; the view requires that script.
+    it('names a record only in data-confirm, on a view that loads the script that escapes it', () => {
+        const filled = /\sdata-(message|title)="@T\["[^"]*\{\d[^"]*",/;
+        const offending = all.flatMap(({ name, text }) => [...tags(text)]
+            .filter(({ tag }) => filled.test(tag) && !/\sdata-action=/.test(tag))
+            .map(({ tag, index }) => `${name}:${text.slice(0, index).split('\n').length}: ${tag.replace(/\s+/g, ' ').slice(0, 120)}`));
+        const withoutScript = all
+            .filter(({ text }) => [...tags(text)].some(({ tag }) => /\sdata-confirm=/.test(tag) && /\sdata-url-af="[^"]*\bRemoveUrl\b/.test(tag)))
+            .filter(({ text }) => !text.includes('asp-name="crestapps-browser"'))
+            .map(({ name }) => name);
+
+        expect(offending).toEqual([]);
+        expect(withoutScript).toEqual([]);
+    });
 });

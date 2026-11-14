@@ -13,7 +13,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.Email;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking;
 using OrchardCore.Modules;
@@ -39,6 +39,7 @@ public sealed class EmailSignInControllerTests
     private readonly User _user = new() { UserId = "user-1", UserName = "jordan", Email = Email, IsEnabled = true, EmailConfirmed = true };
     private readonly List<ILoginFormEvent> _loginFormEvents = [];
     private readonly RecordingLoginFormEvent _recorder = new();
+    private readonly LoginSettings _loginSettings = new();
     // The memory cache expires entries by the machine clock, so the store's clock starts at now.
     private DateTime _now = DateTime.UtcNow;
 
@@ -52,6 +53,10 @@ public sealed class EmailSignInControllerTests
         _userManager.Setup(manager => manager.AccessFailedAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
         _userManager.Setup(manager => manager.ResetAccessFailedCountAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
         _userManager.Setup(manager => manager.UpdateAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
+        _userManager.Setup(manager => manager.HasPasswordAsync(It.IsAny<IUser>())).ReturnsAsync(true);
+        _userManager.Setup(manager => manager.GetLoginsAsync(It.IsAny<IUser>())).ReturnsAsync([]);
+        _userManager.Setup(manager => manager.UpdateSecurityStampAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
+        _userManager.Setup(manager => manager.RemovePasswordAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
 
         _signInManager = new Mock<SignInManager<IUser>>(
             _userManager.Object,
@@ -159,14 +164,14 @@ public sealed class EmailSignInControllerTests
     {
         // Arrange
         _userManager.Setup(manager => manager.IsInRoleAsync(_user, "Administrator")).ReturnsAsync(true);
-        var email = new Mock<IEmailService>();
+        var sender = new Mock<IEmailSignInCodeSender>();
 
         // Act
-        await CreateController(email.Object).Index(new EmailSignInViewModel { Email = Email });
+        await CreateController(sender.Object).Index(new EmailSignInViewModel { Email = Email });
         var result = await CreateController().Code(new EmailSignInViewModel { Email = Email, Code = "123456" });
 
         // Assert
-        email.Verify(service => service.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        sender.VerifyNoOtherCalls();
         Assert.IsType<ViewResult>(result);
         _signInManager.Verify(manager => manager.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
     }
@@ -214,6 +219,69 @@ public sealed class EmailSignInControllerTests
         _signInManager.Verify(manager => manager.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
     }
 
+    /// <summary>
+    /// Final security review (low): the code's mail was sent inside the request, so the time the mail server took told a
+    /// known address from an unknown one. It is now handed to a job that runs after the request.
+    /// </summary>
+    [Fact]
+    public async Task AKnownAddress_HasItsCodeSentAfterTheRequest_NotDuringIt()
+    {
+        // Arrange
+        var sender = new Mock<IEmailSignInCodeSender>();
+
+        // Act
+        var result = await CreateController(sender.Object).Index(new EmailSignInViewModel { Email = Email });
+
+        // Assert
+        Assert.Equal(nameof(EmailSignInController.Code), Assert.IsType<ViewResult>(result).ViewName);
+        sender.Verify(s => s.QueueAsync(_user.UserName, Email, It.Is<string>(code => code.Length == 6), It.IsAny<CancellationToken>()), Times.Once);
+        sender.Verify(s => s.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Final security review (low): a site that turned local sign-in off, to sign in only through an external provider,
+    /// still signed people in with a code.
+    /// </summary>
+    [Fact]
+    public async Task WithLocalSignInOff_ThePagesAreNotThere_AndTheRightCodeSignsNobodyIn()
+    {
+        // Arrange
+        _loginSettings.DisableLocalLogin = true;
+        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+        var controller = CreateController();
+
+        // Act
+        var page = await controller.Index(returnUrl: null);
+        var asked = await controller.Index(new EmailSignInViewModel { Email = Email });
+        var posted = await controller.Code(new EmailSignInViewModel { Email = Email, Code = code });
+
+        // Assert
+        Assert.IsType<NotFoundResult>(page);
+        Assert.IsType<NotFoundResult>(asked);
+        Assert.IsType<NotFoundResult>(posted);
+        _signInManager.Verify(manager => manager.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Final security review (low): an account that signs in only through an external provider was signed in with a
+    /// code, getting around whatever that provider checks.
+    /// </summary>
+    [Fact]
+    public async Task AnAccountWithOnlyAnExternalLogin_IsNotSignedInWithACode()
+    {
+        // Arrange
+        _userManager.Setup(manager => manager.HasPasswordAsync(_user)).ReturnsAsync(false);
+        _userManager.Setup(manager => manager.GetLoginsAsync(_user)).ReturnsAsync([new UserLoginInfo("Microsoft", "key-1", "Microsoft")]);
+        var code = await CreateCodes().IssueAsync(Email, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await CreateController().Code(new EmailSignInViewModel { Email = Email, Code = code });
+
+        // Assert
+        Assert.IsType<ViewResult>(result);
+        _signInManager.Verify(manager => manager.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
+    }
+
     [Fact]
     public void TheController_IsPartOfTheEmailCodeSignInFeature_SoItsRoutesAreGoneWhenTheFeatureIsOff()
     {
@@ -237,30 +305,30 @@ public sealed class EmailSignInControllerTests
         return new EmailSignInCodes(_cache, limiter, new ShellSettings { Name = "Default" }, clock.Object, _lock);
     }
 
-    private EmailSignInController CreateController(IEmailService emailService = null)
+    private EmailSignInController CreateController(IEmailSignInCodeSender codeSender = null)
     {
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(() => _now);
 
-        var site = new Mock<ISite>();
-        site.SetupGet(s => s.SiteName).Returns("Test site");
+        var site = new SiteSettings { SiteName = "Test site" };
+        site.Put(_loginSettings);
         var siteService = new Mock<ISiteService>();
-        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site);
 
-        // No test here sends a code through the controller, so the e-mail service is only ever checked for calls.
-        var email = emailService ?? Mock.Of<IEmailService>();
 
         var controller = new EmailSignInController(
             _userManager.Object,
             _signInManager.Object,
             CreateCodes(),
-            email,
+            codeSender ?? Mock.Of<IEmailSignInCodeSender>(),
             siteService.Object,
             _loginFormEvents,
             clock.Object,
+            Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
             Options.Create(new EmailSignInOptions()),
             NullLogger<EmailSignInController>.Instance,
-            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>());
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>(),
+            Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailSignInController>>());
 
         var httpContext = new DefaultHttpContext();
         httpContext.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.7");

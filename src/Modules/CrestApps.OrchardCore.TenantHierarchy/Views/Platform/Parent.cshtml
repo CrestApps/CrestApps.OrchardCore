@@ -35,7 +35,7 @@
                 }
                 @if (isRunning)
                 {
-                    <a class="btn btn-danger btn-sm" asp-action="Suspend" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend"]" data-message="@T["Suspend {0} and every running child tenant? Nobody can use them until you resume.", parent.DisplayName]">@T["Suspend"]</a>
+                    <a class="btn btn-danger btn-sm" asp-action="Suspend" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend"]" data-confirm="@T["Suspend {0} and every running child tenant? Nobody can use them until you resume.", parent.DisplayName]">@T["Suspend"]</a>
                 }
                 else
                 {
@@ -43,7 +43,7 @@
                 }
                 @if (parent.Children.Count == 0)
                 {
-                    <a class="btn btn-secondary btn-sm" asp-action="Unmake" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-message="@T["Make {0} an ordinary tenant again?", parent.DisplayName]">@T["Make ordinary"]</a>
+                    <a class="btn btn-secondary btn-sm" asp-action="Unmake" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-confirm="@T["Make {0} an ordinary tenant again?", parent.DisplayName]">@T["Make ordinary"]</a>
                 }
             </div>
         </div>
@@ -87,3 +87,4 @@
         }
     </div>
 </div>
+<script asp-name="crestapps-browser" at="Foot"></script>

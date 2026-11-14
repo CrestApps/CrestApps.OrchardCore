@@ -53,11 +53,13 @@ public sealed class SecureKeypadCaptureRealtimeTests
                 await seed.SaveChangesAsync(cancellationToken);
             }
 
+            await MarkRealtimeCallAsync(store, connectionString, activityId);
+
             // The call's scope lasts as long as the call, and its node keeps the entries in its own memory cache.
             var callCache = NewCache();
             await using var callSession = store.CreateSession();
             var callActivities = OmnichannelActivityStoreTests.CreateActivityStore(callSession, store, connectionString);
-            var callNode = CreateNode(store, connectionString, callCache, callActivities);
+            var callNode = CreateNode(store, connectionString, callCache, callSession, callActivities);
 
             // Entry 1, the card number: the tool reads the activity through the call's scope, then opens the keypad.
             Assert.NotNull(await callActivities.FindByIdAsync(activityId, cancellationToken));
@@ -105,11 +107,13 @@ public sealed class SecureKeypadCaptureRealtimeTests
         try
         {
             var activityId = await SeedAsync(store);
+
+            await MarkRealtimeCallAsync(store, connectionString, activityId);
             await using var callSession = store.CreateSession();
             var callActivities = OmnichannelActivityStoreTests.CreateActivityStore(callSession, store, connectionString);
 
             Assert.NotNull(await callActivities.FindByIdAsync(activityId, cancellationToken));
-            await CreateNode(store, connectionString, NewCache(), callActivities).StartAsync(activityId, SecureCaptureField.CreditCardNumber, cancellationToken);
+            await CreateNode(store, connectionString, NewCache(), callSession, callActivities).StartAsync(activityId, SecureCaptureField.CreditCardNumber, cancellationToken);
 
             // Act: the response that asked for the card is still running; the first key reaches another node.
             var key = await OfferInARequestAsync(store, connectionString, NewCache(), activityId, "4");
@@ -135,11 +139,13 @@ public sealed class SecureKeypadCaptureRealtimeTests
         try
         {
             var activityId = await SeedAsync(store);
+
+            await MarkRealtimeCallAsync(store, connectionString, activityId);
             await using var callSession = store.CreateSession();
             var callActivities = OmnichannelActivityStoreTests.CreateActivityStore(callSession, store, connectionString);
 
             Assert.NotNull(await callActivities.FindByIdAsync(activityId, cancellationToken));
-            await CreateNode(store, connectionString, NewCache(), callActivities).StartAsync(activityId, SecureCaptureField.CreditCardNumber, cancellationToken);
+            await CreateNode(store, connectionString, NewCache(), callSession, callActivities).StartAsync(activityId, SecureCaptureField.CreditCardNumber, cancellationToken);
 
             // Act: a provider webhook writes the activity before the response completes, then the call commits.
             await using (var webhook = store.CreateSession())
@@ -174,6 +180,18 @@ public sealed class SecureKeypadCaptureRealtimeTests
         return activityId;
     }
 
+    // A live session holds the call, as the realtime runner records when it answers.
+    private static async Task MarkRealtimeCallAsync(IStore store, string connectionString, string activityId)
+    {
+        await using var session = store.CreateSession();
+        var activities = OmnichannelActivityStoreTests.CreateActivityStore(session, store, connectionString);
+        var activity = await activities.FindByIdAsync(activityId, TestContext.Current.CancellationToken);
+
+        activity.Put(new AILiveCall { ProviderName = "Twilio", ProviderCallId = "call-1", AnsweredUtc = _now, IsRealtime = true });
+        await activities.UpdateAsync(activity, TestContext.Current.CancellationToken);
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
     private static MemoryDistributedCache NewCache()
         => new(Options.Create(new MemoryDistributedCacheOptions()));
 
@@ -195,7 +213,7 @@ public sealed class SecureKeypadCaptureRealtimeTests
     private async Task<SecureKeypadEntry> OfferInARequestAsync(IStore store, string connectionString, IDistributedCache nodeCache, string activityId, string digits)
     {
         await using var requestSession = store.CreateSession();
-        var node = CreateNode(store, connectionString, nodeCache, OmnichannelActivityStoreTests.CreateActivityStore(requestSession, store, connectionString));
+        var node = CreateNode(store, connectionString, nodeCache, requestSession, OmnichannelActivityStoreTests.CreateActivityStore(requestSession, store, connectionString));
         var entry = await node.OfferAsync(activityId, digits, TestContext.Current.CancellationToken);
 
         await requestSession.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -203,7 +221,7 @@ public sealed class SecureKeypadCaptureRealtimeTests
         return entry;
     }
 
-    private DistributedSecureKeypadCaptureStore CreateNode(IStore store, string connectionString, IDistributedCache nodeCache, IOmnichannelActivityStore activities)
+    private DistributedSecureKeypadCaptureStore CreateNode(IStore store, string connectionString, IDistributedCache nodeCache, ISession session, IOmnichannelActivityStore activities)
     {
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(_now);
@@ -211,6 +229,7 @@ public sealed class SecureKeypadCaptureRealtimeTests
         return new DistributedSecureKeypadCaptureStore(
             nodeCache,
             activities,
+            session,
             _lock,
             _keys,
             work => InScopeOfItsOwnAsync(store, connectionString, work),

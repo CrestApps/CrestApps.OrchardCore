@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { escapeHtml } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/html.js';
 import { format } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/text.js';
 import { HttpError, request } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/http.js';
-import { bindForms, confirmAction } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js';
+import { bindForms, bindRemoveLinks, confirmAction } from '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/confirm.js';
 
 const toolkit = '../../../src/Modules/CrestApps.OrchardCore.Resources/Assets/js/browser/index.js';
 
@@ -163,6 +163,40 @@ describe('crestapps.http.request', () => {
 
         expect((await request('/a').catch(caught => caught)).retryAfter).toBeNull();
         vi.useRealTimers();
+    });
+});
+
+// Final security review (low): the admin theme's dialog for a [data-url-af~="RemoveUrl"] element writes its data-title
+// and data-message into the page as markup, so a child tenant's name in the question ran as script. A question that
+// names a record is written in data-confirm, and handed to the theme escaped just before its own click listener reads it.
+describe('the [data-url-af~="RemoveUrl"][data-confirm] binding', () => {
+    function clickOn(element) {
+        let listener;
+        let capture;
+        bindRemoveLinks({ addEventListener: (type, handler, useCapture) => { listener = handler; capture = useCapture; } });
+        listener({ target: { closest: selector => (selector === '[data-url-af~="RemoveUrl"][data-confirm]' ? element : null) } });
+
+        return capture;
+    }
+
+    it('hands the theme the question and its title escaped, before the theme\'s own listener runs', () => {
+        const element = { dataset: { confirm: 'Suspend <img src=x onerror=alert(1)>?', confirmTitle: 'Suspend <b>x</b>' } };
+
+        const capture = clickOn(element);
+
+        expect(capture).toBe(true);
+        expect(element.dataset.message).toBe('Suspend &lt;img src=x onerror=alert(1)&gt;?');
+        expect(element.dataset.title).toBe('Suspend &lt;b&gt;x&lt;/b&gt;');
+    });
+
+    it('leaves the theme\'s own title alone when the question has none, and every other element alone', () => {
+        const element = { dataset: { confirm: 'Discard "x"?', title: 'Discard' } };
+
+        clickOn(element);
+        clickOn(null);
+
+        expect(element.dataset.message).toBe('Discard &quot;x&quot;?');
+        expect(element.dataset.title).toBe('Discard');
     });
 });
 
@@ -452,5 +486,6 @@ describe('window.crestapps', () => {
         expect(globalThis.window.crestapps.http.HttpError.name).toBe('HttpError');
         expect(globalThis.window.crestapps.confirm.name).toBe('confirmAction');
         expect(added).toHaveBeenCalledWith('submit', expect.any(Function), true);
+        expect(added).toHaveBeenCalledWith('click', expect.any(Function), true);
     });
 });

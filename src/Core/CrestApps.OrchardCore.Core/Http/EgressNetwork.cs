@@ -390,7 +390,7 @@ public static class EgressNetwork
 
     private static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, bool allowLoopback, bool allowPrivateNetwork, IWebProxy proxy, CancellationToken cancellationToken)
     {
-        var destination = context.InitialRequestMessage?.RequestUri;
+        var destination = GetDestination(context.InitialRequestMessage);
 
         if (proxy is not null && destination is not null && IsProxyConnection(context.DnsEndPoint, destination, proxy))
         {
@@ -403,6 +403,24 @@ public static class EgressNetwork
         var allowed = await ResolveAllowedAsync(context.DnsEndPoint.Host, allowLoopback, allowPrivateNetwork, cancellationToken);
 
         return await ConnectAnyAsync(allowed, context.DnsEndPoint.Port, cancellationToken);
+    }
+
+    // Where the request goes. An https request through a proxy first asks the proxy for a tunnel, and the connection is
+    // made for that CONNECT request: its address is the proxy's, and the destination is only in its Host header.
+    private static Uri GetDestination(HttpRequestMessage request)
+    {
+        if (request is null || request.Method != HttpMethod.Connect)
+        {
+            return request?.RequestUri;
+        }
+
+        if (string.IsNullOrEmpty(request.Headers.Host) || !Uri.TryCreate($"https://{request.Headers.Host}/", UriKind.Absolute, out var tunnel))
+        {
+            // A tunnel to nowhere that can be named is never asked for.
+            throw new HttpRequestException("A proxy tunnel was asked for without a destination, so it was refused.");
+        }
+
+        return tunnel;
     }
 
     // Whether this connection goes to the proxy the request is sent through, rather than to its destination.

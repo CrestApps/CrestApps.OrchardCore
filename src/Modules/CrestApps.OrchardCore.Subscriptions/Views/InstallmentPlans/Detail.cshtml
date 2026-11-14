@@ -215,7 +215,7 @@ else if (plan.Status == InstallmentPlanStatus.Draft)
                                             <button type="submit" class="btn btn-primary btn-sm"
                                                     data-url-af="RemoveUrl"
                                                     data-title="@T["Charge the customer's card"]"
-                                                    data-message="@T["Charge {0} to {1} now for payment {2} of {3}? The customer is charged immediately.", Money(payment.Amount), plan.PaymentMethod.Describe(), payment.Number, plan.InstallmentCount]"
+                                                    data-confirm="@T["Charge {0} to {1} now for payment {2} of {3}? The customer is charged immediately.", Money(payment.Amount), plan.PaymentMethod.Describe(), payment.Number, plan.InstallmentCount]"
                                                     data-ok-text="@T["Charge now"]"
                                                     data-cancel-text="@T["Don't charge"]">
                                                 <i class="fa-solid fa-bolt" aria-hidden="true"></i>
@@ -275,3 +275,4 @@ else if (plan.Status == InstallmentPlanStatus.Draft)
         }
     </div>
 </div>
+<script asp-name="crestapps-browser" at="Foot"></script>

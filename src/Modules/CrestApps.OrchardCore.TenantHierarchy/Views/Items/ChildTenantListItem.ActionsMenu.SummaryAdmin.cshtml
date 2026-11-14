@@ -27,7 +27,7 @@
     {
         <hr class="dropdown-divider">
         <a class="dropdown-item" asp-action="Reload" asp-route-id="@entryId" data-url-af="UnsafeUrl"><i class="fa-solid fa-rotate fa-fw me-2" aria-hidden="true"></i>@T["Reload"]</a>
-        <a class="dropdown-item" asp-action="Suspend" asp-route-id="@entryId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend {0}", labels.ChildLower]" data-message="@T["Suspend {0}? Nobody can use it, including its own staff, until you resume it.", entry.DisplayName]" data-ok-text="@T["Suspend"]" data-ok-class="btn-warning"><i class="fa-solid fa-pause fa-fw me-2" aria-hidden="true"></i>@T["Suspend"]</a>
+        <a class="dropdown-item" asp-action="Suspend" asp-route-id="@entryId" data-url-af="RemoveUrl UnsafeUrl" data-confirm-title="@T["Suspend {0}", labels.ChildLower]" data-confirm="@T["Suspend {0}? Nobody can use it, including its own staff, until you resume it.", entry.DisplayName]" data-ok-text="@T["Suspend"]" data-ok-class="btn-warning"><i class="fa-solid fa-pause fa-fw me-2" aria-hidden="true"></i>@T["Suspend"]</a>
     }
     else if (item.Info.State == ChildTenantRuntimeState.Suspended)
     {
@@ -40,3 +40,4 @@
     <hr class="dropdown-divider">
     <a class="dropdown-item text-danger" asp-action="Remove" asp-route-id="@entryId"><i class="fa-solid fa-trash fa-fw me-2" aria-hidden="true"></i>@T["Remove"]</a>
 }
+<script asp-name="crestapps-browser" at="Foot"></script>

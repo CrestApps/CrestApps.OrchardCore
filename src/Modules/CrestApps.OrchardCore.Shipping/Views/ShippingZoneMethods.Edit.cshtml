@@ -45,7 +45,7 @@
                             <a class="btn btn-sm btn-danger"
                                asp-action="DeleteMethod" asp-route-zoneId="@Model.Zone.ItemId" asp-route-methodId="@row.Method.MethodId"
                                data-title="@T["Delete"]"
-                               data-message="@T["Are you sure you want to delete the shipping method {0}?", row.Method.Name]"
+                               data-confirm="@T["Are you sure you want to delete the shipping method {0}?", row.Method.Name]"
                                data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
                         </span>
                     </li>
@@ -55,3 +55,4 @@
         }
     </div>
 </div>
+<script asp-name="crestapps-browser" at="Foot"></script>

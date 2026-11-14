@@ -445,8 +445,10 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         var changed = false;
 
         changed |= SetIfDifferent(interaction.ProviderName, call.ProviderName, value => interaction.ProviderName = value);
-        changed |= SetIfDifferent(interaction.From, call.From, value => interaction.From = value);
-        changed |= SetIfDifferent(interaction.To, call.To, value => interaction.To = value);
+        // The addresses are chosen by whoever places the call, and the recent calls list renders them, so they are cleaned
+        // here as they are where the interaction is first stored.
+        changed |= SetIfDifferent(interaction.From, CallerNumbers.Sanitize(call.From), value => interaction.From = value);
+        changed |= SetIfDifferent(interaction.To, CallerNumbers.Sanitize(call.To), value => interaction.To = value);
 
         if (call.State is CallState.Disconnected or CallState.Failed)
         {
