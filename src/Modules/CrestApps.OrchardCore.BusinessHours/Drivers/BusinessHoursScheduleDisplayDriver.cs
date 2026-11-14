@@ -108,16 +108,12 @@ internal sealed class BusinessHoursScheduleDisplayDriver : DisplayDriver<Busines
 
         foreach (var day in invalidDays.Distinct())
         {
-            context.Updater.ModelState.AddModelError(
-                Prefix + "." + nameof(BusinessHoursScheduleViewModel.Days),
-                S["{0}: enter the opening and closing times as hours and minutes, such as 09:00.", CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(day)]);
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(BusinessHoursScheduleViewModel.Days), S["{0}: enter the opening and closing times as hours and minutes, such as 09:00.", CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(day)]);
         }
 
         foreach (var line in invalidLines)
         {
-            context.Updater.ModelState.AddModelError(
-                Prefix + "." + nameof(BusinessHoursScheduleViewModel.SpecialDays),
-                S["Line {0} of the special days is not a date in the form 2026-12-25, optionally followed by hours such as 09:00-13:00 and a name.", line]);
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(BusinessHoursScheduleViewModel.SpecialDays), S["Line {0} of the special days is not a date in the form 2026-12-25, optionally followed by hours such as 09:00-13:00 and a name.", line]);
         }
 
         return Edit(schedule, context);

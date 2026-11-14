@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CrestApps.OrchardCore.Tests.ServiceLevels;
 
@@ -30,6 +31,7 @@ public sealed class ServiceLevelStoreSqliteTests
             {
                 services.AddOpenHours();
                 services.AddServiceLevelsCore();
+                services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ServiceLevels.Models.ServiceLevelPolicy>, CrestApps.OrchardCore.ServiceLevels.Core.Handlers.ServiceLevelPolicyHandler>());
             },
             ServiceLevelsIndexSchema.CreateAsync,
             [new ServiceLevelPolicyIndexProvider(), new ServiceLevelTimerIndexProvider()],

@@ -71,6 +71,11 @@ internal sealed class ServiceLevelPolicyHandler : CatalogEntryHandlerBase<Servic
     {
         var policy = context.Model;
 
+        if (policy.Targets?.Any(target => target is not null && target.Minutes < 0) == true)
+        {
+            context.Result.Fail(new ValidationResult(S["A target is a number of minutes greater than zero."], [nameof(ServiceLevelPolicy.Targets)]));
+        }
+
         Tidy(policy);
 
         if (string.IsNullOrEmpty(policy.Name))

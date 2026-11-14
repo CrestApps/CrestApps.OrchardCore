@@ -95,6 +95,14 @@ public class ValidationOwnershipArchitectureTests
     private static readonly (string DriverPath, string InputMarker, string Justification)[] _editorOnlyInputs =
     [
         (
+            "src/Modules/CrestApps.OrchardCore.BusinessHours/Drivers/BusinessHoursScheduleDisplayDriver.cs",
+            "nameof(BusinessHoursScheduleViewModel.Days)",
+            "The weekly rows are typed as hh:mm text in the editor; a recipe carries the schedule's windows as minutes, which the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.BusinessHours/Drivers/BusinessHoursScheduleDisplayDriver.cs",
+            "nameof(BusinessHoursScheduleViewModel.SpecialDays)",
+            "The special days are typed as lines of text in the editor; a recipe carries them as structured date exceptions, which the handler checks."),
+        (
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/VoiceMediaItemDisplayDriver.cs",
             "nameof(VoiceMediaItemViewModel.Audio)",
             "The uploaded audio file is streamed to the telephony provider by the editor; a recipe carries the resulting media reference, never a file."),

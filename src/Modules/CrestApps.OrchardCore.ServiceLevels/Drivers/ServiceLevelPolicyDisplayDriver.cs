@@ -101,11 +101,6 @@ internal sealed class ServiceLevelPolicyDisplayDriver : DisplayDriver<ServiceLev
         policy.WarningPercent = general.WarningPercent;
         policy.Targets = ServiceLevelTargetGrid.ApplyCells(policy.Targets, targets.Cells, await GetMetricsAsync(scope), await GetPrioritiesAsync(scope));
 
-        if (targets.Cells.Any(cell => cell?.Minutes is < 0))
-        {
-            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(ServiceLevelTargetsViewModel.Cells), S["A target is a number of minutes greater than zero."]);
-        }
-
         return Edit(policy, context);
     }
 

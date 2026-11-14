@@ -561,7 +561,7 @@ public sealed class SmsInboxQueryTests
             MessagingTestChannels.Resolver(MessagingTestChannels.AcceptingDispatcher().Object),
             Mock.Of<IOmnichannelChannelEndpointManager>(),
             Mock.Of<IMessageTemplateManager>(),
-            new LiquidMessageTemplateRenderer(new ServiceCollection().BuildServiceProvider(), NullLogger<LiquidMessageTemplateRenderer>.Instance),
+            new LiquidMessageTemplateRenderer([], NullLogger<LiquidMessageTemplateRenderer>.Instance),
             agentProfiles.Object,
             new PermissiveAgentEntitlementPolicy(),
             Mock.Of<IMessagingAvailabilityService>(service => service.Get(It.IsAny<AgentProfile>()) == new MessagingAgentAvailability()),

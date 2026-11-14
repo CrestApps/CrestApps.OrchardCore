@@ -1,5 +1,4 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.BusinessHours.Core.Handlers;
 using CrestApps.OrchardCore.BusinessHours.Core.Services;
 using CrestApps.OrchardCore.BusinessHours.Models;
 using CrestApps.OrchardCore.BusinessHours.Services;
@@ -40,7 +39,6 @@ public static class BusinessHoursCoreServiceCollectionExtensions
 
         services.AddOpenHours();
         services.AddHoursScheduleSource<BusinessHoursScheduleSource>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<BusinessHoursSchedule>, BusinessHoursScheduleHandler>());
 
         return services;
     }

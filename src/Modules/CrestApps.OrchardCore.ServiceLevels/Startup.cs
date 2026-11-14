@@ -1,7 +1,9 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.BusinessHours.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.ServiceLevels.BackgroundTasks;
 using CrestApps.OrchardCore.ServiceLevels.Core;
+using CrestApps.OrchardCore.ServiceLevels.Core.Handlers;
 using CrestApps.OrchardCore.ServiceLevels.Core.Indexes;
 using CrestApps.OrchardCore.ServiceLevels.Deployments;
 using CrestApps.OrchardCore.ServiceLevels.Drivers;
@@ -40,6 +42,9 @@ public sealed class Startup : StartupBase
         // schedule picker are always there.
         services.AddOpenHours();
         services.AddServiceLevelsCore();
+
+        // The policies' rules come with the feature that imports them.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceLevelPolicy>, ServiceLevelPolicyHandler>());
 
         services.AddDisplayDriver<ServiceLevelPolicy, ServiceLevelPolicyDisplayDriver>();
         services.AddPermissionProvider<ServiceLevelsPermissionsProvider>();

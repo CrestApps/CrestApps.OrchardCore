@@ -1,8 +1,8 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using Fluid;
 using Fluid.Values;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Liquid;
 
@@ -15,17 +15,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// </summary>
 public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly ILiquidTemplateManager _liquid;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LiquidMessageTemplateRenderer"/> class.
     /// </summary>
-    /// <param name="serviceProvider">The services, to find the Liquid template manager when the Liquid feature is on.</param>
+    /// <param name="liquidTemplateManagers">The Liquid template manager, when the Liquid feature is on.</param>
     /// <param name="logger">The logger.</param>
-    public LiquidMessageTemplateRenderer(IServiceProvider serviceProvider, ILogger<LiquidMessageTemplateRenderer> logger)
+    public LiquidMessageTemplateRenderer(IEnumerable<ILiquidTemplateManager> liquidTemplateManagers, ILogger<LiquidMessageTemplateRenderer> logger)
     {
-        _serviceProvider = serviceProvider;
+        _liquid = liquidTemplateManagers?.FirstOrDefault();
         _logger = logger;
     }
 
@@ -42,7 +42,7 @@ public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
             return body;
         }
 
-        if (_serviceProvider.GetService<ILiquidTemplateManager>() is not { } liquid)
+        if (_liquid is not { } liquid)
         {
             return body;
         }
@@ -61,7 +61,7 @@ public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            _logger.LogWarning(exception, "The reply template '{TemplateId}' couldn't render; its body was used as written.", template.ItemId);
+            _logger.LogWarning(exception, "The reply template '{TemplateId}' couldn't render; its body was used as written.", template.ItemId.SanitizeLogValue());
 
             return body;
         }

@@ -70,13 +70,6 @@ public sealed class MessageTemplateRendererTests
 
     private static LiquidMessageTemplateRenderer Renderer(bool withLiquid)
     {
-        var services = new ServiceCollection();
-
-        if (withLiquid)
-        {
-            services.AddSingleton(LiquidDoubles.Manager());
-        }
-
-        return new LiquidMessageTemplateRenderer(services.BuildServiceProvider(), NullLogger<LiquidMessageTemplateRenderer>.Instance);
+        return new LiquidMessageTemplateRenderer(withLiquid ? [LiquidDoubles.Manager()] : [], NullLogger<LiquidMessageTemplateRenderer>.Instance);
     }
 }

@@ -70,7 +70,8 @@ public static class ServiceLevelTargetGrid
 
         foreach (var cell in cells ?? [])
         {
-            if (cell is null || cell.Minutes is not > 0 || !Shown(cell.Metric, cell.Priority))
+            // Zero or empty means no target; a negative number is kept so the policy's handler refuses it.
+            if (cell is null || cell.Minutes is null or 0 || !Shown(cell.Metric, cell.Priority))
             {
                 continue;
             }

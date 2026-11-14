@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Timeline.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using YesSql.Indexes;
 using YesSql.Sql;
 
@@ -60,6 +61,7 @@ internal static class WorkOrderTestStores
         services.AddWorkOrdersCore();
         services.AddOpenHours();
         services.AddServiceLevelsCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ServiceLevels.Models.ServiceLevelPolicy>, CrestApps.OrchardCore.ServiceLevels.Core.Handlers.ServiceLevelPolicyHandler>());
         services.AddTimelineCore();
 
         return services;

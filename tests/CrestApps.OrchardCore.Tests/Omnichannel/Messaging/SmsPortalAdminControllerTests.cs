@@ -627,7 +627,7 @@ public sealed class SmsPortalAdminControllerTests
             channels,
             Mock.Of<IOmnichannelChannelEndpointManager>(),
             Mock.Of<IMessageTemplateManager>(),
-            new LiquidMessageTemplateRenderer(new ServiceCollection().BuildServiceProvider(), NullLogger<LiquidMessageTemplateRenderer>.Instance),
+            new LiquidMessageTemplateRenderer([], NullLogger<LiquidMessageTemplateRenderer>.Instance),
             agentProfileManager.Object,
             new PermissiveAgentEntitlementPolicy(),
             availabilityService.Object,

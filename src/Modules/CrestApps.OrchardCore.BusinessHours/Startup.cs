@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.BusinessHours.Core;
+using CrestApps.OrchardCore.BusinessHours.Core.Handlers;
 using CrestApps.OrchardCore.BusinessHours.Deployments;
 using CrestApps.OrchardCore.BusinessHours.Drivers;
 using CrestApps.OrchardCore.BusinessHours.Models;
@@ -10,6 +11,7 @@ using CrestApps.OrchardCore.BusinessHours.Workflows;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -34,6 +36,9 @@ public sealed class Startup : StartupBase
             .AddCatalogManagers();
 
         services.AddBusinessHoursSchedules();
+
+        // The schedules' rules come with the feature that imports them.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<BusinessHoursSchedule>, BusinessHoursScheduleHandler>());
         services.AddDisplayDriver<BusinessHoursSchedule, BusinessHoursScheduleDisplayDriver>();
         services.AddPermissionProvider<BusinessHoursPermissionsProvider>();
         services.AddNavigationProvider<BusinessHoursAdminMenu>();

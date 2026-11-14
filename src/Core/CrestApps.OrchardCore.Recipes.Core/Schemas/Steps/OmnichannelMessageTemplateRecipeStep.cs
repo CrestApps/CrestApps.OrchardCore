@@ -23,7 +23,8 @@ public sealed class OmnichannelMessageTemplateRecipeStep : RecipeStepSchemaBase
                         .Properties(
                             ("ItemId", CatalogRecipeStepSchemas.ItemId("message template")),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).MinLength(1).Description("Unique template name shown in the composer picker.")),
-                            ("Body", new JsonSchemaBuilder().Type(SchemaValueType.String).MinLength(1).Description("Text inserted into the composer when the template is picked.")),
+                            ("Body", new JsonSchemaBuilder().Type(SchemaValueType.String).MinLength(1).Description("Text inserted into the composer when the template is picked; Liquid placeholders such as {{ Contact.DisplayName }} are filled in.")),
+                            ("Scope", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The kind of work the template is for, such as Tickets; empty for the messaging workspace.")),
                             ("Properties", CatalogRecipeStepSchemas.Properties("message template")))
                         .Required("Name", "Body")
                         .AdditionalProperties(true))

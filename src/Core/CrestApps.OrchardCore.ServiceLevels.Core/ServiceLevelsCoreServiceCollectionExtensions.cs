@@ -1,5 +1,4 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.ServiceLevels.Core.Handlers;
 using CrestApps.OrchardCore.ServiceLevels.Core.Services;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
@@ -31,7 +30,6 @@ public static class ServiceLevelsCoreServiceCollectionExtensions
         services.TryAddScoped<ServiceLevelClock>();
         services.TryAddScoped<IServiceLevelTracker, DefaultServiceLevelTracker>();
         services.TryAddScoped<ServiceLevelMonitor>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceLevelPolicy>, ServiceLevelPolicyHandler>());
 
         return services;
     }
