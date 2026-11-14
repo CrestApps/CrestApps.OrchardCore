@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Portal;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -16,8 +17,8 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
-using OrchardCore.Routing;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.Workforce.Controllers;
 
@@ -31,7 +32,7 @@ public sealed class PayrollExportController : Controller
     private readonly IPayrollExportService _exports;
     private readonly IEnumerable<IPayrollExportProvider> _providers;
     private readonly ITimesheetService _timesheets;
-    private readonly IPayPeriodCalendarManager _calendars;
+    private readonly IPayScheduleManager _calendars;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
 
@@ -55,7 +56,7 @@ public sealed class PayrollExportController : Controller
         IPayrollExportService exports,
         IEnumerable<IPayrollExportProvider> providers,
         ITimesheetService timesheets,
-        IPayPeriodCalendarManager calendars,
+        IPayScheduleManager calendars,
         ILocalClock localClock,
         INotifier notifier,
         IHtmlLocalizer<PayrollExportController> htmlLocalizer,

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
@@ -91,52 +92,15 @@ public sealed class TimeClockPolicyEditViewModel
 }
 
 /// <summary>
-/// The pay period editor.
+/// The Workforce card on the pay code editor: a shift differential's hours.
 /// </summary>
-public sealed class PayPeriodEditViewModel
+public class WorkforcePayCodeWindowViewModel
 {
-    public string Id { get; set; }
-
-    public string Name { get; set; }
-
-    public string Frequency { get; set; }
-
-    public DateOnly AnchorDate { get; set; }
-
-    public string WeekStart { get; set; }
-
-    public bool Enabled { get; set; }
-
-    [BindNever]
-    public IList<(DateOnly Start, DateOnly End)> Upcoming { get; set; } = [];
-}
-
-/// <summary>
-/// The pay code editor.
-/// </summary>
-public sealed class PayCodeEditViewModel
-{
-    public string Id { get; set; }
-
-    public string Code { get; set; }
-
-    public string Name { get; set; }
-
-    public string Kind { get; set; }
-
-    public decimal Multiplier { get; set; }
-
-    public decimal? PremiumPerHour { get; set; }
-
     public TimeOnly? WindowStart { get; set; }
 
     public TimeOnly? WindowEnd { get; set; }
 
     public IList<string> Weekdays { get; set; } = [];
-
-    public string ExportCode { get; set; }
-
-    public bool Enabled { get; set; }
 }
 
 /// <summary>

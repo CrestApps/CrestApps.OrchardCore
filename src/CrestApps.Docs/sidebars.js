@@ -193,6 +193,7 @@ const sidebars = {
                 'user-manual/finance/checks',
                 'user-manual/finance/disbursements',
                 'user-manual/finance/approvals',
+                'user-manual/finance/pay-setup',
             ],
         },
         {
@@ -484,6 +485,7 @@ const sidebars = {
                 'modules/checks',
                 'modules/disbursements',
                 'modules/approvals',
+                'modules/payroll',
             ],
         },
         {

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -96,7 +97,7 @@ internal sealed class WorkforceSettingsDeploymentSource : DeploymentSourceBase<W
             });
         }
 
-        if (On(WorkforceConstants.Features.TimeClock) && _services.GetService<IPayPeriodCalendarManager>() is { } calendarManager)
+        if (On(WorkforceConstants.Features.TimeClock) && _services.GetService<IPayScheduleManager>() is { } calendarManager)
         {
             var calendars = (await calendarManager.GetAllAsync()).ToList();
             var calendarNames = calendars.ToDictionary(calendar => calendar.ItemId, calendar => calendar.Name, StringComparer.Ordinal);
@@ -105,8 +106,9 @@ internal sealed class WorkforceSettingsDeploymentSource : DeploymentSourceBase<W
             result.Steps.Add(new JsonObject
             {
                 ["name"] = TimeClockRecipeStep.TimeClockStepName,
+                // Pay codes are exported by Pay Setup's own step. The pay schedules stay here too, because the policies
+                // of this step name them and a step can't count on another step running first.
                 ["PayPeriods"] = new JsonArray([.. calendars.Select(calendar => (JsonNode)Serialize(calendar))]),
-                ["PayCodes"] = new JsonArray([.. (await _services.GetRequiredService<IPayCodeManager>().GetAllAsync()).Select(code => (JsonNode)Serialize(code))]),
                 ["Policies"] = new JsonArray([.. (await _services.GetRequiredService<ITimeClockPolicyManager>().GetAllAsync()).Select(policy =>
                 {
                     var node = Serialize(policy, "payPeriodCalendarId");

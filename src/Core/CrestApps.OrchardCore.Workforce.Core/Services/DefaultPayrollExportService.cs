@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Core.Services;
 using CrestApps.OrchardCore.Workforce.Core.Telemetry;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -21,8 +22,8 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
     private readonly IEnumerable<IPayrollExportProvider> _providers;
     private readonly PayrollExportBatchStore _batchStore;
     private readonly TimesheetStore _timesheetStore;
-    private readonly PayPeriodCalendarStore _calendarStore;
-    private readonly PayCodeStore _payCodeStore;
+    private readonly IPayScheduleManager _paySchedules;
+    private readonly IPayCodeManager _payCodes;
     private readonly StaffMemberStore _workerStore;
     private readonly PayrollCsvSettingsStore _csvSettings;
     private readonly TimeOffLocks _locks;
@@ -36,8 +37,8 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         IEnumerable<IPayrollExportProvider> providers,
         PayrollExportBatchStore batchStore,
         TimesheetStore timesheetStore,
-        PayPeriodCalendarStore calendarStore,
-        PayCodeStore payCodeStore,
+        IPayScheduleManager paySchedules,
+        IPayCodeManager payCodes,
         StaffMemberStore workerStore,
         PayrollCsvSettingsStore csvSettings,
         TimeOffLocks locks,
@@ -49,8 +50,8 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
         _providers = providers;
         _batchStore = batchStore;
         _timesheetStore = timesheetStore;
-        _calendarStore = calendarStore;
-        _payCodeStore = payCodeStore;
+        _paySchedules = paySchedules;
+        _payCodes = payCodes;
         _workerStore = workerStore;
         _csvSettings = csvSettings;
         _locks = locks;
@@ -82,7 +83,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
     {
         var result = new PlanningResult<PayrollExportBatch>();
         var provider = _providers.FirstOrDefault(provider => string.Equals(provider.Name, providerName, StringComparison.OrdinalIgnoreCase));
-        var calendar = string.IsNullOrEmpty(payPeriodCalendarId) ? null : await _calendarStore.FindByIdAsync(payPeriodCalendarId, cancellationToken);
+        var calendar = string.IsNullOrEmpty(payPeriodCalendarId) ? null : await _paySchedules.FindByIdAsync(payPeriodCalendarId, cancellationToken);
 
         // The provider's registered name, never the requested one, so the tag stays bounded.
         telemetry.AddMetricTag(CrestAppsOrchardCoreTelemetry.ProviderTag, provider?.Name ?? CrestAppsOrchardCoreTelemetry.Unknown);
@@ -142,7 +143,7 @@ internal sealed class DefaultPayrollExportService : IPayrollExportService
 
             var workers = (await _workerStore.GetAsync(timesheets.Select(timesheet => timesheet.WorkerId).Distinct(StringComparer.Ordinal).ToArray(), cancellationToken))
                 .ToDictionary(worker => worker.ItemId, StringComparer.Ordinal);
-            var payCodes = (await _payCodeStore.GetAllAsync(cancellationToken)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
+            var payCodes = (await _payCodes.GetAllAsync(cancellationToken)).ToDictionary(code => code.ItemId, StringComparer.Ordinal);
             var file = await provider.ExportAsync(new PayrollExportContext
             {
                 Calendar = calendar,

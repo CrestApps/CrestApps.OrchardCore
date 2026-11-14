@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 
@@ -11,7 +12,7 @@ public sealed class PayrollExportContext
     /// <summary>
     /// Gets or sets the pay periods.
     /// </summary>
-    public PayPeriodCalendar Calendar { get; set; }
+    public PaySchedule Calendar { get; set; }
 
     /// <summary>
     /// Gets or sets the first day of the period.

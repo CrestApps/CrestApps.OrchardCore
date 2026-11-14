@@ -41,7 +41,7 @@
 
 @if (Model.CalendarOptions.Count == 0)
 {
-    <div class="alert alert-info">@T["Add pay periods and a time clock policy, and give teams the policy, to start keeping timesheets."] <a asp-controller="PayPeriods" asp-action="Index">@T["Pay periods"]</a></div>
+    <div class="alert alert-info">@T["Add a pay schedule and a time clock policy, and give teams the policy, to start keeping timesheets."] <a asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PaySchedules" asp-action="Index">@T["Pay schedules"]</a></div>
 }
 
 <form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">

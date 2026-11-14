@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Workforce.BackgroundTasks;
@@ -41,8 +42,6 @@ public sealed class TimeClockStartup : StartupBase
         services.AddScoped<TimesheetViews>();
         services.AddDataMigration<TimeClockMigrations>()
             .AddIndexProvider<TimeClockPolicyIndexProvider>()
-            .AddIndexProvider<PayPeriodCalendarIndexProvider>()
-            .AddIndexProvider<PayCodeIndexProvider>()
             .AddIndexProvider<TimeClockKioskIndexProvider>()
             .AddIndexProvider<TimePunchIndexProvider>()
             .AddIndexProvider<TimesheetIndexProvider>()
@@ -51,13 +50,12 @@ public sealed class TimeClockStartup : StartupBase
             .AddIndexProvider<PayrollExportBatchIndexProvider>();
 
         services.AddDisplayDriver<TimeClockPolicy, TimeClockPolicyRowDisplayDriver>();
-        services.AddDisplayDriver<PayPeriodCalendar, PayPeriodCalendarRowDisplayDriver>();
-        services.AddDisplayDriver<PayCode, PayCodeRowDisplayDriver>();
         services.AddDisplayDriver<TimeClockKiosk, TimeClockKioskRowDisplayDriver>();
         services.AddDisplayDriver<TimesheetRowViewModel, TimesheetRowDisplayDriver>();
         services.AddDisplayDriver<AttendanceRowViewModel, AttendanceRowDisplayDriver>();
         services.AddDisplayDriver<PayrollExportBatch, PayrollExportBatchRowDisplayDriver>();
         services.AddDisplayDriver<StaffMember, WorkerTimeClockRowDisplayDriver>();
+        services.AddDisplayDriver<PayCode, WorkforcePayCodeDisplayDriver>();
         services.AddSingleton<IBackgroundTask, TimesheetRefreshBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TimeClockTrackerBackfillBackgroundTask>();
         services.AddPermissionProvider<TimeClockPermissionsProvider>();

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Tabular;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -101,7 +102,7 @@ internal sealed class CsvPayrollExportProvider : IPayrollExportProvider
     /// </summary>
     internal static decimal? Amount(PayCode code, decimal hours, decimal? rate)
     {
-        if (code is null || code.Kind == PayCodeKind.Unpaid)
+        if (code is null || code.Kind == PayCodeKinds.Unpaid)
         {
             return code is null ? null : 0;
         }

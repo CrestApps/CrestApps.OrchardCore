@@ -1,6 +1,9 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -23,7 +26,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
 {
     public const string TimeClockStepName = "WorkforceTimeClock";
 
-    private readonly IPayPeriodCalendarManager _calendarManager;
+    private readonly IPayScheduleManager _calendarManager;
     private readonly IPayCodeManager _payCodeManager;
     private readonly ITimeClockPolicyManager _policyManager;
     private readonly ITeamManager _teamManager;
@@ -31,7 +34,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
     private readonly IPayrollExportService _payrollExportService;
 
     public TimeClockRecipeStep(
-        IPayPeriodCalendarManager calendarManager,
+        IPayScheduleManager calendarManager,
         IPayCodeManager payCodeManager,
         ITimeClockPolicyManager policyManager,
         ITeamManager teamManager,
@@ -52,7 +55,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
         var import = new RecipeImport(context, TimeClockStepName);
         var calendars = (await _calendarManager.GetAllAsync()).ToList();
 
-        foreach (var (_, incoming) in import.Read<PayPeriodCalendar>("PayPeriods"))
+        foreach (var (_, incoming) in import.Read<PaySchedule>("PayPeriods"))
         {
             if (await import.SaveAsync(_calendarManager, incoming, RecipeImport.Existing(calendars, incoming, item => item.Name), $"pay periods '{incoming.Name}'") is { } saved && !calendars.Contains(saved))
             {
@@ -62,8 +65,11 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
 
         var codes = (await _payCodeManager.GetAllAsync()).ToList();
 
-        foreach (var (_, incoming) in import.Read<PayCode>("PayCodes"))
+        // Pay codes are Pay Setup's now; a shift differential's window goes into Workforce's settings on the code.
+        foreach (var (node, incoming) in import.Read<PayCode>("PayCodes"))
         {
+            ReadWindow(node, incoming);
+
             if (await import.SaveAsync(_payCodeManager, incoming, RecipeImport.Existing(codes, incoming, item => item.Code), $"pay code '{incoming.Code}'") is { } saved && !codes.Contains(saved))
             {
                 codes.Add(saved);
@@ -204,5 +210,22 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
         settings.Columns = incoming.Columns.Where(column => !string.IsNullOrWhiteSpace(column.Header)).ToList();
 
         await _payrollExportService.SaveCsvSettingsAsync(settings);
+    }
+
+    private static void ReadWindow(JsonObject node, PayCode code)
+    {
+        var start = TimeOnly.TryParse(RecipeImport.String(node, "windowStart"), CultureInfo.InvariantCulture, out var from) ? from : (TimeOnly?)null;
+        var end = TimeOnly.TryParse(RecipeImport.String(node, "windowEnd"), CultureInfo.InvariantCulture, out var to) ? to : (TimeOnly?)null;
+        var weekdays = RecipeImport.Strings(node, "weekdays")
+            .Select(day => Enum.TryParse<DayOfWeek>(day, true, out var parsed) ? parsed : (DayOfWeek?)null)
+            .Where(day => day.HasValue)
+            .Select(day => day.Value)
+            .Distinct()
+            .ToList();
+
+        if (start.HasValue || end.HasValue || weekdays.Count > 0)
+        {
+            code.Put(new WorkforcePayCodeSettings { WindowStart = start, WindowEnd = end, Weekdays = weekdays });
+        }
     }
 }

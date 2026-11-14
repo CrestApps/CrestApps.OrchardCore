@@ -1,5 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
@@ -36,7 +38,7 @@ public sealed class TimesheetsController : Controller
     private readonly ITimesheetService _timesheets;
     private readonly ITimeClockService _timeClock;
     private readonly IAttendanceService _attendance;
-    private readonly IPayPeriodCalendarManager _calendars;
+    private readonly IPayScheduleManager _calendars;
     private readonly IPayCodeManager _payCodes;
     private readonly IStaffMemberManager _workerManager;
     private readonly ITeamManager _teamManager;
@@ -70,7 +72,7 @@ public sealed class TimesheetsController : Controller
         ITimesheetService timesheets,
         ITimeClockService timeClock,
         IAttendanceService attendance,
-        IPayPeriodCalendarManager calendars,
+        IPayScheduleManager calendars,
         IPayCodeManager payCodes,
         IStaffMemberManager workerManager,
         ITeamManager teamManager,
@@ -620,7 +622,7 @@ public sealed class TimesheetsController : Controller
         return RedirectToAction(nameof(Details), new { id = result.Value.ItemId });
     }
 
-    internal static IList<SelectListItem> PeriodOptions(PayPeriodCalendar calendar, DateOnly today, DateOnly selected)
+    internal static IList<SelectListItem> PeriodOptions(PaySchedule calendar, DateOnly today, DateOnly selected)
     {
         var options = new List<SelectListItem>();
         var start = calendar.PeriodOn(today).Start;

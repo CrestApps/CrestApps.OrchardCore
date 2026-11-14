@@ -7,7 +7,7 @@
         <p class="text-muted small">@T["Exports the locked timesheets of a pay period. Approve the timesheets, lock the period under Timesheets, then export. Each timesheet is exported once unless you export again."]</p>
         @if (Model.CalendarOptions.Count == 0)
         {
-            <div class="alert alert-info mb-0">@T["Add pay periods first."] <a asp-controller="PayPeriods" asp-action="Index">@T["Pay periods"]</a></div>
+            <div class="alert alert-info mb-0">@T["Add a pay schedule first."] <a asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PaySchedules" asp-action="Index">@T["Pay schedules"]</a></div>
         }
         else
         {

@@ -297,6 +297,8 @@ A kiosk's address is a secret: the deployment step never writes its token, and t
 }
 ```
 
+The time clock's pay periods and pay codes are Pay Setup's pay schedules and pay codes (see [Payroll](./payroll)). The step still reads `PayPeriods` and `PayCodes` and saves them through Pay Setup, with a code's `windowStart`, `windowEnd` and `weekdays` going into its `WorkforcePayCodeSettings`; new recipes use the `PaySchedules` and `PayCodes` steps.
+
 ```json
 {
   "name": "WorkforceShiftPlanning",
@@ -355,7 +357,7 @@ The **Workforce API** feature maps `api/workforce/v1` with the API authenticatio
 | `ManageLaborRules` (Manage labor rules) | Labor rule sets and the override list. |
 | `OverrideLaborRules` (Override labor rules) | Publishing with a reason despite rules that need an override. |
 | `ApprovePredictabilityPay` (Approve predictability pay) | Approving and waiving the predictability pay of the teams in one's scope. |
-| `ManageTimeClockPolicies` (Manage time clock policies) | Time clock policies, pay periods, pay codes and kiosks. |
+| `ManageTimeClockPolicies` (Manage time clock policies) | Time clock policies and kiosks. Pay schedules and pay codes are Pay Setup's (`ManagePaySetup`), granted to roles with this permission when the site updates. |
 | `ApproveTimesheets` (Approve timesheets) | Approving timesheets, attendance exceptions and punch corrections of the teams the user manages. |
 | `EditPunches` (Edit punches) | Adding, changing and removing punches. |
 | `ExportPayroll` (Export payroll) | Locking periods and exporting payroll. |

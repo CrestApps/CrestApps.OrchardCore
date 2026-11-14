@@ -41,16 +41,6 @@ internal sealed class TimeClockAdminMenu : AdminNavigationProvider
                     .Action("Index", "TimeClockPolicies", WorkforceConstants.Features.Workforce)
                     .Permission(WorkforcePermissions.ManageTimeClockPolicies)
                     .LocalNav())
-                .Add(S["Pay Periods"], S["Pay Periods"].PrefixPosition("51"), periods => periods
-                    .Id("workforcePayPeriods")
-                    .Action("Index", "PayPeriods", WorkforceConstants.Features.Workforce)
-                    .Permission(WorkforcePermissions.ManageTimeClockPolicies)
-                    .LocalNav())
-                .Add(S["Pay Codes"], S["Pay Codes"].PrefixPosition("52"), codes => codes
-                    .Id("workforcePayCodes")
-                    .Action("Index", "PayCodes", WorkforceConstants.Features.Workforce)
-                    .Permission(WorkforcePermissions.ManageTimeClockPolicies)
-                    .LocalNav())
                 .Add(S["Time Clock Kiosks"], S["Time Clock Kiosks"].PrefixPosition("53"), kiosks => kiosks
                     .Id("workforceTimeClockKiosks")
                     .Action("Index", "TimeClockKiosks", WorkforceConstants.Features.Workforce)
