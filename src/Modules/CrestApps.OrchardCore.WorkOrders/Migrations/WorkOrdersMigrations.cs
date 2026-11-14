@@ -18,12 +18,10 @@ namespace CrestApps.OrchardCore.WorkOrders.Migrations;
 internal sealed class WorkOrdersMigrations : DataMigration
 {
     private readonly WorkOrderServiceLevelUpgrade _upgrade;
-    private readonly WorkOrderNotesUpgrade _notesUpgrade;
 
-    public WorkOrdersMigrations(WorkOrderServiceLevelUpgrade upgrade, WorkOrderNotesUpgrade notesUpgrade)
+    public WorkOrdersMigrations(WorkOrderServiceLevelUpgrade upgrade)
     {
         _upgrade = upgrade;
-        _notesUpgrade = notesUpgrade;
     }
 
     /// <summary>
@@ -96,9 +94,11 @@ internal sealed class WorkOrdersMigrations : DataMigration
     /// Moves the notes stored on work orders to their timelines, which this feature depends on.
     /// </summary>
     /// <returns>The migration version.</returns>
-    public async Task<int> UpdateFrom3Async()
+    public static int UpdateFrom3()
     {
-        await _notesUpgrade.RunAsync();
+        // The move runs once this step has committed, a batch at a time, so the Timeline tables created in the same
+        // activation are kept whatever happens.
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<WorkOrderNotesUpgrade>().RunAsync());
 
         return 4;
     }

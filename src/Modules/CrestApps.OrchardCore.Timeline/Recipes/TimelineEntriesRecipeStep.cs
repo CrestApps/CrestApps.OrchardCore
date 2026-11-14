@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
-using CrestApps.OrchardCore.Timeline.Core.Services;
+using CrestApps.OrchardCore.Timeline.Services;
 using CrestApps.OrchardCore.Timeline.Models;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -19,12 +19,12 @@ internal sealed class TimelineEntriesRecipeStep : NamedRecipeStepHandler
     /// </summary>
     public const string EntriesName = "Entries";
 
-    private readonly TimelineEntryStore _store;
+    private readonly ITimelineService _timelineService;
 
-    public TimelineEntriesRecipeStep(TimelineEntryStore store)
+    public TimelineEntriesRecipeStep(ITimelineService timelineService)
         : base(TimelineConstants.RecipeStepName)
     {
-        _store = store;
+        _timelineService = timelineService;
     }
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
@@ -38,21 +38,21 @@ internal sealed class TimelineEntriesRecipeStep : NamedRecipeStepHandler
         {
             var entry = node.Deserialize<TimelineEntry>(JOptions.Default);
 
-            if (entry is null || entry.Subject.IsEmpty || string.IsNullOrWhiteSpace(entry.Kind))
+            if (entry is null)
             {
-                context.Errors.Add("A timeline entry in the TimelineEntries step has no record or no kind.");
+                context.Errors.Add("A timeline entry in the TimelineEntries step can't be read.");
 
                 continue;
             }
 
-            if (!string.IsNullOrEmpty(entry.ItemId) && await _store.FindByIdAsync(entry.ItemId) is not null)
+            // The import path checks and stamps the entry like a new one, leaves an entry already stored as it is, and
+            // announces nothing.
+            var result = await _timelineService.ImportAsync(entry);
+
+            if (!result.Succeeded)
             {
-                continue;
+                context.Errors.Add($"A timeline entry in the TimelineEntries step was refused: {string.Join(" ", result.Errors)}");
             }
-
-            entry.ItemId = string.IsNullOrEmpty(entry.ItemId) ? UniqueId.GenerateId() : entry.ItemId;
-
-            await _store.CreateAsync(entry);
         }
     }
 }

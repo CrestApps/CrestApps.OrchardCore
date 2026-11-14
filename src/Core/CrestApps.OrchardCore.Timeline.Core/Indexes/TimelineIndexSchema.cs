@@ -28,6 +28,7 @@ public static class TimelineIndexSchema
             .Column<string>("AuthorKind", column => column.Nullable().WithLength(64))
             .Column<string>("AuthorId", column => column.Nullable().WithLength(64))
             .Column<string>("Channel", column => column.Nullable().WithLength(64))
+            .Column<string>("ExternalId", column => column.Nullable().WithLength(TimelineConstants.MaxExternalIdLength))
             .Column<DateTime>("CreatedUtc")
             .Column<bool>("Redacted"),
             collection: collection);
@@ -39,6 +40,9 @@ public static class TimelineIndexSchema
             // A record's timeline is read newest first; reports read by time.
             table.CreateIndex("IDX_TL_Entry_Subject", "SubjectKind", "SubjectId", "CreatedUtc");
             table.CreateIndex("IDX_TL_Entry_Created", "CreatedUtc", "Kind");
+
+            // A channel finds an entry again by the id it has outside the site, such as an e-mail's message id.
+            table.CreateIndex("IDX_TL_Entry_External", "ExternalId");
         }, collection: collection);
     }
 }

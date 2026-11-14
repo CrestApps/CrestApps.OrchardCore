@@ -21,10 +21,20 @@ public static class TimelineConstants
     public const int MaxBodyLength = 20_000;
 
     /// <summary>
+    /// The most characters of an entry's kind, channel, and record and author kinds and ids, which are indexed.
+    /// </summary>
+    public const int MaxIndexedLength = 64;
+
+    /// <summary>
+    /// The most characters of <see cref="Models.TimelineEntry.ExternalId"/>, which is indexed.
+    /// </summary>
+    public const int MaxExternalIdLength = 255;
+
+    /// <summary>
     /// The record kind of a content item's timeline, such as an account, a contact or a lead; the record id is the
     /// content item id.
     /// </summary>
-    public const string ContentItemKind = "Content";
+    public const string ContentItemKind = Records.RecordKinds.ContentItem;
 
     /// <summary>
     /// The owner kind of the files attached to a timeline entry; the owner id is the entry's id, so the files are as

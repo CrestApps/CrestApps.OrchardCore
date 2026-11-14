@@ -216,18 +216,36 @@ internal static class OrderAdminApiEndpoints
             await ReadNotesAsync(order, httpContext));
     }
 
-    // The notes and history of the order, oldest first, from its timeline.
+    // The notes and history of the order, oldest first, from its timeline: every one of them, as the API returned before
+    // the notes moved to the timeline, read a page at a time.
     private static async Task<List<ApiOrderNote>> ReadNotesAsync(Order order, HttpContext httpContext)
     {
-        var page = await httpContext.RequestServices.GetRequiredService<ITimelineService>().ListAsync(new TimelineQuery
-        {
-            Subject = new RecordRef(OrderConstants.RecordKind, order.ItemId),
-            IncludeInternal = true,
-            Take = 200,
-        }, httpContext.RequestAborted);
+        const int pageSize = 500;
 
-        return [.. page.Entries
+        var timeline = httpContext.RequestServices.GetRequiredService<ITimelineService>();
+        var entries = new List<TimelineEntry>();
+
+        while (true)
+        {
+            var page = await timeline.ListAsync(new TimelineQuery
+            {
+                Subject = new RecordRef(OrderConstants.RecordKind, order.ItemId),
+                IncludeInternal = true,
+                Skip = entries.Count,
+                Take = pageSize,
+            }, httpContext.RequestAborted);
+
+            entries.AddRange(page.Entries);
+
+            if (page.Entries.Count < pageSize || entries.Count >= page.Total)
+            {
+                break;
+            }
+        }
+
+        return [.. entries
             .Where(entry => !string.IsNullOrEmpty(entry.Body))
+            .AsEnumerable()
             .Reverse()
             .Select(entry => new ApiOrderNote(entry.Body, OrderApiMapper.ToCamel(entry.Kind == TimelineConstants.Kinds.Event ? nameof(OrderNoteKind.Event) : nameof(OrderNoteKind.Note)), entry.AuthorName, entry.CreatedUtc))];
     }

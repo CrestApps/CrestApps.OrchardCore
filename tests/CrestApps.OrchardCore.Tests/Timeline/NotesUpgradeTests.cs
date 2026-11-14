@@ -21,7 +21,8 @@ namespace CrestApps.OrchardCore.Tests.Timeline;
 
 /// <summary>
 /// The notes work orders and orders kept on themselves move to their timelines once, with their own times, authors and
-/// kinds, and the records no longer carry them.
+/// kinds, and the records no longer carry them: a batch at a time, without cutting a long note or announcing anything,
+/// keeping on a record the notes that couldn't move, and adding nothing when it runs again after a run that stopped.
 /// </summary>
 #pragma warning disable CS0618 // The tests store notes the old way, to move them.
 public sealed class NotesUpgradeTests
@@ -82,7 +83,7 @@ public sealed class NotesUpgradeTests
             },
             async schemaBuilder =>
             {
-                await new OrderMigrations(notesUpgrade: null) { SchemaBuilder = schemaBuilder }.CreateAsync();
+                await new OrderMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
                 await TimelineIndexSchema.CreateAsync(schemaBuilder);
             },
             [new OrderIndexProvider(), new TimelineEntryIndexProvider()],
@@ -117,6 +118,122 @@ public sealed class NotesUpgradeTests
         Assert.Equal([TimelineConstants.Kinds.Note, TimelineConstants.Kinds.Event], page.Entries.Select(entry => entry.Kind));
         Assert.Equal("admin", page.Entries[0].AuthorName);
         Assert.Empty(order.Notes);
+    }
+
+    [Fact]
+    public async Task WorkOrderNotes_MoveInBatches_KeepALongNote_AndAnnounceNothing()
+    {
+        // Arrange: five work orders, one with a note longer than a new note may be, read two at a time.
+        var heard = new List<string>();
+        await using var harness = await CalendarTestHarness.CreateAsync(
+            services =>
+            {
+                services.AddWorkOrdersWithServiceLevels();
+                services.AddSingleton<ITimelineEntryHandler>(new Listener(heard));
+            },
+            WorkOrderTestStores.CreateSchemaAsync,
+            [.. WorkOrderTestStores.IndexProviders],
+            WorkOrderTestStores.Collections);
+        var longNote = new string('n', TimelineConstants.MaxBodyLength + 1_000);
+
+        for (var index = 0; index < 5; index++)
+        {
+            await SaveWorkOrderAsync(harness, $"wo{index}", index == 3 ? longNote : $"Note {index}");
+        }
+
+        // Act
+        var first = await harness.RunAsync(services => Upgrade(services, batchSize: 2).RunAsync());
+        var second = await harness.RunAsync(services => Upgrade(services, batchSize: 2).RunAsync());
+
+        // Assert
+        Assert.Equal(5, first);
+        Assert.Equal(0, second);
+        Assert.Empty(heard);
+        var page = await harness.RunAsync(services => services.GetRequiredService<ITimelineService>().ListAsync(new TimelineQuery { Subject = new RecordRef(WorkOrdersConstants.RecordKind, "wo3"), IncludeInternal = true }), commit: false);
+        Assert.Equal(longNote, Assert.Single(page.Entries).Body);
+    }
+
+    [Fact]
+    public async Task AWorkOrderWhoseNoteIsRefused_KeepsItsNotes()
+    {
+        // Arrange: a record id longer than the timeline's index holds, so its note can't be stored.
+        await using var harness = await CalendarTestHarness.CreateAsync(
+            services => services.AddWorkOrdersWithServiceLevels(),
+            WorkOrderTestStores.CreateSchemaAsync,
+            [.. WorkOrderTestStores.IndexProviders],
+            WorkOrderTestStores.Collections);
+        var id = new string('w', TimelineConstants.MaxIndexedLength + 1);
+        await SaveWorkOrderAsync(harness, id, "Keep me.");
+
+        // Act
+        var moved = await harness.RunAsync(services => services.GetRequiredService<WorkOrderNotesUpgrade>().RunAsync());
+
+        // Assert
+        Assert.Equal(0, moved);
+        var stored = await harness.RunAsync(services => services.GetRequiredService<ISession>().Query<WorkOrder>(collection: WorkOrdersConstants.CollectionName).FirstOrDefaultAsync(), commit: false);
+        Assert.Equal("Keep me.", Assert.Single(stored.Notes).Text);
+    }
+
+    [Fact]
+    public async Task ARunAfterOneThatStoppedBeforeClearingTheNotes_AddsNothingTwice()
+    {
+        // Arrange: the notes were copied but the work order still carries them, as if the first run stopped there.
+        await using var harness = await CalendarTestHarness.CreateAsync(
+            services => services.AddWorkOrdersWithServiceLevels(),
+            WorkOrderTestStores.CreateSchemaAsync,
+            [.. WorkOrderTestStores.IndexProviders],
+            WorkOrderTestStores.Collections);
+        await SaveWorkOrderAsync(harness, "wo1", "Once only.");
+        await harness.RunAsync(services => services.GetRequiredService<WorkOrderNotesUpgrade>().RunAsync());
+        await SaveWorkOrderAsync(harness, "wo1-again", "Once only.", itemId: "wo1");
+
+        // Act
+        await harness.RunAsync(services => services.GetRequiredService<WorkOrderNotesUpgrade>().RunAsync());
+
+        // Assert
+        var page = await harness.RunAsync(services => services.GetRequiredService<ITimelineService>().ListAsync(new TimelineQuery { Subject = new RecordRef(WorkOrdersConstants.RecordKind, "wo1"), IncludeInternal = true }), commit: false);
+        Assert.Equal(1, page.Total);
+    }
+
+    private static WorkOrderNotesUpgrade Upgrade(IServiceProvider services, int batchSize)
+    {
+        var upgrade = services.GetRequiredService<WorkOrderNotesUpgrade>();
+        upgrade.BatchSize = batchSize;
+
+        return upgrade;
+    }
+
+    private static Task SaveWorkOrderAsync(CalendarTestHarness harness, string number, string note, string itemId = null)
+        => harness.RunAsync(services => services.GetRequiredService<ISession>().SaveAsync(new WorkOrder
+        {
+            ItemId = itemId ?? number,
+            Number = "WO-" + number,
+            Summary = "Boiler service",
+            Notes = [new WorkOrderNote { Utc = CalendarTestHarness.Now.AddDays(-2), By = "tech", Text = note }],
+        }, collection: WorkOrdersConstants.CollectionName));
+
+    private sealed class Listener : ITimelineEntryHandler
+    {
+        private readonly List<string> _heard;
+
+        public Listener(List<string> heard)
+        {
+            _heard = heard;
+        }
+
+        public Task AddingAsync(TimelineEntry entry, IList<string> errors, CancellationToken cancellationToken = default)
+        {
+            _heard.Add("adding");
+
+            return Task.CompletedTask;
+        }
+
+        public Task AddedAsync(TimelineEntry entry, CancellationToken cancellationToken = default)
+        {
+            _heard.Add("added");
+
+            return Task.CompletedTask;
+        }
     }
 }
 #pragma warning restore CS0618

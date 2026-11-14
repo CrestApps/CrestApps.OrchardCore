@@ -30,6 +30,7 @@ public sealed class TimelineEntryIndexProvider : IndexProvider<TimelineEntry>
                 AuthorKind = entry.Author.Kind,
                 AuthorId = entry.Author.Id,
                 Channel = entry.Channel,
+                ExternalId = entry.ExternalId,
                 CreatedUtc = entry.CreatedUtc,
                 Redacted = entry.RedactedUtc is not null,
             });

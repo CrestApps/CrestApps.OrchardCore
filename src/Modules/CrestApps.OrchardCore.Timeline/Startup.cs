@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Timeline.Notifications;
 using CrestApps.OrchardCore.Timeline.Recipes;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -58,14 +59,12 @@ public sealed class ContentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTimelineAccessProvider<ContentItemTimelineAccess>();
+        services.AddScoped<IContentHandler, ContentItemTimelineCleanup>();
     }
 }
 
 /// <summary>
-/// Registers the recipe step that imports timeline entries.
-/// </summary>
-/// <summary>
-/// Lets the timeline card take files when the Attachments feature is on: the files belong to their entry.
+/// Lets the timeline card take files when the Attachments feature is on: the files belong to their entry, and go with it.
 /// </summary>
 [RequireFeatures(AttachmentsConstants.Features.Attachments)]
 public sealed class AttachmentsStartup : StartupBase
@@ -74,9 +73,13 @@ public sealed class AttachmentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAttachmentAccessProvider<TimelineEntryAttachmentAccess>();
+        services.AddTimelineEntryHandler<TimelineEntryFilesCleanup>();
     }
 }
 
+/// <summary>
+/// Registers the recipe step that imports timeline entries.
+/// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
 public sealed class RecipesStartup : StartupBase
 {

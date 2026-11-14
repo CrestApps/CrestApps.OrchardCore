@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CrestApps.OrchardCore.Orders.Services;
@@ -15,10 +16,12 @@ namespace CrestApps.OrchardCore.Orders.Services;
 internal sealed class OrderTimelineAccess : ITimelineAccessProvider
 {
     private readonly IAuthorizationService _authorizationService;
+    private readonly IOrderStore _orders;
 
-    public OrderTimelineAccess(IAuthorizationService authorizationService)
+    public OrderTimelineAccess(IAuthorizationService authorizationService, IOrderStore orders)
     {
         _authorizationService = authorizationService;
+        _orders = orders;
     }
 
     public string SubjectKind => OrderConstants.RecordKind;
@@ -29,5 +32,9 @@ internal sealed class OrderTimelineAccess : ITimelineAccessProvider
     public async Task<bool> CanAddAsync(ClaimsPrincipal user, RecordRef subject, string kind, TimelineVisibility visibility, CancellationToken cancellationToken = default)
         => visibility == TimelineVisibility.Internal
             && string.Equals(kind, TimelineConstants.Kinds.Note, StringComparison.Ordinal)
-            && await _authorizationService.AuthorizeAsync(user, OrderPermissions.ManageOrders);
+            && await _authorizationService.AuthorizeAsync(user, OrderPermissions.ManageOrders)
+
+            // An entry only goes on an order that exists.
+            && !string.IsNullOrEmpty(subject.Id)
+            && await _orders.FindByIdAsync(subject.Id, cancellationToken) is not null;
 }

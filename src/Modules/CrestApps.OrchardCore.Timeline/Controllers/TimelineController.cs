@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
@@ -26,6 +27,7 @@ public sealed class TimelineController : Controller
     private readonly ITimelineAccessService _accessService;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly TimelineOptions _options;
 
     internal readonly IHtmlLocalizer H;
 
@@ -36,14 +38,17 @@ public sealed class TimelineController : Controller
     /// <param name="accessService">The timeline access service.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="options">The timeline options, for the kinds the composer offers.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public TimelineController(
         ITimelineService timelineService,
         ITimelineAccessService accessService,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        IOptions<TimelineOptions> options,
         IHtmlLocalizer<TimelineController> htmlLocalizer)
     {
+        _options = options.Value;
         _timelineService = timelineService;
         _accessService = accessService;
         _authorizationService = authorizationService;
@@ -56,24 +61,27 @@ public sealed class TimelineController : Controller
     /// </summary>
     /// <param name="subject">The record, as <c>Kind:Id</c>.</param>
     /// <param name="body">The text.</param>
-    /// <param name="isPublic">Whether it is a public comment rather than an internal note.</param>
+    /// <param name="kind">The kind of entry, one of the kinds the composer offers.</param>
     /// <param name="returnUrl">The page to go back to.</param>
     /// <param name="files">The files to attach, when the Attachments feature is enabled.</param>
     /// <returns>A redirect to the page.</returns>
     [HttpPost]
     [Admin("timeline/add", "TimelineAdd")]
-    public async Task<IActionResult> Add(string subject, string body, bool isPublic, string returnUrl, List<IFormFile> files)
+    public async Task<IActionResult> Add(string subject, string body, string kind, string returnUrl, List<IFormFile> files)
     {
-        if (!RecordRef.TryParse(subject, out var record))
+        // Only the kinds the composer offers can be posted here; a module posts its own kinds through its own action.
+        var offered = _options.ComposerKinds.FirstOrDefault(option => string.Equals(option.Kind, kind, StringComparison.Ordinal));
+
+        if (!RecordRef.TryParse(subject, out var record) || offered is null
+            || (offered.SubjectKinds.Count > 0 && !offered.SubjectKinds.Contains(record.Kind)))
         {
             return BadRequest();
         }
 
         var cancellationToken = HttpContext.RequestAborted;
-        var kind = isPublic ? TimelineConstants.Kinds.Comment : TimelineConstants.Kinds.Note;
-        var visibility = isPublic ? TimelineVisibility.Public : TimelineVisibility.Internal;
+        var visibility = offered.Visibility;
 
-        if (!await _accessService.CanAddAsync(User, record, kind, visibility, cancellationToken))
+        if (!await _accessService.CanAddAsync(User, record, offered.Kind, visibility, cancellationToken))
         {
             return Forbid();
         }
@@ -82,7 +90,7 @@ public sealed class TimelineController : Controller
         {
             ItemId = UniqueId.GenerateId(),
             Subject = record,
-            Kind = kind,
+            Kind = offered.Kind,
             Visibility = visibility,
             Author = CurrentUser(),
 
@@ -126,7 +134,7 @@ public sealed class TimelineController : Controller
 
         if (result.Succeeded)
         {
-            await _notifier.SuccessAsync(isPublic ? H["The comment was added."] : H["The note was added."]);
+            await _notifier.SuccessAsync(visibility == TimelineVisibility.Public ? H["The comment was added."] : H["The note was added."]);
         }
         else
         {

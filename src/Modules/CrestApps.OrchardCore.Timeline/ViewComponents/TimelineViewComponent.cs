@@ -6,24 +6,38 @@ using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
 using CrestApps.OrchardCore.Timeline.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Timeline.ViewComponents;
 
 /// <summary>
-/// Shows a record's timeline, newest first, with a composer for a note or a comment. Other modules invoke it by name
-/// (<c>Timeline</c>) from their record pages. What the user may read and write comes from the record kind's
-/// <see cref="ITimelineAccessProvider"/>; with no access it renders nothing.
+/// Shows a record's timeline, newest first and a page at a time, with a composer offering the kinds of entry the user may
+/// add. Other modules invoke it by name (<c>Timeline</c>) from their record pages. What the user may read and write
+/// comes from the record kind's <see cref="ITimelineAccessProvider"/>; with no access it renders nothing.
 /// </summary>
 public sealed class TimelineViewComponent : ViewComponent
 {
-    private const int PageSize = 50;
+    /// <summary>
+    /// The number of entries on a page.
+    /// </summary>
+    internal const int PageSize = 50;
+
+    /// <summary>
+    /// The key, in the temporary data of the next request, of the text a refused post keeps for the composer.
+    /// </summary>
+    internal const string DraftKey = "CrestApps.Timeline.Draft";
 
     private readonly ITimelineService _timelineService;
     private readonly ITimelineAccessService _accessService;
     private readonly IPartyDirectory _partyDirectory;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly TimelineOptions _options;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TimelineViewComponent"/> class.
@@ -32,26 +46,32 @@ public sealed class TimelineViewComponent : ViewComponent
     /// <param name="accessService">The timeline access service.</param>
     /// <param name="partyDirectory">The party directory, for the authors' names.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="localizerFactory">The localizer factory, for the composer's buttons.</param>
+    /// <param name="options">The timeline options.</param>
     public TimelineViewComponent(
         ITimelineService timelineService,
         ITimelineAccessService accessService,
         IPartyDirectory partyDirectory,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizerFactory localizerFactory,
+        IOptions<TimelineOptions> options)
     {
         _timelineService = timelineService;
         _accessService = accessService;
         _partyDirectory = partyDirectory;
         _authorizationService = authorizationService;
+        _localizerFactory = localizerFactory;
+        _options = options.Value;
     }
 
     /// <summary>
-    /// Renders the timeline.
+    /// Renders the timeline of a record.
     /// </summary>
     /// <param name="subject">The record, as <c>Kind:Id</c>.</param>
-    /// <param name="title">The card's title; "Notes" when empty.</param>
-    /// <param name="returnUrl">The page to come back to after a post; the current page when empty.</param>
-    /// <param name="kinds">The kinds of entry to show, comma-separated; every kind when empty.</param>
-    /// <returns>The view, or nothing when the user may not read the timeline.</returns>
+    /// <param name="title">The card's title, or <see langword="null"/> for "Notes".</param>
+    /// <param name="returnUrl">The page to come back to after a post, or <see langword="null"/> for this page.</param>
+    /// <param name="kinds">The entry kinds to show, comma-separated, or <see langword="null"/> for all.</param>
+    /// <returns>The card.</returns>
     public async Task<IViewComponentResult> InvokeAsync(string subject, string title = null, string returnUrl = null, string kinds = null)
     {
         if (!RecordRef.TryParse(subject, out var record))
@@ -69,11 +89,15 @@ public sealed class TimelineViewComponent : ViewComponent
             return Content(string.Empty);
         }
 
+        var pageKey = PageKey(record);
+        var pageNumber = int.TryParse(HttpContext.Request.Query[pageKey], out var requested) && requested > 1 ? requested : 1;
+
         var page = await _timelineService.ListAsync(new TimelineQuery
         {
             Subject = record,
             IncludeInternal = canViewInternal,
             Kinds = string.IsNullOrWhiteSpace(kinds) ? [] : kinds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            Skip = (pageNumber - 1) * PageSize,
             Take = PageSize,
         }, cancellationToken);
 
@@ -98,19 +122,38 @@ public sealed class TimelineViewComponent : ViewComponent
             }
         }
 
-        var canAddNote = await _accessService.CanAddAsync(user, record, TimelineConstants.Kinds.Note, TimelineVisibility.Internal, cancellationToken);
-        var canAddComment = await _accessService.CanAddAsync(user, record, TimelineConstants.Kinds.Comment, TimelineVisibility.Public, cancellationToken);
+        var composer = new List<TimelineComposerButton>();
+
+        foreach (var kind in _options.ComposerKinds)
+        {
+            if ((kind.SubjectKinds.Count == 0 || kind.SubjectKinds.Contains(record.Kind))
+                && await _accessService.CanAddAsync(user, record, kind.Kind, kind.Visibility, cancellationToken))
+            {
+                composer.Add(new TimelineComposerButton
+                {
+                    Kind = kind.Kind,
+                    Visibility = kind.Visibility,
+                    Text = kind.ButtonText is null ? kind.Kind : _localizerFactory.Localize(kind.ButtonText).Value,
+                });
+            }
+        }
+
+        var lastPage = Math.Max(1, (page.Total + PageSize - 1) / PageSize);
 
         return View(new TimelineViewModel
         {
             Subject = record.ToString(),
+            SubjectKind = record.Kind,
             Title = title,
-            ReturnUrl = string.IsNullOrEmpty(returnUrl) ? HttpContext.Request.Path + HttpContext.Request.QueryString : returnUrl,
+            ReturnUrl = string.IsNullOrEmpty(returnUrl) ? HttpContext.Request.PathBase + HttpContext.Request.Path + HttpContext.Request.QueryString : returnUrl,
             Total = page.Total,
-            CanAddNote = canAddNote,
-            CanAddComment = canAddComment,
-            CanAttach = attachmentService is not null && (canAddNote || canAddComment),
+            Composer = composer,
+            Draft = TempData?.Peek(DraftKey) is string draft && draft.StartsWith(record + "\n", StringComparison.Ordinal) ? Pop(draft, record) : null,
+            CanAttach = attachmentService is not null && composer.Count > 0,
             CanRedact = await _authorizationService.AuthorizeAsync(user, TimelinePermissions.RedactTimelineEntries),
+            PageNumber = pageNumber,
+            NewerUrl = pageNumber > 1 ? PageUrl(pageKey, pageNumber - 1) : null,
+            OlderUrl = pageNumber < lastPage ? PageUrl(pageKey, pageNumber + 1) : null,
             Entries = [.. entries.Select(entry => new TimelineEntryViewModel
             {
                 Entry = entry,
@@ -129,5 +172,37 @@ public sealed class TimelineViewComponent : ViewComponent
                     })],
             })],
         });
+    }
+
+    /// <summary>
+    /// The query key that holds the page of a record's timeline, so two timelines on one page page apart.
+    /// </summary>
+    /// <param name="record">The record.</param>
+    /// <returns>The key.</returns>
+    internal static string PageKey(RecordRef record)
+        => "timeline-" + record.Kind + "-" + record.Id;
+
+    // The text a refused post kept, read once.
+    private string Pop(string draft, RecordRef record)
+    {
+        TempData.Remove(DraftKey);
+
+        return draft[(record.ToString().Length + 1)..];
+    }
+
+    // This page's address with the timeline's page set, keeping the tenant's path base and the other query values.
+    private string PageUrl(string pageKey, int pageNumber)
+    {
+        var request = HttpContext.Request;
+        var query = new QueryBuilder(request.Query
+            .Where(pair => !string.Equals(pair.Key, pageKey, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(pair => pair.Value.Select(value => new KeyValuePair<string, string>(pair.Key, value))));
+
+        if (pageNumber > 1)
+        {
+            query.Add(pageKey, pageNumber.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        return request.PathBase + request.Path + query.ToQueryString();
     }
 }

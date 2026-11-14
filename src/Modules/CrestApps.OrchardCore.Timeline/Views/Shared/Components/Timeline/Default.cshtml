@@ -4,10 +4,6 @@
 
 @model TimelineViewModel
 
-@{
-    var formId = "timeline-" + Model.Subject.Replace(':', '-');
-}
-
 <div class="card mb-3 crestapps-timeline">
     <div class="card-header d-flex align-items-center">
         <span>@(string.IsNullOrEmpty(Model.Title) ? T["Notes"].Value : Model.Title)</span>
@@ -17,37 +13,13 @@
         }
     </div>
     <div class="card-body">
-        @if (Model.CanAddNote || Model.CanAddComment)
+        @if (Model.Composer.Count > 0)
         {
-            <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Add" method="post" class="mb-3" id="@formId" enctype="@(Model.CanAttach ? "multipart/form-data" : "application/x-www-form-urlencoded")">
-                <input type="hidden" name="subject" value="@Model.Subject" />
-                <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                <label class="form-label visually-hidden" for="@formId-body">@T["Text"]</label>
-                @if (Model.CanAttach)
-                {
-                    <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" placeholder="@T["Write a note"]"></textarea>
-                    <label class="form-label visually-hidden" for="@formId-files">@T["Files"]</label>
-                    <input id="@formId-files" name="files" type="file" multiple class="form-control form-control-sm mb-2" title="@T["Attach files"]" />
-                }
-                else
-                {
-                    <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" required placeholder="@T["Write a note"]"></textarea>
-                }
-                <div class="d-flex gap-2">
-                    @if (Model.CanAddNote)
-                    {
-                        <button type="submit" name="isPublic" value="false" class="btn btn-sm btn-primary">@T["Add note"]</button>
-                    }
-                    @if (Model.CanAddComment)
-                    {
-                        <button type="submit" name="isPublic" value="true" class="btn btn-sm btn-outline-primary">@T["Add comment"]</button>
-                    }
-                </div>
-                @if (Model.CanAddNote && Model.CanAddComment)
-                {
-                    <span class="hint">@T["A note is seen only by the people who work on the record; a comment is seen by everyone who may read it."]</span>
-                }
-            </form>
+            // A shape, so a module can offer its own composer on its records (TimelineComposer__{Kind}).
+            var composer = await New.TimelineComposer(Timeline: Model);
+            composer.Metadata.Alternates.Add("TimelineComposer__" + Model.SubjectKind);
+
+            @await DisplayAsync(composer)
         }
 
         @if (Model.Entries.Count == 0)
@@ -85,7 +57,7 @@
                             {
                                 <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Redact" asp-route-id="@entry.ItemId" method="post" class="ms-auto">
                                     <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-                                    <button type="submit" class="btn btn-link btn-sm p-0 text-danger" data-title="@T["Redact"]" data-message="@T["Remove the text and files of this entry? This can't be undone."]">@T["Redact"]</button>
+                                    <button type="submit" class="btn btn-link btn-sm p-0 text-danger" data-url-af="RemoveUrl" data-title="@T["Redact"]" data-message="@T["Remove the text and files of this entry? This can't be undone."]">@T["Redact"]</button>
                                 </form>
                             }
                         </div>
@@ -125,6 +97,24 @@
                     </li>
                 }
             </ul>
+        }
+
+        @if (Model.NewerUrl is not null || Model.OlderUrl is not null)
+        {
+            <nav class="d-flex justify-content-between mt-3" aria-label="@T["Timeline pages"]">
+                @if (Model.NewerUrl is not null)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" href="@Model.NewerUrl"><i class="fa-solid fa-angle-left me-1" aria-hidden="true"></i>@T["Newer"]</a>
+                }
+                else
+                {
+                    <span></span>
+                }
+                @if (Model.OlderUrl is not null)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" href="@Model.OlderUrl">@T["Older"]<i class="fa-solid fa-angle-right ms-1" aria-hidden="true"></i></a>
+                }
+            </nav>
         }
     </div>
 </div>

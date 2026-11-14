@@ -71,14 +71,20 @@ internal sealed partial class TimelineMentionHandler : ITimelineEntryHandler
                 continue;
             }
 
+            // The entry's text stays on the record: a notification and its e-mail keep what they were sent, so a body
+            // redacted later would live on in them. The reader follows the link to read it.
+            var encodedTitle = WebUtility.HtmlEncode(title);
+
             await _notificationService.SendAsync(user, new NotificationMessage
             {
                 Subject = S["You were mentioned on {0}", title],
-                Summary = S["You were mentioned on {0}.", title],
-                TextBody = entry.Body,
+                Summary = S["You were mentioned on {0}.", encodedTitle],
+                TextBody = string.IsNullOrEmpty(record?.AdminUrl)
+                    ? S["You were mentioned on {0}.", title]
+                    : S["You were mentioned on {0}: {1}", title, record.AdminUrl],
                 HtmlBody = string.IsNullOrEmpty(record?.AdminUrl)
-                    ? null
-                    : S["You were mentioned on <a href=\"{0}\">{1}</a>.", record.AdminUrl, WebUtility.HtmlEncode(title)],
+                    ? S["You were mentioned on {0}.", encodedTitle]
+                    : S["You were mentioned on <a href=\"{0}\">{1}</a>.", WebUtility.HtmlEncode(record.AdminUrl), encodedTitle],
             }, cancellationToken);
         }
     }

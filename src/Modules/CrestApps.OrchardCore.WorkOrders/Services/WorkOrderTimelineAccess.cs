@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
+using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CrestApps.OrchardCore.WorkOrders.Services;
@@ -14,10 +15,12 @@ namespace CrestApps.OrchardCore.WorkOrders.Services;
 internal sealed class WorkOrderTimelineAccess : ITimelineAccessProvider
 {
     private readonly IAuthorizationService _authorizationService;
+    private readonly WorkOrderStore _workOrders;
 
-    public WorkOrderTimelineAccess(IAuthorizationService authorizationService)
+    public WorkOrderTimelineAccess(IAuthorizationService authorizationService, WorkOrderStore workOrders)
     {
         _authorizationService = authorizationService;
+        _workOrders = workOrders;
     }
 
     public string SubjectKind => WorkOrdersConstants.RecordKind;
@@ -28,5 +31,9 @@ internal sealed class WorkOrderTimelineAccess : ITimelineAccessProvider
     public async Task<bool> CanAddAsync(ClaimsPrincipal user, RecordRef subject, string kind, TimelineVisibility visibility, CancellationToken cancellationToken = default)
         => visibility == TimelineVisibility.Internal
             && string.Equals(kind, TimelineConstants.Kinds.Note, StringComparison.Ordinal)
-            && await _authorizationService.AuthorizeAsync(user, WorkOrdersPermissions.ManageWorkOrders);
+            && await _authorizationService.AuthorizeAsync(user, WorkOrdersPermissions.ManageWorkOrders)
+
+            // An entry only goes on a work order that exists.
+            && !string.IsNullOrEmpty(subject.Id)
+            && await _workOrders.FindByIdAsync(subject.Id, cancellationToken) is not null;
 }

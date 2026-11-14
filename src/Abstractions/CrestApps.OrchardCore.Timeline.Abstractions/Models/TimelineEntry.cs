@@ -57,6 +57,13 @@ public sealed class TimelineEntry : CatalogItem
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the id the entry has outside the site, such as the message id of an e-mail it came in as, so a
+    /// channel can find it again (threading, delivery status). At most <see cref="TimelineConstants.MaxExternalIdLength"/>
+    /// characters.
+    /// </summary>
+    public string ExternalId { get; set; }
+
+    /// <summary>
     /// Gets or sets when it was written, in UTC.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

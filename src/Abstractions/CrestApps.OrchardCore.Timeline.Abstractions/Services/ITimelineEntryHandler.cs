@@ -36,4 +36,22 @@ public interface ITimelineEntryHandler
     /// <returns>A task that completes when the work is done.</returns>
     Task RedactedAsync(TimelineEntry entry, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// Called after a change that doesn't rewrite what an entry says was saved, such as a delivery status.
+    /// </summary>
+    /// <param name="entry">The entry.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task UpdatedAsync(TimelineEntry entry, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// Called after an entry was deleted with its record, such as to delete the files attached to it.
+    /// </summary>
+    /// <param name="entry">The entry.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task DeletedAsync(TimelineEntry entry, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

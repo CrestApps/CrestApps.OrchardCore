@@ -44,27 +44,7 @@ public sealed class DefaultTimelineService : ITimelineService
 
         Tidy(entry);
 
-        var errors = new List<string>();
-
-        if (entry.Subject.IsEmpty)
-        {
-            errors.Add(S["Say which record the entry is on."]);
-        }
-
-        if (string.IsNullOrEmpty(entry.Kind))
-        {
-            errors.Add(S["Say what kind of entry it is."]);
-        }
-
-        if (string.IsNullOrEmpty(entry.Body) && entry.Changes.Count == 0 && entry.AttachmentIds.Count == 0)
-        {
-            errors.Add(S["Write something, or attach a file."]);
-        }
-
-        if (entry.Body?.Length > TimelineConstants.MaxBodyLength)
-        {
-            errors.Add(S["The text is too long; keep it under {0} characters.", TimelineConstants.MaxBodyLength]);
-        }
+        var errors = Check(entry, limitBody: true);
 
         foreach (var handler in _handlers)
         {
@@ -76,12 +56,7 @@ public sealed class DefaultTimelineService : ITimelineService
             return new TimelineResult { Entry = entry, Errors = errors };
         }
 
-        entry.ItemId ??= CrestApps.Core.UniqueId.GenerateId();
-
-        if (entry.CreatedUtc == default)
-        {
-            entry.CreatedUtc = _clock.UtcNow;
-        }
+        Stamp(entry);
 
         await _store.CreateAsync(entry, cancellationToken);
 
@@ -94,8 +69,77 @@ public sealed class DefaultTimelineService : ITimelineService
     }
 
     /// <inheritdoc/>
+    public async Task<TimelineResult> ImportAsync(TimelineEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (!string.IsNullOrEmpty(entry.ItemId) && await _store.FindByIdAsync(entry.ItemId, cancellationToken) is { } stored)
+        {
+            return new TimelineResult { Entry = stored };
+        }
+
+        Tidy(entry);
+
+        var errors = Check(entry, limitBody: false);
+
+        if (errors.Count > 0)
+        {
+            return new TimelineResult { Entry = entry, Errors = errors };
+        }
+
+        Stamp(entry);
+
+        await _store.CreateAsync(entry, cancellationToken);
+
+        return new TimelineResult { Entry = entry };
+    }
+
+    /// <inheritdoc/>
+    public async Task<TimelineResult> UpdateAsync(TimelineEntry entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (string.IsNullOrEmpty(entry.ItemId) || await _store.FindByIdAsync(entry.ItemId, cancellationToken) is not { } stored)
+        {
+            return new TimelineResult { Entry = entry, Errors = [S["The entry doesn't exist."]] };
+        }
+
+        // What the entry says, where it is and who wrote it stay as written; the rest may change.
+        if (!ReferenceEquals(stored, entry)
+            && (!string.Equals(stored.Body, entry.Body, StringComparison.Ordinal)
+                || stored.Subject != entry.Subject
+                || stored.Author != entry.Author
+                || !string.Equals(stored.Kind, entry.Kind, StringComparison.Ordinal)))
+        {
+            return new TimelineResult { Entry = entry, Errors = [S["What an entry says can't be changed; it can only be redacted."]] };
+        }
+
+        Tidy(entry);
+
+        var errors = Check(entry, limitBody: false);
+
+        if (errors.Count > 0)
+        {
+            return new TimelineResult { Entry = entry, Errors = errors };
+        }
+
+        await _store.UpdateAsync(entry, cancellationToken);
+
+        foreach (var handler in _handlers)
+        {
+            await handler.UpdatedAsync(entry, cancellationToken);
+        }
+
+        return new TimelineResult { Entry = entry };
+    }
+
+    /// <inheritdoc/>
     public async Task<TimelineEntry> FindAsync(string entryId, CancellationToken cancellationToken = default)
         => string.IsNullOrEmpty(entryId) ? null : await _store.FindByIdAsync(entryId, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<TimelineEntry> FindByExternalIdAsync(string externalId, CancellationToken cancellationToken = default)
+        => string.IsNullOrWhiteSpace(externalId) ? null : await _store.FindByExternalIdAsync(externalId.Trim(), cancellationToken);
 
     /// <inheritdoc/>
     public async Task<TimelinePage> ListAsync(TimelineQuery query, CancellationToken cancellationToken = default)
@@ -144,9 +188,70 @@ public sealed class DefaultTimelineService : ITimelineService
         foreach (var entry in entries)
         {
             await _store.DeleteAsync(entry, cancellationToken);
+
+            foreach (var handler in _handlers)
+            {
+                await handler.DeletedAsync(entry, cancellationToken);
+            }
         }
 
         return entries.Count;
+    }
+
+    // The rules every stored entry meets. Only a new entry written here is held to the body limit; history is never cut.
+    private List<string> Check(TimelineEntry entry, bool limitBody)
+    {
+        var errors = new List<string>();
+
+        if (entry.Subject.IsEmpty)
+        {
+            errors.Add(S["Say which record the entry is on."]);
+        }
+
+        if (string.IsNullOrEmpty(entry.Kind))
+        {
+            errors.Add(S["Say what kind of entry it is."]);
+        }
+
+        if (string.IsNullOrEmpty(entry.Body) && entry.Changes.Count == 0 && entry.AttachmentIds.Count == 0 && entry.RedactedUtc is null)
+        {
+            errors.Add(S["Write something, or attach a file."]);
+        }
+
+        if (limitBody && entry.Body?.Length > TimelineConstants.MaxBodyLength)
+        {
+            errors.Add(S["The text is too long; keep it under {0} characters.", TimelineConstants.MaxBodyLength]);
+        }
+
+        if (new[] { entry.Subject.Kind, entry.Subject.Id, entry.Kind, entry.Channel, entry.Author.Kind, entry.Author.Id }
+            .Any(value => value?.Length > TimelineConstants.MaxIndexedLength))
+        {
+            errors.Add(S["The record, kind, channel and author can be at most {0} characters each.", TimelineConstants.MaxIndexedLength]);
+        }
+
+        if (entry.ExternalId?.Length > TimelineConstants.MaxExternalIdLength)
+        {
+            errors.Add(S["The external id can be at most {0} characters.", TimelineConstants.MaxExternalIdLength]);
+        }
+
+        if (!string.IsNullOrEmpty(entry.ItemId) && entry.ItemId.Length > 26)
+        {
+            errors.Add(S["The entry id can be at most 26 characters."]);
+        }
+
+        return errors;
+    }
+
+    private void Stamp(TimelineEntry entry)
+    {
+        entry.ItemId ??= CrestApps.Core.UniqueId.GenerateId();
+
+        if (entry.CreatedUtc == default)
+        {
+            entry.CreatedUtc = _clock.UtcNow;
+        }
+
+        entry.CreatedUtc = DateTime.SpecifyKind(entry.CreatedUtc, DateTimeKind.Utc);
     }
 
     private static void Tidy(TimelineEntry entry)
@@ -155,6 +260,7 @@ public sealed class DefaultTimelineService : ITimelineService
         entry.Body = string.IsNullOrWhiteSpace(entry.Body) ? null : entry.Body.Trim();
         entry.AuthorName = string.IsNullOrWhiteSpace(entry.AuthorName) ? null : entry.AuthorName.Trim();
         entry.Channel = string.IsNullOrWhiteSpace(entry.Channel) ? null : entry.Channel.Trim();
+        entry.ExternalId = string.IsNullOrWhiteSpace(entry.ExternalId) ? null : entry.ExternalId.Trim();
         entry.Changes = [.. (entry.Changes ?? []).Where(change => change is not null && !string.IsNullOrWhiteSpace(change.Field) && change.From != change.To)];
         entry.AttachmentIds = [.. (entry.AttachmentIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal)];
     }

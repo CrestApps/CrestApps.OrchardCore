@@ -1,61 +1,83 @@
+using System.Reflection;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Contents;
 using OrchardCore.Security;
+using OrchardCore.Security.AuthorizationHandlers;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Tests.Timeline;
 
 /// <summary>
-/// A content item's timeline (an account, a contact, a lead): internal entries are for the people who may edit the
-/// item, public ones for signed-in people who may view it, and a visitor who isn't signed in reads nothing, even on a
-/// site where anyone may view content.
+/// A content item's timeline (an account, a contact, a lead), through Orchard's own content permission handlers: staff
+/// are the people who may edit every item of the type, so an owner who may edit only their own items doesn't read the
+/// internal entries; public entries exist only on a type a module opted in; and a visitor who isn't signed in reads
+/// nothing, even on a site where anyone may view content.
 /// </summary>
 public sealed class ContentItemTimelineAccessTests
 {
+    private const string OwnerId = "owner";
+
     private static readonly RecordRef _account = new(TimelineConstants.ContentItemKind, "account-1");
 
     [Fact]
-    public async Task InternalEntries_AreOnlyForThoseWhoMayEditTheItem()
+    public async Task InternalEntries_AreForThoseWhoMayEditEveryItemOfTheType_NotForAnOwnerWhoMayEditOnlyTheirs()
     {
         // Arrange
         var access = Create();
 
         // Act
         var viewer = await access.CanViewAsync(User("viewer", CommonPermissions.ViewContent), _account, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
-        var editor = await access.CanViewAsync(User("editor", CommonPermissions.ViewContent, CommonPermissions.EditContent), _account, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
+        var owner = await access.CanViewAsync(User(OwnerId, CommonPermissions.ViewContent, CommonPermissions.EditOwnContent), _account, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
+        var ownerAdds = await access.CanAddAsync(User(OwnerId, CommonPermissions.ViewContent, CommonPermissions.EditOwnContent), _account, TimelineConstants.Kinds.Note, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
+        var editor = await access.CanViewAsync(User("editor", CommonPermissions.EditContent), _account, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(viewer);
+        Assert.False(owner);
+        Assert.False(ownerAdds);
         Assert.True(editor);
     }
 
     [Fact]
-    public async Task PublicEntries_AreForSignedInPeopleWhoMayViewTheItem()
+    public async Task PublicEntries_ExistOnlyOnATypeThatOptedIn()
     {
         // Arrange
-        var access = Create();
+        var closed = Create();
+        var open = Create(publicTypes: "Account");
+        var editor = User("editor", CommonPermissions.EditContent);
+        var viewer = User("viewer", CommonPermissions.ViewContent);
 
         // Act
-        var viewer = await access.CanViewAsync(User("viewer", CommonPermissions.ViewContent), _account, TimelineVisibility.Public, TestContext.Current.CancellationToken);
-        var stranger = await access.CanViewAsync(User("stranger"), _account, TimelineVisibility.Public, TestContext.Current.CancellationToken);
+        var viewerReadsClosed = await closed.CanViewAsync(viewer, _account, TimelineVisibility.Public, TestContext.Current.CancellationToken);
+        var editorCommentsClosed = await closed.CanAddAsync(editor, _account, TimelineConstants.Kinds.Comment, TimelineVisibility.Public, TestContext.Current.CancellationToken);
+        var viewerReadsOpen = await open.CanViewAsync(viewer, _account, TimelineVisibility.Public, TestContext.Current.CancellationToken);
+        var viewerCommentsOpen = await open.CanAddAsync(viewer, _account, TimelineConstants.Kinds.Comment, TimelineVisibility.Public, TestContext.Current.CancellationToken);
+        var editorCommentsOpen = await open.CanAddAsync(editor, _account, TimelineConstants.Kinds.Comment, TimelineVisibility.Public, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(viewer);
-        Assert.False(stranger);
+        Assert.False(viewerReadsClosed);
+        Assert.False(editorCommentsClosed);
+        Assert.True(viewerReadsOpen);
+        Assert.False(viewerCommentsOpen);
+        Assert.True(editorCommentsOpen);
     }
 
     [Fact]
     public async Task AVisitorWhoIsNotSignedIn_ReadsNothing_EvenWhereAnyoneMayViewContent()
     {
         // Arrange
-        var access = Create();
+        var access = Create(publicTypes: "Account");
         var visitor = new ClaimsPrincipal(new ClaimsIdentity([new Claim(Permission.ClaimType, CommonPermissions.ViewContent.Name)]));
 
         // Act
@@ -71,41 +93,59 @@ public sealed class ContentItemTimelineAccessTests
     public async Task AMissingItem_HasNoTimeline()
     {
         // Arrange
-        var access = Create();
+        var access = Create(publicTypes: "Account");
 
         // Act
-        var sees = await access.CanViewAsync(User("editor", CommonPermissions.ViewContent, CommonPermissions.EditContent), new RecordRef(TimelineConstants.ContentItemKind, "missing"), TimelineVisibility.Public, TestContext.Current.CancellationToken);
+        var sees = await access.CanViewAsync(User("editor", CommonPermissions.EditContent), new RecordRef(TimelineConstants.ContentItemKind, "missing"), TimelineVisibility.Internal, TestContext.Current.CancellationToken);
+        var adds = await access.CanAddAsync(User("editor", CommonPermissions.EditContent), new RecordRef(TimelineConstants.ContentItemKind, "missing"), TimelineConstants.Kinds.Note, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(sees);
+        Assert.False(adds);
     }
 
-    private static ContentItemTimelineAccess Create()
+    private static ContentItemTimelineAccess Create(params string[] publicTypes)
     {
         var contentManager = new Mock<IContentManager>();
 
         contentManager
             .Setup(manager => manager.GetAsync("account-1", It.IsAny<VersionOptions>()))
-            .ReturnsAsync(new ContentItem { ContentItemId = "account-1", ContentType = "Account" });
+            .ReturnsAsync(new ContentItem { ContentItemId = "account-1", ContentType = "Account", Owner = OwnerId });
 
-        return new ContentItemTimelineAccess(contentManager.Object, new PermissionClaimsAuthorizationService());
+        var options = new TimelineOptions();
+
+        foreach (var type in publicTypes)
+        {
+            options.PublicContentTypes.Add(type);
+        }
+
+        return new ContentItemTimelineAccess(contentManager.Object, RealAuthorization(), Options.Create(options));
+    }
+
+    // Orchard's authorization as a tenant runs it: the permission handler (claims, implied permissions) and the Contents
+    // module's content type handler (per-type and own-item variations).
+    private static IAuthorizationService RealAuthorization()
+    {
+        var definitions = new Mock<IContentDefinitionManager>();
+        definitions.Setup(manager => manager.GetTypeDefinitionAsync(It.IsAny<string>()))
+            .ReturnsAsync((string name) => new ContentTypeDefinition(name, name));
+
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddOptions()
+            .AddAuthorizationCore()
+            .AddSingleton(definitions.Object)
+            .AddSingleton<IPermissionGrantingService, DefaultPermissionGrantingService>()
+            .AddScoped<IAuthorizationHandler, PermissionHandler>();
+
+        var contentTypeHandler = Assembly.Load("OrchardCore.Contents").GetTypes().Single(type => type.Name == "ContentTypeAuthorizationHandler");
+        services.AddScoped(typeof(IAuthorizationHandler), provider => ActivatorUtilities.CreateInstance(provider, contentTypeHandler));
+
+        return services.BuildServiceProvider().CreateScope().ServiceProvider.GetRequiredService<IAuthorizationService>();
     }
 
     private static ClaimsPrincipal User(string userId, params Permission[] permissions)
         => new(new ClaimsIdentity(
             [new Claim(ClaimTypes.NameIdentifier, userId), .. permissions.Select(permission => new Claim(Permission.ClaimType, permission.Name))],
             "test"));
-
-    private sealed class PermissionClaimsAuthorizationService : IAuthorizationService
-    {
-        public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, IEnumerable<IAuthorizationRequirement> requirements)
-        {
-            var granted = requirements.OfType<PermissionRequirement>().All(requirement => user.HasClaim(Permission.ClaimType, requirement.Permission.Name));
-
-            return Task.FromResult(granted ? AuthorizationResult.Success() : AuthorizationResult.Failed());
-        }
-
-        public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, string policyName)
-            => Task.FromResult(AuthorizationResult.Failed());
-    }
 }

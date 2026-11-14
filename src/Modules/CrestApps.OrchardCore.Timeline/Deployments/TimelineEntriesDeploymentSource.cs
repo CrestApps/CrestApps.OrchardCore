@@ -16,7 +16,6 @@ namespace CrestApps.OrchardCore.Timeline.Deployments;
 internal sealed class TimelineEntriesDeploymentSource : DeploymentSourceBase<TimelineEntriesDeploymentStep>
 {
     private const int PageSize = 500;
-    private const int MaxEntries = 100_000;
 
     private readonly ISession _session;
 
@@ -35,10 +34,13 @@ internal sealed class TimelineEntriesDeploymentSource : DeploymentSourceBase<Tim
 
         if (kinds.Length > 0)
         {
-            for (var skip = 0; skip < MaxEntries; skip += PageSize)
+            // Every entry of the kinds, a page at a time; the id breaks ties between entries of the same time so no page
+            // repeats or misses one.
+            for (var skip = 0; ; skip += PageSize)
             {
                 var page = (await _session.Query<TimelineEntry, TimelineEntryIndex>(index => index.SubjectKind.IsIn(kinds), collection: TimelineConstants.CollectionName)
                     .OrderBy(index => index.CreatedUtc)
+                    .ThenBy(index => index.ItemId)
                     .Skip(skip)
                     .Take(PageSize)
                     .ListAsync()).ToList();
@@ -46,6 +48,9 @@ internal sealed class TimelineEntriesDeploymentSource : DeploymentSourceBase<Tim
                 foreach (var entry in page)
                 {
                     entries.Add(JsonSerializer.SerializeToNode(entry, JOptions.Default));
+
+                    // Written out, so the session needn't keep tracking it on a large export.
+                    _session.Detach(entry, TimelineConstants.CollectionName);
                 }
 
                 if (page.Count < PageSize)

@@ -487,7 +487,13 @@ public sealed class WorkOrderService
             return WorkOrderResult.Fail(S["Write the note."]);
         }
 
-        await NoteAsync(workOrder, actor, text.Trim(), TimelineConstants.Kinds.Note);
+        var errors = await NoteAsync(workOrder, actor, text.Trim(), TimelineConstants.Kinds.Note);
+
+        if (errors.Count > 0)
+        {
+            return WorkOrderResult.Fail([.. errors]);
+        }
+
         await _store.UpdateAsync(workOrder, cancellationToken);
 
         return new WorkOrderResult { WorkOrder = workOrder };
@@ -781,9 +787,9 @@ public sealed class WorkOrderService
 
     // Notes and history are entries on the work order's timeline: what someone wrote is a note, what happened is an
     // event. The actor is the name of who did it, as the callers pass it.
-    private async Task NoteAsync(WorkOrder workOrder, string actor, string text, string kind = TimelineConstants.Kinds.Event)
+    private async Task<IReadOnlyList<string>> NoteAsync(WorkOrder workOrder, string actor, string text, string kind = TimelineConstants.Kinds.Event)
     {
-        await _timeline.AddAsync(new TimelineEntry
+        var result = await _timeline.AddAsync(new TimelineEntry
         {
             Subject = WorkOrderServiceLevels.SubjectOf(workOrder),
             Kind = kind,
@@ -792,6 +798,8 @@ public sealed class WorkOrderService
             Body = text,
             CreatedUtc = _clock.UtcNow,
         });
+
+        return result.Errors;
     }
 
     private static string Label(WorkOrderStatus status, WorkOrderSubStatus subStatus)

@@ -22,7 +22,7 @@ internal sealed class ContentItemRecordSource : IRecordSource
     /// <summary>
     /// The record kind of content items.
     /// </summary>
-    public const string RecordKind = "Content";
+    public const string RecordKind = RecordKinds.ContentItem;
 
     private readonly ISession _session;
     private readonly IContentManager _contentManager;
@@ -63,7 +63,9 @@ internal sealed class ContentItemRecordSource : IRecordSource
         var text = search.Text?.Trim();
         var query = string.IsNullOrEmpty(text)
             ? _session.QueryIndex<ContentItemIndex>(index => index.Latest)
-            : _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.DisplayText.Contains(text));
+            // Names that start with the text: a prefix search uses the display text index, where "contains" reads every
+            // content item of every type.
+            : _session.QueryIndex<ContentItemIndex>(index => index.Latest && index.DisplayText.StartsWith(text));
 
         // A few more than asked, since the items the user may not view are left out.
         var rows = await query.OrderBy(index => index.DisplayText).Take(search.Count * 2).ListAsync(cancellationToken);

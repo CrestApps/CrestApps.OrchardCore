@@ -5,7 +5,7 @@
 
 @{
     // The page keeps its open section in the address's hash, which the browser never sends; come back to this tab.
-    var returnUrl = Context.Request.Path + Context.Request.QueryString + "#account-" + AccountPageTabs.Notes.HtmlClassify();
+    var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString + "#account-" + AccountPageTabs.Notes.HtmlClassify();
 }
 
 @await Component.InvokeAsync("Timeline", new { subject = $"{TimelineConstants.ContentItemKind}:{Model.Value.ContentItem.ContentItemId}", title = T["Notes"].Value, returnUrl })

@@ -11,6 +11,36 @@ public class TimelineViewModel
     public string Subject { get; set; }
 
     /// <summary>
+    /// Gets or sets the record's kind, for the composer shape's alternate.
+    /// </summary>
+    public string SubjectKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kinds of entry the user may add, one button each.
+    /// </summary>
+    public IList<TimelineComposerButton> Composer { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the text a post that was refused kept, so the composer shows it again.
+    /// </summary>
+    public string Draft { get; set; }
+
+    /// <summary>
+    /// Gets or sets the page of the timeline shown, from 1 for the newest entries.
+    /// </summary>
+    public int PageNumber { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the address of the page of newer entries, or <see langword="null"/> on the first page.
+    /// </summary>
+    public string NewerUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address of the page of older entries, or <see langword="null"/> on the last page.
+    /// </summary>
+    public string OlderUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the card's title.
     /// </summary>
     public string Title { get; set; }
@@ -24,16 +54,6 @@ public class TimelineViewModel
     /// Gets or sets how many entries the record has in all.
     /// </summary>
     public int Total { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether the user may add an internal note.
-    /// </summary>
-    public bool CanAddNote { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether the user may add a public comment.
-    /// </summary>
-    public bool CanAddComment { get; set; }
 
     /// <summary>
     /// Gets or sets whether the user may redact an entry.

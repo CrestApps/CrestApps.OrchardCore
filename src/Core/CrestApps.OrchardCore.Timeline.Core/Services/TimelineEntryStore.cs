@@ -57,6 +57,7 @@ public sealed class TimelineEntryStore : DocumentCatalog<TimelineEntry, Timeline
         var total = await entries.CountAsync(cancellationToken);
         var page = await entries
             .OrderByDescending(index => index.CreatedUtc)
+            .ThenByDescending(index => index.ItemId)
             .Skip(Math.Max(query.Skip, 0))
             .Take(Math.Clamp(query.Take, 1, 500))
             .ListAsync(cancellationToken);
@@ -81,8 +82,26 @@ public sealed class TimelineEntryStore : DocumentCatalog<TimelineEntry, Timeline
         var id = subject.Id;
         var entries = await Session.Query<TimelineEntry, TimelineEntryIndex>(index => index.SubjectKind == kind && index.SubjectId == id, collection: CollectionName)
             .OrderBy(index => index.CreatedUtc)
+            .ThenBy(index => index.ItemId)
             .ListAsync(cancellationToken);
 
         return entries.ToArray();
+    }
+
+    /// <summary>
+    /// Finds the entry stored under an id it has outside the site.
+    /// </summary>
+    /// <param name="externalId">The external id.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The entry, or <see langword="null"/>.</returns>
+    public async Task<TimelineEntry> FindByExternalIdAsync(string externalId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(externalId))
+        {
+            return null;
+        }
+
+        return await Session.Query<TimelineEntry, TimelineEntryIndex>(index => index.ExternalId == externalId, collection: CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }

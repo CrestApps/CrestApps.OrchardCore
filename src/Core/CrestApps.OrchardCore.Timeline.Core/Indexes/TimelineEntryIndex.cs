@@ -44,6 +44,11 @@ public sealed class TimelineEntryIndex : CatalogItemIndex
     public string Channel { get; set; }
 
     /// <summary>
+    /// Gets or sets the id the entry has outside the site, such as an e-mail's message id.
+    /// </summary>
+    public string ExternalId { get; set; }
+
+    /// <summary>
     /// Gets or sets when the entry was written, in UTC.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
