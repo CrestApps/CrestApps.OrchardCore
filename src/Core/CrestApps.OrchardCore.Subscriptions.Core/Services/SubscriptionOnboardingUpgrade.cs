@@ -44,4 +44,25 @@ public static class SubscriptionOnboardingUpgrade
 
         return changed;
     }
+
+    /// <summary>
+    /// Keeps an existing store selling sites on a prefix of its own address where it could before, now that new stores
+    /// don't: without a base domain, or with buyers' own domains (a buyer who names none gets a prefix). Upgrading leaves
+    /// the choice made and visible in the settings, and the upgrade notes ask the operator to review it.
+    /// </summary>
+    /// <param name="settings">The onboarding settings to change.</param>
+    /// <returns><see langword="true"/> when the settings changed.</returns>
+    public static bool KeepPrefixSitesOnStoreHost(SubscriptionOnboardingSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        if (settings.AllowPrefixOnStoreHost || (!string.IsNullOrWhiteSpace(settings.BaseDomain) && !settings.AllowCustomDomains))
+        {
+            return false;
+        }
+
+        settings.AllowPrefixOnStoreHost = true;
+
+        return true;
+    }
 }

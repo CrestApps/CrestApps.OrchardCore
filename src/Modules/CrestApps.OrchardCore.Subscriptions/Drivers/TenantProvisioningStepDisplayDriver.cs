@@ -289,6 +289,8 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
             TenantPurchaseErrorCode.InvalidHost => S["'{0}' is not a domain name a site can use.", error.Value],
             TenantPurchaseErrorCode.ReservedHost => S["The domain '{0}' is reserved.", error.Value],
             TenantPurchaseErrorCode.HostTaken => S["The domain '{0}' belongs to another site.", error.Value],
+            TenantPurchaseErrorCode.TooManyDomains => S["A site may answer on at most {0} domains.", error.Value],
+            TenantPurchaseErrorCode.OwnHostRequired => S["Enter a domain for your site: this store doesn't sell sites on its own address."],
             TenantPurchaseErrorCode.RecipeNotAllowed => S["This plan can't be bought yet: the store hasn't finished setting it up."],
             TenantPurchaseErrorCode.FeatureProfileRequired or TenantPurchaseErrorCode.FeatureProfileNotFound => S["This plan can't be bought yet: the store hasn't finished setting it up."],
             _ => S["The details of your new site are not accepted."],

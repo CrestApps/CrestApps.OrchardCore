@@ -88,7 +88,40 @@ public sealed class TenantProvisioningPaymentGateTests
         Assert.False(context.IsRefused, context.ErrorMessage);
     }
 
-    private static TenantProvisioningPaymentGate CreateGate(bool allowCustomPrefix = false, string[] knownProfiles = null, bool featureProfilesOn = true)
+    /// <summary>
+    /// H2 (final security review): a site named after one of the store's own first URL segments took every URL under it,
+    /// such as the customer account pages under <c>/account</c>.
+    /// </summary>
+    [Fact]
+    public async Task BeginningAsync_APrefixTheStoreServesItself_IsRefused()
+    {
+        var context = CreateContext(new TenantProvisioningStep { TenantName = "Shop1", Prefix = "shop1", RecipeName = "Blog" }, planFeatureProfile: "sold");
+
+        await CreateGate(storeRoutes: ["Shop1/details", "cart"]).BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.True(context.IsRefused);
+    }
+
+    /// <summary>
+    /// M10 (final security review): a site on a prefix of the store's own address runs in the store's origin, so it is
+    /// sold only when the operator chose that.
+    /// </summary>
+    [Fact]
+    public async Task BeginningAsync_APrefixSiteOnTheStoresAddress_IsRefusedUnlessTheOperatorChoseIt()
+    {
+        var context = CreateContext(new TenantProvisioningStep { TenantName = "Shop1", Prefix = "shop1", RecipeName = "Blog" }, planFeatureProfile: "sold");
+
+        await CreateGate(allowPrefixOnStoreHost: false).BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.True(context.IsRefused);
+    }
+
+    private static TenantProvisioningPaymentGate CreateGate(
+        bool allowCustomPrefix = false,
+        string[] knownProfiles = null,
+        bool featureProfilesOn = true,
+        bool allowPrefixOnStoreHost = true,
+        string[] storeRoutes = null)
     {
         var shellHost = new Mock<IShellHost>();
         shellHost.Setup(host => host.GetAllSettings()).Returns([new ShellSettings { Name = ShellSettings.DefaultShellName }]);
@@ -99,12 +132,13 @@ public sealed class TenantProvisioningPaymentGateTests
 
         // The real rules provider, so the gate is tested with the rules it is given in a running site.
         var rules = new TenantPurchaseRulesProvider(
-            SiteServiceFactory.Create(new SubscriptionOnboardingSettings { AllowCustomPrefix = allowCustomPrefix }),
+            SiteServiceFactory.Create(new SubscriptionOnboardingSettings { AllowCustomPrefix = allowCustomPrefix, AllowPrefixOnStoreHost = allowPrefixOnStoreHost }),
             shellHost.Object,
             new HttpContextAccessor(),
             Options.Create(new AdminOptions()),
             catalog.Object,
-            Mock.Of<ICheckoutSessionStore>());
+            Mock.Of<ICheckoutSessionStore>(),
+            StoreRoutes.Create(storeRoutes ?? ["account/addresses", "cart"]));
 
         var localizer = new Mock<IStringLocalizer<TenantProvisioningPaymentGate>>();
         localizer.Setup(l => l[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));

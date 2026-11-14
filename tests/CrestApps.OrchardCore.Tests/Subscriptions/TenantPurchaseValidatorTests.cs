@@ -232,6 +232,64 @@ public sealed class TenantPurchaseValidatorTests
         Assert.Empty(TenantPurchaseValidator.Validate(request, Rules(baseDomain: "sites.operator.com"), _tenants));
     }
 
+    /// <summary>
+    /// M12 (final security review): an IP address passed the host pattern, so requests addressed to the server by address,
+    /// health probes included, went to the buyer's site.
+    /// </summary>
+    [Theory]
+    [InlineData("203.0.113.10")]
+    [InlineData("127.0.0.1")]
+    [InlineData("10.1.2.3")]
+    public void Validate_AnIpAddress_IsRefused(string domain)
+    {
+        var errors = TenantPurchaseValidator.Validate(Request(domains: [domain]), Rules(allowCustomDomains: true), _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.InvalidHost);
+    }
+
+    /// <summary>
+    /// M12: a name under another customer's domain, or a parent of it, was free to take, so a buyer could serve
+    /// <c>www.v.com</c> beside customer V's <c>v.com</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("www.acme.example.org")]
+    [InlineData("example.org")]
+    public void Validate_ANameUnderOrAboveAnotherTenantsHost_IsRefused(string domain)
+    {
+        var errors = TenantPurchaseValidator.Validate(Request(domains: [domain]), Rules(allowCustomDomains: true), _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.HostTaken);
+    }
+
+    [Fact]
+    public void Validate_MoreDomainsThanTheCap_IsRefused()
+    {
+        var domains = Enumerable.Range(1, TenantPurchaseValidator.DefaultMaxDomains + 1).Select(index => $"site{index}.example.net").ToArray();
+
+        var errors = TenantPurchaseValidator.Validate(Request(domains: domains), Rules(allowCustomDomains: true), _tenants);
+
+        Assert.Contains(errors, error => error.Code == TenantPurchaseErrorCode.TooManyDomains);
+    }
+
+    /// <summary>
+    /// M10 (final security review): a site on a prefix of the store's own address runs in the store's origin. New stores
+    /// don't sell it unless the operator turns it on; a site on a base domain or the buyer's own domain is unaffected.
+    /// </summary>
+    [Fact]
+    public void Validate_APrefixSiteOnTheStoresAddress_IsRefusedUnlessTheOperatorAllowsIt()
+    {
+        var refused = new SubscriptionOnboardingSettings().ToRules("Blog", "Admin", []);
+        refused.KnownFeatureProfiles = ["sold-tenant"];
+        var allowed = new SubscriptionOnboardingSettings { AllowPrefixOnStoreHost = true }.ToRules("Blog", "Admin", []);
+        allowed.KnownFeatureProfiles = ["sold-tenant"];
+        var baseDomain = new SubscriptionOnboardingSettings { BaseDomain = "sites.operator.com" }.ToRules("Blog", "Admin", []);
+        baseDomain.KnownFeatureProfiles = ["sold-tenant"];
+
+        Assert.Contains(TenantPurchaseValidator.Validate(Request(), refused, _tenants), error => error.Code == TenantPurchaseErrorCode.OwnHostRequired);
+        Assert.Empty(TenantPurchaseValidator.Validate(Request(), allowed, _tenants));
+        Assert.Empty(TenantPurchaseValidator.Validate(TenantPurchaseValidator.Normalize(Request(prefix: null), baseDomain), baseDomain, _tenants));
+    }
+
     private static TenantPurchaseRequest Request(
         string tenantName = "Shop1",
         string prefix = "shop1",
@@ -337,6 +395,24 @@ public sealed class SubscriptionOnboardingUpgradeTests
         ]);
 
         Assert.True(settings.AllowCustomPrefix);
+    }
+
+    /// <summary>
+    /// M10: a store that could sell sites on a prefix of its own address keeps doing so after the upgrade, as a choice
+    /// visible in its settings; one that sells only on its base domain is left as it is.
+    /// </summary>
+    [Fact]
+    public void KeepPrefixSitesOnStoreHost_KeepsWhatTheStoreCouldSell()
+    {
+        var prefixStore = new SubscriptionOnboardingSettings();
+        var customDomainStore = new SubscriptionOnboardingSettings { BaseDomain = "sites.operator.com", AllowCustomDomains = true };
+        var baseDomainStore = new SubscriptionOnboardingSettings { BaseDomain = "sites.operator.com" };
+
+        Assert.True(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(prefixStore));
+        Assert.True(prefixStore.AllowPrefixOnStoreHost);
+        Assert.True(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(customDomainStore));
+        Assert.False(SubscriptionOnboardingUpgrade.KeepPrefixSitesOnStoreHost(baseDomainStore));
+        Assert.False(baseDomainStore.AllowPrefixOnStoreHost);
     }
 
     [Fact]

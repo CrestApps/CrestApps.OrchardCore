@@ -291,6 +291,9 @@ public sealed class TenantProvisioningServiceTests
 
         var setup = new RecordingSetupService();
 
+        // These sites answer on a prefix of the store's address, which the operator chooses explicitly.
+        onboarding.AllowPrefixOnStoreHost = true;
+
         var siteService = SiteServiceFactory.Create(onboarding);
 
         var service = new TenantProvisioningService(
@@ -305,7 +308,7 @@ public sealed class TenantProvisioningServiceTests
             CreateSession(),
             new ProvisioningClock(_now),
             NullLogger<TenantProvisioningService>.Instance,
-            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), new FixedFeatureProfileCatalog(knownProfiles), CreateSessionStore(planRecipe)),
+            new TenantPurchaseRulesProvider(siteService, shellHost.Object, new HttpContextAccessor(), Options.Create(new AdminOptions()), new FixedFeatureProfileCatalog(knownProfiles), CreateSessionStore(planRecipe), StoreRoutes.Create()),
             CreateSubscriptionManager(subscription));
 
         return (service, setup, store);

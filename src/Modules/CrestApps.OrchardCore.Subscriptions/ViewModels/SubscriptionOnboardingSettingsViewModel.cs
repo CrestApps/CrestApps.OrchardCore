@@ -37,6 +37,11 @@ public class SubscriptionOnboardingSettingsViewModel
 
     public bool AllowCustomDomains { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a sold site may answer on a prefix of this store's own address.
+    /// </summary>
+    public bool AllowPrefixOnStoreHost { get; set; }
+
     public string ReservedPrefixes { get; set; }
 
     public string ReservedHosts { get; set; }

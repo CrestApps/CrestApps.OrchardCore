@@ -118,6 +118,7 @@ public sealed class SubscriptionOnboardingSettings
             ReservedHosts = (ReservedHosts ?? []).Concat(hostNames ?? []).ToArray(),
             BaseDomain = BaseDomain,
             AdminPrefix = adminPrefix,
+            RequireOwnHost = !AllowPrefixOnStoreHost,
         };
 
     public const string DefaultDatabaseProvider = "Sqlite";
