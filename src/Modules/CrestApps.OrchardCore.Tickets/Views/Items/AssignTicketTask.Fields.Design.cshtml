@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AssignTicketTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Assign Ticket"])
+    </h4>
+</header>

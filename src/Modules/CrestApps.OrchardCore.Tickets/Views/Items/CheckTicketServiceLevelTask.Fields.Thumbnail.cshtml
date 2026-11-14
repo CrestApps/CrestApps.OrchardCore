@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CheckTicketServiceLevelTask>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+    @T["Check Ticket Service Level"]
+</h4>
+<p>@T["Checks how a ticket stands against its service-level targets."]</p>

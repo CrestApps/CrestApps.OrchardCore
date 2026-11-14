@@ -326,6 +326,11 @@ public sealed class TicketPageViewModel
     public bool IsReadOnly { get; set; }
 
     /// <summary>
+    /// Gets or sets the named actions the user can run on the ticket (workflows that start with Ticket Action Requested).
+    /// </summary>
+    public IReadOnlyList<string> Actions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the reply templates the composer offers, filled in for the ticket.
     /// </summary>
     public IReadOnlyList<TicketReplyTemplate> ReplyTemplates { get; set; } = [];

@@ -32,6 +32,21 @@
                 <span class="text-muted small">@T["Opened"] @await DisplayAsync(await New.DateTime(Utc: Model.Ticket.CreatedUtc, Format: "g"))</span>
             </div>
             <div class="col-auto d-flex gap-1">
+                @if (Model.Actions.Count > 0)
+                {
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Actions"]</button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            @foreach (var action in Model.Actions)
+                            {
+                                <form asp-action="RunAction" asp-route-id="@ticketId" method="post">
+                                    <input type="hidden" name="actionName" value="@action" />
+                                    <button type="submit" class="dropdown-item">@action</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                }
                 @if (Model.CanEdit)
                 {
                     <a asp-action="Edit" asp-route-id="@ticketId" class="btn btn-secondary">@T["Edit fields"]</a>

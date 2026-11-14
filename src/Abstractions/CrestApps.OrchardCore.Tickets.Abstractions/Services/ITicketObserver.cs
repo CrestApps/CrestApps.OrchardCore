@@ -74,4 +74,14 @@ public interface ITicketObserver
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
     Task StatusChangedAsync(ContentItem ticket, Models.TicketStatus previous, Models.TicketStatus current, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// A ticket is close to missing a service-level target, or missed it. Raised once for each.
+    /// </summary>
+    /// <param name="ticket">The ticket.</param>
+    /// <param name="metric">The target: first response, next response or resolution.</param>
+    /// <param name="breached">Whether the target was missed; otherwise it is close.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task ServiceLevelAsync(ContentItem ticket, string metric, bool breached, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

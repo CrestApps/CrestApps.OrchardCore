@@ -383,7 +383,7 @@ public sealed class TicketsController : Controller
     /// </summary>
     /// <param name="id">The ticket.</param>
     /// <returns>The page.</returns>
-    [Admin("tickets/{id}", "TicketsDisplay")]
+    [Admin("ticket/{id}", "TicketsDisplay")]
     public async Task<IActionResult> Display(string id)
     {
         var cancellationToken = HttpContext.RequestAborted;
@@ -422,6 +422,9 @@ public sealed class TicketsController : Controller
             IsReadOnly = readOnly,
             Draft = TempData?.Peek(DraftKey) is string draft && draft.StartsWith(id + "\n", StringComparison.Ordinal) ? PopDraft(id) : null,
             MergedInto = string.IsNullOrEmpty(part.MergedIntoId) ? null : await _tickets.GetAsync(part.MergedIntoId),
+            Actions = !readOnly && await _access.CanAsync(User, ticket, TicketOperation.Edit, cancellationToken) && _serviceProvider.GetService<ITicketActionSource>() is { } actions
+                ? await actions.ListAsync(ticket, cancellationToken)
+                : [],
             ReplyTemplates = !readOnly && _serviceProvider.GetService<ITicketReplyTemplateSource>() is { } replyTemplates
                 ? await replyTemplates.ListAsync(ticket, cancellationToken)
                 : [],
@@ -442,7 +445,7 @@ public sealed class TicketsController : Controller
     /// <param name="replyTemplateId">The reply template used, whose changes to the ticket are applied with the reply.</param>
     /// <returns>The ticket page.</returns>
     [HttpPost]
-    [Admin("tickets/{id}/reply", "TicketsReply")]
+    [Admin("ticket/{id}/reply", "TicketsReply")]
     public async Task<IActionResult> Reply(string id, string body, bool isInternal, string setStatusId, List<IFormFile> files, string replyTemplateId = null)
     {
         var cancellationToken = HttpContext.RequestAborted;
@@ -503,7 +506,7 @@ public sealed class TicketsController : Controller
     /// <param name="update">The values.</param>
     /// <returns>The ticket page.</returns>
     [HttpPost]
-    [Admin("tickets/{id}/update", "TicketsUpdate")]
+    [Admin("ticket/{id}/update", "TicketsUpdate")]
     public async Task<IActionResult> Update(string id, TicketUpdate update)
     {
         var cancellationToken = HttpContext.RequestAborted;
@@ -566,7 +569,7 @@ public sealed class TicketsController : Controller
     /// <param name="id">The ticket.</param>
     /// <returns>The ticket page.</returns>
     [HttpPost]
-    [Admin("tickets/{id}/take", "TicketsTake")]
+    [Admin("ticket/{id}/take", "TicketsTake")]
     public async Task<IActionResult> Take(string id)
     {
         var cancellationToken = HttpContext.RequestAborted;
@@ -591,7 +594,7 @@ public sealed class TicketsController : Controller
     /// </summary>
     /// <param name="id">The ticket.</param>
     /// <returns>The page.</returns>
-    [Admin("tickets/{id}/edit", "TicketsEdit")]
+    [Admin("ticket/{id}/edit", "TicketsEdit")]
     public async Task<IActionResult> Edit(string id)
     {
         if (await _tickets.GetAsync(id) is not { } ticket)
@@ -616,7 +619,7 @@ public sealed class TicketsController : Controller
     /// <returns>The ticket page, or the editor with what's wrong.</returns>
     [HttpPost]
     [ActionName(nameof(Edit))]
-    [Admin("tickets/{id}/edit", "TicketsEdit")]
+    [Admin("ticket/{id}/edit", "TicketsEdit")]
     public async Task<IActionResult> EditPost(string id)
     {
         var cancellationToken = HttpContext.RequestAborted;
@@ -665,7 +668,7 @@ public sealed class TicketsController : Controller
     /// <param name="recordKind">The kind chosen in the links panel, whose picker (<c>record-{kind}</c>) holds the record.</param>
     /// <returns>The ticket page.</returns>
     [HttpPost]
-    [Admin("tickets/{id}/link", "TicketsLink")]
+    [Admin("ticket/{id}/link", "TicketsLink")]
     public async Task<IActionResult> Link(string id, string record, string kind, string recordKind)
     {
         if (string.IsNullOrEmpty(record) && !string.IsNullOrEmpty(recordKind) && Request.HasFormContentType)
@@ -698,13 +701,47 @@ public sealed class TicketsController : Controller
     }
 
     /// <summary>
+    /// Runs a named action on the ticket: the workflows that start with Ticket Action Requested and that name.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="actionName">The action's name.</param>
+    /// <returns>The ticket page.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/action", "TicketsAction")]
+    public async Task<IActionResult> RunAction(string id, string actionName)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+
+        if (await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        if (!await _access.CanAsync(User, ticket, TicketOperation.Edit, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        if (_serviceProvider.GetService<ITicketActionSource>() is { } actions && await actions.RequestAsync(ticket, actionName, cancellationToken))
+        {
+            await _notifier.SuccessAsync(H["{0} was started.", actionName]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["That action isn't offered on this ticket."]);
+        }
+
+        return RedirectToAction(nameof(Display), new { id });
+    }
+
+    /// <summary>
     /// Merges the ticket into another one, chosen by its number.
     /// </summary>
     /// <param name="id">The ticket that goes away.</param>
     /// <param name="intoNumber">The number of the ticket it goes into.</param>
     /// <returns>The page of the ticket it went into.</returns>
     [HttpPost]
-    [Admin("tickets/{id}/merge", "TicketsMerge")]
+    [Admin("ticket/{id}/merge", "TicketsMerge")]
     public async Task<IActionResult> Merge(string id, string intoNumber)
     {
         var cancellationToken = HttpContext.RequestAborted;
@@ -740,7 +777,7 @@ public sealed class TicketsController : Controller
     /// <param name="id">The ticket.</param>
     /// <returns>The list.</returns>
     [HttpPost]
-    [Admin("tickets/{id}/delete", "TicketsDelete")]
+    [Admin("ticket/{id}/delete", "TicketsDelete")]
     public async Task<IActionResult> Delete(string id)
     {
         var cancellationToken = HttpContext.RequestAborted;

@@ -1,0 +1,73 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@model TicketEventViewModel
+
+<div class="mb-3">
+    <label asp-for="DeskIds" class="form-label">@T["Desks"]</label>
+    <select asp-for="DeskIds" asp-items="Model.DeskOptions" class="form-select" multiple size="4"></select>
+    <span class="hint">@T["Leave none selected to start for every desk."]</span>
+</div>
+
+@if (Model.ShowActionName)
+{
+    <div class="mb-3">
+        <label asp-for="ActionName" class="form-label ocat-label-required">@T["Action name"]</label>
+        <input asp-for="ActionName" class="form-control" />
+        <span asp-validation-for="ActionName" class="text-danger"></span>
+        <span class="hint">@T["Shown under Actions on the ticket page, such as Escalate to tier 2."]</span>
+    </div>
+}
+
+@if (Model.ShowChangedFields)
+{
+    <div class="mb-3">
+        <label asp-for="ChangedFields" class="form-label">@T["Only when these change"]</label>
+        <select asp-for="ChangedFields" class="form-select" multiple size="6">
+            @foreach (var field in new[] { "Status", "Priority", "Desk", "Team", "Assignee", "Subject" })
+            {
+                <option value="@field" selected="@Model.ChangedFields.Contains(field)">@T[field]</option>
+            }
+        </select>
+        <span class="hint">@T["Leave none selected to start for any change."]</span>
+    </div>
+}
+
+@if (Model.ShowTimeElapsed)
+{
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="Hours" class="form-label">@T["Hours"]</label>
+            <input asp-for="Hours" class="form-control" inputmode="decimal" />
+            <span asp-validation-for="Hours" class="text-danger"></span>
+        </div>
+        <div class="col-md-8 mb-3">
+            <label asp-for="Since" class="form-label">@T["Since"]</label>
+            <select asp-for="Since" class="form-select">
+                <option value="@TicketTimeElapsedSince.Created">@T["The ticket was created"]</option>
+                <option value="@TicketTimeElapsedSince.LastCustomerReply">@T["The requester's last reply"]</option>
+                <option value="@TicketTimeElapsedSince.LastAgentReply">@T["The last agent reply"]</option>
+                <option value="@TicketTimeElapsedSince.StatusChanged">@T["The last status change"]</option>
+            </select>
+        </div>
+    </div>
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="BusinessHours" class="form-check-input" type="checkbox" />
+            <label asp-for="BusinessHours" class="form-check-label">@T["Count the desk's business hours only"]</label>
+            <span class="hint dashed">@T["Off counts every hour of the clock."]</span>
+        </div>
+    </div>
+}
+
+@if (Model.ShowCategories)
+{
+    <div class="mb-3">
+        <label asp-for="Categories" class="form-label">@T["Status categories"]</label>
+        <select asp-for="Categories" class="form-select" multiple size="6">
+            @foreach (var category in Enum.GetNames<TicketStatusCategory>())
+            {
+                <option value="@category" selected="@Model.Categories.Contains(category)">@T[category]</option>
+            }
+        </select>
+        <span class="hint">@(Model.ShowTimeElapsed ? T["Tickets in these categories; none selected for the ones still being worked on."] : T["Moves into these categories; none selected for any move."])</span>
+    </div>
+}

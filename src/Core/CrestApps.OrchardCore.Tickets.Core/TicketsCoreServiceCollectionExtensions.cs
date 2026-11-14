@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ServiceLevels;
+using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -26,6 +27,7 @@ public static class TicketsCoreServiceCollectionExtensions
         services.TryAddScoped<TicketAutoCloser>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberLoadSource, TicketTeamMemberLoadSource>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketEmailObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceLevelObserver, TicketServiceLevelObserver>());
         services.AddTemplatedEmailTemplateSource<TicketEmailTemplateSource>();
         services.AddServiceLevelScope<TicketServiceLevelScope>();
 

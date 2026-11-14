@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketAssignedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+    @T["Ticket Assigned"]
+</h4>
+<p>@T["Starts when a ticket is given to another assignee."]</p>

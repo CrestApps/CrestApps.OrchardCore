@@ -114,6 +114,57 @@ public static class TicketsConstants
     }
 
     /// <summary>
+    /// The names of the workflow events Tickets raises.
+    /// </summary>
+    public static class Events
+    {
+        /// <summary>A ticket was created.</summary>
+        public const string Created = "TicketCreated";
+
+        /// <summary>A ticket's values or fields changed.</summary>
+        public const string Updated = "TicketUpdated";
+
+        /// <summary>A ticket moved to another status.</summary>
+        public const string StatusChanged = "TicketStatusChanged";
+
+        /// <summary>A ticket was given to another assignee.</summary>
+        public const string Assigned = "TicketAssigned";
+
+        /// <summary>The requester replied.</summary>
+        public const string CustomerReplied = "TicketCustomerReplied";
+
+        /// <summary>An agent replied to the requester.</summary>
+        public const string AgentReplied = "TicketAgentReplied";
+
+        /// <summary>An internal note was added.</summary>
+        public const string NoteAdded = "TicketNoteAdded";
+
+        /// <summary>A ticket is close to missing a service-level target.</summary>
+        public const string ServiceLevelWarning = "TicketServiceLevelWarning";
+
+        /// <summary>A ticket missed a service-level target.</summary>
+        public const string ServiceLevelBreached = "TicketServiceLevelBreached";
+
+        /// <summary>A ticket was solved.</summary>
+        public const string Solved = "TicketSolved";
+
+        /// <summary>A solved or closed ticket was reopened.</summary>
+        public const string Reopened = "TicketReopened";
+
+        /// <summary>A ticket was closed.</summary>
+        public const string Closed = "TicketClosed";
+
+        /// <summary>A ticket was merged into another.</summary>
+        public const string Merged = "TicketMerged";
+
+        /// <summary>An agent ran a named action on a ticket.</summary>
+        public const string ActionRequested = "TicketActionRequested";
+
+        /// <summary>A time passed since a moment in a ticket's life.</summary>
+        public const string TimeElapsed = "TicketTimeElapsed";
+    }
+
+    /// <summary>
     /// The kinds of e-mail Tickets sends requesters, in the <see cref="EmailGroup"/> group.
     /// </summary>
     public static class EmailKinds
