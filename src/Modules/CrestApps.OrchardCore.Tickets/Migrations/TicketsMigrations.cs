@@ -67,9 +67,10 @@ internal sealed class TicketsMigrations : DataMigration
         }
 
         await TicketIndexSchema.CreateAsync(SchemaBuilder);
+        await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -83,6 +84,17 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateAssignedIndexAsync(SchemaBuilder);
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the daily backlog snapshots.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
+
+        return 3;
     }
 
     private async Task SeedAsync()

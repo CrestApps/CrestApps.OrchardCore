@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Tickets.Integrations;
 using CrestApps.OrchardCore.Tickets.Recipes.Workflows;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -127,5 +128,18 @@ public sealed class AuditTrailStartup : StartupBase
     {
         services.AddTransient<IConfigureOptions<AuditTrailOptions>, TicketAuditTrailEvents>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketAuditTrailObserver>());
+    }
+}
+
+/// <summary>
+/// Hands back the open tickets of a staff member who leaves.
+/// </summary>
+[RequireFeatures(StaffConstants.Features.Staff)]
+public sealed class StaffStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddStaffLifecycleObserver<TicketStaffLifecycleObserver>();
     }
 }

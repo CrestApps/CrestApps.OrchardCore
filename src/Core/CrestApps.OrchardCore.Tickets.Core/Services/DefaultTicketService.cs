@@ -671,17 +671,9 @@ public sealed class DefaultTicketService : ITicketService
         }
 
         var filter = query.Query;
-        var none = new[] { "\u0000" };
-        var all = query.AllDeskIds.Count > 0 ? query.AllDeskIds.ToArray() : none;
-        var team = query.TeamDeskIds.Count > 0 ? query.TeamDeskIds.ToArray() : none;
-        var assigned = query.AssignedDeskIds.Count > 0 ? query.AssignedDeskIds.ToArray() : none;
-        var teams = query.TeamIds.Count > 0 ? query.TeamIds.ToArray() : none;
         var userId = string.IsNullOrEmpty(query.UserId) ? "\u0000" : query.UserId;
 
-        var tickets = _session.Query<ContentItem, TicketIndex>(index =>
-            index.DeskId.IsIn(all)
-            || (index.DeskId.IsIn(team) && (index.TeamId.IsIn(teams) || index.AssigneeId == userId))
-            || (index.DeskId.IsIn(assigned) && index.AssigneeId == userId));
+        var tickets = _session.Query<ContentItem, TicketIndex>(TicketScopeFilter.ToPredicate(query));
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {

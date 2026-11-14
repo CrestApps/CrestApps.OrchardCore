@@ -56,4 +56,20 @@ public static class ServiceLevelsServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers who may see the service-level timers of a kind of record.
+    /// </summary>
+    /// <typeparam name="TProvider">The access provider.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddServiceLevelTimerAccessProvider<TProvider>(this IServiceCollection services)
+        where TProvider : class, IServiceLevelTimerAccessProvider
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceLevelTimerAccessProvider, TProvider>());
+
+        return services;
+    }
 }

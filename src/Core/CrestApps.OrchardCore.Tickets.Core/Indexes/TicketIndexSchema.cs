@@ -63,4 +63,25 @@ public static class TicketIndexSchema
     public static Task CreateAssignedIndexAsync(ISchemaBuilder schemaBuilder)
         => schemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table
             .CreateIndex("IDX_TicketIndex_Assigned", "AssigneeId", "AssignedUtc", "DocumentId"));
+
+    /// <summary>
+    /// Creates the table of the daily backlog snapshots.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateBacklogIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<TicketBacklogIndex>(table => table
+            .Column<string>("Day", column => column.WithLength(10))
+            .Column<string>("DeskId", column => column.Nullable().WithLength(26))
+            .Column<DateTime>("TakenUtc"));
+
+        await schemaBuilder.AlterIndexTableAsync<TicketBacklogIndex>(table =>
+        {
+            table.CreateIndex("IDX_TicketBacklogIndex_Day", "Day", "DeskId");
+            table.CreateIndex("IDX_TicketBacklogIndex_Taken", "TakenUtc", "DocumentId");
+        });
+    }
 }

@@ -25,11 +25,13 @@ public static class TicketsCoreServiceCollectionExtensions
         services.TryAddScoped<ITicketService, DefaultTicketService>();
         services.TryAddScoped<ITicketAccessService, DefaultTicketAccessService>();
         services.TryAddScoped<TicketAutoCloser>();
+        services.TryAddScoped<TicketBacklogRecorder>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberLoadSource, TicketTeamMemberLoadSource>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketEmailObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceLevelObserver, TicketServiceLevelObserver>());
         services.AddTemplatedEmailTemplateSource<TicketEmailTemplateSource>();
         services.AddServiceLevelScope<TicketServiceLevelScope>();
+        services.AddServiceLevelTimerAccessProvider<TicketServiceLevelTimerAccess>();
 
         return services;
     }
