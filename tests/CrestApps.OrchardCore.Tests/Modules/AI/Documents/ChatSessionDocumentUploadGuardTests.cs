@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Security;
 using CrestApps.OrchardCore.AI.Documents.Endpoints;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -125,6 +126,58 @@ public sealed class ChatSessionDocumentUploadGuardTests
         await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ => ValueTask.FromResult<object>(Results.Ok()));
 
         limiter.Verify(l => l.AcquireAsync(ChatSessionDocumentUploadOptions.UploadPolicyName, "user:user-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// M14: an anonymous visitor on a public profile could upload, remove and upload again to one session without a
+    /// count, each upload running extraction and embeddings. Uploads are now counted by the visitor's network, with the
+    /// real attempt limiter.
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_AnAnonymousVisitorsUploadsToAnExistingSession_AreCountedByNetwork()
+    {
+        // Arrange
+        var options = new AttemptLimitOptions();
+        options.AddPolicy(ChatSessionDocumentUploadOptions.UploadPolicyName, 3, TimeSpan.FromHours(1));
+        var limiter = new DistributedAttemptLimiter(
+            new Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache(Options.Create(new Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions())),
+            new global::OrchardCore.Locking.LocalLock(Microsoft.Extensions.Logging.Abstractions.NullLogger<global::OrchardCore.Locking.LocalLock>.Instance),
+            new global::OrchardCore.Environment.Shell.ShellSettings { Name = "Default" },
+            Mock.Of<global::OrchardCore.Modules.IClock>(clock => clock.UtcNow == DateTime.UtcNow),
+            Options.Create(options),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<DistributedAttemptLimiter>.Instance);
+        var calls = 0;
+        var statuses = new List<int>();
+
+        // Act
+        for (var i = 0; i < 4; i++)
+        {
+            var (httpContext, _) = CreateContext(authorized: true, files: 1, sessionDocuments: 0, attemptLimiter: limiter);
+            httpContext.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("203.0.113.7");
+
+            await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(httpContext), _ =>
+            {
+                calls++;
+
+                return ValueTask.FromResult<object>(Results.Ok());
+            });
+
+            statuses.Add(httpContext.Response.StatusCode);
+        }
+
+        var (otherNetwork, _) = CreateContext(authorized: true, files: 1, sessionDocuments: 0, attemptLimiter: limiter);
+        otherNetwork.Connection.RemoteIpAddress = System.Net.IPAddress.Parse("198.51.100.9");
+        await new ChatSessionDocumentUploadGuard().InvokeAsync(new DefaultEndpointFilterInvocationContext(otherNetwork), _ =>
+        {
+            calls++;
+
+            return ValueTask.FromResult<object>(Results.Ok());
+        });
+
+        // Assert
+        Assert.Equal(4, calls);
+        Assert.Equal(StatusCodes.Status429TooManyRequests, statuses[^1]);
+        Assert.NotEqual(StatusCodes.Status429TooManyRequests, otherNetwork.Response.StatusCode);
     }
 
     [Fact]
