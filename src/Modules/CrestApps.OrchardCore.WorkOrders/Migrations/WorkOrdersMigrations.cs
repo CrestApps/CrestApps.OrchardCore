@@ -1,6 +1,11 @@
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Locking.Distributed;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.WorkOrders.Migrations;
@@ -52,9 +57,37 @@ internal sealed class WorkOrdersMigrations : DataMigration
     /// <returns>The migration version.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await _upgrade.RunAsync();
+        await _upgrade.CopyPoliciesAsync();
+
+        // The timers read the schedules just copied, which other scopes see once this migration commits.
+        ShellScope.AddDeferredTask(StartOpenWorkOrdersAsync);
 
         return 3;
+    }
+
+    // One node gives the open work orders their timers; a node that finds the lock taken leaves it to the one holding it.
+    private static async Task StartOpenWorkOrdersAsync(ShellScope scope)
+    {
+        var services = scope.ServiceProvider;
+        var (locker, locked) = await services.GetRequiredService<IDistributedLock>()
+            .TryAcquireLockWithoutWaitingAsync("WorkOrders:ServiceLevelUpgrade", TimeSpan.FromHours(1));
+
+        if (!locked)
+        {
+            return;
+        }
+
+        await using (locker)
+        {
+            var started = await services.GetRequiredService<WorkOrderServiceLevelUpgrade>().StartOpenWorkOrdersAsync();
+
+            var logger = services.GetRequiredService<ILogger<WorkOrdersMigrations>>();
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Gave {Count} open work orders their service level timers.", started);
+            }
+        }
     }
 
     /// <summary>

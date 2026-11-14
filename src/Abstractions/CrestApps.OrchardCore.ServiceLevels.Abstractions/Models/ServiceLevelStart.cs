@@ -48,4 +48,22 @@ public sealed class ServiceLevelStart
     /// doesn't raise it again.
     /// </summary>
     public bool AlreadyBreached { get; set; }
+
+    /// <summary>
+    /// Gets or sets the due time the timer already had, in UTC, for a timer copied from another system: it wins over the
+    /// policy's target, which becomes the open time between the start and this due time.
+    /// </summary>
+    public DateTime? DueUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets since when a timer that starts paused has been paused, in UTC: the time before it counts as used.
+    /// Without it, a paused timer counts nothing.
+    /// </summary>
+    public DateTime? PausedSinceUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the metric was already met, in UTC, for a timer copied from another system: the timer starts
+    /// completed then, and nothing is announced.
+    /// </summary>
+    public DateTime? CompletedUtc { get; set; }
 }

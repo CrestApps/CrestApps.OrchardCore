@@ -265,6 +265,38 @@ public sealed class ServiceLevelTrackerTests
         Assert.Empty(kit.Observer.Breached);
     }
 
+    [Fact]
+    public async Task Completing_AnswersEveryRunningCycleOfTheMetric()
+    {
+        // Arrange: two running cycles of one metric, as two nodes upgrading at once could leave.
+        var kit = new Kit(Utc(_friday, 16, 0));
+        var first = await kit.StartAsync(ServiceLevelMetrics.FirstResponse, "High");
+        var twin = new ServiceLevelTimer
+        {
+            ItemId = "twin",
+            Subject = first.Subject,
+            Metric = first.Metric,
+            Priority = first.Priority,
+            PolicyId = first.PolicyId,
+            HoursScheduleId = first.HoursScheduleId,
+            TargetSeconds = first.TargetSeconds,
+            StartedUtc = first.StartedUtc,
+            CountingSinceUtc = first.CountingSinceUtc,
+            DueUtc = first.DueUtc,
+            WarnAtUtc = first.WarnAtUtc,
+            State = ServiceLevelTimerState.Running,
+        };
+        await kit.Store.CreateAsync(twin, TestContext.Current.CancellationToken);
+
+        // Act
+        kit.Clock.UtcNow = Utc(_friday, 16, 30);
+        await kit.Tracker.CompleteAsync(_ticket, ServiceLevelMetrics.FirstResponse, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.All(kit.Store.Timers, timer => Assert.Equal(ServiceLevelTimerState.Completed, timer.State));
+        Assert.Equal(2, kit.Observer.Completed.Count);
+    }
+
     private static DateTime Utc(DateOnly date, int hour, int minute)
         => new(date.Year, date.Month, date.Day, hour, minute, 0, DateTimeKind.Utc);
 

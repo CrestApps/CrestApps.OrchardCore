@@ -80,6 +80,17 @@ public sealed class ServiceLevelClock
     }
 
     /// <summary>
+    /// Returns the open time between two instants on a schedule, in seconds.
+    /// </summary>
+    /// <param name="scheduleId">The schedule, or <see langword="null"/> for around the clock.</param>
+    /// <param name="fromUtc">The start.</param>
+    /// <param name="toUtc">The end.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The open seconds.</returns>
+    public async Task<long> GetOpenSecondsAsync(string scheduleId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default)
+        => toUtc <= fromUtc ? 0 : ToSeconds(await _openHours.GetOpenTimeBetweenAsync(scheduleId, fromUtc, toUtc, cancellationToken: cancellationToken));
+
+    /// <summary>
     /// Gets the seconds of its target after which a timer warns.
     /// </summary>
     /// <param name="timer">The timer.</param>

@@ -3,10 +3,10 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.BusinessHours.Models;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
-using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using YesSql;
+using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 
@@ -16,7 +16,8 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 /// </summary>
 public sealed class WorkOrderServiceLevelUpgrade
 {
-    private const int BatchSize = 100;
+    // The name the policies were stored under before the Work Orders model became the legacy one.
+    internal const string StoredPolicyTypeName = "CrestApps.OrchardCore.WorkOrders.Models.ServiceLevelPolicy, CrestApps.OrchardCore.WorkOrders.Abstractions";
 
     private readonly ISession _session;
     private readonly IServiceLevelPolicyManager _policies;
@@ -51,27 +52,45 @@ public sealed class WorkOrderServiceLevelUpgrade
     }
 
     /// <summary>
+    /// Gets or sets how many work orders are handled, and committed, at a time.
+    /// </summary>
+    internal int BatchSize { get; set; } = 100;
+
+    /// <summary>
     /// Copies every policy Work Orders kept, then gives the open work orders their timers. Running it again does
     /// nothing more: a policy already copied, or a work order that has timers, is left alone.
     /// </summary>
+    /// <remarks>
+    /// The timers read the schedules the policies were given, which other scopes see only once the copy commits; the
+    /// migration copies the policies and gives the work orders their timers in a step that runs after it commits.
+    /// </remarks>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>How many policies were copied and how many work orders got timers.</returns>
     public async Task<(int Policies, int WorkOrders)> RunAsync(CancellationToken cancellationToken = default)
+        => (await CopyPoliciesAsync(cancellationToken), await StartOpenWorkOrdersAsync(cancellationToken));
+
+    /// <summary>
+    /// Copies the policies Work Orders kept to the shared store.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many were copied.</returns>
+    public async Task<int> CopyPoliciesAsync(CancellationToken cancellationToken = default)
     {
         var policies = 0;
+
+        // The schedules created in this run can't be read back until it commits, so their names are kept here.
+        var scheduleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var legacy in await ListLegacyPoliciesAsync(cancellationToken))
         {
             if (await _policies.FindByIdAsync(legacy.ItemId, cancellationToken) is null)
             {
-                await ImportAsync(legacy, cancellationToken);
+                await ImportAsync(legacy, scheduleNames, cancellationToken);
                 policies++;
             }
         }
 
-        var workOrders = await StartOpenWorkOrdersAsync(cancellationToken);
-
-        return (policies, workOrders);
+        return policies;
     }
 
     /// <summary>
@@ -80,7 +99,10 @@ public sealed class WorkOrderServiceLevelUpgrade
     /// <param name="legacy">The Work Orders policy.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The shared policy.</returns>
-    public async Task<ServiceLevelPolicy> ImportAsync(LegacyServiceLevelPolicy legacy, CancellationToken cancellationToken = default)
+    public Task<ServiceLevelPolicy> ImportAsync(LegacyServiceLevelPolicy legacy, CancellationToken cancellationToken = default)
+        => ImportAsync(legacy, new HashSet<string>(StringComparer.OrdinalIgnoreCase), cancellationToken);
+
+    private async Task<ServiceLevelPolicy> ImportAsync(LegacyServiceLevelPolicy legacy, HashSet<string> scheduleNames, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(legacy);
 
@@ -96,7 +118,7 @@ public sealed class WorkOrderServiceLevelUpgrade
         policy.Scope = WorkOrdersConstants.ServiceLevelScope;
         policy.WarningPercent = legacy.WarningPercent is >= 1 and <= 99 ? legacy.WarningPercent : 80;
         policy.Targets = [.. ToTargets(legacy.Targets)];
-        policy.HoursScheduleId = await ResolveScheduleAsync(legacy, cancellationToken);
+        policy.HoursScheduleId = await ResolveScheduleAsync(legacy, scheduleNames, cancellationToken);
         policy.Put(new WorkOrderServiceLevelSettings { PauseStatuses = [.. legacy.PauseStatuses ?? []] });
 
         if (legacy.CreatedUtc != default)
@@ -132,26 +154,29 @@ public sealed class WorkOrderServiceLevelUpgrade
         }
     }
 
-    // The calendar the policy named stays its schedule; its own weekly hours become a Business Hours schedule.
-    private async Task<string> ResolveScheduleAsync(LegacyServiceLevelPolicy legacy, CancellationToken cancellationToken)
+    // The calendar the policy named stays its schedule; its own weekly hours become a new Business Hours schedule named
+    // after the policy, with a number added when another schedule already has that name.
+    private async Task<string> ResolveScheduleAsync(LegacyServiceLevelPolicy legacy, HashSet<string> scheduleNames, CancellationToken cancellationToken)
     {
         if (legacy.WeeklyHours is not { Days.Count: > 0 } weekly || weekly.Closes <= weekly.Opens)
         {
             return string.IsNullOrWhiteSpace(legacy.HoursCalendarId) ? null : legacy.HoursCalendarId;
         }
 
-        var name = $"{legacy.Name} hours";
-        var schedule = await _schedules.FindByNameAsync(name, cancellationToken);
+        var baseName = $"{legacy.Name} hours";
+        var name = baseName;
 
-        if (schedule is not null)
+        for (var number = 2; scheduleNames.Contains(name) || await _schedules.FindByNameAsync(name, cancellationToken) is not null; number++)
         {
-            return schedule.ItemId;
+            name = $"{baseName} ({number})";
         }
+
+        scheduleNames.Add(name);
 
         var open = (weekly.Opens.Hour * 60) + weekly.Opens.Minute;
         var close = (weekly.Closes.Hour * 60) + weekly.Closes.Minute;
 
-        schedule = await _schedules.NewAsync(cancellationToken: cancellationToken);
+        var schedule = await _schedules.NewAsync(cancellationToken: cancellationToken);
         schedule.Name = name;
         schedule.Description = $"The hours of the \"{legacy.Name}\" work order service level policy.";
         schedule.Hours = new HoursSchedule
@@ -175,48 +200,66 @@ public sealed class WorkOrderServiceLevelUpgrade
             return [];
         }
 
+        // A tenant on the old version stored the policies under the old class name, which no longer exists: read that
+        // name as the legacy model. Only the reading is mapped; the stored rows are left as they are.
+        _session.Store.TypeNames[typeof(LegacyServiceLevelPolicy)] = StoredPolicyTypeName;
+
         var policies = await _session.GetAsync<LegacyServiceLevelPolicy>(documentIds, WorkOrdersConstants.CollectionName, cancellationToken);
 
         return [.. policies.Where(policy => policy is not null)];
     }
 
-    private async Task<int> StartOpenWorkOrdersAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Gives the open work orders the timers of their policy, a batch at a time, committing each batch. A work order that
+    /// already has timers is left alone, so running it again, or after a run that stopped part way, does nothing to the
+    /// work orders already done.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many work orders were given timers.</returns>
+    public async Task<int> StartOpenWorkOrdersAsync(CancellationToken cancellationToken = default)
     {
         var started = 0;
-        var page = 0;
+        var afterDocumentId = 0L;
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            // Starting timers doesn't close a work order, so paging the open ones in document order is stable.
-            var batch = await _session.Query<WorkOrder, WorkOrderIndex>(index => index.IsOpen, collection: WorkOrdersConstants.CollectionName)
-                .OrderBy(index => index.ItemId)
-                .Skip(page * BatchSize)
+            // Paged by document id, which only grows, so a work order created meanwhile never shifts a page.
+            var rows = await _session.QueryIndex<WorkOrderIndex>(index => index.IsOpen && index.DocumentId > afterDocumentId, collection: WorkOrdersConstants.CollectionName)
+                .OrderBy(index => index.DocumentId)
                 .Take(BatchSize)
                 .ListAsync(cancellationToken);
-            var workOrders = batch.ToList();
+            var documentIds = rows.Select(row => row.DocumentId).ToArray();
 
-            foreach (var workOrder in workOrders)
+            if (documentIds.Length == 0)
             {
-                if (await StartAsync(workOrder, cancellationToken))
+                break;
+            }
+
+            afterDocumentId = documentIds[^1];
+
+            foreach (var workOrder in await _session.GetAsync<WorkOrder>(documentIds, WorkOrdersConstants.CollectionName, cancellationToken))
+            {
+                if (workOrder is not null && await StartAsync(workOrder, cancellationToken))
                 {
                     started++;
                 }
             }
 
-            if (workOrders.Count < BatchSize)
+            await _session.SaveChangesAsync(cancellationToken);
+
+            if (documentIds.Length < BatchSize)
             {
                 break;
             }
-
-            page++;
         }
 
         return started;
     }
 
-    // The timers count from when the work order was created, moved on by the time it already stood still, so the due
-    // times stay close to the ones it had. A response already given completes its timer then; a work order waiting now
-    // is paused; a warning or breach already raised is not raised again.
+    // The timers count from when the work order was created, moved on by the time it already stood still. The due times
+    // the work order had win over today's targets, a response already given completes its timer then, a work order
+    // waiting now is paused from when it started waiting, and a warning or breach already raised stays raised. Nothing
+    // is announced: the timers bring the state the work order already had.
     private async Task<bool> StartAsync(WorkOrder workOrder, CancellationToken cancellationToken)
     {
         var sla = workOrder.Sla;
@@ -232,7 +275,8 @@ public sealed class WorkOrderServiceLevelUpgrade
 
         foreach (var metric in new[] { ServiceLevelMetrics.FirstResponse, ServiceLevelMetrics.Resolution })
         {
-            var (warned, breached) = metric == ServiceLevelMetrics.FirstResponse
+            var isResponse = metric == ServiceLevelMetrics.FirstResponse;
+            var (warned, breached) = isResponse
                 ? (sla.ResponseWarned, sla.ResponseBreached)
                 : (sla.ResolutionWarned, sla.ResolutionBreached);
 
@@ -243,24 +287,27 @@ public sealed class WorkOrderServiceLevelUpgrade
                 PolicyId = sla.PolicyId,
                 Priority = workOrder.Priority.ToString(),
                 StartUtc = startUtc,
+                DueUtc = isResponse ? sla.RespondByUtc : sla.ResolveByUtc,
+                CompletedUtc = isResponse ? sla.FirstResponseUtc : null,
+                Paused = sla.PausedSinceUtc is not null,
+                PausedSinceUtc = sla.PausedSinceUtc,
                 AlreadyWarned = warned || breached,
                 AlreadyBreached = breached,
             }, cancellationToken);
-        }
-
-        if (sla.FirstResponseUtc is { } respondedUtc)
-        {
-            await _tracker.CompleteAsync(subject, ServiceLevelMetrics.FirstResponse, respondedUtc, cancellationToken);
-        }
-
-        if (sla.PausedSinceUtc is not null)
-        {
-            await _tracker.PauseAsync(subject, cancellationToken: cancellationToken);
         }
 
         await _serviceLevels.RefreshAsync(workOrder, cancellationToken);
         await _workOrders.UpdateAsync(workOrder, cancellationToken);
 
         return true;
+    }
+
+    // Reads the work order index table with the id of each row's document, which the index model doesn't expose, so the
+    // open work orders can be paged by it. Its name matches the table; nothing writes through it.
+    private sealed class WorkOrderIndex : MapIndex
+    {
+        public long DocumentId { get; set; }
+
+        public bool IsOpen { get; set; }
     }
 }

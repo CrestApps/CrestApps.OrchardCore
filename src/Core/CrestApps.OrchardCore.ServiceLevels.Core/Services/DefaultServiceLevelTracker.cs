@@ -73,6 +73,13 @@ public sealed class DefaultServiceLevelTracker : IServiceLevelTracker
         };
 
         Apply(timer, policy, target);
+
+        // A due time the record already had wins: the target becomes the open time up to it.
+        if (start.DueUtc is { } dueUtc && dueUtc > now)
+        {
+            timer.TargetSeconds = Math.Max(await _timerClock.GetOpenSecondsAsync(timer.HoursScheduleId, now, dueUtc, cancellationToken), 1);
+        }
+
         await _timerClock.ScheduleAsync(timer, now, cancellationToken);
 
         if (start.AlreadyWarned || start.AlreadyBreached)
@@ -85,10 +92,21 @@ public sealed class DefaultServiceLevelTracker : IServiceLevelTracker
             timer.BreachedUtc = timer.DueUtc;
         }
 
-        if (start.Paused)
+        // Starting a timer never announces anything: a copied timer brings its state with it.
+        if (start.CompletedUtc is { } completedUtc)
         {
+            await _timerClock.SettleAsync(timer, completedUtc < now ? now : completedUtc, cancellationToken);
+            timer.ElapsedSeconds = timer.UsedSeconds;
+            timer.State = ServiceLevelTimerState.Completed;
+            timer.EndedUtc = completedUtc;
+        }
+        else if (start.Paused)
+        {
+            var pausedSince = start.PausedSinceUtc is { } since && since > now ? since : now;
+
+            await _timerClock.SettleAsync(timer, pausedSince, cancellationToken);
             timer.State = ServiceLevelTimerState.Paused;
-            timer.PausedSinceUtc = now;
+            timer.PausedSinceUtc = pausedSince;
         }
 
         await _store.CreateAsync(timer, cancellationToken);
@@ -168,26 +186,27 @@ public sealed class DefaultServiceLevelTracker : IServiceLevelTracker
             return null;
         }
 
-        // The newest cycle of the metric is the one being answered.
-        var timer = active[0];
-
         var at = atUtc ?? _clock.UtcNow;
 
-        if (timer.State == ServiceLevelTimerState.Running)
+        // Every running cycle of the metric is answered; the newest is the one returned.
+        foreach (var timer in active)
         {
-            MarkBreachedIfOverdue(timer, at);
-            await _timerClock.SettleAsync(timer, at, cancellationToken);
+            if (timer.State == ServiceLevelTimerState.Running)
+            {
+                MarkBreachedIfOverdue(timer, at);
+                await _timerClock.SettleAsync(timer, at, cancellationToken);
+            }
+
+            timer.ElapsedSeconds = timer.UsedSeconds;
+            timer.State = ServiceLevelTimerState.Completed;
+            timer.PausedSinceUtc = null;
+            timer.EndedUtc = at;
+
+            await _store.UpdateAsync(timer, cancellationToken);
+            await NotifyAsync(observer => observer.CompletedAsync(timer, cancellationToken));
         }
 
-        timer.ElapsedSeconds = timer.UsedSeconds;
-        timer.State = ServiceLevelTimerState.Completed;
-        timer.PausedSinceUtc = null;
-        timer.EndedUtc = at;
-
-        await _store.UpdateAsync(timer, cancellationToken);
-        await NotifyAsync(observer => observer.CompletedAsync(timer, cancellationToken));
-
-        return timer;
+        return active[0];
     }
 
     /// <inheritdoc/>
