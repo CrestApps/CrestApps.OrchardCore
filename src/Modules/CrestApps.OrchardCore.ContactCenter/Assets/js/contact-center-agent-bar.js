@@ -13,7 +13,7 @@
 import { coalesceRefresh } from './shared/coalesced-refresh.js';
 import { agentStatusLabel, dialPhaseHint, dialPhaseLabel, normalizeDialPhase, showsDialProgress } from './shared/agent-presence.js';
 import { readOfferRefusal, showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
-import { activityToAutoOpen, autoOpenWorkKey, readPoppedActivities, rememberPoppedActivity } from './shared/agent-bar-work.js';
+import { acceptedOfferActivityToOpen, activityToAutoOpen, autoOpenWorkKey, isOfferForUser, readPoppedActivities, rememberPoppedActivity } from './shared/agent-bar-work.js';
 import { escapeHtml } from '../../../CrestApps.OrchardCore.Resources/Assets/js/browser/html.js';
 
 (function (window, document) {
@@ -384,6 +384,9 @@ import { escapeHtml } from '../../../CrestApps.OrchardCore.Resources/Assets/js/b
                 return false;
             }
 
+            // The one line that says why the page changed under the agent, kept by a console set to preserve its log.
+            diagnostic('activity-opened', { activityId: String(activityId), forced: !!force });
+
             window.location.assign(target);
             return true;
         }
@@ -409,6 +412,11 @@ import { escapeHtml } from '../../../CrestApps.OrchardCore.Resources/Assets/js/b
 
         function wasPopped(activityId) {
             return Object.prototype.hasOwnProperty.call(poppedActivityIds, String(activityId));
+        }
+
+        // The signed-in user, as the workspace state names them, or '' until the first state has loaded.
+        function ownUserId() {
+            return (state && state.userId) || '';
         }
 
         function presenceStatus() {
@@ -970,8 +978,10 @@ import { escapeHtml } from '../../../CrestApps.OrchardCore.Resources/Assets/js/b
             // hung up as it was presented) never makes a sound.
             var beepFor = notification.kind === 'InboundCall' && isNew ? notification.reservationId : null;
 
+            // Only the agent the record was offered to reviews it: the queue and its supervisors hear of the offer too.
             var shouldPop = notification.autoOpenActivity &&
                 notification.activityItemId &&
+                isOfferForUser(notification, ownUserId()) &&
                 !wasPopped(notification.activityItemId);
 
             if (shouldPop) {
@@ -989,9 +999,23 @@ import { escapeHtml } from '../../../CrestApps.OrchardCore.Resources/Assets/js/b
         // The offer was taken. When the agent accepted it, pop the activity so they land on the record for the call
         // they just took (pop-on-answer). An automatic dial is accepted by the dialer before it is placed, so its
         // record waits until the agent is connected. Other revoke reasons (expired, released) just refresh.
+        //
+        // The same notification reaches everyone signed in to the offer's queue and that queue's supervisors, so the
+        // record opens only when it names this agent (shared/agent-bar-work.js): every screen that heard another
+        // agent's acceptance used to be taken to that agent's record.
         function onOfferRevoked(notification) {
-            if (notification && notification.reason === 'Accepted' && notification.kind !== 'AutoDial' && notification.activityItemId) {
-                popActivity(notification.activityItemId, false);
+            var acceptedActivityId = acceptedOfferActivityToOpen(notification, ownUserId());
+
+            diagnostic('offer-revoked', notification ? {
+                reservationId: notification.reservationId,
+                reason: notification.reason,
+                kind: notification.kind,
+                own: isOfferForUser(notification, ownUserId()),
+                opensActivityId: acceptedActivityId || null
+            } : {});
+
+            if (acceptedActivityId) {
+                popActivity(acceptedActivityId, false);
             }
 
             lastOfferReservationId = null;

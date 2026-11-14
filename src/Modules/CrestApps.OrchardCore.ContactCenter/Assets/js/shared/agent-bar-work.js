@@ -52,6 +52,34 @@ export function activityToAutoOpen(state, poppedActivityIds) {
     return poppedActivityIds && Object.prototype.hasOwnProperty.call(poppedActivityIds, id) ? '' : id;
 }
 
+// Whether an offer notification names this user as the agent the offer was made to. The server also sends every
+// offer's notifications to the offer's queue and to that queue's supervisors, for their views, so one arriving here is
+// not proof it is this agent's. Unlike a refresh, opening a record is only ever done for the agent's own offer: an
+// unknown owner on either side is never taken as this agent's.
+//   notification - the offer notification: { userId }.
+//   ownUserId    - the signed-in user, from the workspace state.
+export function isOfferForUser(notification, ownUserId) {
+    return !!notification && !!notification.userId && !!ownUserId &&
+        String(notification.userId) === String(ownUserId);
+}
+
+// The activity to open because an offer was accepted, or '' for none. Only the agent who accepted it lands on its
+// record. Live: administrators who had once signed in to a queue were taken off the page they were on, to the record
+// of a call another agent had just answered -- two of them to the same record at once -- because every screen that
+// heard the acceptance opened it. An automatic dial is accepted by the dialer before the call is placed, so its record
+// waits until the agent is connected.
+//   notification - the OfferRevoked notification: { userId, reason, kind, activityItemId }.
+export function acceptedOfferActivityToOpen(notification, ownUserId) {
+    if (!isOfferForUser(notification, ownUserId) ||
+        notification.reason !== 'Accepted' ||
+        notification.kind === 'AutoDial' ||
+        !notification.activityItemId) {
+        return '';
+    }
+
+    return String(notification.activityItemId);
+}
+
 // The activities this tab already opened, kept across the page loads a pop causes. Storage can be missing or refuse
 // access (a private window, blocked site data); the bar then only remembers them for the page.
 var POPPED_STORAGE_KEY = 'cc-agent-bar:popped-activities';

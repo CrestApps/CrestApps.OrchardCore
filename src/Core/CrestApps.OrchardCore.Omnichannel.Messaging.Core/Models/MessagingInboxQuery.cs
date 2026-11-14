@@ -45,6 +45,22 @@ public sealed class MessagingInboxQuery
     public bool UnreadOnly { get; set; }
 
     /// <summary>
+    /// Gets or sets the agent whose conversations the inbox is narrowed to: the ones they hold, assigned to them or
+    /// sent to them personally and not claimed by anyone else. <see langword="null"/> for everybody's.
+    /// </summary>
+    public string HolderAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the queue the inbox is narrowed to, or <see langword="null"/> for every queue and personal thread.
+    /// </summary>
+    public string QueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign the inbox is narrowed to, or <see langword="null"/> for every thread.
+    /// </summary>
+    public string CampaignId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether only open threads are matched. A snoozed, closed or spam thread is
     /// not waiting on anyone, even when it still carries unread messages.
     /// </summary>
