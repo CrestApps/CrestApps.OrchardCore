@@ -152,7 +152,7 @@ A stdio connection starts an operating-system process, so the feature is limited
 
 - It can be enabled on the **default tenant only**. A child tenant's administrator is not the host's operator, and no child tenant can start a process.
 - Creating or changing a stdio connection, in the editor or through a recipe, needs the security-critical **Manage local (stdio) MCP connections** permission (`ManageMcpStdioConnections`). A setup recipe and a startup recipe run as the host and may carry one. A recipe never changes the transport of an existing connection.
-- The host can list the programs a connection may start under `CrestApps:AI:Mcp:Stdio:AllowedCommands`, for example `["npx", "docker"]`. A bare name matches with or without its extension; a command written as a path is allowed only when that exact path is listed. The list limits the program, not its arguments. An empty list allows any program.
+- The host can list the programs a connection may start under `CrestApps:AI:Mcp:Stdio:AllowedCommands`, for example `["npx", "docker"]`. A bare name matches with or without its extension; a command written as a path is allowed only when that exact path is listed. When the list is set, a connection may not set an environment variable that changes which program runs or what it loads before its own code (`PATH`, `PATHEXT`, `NODE_OPTIONS`, `NODE_PATH`, `PYTHONPATH`, `LD_PRELOAD`, `DYLD_INSERT_LIBRARIES`, `JAVA_TOOL_OPTIONS`, `DOTNET_STARTUP_HOOKS`, package index URLs and the like). The list does not limit the arguments or the working directory: with `npx` allowed, `npx -y <package>` runs any package, so list a wrapper script with fixed arguments when that matters. An empty list allows any program.
 :::
 
 ### Example: Global Time Capabilities with `mcp/time`

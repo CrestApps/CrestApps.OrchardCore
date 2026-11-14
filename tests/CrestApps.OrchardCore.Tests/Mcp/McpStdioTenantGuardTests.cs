@@ -182,6 +182,31 @@ public sealed class McpStdioTenantGuardTests
         Assert.NotNull(await provider.GetAsync(CreateConnection(@"C:\tools\npx.cmd")));
     }
 
+    [Theory]
+    [InlineData("PATH")]
+    [InlineData("node_options")]
+    [InlineData("LD_PRELOAD")]
+    [InlineData("DOTNET_STARTUP_HOOKS")]
+    public async Task GetAsync_WithAnAllowlist_RefusesAVariableThatChangesWhichProgramRuns(string variable)
+    {
+        // Low (AI): with npx allowed, PATH or NODE_OPTIONS made the allowed command run anything.
+        var provider = CreateProvider(ShellSettings.DefaultShellName, allowedCommands: ["npx"]);
+        var connection = CreateConnection("npx");
+        connection.Put(new StdioMcpConnectionMetadata { Command = "npx", Arguments = [], EnvironmentVariables = new() { [variable] = "x" } });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetAsync(connection));
+    }
+
+    [Fact]
+    public async Task GetAsync_WithAnAllowlist_KeepsAnOrdinaryVariable()
+    {
+        var provider = CreateProvider(ShellSettings.DefaultShellName, allowedCommands: ["npx"]);
+        var connection = CreateConnection("npx");
+        connection.Put(new StdioMcpConnectionMetadata { Command = "npx", Arguments = [], EnvironmentVariables = new() { ["GITHUB_TOKEN"] = "x" } });
+
+        Assert.NotNull(await provider.GetAsync(connection));
+    }
+
     private static GuardedStdioClientTransportProvider CreateProvider(string tenantName, string[] allowedCommands = null)
         => new(
             new ShellSettings { Name = tenantName },
