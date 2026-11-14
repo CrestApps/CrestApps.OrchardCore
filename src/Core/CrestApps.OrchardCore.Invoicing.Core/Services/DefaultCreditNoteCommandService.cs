@@ -262,7 +262,18 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
                 return result.Fail(S["The customer can't hold credit (the Store Credit feature is off, or the invoice is billed to someone without an account). Choose another way to credit it."]);
         }
 
-        var number = await _numbers.GenerateAsync(new FinancialDocumentNumberRequest(FinancialDocumentKind.CreditNote), cancellationToken);
+        var number = await UnusedDocumentNumbers.NextAsync(
+            _numbers,
+            FinancialDocumentKind.CreditNote,
+            async candidate => await _creditNotes.FindByNumberAsync(candidate, cancellationToken) is not null,
+            cancellationToken);
+
+        if (number is null)
+        {
+            await _session.CancelAsync();
+
+            return result.Fail(S["The credit note number series keeps giving numbers other credit notes already hold. Change its format under Settings > Number series."]);
+        }
 
         creditNote.Number = number.PublicToken;
 

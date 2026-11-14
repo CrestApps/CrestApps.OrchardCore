@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 
+using YesSql;
+
 namespace CrestApps.OrchardCore.Tests.Invoicing;
 
 /// <summary>
@@ -50,8 +52,9 @@ public sealed class InvoiceNumberingTests
     }
 
     /// <summary>
-    /// The same issues with a series lock that locks nothing: the numbers collide, which shows the test above depends on
-    /// the lock and would fail without it.
+    /// The same issues with a series lock that locks nothing: they don't all get distinct consecutive numbers (they collide
+    /// on a number, or the sequence's concurrency check refuses all but one), which shows the test above depends on the
+    /// lock and would fail without it.
     /// </summary>
     [Fact]
     public async Task WithoutTheSeriesLock_InvoicesIssuedAtTheSameTime_CollideOnTheirNumbers()
@@ -78,10 +81,22 @@ public sealed class InvoiceNumberingTests
             drafts.Add((await harness.CreateDraftAsync()).ItemId);
         }
 
-        var results = await Task.WhenAll(drafts.Select(id => harness.InScopeAsync(services =>
-            services.GetRequiredService<IInvoiceCommandService>().IssueAsync(id, TestContext.Current.CancellationToken))));
+        var results = await Task.WhenAll(drafts.Select(async id =>
+        {
+            try
+            {
+                var result = await harness.InScopeAsync(services =>
+                    services.GetRequiredService<IInvoiceCommandService>().IssueAsync(id, TestContext.Current.CancellationToken));
 
-        return [.. results.Select(result => result.Succeeded ? result.Invoice.Number : $"failed: {string.Join(" ", result.Errors)}")];
+                return result.Succeeded ? result.Invoice.Number : $"failed: {string.Join(" ", result.Errors)}";
+            }
+            catch (ConcurrencyException ex)
+            {
+                return $"failed: {ex.Message}";
+            }
+        }));
+
+        return results;
     }
 
     /// <summary>

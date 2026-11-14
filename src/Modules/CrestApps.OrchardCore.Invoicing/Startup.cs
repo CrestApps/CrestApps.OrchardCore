@@ -8,6 +8,9 @@ using CrestApps.OrchardCore.Invoicing.Migrations;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Navigation;
 using CrestApps.OrchardCore.Invoicing.Recipes;
+using CrestApps.OrchardCore.Invoicing.Deployments;
+using OrchardCore.Deployment;
+using OrchardCore.Recipes;
 using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Invoicing.Recipes.Workflows;
 using CrestApps.OrchardCore.Invoicing.Workflows;
@@ -52,6 +55,8 @@ public sealed class Startup : StartupBase
     {
         services
             .AddInvoicingCore()
+            .AddRecipeExecutionStep<InvoicesStep>()
+            .AddRecipeExecutionStep<CreditNotesStep>()
             .AddIndexProvider<InvoiceIndexProvider>()
             .AddIndexProvider<CreditNoteIndexProvider>()
             .AddDataMigration<InvoicingMigrations>()
@@ -199,6 +204,24 @@ public sealed class RecipeSchemasStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISiteSettingsSchemaDefinition, InvoicingSettingsSchema>();
+        services.AddScoped<IRecipeStep, InvoicesRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, CreditNotesRecipeStepSchema>();
+        services.AddDeploymentStepSchema<InvoicesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<CreditNotesDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Invoices and credit notes travel with deployment plans.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
+public sealed class DeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<InvoicesDeploymentSource, InvoicesDeploymentStep>();
+        services.AddDeployment<CreditNotesDeploymentSource, CreditNotesDeploymentStep>();
     }
 }
 

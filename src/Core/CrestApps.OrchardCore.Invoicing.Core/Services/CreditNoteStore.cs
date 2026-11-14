@@ -21,6 +21,13 @@ public interface ICreditNoteStore : ICatalog<CreditNote>
     /// Returns whether an issued credit note credits an invoice.
     /// </summary>
     Task<bool> HasIssuedForInvoiceAsync(string invoiceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the credit note that holds a number.
+    /// </summary>
+    /// <param name="number">The number, such as <c>CN-1001</c>.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<CreditNote> FindByNumberAsync(string number, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -70,4 +77,10 @@ public sealed class CreditNoteStore : DocumentCatalog<CreditNote, CreditNoteInde
         return await Session.QueryIndex<CreditNoteIndex>(index => index.InvoiceId == invoiceId && index.Status == issued, collection: CollectionName)
             .CountAsync(cancellationToken) > 0;
     }
+
+    /// <inheritdoc/>
+    public Task<CreditNote> FindByNumberAsync(string number, CancellationToken cancellationToken = default)
+        => string.IsNullOrWhiteSpace(number)
+            ? Task.FromResult<CreditNote>(null)
+            : Session.Query<CreditNote, CreditNoteIndex>(index => index.Number == number.Trim(), collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
 }

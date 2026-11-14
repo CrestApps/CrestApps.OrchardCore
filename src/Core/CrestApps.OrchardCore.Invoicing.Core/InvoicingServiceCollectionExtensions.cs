@@ -29,6 +29,7 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddScoped<IInvoiceManager, InvoiceManager>();
         services.TryAddScoped<IInvoiceCommandService, DefaultInvoiceCommandService>();
         services.TryAddScoped<ICreditNoteCommandService, DefaultCreditNoteCommandService>();
+        services.TryAddScoped<InvoicingDocumentImporter>();
 
         // Delivery: the printable document, its PDF (archived at issue), share links, sending and viewed tracking. The
         // feature registers the archive's file store (InvoiceArchiveFileStore).

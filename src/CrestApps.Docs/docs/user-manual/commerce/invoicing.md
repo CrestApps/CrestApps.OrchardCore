@@ -117,6 +117,10 @@ For example, to thank customers when they pay, start a workflow with **Invoice P
 
 With **Commerce Webhooks** enabled, the same moments can be sent to another system: tick the events under **Invoicing** when you add a webhook under **Configuration > Webhooks** (see [Webhooks](webhooks.md)).
 
+## Move invoices to another site
+
+Under **Tools > Deployments > Plans**, add the **Invoices** and **Credit notes** steps to a plan to take every invoice and credit note to another site. Issued invoices keep their numbers there and don't change what customers owe: bring their balances with the transactions. An invoice the other site already issued is left as it is, and one whose number the other site already uses is not imported. New invoices on the other site skip the numbers that came in.
+
 ## Related pages
 
 - [Transactions](transactions.md): the balances invoices post.

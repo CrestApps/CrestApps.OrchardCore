@@ -189,8 +189,20 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
             invoice.Terms ??= settings.DefaultTerms;
             invoice.Footer ??= settings.DefaultFooter;
 
-            // Numbered in this unit of work: a failure below saves nothing, so no number is used up.
-            var number = await _numbers.GenerateAsync(new FinancialDocumentNumberRequest(FinancialDocumentKind.Invoice), cancellationToken);
+            // Numbered in this unit of work: a failure below saves nothing, so no number is used up. A number an imported
+            // invoice already holds is passed over.
+            var number = await UnusedDocumentNumbers.NextAsync(
+                _numbers,
+                FinancialDocumentKind.Invoice,
+                async candidate => await _store.FindByNumberAsync(candidate, cancellationToken) is not null,
+                cancellationToken);
+
+            if (number is null)
+            {
+                result.Fail(S["The invoice number series keeps giving numbers other invoices already hold. Change its format under Settings > Number series."]);
+
+                return null;
+            }
 
             invoice.Number = number.PublicToken;
 

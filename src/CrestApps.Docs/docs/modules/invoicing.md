@@ -103,6 +103,17 @@ Create Invoice drafts one line; Issue Invoice issues it. Create Credit Note cred
 
 With **Commerce Webhooks** enabled, `InvoiceWebhookObserver` publishes `invoice.created`, `invoice.issued`, `invoice.sent`, `invoice.viewed`, `invoice.payment-received`, `invoice.paid`, `invoice.overdue`, `invoice.voided` and `credit-note.issued` (`InvoicingConstants.WebhookEvents`), with the invoice in `data.invoice` and the event's own values (the payment's `amount`, the void's `reason`, the `creditNote`) in `data.details`. Each event id is stable (such as `evt_invoice-issued_{invoiceId}`), so a receiver drops a repeat.
 
+## Recipes and deployment
+
+With **Deployment** enabled, the **Invoices** and **Credit notes** deployment steps export every invoice and credit note, drafts and issued, with everything they hold (number, lines, totals, history, when they were created and by whom) but the storing site's document id. The `Invoices` and `CreditNotes` recipe steps import them through `InvoicingDocumentImporter`:
+
+- an issued document keeps its number and never posts to the ledger: its transaction travels with the ledger's own step;
+- an issued document the site already has is kept as it is, since after issue only the document commands change it;
+- a draft the site has is replaced, in the same stored document;
+- a document whose number another document of the site holds is refused, as is an issued one without a number, and the step reports a recipe error.
+
+Issuing passes over a number an imported document already holds, so the site's series never gives it twice (`UnusedDocumentNumbers`; the issue fails after 1,000 held numbers in a row). Import the invoices before their credit notes. Payment terms, document templates, number series settings and invoicing settings have their own steps (Payment Terms, Business Document Templates, and the Settings step with the `NumberSeriesSettings` and `InvoicingSettings` schemas). With CrestApps Recipes, each step has its schema.
+
 ## Tax
 
 The calculator asks the `IDocumentTaxProvider`s in order for the lines' taxes; without one, the taxes typed on the lines are used. With **Taxation** enabled, a `[RequireFeatures]` startup registers `TaxationDocumentTaxProvider`: it builds a `TaxCalculationContext` from the lines (the line discount as an amount, services as `Service` items), the bill-to's party tax profile (`IPartyTaxProfileService`) and its shipping address, and maps the tax lines back, the rate in percent. Charges keep the taxes typed on them. Invoicing resolves nothing of Taxation's when it is off.
