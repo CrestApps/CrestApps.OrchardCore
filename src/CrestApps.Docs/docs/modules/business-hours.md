@@ -25,7 +25,9 @@ Schedules come from every registered source. The Business Hours feature keeps it
 
 It adds **Configuration > Business Hours**, a list of schedules (on the shared admin list, so the List and Grid layouts and the Buttons and Menu row actions apply) and an editor with three cards: **General** (name, description, time zone, enabled), **Weekly hours** (each day open or closed, with up to two windows so a lunch break can be entered) and **Holidays and special days** (one date per line: `2026-12-25 Christmas Day` is closed all day, `2026-12-24 09:00-13:00 Christmas Eve` has special hours). The editor is built through `IDisplayManager<BusinessHoursSchedule>`, so another module adds a card with its own display driver.
 
-A disabled schedule is unknown to `IOpenHoursService`: `IsOpenAsync` returns `null` and the time arithmetic counts around the clock.
+A disabled schedule is unknown to `IOpenHoursService`: `IsOpenAsync` returns `null` and the time arithmetic counts around the clock. A new schedule takes the site's time zone.
+
+A module that counts time on schedules implements `IBusinessHoursScheduleObserver`: `ChangingAsync(scheduleId)` runs before a schedule is changed or deleted, while reads still return its old hours, and `ChangedAsync(scheduleId)` after; the new hours are readable once the change commits. Service Levels uses it to settle and reschedule its running timers.
 
 The permission is `ManageBusinessHoursSchedules` (**Manage business hours schedules**); administrators have it by default.
 

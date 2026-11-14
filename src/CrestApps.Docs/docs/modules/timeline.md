@@ -5,7 +5,7 @@ description: "The shared Timeline building block: comments, internal notes and e
 user_manual: user-manual/administration/timeline
 ---
 
-**Timeline** keeps what is said and what happens on a record: comments, internal notes and events, newest first, with who wrote them, the field changes they record and their attachments. Any module can give its records a timeline. Work order notes and order notes live in it, and ticket replies will too.
+**Timeline** keeps what is said and what happens on a record: comments, internal notes and events, newest first, with who wrote them, the field changes they record and their attachments. Any module can give its records a timeline. Work order notes, order notes and the notes of accounts and contacts live in it.
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ user_manual: user-manual/administration/timeline
 
 | Project | Holds |
 | --- | --- |
-| `CrestApps.OrchardCore.Timeline.Abstractions` | `TimelineEntry`, `TimelineVisibility`, `TimelineFieldChange`, `TimelineQuery`, `TimelinePage`, `TimelineResult`, `ITimelineService`, `ITimelineEntryHandler`, `ITimelineAccessProvider`, `ITimelineAccessService`, `TimelineConstants`, `TimelinePermissions` and the registration helpers |
+| `CrestApps.OrchardCore.Timeline.Abstractions` | `TimelineEntry`, `TimelineVisibility`, `TimelineFieldChange`, `TimelineQuery`, `TimelinePage`, `TimelineResult`, `TimelineComposerKind`, `TimelineOptions`, `TimelineEntryIds`, `ITimelineService`, `ITimelineEntryHandler`, `ITimelineAccessProvider`, `ITimelineAccessService`, `TimelineConstants`, `TimelinePermissions` and the registration helpers |
 | `CrestApps.OrchardCore.Timeline.Core` | `TimelineEntryStore` and its index (collection `Timeline`), `DefaultTimelineService`, `DefaultTimelineAccessService` and `AddTimelineCore()` |
 | `CrestApps.OrchardCore.Timeline` (module) | The `Timeline` view component, the add and redact endpoints, mentions, the migration and the recipe and deployment step |
 
@@ -22,13 +22,14 @@ user_manual: user-manual/administration/timeline
 | Member | Meaning |
 | --- | --- |
 | `Subject` | The record, a `RecordRef` (`Kind:Id`) |
-| `Kind` | An open string: `Comment`, `Note`, `Event`, or a kind a module adds, such as a ticket's `Reply` |
+| `Kind` | An open string: `Comment`, `Note`, `Event`, or a kind a module adds, such as a `Reply` |
 | `Visibility` | `Public` (everyone who may read the record, the customer included) or `Internal` |
 | `Author` | A `PartyRef`; empty for the site. `AuthorName` keeps a name only for an author no party source knows, such as a guest who wrote by e-mail |
 | `Body` | Plain text with line breaks |
 | `Changes` | `{ Field, From, To }`, as people read them |
 | `AttachmentIds` | The entry's attachments |
 | `Channel` | Where it came in or went out, such as `Email` or `Portal`; empty for the admin |
+| `ExternalId` | The id it has outside the site, such as an e-mail's message id (indexed, up to 255 characters) |
 | `RedactedUtc`, `RedactedBy` | Set when the body was redacted |
 
 Entries are kept as written. A body can only be redacted (`ITimelineService.RedactAsync`), which keeps the entry and its changes; the timeline card's **Redact** also deletes the entry's files.
@@ -46,7 +47,13 @@ await timelineService.AddAsync(new TimelineEntry
 });
 ```
 
-`AddAsync` refuses an entry without a record, a kind, or a body, change or attachment, and one whose body is longer than 20,000 characters. `ITimelineEntryHandler`s (`AddTimelineEntryHandler<T>()`) may refuse an entry in `AddingAsync` and act on it in `AddedAsync` and `RedactedAsync`. `ListAsync(TimelineQuery)` pages a record's entries newest first, with or without internal entries and for some kinds only. `DeleteAllAsync(subject)` removes a deleted record's timeline.
+`AddAsync` refuses an entry without a record, a kind, or a body, change or attachment, one whose body is longer than 20,000 characters, and one whose record, kind, channel or author is longer than the 64 characters the index holds. `ITimelineEntryHandler`s (`AddTimelineEntryHandler<T>()`) may refuse an entry in `AddingAsync` and act on it in `AddedAsync`, `RedactedAsync`, `UpdatedAsync` and `DeletedAsync`. `ListAsync(TimelineQuery)` pages a record's entries newest first (entries of the same time in a fixed order), with or without internal entries and for some kinds only.
+
+Other paths:
+
+- **`ImportAsync`** brings in history that happened elsewhere, such as notes an older version kept on a record. It checks and stamps an entry like `AddAsync` but keeps a long body whole and tells no handler, so nothing is announced. An entry whose id is already stored is left as it is: give the entry an id made from where it came from with `TimelineEntryIds.FromSource(...)`, and importing again adds nothing.
+- **`UpdateAsync`** saves a change that doesn't rewrite what an entry says, such as a delivery status a channel keeps in its properties or the `ExternalId` it was sent under; `FindByExternalIdAsync` finds the entry again.
+- **`DeleteAllAsync(subject)`** removes a deleted record's timeline and tells the handlers of each entry, so its files go too. A content item's timeline is deleted when the item is removed for good.
 
 ## Access
 
@@ -65,7 +72,13 @@ public sealed class WorkOrderTimelineAccess : ITimelineAccessProvider
 services.AddTimelineAccessProvider<WorkOrderTimelineAccess>();
 ```
 
-Content items (the record kind `Content`, such as accounts, contacts and leads) come with a provider: internal entries are for people who may edit the item, public ones for signed-in people who may view it, and a visitor who isn't signed in reads nothing, even on a site where anyone may view content.
+Content items (the record kind `Content`, such as accounts, contacts and leads) come with a provider. Staff, who read and write internal entries, are the people who may edit every item of the type: owning an item isn't enough, so on a type its owners may edit, an owner doesn't read the staff's notes. Public entries are read by everyone who may view the item, which on many sites is every registered user, so a content type's timeline takes them only when a module opts the type in:
+
+```csharp
+services.AllowPublicTimelineEntries("Project");
+```
+
+A visitor who isn't signed in reads nothing, even on a site where anyone may view content. The work order and order providers let an entry go only on a record that exists.
 
 `RedactTimelineEntries` (**Redact timeline entries**) lets a user redact an entry on any record they may read; administrators have it by default.
 
@@ -77,15 +90,29 @@ A module shows a record's timeline on its own page by invoking the view componen
 @await Component.InvokeAsync("Timeline", new { subject = $"WorkOrder:{Model.WorkOrder.ItemId}", title = T["Notes"].Value })
 ```
 
-The card renders nothing when the user may not read the timeline. It shows the entries the user may read, with the author's current name from the party directory, the time in the user's time zone, the field changes and an **Internal** badge, and a composer with **Add note** (an internal `Note`) and **Add comment** (a public `Comment`) as the access provider allows. The composer posts to `Admin/timeline/add` and comes back to the page; **Redact** posts to `Admin/timeline/redact/{id}`. Optional arguments are `returnUrl` and `kinds` (comma-separated kinds to show).
+The card renders nothing when the user may not read the timeline. It shows the entries the user may read, 50 at a time with **Older** and **Newer** links, with the author's current name from the party directory, the time in the user's time zone, the field changes and an **Internal** badge. Its composer offers one button for each kind in `TimelineOptions.ComposerKinds` the access provider lets the user add: **Add note** (an internal `Note`) and **Add comment** (a public `Comment`) by default. The composer posts to `Admin/timeline/add` and comes back to the page, with the tenant's path base; a refused file or entry keeps what was typed. **Redact** asks for confirmation, then posts to `Admin/timeline/redact/{id}`. Optional arguments are `returnUrl` and `kinds` (comma-separated kinds to show).
+
+A module adds a button for its own kind of entry:
+
+```csharp
+services.AddTimelineComposerKind(new TimelineComposerKind
+{
+    Kind = "Reply",
+    Visibility = TimelineVisibility.Public,
+    ButtonText = LocalizationSource.Create<Startup>("Reply"),
+    SubjectKinds = { "Inspection" },
+});
+```
+
+The composer is the `TimelineComposer` shape, with the alternate `TimelineComposer__{Kind}` for one record kind. A module that needs more than a button, such as a reply that also changes the record's status, overrides it for its records and posts to its own action.
 
 ## Mentions
 
-With Orchard Core **Notifications** enabled, a user mentioned as `@username` in an entry gets a notification with a link to the record, unless they may not read the entry. An e-mail address is not a mention.
+With Orchard Core **Notifications** enabled, a user mentioned as `@username` in an entry gets a notification with a link to the record, unless they may not read the entry. The notification doesn't carry the entry's text, so a body redacted later isn't kept in it. An e-mail address is not a mention.
 
 ## Recipe and deployment step
 
-The `TimelineEntries` step adds entries, such as history brought from another system. An entry whose `ItemId` is already stored is left as it is.
+The `TimelineEntries` step adds entries through the import path, such as history brought from another system: each is checked and stamped, nothing is announced, and an entry whose `ItemId` is already stored is left as it is.
 
 ```json
 {
@@ -103,4 +130,4 @@ The `TimelineEntries` step adds entries, such as history brought from another sy
 }
 ```
 
-The **Timeline entries** deployment step exports the entries of the record kinds it names (`SubjectKinds`, such as `WorkOrder,Order`), oldest first. Both have schemas for CrestApps Recipes.
+The **Timeline entries** deployment step exports every entry of the record kinds it names (`SubjectKinds`, such as `WorkOrder,Order`), oldest first. Both have schemas for CrestApps Recipes.

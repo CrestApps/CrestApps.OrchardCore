@@ -148,7 +148,7 @@ You can also click the **Send SMS** button beside any phone field on admin pages
 Templates are canned responses agents insert into a reply. Use them for answers you give often, such as your opening hours.
 
 1. Open **Messaging > Templates** and click **Add template**.
-2. Enter a **Name** agents will recognize and the **Body** text, then click **Save**. Write `{{ Contact.DisplayName }}` where the contact's name goes, such as `Hi {{ Contact.DisplayName }}`; it's filled in when an agent inserts the template.
+2. Enter a **Name** agents will recognize and the **Body** text, then click **Save**. Write `{{ Contact.DisplayName }}` where the contact's name goes, such as `Hi {{ Contact.DisplayName }}`; it's filled in when an agent inserts the template. If the placeholders are mistyped, the template isn't saved and the message says what's wrong. To insert braces as they are, select **Plain text**.
 
 In the inbox, the list **Insert a canned response...** above the message box shows the templates. Pick one and its text fills the message box as a draft, which you can change before you send it. Anyone who can use the messaging workspace can insert a template; adding and changing them needs the **Manage the messaging workspace** permission.
 

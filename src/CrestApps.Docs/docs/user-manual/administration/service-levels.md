@@ -20,7 +20,7 @@ A **service level policy** says how long a piece of work may take: how soon it m
 
 1. Go to **Configuration > Service Levels** and select **Add Policy**. When more than one kind of work uses service levels, choose the one the policy is for, such as **For Work orders**.
 2. In **General**, enter a **Name** such as *Premium support*.
-3. In **Counted on**, choose the business hours schedule the targets are counted in, or **Around the clock** to count every hour. See [Business Hours Schedules](business-hours-schedules.md).
+3. In **Counted on**, choose the business hours schedule the targets are counted in, or **Around the clock** to count every hour. A schedule that is never open can't be chosen: no target could be met. See [Business Hours Schedules](business-hours-schedules.md).
 4. In **Warn at**, enter how much of a target may pass before a warning is raised, such as *80* %.
 5. In **Targets**, enter the minutes allowed for each metric at each priority. Leave a cell empty for no target. The **Any other priority** row applies to every priority that has no row of its own.
 6. Some kinds of work add their own card. For work orders, **Pause in** chooses the statuses in which the timers stop, such as **On hold**.
@@ -41,7 +41,9 @@ Minutes count in the hours you chose: with a 09:00 to 17:00 schedule, a target o
 ## Edit or delete a policy
 
 - Select **Edit** to change a policy. Records that already have timers keep their due times until their priority or status changes.
-- Select **Delete** to remove a policy. A policy that is still used, for example by a work order type, can't be deleted; the message names what uses it.
+- Select **Delete** to remove a policy. A policy that is still used, for example by a work order type or by timers still running or paused, can't be deleted; the message names what uses it.
+
+A record that is reopened after it was resolved, such as a work order moved back from **Completed** to **In progress**, counts its resolution again from the time it had used, and its warning and breach are raised again if it runs out.
 
 ## See it on a record
 

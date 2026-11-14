@@ -5,7 +5,7 @@ description: "The shared Service Levels building block: policies with a target p
 user_manual: user-manual/administration/service-levels
 ---
 
-**Service Levels** measures how long work takes against targets: how soon a record must first be answered, answered again, or resolved, at its priority, counted on a business hours schedule or around the clock. Any module can use it. Work Orders keeps its response and resolution timers in it, and Tickets will too.
+**Service Levels** measures how long work takes against targets: how soon a record must first be answered, answered again, or resolved, at its priority, counted on a business hours schedule or around the clock. Any module can use it. Work Orders keeps its response and resolution timers in it.
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -36,9 +36,9 @@ The editor is built through `IDisplayManager<ServiceLevelPolicy>`. A module adds
 ### Registering a scope
 
 ```csharp
-public sealed class TicketServiceLevelScope : IServiceLevelScopeProvider
+public sealed class InspectionServiceLevelScope : IServiceLevelScopeProvider
 {
-    public string Name => "Tickets";
+    public string Name => "Inspections";
 
     public LocalizationSource DisplayName => _displayName;
 
@@ -47,9 +47,9 @@ public sealed class TicketServiceLevelScope : IServiceLevelScopeProvider
     public Task<IReadOnlyList<ServiceLevelOption>> GetPrioritiesAsync(CancellationToken cancellationToken = default) => ...;
 }
 
-services.AddServiceLevelScope<TicketServiceLevelScope>();
-services.AddServiceLevelObserver<TicketServiceLevelObserver>();
-services.AddServiceLevelPolicyUsage<TicketDeskPolicyUsage>();
+services.AddServiceLevelScope<InspectionServiceLevelScope>();
+services.AddServiceLevelObserver<InspectionServiceLevelObserver>();
+services.AddServiceLevelPolicyUsage<InspectionDeskPolicyUsage>();
 ```
 
 With one scope, **Add Policy** opens the editor for it; with several, it lists them.
@@ -60,18 +60,21 @@ The module that owns a record tells `IServiceLevelTracker` what happens to it, w
 
 | Method | When |
 | --- | --- |
-| `StartAsync(ServiceLevelStart)` | The record is created, or a repeating metric starts a new cycle (a customer replies). An active timer of the same metric is cancelled first. `Paused` starts it paused; `AlreadyWarned` and `AlreadyBreached` mark a timer copied from another system so the monitor doesn't raise those again. |
+| `StartAsync(ServiceLevelStart)` | The record is created, or a repeating metric starts a new cycle (a customer replies). An active timer of the same metric is cancelled first. `Paused` starts it paused; `AlreadyWarned` and `AlreadyBreached` mark a timer copied from another system so the monitor doesn't raise those again; `DueUtc`, `PausedSinceUtc` and `CompletedUtc` bring the due time, the start of a wait and an answer it already had. Starting never tells the observers. |
 | `PauseAsync` / `ResumeAsync` | The record waits (on hold, waiting for the customer) and stops waiting |
-| `CompleteAsync` | The work was done; the business time used is kept in `ElapsedSeconds` |
+| `CompleteAsync` | The work was done; the business time used is kept in `ElapsedSeconds`. Every running cycle of the metric is completed, and one completed after its due time is announced as breached first |
+| `ReopenAsync` | The record was reopened after it was answered; its newest completed cycle counts on from the time it had used, keeping a warning or breach already raised |
 | `CancelAsync` | The record is no longer measured (closed as spam, deleted) |
-| `RetargetAsync` | The priority or the policy changed; the time already used counts against the new target |
+| `RetargetAsync` | The priority or the policy changed; the time already used counts against the new target, and a paused timer gets due times as if it went on counting now |
 | `GetTimersAsync` | The record's timers, newest first |
 
 A timer keeps the business seconds it has used (`UsedSeconds`), so a pause, a resume or a new target never adds wall-clock time to a deadline, and the warning point moves with the paused time.
 
 ## The monitor
 
-A background task runs `ServiceLevelMonitor` every minute. It reads the running timers that are due in pages ordered by due time (never every record), marks each breach and warning with a concurrency-checked save, and only after that save calls the `IServiceLevelObserver`s (`WarningAsync`, `BreachedAsync`). Completing a timer calls `CompletedAsync`. A timer that an owner changed while the monitor was marking it is read again on the next pass, and nobody is told twice.
+A background task runs `ServiceLevelMonitor` every minute. It reads the running timers that are due in pages ordered by due time (never every record), marks each breach and warning with a concurrency-checked save, and only after that save calls the `IServiceLevelObserver`s (`WarningAsync`, `BreachedAsync`). Completing a timer calls `CompletedAsync`. Every save of a timer, the owner's included, takes part in the version check, so a timer that an owner changed while the monitor was marking it is read again on the next pass, and nobody is told twice. One observer that fails is logged and doesn't stop the others.
+
+When the hours of a Business Hours schedule change, or the schedule is deleted, the running timers on it are settled on the old hours before the change and get new due times on the new hours once it commits (through `IBusinessHoursScheduleObserver`). A policy is refused when its schedule no longer exists or is never open, when its scope isn't registered, when its id isn't valid or its name is longer than 255 characters, and a policy with running or paused timers can't be deleted.
 
 Observers feed the owner's own events: Work Orders raises its **Work Order Service Level Warning** and **Breached** workflow events from one.
 

@@ -4,7 +4,7 @@ title: Templated e-mails
 description: "The shared templated e-mail sender in CrestApps.OrchardCore.Core: kinds of e-mail a site can write its own Liquid template of, grouped by the module that sends them, sources that keep those templates, the built e-mail as {{ Content }}, a layout per group, and sending in the recipient's culture."
 ---
 
-A module that sends people e-mails of a kind (a ticket's *we got your request*, an order's confirmation) builds the e-mail in code and lets the site write over it in Liquid. `CrestApps.OrchardCore.Core` holds the shared pieces; Commerce sends its e-mails through them, and Tickets will too.
+A module that sends people e-mails of a kind (an inspection's *booked*, an order's confirmation) builds the e-mail in code and lets the site write over it in Liquid. `CrestApps.OrchardCore.Core` holds the shared pieces; Commerce sends its e-mails through them.
 
 | Piece | Holds |
 | --- | --- |
@@ -18,17 +18,17 @@ A module that sends people e-mails of a kind (a ticket's *we got your request*, 
 await sender.SendAsync(
     new TemplatedEmail
     {
-        Kind = "ticket-received",
+        Kind = "inspection-booked",
         To = requester.Email,
-        Models = new Dictionary<string, object> { ["Ticket"] = ticket },
+        Models = new Dictionary<string, object> { ["Inspection"] = inspection },
         Culture = requester.Culture,
-        Reference = ticket.Number,
+        Reference = inspection.Number,
     },
     async cancellationToken => new TemplatedEmailContent
     {
         Subject = S["We got your request"],
-        Html = await RenderAsync(ticket, cancellationToken),
-        Values = new Dictionary<string, string> { ["TicketUrl"] = url },
+        Html = await RenderAsync(inspection, cancellationToken),
+        Values = new Dictionary<string, string> { ["InspectionUrl"] = url },
     });
 ```
 
@@ -40,13 +40,13 @@ A module lists the kinds of e-mail a site can write over, in a group named after
 
 ```csharp
 services
-    .AddTemplatedEmailKind("Tickets", "ticket-received", LocalizationSource.Create<Startup>("Request received"), LocalizationSource.Create<Startup>("{{ TicketUrl }}: the link to the request"))
-    .AddTemplatedEmailTemplateSource<TicketEmailTemplateSource>();
+    .AddTemplatedEmailKind("Inspections", "inspection-booked", LocalizationSource.Create<Startup>("Inspection booked"), LocalizationSource.Create<Startup>("{{ InspectionUrl }}: the link to the inspection"))
+    .AddTemplatedEmailTemplateSource<InspectionEmailTemplateSource>();
 ```
 
 The module keeps the site's templates where it likes, such as its settings, and returns them from its `ITemplatedEmailTemplateSource`: the kind's template when it's on, the group's layout and any values every template of the group reads. `LiquidTemplatedEmailTemplates` asks the sources in turn and renders what the first one that knows the kind gives; a kind no source knows goes as built.
 
-In a template the built HTML is `{{ Content }}`, the subject `{{ Subject }}`, the site's name `{{ SiteName }}`, each model by its name with its properties as written (`{{ Ticket.Number }}`), and each value by its name. A template's body replaces the built HTML, and the text part follows it; a layout goes around the HTML. A template that fails to render gives the built e-mail.
+In a template the built HTML is `{{ Content }}`, the subject `{{ Subject }}`, the site's name `{{ SiteName }}`, each model by its name with its properties as written (`{{ Inspection.Number }}`), and each value by its name. A template's body replaces the built HTML, and the text part follows it; a layout goes around the HTML. Templates render with restricted Liquid: they read only these values, never Orchard's request, user or site objects or its own filters, and need no Liquid feature. A template that doesn't parse or fails to render gives the built e-mail.
 
 ## Commerce
 

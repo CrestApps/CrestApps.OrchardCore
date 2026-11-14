@@ -20,7 +20,7 @@ A **business hours schedule** says when you are open: the hours of each day of t
 
 1. Go to **Configuration > Business Hours** and select **Add Schedule**.
 2. In **General**, enter a **Name** such as *Support desk hours* and an optional **Description**.
-3. Choose the **Time zone** the hours are written in. Leave it empty for UTC.
+3. Choose the **Time zone** the hours are written in. A new schedule starts with the site's time zone.
 4. In **Weekly hours**, tick **Open** for each day you are open and enter **From** and **To**. A new schedule starts with Monday to Friday, 09:00 to 17:00.
 5. To close for lunch, enter the morning in **From** and **To**, and the afternoon in **Then from** and the second **To**.
 6. In **Holidays and special days**, enter one date per line, written as *2026-12-25*:
@@ -40,9 +40,9 @@ A **business hours schedule** says when you are open: the hours of each day of t
 
 ## Copy, edit or delete a schedule
 
-- Select **Edit** on a schedule to change it.
+- Select **Edit** on a schedule to change it. Timers already counting on it keep the time they used so far and count the rest in the new hours.
 - In the row's menu, select **Copy** to start a new schedule from an existing one.
-- Select **Delete** to remove a schedule. Features that used it count every hour of the day from then on.
+- Select **Delete** to remove a schedule. Timers counting on it keep the time they used so far and count every hour of the day from then on.
 
 ## Use a schedule
 

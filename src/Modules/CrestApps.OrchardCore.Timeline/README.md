@@ -1,6 +1,6 @@
 # Timeline
 
-Comments, internal notes and events on any record (a work order, an order, an account, a ticket), newest first, with who wrote them, the field changes they record and their attachments.
+Comments, internal notes and events on any record (a work order, an order, an account), newest first, with who wrote them, the field changes they record and their attachments.
 
 ## Feature
 
@@ -15,7 +15,7 @@ Comments, internal notes and events on any record (a work order, an order, an ac
 3. Write entries with `ITimelineService.AddAsync` (a `RecordRef` subject, a kind such as `Note` or `Event`, a visibility, an author `PartyRef`).
 4. Show the timeline on your record page: `@await Component.InvokeAsync("Timeline", new { subject = "Kind:Id" })`.
 
-Content items are the record kind `Content`: internal entries are for people who may edit the item, public ones for signed-in people who may view it, and a visitor who isn't signed in reads nothing.
+Content items are the record kind `Content`: internal entries are for people who may edit every item of the type, public ones exist only on types a module opts in with `AllowPublicTimelineEntries` and are for signed-in people who may view the item, and a visitor who isn't signed in reads nothing. Bring in history with `ITimelineService.ImportAsync`, which announces nothing; add composer buttons with `AddTimelineComposerKind`.
 
 ## Recipe step
 

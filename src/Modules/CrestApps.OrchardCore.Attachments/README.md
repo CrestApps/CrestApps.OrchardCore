@@ -1,6 +1,6 @@
 # Attachments
 
-Files attached to records (a timeline note, a ticket, a work order): one upload policy that matches each file by its own bytes, scanning through Orchard Core's file events, encrypted storage in the tenant's application data or Azure Blob Storage, and downloads allowed by the module that owns the record or by a signed link.
+Files attached to records (a timeline note, a work order): one upload policy that matches each file by its own bytes, scanning through Orchard Core's file events, encrypted storage in the tenant's application data or Azure Blob Storage, and downloads allowed by the module that owns the record or by a signed link.
 
 ## Feature
 

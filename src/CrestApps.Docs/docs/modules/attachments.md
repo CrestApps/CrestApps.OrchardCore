@@ -5,7 +5,7 @@ description: "The shared Attachments building block: files attached to any recor
 user_manual: user-manual/administration/attachments
 ---
 
-**Attachments** keeps the files attached to records. Any module can let people attach files to its records; the timeline uses it for the files of a note or comment, and tickets will too.
+**Attachments** keeps the files attached to records. Any module can let people attach files to its records; the timeline uses it for the files of a note or comment.
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ var result = await attachmentService.AddAsync(
 [
     new AttachmentUpload
     {
-        Owner = new RecordRef("Ticket", ticketId),
+        Owner = new RecordRef("Inspection", inspectionId),
         FileName = file.FileName,
         DeclaredContentType = file.ContentType,
         Content = bytes,
@@ -70,12 +70,12 @@ The module runs every file through Orchard Core's `FileCreationService`, so each
 `IAttachmentService` doesn't check who may read or change a file; a page that acts for a user asks `IAttachmentAccessService`, which asks the `IAttachmentAccessProvider` registered for the owner's kind. A kind without a provider is refused.
 
 ```csharp
-services.AddAttachmentAccessProvider<TicketAttachmentAccess>();
+services.AddAttachmentAccessProvider<InspectionAttachmentAccess>();
 ```
 
 ## Downloads
 
-`GET /attachments/{id}` serves a file to a signed-in user the owner's provider allows. A guest who holds a signed link gets it too: `IAttachmentService.CreateSignedPath(id, lifetime)` returns `/attachments/{id}?token=...`, for e-mails and guests. Anyone else is asked to sign in, and a signed-in user who may not read the record gets *not found*.
+`GET /attachments/{id}` serves a file to a signed-in user the owner's provider allows. A guest who holds a signed link gets it too: `IAttachmentService.CreateSignedPath(id, lifetime)` returns `/attachments/{id}?token=...` with the tenant's path base in front (from the request, or the tenant's URL prefix in the background), for e-mails and guests. Anyone else is asked to sign in, whether or not the id exists, and a signed-in user who may not read the record gets *not found*. The files are encrypted at rest and removed with their tenant; a write that fails part way leaves no file behind.
 
 Only pictures recognized by their bytes are shown in the page; every other file, and a picture asked for with `?download=true`, is a download. Every response says `X-Content-Type-Options: nosniff`, is not cached, and carries a sandboxing content security policy.
 

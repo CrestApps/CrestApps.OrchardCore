@@ -22,7 +22,9 @@ Many record pages, such as a work order or an order, have a **Notes** card: the 
 2. Type your note in the box.
 3. Select **Add note**. A note is seen only by the people who work on the record.
 
-Some records also offer **Add comment**. A comment is seen by everyone who may read the record, which can include the customer.
+Some records also offer **Add comment**. A comment is seen by everyone who may read the record, which can include the customer. On accounts, contacts and other content items, notes are for the people who may edit every item of that type, and comments are offered only where a feature turns them on.
+
+If a note or an attached file is refused, the message says why and what you typed stays in the box, so you can fix it and add it again.
 
 ## Mention a colleague
 
@@ -30,7 +32,7 @@ Type `@` followed by a colleague's user name, such as *@maria*, anywhere in a no
 
 ## Read the timeline
 
-Each entry shows when it was written (in your time zone), who wrote it (or **The site** for something the site did), and, for a change, the field and its value before and after. An **Internal** badge marks a note only the team sees.
+Each entry shows when it was written (in your time zone), who wrote it (or **The site** for something the site did), and, for a change, the field and its value before and after. An **Internal** badge marks a note only the team sees. The card shows the 50 newest entries; select **Older** to see earlier ones and **Newer** to come back.
 
 ## Redact text
 
