@@ -397,5 +397,11 @@
     "name": "crestapps-browser.js",
     "source": "Assets/js/browser/index.js",
     "dest": "wwwroot/scripts/crestapps-browser.js"
+  },
+  {
+    "action": "vite",
+    "name": "chat-output-guard.js",
+    "source": "Assets/js/chat-output-guard/index.js",
+    "dest": "wwwroot/scripts/chat-output-guard.js"
   }
 ]
