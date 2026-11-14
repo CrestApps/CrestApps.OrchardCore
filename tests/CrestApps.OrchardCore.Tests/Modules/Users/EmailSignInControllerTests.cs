@@ -52,6 +52,10 @@ public sealed class EmailSignInControllerTests
         _userManager.Setup(manager => manager.AccessFailedAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
         _userManager.Setup(manager => manager.ResetAccessFailedCountAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
         _userManager.Setup(manager => manager.UpdateAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
+        _userManager.Setup(manager => manager.HasPasswordAsync(It.IsAny<IUser>())).ReturnsAsync(true);
+        _userManager.Setup(manager => manager.GetLoginsAsync(It.IsAny<IUser>())).ReturnsAsync([]);
+        _userManager.Setup(manager => manager.UpdateSecurityStampAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
+        _userManager.Setup(manager => manager.RemovePasswordAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
 
         _signInManager = new Mock<SignInManager<IUser>>(
             _userManager.Object,
@@ -258,9 +262,11 @@ public sealed class EmailSignInControllerTests
             siteService.Object,
             _loginFormEvents,
             clock.Object,
+            Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
             Options.Create(new EmailSignInOptions()),
             NullLogger<EmailSignInController>.Instance,
-            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>());
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>(),
+            Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailSignInController>>());
 
         var httpContext = new DefaultHttpContext();
         httpContext.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.7");
