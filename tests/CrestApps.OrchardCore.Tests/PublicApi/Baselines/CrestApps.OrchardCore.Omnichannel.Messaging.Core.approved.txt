@@ -182,6 +182,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes
         public string AssignedAgentId { get; set; }
         public System.DateTime? AssignedUtc { get; set; }
         public string AssignmentStatus { get; set; }
+        public string CampaignId { get; set; }
         public string Channel { get; set; }
         public string ContactAddress { get; set; }
         public string ContactContentItemId { get; set; }
@@ -275,6 +276,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public string AssignedAgentId { get; set; }
         public System.DateTime? AssignedUtc { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationAssignmentStatus AssignmentStatus { get; set; }
+        public string CampaignId { get; set; }
         public string Channel { get; set; }
         public string ContactAddress { get; set; }
         public string ContactContentItemId { get; set; }
@@ -366,10 +368,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
     {
         public MessagingInboxQuery() { }
         public string AgentId { get; set; }
+        public string CampaignId { get; set; }
         public string Channel { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingInboxFilter Filter { get; set; }
+        public string HolderAgentId { get; set; }
         public bool IncludeAll { get; set; }
         public bool OpenOnly { get; set; }
+        public string QueueId { get; set; }
         public System.Collections.Generic.IReadOnlyCollection<string> QueueIds { get; set; }
         public int Skip { get; set; }
         public int Take { get; set; }

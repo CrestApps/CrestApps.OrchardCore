@@ -667,6 +667,31 @@ import {
         });
     }
 
+    // ---- Person, queue and campaign filters ---------------------------------------------------------------------
+
+    var narrowingForm = workspace.querySelector('[data-inbox-narrowing-form]');
+
+    if (narrowingForm) {
+        // Empty fields are left out so the address only carries the filters that are applied.
+        narrowingForm.addEventListener('submit', function () {
+            Array.prototype.forEach.call(narrowingForm.elements, function (field) {
+                if (field.name && !field.value) {
+                    field.disabled = true;
+                }
+            });
+        });
+
+        narrowingForm.querySelectorAll('[data-inbox-narrowing]').forEach(function (select) {
+            select.addEventListener('change', function () {
+                if (typeof narrowingForm.requestSubmit === 'function') {
+                    narrowingForm.requestSubmit();
+                } else {
+                    narrowingForm.submit();
+                }
+            });
+        });
+    }
+
     // ---- Availability ------------------------------------------------------------------------------------------
 
     var toggle = workspace.querySelector('[data-availability-toggle]');
