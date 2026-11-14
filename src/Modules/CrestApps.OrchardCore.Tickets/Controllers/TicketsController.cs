@@ -248,12 +248,12 @@ public sealed class TicketsController : Controller
 
         if (done > 0)
         {
-            await _notifier.SuccessAsync(H["{0} tickets changed.", done]);
+            await _notifier.SuccessAsync(H.Plural(done, "1 ticket changed.", "{0} tickets changed."));
         }
 
         if (refused > 0)
         {
-            await _notifier.WarningAsync(H["{0} tickets were left as they were: you may not change them, or they can't change.", refused]);
+            await _notifier.WarningAsync(H.Plural(refused, "1 ticket was left as it was: you may not change it, or it can't change.", "{0} tickets were left as they were: you may not change them, or they can't change."));
         }
 
         return Back(returnUrl);
@@ -458,7 +458,7 @@ public sealed class TicketsController : Controller
 
         if (uploadError)
         {
-            return KeepDraft(id, body);
+            return await KeepDraftAsync(id, body);
         }
 
         var result = await _tickets.ReplyAsync(id, new TicketReply
@@ -482,7 +482,7 @@ public sealed class TicketsController : Controller
                 await _notifier.ErrorAsync(H["{0}", error]);
             }
 
-            return KeepDraft(id, body);
+            return await KeepDraftAsync(id, body);
         }
 
         await _notifier.SuccessAsync(isInternal ? H["The note was added."] : H["The reply was sent."]);
@@ -928,9 +928,15 @@ public sealed class TicketsController : Controller
         }
     }
 
-    private RedirectToActionResult KeepDraft(string id, string body)
+    // The draft travels in the TempData cookie, so a long one isn't kept: it would push the request headers past what
+    // servers accept.
+    private async Task<RedirectToActionResult> KeepDraftAsync(string id, string body)
     {
-        if (!string.IsNullOrEmpty(body))
+        if (body?.Length > TimelineConstants.MaxKeptDraftLength)
+        {
+            await _notifier.WarningAsync(H["Your text was too long to keep for another try. Copy a long text before you send it."]);
+        }
+        else if (!string.IsNullOrEmpty(body))
         {
             TempData[DraftKey] = id + "\n" + body;
         }
