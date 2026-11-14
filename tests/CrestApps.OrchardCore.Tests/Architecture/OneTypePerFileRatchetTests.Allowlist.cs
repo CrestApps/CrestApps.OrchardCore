@@ -434,7 +434,7 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Modules/CrestApps.OrchardCore.AI/Startup.cs"] = 25,
         ["src/Modules/CrestApps.OrchardCore.AI/ViewModels/AIApiKeyViewModels.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.AI/ViewModels/AIProfileVersionsViewModel.cs"] = 3,
-        ["src/Modules/CrestApps.OrchardCore.AI/ViewModels/AIQAViewModels.cs"] = 4,
+        ["src/Modules/CrestApps.OrchardCore.AI/ViewModels/AIQAViewModels.cs"] = 3,
         ["src/Modules/CrestApps.OrchardCore.AI/ViewModels/AITestViewModels.cs"] = 4,
         ["src/Modules/CrestApps.OrchardCore.AI/ViewModels/AIToolInstanceParameterViewModel.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.AI/ViewModels/EditDeploymentModelCapabilitiesViewModel.cs"] = 2,
