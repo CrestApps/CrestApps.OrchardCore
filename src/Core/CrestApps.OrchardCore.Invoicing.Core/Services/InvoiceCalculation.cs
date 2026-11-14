@@ -4,19 +4,19 @@ using CrestApps.OrchardCore.Invoicing.Services;
 namespace CrestApps.OrchardCore.Invoicing.Core.Services;
 
 /// <summary>
-/// Works out an invoice's tax breakdown and totals the one way issue does, so a draft saved in the editor shows the
-/// amounts it will be issued with.
+/// Works out the tax breakdown and totals of an invoice or a credit note the one way issue does, so a draft saved in the
+/// editor shows the amounts it will be issued with.
 /// </summary>
 public static class InvoiceCalculation
 {
     /// <summary>
-    /// Builds what the calculator reads from an invoice and the invoicing settings.
+    /// Builds what the calculator reads from an invoice or credit note and the invoicing settings.
     /// </summary>
-    /// <param name="invoice">The invoice.</param>
+    /// <param name="invoice">The invoice or credit note.</param>
     /// <param name="settings">The invoicing settings, for cash rounding.</param>
     /// <param name="issueDate">The date the taxes are worked out for.</param>
     /// <returns>The calculation context.</returns>
-    public static DocumentCalculationContext CreateContext(Invoice invoice, InvoicingSettings settings, DateOnly? issueDate)
+    public static DocumentCalculationContext CreateContext(InvoicingDocument invoice, InvoicingSettings settings, DateOnly? issueDate)
     {
         ArgumentNullException.ThrowIfNull(invoice);
 
@@ -36,14 +36,14 @@ public static class InvoiceCalculation
     }
 
     /// <summary>
-    /// Calculates the invoice and stores the tax breakdown and totals on it.
+    /// Calculates the document and stores the tax breakdown and totals on it.
     /// </summary>
     /// <param name="calculator">The document calculator.</param>
-    /// <param name="invoice">The invoice.</param>
+    /// <param name="invoice">The invoice or credit note.</param>
     /// <param name="settings">The invoicing settings, for cash rounding.</param>
     /// <param name="issueDate">The date the taxes are worked out for.</param>
     /// <param name="cancellationToken">A token to cancel the calculation.</param>
-    public static async Task ApplyAsync(IDocumentCalculator calculator, Invoice invoice, InvoicingSettings settings, DateOnly? issueDate, CancellationToken cancellationToken = default)
+    public static async Task ApplyAsync(IDocumentCalculator calculator, InvoicingDocument invoice, InvoicingSettings settings, DateOnly? issueDate, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(calculator);
 

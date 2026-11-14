@@ -1,0 +1,120 @@
+@model InvoicingDocument
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@* The lines, tax breakdown and totals of an invoice or a credit note. *@
+@{
+    var invoice = Model;
+    var currency = invoice.Currency;
+    var totals = invoice.Totals ?? new DocumentTotals();
+    string Money(decimal amount) => string.IsNullOrEmpty(currency) ? amount.ToString("0.00") : MoneyFormatter.Format(amount, currency);
+}
+
+<div class="card">
+    <div class="card-header">@T["Lines"]</div>
+    @if (invoice.Lines.Count == 0)
+    {
+        <div class="card-body text-muted">@T["No lines yet."]</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Description"]</th>
+                        <th scope="col" class="text-end">@T["Quantity"]</th>
+                        <th scope="col" class="text-end">@T["Price each"]</th>
+                        <th scope="col" class="text-end">@T["Tax"]</th>
+                        <th scope="col" class="text-end">@T["Amount"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in invoice.Lines)
+                    {
+                        if (line.Kind == DocumentLineKind.Section)
+                        {
+                            <tr><th scope="rowgroup" colspan="5">@line.Name</th></tr>
+                            continue;
+                        }
+
+                        if (!line.HasAmount)
+                        {
+                            <tr><td colspan="5" class="text-muted">@line.Name @line.Description</td></tr>
+                            continue;
+                        }
+
+                        <tr>
+                            <td>
+                                <div>@line.Name</div>
+                                @if (!string.IsNullOrEmpty(line.Description))
+                                {
+                                    <div class="small text-muted" style="white-space: pre-line">@line.Description</div>
+                                }
+                                @if (line.DiscountPercent is > 0m)
+                                {
+                                    <div class="small text-muted">@T["Less {0}%", line.DiscountPercent.Value.ToString("0.##")]</div>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">@line.Quantity.ToString("0.######") @line.Unit</td>
+                            <td class="text-end text-nowrap">@Money(line.UnitPrice)</td>
+                            <td class="text-end text-nowrap">@Money(line.TaxAmount)</td>
+                            <td class="text-end text-nowrap">@Money(line.Net)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th scope="row" colspan="4" class="text-end">@T["Subtotal"]</th>
+                        <td class="text-end text-nowrap">@Money(totals.Subtotal)</td>
+                    </tr>
+                    @if (totals.DiscountTotal != 0m)
+                    {
+                        <tr>
+                            <th scope="row" colspan="4" class="text-end">@T["Discount"]</th>
+                            <td class="text-end text-nowrap">@Money(-totals.DiscountTotal)</td>
+                        </tr>
+                    }
+                    @if (totals.ChargeTotal != 0m)
+                    {
+                        <tr>
+                            <th scope="row" colspan="4" class="text-end">@T["Charges"]</th>
+                            <td class="text-end text-nowrap">@Money(totals.ChargeTotal)</td>
+                        </tr>
+                    }
+                    @foreach (var tax in invoice.Taxes ?? [])
+                    {
+                        <tr>
+                            <th scope="row" colspan="4" class="text-end">
+                                @(string.IsNullOrEmpty(tax.Name) ? T["Tax"].Value : tax.Name)
+                                @if (tax.Rate > 0m)
+                                {
+                                    <span>(@tax.Rate.ToString("0.###")%)</span>
+                                }
+                                @if (!string.IsNullOrEmpty(tax.ExemptionReason))
+                                {
+                                    <span class="d-block small text-muted fw-normal">@tax.ExemptionReason</span>
+                                }
+                            </th>
+                            <td class="text-end text-nowrap">@Money(tax.TaxAmount)</td>
+                        </tr>
+                    }
+                    @if (totals.RoundingAmount != 0m)
+                    {
+                        <tr>
+                            <th scope="row" colspan="4" class="text-end">@T["Rounding"]</th>
+                            <td class="text-end text-nowrap">@Money(totals.RoundingAmount)</td>
+                        </tr>
+                    }
+                    <tr>
+                        <th scope="row" colspan="4" class="text-end">@T["Total"]</th>
+                        <th class="text-end text-nowrap">@Money(totals.Total)</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+    @if (invoice.IssuedUtc is null)
+    {
+        <div class="card-footer small text-muted">@T["Tax is worked out again when it is issued."]</div>
+    }
+</div>

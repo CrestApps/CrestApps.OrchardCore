@@ -21,13 +21,16 @@ public static class InvoicingConstants
     public const string CreditNoteDocumentKind = "CreditNote";
 
     /// <summary>
+    /// The reference type of an invoice history entry copied from an entry of the invoice's transaction; its reference
+    /// id is the transaction entry's id.
+    /// </summary>
+    public const string TransactionEventReferenceType = "TransactionEvent";
+
+    /// <summary>
     /// The identifier of the site settings group of the invoicing settings.
     /// </summary>
     public const string SettingsGroupId = "invoicing";
 
-    /// <summary>
-    /// The feature identifiers of the Invoicing modules.
-    /// </summary>
     /// <summary>
     /// The display types an invoice is built for.
     /// </summary>
@@ -40,6 +43,9 @@ public static class InvoicingConstants
         public const string DetailAdmin = "DetailAdmin";
     }
 
+    /// <summary>
+    /// The feature identifiers of the Invoicing modules.
+    /// </summary>
     public static class Features
     {
         /// <summary>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Invoicing.Core.Handlers;
 using CrestApps.OrchardCore.Invoicing.Core.Services;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Services;
+using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -25,7 +26,13 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddScoped<ICreditNoteStore, CreditNoteStore>();
         services.TryAddScoped<IInvoiceManager, InvoiceManager>();
         services.TryAddScoped<IInvoiceCommandService, DefaultInvoiceCommandService>();
+        services.TryAddScoped<ICreditNoteCommandService, DefaultCreditNoteCommandService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Invoice>, InvoiceHandler>());
+
+        // An issued invoice follows its transaction: payments, payments taken back, refunds and settlement.
+        services.TryAddScoped<InvoiceLedgerSync>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionPaymentHandler, InvoiceTransactionHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionEventHandler, InvoiceTransactionHandler>());
 
         return services;
     }

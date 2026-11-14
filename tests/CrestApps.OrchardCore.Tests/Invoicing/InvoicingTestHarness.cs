@@ -63,6 +63,11 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
     public Mock<ICustomerContactResolver> Contacts { get; } = new();
 
+    /// <summary>
+    /// Stands in for Store Credit: no one can hold credit unless a test says so.
+    /// </summary>
+    public Mock<ICustomerCreditService> Credit { get; } = new();
+
     public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null)
     {
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-invoicing-{Guid.NewGuid():N}.db");
@@ -128,6 +133,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             new PassThroughStringLocalizer<DefaultTransactionCommandService>()));
         services.AddSingleton<IFinancialDocumentNumberGenerator>(_ => harness.Numbers);
         services.AddSingleton(_ => harness.Contacts.Object);
+        services.AddSingleton(_ => harness.Credit.Object);
 
         services.AddInvoicingCore();
 
@@ -176,6 +182,15 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
     public Task<Invoice> FindInvoiceAsync(string id)
         => InScopeAsync(services => services.GetRequiredService<IInvoiceStore>().FindByIdAsync(id, TestContext.Current.CancellationToken).AsTask());
+
+    /// <summary>
+    /// Counts the stored copies of an invoice: a command that saves an invoice the session no longer tracks writes a
+    /// second document instead of updating the first.
+    /// </summary>
+    public Task<int> CountInvoiceDocumentsAsync(string id)
+        => InScopeAsync(services => services.GetRequiredService<ISession>()
+            .QueryIndex<InvoiceIndex>(index => index.ItemId == id, collection: InvoicingConstants.CollectionName)
+            .CountAsync(TestContext.Current.CancellationToken));
 
     public Task<Transaction> FindTransactionAsync(string id)
         => InScopeAsync(services => services.GetRequiredService<ITransactionManager>().FindByIdAsync(id, TestContext.Current.CancellationToken).AsTask());

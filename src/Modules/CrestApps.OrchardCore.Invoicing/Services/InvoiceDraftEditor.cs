@@ -37,7 +37,51 @@ internal static class InvoiceDraftEditor
         model.Totals = invoice.Totals;
         model.Taxes = invoice.Taxes ?? [];
 
-        model.Lines = [.. invoice.Lines.Select(line => new InvoiceLineEditViewModel
+        model.Lines = BuildLines(invoice.Lines);
+        model.Lines.Add(new InvoiceLineEditViewModel { Quantity = 1m });
+    }
+
+    /// <summary>
+    /// Fills the editor of a draft credit note. It credits the invoice's lines only, so it offers no blank row.
+    /// </summary>
+    public static void Build(CreditNote creditNote, CreditNoteEditViewModel model)
+    {
+        ArgumentNullException.ThrowIfNull(creditNote);
+        ArgumentNullException.ThrowIfNull(model);
+
+        model.ItemId = creditNote.ItemId;
+        model.InvoiceId = creditNote.InvoiceId;
+        model.InvoiceNumber = creditNote.InvoiceNumber;
+        model.Reason = creditNote.Reason;
+        model.Disposition = creditNote.Disposition;
+        model.Notes = creditNote.Notes;
+        model.Currency = creditNote.Currency;
+        model.Totals = creditNote.Totals;
+        model.Taxes = creditNote.Taxes ?? [];
+        model.Lines = BuildLines(creditNote.Lines);
+    }
+
+    /// <summary>
+    /// Writes what was posted onto a draft credit note. Totals are worked out after, by the calculator.
+    /// </summary>
+    public static void Apply(CreditNoteEditViewModel model, CreditNote creditNote)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(creditNote);
+
+        creditNote.Reason = Clean(model.Reason);
+        creditNote.Disposition = model.Disposition;
+        creditNote.Notes = Clean(model.Notes);
+
+        // Only the lines it already credits: a row the editor did not start from is not added.
+        ApplyLines(model.Lines?.Where(row => !string.IsNullOrEmpty(row?.Id)), creditNote, keepText: true);
+    }
+
+    /// <summary>
+    /// The editor's rows for the lines of an invoice or a credit note.
+    /// </summary>
+    public static List<InvoiceLineEditViewModel> BuildLines(IEnumerable<DocumentLine> lines)
+        => [.. (lines ?? []).Select(line => new InvoiceLineEditViewModel
         {
             Id = line.Id,
             Kind = line.Kind,
@@ -50,9 +94,6 @@ internal static class InvoiceDraftEditor
             TaxCategoryCode = line.TaxCategoryCode,
             Total = line.HasAmount ? line.Total : null,
         })];
-
-        model.Lines.Add(new InvoiceLineEditViewModel { Quantity = 1m });
-    }
 
     /// <summary>
     /// Writes what was posted onto the draft. Totals are not touched: they are worked out after, by the calculator.
@@ -81,10 +122,22 @@ internal static class InvoiceDraftEditor
         invoice.Footer = Clean(model.Footer);
         invoice.InternalNote = Clean(model.InternalNote);
 
-        var existing = invoice.Lines.Where(line => !string.IsNullOrEmpty(line.Id)).ToDictionary(line => line.Id, StringComparer.Ordinal);
+        ApplyLines(model.Lines, invoice, keepText: false);
+    }
+
+    /// <summary>
+    /// Writes the editor's rows onto the lines of an invoice or a credit note: each row keeps its saved line (with what the
+    /// editor doesn't show, such as the line it credits or its manual taxes), a row ticked Remove goes, and a blank row is
+    /// ignored.
+    /// </summary>
+    public static void ApplyLines(IEnumerable<InvoiceLineEditViewModel> rows, InvoicingDocument document, bool keepText)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var existing = document.Lines.Where(line => !string.IsNullOrEmpty(line.Id)).ToDictionary(line => line.Id, StringComparer.Ordinal);
         var lines = new List<DocumentLine>();
 
-        foreach (var row in model.Lines ?? [])
+        foreach (var row in rows ?? [])
         {
             if (row is null || row.Remove || IsBlank(row))
             {
@@ -96,11 +149,15 @@ internal static class InvoiceDraftEditor
                 ? saved
                 : new DocumentLine { Id = IdGenerator.GenerateId() };
 
-            line.Kind = row.Kind;
-            line.Name = Clean(row.Name);
-            line.Description = Clean(row.Description);
-            line.Unit = Clean(row.Unit);
-            line.TaxCategoryCode = Clean(row.TaxCategoryCode);
+            // A credit note's line keeps what the line it credits says; only its amounts change.
+            if (!keepText || string.IsNullOrEmpty(line.Name))
+            {
+                line.Kind = row.Kind;
+                line.Name = Clean(row.Name);
+                line.Description = Clean(row.Description);
+                line.Unit = Clean(row.Unit);
+                line.TaxCategoryCode = Clean(row.TaxCategoryCode);
+            }
 
             if (line.HasAmount)
             {
@@ -119,7 +176,7 @@ internal static class InvoiceDraftEditor
             lines.Add(line);
         }
 
-        invoice.Lines = lines;
+        document.Lines = lines;
     }
 
     // The blank row offered at the end, left as it was: nothing typed but its default quantity.

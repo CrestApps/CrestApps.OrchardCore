@@ -110,6 +110,35 @@ public sealed class InvoiceDraftEditorTests
     }
 
     [Fact]
+    public void ACreditNoteDraft_ChangesOnlyAmounts_AndAddsNoLineOfItsOwn()
+    {
+        // Arrange
+        var creditNote = new CreditNote { Currency = "USD" };
+        creditNote.Lines.Add(new DocumentLine { Id = "credit-1", CreditedLineId = "line-1", Name = "Consulting", Description = "November", Unit = "hours", Quantity = 3m, UnitPrice = 50m });
+        creditNote.Lines.Add(new DocumentLine { Id = "credit-2", CreditedLineId = "line-2", Name = "Travel", Quantity = 1m, UnitPrice = 80m });
+
+        var model = new CreditNoteEditViewModel
+        {
+            Reason = " Two hours were not worked ",
+            Disposition = CreditNoteDisposition.CustomerCredit,
+            Lines =
+            [
+                new InvoiceLineEditViewModel { Id = "credit-1", Quantity = 2m, UnitPrice = 50m },
+                new InvoiceLineEditViewModel { Id = "credit-2", Quantity = 1m, UnitPrice = 80m, Remove = true },
+                new InvoiceLineEditViewModel { Name = "Something else", Quantity = 1m, UnitPrice = 999m },
+            ],
+        };
+
+        // Act
+        InvoiceDraftEditor.Apply(model, creditNote);
+
+        // Assert
+        Assert.Equal(("Two hours were not worked", CreditNoteDisposition.CustomerCredit), (creditNote.Reason, creditNote.Disposition));
+        var line = Assert.Single(creditNote.Lines);
+        Assert.Equal(("credit-1", "line-1", "Consulting", "November", "hours", 2m), (line.Id, line.CreditedLineId, line.Name, line.Description, line.Unit, line.Quantity));
+    }
+
+    [Fact]
     public async Task PartySearch_FindsEveryKindButGuests_AndSaysWhichKind()
     {
         // Arrange

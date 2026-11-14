@@ -11,7 +11,7 @@ An **invoice** tells a customer what they owe you, line by line, with tax. While
 | | |
 | --- | --- |
 | **Menu** | Commerce > Invoices; Settings > Commerce > Invoicing |
-| **Permission** | View invoices; Create invoices and change drafts; Issue invoices; Void and write off invoices; Manage invoicing settings |
+| **Permission** | View invoices; Create invoices and change drafts; Issue invoices; Void and write off invoices; Issue credit notes; Manage invoicing settings |
 | **Feature** | Invoicing |
 
 <AskYourAdmin />
@@ -43,6 +43,25 @@ On the draft's page, click **Issue** and confirm. You need **Issue invoices**.
 - What it says is owed is added to the customer's balances. An invoice that totals zero is paid at once.
 - Its page shows what was paid and what is still due, and **Open the transaction** takes you to the balance under **Commerce > Transactions**, where payments are recorded. The balance's page names the invoice and links back to it.
 - It can't be changed any more: **Edit** opens its page instead.
+
+## Payments on an invoice
+
+An invoice shows what was paid, what was credited and what is still due, and its history lists each payment and each payment taken back. Payments are recorded on the invoice's balance: click **Open the transaction** on the invoice's page, then use **Record an offline payment** or **Apply customer credit** there. The invoice follows at once; if it was busy at that moment, it catches up the next time you open it.
+
+## Credit an invoice
+
+Correct an issued invoice with a **credit note**, for example for goods returned or a price that was wrong. You need **Issue credit notes**.
+
+1. On the invoice's page, under **Credit notes**, click **New credit note**. A draft is made with every line that can still be credited.
+2. Type the **Reason**, printed on the credit note.
+3. Pick how to **Give the credit**:
+   - **Lower what is owed on the invoice**, while it is not paid in full. It can't lower the balance by more than is still owed.
+   - **Refund what was paid**, through the payment provider the customer paid with.
+   - **Keep it as the customer's credit**, for their next purchase or invoice (with the **Store Credit** feature).
+4. To credit part of a line, lower its **Quantity** or **Price each**; to leave a line out, tick **Remove**. Click **Update** to see the total.
+5. Click **Save and issue**, or **Save draft** to finish later.
+
+The credit note gets its own number, such as **CN-1001**, and the invoice shows what it credited. An invoice can never be credited by more than its total, line by line. A draft credit note can be deleted; an issued one can't.
 
 ## Void, write off or reinstate an invoice
 

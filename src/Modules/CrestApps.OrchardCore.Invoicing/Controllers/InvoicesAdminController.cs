@@ -43,6 +43,7 @@ public sealed class InvoicesAdminController : Controller
 
     private readonly IInvoiceManager _invoiceManager;
     private readonly IInvoiceCommandService _commands;
+    private readonly InvoiceLedgerSync _ledgerSync;
     private readonly IDocumentCalculator _calculator;
     private readonly IPaymentTermManager _paymentTerms;
     private readonly IPartyDirectory _parties;
@@ -59,6 +60,7 @@ public sealed class InvoicesAdminController : Controller
     public InvoicesAdminController(
         IInvoiceManager invoiceManager,
         IInvoiceCommandService commands,
+        InvoiceLedgerSync ledgerSync,
         IDocumentCalculator calculator,
         IPaymentTermManager paymentTerms,
         IPartyDirectory parties,
@@ -73,6 +75,7 @@ public sealed class InvoicesAdminController : Controller
     {
         _invoiceManager = invoiceManager;
         _commands = commands;
+        _ledgerSync = ledgerSync;
         _calculator = calculator;
         _paymentTerms = paymentTerms;
         _parties = parties;
@@ -277,6 +280,9 @@ public sealed class InvoicesAdminController : Controller
         {
             return NotFound();
         }
+
+        // Catches up anything the ledger recorded while the invoice was busy, so the page shows what is paid and due now.
+        invoice = await _ledgerSync.SyncAsync(invoice, HttpContext.RequestAborted);
 
         return View(new InvoiceDetailPageViewModel
         {

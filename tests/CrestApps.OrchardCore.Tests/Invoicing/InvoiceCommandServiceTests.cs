@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.Tests.Invoicing;
 
@@ -135,6 +136,7 @@ public sealed class InvoiceCommandServiceTests
         var stored = await harness.FindInvoiceAsync(invoice.ItemId);
         Assert.Equal((InvoiceStatus.Void, "INV-1001", 0m), (stored.Status, stored.Number, stored.AmountDue));
         Assert.Equal(TransactionStatus.Canceled, (await harness.FindTransactionAsync(invoice.TransactionId)).Status);
+        Assert.Equal(1, await harness.CountInvoiceDocumentsAsync(invoice.ItemId));
     }
 
     /// <summary>
@@ -148,7 +150,17 @@ public sealed class InvoiceCommandServiceTests
         await using var harness = await InvoicingTestHarness.CreateAsync();
         var invoice = await IssueAsync(harness);
 
-        var paid = await harness.OnLedgerAsync(ledger => ledger.RecordPaymentAsync(invoice.TransactionId, new TransactionPaymentRequest { Amount = 10m }, TestContext.Current.CancellationToken));
+        // Recorded while the invoice is busy, so the invoice does not mirror it yet.
+        var paid = await harness.InScopeAsync(async services =>
+        {
+            var (locker, _) = await services.GetRequiredService<IDistributedLock>().TryAcquireLockAsync(
+                DefaultInvoiceCommandService.LockPrefix + invoice.ItemId, TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(1));
+
+            await using (locker)
+            {
+                return await harness.OnLedgerAsync(ledger => ledger.RecordPaymentAsync(invoice.TransactionId, new TransactionPaymentRequest { Amount = 10m }, TestContext.Current.CancellationToken));
+            }
+        });
         Assert.True(paid.Succeeded);
         Assert.Equal(0m, (await harness.FindInvoiceAsync(invoice.ItemId)).AmountPaid);
 
@@ -211,6 +223,9 @@ public sealed class InvoiceCommandServiceTests
         var stored = await harness.FindInvoiceAsync(invoice.ItemId);
         Assert.Equal((InvoiceStatus.Open, 70m), (stored.Status, stored.AmountDue));
         Assert.Equal(70m, (await harness.FindTransactionAsync(invoice.TransactionId)).OutstandingAmount);
+
+        // The ledger commits the session in the middle of each command; the invoice is still saved as one document.
+        Assert.Equal(1, await harness.CountInvoiceDocumentsAsync(invoice.ItemId));
     }
 
     [Fact]

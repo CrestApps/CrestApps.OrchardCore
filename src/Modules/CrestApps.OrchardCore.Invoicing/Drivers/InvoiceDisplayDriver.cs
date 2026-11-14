@@ -105,9 +105,23 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
                 await _authorizationService.AuthorizeAsync(user, TransactionsPermissions.ManageTransactions),
         };
 
+        // Credit notes, once the invoice is issued: those already made, and a way to make one while something is creditable.
+        IReadOnlyList<CreditNote> creditNotes = invoice.IssuedUtc.HasValue && _serviceProvider.GetService<ICreditNoteStore>() is { } creditNoteStore
+            ? await creditNoteStore.ListByInvoiceAsync(invoice.ItemId)
+            : [];
+        var canCredit = invoice.Status is InvoiceStatus.Open or InvoiceStatus.Uncollectible &&
+            CreditNoteRules.GetCreditable(invoice, creditNotes).Total > 0m &&
+            await _authorizationService.AuthorizeAsync(user, InvoicingPermissions.ManageCreditNotes);
+
         return Combine(
             Card("InvoiceSummary_DetailAdmin", model).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:1"),
             Card("InvoiceLines_DetailAdmin", model).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:5"),
+            Initialize<InvoiceCreditNotesViewModel>("InvoiceCreditNotes_DetailAdmin", card =>
+            {
+                card.Invoice = invoice;
+                card.CreditNotes = [.. creditNotes.OrderBy(note => note.CreatedUtc)];
+                card.CanCredit = canCredit;
+            }).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:8"),
             Card("InvoiceHistory_DetailAdmin", model).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:10"),
             Card("InvoiceActions_DetailAdmin", model).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Actions:1"));
     }

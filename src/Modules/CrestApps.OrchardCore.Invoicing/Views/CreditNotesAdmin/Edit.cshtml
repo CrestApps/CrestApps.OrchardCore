@@ -1,0 +1,127 @@
+@model CreditNoteEditViewModel
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@{
+    var currency = Model.Currency;
+    var totals = Model.Totals ?? new DocumentTotals();
+    string Money(decimal amount) => string.IsNullOrEmpty(currency) ? amount.ToString("0.00") : MoneyFormatter.Format(amount, currency);
+}
+
+<zone Name="Title">
+    <breadcrumb name="CreditNotesEdit" title="@T["Draft credit note for invoice {0}", Model.InvoiceNumber]">
+        <breadcrumb-item id="InvoicesIndex" action="Index" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoices"]</breadcrumb-item>
+        <breadcrumb-item id="InvoicesDetail" action="Detail" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" route-itemId="@Model.InvoiceId" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoice {0}", Model.InvoiceNumber]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Credit"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Reason">
+                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reason" class="form-control" maxlength="500" autocomplete="off" />
+                    <span class="hint">@T["Why the invoice is credited, such as goods returned or a price corrected. Printed on the credit note."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Disposition">
+                <label asp-for="Disposition" class="ocat-label">@T["Give the credit by"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Disposition" asp-items="Model.Dispositions" class="form-select"></select>
+                    <span class="hint">@T["Lowering what is owed works while the invoice is not paid in full. Once it is paid, refund the money or keep it as the customer's credit for their next purchase or invoice."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Notes">
+                <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Notes" rows="2" class="form-control" maxlength="4000"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Lines credited"]</div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Description"]</th>
+                        <th scope="col" class="text-end">@T["Quantity"]</th>
+                        <th scope="col" class="text-end">@T["Price each"]</th>
+                        <th scope="col" class="text-end">@T["Discount %"]</th>
+                        <th scope="col" class="text-end">@T["Amount"]</th>
+                        <th scope="col" class="text-center">@T["Remove"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Lines.Count; i++)
+                    {
+                        var line = Model.Lines[i];
+
+                        <tr>
+                            <td>
+                                <input type="hidden" name="Lines[@i].Id" value="@line.Id" />
+                                <div>@line.Name</div>
+                                @if (!string.IsNullOrEmpty(line.Description))
+                                {
+                                    <div class="small text-muted">@line.Description</div>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <input type="number" name="Lines[@i].Quantity" value="@line.Quantity?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="any" min="0" class="form-control form-control-sm text-end d-inline-block" style="width: 6rem;" aria-label="@T["Quantity of {0}", line.Name]" />
+                            </td>
+                            <td class="text-end">
+                                <input type="number" name="Lines[@i].UnitPrice" value="@line.UnitPrice?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="any" min="0" class="form-control form-control-sm text-end d-inline-block" style="width: 8rem;" aria-label="@T["Price each of {0}", line.Name]" />
+                            </td>
+                            <td class="text-end">
+                                <input type="number" name="Lines[@i].DiscountPercent" value="@line.DiscountPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="any" min="0" max="100" class="form-control form-control-sm text-end d-inline-block" style="width: 5rem;" aria-label="@T["Discount of {0}", line.Name]" />
+                            </td>
+                            <td class="text-end text-nowrap">@(line.Total is { } total ? Money(total) : null)</td>
+                            <td class="text-center">
+                                <input type="checkbox" name="Lines[@i].Remove" value="true" class="form-check-input" aria-label="@T["Don't credit {0}", line.Name]" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    @foreach (var tax in Model.Taxes)
+                    {
+                        <tr>
+                            <th scope="row" colspan="4" class="text-end">
+                                @(string.IsNullOrEmpty(tax.Name) ? T["Tax"].Value : tax.Name)
+                                @if (tax.Rate > 0m)
+                                {
+                                    <span>(@tax.Rate.ToString("0.###")%)</span>
+                                }
+                            </th>
+                            <td class="text-end text-nowrap">@Money(tax.TaxAmount)</td>
+                            <td></td>
+                        </tr>
+                    }
+                    <tr>
+                        <th scope="row" colspan="4" class="text-end">@T["Total credited"]</th>
+                        <th class="text-end text-nowrap">@Money(totals.Total)</th>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="card-footer small text-muted">@T["Lower a quantity or price to credit part of a line, or tick Remove to leave a line out, then click Update. At most {0} can still be credited on this invoice.", Money(Model.Creditable)]</div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
+        <button type="submit" name="submit" value="update" class="btn btn-secondary">@T["Update"]</button>
+        @if (Model.CanIssue)
+        {
+            <button type="submit" name="submit" value="issue" class="btn btn-success action-bar-secondary">@T["Save and issue"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" href="@Url.Action("Detail", "CreditNotesAdmin", new { itemId = Model.ItemId })">@T["Cancel"]</a>
+    </div>
+</form>
