@@ -128,11 +128,13 @@ public sealed class TenantProvisioningStepDisplayDriver : CheckoutFlowDisplayDri
             FeatureProfile = GetStepData(flow, "FeatureProfile"),
         }, rules);
 
-        foreach (var error in TenantPurchaseValidator.Validate(request, rules, _shellHost.GetAllSettings()))
+        foreach (var error in await _rulesProvider.ValidateAsync(request, rules, _shellHost.GetAllSettings()))
         {
             var field = error.Field switch
             {
                 nameof(TenantPurchaseRequest.Domains) => nameof(model.Domains),
+                nameof(TenantPurchaseRequest.Prefix) when error.Code == TenantPurchaseErrorCode.OwnHostRequired
+                    => rules.AllowCustomDomains ? nameof(model.Domains) : nameof(model.TenantName),
                 nameof(TenantPurchaseRequest.Prefix) => nameof(model.Prefix),
                 _ => nameof(model.TenantName),
             };

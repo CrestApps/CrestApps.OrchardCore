@@ -292,7 +292,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         // Checked again here, so a purchase recorded before a rule existed can't create a site on a reserved prefix,
         // the operator's own host, another recipe, or a feature profile that no longer exists.
         var rules = await _rulesProvider.GetRulesAsync(planRecipe);
-        var errors = TenantPurchaseValidator.Validate(
+        var errors = await _rulesProvider.ValidateAsync(
             new TenantPurchaseRequest
             {
                 TenantName = job.TenantName,

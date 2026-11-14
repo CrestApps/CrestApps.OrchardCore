@@ -76,7 +76,7 @@ public sealed class TenantProvisioningPaymentGate : ICheckoutPaymentGate
         };
 
         var rules = await _rulesProvider.GetRulesAsync(planRecipe);
-        var errors = TenantPurchaseValidator.Validate(request, rules, _shellHost.GetAllSettings());
+        var errors = await _rulesProvider.ValidateAsync(request, rules, _shellHost.GetAllSettings(), cancellationToken: cancellationToken);
 
         if (errors.Count > 0)
         {
