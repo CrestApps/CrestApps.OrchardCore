@@ -31,6 +31,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
     private readonly IEnumerable<IEnrollmentObserver> _observers;
     private readonly INumberSequence _numberSequence;
     private readonly IDistributedLock _distributedLock;
+    private readonly EnrollmentWriteGate _writeGate;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -44,6 +45,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
     /// <param name="observers">The enrollment observers.</param>
     /// <param name="numberSequence">The number sequence for enrollment numbers.</param>
     /// <param name="distributedLock">The distributed lock.</param>
+    /// <param name="writeGate">The per-enrollment write lock.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public DefaultEnrollmentService(
@@ -54,6 +56,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
         IEnumerable<IEnrollmentObserver> observers,
         INumberSequence numberSequence,
         IDistributedLock distributedLock,
+        EnrollmentWriteGate writeGate,
         IClock clock,
         ILogger<DefaultEnrollmentService> logger)
     {
@@ -64,6 +67,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
         _observers = observers;
         _numberSequence = numberSequence;
         _distributedLock = distributedLock;
+        _writeGate = writeGate;
         _clock = clock;
         _logger = logger;
     }
@@ -158,56 +162,34 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
     }
 
     /// <inheritdoc />
-    public async Task<EnrollmentResult> ApproveAsync(string enrollmentId, string actor, CancellationToken cancellationToken = default)
-    {
-        var enrollment = await FindAsync(enrollmentId, cancellationToken);
-
-        if (enrollment is null)
+    public Task<EnrollmentResult> ApproveAsync(string enrollmentId, string actor, CancellationToken cancellationToken = default)
+        => WriteAsync(enrollmentId, async (enrollment, notifications) =>
         {
-            return EnrollmentResult.Fail(EnrollmentErrors.NotFound);
-        }
+            if (enrollment.Status != EnrollmentStatus.Pending)
+            {
+                return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
+            }
 
-        if (enrollment.Status != EnrollmentStatus.Pending)
-        {
-            return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
-        }
+            Move(enrollment, EnrollmentStatus.Active, actor, null);
+            await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+            notifications.Add(() => NotifyAsync(observer => observer.StatusChangedAsync(enrollment, EnrollmentStatus.Pending, cancellationToken)));
+            notifications.Add(() => NotifyAsync(observer => observer.EnrolledAsync(enrollment, cancellationToken)));
 
-        Move(enrollment, EnrollmentStatus.Active, actor, null);
-        await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
-        await NotifyAsync(observer => observer.StatusChangedAsync(enrollment, EnrollmentStatus.Pending, cancellationToken));
-        await NotifyAsync(observer => observer.EnrolledAsync(enrollment, cancellationToken));
-
-        return new EnrollmentResult { Enrollment = enrollment, Changed = true };
-    }
+            return new EnrollmentResult { Enrollment = enrollment, Changed = true };
+        }, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<EnrollmentResult> RejectAsync(string enrollmentId, string actor, string reason, CancellationToken cancellationToken = default)
-    {
-        var enrollment = await FindAsync(enrollmentId, cancellationToken);
-
-        if (enrollment is null)
-        {
-            return EnrollmentResult.Fail(EnrollmentErrors.NotFound);
-        }
-
-        if (enrollment.Status != EnrollmentStatus.Pending)
-        {
-            return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
-        }
-
-        return await ChangeStatusAsync(enrollmentId, EnrollmentStatus.Withdrawn, actor, reason, cancellationToken);
-    }
+    public Task<EnrollmentResult> RejectAsync(string enrollmentId, string actor, string reason, CancellationToken cancellationToken = default)
+        => WriteAsync(enrollmentId, (enrollment, notifications) => enrollment.Status != EnrollmentStatus.Pending
+            ? Task.FromResult(EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition))
+            : ChangeStatusCoreAsync(enrollment, EnrollmentStatus.Withdrawn, actor, reason, notifications, cancellationToken), cancellationToken);
 
     /// <inheritdoc />
-    public async Task<EnrollmentResult> ChangeStatusAsync(string enrollmentId, EnrollmentStatus status, string actor, string reason, CancellationToken cancellationToken = default)
+    public Task<EnrollmentResult> ChangeStatusAsync(string enrollmentId, EnrollmentStatus status, string actor, string reason, CancellationToken cancellationToken = default)
+        => WriteAsync(enrollmentId, (enrollment, notifications) => ChangeStatusCoreAsync(enrollment, status, actor, reason, notifications, cancellationToken), cancellationToken);
+
+    private async Task<EnrollmentResult> ChangeStatusCoreAsync(Enrollment enrollment, EnrollmentStatus status, string actor, string reason, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
-        var enrollment = await FindAsync(enrollmentId, cancellationToken);
-
-        if (enrollment is null)
-        {
-            return EnrollmentResult.Fail(EnrollmentErrors.NotFound);
-        }
-
         if (!EnrollmentTransitions.CanMove(enrollment.Status, status))
         {
             return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
@@ -230,125 +212,128 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
         }
 
         await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
-        await NotifyAsync(observer => observer.StatusChangedAsync(enrollment, previous, cancellationToken));
+        notifications.Add(() => NotifyAsync(observer => observer.StatusChangedAsync(enrollment, previous, cancellationToken)));
 
         if (status == EnrollmentStatus.Completed)
         {
-            await NotifyAsync(observer => observer.CompletedAsync(enrollment, cancellationToken));
+            notifications.Add(() => NotifyAsync(observer => observer.CompletedAsync(enrollment, cancellationToken)));
         }
 
         return new EnrollmentResult { Enrollment = enrollment, Changed = true };
     }
 
     /// <inheritdoc />
-    public async Task<EnrollmentResult> ExtendAsync(string enrollmentId, DateTime? accessEndsUtc, DateTime? dueUtc, string actor, string reason, CancellationToken cancellationToken = default)
-    {
-        var enrollment = await FindAsync(enrollmentId, cancellationToken);
-
-        if (enrollment is null)
+    public Task<EnrollmentResult> ExtendAsync(string enrollmentId, DateTime? accessEndsUtc, DateTime? dueUtc, string actor, string reason, CancellationToken cancellationToken = default)
+        => WriteAsync(enrollmentId, async (enrollment, notifications) =>
         {
-            return EnrollmentResult.Fail(EnrollmentErrors.NotFound);
-        }
-
-        if (enrollment.Status is EnrollmentStatus.Completed or EnrollmentStatus.Withdrawn)
-        {
-            return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
-        }
-
-        if (string.IsNullOrWhiteSpace(reason))
-        {
-            return EnrollmentResult.Fail(EnrollmentErrors.ReasonRequired);
-        }
-
-        var now = _clock.UtcNow;
-
-        if (accessEndsUtc is not null)
-        {
-            enrollment.Grants.Add(new EnrollmentGrant
+            if (enrollment.Status is EnrollmentStatus.Completed or EnrollmentStatus.Withdrawn)
             {
-                Source = LearningConstants.EnrollmentSources.Manual,
-                SourceId = "Extension:" + UniqueId.GenerateId(),
-                GrantedUtc = now,
-                AccessEndsUtc = DateTime.SpecifyKind(accessEndsUtc.Value, DateTimeKind.Utc),
-            });
-
-            enrollment.AccessEndsUtc = EnrollmentAccess.ComputeAccessEnds(enrollment.Grants);
-        }
-
-        if (dueUtc is not null)
-        {
-            enrollment.DueUtc = DateTime.SpecifyKind(dueUtc.Value, DateTimeKind.Utc);
-        }
-
-        enrollment.ModifiedUtc = now;
-
-        var previous = enrollment.Status;
-
-        if (previous == EnrollmentStatus.Expired && (enrollment.AccessEndsUtc is null || enrollment.AccessEndsUtc > now))
-        {
-            Move(enrollment, EnrollmentStatus.Active, actor, reason.Trim());
-        }
-
-        await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
-
-        if (previous != enrollment.Status)
-        {
-            await NotifyAsync(observer => observer.StatusChangedAsync(enrollment, previous, cancellationToken));
-        }
-
-        await NotifyAsync(observer => observer.ExtendedAsync(enrollment, actor, reason.Trim(), cancellationToken));
-
-        return new EnrollmentResult { Enrollment = enrollment, Changed = true };
-    }
-
-    /// <inheritdoc />
-    public async Task<IReadOnlyList<Enrollment>> RevokeGrantAsync(string source, string sourceId, string actor, string reason, CancellationToken cancellationToken = default)
-    {
-        var changed = new List<Enrollment>();
-
-        foreach (var enrollment in await _enrollmentStore.ListByGrantAsync(source, sourceId, cancellationToken))
-        {
-            if (!enrollment.IsOpen && enrollment.Status != EnrollmentStatus.Expired)
-            {
-                continue;
+                return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
             }
 
-            var removed = 0;
-
-            for (var index = enrollment.Grants.Count - 1; index >= 0; index--)
+            if (string.IsNullOrWhiteSpace(reason))
             {
-                var grant = enrollment.Grants[index];
+                return EnrollmentResult.Fail(EnrollmentErrors.ReasonRequired);
+            }
 
-                if (string.Equals(grant.Source, source, StringComparison.Ordinal) && string.Equals(grant.SourceId, sourceId, StringComparison.Ordinal))
+            var now = _clock.UtcNow;
+
+            if (accessEndsUtc is not null)
+            {
+                enrollment.Grants.Add(new EnrollmentGrant
                 {
-                    enrollment.Grants.RemoveAt(index);
-                    removed++;
-                }
+                    Source = LearningConstants.EnrollmentSources.Manual,
+                    SourceId = "Extension:" + UniqueId.GenerateId(),
+                    GrantedUtc = now,
+                    AccessEndsUtc = DateTime.SpecifyKind(accessEndsUtc.Value, DateTimeKind.Utc),
+                });
+
+                enrollment.AccessEndsUtc = EnrollmentAccess.ComputeAccessEnds(enrollment.Grants);
             }
 
-            if (removed == 0)
+            if (dueUtc is not null)
             {
-                continue;
+                enrollment.DueUtc = DateTime.SpecifyKind(dueUtc.Value, DateTimeKind.Utc);
             }
 
-            enrollment.AccessEndsUtc = EnrollmentAccess.ComputeAccessEnds(enrollment.Grants);
-            enrollment.ModifiedUtc = _clock.UtcNow;
+            enrollment.ModifiedUtc = now;
 
             var previous = enrollment.Status;
 
-            if (enrollment.Grants.Count == 0)
+            if (previous == EnrollmentStatus.Expired && (enrollment.AccessEndsUtc is null || enrollment.AccessEndsUtc > now))
             {
-                Move(enrollment, EnrollmentStatus.Withdrawn, actor, reason);
+                Move(enrollment, EnrollmentStatus.Active, actor, reason.Trim());
             }
 
             await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
 
             if (previous != enrollment.Status)
             {
-                await NotifyAsync(observer => observer.StatusChangedAsync(enrollment, previous, cancellationToken));
+                notifications.Add(() => NotifyAsync(observer => observer.StatusChangedAsync(enrollment, previous, cancellationToken)));
             }
 
-            changed.Add(enrollment);
+            notifications.Add(() => NotifyAsync(observer => observer.ExtendedAsync(enrollment, actor, reason.Trim(), cancellationToken)));
+
+            return new EnrollmentResult { Enrollment = enrollment, Changed = true };
+        }, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Enrollment>> RevokeGrantAsync(string source, string sourceId, string actor, string reason, CancellationToken cancellationToken = default)
+    {
+        var changed = new List<Enrollment>();
+        var ids = (await _enrollmentStore.ListByGrantAsync(source, sourceId, cancellationToken)).Select(enrollment => enrollment.ItemId).ToList();
+
+        foreach (var id in ids)
+        {
+            var result = await WriteAsync(id, async (enrollment, notifications) =>
+            {
+                if (!enrollment.IsOpen && enrollment.Status != EnrollmentStatus.Expired)
+                {
+                    return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
+                }
+
+                var removed = 0;
+
+                for (var index = enrollment.Grants.Count - 1; index >= 0; index--)
+                {
+                    var grant = enrollment.Grants[index];
+
+                    if (string.Equals(grant.Source, source, StringComparison.Ordinal) && string.Equals(grant.SourceId, sourceId, StringComparison.Ordinal))
+                    {
+                        enrollment.Grants.RemoveAt(index);
+                        removed++;
+                    }
+                }
+
+                if (removed == 0)
+                {
+                    return EnrollmentResult.Fail(EnrollmentErrors.NotFound);
+                }
+
+                enrollment.AccessEndsUtc = EnrollmentAccess.ComputeAccessEnds(enrollment.Grants);
+                enrollment.ModifiedUtc = _clock.UtcNow;
+
+                var previous = enrollment.Status;
+
+                if (enrollment.Grants.Count == 0)
+                {
+                    Move(enrollment, EnrollmentStatus.Withdrawn, actor, reason);
+                }
+
+                await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+
+                if (previous != enrollment.Status)
+                {
+                    notifications.Add(() => NotifyAsync(observer => observer.StatusChangedAsync(enrollment, previous, cancellationToken)));
+                }
+
+                return new EnrollmentResult { Enrollment = enrollment, Changed = true };
+            }, cancellationToken);
+
+            if (result.Changed)
+            {
+                changed.Add(result.Enrollment);
+            }
         }
 
         return changed;
@@ -368,21 +353,34 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
             var page = await _enrollmentStore.ListEndedAsync(now, PageSize, cancellationToken);
             var moved = false;
 
-            foreach (var enrollment in page)
+            foreach (var id in page.Select(enrollment => enrollment.ItemId).ToList())
             {
-                if (!seen.Add(enrollment.ItemId) || !EnrollmentTransitions.CanMove(enrollment.Status, EnrollmentStatus.Expired))
+                if (!seen.Add(id))
                 {
                     continue;
                 }
 
-                var previous = enrollment.Status;
+                var result = await WriteAsync(id, async (enrollment, notifications) =>
+                {
+                    if (!EnrollmentTransitions.CanMove(enrollment.Status, EnrollmentStatus.Expired) || !(enrollment.AccessEndsUtc <= now))
+                    {
+                        return EnrollmentResult.Fail(EnrollmentErrors.InvalidTransition);
+                    }
 
-                Move(enrollment, EnrollmentStatus.Expired, SystemActor, "Access ended");
-                await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
-                await NotifyAsync(observer => observer.StatusChangedAsync(enrollment, previous, cancellationToken));
+                    var previous = enrollment.Status;
 
-                expired++;
-                moved = true;
+                    Move(enrollment, EnrollmentStatus.Expired, SystemActor, "Access ended");
+                    await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+                    notifications.Add(() => NotifyAsync(observer => observer.StatusChangedAsync(enrollment, previous, cancellationToken)));
+
+                    return new EnrollmentResult { Enrollment = enrollment, Changed = true };
+                }, cancellationToken);
+
+                if (result.Changed)
+                {
+                    expired++;
+                    moved = true;
+                }
             }
 
             if (!moved || page.Count < PageSize)
@@ -392,6 +390,25 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
         }
 
         return expired;
+    }
+
+    private Task<EnrollmentResult> WriteAsync(string enrollmentId, Func<Enrollment, IList<Func<Task>>, Task<EnrollmentResult>> work, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(enrollmentId))
+        {
+            return Task.FromResult(EnrollmentResult.Fail(EnrollmentErrors.NotFound));
+        }
+
+        return _writeGate.RunAsync(
+            enrollmentId,
+            async notifications =>
+            {
+                var enrollment = await _enrollmentStore.FindFreshAsync(enrollmentId, cancellationToken);
+
+                return enrollment is null ? EnrollmentResult.Fail(EnrollmentErrors.NotFound) : await work(enrollment, notifications);
+            },
+            () => EnrollmentResult.Fail(EnrollmentErrors.Busy),
+            cancellationToken);
     }
 
     /// <summary>

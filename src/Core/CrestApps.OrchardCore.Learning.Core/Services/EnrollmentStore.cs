@@ -289,4 +289,30 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
     /// <returns>A task.</returns>
     public Task SaveAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
         => Session.SaveAsync(enrollment, false, CollectionName, cancellationToken);
+
+    /// <summary>
+    /// Reads an enrollment from the database again, dropping the copy this session tracks, for a write under the
+    /// enrollment lock.
+    /// </summary>
+    /// <param name="enrollmentId">The enrollment.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The enrollment, or <see langword="null"/>.</returns>
+    public async Task<Enrollment> FindFreshAsync(string enrollmentId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(enrollmentId))
+        {
+            return null;
+        }
+
+        var tracked = await FindByIdAsync(enrollmentId, cancellationToken);
+
+        if (tracked is null)
+        {
+            return null;
+        }
+
+        Session.Detach(tracked, CollectionName);
+
+        return await FindByIdAsync(enrollmentId, cancellationToken);
+    }
 }

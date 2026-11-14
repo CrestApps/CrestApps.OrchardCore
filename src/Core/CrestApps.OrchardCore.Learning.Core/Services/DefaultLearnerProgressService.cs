@@ -27,6 +27,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     private readonly CourseReleaseEvaluator _releaseEvaluator;
     private readonly CourseCompletionEvaluator _completionEvaluator;
     private readonly IEnumerable<IEnrollmentObserver> _observers;
+    private readonly EnrollmentWriteGate _writeGate;
     private readonly IEnumerable<ICourseItemHandler> _itemHandlers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -41,6 +42,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     /// <param name="completionEvaluator">The completion evaluator.</param>
     /// <param name="observers">The enrollment observers.</param>
     /// <param name="itemHandlers">The course item handlers.</param>
+    /// <param name="writeGate">The per-enrollment write lock.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public DefaultLearnerProgressService(
@@ -51,6 +53,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         CourseCompletionEvaluator completionEvaluator,
         IEnumerable<IEnrollmentObserver> observers,
         IEnumerable<ICourseItemHandler> itemHandlers,
+        EnrollmentWriteGate writeGate,
         IClock clock,
         ILogger<DefaultLearnerProgressService> logger)
     {
@@ -61,6 +64,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         _completionEvaluator = completionEvaluator;
         _observers = observers;
         _itemHandlers = itemHandlers;
+        _writeGate = writeGate;
         _clock = clock;
         _logger = logger;
     }
@@ -179,12 +183,23 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     }
 
     /// <inheritdoc />
-    public async Task<ProgressUpdate> ApproveCompletionAsync(Enrollment enrollment, string actor, CancellationToken cancellationToken = default)
+    public Task<ProgressUpdate> ApproveCompletionAsync(Enrollment enrollment, string actor, CancellationToken cancellationToken = default)
     {
-        if (enrollment is not null)
+        if (enrollment is null)
         {
-            enrollment = await TrackedAsync(enrollment, cancellationToken);
+            return Task.FromResult(new ProgressUpdate { RefusedReason = "Only an active enrollment can be approved." });
         }
+
+        return _writeGate.RunAsync(
+            enrollment.ItemId,
+            notifications => ApproveCompletionCoreAsync(enrollment, actor, notifications, cancellationToken),
+            () => new ProgressUpdate { Enrollment = enrollment, RefusedReason = "Busy" },
+            cancellationToken);
+    }
+
+    private async Task<ProgressUpdate> ApproveCompletionCoreAsync(Enrollment enrollment, string actor, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    {
+        enrollment = await _enrollmentStore.FindFreshAsync(enrollment.ItemId, cancellationToken);
 
         if (enrollment is null || enrollment.Status != EnrollmentStatus.Active)
         {
@@ -200,7 +215,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         var now = _clock.UtcNow;
         var outline = await _courseStructure.GetOutlineAsync(course);
-        var progress = await _progressStore.FindByEnrollmentAsync(enrollment.ItemId, cancellationToken) ?? new EnrollmentProgress { EnrollmentId = enrollment.ItemId };
+        var progress = await _progressStore.FindFreshByEnrollmentAsync(enrollment.ItemId, cancellationToken) ?? new EnrollmentProgress { EnrollmentId = enrollment.ItemId };
 
         enrollment.Properties[LearningRuleNames.StaffApprovalProperty] = new Dictionary<string, object>
         {
@@ -222,8 +237,8 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (completed)
         {
-            await NotifyAsync(observer => observer.StatusChangedAsync(enrollment, EnrollmentStatus.Active, cancellationToken));
-            await NotifyAsync(observer => observer.CompletedAsync(enrollment, cancellationToken));
+            notifications.Add(() => NotifyAsync(observer => observer.StatusChangedAsync(enrollment, EnrollmentStatus.Active, cancellationToken)));
+            notifications.Add(() => NotifyAsync(observer => observer.CompletedAsync(enrollment, cancellationToken)));
         }
 
         return new ProgressUpdate { Enrollment = enrollment, Progress = progress, CourseCompleted = completed };
@@ -247,16 +262,25 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         enrollment.Status = EnrollmentStatus.Completed;
     }
 
-    private async Task<ProgressUpdate> UpdateAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, CancellationToken cancellationToken, bool manual = false)
+    private Task<ProgressUpdate> UpdateAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, CancellationToken cancellationToken, bool manual = false)
     {
         if (enrollment is null || string.IsNullOrEmpty(itemId))
         {
-            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course item was not found." };
+            return Task.FromResult(new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course item was not found." });
         }
 
-        // Work on the instance the session tracks: a caller may hold a copy read in another scope, and saving that
-        // copy would store a second document.
-        enrollment = await TrackedAsync(enrollment, cancellationToken);
+        return _writeGate.RunAsync(
+            enrollment.ItemId,
+            notifications => UpdateCoreAsync(enrollment, itemId, apply, notifications, manual, cancellationToken),
+            () => new ProgressUpdate { Enrollment = enrollment, RefusedReason = "Busy" },
+            cancellationToken);
+    }
+
+    private async Task<ProgressUpdate> UpdateCoreAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, IList<Func<Task>> notifications, bool manual, CancellationToken cancellationToken)
+    {
+        // Read the enrollment again inside the lock: a caller may hold a copy read earlier or in another scope, and
+        // deciding on that copy could complete the course twice or save a second document.
+        enrollment = await _enrollmentStore.FindFreshAsync(enrollment.ItemId, cancellationToken) ?? enrollment;
 
         var now = _clock.UtcNow;
         var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
@@ -274,7 +298,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course item was not found." };
         }
 
-        var progress = await _progressStore.FindByEnrollmentAsync(enrollment.ItemId, cancellationToken);
+        var progress = await _progressStore.FindFreshByEnrollmentAsync(enrollment.ItemId, cancellationToken);
         var isNewProgress = progress is null;
 
         progress ??= new EnrollmentProgress
@@ -419,24 +443,24 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (!courseStarted)
         {
-            await NotifyAsync(observer => observer.CourseStartedAsync(enrollment, cancellationToken));
+            notifications.Add(() => NotifyAsync(observer => observer.CourseStartedAsync(enrollment, cancellationToken)));
         }
 
         if (!itemStarted)
         {
-            await HandleAsync(handler => handler.StartedAsync(eventContext));
+            notifications.Add(() => HandleAsync(handler => handler.StartedAsync(eventContext)));
         }
 
         if (itemCompleted)
         {
-            await NotifyAsync(observer => observer.ItemCompletedAsync(enrollment, item, cancellationToken));
-            await HandleAsync(handler => handler.CompletedAsync(eventContext));
+            notifications.Add(() => NotifyAsync(observer => observer.ItemCompletedAsync(enrollment, item, cancellationToken)));
+            notifications.Add(() => HandleAsync(handler => handler.CompletedAsync(eventContext)));
         }
 
         if (courseCompleted)
         {
-            await NotifyAsync(observer => observer.StatusChangedAsync(enrollment, EnrollmentStatus.Active, cancellationToken));
-            await NotifyAsync(observer => observer.CompletedAsync(enrollment, cancellationToken));
+            notifications.Add(() => NotifyAsync(observer => observer.StatusChangedAsync(enrollment, EnrollmentStatus.Active, cancellationToken)));
+            notifications.Add(() => NotifyAsync(observer => observer.CompletedAsync(enrollment, cancellationToken)));
         }
 
         return new ProgressUpdate

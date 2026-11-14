@@ -63,4 +63,24 @@ public sealed class EnrollmentProgressStore : DocumentCatalog<EnrollmentProgress
     /// <returns>A task.</returns>
     public Task SaveAsync(EnrollmentProgress progress, CancellationToken cancellationToken = default)
         => Session.SaveAsync(progress, false, CollectionName, cancellationToken);
+
+    /// <summary>
+    /// Reads the progress of an enrollment from the database again, dropping the copy this session tracks.
+    /// </summary>
+    /// <param name="enrollmentId">The enrollment.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The progress, or <see langword="null"/>.</returns>
+    public async Task<EnrollmentProgress> FindFreshByEnrollmentAsync(string enrollmentId, CancellationToken cancellationToken = default)
+    {
+        var tracked = await FindByEnrollmentAsync(enrollmentId, cancellationToken);
+
+        if (tracked is null)
+        {
+            return null;
+        }
+
+        Session.Detach(tracked, CollectionName);
+
+        return await FindByEnrollmentAsync(enrollmentId, cancellationToken);
+    }
 }
