@@ -73,4 +73,16 @@ public sealed class InvoicingSettings
     /// Gets or sets how many days a shared link to an invoice stays valid.
     /// </summary>
     public int ShareLinkDays { get; set; } = 60;
+
+    /// <summary>
+    /// Gets or sets whether an invoice may be issued with a date after today. Off by default: an invoice is dated the day
+    /// it is issued or earlier.
+    /// </summary>
+    public bool AllowFutureIssueDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether invoices must be dated in the order they are numbered: an invoice can't be issued with a date
+    /// before the date of the last invoice issued. Off by default; some countries require it.
+    /// </summary>
+    public bool ChronologicalIssueDates { get; set; }
 }

@@ -23,6 +23,10 @@ public class InvoicingSettingsViewModel
 
     public bool IssueOnSend { get; set; }
 
+    public bool AllowFutureIssueDate { get; set; }
+
+    public bool ChronologicalIssueDates { get; set; }
+
     public decimal? CashRoundingIncrement { get; set; }
 
     public int ShareLinkDays { get; set; }

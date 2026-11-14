@@ -23,6 +23,11 @@ public class InvoiceEditViewModel
 
     public string Currency { get; set; }
 
+    /// <summary>
+    /// Gets or sets the date the invoice is issued with; today when empty.
+    /// </summary>
+    public DateOnly? IssueDate { get; set; }
+
     public string PaymentTermId { get; set; }
 
     public string PurchaseOrderNumber { get; set; }

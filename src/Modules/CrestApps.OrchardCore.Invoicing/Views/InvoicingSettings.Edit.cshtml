@@ -53,6 +53,28 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="AllowFutureIssueDate" class="form-check-input" />
+            <label asp-for="AllowFutureIssueDate" class="form-check-label">@T["Allow issue dates after today"]</label>
+            <span class="hint dashed">@T["An invoice can be issued with a date in the future. Otherwise it is dated the day it is issued or earlier."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="ChronologicalIssueDates" class="form-check-input" />
+            <label asp-for="ChronologicalIssueDates" class="form-check-label">@T["Date invoices in the order they are numbered"]</label>
+            <span class="hint dashed">@T["An invoice can't be dated before the last invoice issued, so numbers and dates go up together, as some countries require."]</span>
+        </div>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="CashRoundingIncrement">
     <label asp-for="CashRoundingIncrement" class="ocat-label">@T["Cash rounding"]</label>
     <div class="ocat-end">

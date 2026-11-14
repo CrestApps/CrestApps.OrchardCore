@@ -172,6 +172,14 @@
                 </div>
             </div>
 
+            <div class="ocat-limited-wrapper" asp-validation-class-for="IssueDate">
+                <label asp-for="IssueDate" class="ocat-label">@T["Issue date"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="IssueDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                    <span class="hint">@T["The date printed on the invoice. Left empty, it is dated the day it is issued. The due date is worked out from it."]</span>
+                </div>
+            </div>
+
             <div class="ocat-wrapper" asp-validation-class-for="PaymentTermId">
                 <label asp-for="PaymentTermId" class="ocat-label">@T["Payment term"]</label>
                 <div class="ocat-end">

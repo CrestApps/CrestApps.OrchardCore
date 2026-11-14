@@ -145,7 +145,26 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
                 return null;
             }
 
-            var issueDate = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+            // The date chosen on the draft is kept; without one, the invoice is dated today in the site's time zone. It is
+            // checked before anything is numbered, so a refused date takes no number.
+            var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+            var issueDate = invoice.IssueDate ?? today;
+
+            if (issueDate > today && !settings.AllowFutureIssueDate)
+            {
+                result.Fail(S["The invoice can't be dated after today ({0:d}).", issueDate.ToDateTime(TimeOnly.MinValue)]);
+
+                return null;
+            }
+
+            if (settings.ChronologicalIssueDates &&
+                await _store.FindLastIssuedAsync(cancellationToken) is { IssueDate: { } lastDate } last &&
+                issueDate < lastDate)
+            {
+                result.Fail(S["Invoice {0} was dated {1:d}, and invoices are dated in the order they are numbered, so this one can't be dated earlier.", last.Number, lastDate.ToDateTime(TimeOnly.MinValue)]);
+
+                return null;
+            }
 
             invoice.IssueDate = issueDate;
             invoice.Currency = invoice.Currency.Trim().ToUpperInvariant();
@@ -419,10 +438,29 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
 
         result.Invoice = invoice;
 
-        var notify = await command(invoice, result);
+        Func<IInvoiceObserver, Task> notify;
 
-        if (!result.Succeeded || result.AlreadyDone)
+        try
         {
+            notify = await command(invoice, result);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Nothing the command left in the session is saved, such as a number it took: the next issue gets that number.
+            await _session.CancelAsync();
+
+            throw;
+        }
+
+        if (result.AlreadyDone)
+        {
+            return result;
+        }
+
+        if (!result.Succeeded)
+        {
+            await _session.CancelAsync();
+
             return result;
         }
 
@@ -435,6 +473,7 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
         }
         catch (ConcurrencyException)
         {
+            await _session.CancelAsync();
             _logger.LogWarning("A concurrency conflict prevented a command on invoice '{InvoiceId}'; another writer updated it first.", invoice.ItemId);
 
             return result.Fail(S["This invoice was changed by someone else while you were working on it. Reload it and try again."]);

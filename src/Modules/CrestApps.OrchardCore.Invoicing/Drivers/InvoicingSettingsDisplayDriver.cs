@@ -61,6 +61,8 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
             model.PricesIncludeTax = settings.PricesIncludeTax;
             model.AllowPartialPayment = settings.AllowPartialPayment;
             model.IssueOnSend = settings.IssueOnSend;
+            model.AllowFutureIssueDate = settings.AllowFutureIssueDate;
+            model.ChronologicalIssueDates = settings.ChronologicalIssueDates;
             model.CashRoundingIncrement = settings.CashRoundingIncrement;
             model.ShareLinkDays = settings.ShareLinkDays;
             model.PaymentTerms = [.. (await _paymentTerms.GetEnabledAsync()).Select(term => new SelectListItem(term.Name, term.ItemId))];
@@ -106,6 +108,8 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
         settings.PricesIncludeTax = model.PricesIncludeTax;
         settings.AllowPartialPayment = model.AllowPartialPayment;
         settings.IssueOnSend = model.IssueOnSend;
+        settings.AllowFutureIssueDate = model.AllowFutureIssueDate;
+        settings.ChronologicalIssueDates = model.ChronologicalIssueDates;
         settings.CashRoundingIncrement = model.CashRoundingIncrement;
         settings.ShareLinkDays = model.ShareLinkDays;
 

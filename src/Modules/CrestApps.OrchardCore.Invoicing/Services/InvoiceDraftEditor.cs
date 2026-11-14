@@ -25,6 +25,7 @@ internal static class InvoiceDraftEditor
         model.ContactName = invoice.BillTo?.Contact?.Name;
         model.ContactEmail = invoice.BillTo?.Contact?.Email;
         model.Currency = invoice.Currency;
+        model.IssueDate = invoice.IssueDate;
         model.PaymentTermId = invoice.PaymentTermId;
         model.PurchaseOrderNumber = invoice.PurchaseOrderNumber;
         model.Reference = invoice.Reference;
@@ -112,6 +113,7 @@ internal static class InvoiceDraftEditor
         };
 
         invoice.Currency = Clean(model.Currency)?.ToUpperInvariant();
+        invoice.IssueDate = model.IssueDate;
         invoice.PaymentTermId = Clean(model.PaymentTermId);
         invoice.PurchaseOrderNumber = Clean(model.PurchaseOrderNumber);
         invoice.Reference = Clean(model.Reference);

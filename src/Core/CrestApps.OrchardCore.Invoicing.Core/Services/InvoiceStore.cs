@@ -27,6 +27,11 @@ public interface IInvoiceStore : ICatalog<Invoice>
     Task<Invoice> FindByNumberAsync(string number, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the invoice issued last, or <see langword="null"/> when none was.
+    /// </summary>
+    Task<Invoice> FindLastIssuedAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns a page of invoices, newest first.
     /// </summary>
     Task<PageResult<Invoice>> PageAsync(int page, int pageSize, InvoiceQuery query, CancellationToken cancellationToken = default);
@@ -62,6 +67,12 @@ public sealed class InvoiceStore : DocumentCatalog<Invoice, InvoiceIndex>, IInvo
         => string.IsNullOrWhiteSpace(number)
             ? Task.FromResult<Invoice>(null)
             : Session.Query<Invoice, InvoiceIndex>(index => index.Number == number.Trim(), collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<Invoice> FindLastIssuedAsync(CancellationToken cancellationToken = default)
+        => Session.Query<Invoice, InvoiceIndex>(index => index.IssuedUtc != null, collection: CollectionName)
+            .OrderByDescending(index => index.IssuedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
 
     /// <inheritdoc/>
     public async Task<PageResult<Invoice>> PageAsync(int page, int pageSize, InvoiceQuery query, CancellationToken cancellationToken = default)

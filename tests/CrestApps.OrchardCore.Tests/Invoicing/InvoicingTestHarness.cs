@@ -30,6 +30,9 @@ using CrestApps.OrchardCore.BusinessDocuments.Models;
 using CrestApps.OrchardCore.BusinessDocuments.Services;
 using CrestApps.OrchardCore.Commerce.Emails;
 using Microsoft.AspNetCore.DataProtection;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Numbering;
+using CrestApps.OrchardCore.YesSql.Core.Numbering;
 using Moq;
 using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Locking;
@@ -93,7 +96,23 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     /// </summary>
     public string ArchiveFolder { get; } = Path.Combine(Path.GetTempPath(), $"crestapps-invoicing-archive-{Guid.NewGuid():N}");
 
-    public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null)
+    /// <summary>
+    /// Handlers run when a transaction is created, a seam a test uses to slow down or break the step of issue that posts
+    /// the transaction, after the invoice took its number.
+    /// </summary>
+    public List<ICatalogEntryHandler<Transaction>> TransactionHandlers { get; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the next transaction created fails to save, once.
+    /// </summary>
+    public bool FailNextTransaction { get; set; }
+
+    /// <summary>
+    /// Creates the harness. With <paramref name="realNumbers"/>, invoices are numbered by the site's generator over the
+    /// number sequence kept in the store, whose series lock is <paramref name="numberLock"/> (the harness's lock when
+    /// none is given); otherwise by <see cref="FakeNumberGenerator"/>.
+    /// </summary>
+    public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null, bool realNumbers = false, IDistributedLock numberLock = null)
     {
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-invoicing-{Guid.NewGuid():N}.db");
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
@@ -125,7 +144,8 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddScoped(_ => store.CreateSession());
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
-        services.AddSingleton<IDistributedLock>(new LocalLock(NullLogger<LocalLock>.Instance));
+        var locks = new LocalLock(NullLogger<LocalLock>.Instance);
+        services.AddSingleton<IDistributedLock>(locks);
         services.AddSingleton<IHttpContextAccessor>(new HttpContextAccessor());
 
         var clock = new Mock<IClock>();
@@ -142,8 +162,10 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         site.Put(new StoreProfileSettings { Name = "Contoso Supplies", Email = "billing@contoso.example" });
         services.AddSingleton(Mock.Of<ISiteService>(service => service.GetSiteSettingsAsync() == Task.FromResult<ISite>(site)));
 
-        services.AddScoped<ITransactionStore, TransactionStore>();
-        services.AddScoped<ITransactionManager>(sp => new TransactionManager(sp.GetRequiredService<ITransactionStore>(), [], sp, NullLogger<CrestApps.Core.Services.CatalogManager<Transaction>>.Instance));
+        services.AddScoped<ITransactionStore>(sp => new BreakableTransactionStore(
+            new TransactionStore(sp.GetRequiredService<ISession>(), sp.GetRequiredService<IClock>()),
+            () => harness.FailNextTransaction && !(harness.FailNextTransaction = false)));
+        services.AddScoped<ITransactionManager>(sp => new TransactionManager(sp.GetRequiredService<ITransactionStore>(), harness.TransactionHandlers, sp, NullLogger<CrestApps.Core.Services.CatalogManager<Transaction>>.Instance));
         services.AddScoped<ITransactionCommandService>(sp => new DefaultTransactionCommandService(
             sp.GetRequiredService<ITransactionManager>(),
             sp.GetRequiredService<IDistributedLock>(),
@@ -156,7 +178,24 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             sp.GetRequiredService<IClock>(),
             NullLogger<DefaultTransactionCommandService>.Instance,
             new PassThroughStringLocalizer<DefaultTransactionCommandService>()));
-        services.AddSingleton<IFinancialDocumentNumberGenerator>(_ => harness.Numbers);
+        if (realNumbers)
+        {
+            // The series the Transactions feature registers, numbered as on a site: one sequence per unit of work, which
+            // holds the series lock until that unit of work's scope ends.
+            var seriesServices = new ServiceCollection();
+            seriesServices.AddTransactionsCore();
+            using var seriesProvider = seriesServices.BuildServiceProvider();
+            var seriesOptions = Options.Create(seriesProvider.GetRequiredService<IOptions<NumberSeriesOptions>>().Value);
+            var siteService = Mock.Of<ISiteService>(service => service.GetSiteSettingsAsync() == Task.FromResult<ISite>(site));
+
+            services.AddScoped<INumberSequence>(sp => new DocumentNumberSequence(sp.GetRequiredService<ISession>(), numberLock ?? locks));
+            services.AddScoped<INumberSeries>(sp => new NumberSeriesService(sp.GetRequiredService<INumberSequence>(), siteService, localClock.Object, seriesOptions));
+            services.AddScoped<IFinancialDocumentNumberGenerator>(sp => new SequentialFinancialDocumentNumberGenerator(sp.GetRequiredService<INumberSeries>(), sp.GetRequiredService<ISession>()));
+        }
+        else
+        {
+            services.AddSingleton<IFinancialDocumentNumberGenerator>(_ => harness.Numbers);
+        }
         services.AddSingleton(_ => harness.Contacts.Object);
         services.AddSingleton(_ => harness.Credit.Object);
         services.AddSingleton<IBusinessDocumentPdfRenderer>(_ => harness.Pdf);
@@ -194,6 +233,25 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
 
         return result;
+    }
+
+    /// <summary>
+    /// Runs work as a request does: the session is saved when the work ends, even when it fails, as a site saves it when
+    /// the request's scope ends. A command that fails must leave nothing in the session it doesn't mean to save.
+    /// </summary>
+    public async Task<T> InRequestAsync<T>(Func<IServiceProvider, Task<T>> work)
+    {
+        await using var scope = _provider.CreateAsyncScope();
+        var session = scope.ServiceProvider.GetRequiredService<ISession>();
+
+        try
+        {
+            return await work(scope.ServiceProvider);
+        }
+        finally
+        {
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
     }
 
     public Task<InvoiceCommandResult> RunAsync(Func<IInvoiceCommandService, Task<InvoiceCommandResult>> command)
