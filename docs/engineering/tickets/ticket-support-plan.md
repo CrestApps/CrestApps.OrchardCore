@@ -246,7 +246,9 @@ Taken as recommended unless you say otherwise: push assignment through a new Tea
 
 Keep this section current: a row per slice, with what was built, what differs from the plan and what is left.
 
-### Phase 1 (in progress)
+### Phase 1 (done)
+
+End checks on 2026-11-13: Release build of the solution with warnings as errors clean; the full unit test project (15,795 tests; the five failures it found were fixed in their own commit and rerun); `npx vitest run` 1,475 tests; `npm run check:manuals`; the docs build (links and anchors checked); public API baselines approved. Not done in the browser: a pass as a non-administrator, because test sites here keep a single `admin` account; access rules are covered by unit tests.
 
 | Slice | State | Notes |
 | --- | --- | --- |
