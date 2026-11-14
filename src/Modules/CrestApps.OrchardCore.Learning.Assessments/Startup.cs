@@ -52,7 +52,8 @@ public sealed class Startup : StartupBase
         services.AddContentPart<EssayQuestionPart>()
             .UseDisplayDriver<EssayQuestionPartDisplayDriver>();
         services.AddContentPart<QuizPart>()
-            .UseDisplayDriver<QuizPartDisplayDriver>();
+            .UseDisplayDriver<QuizPartDisplayDriver>()
+            .UseDisplayDriver<QuizPartLearnerDisplayDriver>();
 
         services.AddPermissionProvider<AssessmentsPermissionsProvider>();
         services.AddNavigationProvider<AssessmentsAdminMenu>();

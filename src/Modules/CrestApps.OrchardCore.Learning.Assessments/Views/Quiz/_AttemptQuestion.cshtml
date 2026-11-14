@@ -1,0 +1,154 @@
+@model (AttemptItem Item, bool Review)
+
+@{
+    var item = Model.Item;
+    var review = Model.Review;
+    var name = "a" + item.Index;
+    var response = item.Response;
+    var chosen = response?.ChoiceIds ?? [];
+    var key = item.Key;
+}
+
+<fieldset class="card mb-3 learning-question" data-question="@item.Index">
+    <div class="card-body">
+        <legend class="h6 d-flex justify-content-between gap-2">
+            <span>@T["Question {0}", item.Index + 1]</span>
+            <span class="text-secondary small fw-normal">@T["{0} points", item.Points.ToString("0.##")]</span>
+        </legend>
+        <div class="mb-3">@Html.Raw(item.Prompt)</div>
+
+        @switch (item.QuestionType)
+        {
+            case AssessmentsConstants.QuestionTypes.SingleChoice:
+            case AssessmentsConstants.QuestionTypes.TrueFalse:
+            case AssessmentsConstants.QuestionTypes.MultipleChoice:
+                var multiple = item.QuestionType == AssessmentsConstants.QuestionTypes.MultipleChoice;
+                foreach (var choice in item.Choices)
+                {
+                    var id = name + "-" + choice.Id;
+                    var right = review && key.ChoiceIds.Contains(choice.Id);
+                    <div class="form-check @(right ? "text-success fw-semibold" : null)">
+                        <input class="form-check-input" type="@(multiple ? "checkbox" : "radio")" name="@name" value="@choice.Id" id="@id" checked="@chosen.Contains(choice.Id)" disabled="@review" />
+                        <label class="form-check-label" for="@id">
+                            @(choice.Id == "true" ? T["True"] : choice.Id == "false" ? T["False"] : (object)choice.Text)
+                            @if (right)
+                            {
+                                <span class="visually-hidden">@T["(right answer)"]</span><i class="fa-solid fa-check ms-1" aria-hidden="true"></i>
+                            }
+                        </label>
+                        @if (review && chosen.Contains(choice.Id) && !string.IsNullOrEmpty(choice.Feedback))
+                        {
+                            <div class="hint">@choice.Feedback</div>
+                        }
+                    </div>
+                }
+                break;
+
+            case AssessmentsConstants.QuestionTypes.Numeric:
+                <input class="form-control learning-answer-sm" type="text" inputmode="decimal" name="@name" value="@response?.Number" aria-label="@T["Your answer"]" disabled="@review" />
+                @if (review)
+                {
+                    <p class="text-success mt-2 mb-0">@T["Right answer: {0} (within {1})", key.Number?.ToString("0.####"), key.Tolerance.ToString("0.####")]</p>
+                }
+                break;
+
+            case AssessmentsConstants.QuestionTypes.FillInBlanks:
+                <p class="mb-0">
+                    @for (var i = 0; i < item.Segments.Count; i++)
+                    {
+                        @item.Segments[i]
+                        if (i < item.BlankCount)
+                        {
+                            <input class="form-control d-inline-block w-auto mx-1 my-1" type="text" name="@(name + "_b" + i)" value="@(response?.Texts.ElementAtOrDefault(i))" aria-label="@T["Blank {0}", i + 1]" disabled="@review" />
+                            if (review)
+                            {
+                                <span class="text-success small">(@key.Texts[i].Replace("|", " / "))</span>
+                            }
+                        }
+                    }
+                </p>
+                break;
+
+            case AssessmentsConstants.QuestionTypes.Matching:
+                foreach (var prompt in item.Choices)
+                {
+                    var selected = response?.Pairs.TryGetValue(prompt.Id, out var value) == true ? value : null;
+                    <div class="row g-2 align-items-center mb-2">
+                        <label class="col-sm-5 col-form-label" for="@(name + "-" + prompt.Id)">@prompt.Text</label>
+                        <div class="col-sm-7">
+                            <select class="form-select" id="@(name + "-" + prompt.Id)" name="@(name + "_p" + prompt.Id)" disabled="@review">
+                                <option value="">@T["Choose"]</option>
+                                @foreach (var answer in item.Answers)
+                                {
+                                    <option value="@answer.Id" selected="@(answer.Id == selected)">@answer.Text</option>
+                                }
+                            </select>
+                            @if (review && key.Pairs.TryGetValue(prompt.Id, out var rightId))
+                            {
+                                <span class="text-success small">@item.Answers.FirstOrDefault(answer => answer.Id == rightId)?.Text</span>
+                            }
+                        </div>
+                    </div>
+                }
+                break;
+
+            case AssessmentsConstants.QuestionTypes.Ordering:
+                for (var position = 0; position < item.Choices.Count; position++)
+                {
+                    var selected = chosen.ElementAtOrDefault(position);
+                    <div class="row g-2 align-items-center mb-2">
+                        <label class="col-sm-2 col-form-label" for="@(name + "-o" + position)">@(position + 1).</label>
+                        <div class="col-sm-10">
+                            <select class="form-select" id="@(name + "-o" + position)" name="@(name + "_o" + position)" disabled="@review">
+                                <option value="">@T["Choose"]</option>
+                                @foreach (var choice in item.Choices)
+                                {
+                                    <option value="@choice.Id" selected="@(choice.Id == selected)">@choice.Text</option>
+                                }
+                            </select>
+                            @if (review)
+                            {
+                                <span class="text-success small">@item.Choices.FirstOrDefault(choice => choice.Id == key.ChoiceIds.ElementAtOrDefault(position))?.Text</span>
+                            }
+                        </div>
+                    </div>
+                }
+                break;
+
+            case AssessmentsConstants.QuestionTypes.Essay:
+                <textarea class="form-control" name="@name" rows="8" aria-label="@T["Your answer"]" disabled="@review">@(response?.Texts.FirstOrDefault())</textarea>
+                @if (item.MaxWords > 0 || item.MinWords > 0)
+                {
+                    <span class="hint">@T["Between {0} and {1} words.", item.MinWords, item.MaxWords > 0 ? item.MaxWords : (object)T["any number of"]]</span>
+                }
+                break;
+
+            default:
+                <input class="form-control" type="text" name="@name" value="@(response?.Texts.FirstOrDefault())" aria-label="@T["Your answer"]" disabled="@review" maxlength="500" />
+                @if (review && key.Texts.Count > 0)
+                {
+                    <p class="text-success mt-2 mb-0">@T["Accepted: {0}", string.Join(" / ", key.Texts)]</p>
+                }
+                break;
+        }
+
+        @if (review)
+        {
+            <p class="mt-3 mb-0 small">
+                <strong>@T["Score"]:</strong> @(item.Score?.ToString("0.##") ?? T["Waiting for a grader"].Value) / @item.Points.ToString("0.##")
+            </p>
+            @if (!string.IsNullOrEmpty(item.GraderComment))
+            {
+                <p class="mb-0 small"><strong>@T["Grader"]:</strong> @item.GraderComment</p>
+            }
+            @if (!string.IsNullOrEmpty(item.Feedback))
+            {
+                <div class="alert alert-info mt-2 mb-0 small">@Html.Raw(item.Feedback)</div>
+            }
+        }
+        else
+        {
+            <span class="learning-saved small text-secondary d-none" data-saved>@T["Saved"]</span>
+        }
+    </div>
+</fieldset>

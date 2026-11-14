@@ -1,0 +1,52 @@
+@model AttemptPageViewModel
+@inject OrchardCore.Modules.IClock Clock
+
+@{
+    var attempt = Model.Attempt;
+    var lastItem = Model.Items.LastOrDefault();
+    var nextIndex = Model.Sequential && lastItem is not null && lastItem.Index < attempt.Items.Count - 1 ? lastItem.Index + 1 : (int?)null;
+}
+
+<div class="container my-4 learning-attempt" style="max-width: 860px;">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningAttempt" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(attempt.QuizTitle))">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            <breadcrumb-item id="LearningMyLearning" url="@Url.Content("~/learning")">@T["My learning"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+
+    <h1 class="h3">@attempt.QuizTitle</h1>
+    <p class="text-secondary">@T["Attempt {0}", attempt.Sequence] &middot; @T["Started"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(attempt.StartedUtc, DateTimeKind.Utc), Format: "g"))</p>
+
+    @if (attempt.DeadlineUtc is { } deadline)
+    {
+        <div class="alert alert-warning sticky-top d-flex justify-content-between align-items-center" role="timer" aria-live="off" data-learning-timer data-deadline="@deadline.ToString("O")" data-server-now="@Clock.UtcNow.ToString("O")">
+            <span>@T["Time left"]: <strong data-learning-timer-text>&nbsp;</strong></span>
+            <span class="small">@T["Due"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(deadline, DateTimeKind.Utc), Format: "t"))</span>
+        </div>
+    }
+
+    <form method="post" action="@Url.RouteUrl("LearningAttemptSubmit", new { attemptId = attempt.ItemId })" data-learning-attempt data-answer-url="@Url.RouteUrl("LearningAttemptAnswer", new { attemptId = attempt.ItemId, index = 0 })" novalidate>
+        @Html.AntiForgeryToken()
+
+        @foreach (var item in Model.Items)
+        {
+            <partial name="_AttemptQuestion" model="(item, false)" />
+        }
+
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            @if (nextIndex is { } next)
+            {
+                <button type="submit" name="next" value="@next" class="btn btn-primary">@T["Save and continue"]</button>
+                <span class="hint">@T["You cannot come back to a question once you continue."]</span>
+            }
+            else
+            {
+                <button type="submit" class="btn btn-success" data-learning-submit data-confirm-text="@T["Submit your answers? You cannot change them afterwards."]">@T["Submit"]</button>
+                <span class="hint">@T["Your answers are saved as you go."]</span>
+            }
+        </div>
+    </form>
+</div>
+
+<script asp-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-player.min.js" debug-src="~/CrestApps.OrchardCore.Learning.Assessments/scripts/quiz-player.js" at="Foot"></script>

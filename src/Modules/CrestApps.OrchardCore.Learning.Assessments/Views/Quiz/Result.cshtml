@@ -1,0 +1,76 @@
+@model AttemptPageViewModel
+
+@{
+    var attempt = Model.Attempt;
+}
+
+<div class="container my-4 learning-attempt" style="max-width: 860px;">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningAttempt" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(attempt.QuizTitle))">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            <breadcrumb-item id="LearningMyLearning" url="@Url.Content("~/learning")">@T["My learning"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+
+    <h1 class="h3">@attempt.QuizTitle</h1>
+    <p class="text-secondary">
+        @T["Attempt {0}", attempt.Sequence]
+        @if (attempt.SubmittedUtc is { } submitted)
+        {
+            <span>&middot; @T["Submitted"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(submitted, DateTimeKind.Utc), Format: "g"))</span>
+        }
+        @if (attempt.AutoSubmitted)
+        {
+            <span>&middot; @T["submitted when the time was up"]</span>
+        }
+    </p>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            @switch (attempt.Status)
+            {
+                case AttemptStatus.NeedsGrading:
+                    <p class="mb-0">@T["Your answers are in. A grader marks the written answers; your score appears here when they are done."]</p>
+                    break;
+                case AttemptStatus.Voided:
+                    <p class="mb-0">@T["This attempt was cancelled and does not count."]</p>
+                    break;
+                case AttemptStatus.Graded when Model.CanSeeScore:
+                    <p class="display-6 mb-1">@(attempt.Percent?.ToString("0.##"))%</p>
+                    <p class="mb-0">
+                        @T["{0} of {1} points", attempt.Score?.ToString("0.##"), attempt.MaxScore.ToString("0.##")]
+                        @if (attempt.Passed == true)
+                        {
+                            <span class="badge text-bg-success ms-2">@T["Passed"]</span>
+                        }
+                        else if (attempt.Passed == false)
+                        {
+                            <span class="badge text-bg-secondary ms-2">@T["Not passed"]</span>
+                        }
+                    </p>
+                    @if (!string.IsNullOrEmpty(attempt.Feedback))
+                    {
+                        <p class="mt-2 mb-0">@attempt.Feedback</p>
+                    }
+                    break;
+                default:
+                    <p class="mb-0">@T["Your answers are in."]</p>
+                    break;
+            }
+        </div>
+    </div>
+
+    @if (Model.CanReview)
+    {
+        <h2 class="h5">@T["Review"]</h2>
+        @foreach (var item in attempt.Items)
+        {
+            <partial name="_AttemptQuestion" model="(item, true)" />
+        }
+    }
+
+    @if (!string.IsNullOrEmpty(Model.CourseId))
+    {
+        <a class="btn btn-outline-secondary" href="@Url.Content("~/learning/courses/" + Model.CourseId + "/play/" + attempt.QuizId)">@T["Back to the course"]</a>
+    }
+</div>

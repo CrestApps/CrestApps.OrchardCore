@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "quiz-player.js",
+    "source": "Assets/js/quiz-player.js",
+    "dest": "wwwroot/scripts/quiz-player.js"
+  }
+]
