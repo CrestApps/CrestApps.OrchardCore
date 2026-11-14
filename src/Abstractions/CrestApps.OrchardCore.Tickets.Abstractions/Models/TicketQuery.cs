@@ -62,6 +62,11 @@ public sealed class TicketQuery
     public TimeSpan? DueWithin { get; set; }
 
     /// <summary>
+    /// Gets or sets a time: only tickets solved before it are listed.
+    /// </summary>
+    public DateTime? SolvedBeforeUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the order.
     /// </summary>
     public TicketSort Sort { get; set; } = TicketSort.Updated;

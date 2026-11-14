@@ -44,6 +44,7 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
                     ModifiedUtc = item.ModifiedUtc ?? item.CreatedUtc ?? DateTime.MinValue,
                     NextDueUtc = part.NextDueUtc,
                     SolvedUtc = part.SolvedUtc,
+                    AssignedUtc = part.AssignedUtc,
                     ClosedUtc = part.ClosedUtc,
                 };
             });

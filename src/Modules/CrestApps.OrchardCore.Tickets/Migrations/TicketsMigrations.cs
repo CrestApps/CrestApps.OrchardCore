@@ -5,6 +5,7 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using OrchardCore.Title.Models;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tickets.Migrations;
 
@@ -68,7 +69,20 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds when each ticket was last given to its assignee, so team assignment can take turns.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table
+            .AddColumn<DateTime>("AssignedUtc", column => column.Nullable()));
+        await TicketIndexSchema.CreateAssignedIndexAsync(SchemaBuilder);
+
+        return 2;
     }
 
     private async Task SeedAsync()

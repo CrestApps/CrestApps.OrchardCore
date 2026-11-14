@@ -6,6 +6,8 @@ using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tickets;
 using CrestApps.OrchardCore.Tickets.Core.Services;
@@ -303,10 +305,37 @@ public sealed class TicketServiceTests
         Assert.False(again.Succeeded);
     }
 
+    [Fact]
+    public async Task ADeskWithAStrategy_GivesANewTicketToATeamMember_AndOneWithoutLeavesItForAnAgent()
+    {
+        // Arrange
+        var requests = new List<TeamAssignmentRequest>();
+        var assignment = new Mock<ITeamAssignmentService>();
+        assignment.Setup(service => service.SelectAsync(It.IsAny<TeamAssignmentRequest>(), It.IsAny<CancellationToken>()))
+            .Callback((TeamAssignmentRequest request, CancellationToken _) => requests.Add(request))
+            .ReturnsAsync(new TeamMember { UserId = "agent-7" });
+        var services = new ServiceCollection().AddSingleton(assignment.Object).BuildServiceProvider();
+
+        var pushing = Create(new TicketDesk { ItemId = "support", Name = "Support", DefaultTeamId = "tier-1", AssignmentStrategy = TeamAssignmentStrategies.RoundRobin }, services);
+        var pulling = Create(new TicketDesk { ItemId = "support", Name = "Support", DefaultTeamId = "tier-1", AssignmentStrategy = null }, services);
+
+        // Act
+        var pushed = (await pushing.CreateAsync(new TicketCreateRequest { Subject = "Printer jams", Requester = _requester }, TestContext.Current.CancellationToken)).Ticket;
+        var pulled = (await pulling.CreateAsync(new TicketCreateRequest { Subject = "Screen flickers", Requester = _requester }, TestContext.Current.CancellationToken)).Ticket;
+
+        // Assert
+        var request = Assert.Single(requests);
+        Assert.Equal(TeamAssignmentStrategies.RoundRobin, request.Strategy);
+        Assert.Equal("tier-1", request.TeamId);
+        Assert.Equal("agent-7", _items[pushed.ContentItemId].GetOrCreate<TicketPart>().AssigneeId);
+        Assert.Equal(_now, _items[pushed.ContentItemId].GetOrCreate<TicketPart>().AssignedUtc);
+        Assert.Null(_items[pulled.ContentItemId].GetOrCreate<TicketPart>().AssigneeId);
+    }
+
     private static RecordRef Subject(ContentItem ticket)
         => new(TicketsConstants.RecordKind, ticket.ContentItemId);
 
-    private DefaultTicketService Create()
+    private DefaultTicketService Create(TicketDesk desk = null, IServiceProvider services = null)
     {
         var contentManager = new Mock<IContentManager>();
 
@@ -356,14 +385,14 @@ public sealed class TicketServiceTests
             Mock.Of<ISession>(),
             Catalog(_statuses),
             Catalog(_priorities),
-            Catalog([_desk]),
+            Catalog([desk ?? _desk]),
             _timeline,
             _tracker,
             Mock.Of<IPartyDirectory>(),
             numbers.Object,
             locks.Object,
             clock.Object,
-            new ServiceCollection().BuildServiceProvider(),
+            services ?? new ServiceCollection().BuildServiceProvider(),
             [observer.Object],
             NullLogger<DefaultTicketService>.Instance,
             new PassThroughLocalizer<DefaultTicketService>());

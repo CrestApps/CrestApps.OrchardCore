@@ -197,7 +197,8 @@ public sealed class DefaultTicketService : ITicketService
             : request.Requester.IsEmpty ? null : await _parties.GetContactInfoAsync(request.Requester, cancellationToken);
         part.AccountId = request.AccountId;
         part.TeamId = FirstNonEmpty(request.TeamId, settings.DefaultTeamId, desk.DefaultTeamId);
-        part.AssigneeId = request.AssigneeId;
+        part.AssigneeId = string.IsNullOrEmpty(request.AssigneeId) ? null : request.AssigneeId;
+        part.AssignedUtc = part.AssigneeId is null ? null : now;
         part.Channel = request.Channel;
         part.FollowUpOfId = request.FollowUpOfId;
         part.LastCustomerActivityUtc = now;
@@ -267,9 +268,10 @@ public sealed class DefaultTicketService : ITicketService
         ticket.Apply(part);
         await _contentManager.UpdateAsync(ticket);
 
-        if (string.IsNullOrEmpty(part.AssigneeId) && !string.IsNullOrEmpty(part.TeamId))
+        // A desk without a strategy leaves new tickets for an agent to take.
+        if (string.IsNullOrEmpty(part.AssigneeId) && !string.IsNullOrEmpty(part.TeamId) && !string.IsNullOrEmpty(desk.AssignmentStrategy))
         {
-            await AssignToTeamMemberAsync(ticket, part, settings, TicketActor.Site, cancellationToken);
+            await AssignToTeamMemberAsync(ticket, part, settings, desk.AssignmentStrategy, TicketActor.Site, cancellationToken);
         }
 
         await NotifyAsync(observer => observer.CreatedAsync(ticket, cancellationToken));
@@ -516,8 +518,10 @@ public sealed class DefaultTicketService : ITicketService
             }
 
             var settings = await GetSettingsAsync(ticket.ContentType);
+            var desk = await _desks.FindByIdAsync(part.DeskId, cancellationToken);
+            var strategy = string.IsNullOrEmpty(desk?.AssignmentStrategy) ? TeamAssignmentStrategies.LeastLoaded : desk.AssignmentStrategy;
 
-            return await AssignToTeamMemberAsync(ticket, part, settings, actor ?? TicketActor.Site, cancellationToken)
+            return await AssignToTeamMemberAsync(ticket, part, settings, strategy, actor ?? TicketActor.Site, cancellationToken)
                 ? new TicketResult { Ticket = ticket }
                 : Refuse(S["Nobody in the team can take the ticket now."], ticket);
         }, cancellationToken);
@@ -731,6 +735,11 @@ public sealed class DefaultTicketService : ITicketService
             tickets = tickets.Where(index => index.AccountId == accountId);
         }
 
+        if (filter.SolvedBeforeUtc is { } solvedBefore)
+        {
+            tickets = tickets.Where(index => index.SolvedUtc != null && index.SolvedUtc < solvedBefore);
+        }
+
         if (filter.DueWithin is { } within)
         {
             var dueBy = _clock.UtcNow.Add(within);
@@ -824,6 +833,7 @@ public sealed class DefaultTicketService : ITicketService
             }
 
             part.AssigneeId = NullIfEmpty(update.AssigneeId);
+            part.AssignedUtc = part.AssigneeId is null ? null : _clock.UtcNow;
         }
 
         if (update.EscalationLevel is { } level && level != part.EscalationLevel && level >= 0)
@@ -956,7 +966,7 @@ public sealed class DefaultTicketService : ITicketService
         }, cancellationToken);
     }
 
-    private async Task<bool> AssignToTeamMemberAsync(ContentItem ticket, TicketPart part, TicketPartSettings settings, TicketActor actor, CancellationToken cancellationToken)
+    private async Task<bool> AssignToTeamMemberAsync(ContentItem ticket, TicketPart part, TicketPartSettings settings, string strategy, TicketActor actor, CancellationToken cancellationToken)
     {
         if (_serviceProvider.GetService<ITeamAssignmentService>() is not { } assignment)
         {
@@ -970,6 +980,7 @@ public sealed class DefaultTicketService : ITicketService
         {
             TeamId = part.TeamId,
             WorkKind = TicketsConstants.RecordKind,
+            Strategy = strategy,
             ExcludedUserIds = string.IsNullOrEmpty(part.AssigneeId) ? [] : [part.AssigneeId],
             CandidateFilter = skills is null || required.Count == 0
                 ? null

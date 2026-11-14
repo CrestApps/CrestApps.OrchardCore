@@ -3,6 +3,7 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
+using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tickets.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -77,6 +78,20 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
             context.Result.Fail(new ValidationResult(S["The name is required."], [nameof(ITicketSettingsRecord.Name)]));
 
             return;
+        }
+
+        if (context.Model is TicketDesk desk)
+        {
+            if (desk.ReopenWindowDays < 0 || desk.AutoCloseDays < 0)
+            {
+                context.Result.Fail(new ValidationResult(S["Days can't be negative."], [nameof(TicketDesk.AutoCloseDays)]));
+            }
+
+            if (!string.IsNullOrEmpty(desk.AssignmentStrategy)
+                && desk.AssignmentStrategy is not (TeamAssignmentStrategies.LeastLoaded or TeamAssignmentStrategies.RoundRobin))
+            {
+                context.Result.Fail(new ValidationResult(S["Choose how new tickets are assigned."], [nameof(TicketDesk.AssignmentStrategy)]));
+            }
         }
 
         // Saved views are per owner, so two people may each have one called "My open tickets".

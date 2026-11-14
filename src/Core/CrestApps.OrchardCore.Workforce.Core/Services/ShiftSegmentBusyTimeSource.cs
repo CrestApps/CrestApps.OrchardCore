@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class ShiftSegmentBusyTimeSource : ICalendarBusyTimeSource
 {
-    private static readonly HashSet<ActivityKind> _busyKinds =
+    internal static readonly HashSet<ActivityKind> BusyKinds =
     [
         ActivityKind.Break,
         ActivityKind.Meal,
@@ -60,7 +60,7 @@ internal sealed class ShiftSegmentBusyTimeSource : ICalendarBusyTimeSource
                 continue;
             }
 
-            foreach (var segment in shift.Segments.Where(segment => _busyKinds.Contains(segment.Kind) && segment.EndUtc > query.FromUtc && segment.StartUtc < query.ToUtc))
+            foreach (var segment in shift.Segments.Where(segment => BusyKinds.Contains(segment.Kind) && segment.EndUtc > query.FromUtc && segment.StartUtc < query.ToUtc))
             {
                 foreach (var attendee in occurrence.Event.Attendees.Where(attendee => !string.IsNullOrEmpty(attendee.UserId) && users.Contains(attendee.UserId)))
                 {

@@ -3927,6 +3927,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class AgentPresenceAvailabilitySource : CrestApps.OrchardCore.Teams.Services.ITeamMemberAvailabilitySource
+    {
+        public AgentPresenceAvailabilitySource(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetUnavailableAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public static class AgentPresenceManagerExtensions
     {
         public static System.Threading.Tasks.Task ConnectHeldAgentAsync(this CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager, string agentId, CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.DateTime connectedUtc, System.Threading.CancellationToken cancellationToken = default) { }

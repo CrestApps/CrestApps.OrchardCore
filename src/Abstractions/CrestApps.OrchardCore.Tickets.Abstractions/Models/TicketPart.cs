@@ -144,4 +144,9 @@ public sealed class TicketPart : ContentPart
     /// Gets or sets the earliest due time of the ticket's running service-level timers, in UTC, for lists and views.
     /// </summary>
     public DateTime? NextDueUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the ticket was last given to its assignee, so team assignment can take turns.
+    /// </summary>
+    public DateTime? AssignedUtc { get; set; }
 }

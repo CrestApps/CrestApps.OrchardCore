@@ -36,7 +36,8 @@ public static class TicketIndexSchema
             .Column<DateTime>("ModifiedUtc")
             .Column<DateTime>("NextDueUtc", column => column.Nullable())
             .Column<DateTime>("SolvedUtc", column => column.Nullable())
-            .Column<DateTime>("ClosedUtc", column => column.Nullable()));
+            .Column<DateTime>("ClosedUtc", column => column.Nullable())
+            .Column<DateTime>("AssignedUtc", column => column.Nullable()));
 
         await schemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
         {
@@ -50,5 +51,16 @@ public static class TicketIndexSchema
             table.CreateIndex("IDX_TicketIndex_Due", "StatusCategory", "NextDueUtc", "DocumentId");
             table.CreateIndex("IDX_TicketIndex_Solved", "StatusCategory", "SolvedUtc", "DocumentId");
         });
+
+        await CreateAssignedIndexAsync(schemaBuilder);
     }
+
+    /// <summary>
+    /// Creates the index team assignment reads to take turns: the latest assignment of each assignee.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task that completes when the index exists.</returns>
+    public static Task CreateAssignedIndexAsync(ISchemaBuilder schemaBuilder)
+        => schemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table
+            .CreateIndex("IDX_TicketIndex_Assigned", "AssigneeId", "AssignedUtc", "DocumentId"));
 }

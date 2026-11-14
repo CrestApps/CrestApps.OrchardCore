@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Tickets.BackgroundTasks;
 using CrestApps.OrchardCore.Tickets.Core;
 using CrestApps.OrchardCore.Tickets.Core.Handlers;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
@@ -17,6 +18,7 @@ using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Records;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
@@ -54,6 +56,7 @@ public sealed class Startup : StartupBase
         services.AddContentPart<TicketPart>()
             .UseDisplayDriver<TicketPartDisplayDriver>();
         services.AddDisplayDriver<TicketRow, TicketRowDisplayDriver>();
+        services.AddSingleton<IBackgroundTask, TicketAutoCloseBackgroundTask>();
 
         // The settings records' rules come with the feature that imports them.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketStatus>, TicketSettingsRecordHandler<TicketStatus>>());

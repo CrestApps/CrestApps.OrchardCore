@@ -59,6 +59,16 @@
 </div>
 
 <div class="mb-3">
+    <label asp-for="AssignmentStrategy" class="form-label">@T["New tickets go to"]</label>
+    <select asp-for="AssignmentStrategy" class="form-select">
+        <option value="">@T["Nobody: an agent takes them"]</option>
+        <option value="LeastLoaded">@T["The team member with the fewest open tickets"]</option>
+        <option value="RoundRobin">@T["Each team member in turn"]</option>
+    </select>
+    <span class="hint">@T["Only members who can take work now are chosen (on shift, not away, not out of office), with the skills the ticket type asks for."]</span>
+</div>
+
+<div class="mb-3">
     <div class="form-check">
         <input asp-for="NotifyRequester" class="form-check-input" type="checkbox" />
         <label asp-for="NotifyRequester" class="form-check-label">@T["E-mail the requester"]</label>

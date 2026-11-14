@@ -104,6 +104,11 @@ public sealed class TicketIndex : MapIndex
     public DateTime? SolvedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when the ticket was last given to its assignee.
+    /// </summary>
+    public DateTime? AssignedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets when it was closed, in UTC.
     /// </summary>
     public DateTime? ClosedUtc { get; set; }

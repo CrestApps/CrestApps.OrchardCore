@@ -31,6 +31,7 @@ internal sealed class TicketDesksRecipeStepSchema : RecipeStepSchemaBase
                             ("TicketTypes", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("The ticket types it offers; empty offers every type.")),
                             ("ReopenWindowDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Days after solving in which a requester reply reopens a ticket.")),
                             ("AutoCloseDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Days a solved ticket waits before it closes; 0 never.")),
+                            ("AssignmentStrategy", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("How a new ticket with a team and no assignee is given to a member: LeastLoaded, RoundRobin, or empty to leave it for an agent.")),
                             ("NotifyRequester", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether requesters are e-mailed.")),
                             ("NotifyAssignee", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether assignees are told.")),
                             ("CreatedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Format(Formats.DateTime).Description("When it was created, in UTC.")),

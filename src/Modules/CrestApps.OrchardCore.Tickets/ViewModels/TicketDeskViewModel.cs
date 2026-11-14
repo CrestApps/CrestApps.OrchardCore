@@ -54,6 +54,11 @@ public class TicketDeskViewModel
     public int AutoCloseDays { get; set; }
 
     /// <summary>
+    /// Gets or sets how new tickets are given to a team member; empty leaves them for an agent to take.
+    /// </summary>
+    public string AssignmentStrategy { get; set; }
+
+    /// <summary>
     /// Gets or sets whether requesters are e-mailed.
     /// </summary>
     public bool NotifyRequester { get; set; }

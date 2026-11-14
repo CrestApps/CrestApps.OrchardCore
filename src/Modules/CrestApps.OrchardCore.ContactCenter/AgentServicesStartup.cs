@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Teams;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
@@ -47,5 +48,18 @@ public sealed class AgentServicesStartup : StartupBase
         services
             .AddIndexProvider<AgentProfileIndexProvider>()
             .AddDataMigration<AgentProfileIndexMigrations>();
+    }
+}
+
+/// <summary>
+/// Tells team assignment which agents can't take work now, from their presence.
+/// </summary>
+[Feature(ContactCenterConstants.Feature.AgentServices)]
+[RequireFeatures(TeamsConstants.Features.Teams)]
+public sealed class AgentPresenceTeamsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTeamMemberAvailabilitySource<AgentPresenceAvailabilitySource>();
     }
 }

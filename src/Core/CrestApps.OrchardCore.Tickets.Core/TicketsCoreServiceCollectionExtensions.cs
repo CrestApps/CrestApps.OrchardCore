@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ServiceLevels;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,8 @@ public static class TicketsCoreServiceCollectionExtensions
 
         services.TryAddScoped<ITicketService, DefaultTicketService>();
         services.TryAddScoped<ITicketAccessService, DefaultTicketAccessService>();
+        services.TryAddScoped<TicketAutoCloser>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberLoadSource, TicketTeamMemberLoadSource>());
         services.AddServiceLevelScope<TicketServiceLevelScope>();
 
         return services;
