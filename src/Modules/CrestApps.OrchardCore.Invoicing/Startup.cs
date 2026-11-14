@@ -9,6 +9,12 @@ using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Navigation;
 using CrestApps.OrchardCore.Invoicing.Recipes;
 using CrestApps.OrchardCore.Invoicing.Services;
+using CrestApps.OrchardCore.Invoicing.Recipes.Workflows;
+using CrestApps.OrchardCore.Invoicing.Workflows;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore;
+using OrchardCore.Workflows.Helpers;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Taxation;
@@ -99,6 +105,87 @@ public sealed class Startup : StartupBase
             areaName: InvoicingConstants.Features.Area,
             pattern: "invoices/view/{token}/pdf",
             defaults: new { controller = "Invoice", action = "Pdf" });
+    }
+}
+
+/// <summary>
+/// Starts workflows from what happens to invoices, and gives workflows the invoice tasks, when Workflows is on.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IInvoiceObserver, InvoiceWorkflowObserver>();
+
+        services.AddActivity<InvoiceCreatedEvent, InvoiceEventDisplayDriver<InvoiceCreatedEvent>>();
+        services.AddActivity<InvoiceIssuedEvent, InvoiceEventDisplayDriver<InvoiceIssuedEvent>>();
+        services.AddActivity<InvoiceSentEvent, InvoiceEventDisplayDriver<InvoiceSentEvent>>();
+        services.AddActivity<InvoiceViewedEvent, InvoiceEventDisplayDriver<InvoiceViewedEvent>>();
+        services.AddActivity<InvoicePaymentReceivedEvent, InvoiceEventDisplayDriver<InvoicePaymentReceivedEvent>>();
+        services.AddActivity<InvoicePaidEvent, InvoiceEventDisplayDriver<InvoicePaidEvent>>();
+        services.AddActivity<InvoiceOverdueEvent, InvoiceEventDisplayDriver<InvoiceOverdueEvent>>();
+        services.AddActivity<InvoiceVoidedEvent, InvoiceEventDisplayDriver<InvoiceVoidedEvent>>();
+        services.AddActivity<CreditNoteIssuedEvent, InvoiceEventDisplayDriver<CreditNoteIssuedEvent>>();
+
+        services.AddActivity<CreateInvoiceTask, InvoiceTaskDisplayDriver<CreateInvoiceTask>>();
+        services.AddActivity<IssueInvoiceTask, InvoiceTaskDisplayDriver<IssueInvoiceTask>>();
+        services.AddActivity<SendInvoiceTask, InvoiceTaskDisplayDriver<SendInvoiceTask>>();
+        services.AddActivity<RecordInvoicePaymentTask, InvoiceTaskDisplayDriver<RecordInvoicePaymentTask>>();
+        services.AddActivity<VoidInvoiceTask, InvoiceTaskDisplayDriver<VoidInvoiceTask>>();
+        services.AddActivity<CreateCreditNoteTask, InvoiceTaskDisplayDriver<CreateCreditNoteTask>>();
+    }
+}
+
+/// <summary>
+/// Describes the invoice workflow events and tasks to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class WorkflowsRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<InvoiceCreatedEventSchema>()
+            .AddWorkflowActivitySchema<InvoiceIssuedEventSchema>()
+            .AddWorkflowActivitySchema<InvoiceSentEventSchema>()
+            .AddWorkflowActivitySchema<InvoiceViewedEventSchema>()
+            .AddWorkflowActivitySchema<InvoicePaymentReceivedEventSchema>()
+            .AddWorkflowActivitySchema<InvoicePaidEventSchema>()
+            .AddWorkflowActivitySchema<InvoiceOverdueEventSchema>()
+            .AddWorkflowActivitySchema<InvoiceVoidedEventSchema>()
+            .AddWorkflowActivitySchema<CreditNoteIssuedEventSchema>()
+            .AddWorkflowActivitySchema<CreateInvoiceTaskSchema>()
+            .AddWorkflowActivitySchema<IssueInvoiceTaskSchema>()
+            .AddWorkflowActivitySchema<SendInvoiceTaskSchema>()
+            .AddWorkflowActivitySchema<RecordInvoicePaymentTaskSchema>()
+            .AddWorkflowActivitySchema<VoidInvoiceTaskSchema>()
+            .AddWorkflowActivitySchema<CreateCreditNoteTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Tells webhooks what happens to invoices when the Commerce Webhooks feature is on.
+/// </summary>
+[RequireFeatures(CommerceConstants.Features.Webhooks)]
+public sealed class WebhooksStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IInvoiceObserver, InvoiceWebhookObserver>();
+
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoiceCreated, "Invoice created", "Invoicing");
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoiceIssued, "Invoice issued", "Invoicing");
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoiceSent, "Invoice sent", "Invoicing");
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoiceViewed, "Invoice viewed", "Invoicing");
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoicePaymentReceived, "Invoice payment received", "Invoicing");
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoicePaid, "Invoice paid", "Invoicing");
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoiceOverdue, "Invoice overdue", "Invoicing");
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.InvoiceVoided, "Invoice voided", "Invoicing");
+        services.AddWebhookEvent(InvoicingConstants.WebhookEvents.CreditNoteIssued, "Credit note issued", "Invoicing");
     }
 }
 

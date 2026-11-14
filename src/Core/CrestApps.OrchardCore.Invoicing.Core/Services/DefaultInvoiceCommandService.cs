@@ -484,17 +484,7 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
 
         if (notify is not null)
         {
-            foreach (var observer in _serviceProvider.GetServices<IInvoiceObserver>())
-            {
-                try
-                {
-                    await notify(observer);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    _logger.LogError(ex, "An invoice observer '{Observer}' failed on invoice '{InvoiceId}'.", observer.GetType().FullName, invoice.ItemId);
-                }
-            }
+            await _serviceProvider.GetRequiredService<InvoiceObserverNotifier>().NotifyAsync(invoice, notify);
         }
 
         return result;

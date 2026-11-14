@@ -120,6 +120,12 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     public AfterScopeSyncs Deferred { get; } = new();
 
     /// <summary>
+    /// What the invoice observers heard, in order, written <c>Event:Number</c> (the invoice's id while it is a draft), with
+    /// the amount for a payment and the credit note's number for a credit.
+    /// </summary>
+    public List<string> Observed { get; } = [];
+
+    /// <summary>
     /// Creates the harness. With <paramref name="realNumbers"/>, invoices are numbered by the site's generator over the
     /// number sequence kept in the store, whose series lock is <paramref name="numberLock"/> (the harness's lock when
     /// none is given); otherwise by <see cref="FakeNumberGenerator"/>.
@@ -224,6 +230,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddSingleton(_ => harness.Credit.Object);
         services.AddSingleton<IInvoiceLedgerSyncScheduler>(_ => harness.Deferred);
         services.AddScoped<ITransactionEventHandler>(_ => new StatusHook(harness));
+        services.AddScoped<IInvoiceObserver>(_ => new RecordingObserver(harness.Observed));
         services.AddSingleton<IBusinessDocumentPdfRenderer>(_ => harness.Pdf);
         services.AddSingleton(Mock.Of<IBusinessDocumentTemplateManager>());
         services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
@@ -377,6 +384,59 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
         public bool TryTake(out string transactionId)
             => _pending.TryDequeue(out transactionId);
+    }
+
+    private sealed class RecordingObserver : IInvoiceObserver
+    {
+        private readonly List<string> _observed;
+
+        public RecordingObserver(List<string> observed)
+        {
+            _observed = observed;
+        }
+
+        public Task CreatedAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("Created", invoice);
+
+        public Task IssuedAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("Issued", invoice);
+
+        public Task SentAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("Sent", invoice);
+
+        public Task ViewedAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("Viewed", invoice);
+
+        public Task PaymentReceivedAsync(Invoice invoice, decimal amount, CancellationToken cancellationToken = default)
+            => Add("PaymentReceived", invoice, amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
+
+        public Task PaidAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("Paid", invoice);
+
+        public Task OverdueAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("Overdue", invoice);
+
+        public Task VoidedAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("Voided", invoice);
+
+        public Task WrittenOffAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("WrittenOff", invoice);
+
+        public Task ReinstatedAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("Reinstated", invoice);
+
+        public Task CreditNoteIssuedAsync(CreditNote creditNote, Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("CreditNoteIssued", invoice, creditNote.Number);
+
+        private Task Add(string kind, Invoice invoice, string detail = null)
+        {
+            lock (_observed)
+            {
+                _observed.Add($"{kind}:{invoice.Number ?? invoice.ItemId}" + (detail is null ? string.Empty : ":" + detail));
+            }
+
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class StatusHook : ITransactionEventHandler

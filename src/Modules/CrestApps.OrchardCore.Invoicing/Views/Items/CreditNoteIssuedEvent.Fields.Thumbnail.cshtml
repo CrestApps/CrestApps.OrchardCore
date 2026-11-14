@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CreditNoteIssuedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-file-circle-minus" aria-hidden="true"></i>
+    @T["Credit Note Issued"]
+</h4>
+<p>@T["Starts when a credit note for an invoice is issued."]</p>

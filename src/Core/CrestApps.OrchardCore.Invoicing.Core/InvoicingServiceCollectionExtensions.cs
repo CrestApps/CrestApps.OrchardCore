@@ -42,6 +42,7 @@ public static class InvoicingServiceCollectionExtensions
         // What a signed-in customer sees as their own invoices: those billed to a party they have billing access to.
         services.AddPartyMembership();
         services.TryAddScoped<IInvoiceVisibilityService, DefaultInvoiceVisibilityService>();
+        services.TryAddScoped<InvoiceObserverNotifier>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, InvoiceArchiveObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Invoice>, InvoiceHandler>());
 

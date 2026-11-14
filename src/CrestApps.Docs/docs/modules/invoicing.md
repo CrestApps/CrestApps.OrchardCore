@@ -82,6 +82,27 @@ Draft credit notes are edited (`CreditNotesAdminController`, routes `Admin/credi
 
 With Work Orders enabled, Invoicing's `WorkOrdersStartup` registers `InvoicingWorkOrderBilling` (`IWorkOrderBilling`, `Priority` 10, so it bills instead of the plain debt Transactions posts). It turns the `WorkOrderBillingRequest` into an invoice: parts as `Item` lines (with the product), labor and other lines as `Service` lines, each with the line's or the request's tax category; billed to the request's payer with the work order's contact; `SourceType` `WorkOrder`, `SourceId` the work order and `Reference` its number; the request's payment term. It issues the invoice at once, which posts what is owed; an invoice that can't be issued stays a draft for someone to finish. Billing a work order again returns its invoice.
 
+## Workflows and webhooks
+
+`IInvoiceObserver` hears what happens to an invoice once it is saved: a draft created (`InvoiceHandler`), issued, voided, written off and reinstated (the commands), sent (`IInvoiceSender`), opened by the customer for the first time (`InvoiceViewTracker`), a payment reaching it and its being paid in full (`InvoiceLedgerSync`, when the mirror raises `AmountPaid` or settles it), overdue (when the ledger finds its transaction overdue and the invoice is still open) and credited (`ICreditNoteCommandService`). Every member has a default that does nothing. `InvoiceObserverNotifier` calls them, logging an observer that fails; a change queued in the session (created, payment, paid, overdue) is told after the request saves it, through `DeferredWork` (`invoicing_observers`), with the invoice read again. A credit is not a payment: crediting an invoice in full raises Credit Note Issued, not Paid.
+
+With **Workflows** enabled, `InvoiceWorkflowObserver` starts the events **Invoice Created**, **Invoice Issued**, **Invoice Sent**, **Invoice Viewed**, **Invoice Payment Received**, **Invoice Paid**, **Invoice Overdue**, **Invoice Voided** and **Credit Note Issued** (category **Invoicing**), after the request's work is saved and correlated by the invoice's id. The input holds the invoice: `InvoiceId`, `Number`, `Kind`, `Status`, `Settlement`, `Delivery`, `Currency`, `Total`, `TaxTotal`, `AmountPaid`, `AmountCredited`, `AmountDue`, `BillToKind`, `BillToId`, `BillToName`, `BillToEmail`, `IssueDate` and `DueDate` (ISO dates), `TransactionId`, `SourceType`, `SourceId` and `OwnerId`; a payment adds `Amount`, a void `Reason`, a credit `CreditNoteId`, `CreditNoteNumber`, `CreditNoteTotal`, `Disposition` and `Reason`.
+
+The tasks run the commands staff run. Their fields are Liquid, amounts are written with a dot, and each writes the invoice and the command's `Errors` to the workflow output under **Output name** (`Invoice` when empty):
+
+| Task | Fields | Outcomes |
+| --- | --- | --- |
+| **Create Invoice** | Bill to (`Kind:Id`), Currency, Description, Amount, Reference | Done, Failed |
+| **Issue Invoice** | Invoice id | Done, NotFound, Failed |
+| **Send Invoice** | Invoice id, To | Done, NotFound, Failed |
+| **Record Invoice Payment** | Invoice id, Amount (what is due when empty), Payment method, Reference, Note | Done, NotFound, Failed |
+| **Void Invoice** | Invoice id, Reason | Done, NotFound, Failed |
+| **Create Credit Note** | Invoice id, Reason, Disposition (`ReduceBalance`, `Refund` or `CustomerCredit`) | Done, NotFound, Failed |
+
+Create Invoice drafts one line; Issue Invoice issues it. Create Credit Note credits everything still creditable and issues the credit note. With CrestApps Recipes, each activity has its schema for the `WorkflowType` step.
+
+With **Commerce Webhooks** enabled, `InvoiceWebhookObserver` publishes `invoice.created`, `invoice.issued`, `invoice.sent`, `invoice.viewed`, `invoice.payment-received`, `invoice.paid`, `invoice.overdue`, `invoice.voided` and `credit-note.issued` (`InvoicingConstants.WebhookEvents`), with the invoice in `data.invoice` and the event's own values (the payment's `amount`, the void's `reason`, the `creditNote`) in `data.details`. Each event id is stable (such as `evt_invoice-issued_{invoiceId}`), so a receiver drops a repeat.
+
 ## Tax
 
 The calculator asks the `IDocumentTaxProvider`s in order for the lines' taxes; without one, the taxes typed on the lines are used. With **Taxation** enabled, a `[RequireFeatures]` startup registers `TaxationDocumentTaxProvider`: it builds a `TaxCalculationContext` from the lines (the line discount as an amount, services as `Service` items), the bill-to's party tax profile (`IPartyTaxProfileService`) and its shipping address, and maps the tax lines back, the rate in percent. Charges keep the taxes typed on them. Invoicing resolves nothing of Taxation's when it is off.

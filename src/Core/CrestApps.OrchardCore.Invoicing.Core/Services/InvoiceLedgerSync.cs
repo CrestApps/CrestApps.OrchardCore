@@ -27,6 +27,7 @@ public sealed class InvoiceLedgerSync
     private readonly ITransactionManager _transactions;
     private readonly IDistributedLock _distributedLock;
     private readonly InvoiceCommandLocks _commandLocks;
+    private readonly InvoiceObserverNotifier _notifier;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -37,6 +38,7 @@ public sealed class InvoiceLedgerSync
         ITransactionManager transactions,
         IDistributedLock distributedLock,
         InvoiceCommandLocks commandLocks,
+        InvoiceObserverNotifier notifier,
         IClock clock,
         IStringLocalizer<InvoiceLedgerSync> stringLocalizer)
     {
@@ -45,6 +47,7 @@ public sealed class InvoiceLedgerSync
         _transactions = transactions;
         _distributedLock = distributedLock;
         _commandLocks = commandLocks;
+        _notifier = notifier;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -121,11 +124,27 @@ public sealed class InvoiceLedgerSync
             .Where(creditNote => creditNote.Status == CreditNoteStatus.Issued)
             .Sum(creditNote => creditNote.Totals?.Total ?? 0m);
 
+        var paidBefore = invoice.AmountPaid;
+        var settlementBefore = invoice.Settlement;
+
         if (InvoiceLedgerMirror.Apply(invoice, transaction, credited, S))
         {
             invoice.ModifiedUtc = _clock.UtcNow;
 
             await _invoices.UpdateAsync(invoice, cancellationToken);
+
+            // The observers hear it once the invoice's update is saved, which this method leaves to its caller.
+            var received = invoice.AmountPaid - paidBefore;
+
+            if (received > 0m)
+            {
+                await _notifier.NotifyAfterSaveAsync(invoice, (observer, saved) => observer.PaymentReceivedAsync(saved, received));
+            }
+
+            if (invoice.Settlement == InvoiceSettlement.Paid && settlementBefore != InvoiceSettlement.Paid)
+            {
+                await _notifier.NotifyAfterSaveAsync(invoice, (observer, saved) => observer.PaidAsync(saved));
+            }
         }
 
         return invoice;

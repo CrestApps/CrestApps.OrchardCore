@@ -330,6 +330,8 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
             }
         }
 
+        await _serviceProvider.GetRequiredService<InvoiceObserverNotifier>().NotifyAsync(invoice, observer => observer.CreditNoteIssuedAsync(creditNote, invoice, cancellationToken));
+
         return result;
     }
 

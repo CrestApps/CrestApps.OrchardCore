@@ -29,7 +29,7 @@ public sealed class DeferredInvoiceLedgerSyncScheduler : IInvoiceLedgerSyncSched
     /// <summary>
     /// The name of the deferred work, for telemetry.
     /// </summary>
-    public const string WorkName = "invoicing.ledger_sync";
+    public const string WorkName = "invoicing_ledger_sync";
 
     private readonly HashSet<string> _pending = new(StringComparer.Ordinal);
 

@@ -109,6 +109,14 @@ You need **Void and write off invoices** for these, and you are asked for a reas
 | **Share links last (days)** | How long the link that shows an invoice without signing in keeps working. |
 | **Default notes**, **Default terms**, **Default footer** | Printed on every invoice that has none of its own. |
 
+## Automate invoices
+
+With **Workflows** enabled, a workflow can start when an invoice is created, issued, sent, opened by the customer for the first time, receives a payment, is paid in full, becomes overdue or is voided, or when a credit note is issued for it. You find these events under **Invoicing** when you add a start to a workflow. A workflow can also create an invoice with one line, issue it, send it, record a payment received outside the site, void it, or credit it in full; each of these steps asks for the invoice, which in a workflow started by an invoice event is `{{ Workflow.Input.InvoiceId }}`.
+
+For example, to thank customers when they pay, start a workflow with **Invoice Paid** and send an e-mail to `{{ Workflow.Input.BillToEmail }}`.
+
+With **Commerce Webhooks** enabled, the same moments can be sent to another system: tick the events under **Invoicing** when you add a webhook under **Configuration > Webhooks** (see [Webhooks](webhooks.md)).
+
 ## Related pages
 
 - [Transactions](transactions.md): the balances invoices post.

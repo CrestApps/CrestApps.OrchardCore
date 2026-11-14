@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Invoicing.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InvoiceOverdueEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-clock" aria-hidden="true"></i>
+    @T["Invoice Overdue"]
+</h4>
+<p>@T["Starts the first time an open invoice is found unpaid after its due date."]</p>

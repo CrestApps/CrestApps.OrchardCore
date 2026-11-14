@@ -163,6 +163,10 @@ public sealed class DefaultInvoiceSender : IInvoiceSender
 
         result.Invoice = await RecordAsync(invoice.ItemId, to, cc, cancellationToken) ?? invoice;
 
+        var sentInvoice = result.Invoice;
+
+        await _serviceProvider.GetRequiredService<InvoiceObserverNotifier>().NotifyAsync(sentInvoice, observer => observer.SentAsync(sentInvoice, cancellationToken));
+
         return result;
     }
 

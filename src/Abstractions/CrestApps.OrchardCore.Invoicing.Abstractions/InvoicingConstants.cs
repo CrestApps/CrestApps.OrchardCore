@@ -142,6 +142,57 @@ public static class InvoicingConstants
     }
 
     /// <summary>
+    /// The outbound webhook events Invoicing publishes when the Commerce Webhooks feature is on.
+    /// </summary>
+    public static class WebhookEvents
+    {
+        /// <summary>
+        /// A draft invoice was created.
+        /// </summary>
+        public const string InvoiceCreated = "invoice.created";
+
+        /// <summary>
+        /// An invoice was issued with its number.
+        /// </summary>
+        public const string InvoiceIssued = "invoice.issued";
+
+        /// <summary>
+        /// An invoice was sent to its customer.
+        /// </summary>
+        public const string InvoiceSent = "invoice.sent";
+
+        /// <summary>
+        /// The customer opened an invoice's page for the first time.
+        /// </summary>
+        public const string InvoiceViewed = "invoice.viewed";
+
+        /// <summary>
+        /// A payment toward an invoice reached it.
+        /// </summary>
+        public const string InvoicePaymentReceived = "invoice.payment-received";
+
+        /// <summary>
+        /// An invoice was paid in full.
+        /// </summary>
+        public const string InvoicePaid = "invoice.paid";
+
+        /// <summary>
+        /// An open invoice was found unpaid after its due date, for the first time.
+        /// </summary>
+        public const string InvoiceOverdue = "invoice.overdue";
+
+        /// <summary>
+        /// An invoice was voided.
+        /// </summary>
+        public const string InvoiceVoided = "invoice.voided";
+
+        /// <summary>
+        /// A credit note for an invoice was issued.
+        /// </summary>
+        public const string CreditNoteIssued = "credit-note.issued";
+    }
+
+    /// <summary>
     /// The feature identifiers of the Invoicing modules.
     /// </summary>
     public static class Features

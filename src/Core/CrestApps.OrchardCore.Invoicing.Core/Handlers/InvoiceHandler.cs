@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Core.Handlers;
 using CrestApps.OrchardCore.Invoicing.Core.Services;
 using CrestApps.OrchardCore.Invoicing.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -12,10 +13,13 @@ namespace CrestApps.OrchardCore.Invoicing.Core.Handlers;
 
 /// <summary>
 /// Audits invoices saved through <c>IInvoiceManager</c>, refuses lines out of range on a draft, and refuses any change to an
-/// invoice that is no longer a draft: after issue only the invoice commands change it.
+/// invoice that is no longer a draft: after issue only the invoice commands change it. Tells the observers a draft was
+/// created once it is saved.
 /// </summary>
 public sealed class InvoiceHandler : AuditedCatalogEntryHandlerBase<Invoice>
 {
+    private readonly IServiceProvider _serviceProvider;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -23,15 +27,23 @@ public sealed class InvoiceHandler : AuditedCatalogEntryHandlerBase<Invoice>
     /// </summary>
     /// <param name="httpContextAccessor">The accessor for the user recorded as the author.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="serviceProvider">The services, for the observer notifier.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public InvoiceHandler(
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
+        IServiceProvider serviceProvider,
         IStringLocalizer<InvoiceHandler> stringLocalizer)
         : base(httpContextAccessor, clock)
     {
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
+
+    /// <inheritdoc/>
+    public override Task CreatedAsync(CreatedContext<Invoice> context, CancellationToken cancellationToken = default)
+        => _serviceProvider.GetRequiredService<InvoiceObserverNotifier>()
+            .NotifyAfterSaveAsync(context.Model, (observer, saved) => observer.CreatedAsync(saved));
 
     /// <inheritdoc/>
     public override Task ValidatingAsync(ValidatingContext<Invoice> context, CancellationToken cancellationToken = default)

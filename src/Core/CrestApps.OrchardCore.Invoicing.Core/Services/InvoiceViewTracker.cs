@@ -16,14 +16,16 @@ public sealed class InvoiceViewTracker
     private readonly IInvoiceStore _invoices;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly InvoiceObserverNotifier _notifier;
 
     internal readonly IStringLocalizer S;
 
-    public InvoiceViewTracker(IInvoiceStore invoices, ISession session, IClock clock, IStringLocalizer<InvoiceViewTracker> stringLocalizer)
+    public InvoiceViewTracker(IInvoiceStore invoices, ISession session, IClock clock, InvoiceObserverNotifier notifier, IStringLocalizer<InvoiceViewTracker> stringLocalizer)
     {
         _invoices = invoices;
         _session = session;
         _clock = clock;
+        _notifier = notifier;
         S = stringLocalizer;
     }
 
@@ -62,6 +64,8 @@ public sealed class InvoiceViewTracker
             // Seen while it was being changed: the next open records it.
             return false;
         }
+
+        await _notifier.NotifyAsync(invoice, observer => observer.ViewedAsync(invoice, cancellationToken));
 
         return true;
     }
