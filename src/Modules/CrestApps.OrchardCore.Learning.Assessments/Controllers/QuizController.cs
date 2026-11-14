@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
+using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.ContentManagement;
@@ -20,6 +21,7 @@ public sealed class QuizController : Controller
     private readonly AssessmentAttemptStore _attemptStore;
     private readonly IAssessmentContentSource _contentSource;
     private readonly AttemptReviewPolicy _reviewPolicy;
+    private readonly ICourseStructureService _courseStructure;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -32,6 +34,7 @@ public sealed class QuizController : Controller
         AssessmentAttemptStore attemptStore,
         IAssessmentContentSource contentSource,
         AttemptReviewPolicy reviewPolicy,
+        ICourseStructureService courseStructure,
         INotifier notifier,
         IHtmlLocalizer<QuizController> htmlLocalizer)
     {
@@ -39,6 +42,7 @@ public sealed class QuizController : Controller
         _attemptStore = attemptStore;
         _contentSource = contentSource;
         _reviewPolicy = reviewPolicy;
+        _courseStructure = courseStructure;
         _notifier = notifier;
         H = htmlLocalizer;
     }
@@ -82,7 +86,9 @@ public sealed class QuizController : Controller
 
         await _notifier.WarningAsync(ErrorText(result.ErrorCode));
 
-        return LocalRedirect(Url.Content("~/Contents/ContentItems/" + quizId));
+        var courseId = _courseStructure.GetCourseId(await _contentSource.GetItemAsync(quizId));
+
+        return LocalRedirect(Url.Content(string.IsNullOrEmpty(courseId) ? "~/learning" : $"~/learning/courses/{courseId}/play/{quizId}"));
     }
 
     /// <summary>

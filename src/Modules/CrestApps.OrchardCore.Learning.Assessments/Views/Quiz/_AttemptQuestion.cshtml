@@ -13,7 +13,7 @@
     <div class="card-body">
         <legend class="h6 d-flex justify-content-between gap-2">
             <span>@T["Question {0}", item.Index + 1]</span>
-            <span class="text-secondary small fw-normal">@T["{0} points", item.Points.ToString("0.##")]</span>
+            <span class="text-secondary small fw-normal">@T["Points: {0}", item.Points.ToString("0.##")]</span>
         </legend>
         <div class="mb-3">@Html.Raw(item.Prompt)</div>
 

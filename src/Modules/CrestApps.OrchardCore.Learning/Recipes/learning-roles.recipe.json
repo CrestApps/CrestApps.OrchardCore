@@ -57,7 +57,13 @@
             "EditContent_Acknowledgement",
             "PublishContent_Acknowledgement",
             "DeleteContent_Acknowledgement",
-            "ManageMediaContent"
+            "ManageMediaContent",
+            "ManageQuestionBanks",
+            "ViewQuestionBanks",
+            "GradeAssessments",
+            "OverrideGrades",
+            "ManageAssessmentOverrides",
+            "ManageGradeScales"
           ]
         },
         {
@@ -82,7 +88,14 @@
             "PublishContent_LinkLesson",
             "EditContent_Acknowledgement",
             "PublishContent_Acknowledgement",
-            "ManageMediaContent"
+            "ManageMediaContent",
+            "ManageQuestionBanks",
+            "ViewQuestionBanks",
+            "EditContent_QuestionBank",
+            "PublishContent_QuestionBank",
+            "ViewContent_QuestionBank",
+            "EditContent_QuizLesson",
+            "PublishContent_QuizLesson"
           ]
         },
         {
@@ -103,7 +116,11 @@
             "PublishOwnContent_LinkLesson",
             "EditOwnContent_Acknowledgement",
             "PublishOwnContent_Acknowledgement",
-            "ManageOwnMedia"
+            "ManageOwnMedia",
+            "ViewQuestionBanks",
+            "EditOwnContent_QuizLesson",
+            "PublishOwnContent_QuizLesson",
+            "ManageAssessmentOverrides"
           ]
         },
         {
@@ -112,6 +129,7 @@
           "Permissions": [
             "AccessAdminPanel",
             "AccessLearning",
+            "GradeAssessments",
             "ManageOwnCourses"
           ]
         },
@@ -123,7 +141,9 @@
             "ManageEnrollments",
             "ViewLearnerRecords",
             "ViewLearningReports",
-            "AccessLearning"
+            "AccessLearning",
+            "OverrideGrades",
+            "ManageAssessmentOverrides"
           ]
         },
         {
