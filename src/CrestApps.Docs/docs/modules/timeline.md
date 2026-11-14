@@ -110,6 +110,12 @@ The composer is the `TimelineComposer` shape, with the alternate `TimelineCompos
 
 With Orchard Core **Notifications** enabled, a user mentioned as `@username` in an entry gets a notification with a link to the record, unless they may not read the entry. The notification doesn't carry the entry's text, so a body redacted later isn't kept in it. An e-mail address is not a mention.
 
+## Data set and erasure
+
+With Data Pipelines Core on, the **Timeline** data source has a `TimelineEntries` data set (one row per entry: its record, kind, visibility, channel, text, author, attachments and changes count) for the Report Builder and data pipelines. Each record kind's access provider decides which rows a reader gets, so an entry of a record the reader can't see, or of a kind with no provider, is never shown.
+
+For a request to erase a person's data, `ITimelineService.ScrubAsync(subject, scrub)` rewrites the body, the author's name and the recorded change values of every entry on a record through the function given, such as `PersonalDataAnonymizeContext.Scrub`. Nothing else of an entry changes. Tickets uses it for the tickets a person asked for.
+
 ## Recipe and deployment step
 
 The `TimelineEntries` step adds entries through the import path, such as history brought from another system: each is checked and stamped, nothing is announced, and an entry whose `ItemId` is already stored is left as it is.

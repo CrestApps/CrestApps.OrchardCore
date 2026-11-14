@@ -106,6 +106,10 @@ The `ServiceLevelPolicies` step creates or updates policies, matched by `ItemId`
 
 The **Service level policies** deployment step exports every policy in the same shape. Both have schemas for CrestApps Recipes.
 
+## Data set
+
+With Data Pipelines Core on, the **Service levels** data source has a `ServiceLevelTimers` data set: one row per timer with its record, metric, policy, priority, state, target, start, warning and due times, end, and whether it was met, warned or breached, with the business minutes it used. Those who manage policies see every timer. Others see the timers of records a module's `IServiceLevelTimerAccessProvider` (registered with `AddServiceLevelTimerAccessProvider`) lets them see: it gets a batch of record ids of its kind and returns the ones the user may see. Tickets registers one for its tickets; the timers of a kind with no provider are left to policy managers.
+
 ## Permissions
 
 `ManageServiceLevelPolicies` (**Manage service level policies**) lets a user list, create, edit and delete policies. Administrators have it by default.
