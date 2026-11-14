@@ -49,6 +49,9 @@ public class CoursePartViewModel
     public bool HasEnrollmentKey { get; set; }
 
     [BindNever]
+    public bool CanChangeEnrollmentSettings { get; set; }
+
+    [BindNever]
     public IList<SelectListItem> ItemOptions { get; set; } = [];
 
     [BindNever]

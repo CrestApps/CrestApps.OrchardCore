@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using YesSql.Indexes;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Learning;
 
@@ -17,7 +19,11 @@ internal static class LearningTestHarness
 {
     public static DateTime Now => CalendarTestHarness.Now;
 
-    public static async Task<(CalendarTestHarness Harness, InMemoryCourses Courses, RecordingEnrollmentObserver Observer)> CreateAsync(Action<IServiceCollection> configure = null)
+    public static async Task<(CalendarTestHarness Harness, InMemoryCourses Courses, RecordingEnrollmentObserver Observer)> CreateAsync(
+        Action<IServiceCollection> configure = null,
+        Func<ISchemaBuilder, Task> extraSchema = null,
+        IIndexProvider[] extraIndexProviders = null,
+        string[] extraCollections = null)
     {
         var courses = new InMemoryCourses();
         var observer = new RecordingEnrollmentObserver();
@@ -32,9 +38,17 @@ internal static class LearningTestHarness
                 services.AddSingleton<IEnrollmentObserver>(observer);
                 configure?.Invoke(services);
             },
-            LearningIndexSchema.CreateAsync,
-            LearningIndexProviders.All(),
-            [LearningConstants.CollectionName]);
+            async schemaBuilder =>
+            {
+                await LearningIndexSchema.CreateAsync(schemaBuilder);
+
+                if (extraSchema is not null)
+                {
+                    await extraSchema(schemaBuilder);
+                }
+            },
+            [.. LearningIndexProviders.All(), .. extraIndexProviders ?? []],
+            [LearningConstants.CollectionName, .. extraCollections ?? []]);
 
         return (harness, courses, observer);
     }

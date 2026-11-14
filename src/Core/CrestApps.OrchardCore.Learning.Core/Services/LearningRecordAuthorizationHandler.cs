@@ -16,14 +16,16 @@ public sealed class LearningRecordAuthorizationHandler : AuthorizationHandler<Pe
     private static readonly string[] _managingRoles = [LearningConstants.CourseStaffRoles.Instructor, LearningConstants.CourseStaffRoles.Assistant];
 
     private readonly Lazy<ICourseStructureService> _courseStructure;
+    private readonly Lazy<IAuthorizationService> _authorizationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningRecordAuthorizationHandler"/> class.
     /// </summary>
     /// <param name="courseStructure">The course structure reader, resolved lazily because it builds the content manager, whose handlers may use authorization.</param>
-    public LearningRecordAuthorizationHandler(Lazy<ICourseStructureService> courseStructure)
+    public LearningRecordAuthorizationHandler(Lazy<ICourseStructureService> courseStructure, Lazy<IAuthorizationService> authorizationService)
     {
         _courseStructure = courseStructure;
+        _authorizationService = authorizationService;
     }
 
     /// <inheritdoc />
@@ -47,6 +49,13 @@ public sealed class LearningRecordAuthorizationHandler : AuthorizationHandler<Pe
         {
             context.Succeed(requirement);
 
+            return;
+        }
+
+        // Course staff reach records only with a Learning permission too: being named on a course or holding an editor
+        // role is not enough.
+        if (!await _authorizationService.Value.AuthorizeAsync(context.User, LearningPermissions.ManageOwnCourses))
+        {
             return;
         }
 

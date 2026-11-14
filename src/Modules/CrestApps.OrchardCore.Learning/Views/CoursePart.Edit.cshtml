@@ -39,14 +39,18 @@
         <div class="ocat-wrapper" asp-validation-class-for="EnrollmentMode">
             <label asp-for="EnrollmentMode" class="ocat-label">@T["How learners enroll"]</label>
             <div class="ocat-end">
-                <select asp-for="EnrollmentMode" asp-items="Model.EnrollmentModeOptions" class="form-select"></select>
+                <select asp-for="EnrollmentMode" asp-items="Model.EnrollmentModeOptions" class="form-select" disabled="@(!Model.CanChangeEnrollmentSettings)"></select>
+                @if (!Model.CanChangeEnrollmentSettings)
+                {
+                    <span class="hint">@T["Only a course manager or an instructor of the published course can change how learners enroll, the key and the staff."]</span>
+                }
                 <span class="hint">@T["People with the Manage enrollments permission can always enroll a learner."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="NewEnrollmentKey">
             <label asp-for="NewEnrollmentKey" class="ocat-label">@T["Enrollment key"]</label>
             <div class="ocat-end">
-                <input asp-for="NewEnrollmentKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
+                <input asp-for="NewEnrollmentKey" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore disabled="@(!Model.CanChangeEnrollmentSettings)" />
                 <span asp-validation-for="NewEnrollmentKey"></span>
                 <span class="hint">@(Model.HasEnrollmentKey ? T["A key is set. Type a new key to replace it; the key is stored only as a hash."] : T["For a course that needs a key. The key is stored only as a hash, so keep a copy to share."])</span>
             </div>
@@ -56,7 +60,7 @@
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
                     <div class="form-check">
-                        <input asp-for="ClearEnrollmentKey" type="checkbox" class="form-check-input" />
+                        <input asp-for="ClearEnrollmentKey" type="checkbox" class="form-check-input" disabled="@(!Model.CanChangeEnrollmentSettings)" />
                         <label asp-for="ClearEnrollmentKey" class="form-check-label">@T["Remove the enrollment key"]</label>
                     </div>
                 </div>
@@ -129,31 +133,38 @@
 <div class="card mb-3">
     <div class="card-header">@T["Course staff"]</div>
     <div class="card-body">
-        <div class="ocat-wrapper">
-            <label class="ocat-label">@T["Instructors"]</label>
-            <div class="ocat-end">
-                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.InstructorIds).ToString(), selectedValues = Model.InstructorIds, valueType = "userId", multiple = true, buttonText = T["Choose instructors"].Value, searchPlaceholder = T["Search users"].Value })
-                <span class="hint">@T["Instructors and assistants edit the course and see its learners' records."]</span>
+        @if (!Model.CanChangeEnrollmentSettings)
+        {
+            <p class="hint mb-0">@T["{0} instructors, {1} assistants, {2} graders and {3} observers. Only a course manager or an instructor of the published course can change the staff.", Model.InstructorIds.Length, Model.AssistantIds.Length, Model.GraderIds.Length, Model.ObserverIds.Length]</p>
+        }
+        else
+        {
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Instructors"]</label>
+                <div class="ocat-end">
+                    @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.InstructorIds).ToString(), selectedValues = Model.InstructorIds, valueType = "userId", multiple = true, buttonText = T["Choose instructors"].Value, searchPlaceholder = T["Search users"].Value })
+                    <span class="hint">@T["Instructors and assistants edit the course and see its learners' records."]</span>
+                </div>
             </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label class="ocat-label">@T["Assistants"]</label>
-            <div class="ocat-end">
-                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.AssistantIds).ToString(), selectedValues = Model.AssistantIds, valueType = "userId", multiple = true, buttonText = T["Choose assistants"].Value, searchPlaceholder = T["Search users"].Value })
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Assistants"]</label>
+                <div class="ocat-end">
+                    @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.AssistantIds).ToString(), selectedValues = Model.AssistantIds, valueType = "userId", multiple = true, buttonText = T["Choose assistants"].Value, searchPlaceholder = T["Search users"].Value })
+                </div>
             </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label class="ocat-label">@T["Graders"]</label>
-            <div class="ocat-end">
-                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.GraderIds).ToString(), selectedValues = Model.GraderIds, valueType = "userId", multiple = true, buttonText = T["Choose graders"].Value, searchPlaceholder = T["Search users"].Value })
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Graders"]</label>
+                <div class="ocat-end">
+                    @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.GraderIds).ToString(), selectedValues = Model.GraderIds, valueType = "userId", multiple = true, buttonText = T["Choose graders"].Value, searchPlaceholder = T["Search users"].Value })
+                </div>
             </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label class="ocat-label">@T["Observers"]</label>
-            <div class="ocat-end">
-                @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.ObserverIds).ToString(), selectedValues = Model.ObserverIds, valueType = "userId", multiple = true, buttonText = T["Choose observers"].Value, searchPlaceholder = T["Search users"].Value })
-                <span class="hint">@T["Observers see the course and its learners' progress without changing anything."]</span>
+            <div class="ocat-wrapper">
+                <label class="ocat-label">@T["Observers"]</label>
+                <div class="ocat-end">
+                    @await Component.InvokeAsync("UserPicker", new { name = Html.NameFor(m => m.ObserverIds).ToString(), selectedValues = Model.ObserverIds, valueType = "userId", multiple = true, buttonText = T["Choose observers"].Value, searchPlaceholder = T["Search users"].Value })
+                    <span class="hint">@T["Observers see the course and its learners' progress without changing anything."]</span>
+                </div>
             </div>
-        </div>
+        }
     </div>
 </div>

@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.ViewModels;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -17,14 +19,23 @@ namespace CrestApps.OrchardCore.Learning.Drivers;
 internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CoursePart>
 {
     private readonly CourseEditorOptions _editorOptions;
+    private readonly CourseSettingsPolicy _settingsPolicy;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IUserSearchService _userSearchService;
 
     internal readonly IStringLocalizer S;
 
     public CoursePartDisplayDriver(
         CourseEditorOptions editorOptions,
+        CourseSettingsPolicy settingsPolicy,
+        IHttpContextAccessor httpContextAccessor,
+        IUserSearchService userSearchService,
         IStringLocalizer<CoursePartDisplayDriver> stringLocalizer)
     {
         _editorOptions = editorOptions;
+        _settingsPolicy = settingsPolicy;
+        _httpContextAccessor = httpContextAccessor;
+        _userSearchService = userSearchService;
         S = stringLocalizer;
     }
 
@@ -34,6 +45,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         {
             var courseId = part.ContentItem.ContentItemId;
 
+            model.CanChangeEnrollmentSettings = await _settingsPolicy.CanChangeEnrollmentSettingsAsync(_httpContextAccessor.HttpContext?.User, courseId);
             model.Code = part.Code;
             model.Summary = part.Summary;
             model.Level = part.Level;
@@ -85,6 +97,36 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         if (model.AccessDays is < 1)
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.AccessDays), S["Access is at least one day, or empty for no end."]);
+        }
+
+        // The staff, the enrollment mode and the key decide who gets in and who reads learner records, so only a course
+        // manager or an instructor of the published course changes them; for anyone else the stored values stay.
+        var canChangeSettings = await _settingsPolicy.CanChangeEnrollmentSettingsAsync(_httpContextAccessor.HttpContext?.User, part.ContentItem.ContentItemId);
+
+        if (!canChangeSettings)
+        {
+            model.EnrollmentMode = part.EnrollmentMode;
+            model.NewEnrollmentKey = null;
+            model.ClearEnrollmentKey = false;
+            model.InstructorIds = StaffIds(part, LearningConstants.CourseStaffRoles.Instructor);
+            model.AssistantIds = StaffIds(part, LearningConstants.CourseStaffRoles.Assistant);
+            model.GraderIds = StaffIds(part, LearningConstants.CourseStaffRoles.Grader);
+            model.ObserverIds = StaffIds(part, LearningConstants.CourseStaffRoles.Observer);
+        }
+        else
+        {
+            var posted = (model.InstructorIds ?? []).Concat(model.AssistantIds ?? []).Concat(model.GraderIds ?? []).Concat(model.ObserverIds ?? [])
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            var known = posted.Length == 0
+                ? new HashSet<string>(StringComparer.Ordinal)
+                : (await _userSearchService.GetAsync(posted)).Select(user => user.UserId).ToHashSet(StringComparer.Ordinal);
+
+            if (posted.Any(id => !known.Contains(id)))
+            {
+                context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.InstructorIds), S["A person chosen for the course staff does not exist."]);
+            }
         }
 
         var keyNeeded = model.EnrollmentMode == EnrollmentMode.Key;

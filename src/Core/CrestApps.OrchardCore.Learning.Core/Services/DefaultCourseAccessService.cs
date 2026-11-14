@@ -83,7 +83,7 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
 
         if (authenticated
             && (await _authorizationService.Value.AuthorizeAsync(user, LearningPermissions.ManageCourses)
-                || (courseId is not null && await _courseStructure.IsCourseStaffAsync(userId, courseId))
+                || (courseId is not null && await _courseStructure.IsCourseStaffAsync(userId, courseId) && await _authorizationService.Value.AuthorizeAsync(user, LearningPermissions.ManageOwnCourses))
                 || await _authorizationService.Value.AuthorizeAsync(user, CommonPermissions.EditContent, item)))
         {
             access.Reason = CourseItemAccessReason.Staff;

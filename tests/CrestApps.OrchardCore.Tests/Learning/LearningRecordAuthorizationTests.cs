@@ -13,18 +13,21 @@ namespace CrestApps.OrchardCore.Tests.Learning;
 public sealed class LearningRecordAuthorizationTests
 {
     [Theory]
-    [InlineData("learner", "ViewLearnerRecords", true)]
-    [InlineData("learner", "ManageEnrollments", false)]
-    [InlineData("other-learner", "ViewLearnerRecords", false)]
-    [InlineData("teacher", "ViewEnrollments", true)]
-    [InlineData("teacher", "ViewLearnerRecords", true)]
-    [InlineData("teacher", "ManageEnrollments", true)]
-    [InlineData("grader", "ViewLearnerRecords", true)]
-    [InlineData("grader", "ManageEnrollments", false)]
-    [InlineData("observer", "ViewLearnerRecords", true)]
-    [InlineData("observer", "ManageEnrollments", false)]
-    [InlineData("other-teacher", "ViewLearnerRecords", false)]
-    public async Task RecordHandler_GrantsTheLearnerAndTheCourseStaffOnly(string userId, string permissionName, bool granted)
+    [InlineData("learner", "ViewLearnerRecords", false, true)]
+    [InlineData("learner", "ManageEnrollments", false, false)]
+    [InlineData("other-learner", "ViewLearnerRecords", false, false)]
+    [InlineData("teacher", "ViewEnrollments", true, true)]
+    [InlineData("teacher", "ViewLearnerRecords", true, true)]
+    [InlineData("teacher", "ManageEnrollments", true, true)]
+    [InlineData("teacher", "ViewLearnerRecords", false, false)]
+    [InlineData("teacher", "ManageEnrollments", false, false)]
+    [InlineData("grader", "ViewLearnerRecords", true, true)]
+    [InlineData("grader", "ViewLearnerRecords", false, false)]
+    [InlineData("grader", "ManageEnrollments", true, false)]
+    [InlineData("observer", "ViewLearnerRecords", true, true)]
+    [InlineData("observer", "ManageEnrollments", true, false)]
+    [InlineData("other-teacher", "ViewLearnerRecords", true, false)]
+    public async Task RecordHandler_GrantsTheLearnerAndCourseStaffWithALearningPermissionOnly(string userId, string permissionName, bool staffPermission, bool granted)
     {
         // Arrange
         var (harness, courses, _) = await LearningTestHarness.CreateAsync();
@@ -43,7 +46,7 @@ public sealed class LearningRecordAuthorizationTests
         var context = await harness.RunAsync(async services =>
         {
             var handler = ActivatorUtilities.CreateInstance<LearningRecordAuthorizationHandler>(services);
-            var authorization = new AuthorizationHandlerContext([new PermissionRequirement(permission)], CalendarTestHarness.User(userId), enrollment);
+            var authorization = new AuthorizationHandlerContext([new PermissionRequirement(permission)], staffPermission ? CalendarTestHarness.User(userId, LearningPermissions.ManageOwnCourses.Name) : CalendarTestHarness.User(userId), enrollment);
 
             await handler.HandleAsync(authorization);
 
