@@ -115,13 +115,15 @@ public static class AISourceCatalogApi
                 return NotFound();
             }
 
-            body ??= [];
-            body.Remove(nameof(CatalogItem.ItemId));
-            body.Remove("Source");
+            // The body is bound without regard to case, while the record's own JSON is not: its keys take the record's
+            // spelling first, so the copy that is validated and the update that is saved read the same values.
+            var current = JsonSerializer.SerializeToNode(item) as JsonObject ?? [];
+            var changes = NormalizeKeys(body, current);
+            changes.Remove(nameof(CatalogItem.ItemId));
+            changes.Remove("Source");
 
             // Validate a copy first: the manager saves as it updates.
-            var current = JsonSerializer.SerializeToNode(item) as JsonObject ?? [];
-            var copy = await manager.NewAsync(item.Source, Merge(current, body), httpContext.RequestAborted);
+            var copy = await manager.NewAsync(item.Source, Merge(current, changes), httpContext.RequestAborted);
             copy.ItemId = item.ItemId;
             var validation = await manager.ValidateAsync(copy, httpContext.RequestAborted);
 
@@ -130,7 +132,7 @@ public static class AISourceCatalogApi
                 return Invalid(validation);
             }
 
-            await manager.UpdateAsync(item, body, httpContext.RequestAborted);
+            await manager.UpdateAsync(item, changes, httpContext.RequestAborted);
 
             return TypedResults.Ok(item);
         })
@@ -167,7 +169,8 @@ public static class AISourceCatalogApi
     }
 
     /// <summary>
-    /// Merges changes into a JSON object, object by object.
+    /// Merges changes into a JSON object, object by object. A change whose key differs from one of the target's only in
+    /// case changes that key, so the target never holds the same name twice.
     /// </summary>
     /// <param name="target">The object changed.</param>
     /// <param name="changes">The changes.</param>
@@ -178,17 +181,51 @@ public static class AISourceCatalogApi
 
         foreach (var (key, value) in changes ?? [])
         {
-            if (value is JsonObject child && target[key] is JsonObject existing)
+            var targetKey = FindKey(target, key) ?? key;
+
+            if (value is JsonObject child && target[targetKey] is JsonObject existing)
             {
                 Merge(existing, child);
 
                 continue;
             }
 
-            target[key] = value?.DeepClone();
+            target[targetKey] = value?.DeepClone();
         }
 
         return target;
+    }
+
+    /// <summary>
+    /// Returns a copy of posted changes whose keys, at every depth, are spelled as the record's are, and in which two keys
+    /// that differ only in case are one. A request body is bound without regard to case but a record's own JSON is not,
+    /// so without this a check made on the merged record and the update that is saved could read different values.
+    /// </summary>
+    /// <param name="changes">The posted changes.</param>
+    /// <param name="reference">The record's current JSON, or <see langword="null"/>.</param>
+    /// <returns>The normalized changes, a new object.</returns>
+    public static JsonObject NormalizeKeys(JsonObject changes, JsonObject reference)
+    {
+        var result = new JsonObject();
+
+        foreach (var (key, value) in changes ?? [])
+        {
+            var canonical = FindKey(reference, key) ?? FindKey(result, key) ?? key;
+            var normalized = value is JsonObject child
+                ? NormalizeKeys(child, reference?[canonical] as JsonObject)
+                : value?.DeepClone();
+
+            if (normalized is JsonObject normalizedObject && result[canonical] is JsonObject existing)
+            {
+                Merge(existing, normalizedObject);
+
+                continue;
+            }
+
+            result[canonical] = normalized;
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -203,6 +240,31 @@ public static class AISourceCatalogApi
         return TypedResults.ValidationProblem(validation.Errors
             .GroupBy(error => error.MemberNames?.FirstOrDefault() ?? string.Empty)
             .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray()));
+    }
+
+    private static string FindKey(JsonObject node, string key)
+    {
+        if (node is null)
+        {
+            return null;
+        }
+
+        string match = null;
+
+        foreach (var (name, _) in node)
+        {
+            if (string.Equals(name, key, StringComparison.Ordinal))
+            {
+                return name;
+            }
+
+            if (match is null && string.Equals(name, key, StringComparison.OrdinalIgnoreCase))
+            {
+                match = name;
+            }
+        }
+
+        return match;
     }
 
     private static ProblemHttpResult Forbidden()
