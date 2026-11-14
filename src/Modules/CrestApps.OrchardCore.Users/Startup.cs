@@ -222,6 +222,7 @@ public sealed class EmailCodeSignInStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<EmailSignInCodes>();
+        services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
         services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
         services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
 

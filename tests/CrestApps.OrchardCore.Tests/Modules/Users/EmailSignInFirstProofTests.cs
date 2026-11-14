@@ -17,7 +17,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using OrchardCore.Email;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking;
 using OrchardCore.Modules;
@@ -207,10 +206,9 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(() => _now);
 
-        var site = new Mock<ISite>();
-        site.SetupGet(s => s.SiteName).Returns("Test site");
+        var site = new SiteSettings { SiteName = "Test site" };
         var siteService = new Mock<ISiteService>();
-        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site);
 
         var signInManager = new Mock<SignInManager<IUser>>(manager, Mock.Of<IHttpContextAccessor>(), Mock.Of<IUserClaimsPrincipalFactory<IUser>>(), null, null, null, null);
         signInManager.Setup(s => s.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>())).Returns(Task.CompletedTask);
@@ -225,7 +223,7 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
             manager,
             signInManager.Object,
             CreateCodes(),
-            Mock.Of<IEmailService>(),
+            Mock.Of<IEmailSignInCodeSender>(),
             siteService.Object,
             loginFormEvents,
             clock.Object,

@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Core.Throttling;
-using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +8,6 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
 using OrchardCore.Settings;
@@ -20,8 +18,9 @@ using OrchardCore.Users.Models;
 namespace CrestApps.OrchardCore.Users.Controllers;
 
 /// <summary>
-/// Signing in with a code emailed to the account's address, instead of a password. The pages answer the same way
-/// whether or not an account has the email, so they never tell who has one.
+/// Signing in with a code emailed to the account's address, instead of a password. The pages answer the same way, and
+/// in the same time, whether or not an account has the email, so they never tell who has one. They are not there when
+/// the site turned off local sign-in.
 /// </summary>
 [AllowAnonymous]
 [Feature(UsersConstants.Feature.EmailCodeSignIn)]
@@ -32,7 +31,7 @@ public sealed class EmailSignInController : Controller
     private readonly UserManager<IUser> _userManager;
     private readonly SignInManager<IUser> _signInManager;
     private readonly EmailSignInCodes _codes;
-    private readonly IEmailService _emailService;
+    private readonly IEmailSignInCodeSender _codeSender;
     private readonly ISiteService _siteService;
     private readonly IEnumerable<ILoginFormEvent> _loginFormEvents;
     private readonly IClock _clock;
@@ -47,7 +46,7 @@ public sealed class EmailSignInController : Controller
         UserManager<IUser> userManager,
         SignInManager<IUser> signInManager,
         EmailSignInCodes codes,
-        IEmailService emailService,
+        IEmailSignInCodeSender codeSender,
         ISiteService siteService,
         IEnumerable<ILoginFormEvent> loginFormEvents,
         IClock clock,
@@ -64,7 +63,7 @@ public sealed class EmailSignInController : Controller
         _userManager = userManager;
         _signInManager = signInManager;
         _codes = codes;
-        _emailService = emailService;
+        _codeSender = codeSender;
         _siteService = siteService;
         _logger = logger;
         S = stringLocalizer;
@@ -72,14 +71,26 @@ public sealed class EmailSignInController : Controller
     }
 
     [HttpGet("sign-in/email", Name = "EmailSignIn")]
-    public IActionResult Index(string returnUrl = null)
-        => View(new EmailSignInViewModel { ReturnUrl = returnUrl });
+    public async Task<IActionResult> Index(string returnUrl = null)
+    {
+        if (await IsLocalLoginDisabledAsync())
+        {
+            return NotFound();
+        }
+
+        return View(new EmailSignInViewModel { ReturnUrl = returnUrl });
+    }
 
     [HttpPost("sign-in/email")]
     [ValidateAntiForgeryToken]
     [RateLimitGroup(EmailSignInCodes.RateLimitGroup)]
     public async Task<IActionResult> Index(EmailSignInViewModel model)
     {
+        if (await IsLocalLoginDisabledAsync())
+        {
+            return NotFound();
+        }
+
         var email = model.Email?.Trim();
 
         if (string.IsNullOrEmpty(email) || !_emailAddress.IsValid(email))
@@ -98,7 +109,8 @@ public sealed class EmailSignInController : Controller
 
         if (await FindUserAsync(email) is { } user)
         {
-            await SendCodeAsync(user, email);
+            // Sent after the response, so the time the mail server takes never tells a known address from an unknown one.
+            await _codeSender.QueueAsync(user.UserName, email, await _codes.IssueAsync(email, HttpContext.RequestAborted), HttpContext.RequestAborted);
         }
 
         // The code form is shown straight away rather than through a redirect, so the email never goes in a URL.
@@ -114,6 +126,11 @@ public sealed class EmailSignInController : Controller
     [RateLimitGroup(EmailSignInCodes.RateLimitGroup)]
     public async Task<IActionResult> Code(EmailSignInViewModel model)
     {
+        if (await IsLocalLoginDisabledAsync())
+        {
+            return NotFound();
+        }
+
         var email = model.Email?.Trim();
 
         // The events a password sign-in raises after its form is posted, so audit, lockout and any other hook sees this
@@ -257,8 +274,13 @@ public sealed class EmailSignInController : Controller
         return View(model);
     }
 
+    // A code is a local sign-in: a site that turned those off, to sign in only through an external provider, has none.
+    private async Task<bool> IsLocalLoginDisabledAsync()
+        => (await _siteService.GetSettingsAsync<LoginSettings>()).DisableLocalLogin;
+
     // An account that can sign in with a code: enabled, not locked out, not using two-factor sign-in, which a code would
-    // get around, and not in a role kept to password sign-in (Administrator by default).
+    // get around, not in a role kept to password sign-in (Administrator by default), and not one that signs in only
+    // through an external provider, whose own checks a code would get around too.
     private async Task<IUser> FindUserAsync(string email)
     {
         var user = await _userManager.FindByEmailAsync(email);
@@ -267,7 +289,8 @@ public sealed class EmailSignInController : Controller
             (user is User account && !account.IsEnabled) ||
             await _userManager.IsLockedOutAsync(user) ||
             await _userManager.GetTwoFactorEnabledAsync(user) ||
-            await IsInExcludedRoleAsync(user))
+            await IsInExcludedRoleAsync(user) ||
+            await SignsInOnlyExternallyAsync(user))
         {
             return null;
         }
@@ -288,26 +311,8 @@ public sealed class EmailSignInController : Controller
         return false;
     }
 
-    private async Task SendCodeAsync(IUser user, string email)
-    {
-        var code = await _codes.IssueAsync(email, HttpContext.RequestAborted);
-        var site = await _siteService.GetSiteSettingsAsync();
-        var siteName = string.IsNullOrWhiteSpace(site.SiteName) ? S["the site"].Value : site.SiteName;
-        var encoder = HtmlEncoder.Default;
-
-        var result = await _emailService.SendAsync(new MailMessage
-        {
-            To = email,
-            Subject = S["Your sign-in code for {0}: {1}", siteName, code],
-            TextBody = S["Your sign-in code is {0}. It works for 10 minutes. If you didn't ask for it, ignore this email.", code],
-            HtmlBody = $"<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#212529\"><p>{encoder.Encode(S["Your sign-in code for {0} is:", siteName].Value)}</p><p style=\"font-size:28px;font-weight:bold;letter-spacing:6px\">{code}</p><p style=\"color:#6c757d\">{encoder.Encode(S["It works for 10 minutes. If you didn't ask for it, ignore this email.", code].Value)}</p></div>",
-        });
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("A sign-in code couldn't be emailed to user {UserName}.", user.UserName);
-        }
-    }
+    private async Task<bool> SignsInOnlyExternallyAsync(IUser user)
+        => !await _userManager.HasPasswordAsync(user) && (await _userManager.GetLoginsAsync(user)).Count > 0;
 }
 
 public class EmailSignInViewModel
