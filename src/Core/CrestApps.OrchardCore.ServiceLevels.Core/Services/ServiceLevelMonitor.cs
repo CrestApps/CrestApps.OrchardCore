@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
-using YesSql;
 
 namespace CrestApps.OrchardCore.ServiceLevels.Core.Services;
 
@@ -49,19 +48,16 @@ public sealed class ServiceLevelMonitor
     {
         var now = _clock.UtcNow;
 
-        var (breached, interrupted) = await RaiseAsync(
+        var breached = await RaiseAsync(
             () => _store.ListNewlyBreachedAsync(now, BatchSize, cancellationToken),
+            timer => timer.State == ServiceLevelTimerState.Running && timer.BreachedUtc is null && timer.DueUtc <= now,
             timer => timer.BreachedUtc = timer.DueUtc,
             (observer, timer) => observer.BreachedAsync(timer, cancellationToken),
             cancellationToken);
 
-        if (interrupted)
-        {
-            return breached;
-        }
-
-        var (warned, _) = await RaiseAsync(
+        var warned = await RaiseAsync(
             () => _store.ListNewlyWarnedAsync(now, BatchSize, cancellationToken),
+            timer => timer.State == ServiceLevelTimerState.Running && timer.WarnedUtc is null && timer.BreachedUtc is null && timer.WarnAtUtc <= now && timer.DueUtc > now,
             timer => timer.WarnedUtc = now,
             (observer, timer) => observer.WarningAsync(timer, cancellationToken),
             cancellationToken);
@@ -69,8 +65,12 @@ public sealed class ServiceLevelMonitor
         return breached + warned;
     }
 
-    private async Task<(int Raised, bool Interrupted)> RaiseAsync(
+    // Each due timer is marked in a transaction of its own, read right before the write, and only while it still needs
+    // the mark: an owner's change (completing, pausing, retargeting) always wins, and owners never fail on the monitor.
+    // Only a timer whose mark was saved is announced.
+    private async Task<int> RaiseAsync(
         Func<Task<IReadOnlyList<ServiceLevelTimer>>> listDue,
+        Func<ServiceLevelTimer, bool> stillDue,
         Action<ServiceLevelTimer> mark,
         Func<IServiceLevelObserver, ServiceLevelTimer, Task> notify,
         CancellationToken cancellationToken)
@@ -86,27 +86,27 @@ public sealed class ServiceLevelMonitor
                 break;
             }
 
-            foreach (var timer in timers)
-            {
-                mark(timer);
-                await _store.UpdateIfUnchangedAsync(timer, cancellationToken);
-            }
+            var ids = timers.Select(timer => timer.ItemId).ToList();
 
-            try
-            {
-                await _store.FlushAsync(cancellationToken);
-            }
-            catch (ConcurrencyException)
-            {
-                // An owner changed one of these timers while they were being marked. Nothing was saved and nobody was
-                // told; the next pass reads them again.
-                _logger.LogDebug("A service level timer changed while the monitor was marking a batch; the batch is retried on the next pass.");
+            // The list was read in this scope's transaction; ending it lets each mark take a transaction of its own.
+            await _store.FlushAsync(cancellationToken);
 
-                return (raised, true);
+            var marked = new List<ServiceLevelTimer>();
+
+            foreach (var id in ids)
+            {
+                if (await _store.MarkIfStillDueAsync(id, stillDue, mark, cancellationToken) is { } saved)
+                {
+                    marked.Add(saved);
+                }
+                else
+                {
+                    _logger.LogDebug("A service level timer no longer needed its mark, or changed while it was being marked; it is read again on the next pass.");
+                }
             }
 
             // The marks are saved; one observer that fails neither stops the others nor brings the mark back.
-            foreach (var timer in timers)
+            foreach (var timer in marked)
             {
                 foreach (var observer in _observers)
                 {
@@ -121,14 +121,14 @@ public sealed class ServiceLevelMonitor
                 }
             }
 
-            raised += timers.Count;
+            raised += marked.Count;
 
-            if (timers.Count < BatchSize)
+            if (timers.Count < BatchSize || marked.Count == 0)
             {
                 break;
             }
         }
 
-        return (raised, false);
+        return raised;
     }
 }

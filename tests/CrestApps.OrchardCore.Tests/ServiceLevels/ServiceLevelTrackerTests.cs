@@ -298,6 +298,45 @@ public sealed class ServiceLevelTrackerTests
     }
 
     [Fact]
+    public async Task AMetricThatWasCancelled_IsNotReopened()
+    {
+        // Arrange
+        var kit = new Kit(Utc(_friday, 9, 0));
+        await kit.StartAsync(ServiceLevelMetrics.Resolution, "High");
+        await kit.Tracker.CancelAsync(_ticket, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        var reopened = await kit.Tracker.ReopenAsync(_ticket, ServiceLevelMetrics.Resolution, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(reopened);
+    }
+
+    [Fact]
+    public async Task AStoredDueTimeAtClosingTime_IsKeptExactly()
+    {
+        // Arrange: started Friday 15:00 with its due time stored as Friday 17:00, when the schedule closes.
+        var kit = new Kit(Utc(_friday, 15, 0));
+
+        // Act
+        var timer = await kit.Tracker.StartAsync(
+            new ServiceLevelStart
+            {
+                Subject = _ticket,
+                Metric = ServiceLevelMetrics.Resolution,
+                PolicyId = kit.Policy.ItemId,
+                Priority = "High",
+                StartUtc = Utc(_friday, 15, 0),
+                DueUtc = Utc(_friday, 17, 0),
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(Utc(_friday, 17, 0), timer.DueUtc);
+        Assert.Equal(7200, timer.TargetSeconds);
+    }
+
+    [Fact]
     public async Task CompletingLate_AnnouncesTheBreach_BeforeTheCompletion()
     {
         // Arrange
@@ -519,7 +558,7 @@ public sealed class ServiceLevelTrackerTests
             => Task.CompletedTask;
 
         public Task FlushAsync(CancellationToken cancellationToken = default)
-            => ConflictOnFlush ? throw new global::YesSql.ConcurrencyException(new global::YesSql.Document()) : Task.CompletedTask;
+            => Task.CompletedTask;
 
         public Task<IReadOnlyList<ServiceLevelTimer>> ListBySubjectAsync(RecordRef subject, bool activeOnly, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ServiceLevelTimer>>(
@@ -534,6 +573,21 @@ public sealed class ServiceLevelTrackerTests
 
         public Task<bool> AnyActiveAsync(string policyId, CancellationToken cancellationToken = default)
             => Task.FromResult(Timers.Any(timer => timer.IsActive && timer.PolicyId == policyId));
+
+        // Changed meanwhile, the timer isn't marked: the monitor leaves it for the next pass.
+        public Task<ServiceLevelTimer> MarkIfStillDueAsync(string timerId, Func<ServiceLevelTimer, bool> stillDue, Action<ServiceLevelTimer> mark, CancellationToken cancellationToken = default)
+        {
+            var timer = Timers.FirstOrDefault(candidate => candidate.ItemId == timerId);
+
+            if (ConflictOnFlush || timer is null || !stillDue(timer))
+            {
+                return Task.FromResult<ServiceLevelTimer>(null);
+            }
+
+            mark(timer);
+
+            return Task.FromResult(timer);
+        }
 
         public Task<IReadOnlyList<ServiceLevelTimer>> ListNewlyBreachedAsync(DateTime nowUtc, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ServiceLevelTimer>>(

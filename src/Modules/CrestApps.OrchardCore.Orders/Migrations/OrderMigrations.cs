@@ -2,9 +2,8 @@ using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
-using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.Data.Migration;
-using OrchardCore.Environment.Shell.Scope;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Orders.Migrations;
@@ -14,6 +13,13 @@ namespace CrestApps.OrchardCore.Orders.Migrations;
 /// </summary>
 internal sealed class OrderMigrations : DataMigration
 {
+    private readonly ResumableSteps _steps;
+
+    public OrderMigrations(ResumableSteps steps)
+    {
+        _steps = steps;
+    }
+
     public async Task<int> CreateAsync()
     {
         await SchemaBuilder.CreateMapIndexTableAsync<OrderIndex>(table => table
@@ -85,13 +91,13 @@ internal sealed class OrderMigrations : DataMigration
     }
 
     /// <summary>
-    /// Moves the notes stored on orders to their timelines, which this feature depends on. The move runs once this step
-    /// has committed, a batch at a time, so the Timeline tables created in the same activation are kept whatever happens.
+    /// Moves the notes stored on orders to their timelines, which this feature depends on. The move runs in the background,
+    /// a few batches a minute until none is left, after the Timeline tables created in the same activation have committed.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public static int UpdateFrom3()
+    public async Task<int> UpdateFrom3Async()
     {
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<OrderNotesUpgrade>().RunAsync());
+        await _steps.RequestAsync(OrderNotesStep.StepName);
 
         return 4;
     }

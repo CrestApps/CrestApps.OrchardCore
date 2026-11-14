@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.BusinessHours;
+using CrestApps.OrchardCore.BusinessHours.Models;
 using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 
@@ -77,6 +79,28 @@ public sealed class ServiceLevelClock
         }
 
         return timer.UsedSeconds + ToSeconds(await _openHours.GetOpenTimeBetweenAsync(timer.HoursScheduleId, timer.CountingSinceUtc, atUtc, cancellationToken: cancellationToken));
+    }
+
+    /// <summary>
+    /// Counts the time a running timer used up to an instant on hours given as they were, such as a schedule's hours
+    /// before they changed, and has it count on from that instant.
+    /// </summary>
+    /// <param name="timer">The timer.</param>
+    /// <param name="hours">The hours, or <see langword="null"/> for around the clock.</param>
+    /// <param name="atUtc">The instant.</param>
+    public static void SettleOn(ServiceLevelTimer timer, HoursSchedule hours, DateTime atUtc)
+    {
+        ArgumentNullException.ThrowIfNull(timer);
+
+        if (timer.State != ServiceLevelTimerState.Running || atUtc <= timer.CountingSinceUtc)
+        {
+            return;
+        }
+
+        var used = hours is null ? atUtc - timer.CountingSinceUtc : HoursScheduleEvaluator.GetOpenTime(hours, timer.CountingSinceUtc, atUtc);
+
+        timer.UsedSeconds += ToSeconds(used);
+        timer.CountingSinceUtc = atUtc;
     }
 
     /// <summary>

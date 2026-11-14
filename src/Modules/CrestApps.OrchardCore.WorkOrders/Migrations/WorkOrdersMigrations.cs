@@ -1,13 +1,12 @@
 using CrestApps.OrchardCore.Core.Security;
-using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Locking.Distributed;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.WorkOrders.Migrations;
@@ -18,10 +17,12 @@ namespace CrestApps.OrchardCore.WorkOrders.Migrations;
 internal sealed class WorkOrdersMigrations : DataMigration
 {
     private readonly WorkOrderServiceLevelUpgrade _upgrade;
+    private readonly ResumableSteps _steps;
 
-    public WorkOrdersMigrations(WorkOrderServiceLevelUpgrade upgrade)
+    public WorkOrdersMigrations(WorkOrderServiceLevelUpgrade upgrade, ResumableSteps steps)
     {
         _upgrade = upgrade;
+        _steps = steps;
     }
 
     /// <summary>
@@ -59,46 +60,22 @@ internal sealed class WorkOrdersMigrations : DataMigration
     {
         await _upgrade.CopyPoliciesAsync();
 
-        // The timers read the schedules just copied, which other scopes see once this migration commits.
-        ShellScope.AddDeferredTask(StartOpenWorkOrdersAsync);
+        // The open work orders get their timers in the background, a few batches a minute, until none is left: not in
+        // the tenant's activation, where a large store would hold the activation lock and a failure would be final.
+        await _steps.RequestAsync(WorkOrderServiceLevelTimersStep.StepName);
 
         return 3;
-    }
-
-    // One node gives the open work orders their timers; a node that finds the lock taken leaves it to the one holding it.
-    private static async Task StartOpenWorkOrdersAsync(ShellScope scope)
-    {
-        var services = scope.ServiceProvider;
-        var (locker, locked) = await services.GetRequiredService<IDistributedLock>()
-            .TryAcquireLockWithoutWaitingAsync("WorkOrders:ServiceLevelUpgrade", TimeSpan.FromHours(1));
-
-        if (!locked)
-        {
-            return;
-        }
-
-        await using (locker)
-        {
-            var started = await services.GetRequiredService<WorkOrderServiceLevelUpgrade>().StartOpenWorkOrdersAsync();
-
-            var logger = services.GetRequiredService<ILogger<WorkOrdersMigrations>>();
-
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Gave {Count} open work orders their service level timers.", started);
-            }
-        }
     }
 
     /// <summary>
     /// Moves the notes stored on work orders to their timelines, which this feature depends on.
     /// </summary>
     /// <returns>The migration version.</returns>
-    public static int UpdateFrom3()
+    public async Task<int> UpdateFrom3Async()
     {
-        // The move runs once this step has committed, a batch at a time, so the Timeline tables created in the same
-        // activation are kept whatever happens.
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<WorkOrderNotesUpgrade>().RunAsync());
+        // The notes move in the background, a few batches a minute, until none is left, after the Timeline tables
+        // created in the same activation have committed.
+        await _steps.RequestAsync(WorkOrderNotesStep.StepName);
 
         return 4;
     }

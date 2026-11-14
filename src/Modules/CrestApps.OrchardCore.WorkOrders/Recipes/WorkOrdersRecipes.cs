@@ -60,6 +60,9 @@ internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
 
         var upgrade = _services.GetRequiredService<WorkOrderServiceLevelUpgrade>();
 
+        // One set of schedule names for the whole step, so two policies of one name get a schedule each.
+        var scheduleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var node in policies.OfType<JsonObject>())
         {
             var legacy = node.Deserialize<LegacyServiceLevelPolicy>(JOptions.Default);
@@ -71,7 +74,7 @@ internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
                 continue;
             }
 
-            var (_, errors) = await upgrade.ImportAsync(legacy);
+            var (_, errors) = await upgrade.ImportAsync(legacy, scheduleNames);
 
             if (errors.Count > 0)
             {

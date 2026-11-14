@@ -54,7 +54,8 @@ public interface IServiceLevelTracker
     /// <summary>
     /// Counts a metric again after it was answered, such as when a solved record is reopened: its newest answered cycle
     /// goes on from the time it had used, keeping a warning or breach already raised. A metric still counting is left as
-    /// it is.
+    /// it is. A metric whose newest cycle was cancelled (the record was closed without being measured) is not reopened:
+    /// the owner starts a new cycle with <see cref="StartAsync"/> when it should be measured again.
     /// </summary>
     /// <param name="subject">The record.</param>
     /// <param name="metric">The metric.</param>

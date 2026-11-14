@@ -15,8 +15,10 @@ using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Documents;
 using OrchardCore.Localization;
 using YesSql;
@@ -24,8 +26,8 @@ using YesSql;
 namespace CrestApps.OrchardCore.Tests.ServiceLevels;
 
 /// <summary>
-/// Service levels on a real database and the real catalogs: every write of a timer moves the version the monitor's
-/// checked save compares, so neither can overwrite the other; a schedule's new hours count from when they changed; a policy
+/// Service levels on a real database and the real catalogs: an owner's change made between the monitor's list and its
+/// mark wins and nobody is told, and an owner's change after the mark keeps it and the breach is told once; a schedule's new hours count from when they changed; a policy
 /// is refused when its schedule is gone or never opens, when its scope is unknown or its name too long; and a policy
 /// with running timers can't be deleted.
 /// </summary>
@@ -36,29 +38,64 @@ public sealed class ServiceLevelRealStoreTests
     // Monday 2 November 2026, 12:00 UTC: the harness's clock.
     private static readonly DateTime _now = CalendarTestHarness.Now;
 
-    // The monitor saves its warning and breach marks with a version check (YesSql compares the version it read). The
-    // check sees an owner's change only if the owner's save moves the version, which YesSql does only for checked saves.
-    // SQLite locks a read transaction until it ends, so two sessions can't interleave here; the mechanism is tested.
     [Fact]
-    public async Task EveryWriteOfATimer_MovesTheVersionTheMonitorChecks()
+    public async Task AnOwnerWhoCompletesTheTimer_AfterTheMonitorReadItsList_Wins_AndNobodyIsTold()
+    {
+        // Arrange: a one-hour resolution that started 90 minutes ago, so the monitor lists it as breached.
+        await using var harness = await CreateAsync();
+        var policyId = await StartOverdueTimerAsync(harness);
+
+        // The owner completes the timer in a session of its own after the monitor read its list and before it marks.
+        Interleave = () => harness.RunAsync(services => services.GetRequiredService<IServiceLevelTracker>().CompleteAsync(_ticket, ServiceLevelMetrics.Resolution));
+
+        // Act
+        var raised = await harness.RunAsync(services => services.GetRequiredService<ServiceLevelMonitor>().CheckAsync());
+
+        // Assert
+        Assert.Equal(0, raised);
+        var stored = await TimerAsync(harness);
+        Assert.Equal(ServiceLevelTimerState.Completed, stored.State);
+
+        // Completed after its due time, the timer was breached: the owner's completion records it, not the monitor.
+        Assert.Equal(_now.AddMinutes(-30), stored.BreachedUtc);
+        Assert.NotNull(policyId);
+    }
+
+    [Fact]
+    public async Task AnOwnerWhoPausesAfterTheMonitorMarkedTheBreach_KeepsTheMark_AndTheBreachIsToldOnce()
     {
         // Arrange
         await using var harness = await CreateAsync();
+        await StartOverdueTimerAsync(harness);
+        var raised = await harness.RunAsync(services => services.GetRequiredService<ServiceLevelMonitor>().CheckAsync());
+
+        // Act: the owner reads the timer after the monitor's mark committed, and pauses it.
+        await harness.RunAsync(services => services.GetRequiredService<IServiceLevelTracker>().PauseAsync(_ticket));
+        var again = await harness.RunAsync(services => services.GetRequiredService<ServiceLevelMonitor>().CheckAsync());
+
+        // Assert
+        Assert.Equal(1, raised);
+        Assert.Equal(0, again);
+        var stored = await TimerAsync(harness);
+        Assert.Equal(ServiceLevelTimerState.Paused, stored.State);
+        Assert.Equal(_now.AddMinutes(-30), stored.BreachedUtc);
+    }
+
+    private static Func<Task> Interleave { get; set; }
+
+    private static async Task<string> StartOverdueTimerAsync(CalendarTestHarness harness)
+    {
         var policyId = await CreatePolicyAsync(harness, scheduleId: null, minutes: 60);
+
         await harness.RunAsync(services => services.GetRequiredService<IServiceLevelTracker>().StartAsync(new ServiceLevelStart
         {
             Subject = _ticket,
             Metric = ServiceLevelMetrics.Resolution,
             PolicyId = policyId,
+            StartUtc = _now.AddMinutes(-90),
         }));
-        var (_, before, _) = await ReadStoredTimerAsync(harness);
 
-        // Act
-        await harness.RunAsync(services => services.GetRequiredService<IServiceLevelTracker>().PauseAsync(_ticket));
-        var (_, after, _) = await ReadStoredTimerAsync(harness);
-
-        // Assert
-        Assert.True(after > before, $"The version stayed at {before}, so the monitor's check can't see the pause.");
+        return policyId;
     }
 
     [Fact]
@@ -86,7 +123,7 @@ public sealed class ServiceLevelRealStoreTests
         }));
         Assert.Equal(_now.AddHours(3), (await TimerAsync(harness)).DueUtc);
 
-        // Act: at 12:00 the schedule closes at 13:00 instead; the deferred step reschedules once the change commits.
+        // Act: at 12:00 the schedule closes at 13:00 instead; the background step catches the timers up once it commits.
         await harness.RunAsync(async services =>
         {
             var schedules = services.GetRequiredService<INamedCatalogManager<BusinessHoursSchedule>>();
@@ -94,11 +131,15 @@ public sealed class ServiceLevelRealStoreTests
             schedule.Hours = Weekdays(9, 13);
             await schedules.UpdateAsync(schedule);
         });
-        var rescheduled = await harness.RunAsync(services => services.GetRequiredService<ServiceLevelScheduleObserver>().RescheduleAsync(scheduleId));
+        var pendingBefore = await harness.RunAsync(services => services.GetRequiredService<ResumableSteps>().IsPendingAsync(ServiceLevelScheduleChangesStep.StepName), commit: false);
+        var ran = await harness.RunAsync(services => services.GetRequiredService<ResumableSteps>().RunPendingAsync(services.GetServices<IResumableStep>(), NullLogger.Instance));
+        var pendingAfter = await harness.RunAsync(services => services.GetRequiredService<ResumableSteps>().IsPendingAsync(ServiceLevelScheduleChangesStep.StepName), commit: false);
 
         // Assert: one hour used (11 to 12); three left: 12 to 13 today, then 9 to 11 tomorrow.
         var timer = await TimerAsync(harness);
-        Assert.Equal(1, rescheduled);
+        Assert.True(pendingBefore);
+        Assert.Equal(1, ran);
+        Assert.False(pendingAfter);
         Assert.Equal(3600, timer.UsedSeconds);
         Assert.Equal(new DateTime(2026, 11, 3, 11, 0, 0, DateTimeKind.Utc), timer.DueUtc);
     }
@@ -257,10 +298,52 @@ public sealed class ServiceLevelRealStoreTests
                 services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<BusinessHoursSchedule>, BusinessHoursScheduleHandler>());
                 services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceLevelPolicy>, ServiceLevelPolicyHandler>());
                 services.AddSingleton<IServiceLevelScopeProvider>(new TicketsScope());
+                services.AddScoped<IServiceLevelTimerStore>(provider => new InterleavingTimerStore(provider.GetRequiredService<ServiceLevelTimerStore>()));
             },
             ServiceLevelsIndexSchema.CreateAsync,
             [new ServiceLevelPolicyIndexProvider(), new ServiceLevelTimerIndexProvider()],
             [ServiceLevelsConstants.CollectionName]);
+
+    // Runs the interleaved work once, in another session, right after the monitor ends the transaction it listed in.
+    private sealed class InterleavingTimerStore : IServiceLevelTimerStore
+    {
+        private readonly ServiceLevelTimerStore _inner;
+
+        public InterleavingTimerStore(ServiceLevelTimerStore inner)
+        {
+            _inner = inner;
+        }
+
+        public ValueTask CreateAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default) => _inner.CreateAsync(timer, cancellationToken);
+
+        public ValueTask UpdateAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default) => _inner.UpdateAsync(timer, cancellationToken);
+
+        public Task UpdateIfUnchangedAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default) => _inner.UpdateIfUnchangedAsync(timer, cancellationToken);
+
+        public async Task FlushAsync(CancellationToken cancellationToken = default)
+        {
+            await _inner.FlushAsync(cancellationToken);
+
+            if (Interleave is { } interleave)
+            {
+                Interleave = null;
+                await interleave();
+            }
+        }
+
+        public Task<ServiceLevelTimer> MarkIfStillDueAsync(string timerId, Func<ServiceLevelTimer, bool> stillDue, Action<ServiceLevelTimer> mark, CancellationToken cancellationToken = default)
+            => _inner.MarkIfStillDueAsync(timerId, stillDue, mark, cancellationToken);
+
+        public Task<IReadOnlyList<ServiceLevelTimer>> ListBySubjectAsync(RecordRef subject, bool activeOnly, CancellationToken cancellationToken = default) => _inner.ListBySubjectAsync(subject, activeOnly, cancellationToken);
+
+        public Task<IReadOnlyList<ServiceLevelTimer>> ListRunningByPoliciesAsync(IEnumerable<string> policyIds, CancellationToken cancellationToken = default) => _inner.ListRunningByPoliciesAsync(policyIds, cancellationToken);
+
+        public Task<bool> AnyActiveAsync(string policyId, CancellationToken cancellationToken = default) => _inner.AnyActiveAsync(policyId, cancellationToken);
+
+        public Task<IReadOnlyList<ServiceLevelTimer>> ListNewlyBreachedAsync(DateTime nowUtc, int take, CancellationToken cancellationToken = default) => _inner.ListNewlyBreachedAsync(nowUtc, take, cancellationToken);
+
+        public Task<IReadOnlyList<ServiceLevelTimer>> ListNewlyWarnedAsync(DateTime nowUtc, int take, CancellationToken cancellationToken = default) => _inner.ListNewlyWarnedAsync(nowUtc, take, cancellationToken);
+    }
 
     private sealed class TicketsScope : IServiceLevelScopeProvider
     {

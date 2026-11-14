@@ -54,7 +54,7 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
             var transaction = await session.BeginTransactionAsync(cancellationToken);
             var schemaBuilder = new SchemaBuilder(_store.Configuration, transaction);
 
-            await new OrderMigrations() { SchemaBuilder = schemaBuilder }.CreateAsync();
+            await new OrderMigrations(steps: null) { SchemaBuilder = schemaBuilder }.CreateAsync();
             await new OrderReturnMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
 
             await schemaBuilder.CreateMapIndexTableAsync<GiftCardIndex>(table => table
@@ -539,7 +539,7 @@ public sealed class OrderReportDataSourceTests : IAsyncLifetime
         var schemaBuilder = new SchemaBuilder(_store.Configuration, transaction);
 
         // Act
-        var orders = await new OrderMigrations() { SchemaBuilder = schemaBuilder }.UpdateFrom1Async();
+        var orders = await new OrderMigrations(steps: null) { SchemaBuilder = schemaBuilder }.UpdateFrom1Async();
         var returns = await new OrderReturnMigrations { SchemaBuilder = schemaBuilder }.UpdateFrom1Async();
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,8 @@ public static class WorkOrdersServiceCollectionExtensions
         services.TryAddScoped<WorkOrderServiceLevels>();
         services.TryAddScoped<WorkOrderServiceLevelUpgrade>();
         services.TryAddScoped<WorkOrderNotesUpgrade>();
+        services.AddResumableStep<WorkOrderServiceLevelTimersStep>();
+        services.AddResumableStep<WorkOrderNotesStep>();
         services.AddServiceLevelScope<WorkOrderServiceLevelScope>();
         services.AddServiceLevelObserver<WorkOrderServiceLevelObserver>();
         services.AddNumberSequence();

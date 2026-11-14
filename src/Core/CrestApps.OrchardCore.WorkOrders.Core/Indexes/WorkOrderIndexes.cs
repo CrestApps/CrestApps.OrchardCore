@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 /// <summary>
 /// Indexes work orders.
 /// </summary>
+/// <remarks>
+/// The Legacy upgrades read this table through private readers of the same name that add the row's
+/// <c>DocumentId</c> (<c>WorkOrderServiceLevelUpgrade.WorkOrderIndex</c>, <c>WorkOrderNotesUpgrade.WorkOrderIndex</c>), to
+/// page work orders by it. Renaming this class or the table breaks them.
+/// </remarks>
 public sealed class WorkOrderIndex : CatalogItemIndex
 {
     /// <summary>

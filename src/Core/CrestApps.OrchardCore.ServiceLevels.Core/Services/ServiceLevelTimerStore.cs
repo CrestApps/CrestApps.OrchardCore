@@ -22,12 +22,6 @@ public sealed class ServiceLevelTimerStore : DocumentCatalog<ServiceLevelTimer, 
         CollectionName = ServiceLevelsConstants.CollectionName;
     }
 
-    /// <summary>
-    /// Gets a value indicating whether a save checks the timer was not changed since it was read. Every writer takes part,
-    /// so an owner's change and the monitor's warning or breach mark can never overwrite each other.
-    /// </summary>
-    protected override bool CheckConcurrency => true;
-
     /// <inheritdoc/>
     public async Task<IReadOnlyList<ServiceLevelTimer>> ListBySubjectAsync(RecordRef subject, bool activeOnly, CancellationToken cancellationToken = default)
     {
@@ -102,6 +96,45 @@ public sealed class ServiceLevelTimerStore : DocumentCatalog<ServiceLevelTimer, 
             .ListAsync(cancellationToken);
 
         return timers.ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<ServiceLevelTimer> MarkIfStillDueAsync(string timerId, Func<ServiceLevelTimer, bool> stillDue, Action<ServiceLevelTimer> mark, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(stillDue);
+        ArgumentNullException.ThrowIfNull(mark);
+
+        if (string.IsNullOrEmpty(timerId))
+        {
+            return null;
+        }
+
+        // A transaction of its own, read right before the write, so an owner's change committed meanwhile is seen, and
+        // a change committed in the moments between the read and the write fails the save instead of being overwritten.
+        await using var session = Session.Store.CreateSession();
+
+        var timer = await session.Query<ServiceLevelTimer, ServiceLevelTimerIndex>(index => index.ItemId == timerId, collection: CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (timer is null || !stillDue(timer))
+        {
+            return null;
+        }
+
+        mark(timer);
+
+        await session.SaveAsync(timer, checkConcurrency: true, collection: CollectionName, cancellationToken: cancellationToken);
+
+        try
+        {
+            await session.SaveChangesAsync(cancellationToken);
+        }
+        catch (ConcurrencyException)
+        {
+            return null;
+        }
+
+        return timer;
     }
 
     /// <inheritdoc/>

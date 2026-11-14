@@ -166,6 +166,77 @@ public sealed class WorkOrderServiceLevelUpgradeRealStoreTests
         }
     }
 
+    [Fact]
+    public async Task TheMigration_LeavesTheTimersToABackgroundStep_ThatResumesUntilEveryOpenWorkOrderHasThem()
+    {
+        // Arrange: twelve open work orders, more than one run of the step handles (five batches of two).
+        await using var harness = await CreateAsync();
+        await SeedPolicyAsync(harness, weekly: false);
+
+        for (var index = 0; index < 12; index++)
+        {
+            await SeedWorkOrderAsync(harness, $"wo-{index:D2}", new DateTime(2026, 11, 2, 9, 0, 0, DateTimeKind.Utc), sla => { });
+        }
+
+        // Act: the real migration step, then the background task's runs.
+        await harness.RunAsync(services => new CrestApps.OrchardCore.WorkOrders.Migrations.WorkOrdersMigrations(
+            services.GetRequiredService<WorkOrderServiceLevelUpgrade>(),
+            services.GetRequiredService<CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableSteps>()).UpdateFrom2Async());
+
+        var runs = 0;
+
+        while (await harness.RunAsync(services => services.GetRequiredService<CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableSteps>().IsPendingAsync(WorkOrderServiceLevelTimersStep.StepName), commit: false) && runs < 10)
+        {
+            await harness.RunAsync(services =>
+            {
+                services.GetRequiredService<WorkOrderServiceLevelUpgrade>().BatchSize = 2;
+
+                return services.GetRequiredService<CrestApps.OrchardCore.YesSql.Core.Upgrades.ResumableSteps>()
+                    .RunPendingAsync(services.GetServices<CrestApps.OrchardCore.YesSql.Core.Upgrades.IResumableStep>(), Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+            });
+
+            runs++;
+        }
+
+        // Assert: more than one run, and every work order has its two timers.
+        Assert.Equal(2, runs);
+
+        for (var index = 0; index < 12; index++)
+        {
+            var timers = await harness.RunAsync(services => services.GetRequiredService<IServiceLevelTracker>().GetTimersAsync(new RecordRef(WorkOrdersConstants.RecordKind, $"wo-{index:D2}")), commit: false);
+            Assert.Equal(2, timers.Count);
+        }
+    }
+
+    [Fact]
+    public async Task AnOlderRecipeWithTwoPoliciesOfOneName_ImportsTheFirst_AndReportsTheSecond_WithoutStopping()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        var context = new global::OrchardCore.Recipes.Models.RecipeExecutionContext
+        {
+            Name = "WorkOrders",
+            Step = System.Text.Json.Nodes.JsonNode.Parse("""
+                {
+                  "name": "WorkOrders",
+                  "ServiceLevels": [
+                    { "ItemId": "4recipepolicy0000000000001", "Name": "Gold", "TimeZoneId": "UTC", "WarningPercent": 80, "WeeklyHours": { "Days": [1, 2, 3, 4, 5] }, "Targets": [ { "Priority": 1, "ResponseMinutes": 60, "ResolveMinutes": 480 } ] },
+                    { "ItemId": "4recipepolicy0000000000002", "Name": "Gold", "TimeZoneId": "UTC", "WarningPercent": 80, "WeeklyHours": { "Days": [1, 2, 3, 4, 5] }, "Targets": [ { "Priority": 1, "ResponseMinutes": 60, "ResolveMinutes": 480 } ] }
+                  ]
+                }
+                """).AsObject(),
+        };
+
+        // Act
+        var exception = await Record.ExceptionAsync(() => harness.RunAsync(services => new CrestApps.OrchardCore.WorkOrders.Recipes.WorkOrdersRecipeStep(services).ExecuteAsync(context)));
+
+        // Assert
+        Assert.Null(exception);
+        Assert.Single(context.Errors);
+        var policies = await harness.RunAsync(async services => await services.GetRequiredService<IServiceLevelPolicyManager>().GetAllAsync(), commit: false);
+        Assert.Single(policies);
+    }
+
     private static WorkOrderServiceLevelUpgrade Upgrade(IServiceProvider services, int batchSize)
     {
         var upgrade = services.GetRequiredService<WorkOrderServiceLevelUpgrade>();

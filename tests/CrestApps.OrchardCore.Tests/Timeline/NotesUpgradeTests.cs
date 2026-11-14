@@ -83,7 +83,7 @@ public sealed class NotesUpgradeTests
             },
             async schemaBuilder =>
             {
-                await new OrderMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
+                await new OrderMigrations(steps: null) { SchemaBuilder = schemaBuilder }.CreateAsync();
                 await TimelineIndexSchema.CreateAsync(schemaBuilder);
             },
             [new OrderIndexProvider(), new TimelineEntryIndexProvider()],

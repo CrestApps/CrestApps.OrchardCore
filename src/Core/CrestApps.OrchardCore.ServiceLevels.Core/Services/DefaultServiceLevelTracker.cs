@@ -82,6 +82,12 @@ public sealed class DefaultServiceLevelTracker : IServiceLevelTracker
 
         await _timerClock.ScheduleAsync(timer, now, cancellationToken);
 
+        // The due time the record had is kept exactly, even when it falls on a closing time the schedule would roll over.
+        if (start.DueUtc is { } kept && kept > now)
+        {
+            timer.DueUtc = kept;
+        }
+
         if (start.AlreadyWarned || start.AlreadyBreached)
         {
             timer.WarnedUtc = timer.WarnAtUtc;

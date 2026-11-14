@@ -98,18 +98,18 @@ internal sealed class WorkOrderServiceLevelUpgrade
     /// admin. A refused policy is not saved.
     /// </summary>
     /// <param name="legacy">The Work Orders policy.</param>
+    /// <param name="scheduleNames">
+    /// The names of the schedules made earlier in the same import, shared by every policy of a recipe: a schedule made in
+    /// this scope can't be read back until it commits, so two policies of one name still get a schedule each.
+    /// </param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The shared policy, or the reasons it was refused.</returns>
-    public async Task<(ServiceLevelPolicy Policy, IReadOnlyList<string> Errors)> ImportAsync(LegacyServiceLevelPolicy legacy, CancellationToken cancellationToken = default)
-    {
-        var (policy, errors) = await ImportAsync(legacy, new HashSet<string>(StringComparer.OrdinalIgnoreCase), validate: true, cancellationToken);
-
-        return (policy, errors);
-    }
+    public Task<(ServiceLevelPolicy Policy, IReadOnlyList<string> Errors)> ImportAsync(LegacyServiceLevelPolicy legacy, ISet<string> scheduleNames, CancellationToken cancellationToken = default)
+        => ImportAsync(legacy, scheduleNames ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase), validate: true, cancellationToken);
 
     // The migration copies what the store already holds; a recipe's policy is checked first. The check runs before a
     // schedule is made from the weekly hours, since a schedule created in this scope can't be read back until it commits.
-    private async Task<(ServiceLevelPolicy Policy, IReadOnlyList<string> Errors)> ImportAsync(LegacyServiceLevelPolicy legacy, HashSet<string> scheduleNames, bool validate, CancellationToken cancellationToken)
+    private async Task<(ServiceLevelPolicy Policy, IReadOnlyList<string> Errors)> ImportAsync(LegacyServiceLevelPolicy legacy, ISet<string> scheduleNames, bool validate, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(legacy);
 
@@ -182,7 +182,7 @@ internal sealed class WorkOrderServiceLevelUpgrade
 
     // The calendar the policy named stays its schedule; its own weekly hours become a new Business Hours schedule named
     // after the policy, with a number added when another schedule already has that name.
-    private async Task<string> ResolveScheduleAsync(LegacyServiceLevelPolicy legacy, HashSet<string> scheduleNames, CancellationToken cancellationToken)
+    private async Task<string> ResolveScheduleAsync(LegacyServiceLevelPolicy legacy, ISet<string> scheduleNames, CancellationToken cancellationToken)
     {
         if (!HasWeeklyHours(legacy))
         {
@@ -251,6 +251,33 @@ internal sealed class WorkOrderServiceLevelUpgrade
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            var batch = await StartOpenWorkOrdersBatchesAsync(afterDocumentId, maxBatches: 1, cancellationToken);
+
+            started += batch.Count;
+            afterDocumentId = batch.LastDocumentId;
+
+            if (batch.Done)
+            {
+                break;
+            }
+        }
+
+        return started;
+    }
+
+    /// <summary>
+    /// Handles up to a number of batches of open work orders, from where an earlier run got to, committing each batch.
+    /// </summary>
+    /// <param name="afterDocumentId">The last document id an earlier run handled, or 0 to start.</param>
+    /// <param name="maxBatches">The most batches to handle.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many were handled, the last document id handled, and whether there is nothing left.</returns>
+    internal async Task<(int Count, long LastDocumentId, bool Done)> StartOpenWorkOrdersBatchesAsync(long afterDocumentId, int maxBatches, CancellationToken cancellationToken = default)
+    {
+        var started = 0;
+
+        for (var round = 0; round < maxBatches && !cancellationToken.IsCancellationRequested; round++)
+        {
             // Paged by document id, which only grows, so a work order created meanwhile never shifts a page.
             var rows = await _session.QueryIndex<WorkOrderIndex>(index => index.IsOpen && index.DocumentId > afterDocumentId, collection: WorkOrdersConstants.CollectionName)
                 .OrderBy(index => index.DocumentId)
@@ -260,7 +287,7 @@ internal sealed class WorkOrderServiceLevelUpgrade
 
             if (documentIds.Length == 0)
             {
-                break;
+                return (started, afterDocumentId, true);
             }
 
             afterDocumentId = documentIds[^1];
@@ -277,11 +304,11 @@ internal sealed class WorkOrderServiceLevelUpgrade
 
             if (documentIds.Length < BatchSize)
             {
-                break;
+                return (started, afterDocumentId, true);
             }
         }
 
-        return started;
+        return (started, afterDocumentId, false);
     }
 
     // The timers count from when the work order was created, moved on by the time it already stood still. The due times

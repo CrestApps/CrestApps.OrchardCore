@@ -53,6 +53,33 @@ public sealed class OrderNotesUpgrade
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            var batch = await RunBatchesAsync(afterDocumentId, maxBatches: 1, cancellationToken);
+
+            moved += batch.Count;
+            afterDocumentId = batch.LastDocumentId;
+
+            if (batch.Done)
+            {
+                break;
+            }
+        }
+
+        return moved;
+    }
+
+    /// <summary>
+    /// Handles up to a number of batches of orders whose notes move, from where an earlier run got to, committing each batch.
+    /// </summary>
+    /// <param name="afterDocumentId">The last document id an earlier run handled, or 0 to start.</param>
+    /// <param name="maxBatches">The most batches to handle.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>How many were handled, the last document id handled, and whether there is nothing left.</returns>
+    internal async Task<(int Count, long LastDocumentId, bool Done)> RunBatchesAsync(long afterDocumentId, int maxBatches, CancellationToken cancellationToken = default)
+    {
+        var moved = 0;
+
+        for (var round = 0; round < maxBatches && !cancellationToken.IsCancellationRequested; round++)
+        {
             // Paged by document id, which only grows, so an order placed meanwhile never shifts a page.
             var rows = await _session.QueryIndex<OrderIndex>(index => index.DocumentId > afterDocumentId, collection: OrderConstants.CollectionName)
                 .OrderBy(index => index.DocumentId)
@@ -62,7 +89,7 @@ public sealed class OrderNotesUpgrade
 
             if (documentIds.Length == 0)
             {
-                break;
+                return (moved, afterDocumentId, true);
             }
 
             afterDocumentId = documentIds[^1];
@@ -79,11 +106,11 @@ public sealed class OrderNotesUpgrade
 
             if (documentIds.Length < BatchSize)
             {
-                break;
+                return (moved, afterDocumentId, true);
             }
         }
 
-        return moved;
+        return (moved, afterDocumentId, false);
     }
 
     private async Task<int> MoveAsync(Order order, CancellationToken cancellationToken)

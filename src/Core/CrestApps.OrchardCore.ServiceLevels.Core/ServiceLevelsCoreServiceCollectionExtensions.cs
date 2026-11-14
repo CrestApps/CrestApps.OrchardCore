@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.OrchardCore.ServiceLevels.Core.Services;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -31,8 +32,8 @@ public static class ServiceLevelsCoreServiceCollectionExtensions
         services.TryAddScoped<ServiceLevelClock>();
         services.TryAddScoped<IServiceLevelTracker, DefaultServiceLevelTracker>();
         services.TryAddScoped<ServiceLevelMonitor>();
-        services.TryAddScoped<ServiceLevelScheduleObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IBusinessHoursScheduleObserver, ServiceLevelScheduleObserver>());
+        services.AddResumableStep<ServiceLevelScheduleChangesStep>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceLevelPolicyUsageProvider, ActiveTimerPolicyUsage>());
 
         return services;

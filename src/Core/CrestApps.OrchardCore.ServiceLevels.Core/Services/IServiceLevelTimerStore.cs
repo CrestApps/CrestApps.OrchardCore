@@ -32,6 +32,18 @@ public interface IServiceLevelTimerStore
     Task UpdateIfUnchangedAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Marks a timer in a transaction of its own, read right before the write, only while it is still due: a timer its
+    /// owner completed, paused or retargeted meanwhile is left alone. The monitor marks warnings and breaches this way,
+    /// so an owner's change always wins and an owner never fails on the monitor.
+    /// </summary>
+    /// <param name="timerId">The timer's id.</param>
+    /// <param name="stillDue">Whether the timer, as read now, still needs the mark.</param>
+    /// <param name="mark">Sets the mark.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The timer as saved, or <see langword="null"/> when it no longer needed the mark or changed meanwhile.</returns>
+    Task<ServiceLevelTimer> MarkIfStillDueAsync(string timerId, Func<ServiceLevelTimer, bool> stillDue, Action<ServiceLevelTimer> mark, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Writes the pending changes to the database now.
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the work.</param>

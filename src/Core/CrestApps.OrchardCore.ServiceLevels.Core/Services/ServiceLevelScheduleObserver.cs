@@ -1,96 +1,173 @@
+using System.Globalization;
+using System.Text.Json;
+using CrestApps.OrchardCore.BusinessHours.Models;
 using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
-using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Environment.Shell.Scope;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ServiceLevels.Core.Services;
 
 /// <summary>
-/// Keeps the running timers right when the hours of their schedule change: the time used so far is counted on the old
-/// hours before the change, and the due and warning times are worked out again on the new hours once it commits.
+/// Keeps the running timers right when the hours of their schedule change or the schedule is deleted. Before the change,
+/// while reads still return the old hours, it keeps a copy of them and the time of the change, and asks for the
+/// <see cref="ServiceLevelScheduleChangesStep"/>. That step, in the background and a batch at a time, counts each running
+/// timer's time up to the change on the old hours and works out its due and warning times from the change on the new
+/// ones. Nothing is done in the admin's request beyond keeping the copy.
 /// </summary>
 public sealed class ServiceLevelScheduleObserver : IBusinessHoursScheduleObserver
 {
-    private readonly IServiceLevelPolicyManager _policies;
-    private readonly IServiceLevelTimerStore _timers;
-    private readonly ServiceLevelClock _timerClock;
+    private readonly IEnumerable<IHoursScheduleSource> _sources;
+    private readonly ResumableSteps _steps;
     private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServiceLevelScheduleObserver"/> class.
     /// </summary>
-    /// <param name="policies">The policy manager.</param>
-    /// <param name="timers">The timer store.</param>
-    /// <param name="timerClock">The service level clock.</param>
+    /// <param name="sources">The sources of schedules, to read the hours before they change.</param>
+    /// <param name="steps">The resumable steps.</param>
     /// <param name="clock">The clock.</param>
-    public ServiceLevelScheduleObserver(
-        IServiceLevelPolicyManager policies,
-        IServiceLevelTimerStore timers,
-        ServiceLevelClock timerClock,
-        IClock clock)
+    public ServiceLevelScheduleObserver(IEnumerable<IHoursScheduleSource> sources, ResumableSteps steps, IClock clock)
     {
-        _policies = policies;
-        _timers = timers;
-        _timerClock = timerClock;
+        _sources = sources;
+        _steps = steps;
         _clock = clock;
     }
 
     /// <inheritdoc/>
     public async Task ChangingAsync(string scheduleId, CancellationToken cancellationToken = default)
     {
-        var now = _clock.UtcNow;
-
-        foreach (var timer in await RunningTimersAsync(scheduleId, cancellationToken))
+        if (string.IsNullOrEmpty(scheduleId))
         {
-            await _timerClock.SettleAsync(timer, now, cancellationToken);
-            await _timers.UpdateAsync(timer, cancellationToken);
+            return;
         }
+
+        HoursSchedule hours = null;
+
+        foreach (var source in _sources)
+        {
+            if ((hours = await source.FindAsync(scheduleId, cancellationToken)) is not null)
+            {
+                break;
+            }
+        }
+
+        var change = new ServiceLevelScheduleChange { ScheduleId = scheduleId, AtUtc = _clock.UtcNow, OldHours = hours };
+
+        await _steps.RequestAsync(ServiceLevelScheduleChangesStep.StepName, new Dictionary<string, string>
+        {
+            [change.Key] = JsonSerializer.Serialize(change),
+        });
     }
 
     /// <inheritdoc/>
     public Task ChangedAsync(string scheduleId, CancellationToken cancellationToken = default)
-    {
-        // The new hours are readable once the change commits.
-        if (ShellScope.Current is null)
-        {
-            return Task.CompletedTask;
-        }
+        => Task.CompletedTask;
+}
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ServiceLevelScheduleObserver>().RescheduleAsync(scheduleId));
-
-        return Task.CompletedTask;
-    }
+/// <summary>
+/// A change of a schedule's hours that its running timers still have to catch up with.
+/// </summary>
+public sealed class ServiceLevelScheduleChange
+{
+    /// <summary>
+    /// Gets or sets the schedule.
+    /// </summary>
+    public string ScheduleId { get; set; }
 
     /// <summary>
-    /// Works out the due and warning times of the running timers on a schedule again, from now, on its current hours.
+    /// Gets or sets when the hours changed, in UTC.
     /// </summary>
-    /// <param name="scheduleId">The schedule.</param>
-    /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>How many timers were rescheduled.</returns>
-    public async Task<int> RescheduleAsync(string scheduleId, CancellationToken cancellationToken = default)
-    {
-        var now = _clock.UtcNow;
-        var timers = await RunningTimersAsync(scheduleId, cancellationToken);
+    public DateTime AtUtc { get; set; }
 
-        foreach (var timer in timers)
+    /// <summary>
+    /// Gets or sets the hours before the change, or <see langword="null"/> when the schedule was unknown (around the clock).
+    /// </summary>
+    public HoursSchedule OldHours { get; set; }
+
+    /// <summary>
+    /// Gets the key the change is kept under, in order of time for one schedule.
+    /// </summary>
+    public string Key => ScheduleId + "|" + AtUtc.Ticks.ToString("D20", CultureInfo.InvariantCulture);
+}
+
+/// <summary>
+/// Catches the running timers up with the changes of their schedules, a batch at a time, oldest change first.
+/// </summary>
+public sealed class ServiceLevelScheduleChangesStep : IResumableStep
+{
+    /// <summary>
+    /// The step's name.
+    /// </summary>
+    public const string StepName = "ServiceLevels.ScheduleChanges";
+
+    private const int TimersPerRun = 200;
+
+    private readonly IServiceLevelPolicyManager _policies;
+    private readonly IServiceLevelTimerStore _timers;
+    private readonly ServiceLevelClock _timerClock;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ServiceLevelScheduleChangesStep"/> class.
+    /// </summary>
+    /// <param name="policies">The policy manager.</param>
+    /// <param name="timers">The timer store.</param>
+    /// <param name="timerClock">The service level clock.</param>
+    public ServiceLevelScheduleChangesStep(IServiceLevelPolicyManager policies, IServiceLevelTimerStore timers, ServiceLevelClock timerClock)
+    {
+        _policies = policies;
+        _timers = timers;
+        _timerClock = timerClock;
+    }
+
+    /// <inheritdoc/>
+    public string Name => StepName;
+
+    /// <inheritdoc/>
+    public async Task<bool> RunAsync(ResumableStepContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var budget = TimersPerRun;
+
+        foreach (var key in context.Data.Keys.Order(StringComparer.Ordinal).ToList())
         {
-            await _timerClock.SettleAsync(timer, now, cancellationToken);
-            await _timerClock.ScheduleAsync(timer, now, cancellationToken);
-            await _timers.UpdateAsync(timer, cancellationToken);
+            if (budget <= 0)
+            {
+                break;
+            }
+
+            var change = JsonSerializer.Deserialize<ServiceLevelScheduleChange>(context.Data[key]);
+            var allowed = budget;
+
+            // The timers still counting from before the change; a timer caught up counts from the change on.
+            var behind = (await RunningTimersAsync(change.ScheduleId, cancellationToken))
+                .Where(timer => timer.CountingSinceUtc < change.AtUtc)
+                .Take(allowed)
+                .ToList();
+
+            foreach (var timer in behind)
+            {
+                ServiceLevelClock.SettleOn(timer, change.OldHours, change.AtUtc);
+                await _timerClock.ScheduleAsync(timer, change.AtUtc, cancellationToken);
+                await _timers.UpdateAsync(timer, cancellationToken);
+            }
+
+            budget -= behind.Count;
+
+            // Fewer behind than this run could take: the change is caught up.
+            if (behind.Count < allowed)
+            {
+                context.Data.Remove(key);
+            }
         }
 
-        return timers.Count;
+        return context.Data.Count == 0;
     }
 
     private async Task<IReadOnlyList<ServiceLevelTimer>> RunningTimersAsync(string scheduleId, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(scheduleId))
-        {
-            return [];
-        }
-
         var policyIds = (await _policies.GetAllAsync(cancellationToken))
             .Where(policy => string.Equals(policy.HoursScheduleId, scheduleId, StringComparison.Ordinal))
             .Select(policy => policy.ItemId)
