@@ -35,6 +35,32 @@ public sealed class EgressNetworkProxyTests
         Assert.Equal("GET http://93.184.215.14/feed HTTP/1.1", Assert.Single(proxy.RequestLines));
     }
 
+    /// <summary>
+    /// M7 (final security review): for an https destination the client first sends the proxy a CONNECT request, and the
+    /// connect callback sees that request, whose address is the proxy's. The destination is only in its Host header, so
+    /// every https call through a proxy on a private address was refused, and through a public one nothing was checked.
+    /// </summary>
+    [Fact]
+    public async Task ThroughAProxy_AnHttpsDestinationIsCheckedFromTheConnectRequest()
+    {
+        // Arrange: the proxy is on this machine, an address the guard refuses as a destination.
+        await using var proxy = await FakeProxy.StartAsync();
+        using var client = new HttpClient(EgressNetwork.CreateHandler(allowLoopback: false, allowPrivateNetwork: false, allowRedirects: false, new WebProxy(proxy.Address)))
+        {
+            Timeout = TimeSpan.FromSeconds(10),
+        };
+
+        // Act: the fake proxy answers the CONNECT itself and is no TLS server, so the public request fails after the
+        // tunnel is asked for; what matters is that it was asked for.
+        var allowed = await Assert.ThrowsAnyAsync<Exception>(() => client.GetAsync("https://93.184.215.14/feed", TestContext.Current.CancellationToken));
+        var refused = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync("https://10.0.0.5/admin", TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.DoesNotContain(EgressNetwork.RefusedMessage, allowed.ToString(), StringComparison.Ordinal);
+        Assert.Contains(EgressNetwork.RefusedMessage, refused.Message, StringComparison.Ordinal);
+        Assert.Equal("CONNECT 93.184.215.14:443 HTTP/1.1", Assert.Single(proxy.RequestLines));
+    }
+
     [Theory]
     [InlineData(null, false)]
     [InlineData("false", false)]

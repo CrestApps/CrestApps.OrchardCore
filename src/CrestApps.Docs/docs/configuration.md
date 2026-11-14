@@ -1956,7 +1956,8 @@ proxy, where it would see the proxy's address instead of the destination's.
 On a host whose only way out is an HTTP proxy, set `UseSystemProxy` to `true` (default `false`). The guarded clients then
 go through the system proxy (`HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, or the system's settings on Windows), connect
 to the proxy whatever its address, and check each destination's own DNS answer before the proxy is asked to reach it,
-on every request and every redirect. The proxy resolves the name again, so keep egress rules on the proxy too: a name
+on every request and every redirect. For an https destination that is the host the client asks the proxy to tunnel to
+(the `Host` of its `CONNECT` request). The proxy resolves the name again, so keep egress rules on the proxy too: a name
 that answers differently each time can still reach what the proxy lets it reach.
 
 ```json
