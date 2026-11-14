@@ -46,21 +46,21 @@ public sealed class AssessmentAttemptStore : DocumentCatalog<AssessmentAttempt, 
             .ListAsync(cancellationToken)).ToArray();
 
     /// <summary>
-    /// Reads a page of the attempts that wait for a grader, oldest submission first, optionally of some quizzes.
+    /// Reads a page of the attempts that wait for a grader, oldest submission first, optionally of some courses.
     /// </summary>
-    /// <param name="quizIds">The quizzes, or <see langword="null"/> for every quiz.</param>
+    /// <param name="courseIds">The courses, or <see langword="null"/> for every course.</param>
     /// <param name="page">The page, from one.</param>
     /// <param name="pageSize">The page size.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The count and the page.</returns>
-    public async Task<(int Count, IReadOnlyList<AssessmentAttempt> Items)> PageNeedingGradingAsync(IReadOnlyCollection<string> quizIds, int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<(int Count, IReadOnlyList<AssessmentAttempt> Items)> PageNeedingGradingAsync(IReadOnlyCollection<string> courseIds, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var query = Session.Query<AssessmentAttempt, AssessmentAttemptIndex>(index => index.NeedsGrading, collection: CollectionName);
 
-        if (quizIds is not null)
+        if (courseIds is not null)
         {
-            var ids = quizIds.ToArray();
-            query = query.Where(index => index.QuizId.IsIn(ids));
+            var ids = courseIds.ToArray();
+            query = query.Where(index => index.CourseId.IsIn(ids));
         }
 
         var count = await query.CountAsync(cancellationToken);

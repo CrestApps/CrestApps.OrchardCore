@@ -1,0 +1,4 @@
+@model AttemptRowViewModel
+
+<a asp-controller="Grading" asp-action="Attempt" asp-route-id="@Model.Attempt.ItemId">@Model.LearnerName</a>
+<div class="admin-list-secondary">@Model.Attempt.Number</div>

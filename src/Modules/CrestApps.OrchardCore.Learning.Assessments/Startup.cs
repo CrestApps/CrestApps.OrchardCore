@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
@@ -55,6 +56,8 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<QuizPartDisplayDriver>()
             .UseDisplayDriver<QuizPartLearnerDisplayDriver>();
 
+        services.AddScoped<GradingScope>();
+        services.AddDisplayDriver<AssessmentAttempt, AttemptRowDisplayDriver>();
         services.AddPermissionProvider<AssessmentsPermissionsProvider>();
         services.AddNavigationProvider<AssessmentsAdminMenu>();
         services.AddSingleton<IBackgroundTask, AttemptDeadlineBackgroundTask>();

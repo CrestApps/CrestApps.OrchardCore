@@ -1,0 +1,194 @@
+@model AttemptGradingViewModel
+
+@{
+    var attempt = Model.Attempt;
+    string Name(string actor) => actor is not null && Model.ActorNames.TryGetValue(actor, out var name) ? name : actor;
+    string StatusText(AttemptStatus status) => status switch
+    {
+        AttemptStatus.InProgress => T["In progress"].Value,
+        AttemptStatus.NeedsGrading => T["Waiting for a grader"].Value,
+        AttemptStatus.Graded => T["Graded"].Value,
+        AttemptStatus.Voided => T["Cancelled"].Value,
+        AttemptStatus.Abandoned => T["Abandoned"].Value,
+        _ => T["Submitted"].Value,
+    };
+    var canEdit = attempt.Status == AttemptStatus.NeedsGrading || (attempt.Status == AttemptStatus.Graded && Model.CanOverride);
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningGradingAttempt" title="@(new Microsoft.AspNetCore.Html.HtmlString(System.Net.WebUtility.HtmlEncode(Model.LearnerName + " · " + attempt.QuizTitle)))">
+        <breadcrumb-item id="LearningGrading" action="Index" controller="Grading" area="CrestApps.OrchardCore.Learning.Assessments">@T["Grading"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Attempt {0}", attempt.Number]</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Learner"]</dt><dd class="col-sm-9">@Model.LearnerName</dd>
+            <dt class="col-sm-3">@T["Quiz"]</dt><dd class="col-sm-9">@attempt.QuizTitle · @T["attempt {0}", attempt.Sequence]</dd>
+            <dt class="col-sm-3">@T["Status"]</dt><dd class="col-sm-9">@StatusText(attempt.Status)@(attempt.AutoSubmitted ? " · " + T["submitted when the time was up"].Value : string.Empty)</dd>
+            <dt class="col-sm-3">@T["Started"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(attempt.StartedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+            @if (attempt.SubmittedUtc is { } submitted)
+            {
+                <dt class="col-sm-3">@T["Submitted"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(submitted, DateTimeKind.Utc), Format: "g"))</dd>
+            }
+            <dt class="col-sm-3">@T["Score"]</dt><dd class="col-sm-9">@T["{0} of {1} points ({2}%)", attempt.Score?.ToString("0.##") ?? "-", attempt.MaxScore.ToString("0.##"), attempt.Percent?.ToString("0.##") ?? "-"]@(attempt.Passed == true ? " · " + T["passed"].Value : attempt.Passed == false ? " · " + T["not passed"].Value : string.Empty)</dd>
+            @if (!string.IsNullOrEmpty(attempt.HonorStatement))
+            {
+                <dt class="col-sm-3">@T["Confirmed"]</dt><dd class="col-sm-9"><em>@attempt.HonorStatement</em></dd>
+            }
+        </dl>
+    </div>
+</div>
+
+<form method="post" action="@Url.Action("Grade", "Grading", new { area = "CrestApps.OrchardCore.Learning.Assessments", id = attempt.ItemId })">
+    @Html.AntiForgeryToken()
+
+    @foreach (var item in attempt.Items)
+    {
+        var response = item.Response;
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between">
+                <span>@T["Question {0}", item.Index + 1] · @item.Title</span>
+                <span class="text-secondary small">@item.QuestionType</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">@Html.Raw(item.Prompt)</div>
+                <dl class="row small mb-2">
+                    <dt class="col-sm-3">@T["Answer"]</dt>
+                    <dd class="col-sm-9">
+                        @if (response is null)
+                        {
+                            <em>@T["No answer"]</em>
+                        }
+                        else if (item.QuestionType == AssessmentsConstants.QuestionTypes.Essay)
+                        {
+                            <div class="border rounded p-2" style="white-space: pre-wrap;">@response.Texts.FirstOrDefault()</div>
+                        }
+                        else if (response.ChoiceIds.Count > 0)
+                        {
+                            @string.Join(" · ", response.ChoiceIds.Select(id => item.Choices.FirstOrDefault(choice => choice.Id == id)?.Text ?? id))
+                        }
+                        else if (response.Pairs.Count > 0)
+                        {
+                            @string.Join(" · ", response.Pairs.Select(pair => (item.Choices.FirstOrDefault(choice => choice.Id == pair.Key)?.Text ?? pair.Key) + " → " + (item.Answers.FirstOrDefault(answer => answer.Id == pair.Value)?.Text ?? pair.Value)))
+                        }
+                        else if (response.Number is { } number)
+                        {
+                            @number
+                        }
+                        else
+                        {
+                            @string.Join(" · ", response.Texts)
+                        }
+                    </dd>
+                    @if (item.QuestionType != AssessmentsConstants.QuestionTypes.Essay)
+                    {
+                        <dt class="col-sm-3">@T["Key"]</dt>
+                        <dd class="col-sm-9">
+                            @if (item.Key.ChoiceIds.Count > 0)
+                            {
+                                @string.Join(" · ", item.Key.ChoiceIds.Select(id => item.Choices.FirstOrDefault(choice => choice.Id == id)?.Text ?? id))
+                            }
+                            else if (item.Key.Pairs.Count > 0)
+                            {
+                                @string.Join(" · ", item.Key.Pairs.Select(pair => (item.Choices.FirstOrDefault(choice => choice.Id == pair.Key)?.Text ?? pair.Key) + " → " + (item.Answers.FirstOrDefault(answer => answer.Id == pair.Value)?.Text ?? pair.Value)))
+                            }
+                            else if (item.Key.Number is { } key)
+                            {
+                                @T["{0} (within {1})", key, item.Key.Tolerance]
+                            }
+                            else
+                            {
+                                @string.Join(" · ", item.Key.Texts)
+                            }
+                        </dd>
+                    }
+                    else if (Model.Guidance.TryGetValue(item.QuestionId ?? string.Empty, out var guidance))
+                    {
+                        <dt class="col-sm-3">@T["Guidance"]</dt>
+                        <dd class="col-sm-9">@guidance</dd>
+                    }
+                </dl>
+                <div class="row g-2 align-items-end">
+                    <div class="col-sm-3">
+                        <label class="form-label small" for="score@(item.Index)">@T["Score (of {0})", item.Points.ToString("0.##")]</label>
+                        <input class="form-control form-control-sm" id="score@(item.Index)" name="score@(item.Index)" type="number" min="0" max="@item.Points" step="0.01" value="@item.Score?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canEdit)" />
+                    </div>
+                    <div class="col-sm-9">
+                        <label class="form-label small" for="comment@(item.Index)">@T["Comment to the learner"]</label>
+                        <input class="form-control form-control-sm" id="comment@(item.Index)" name="comment@(item.Index)" value="@item.GraderComment" maxlength="1000" disabled="@(!canEdit)" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <label class="form-label" for="feedback">@T["Overall feedback"]</label>
+            <textarea class="form-control" id="feedback" name="feedback" rows="2" maxlength="2000" disabled="@(!canEdit)">@attempt.Feedback</textarea>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        @if (canEdit)
+        {
+            <button type="submit" class="btn btn-primary">@T["Save the scores"]</button>
+        }
+        <a class="btn btn-secondary action-bar-secondary" asp-action="Index">@T["Back to grading"]</a>
+        @if (Model.CanManageOverrides)
+        {
+            <a class="btn btn-secondary action-bar-secondary" asp-action="Overrides" asp-route-quizId="@attempt.QuizId">@T["Overrides of this quiz"]</a>
+        }
+    </div>
+</form>
+
+@if (Model.CanOverride && attempt.Status is AttemptStatus.Graded or AttemptStatus.NeedsGrading)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Change the attempt"]</div>
+        <div class="card-body">
+            <form method="post" action="@Url.Action("Regrade", "Grading", new { area = "CrestApps.OrchardCore.Learning.Assessments", id = attempt.ItemId })" class="row g-2 align-items-end mb-3">
+                @Html.AntiForgeryToken()
+                <div class="col-sm-8">
+                    <label class="form-label" for="regrade-reason">@T["Score again from its answers, because"]</label>
+                    <input class="form-control" id="regrade-reason" name="reason" required maxlength="500" />
+                </div>
+                <div class="col-sm-4"><button type="submit" class="btn btn-secondary">@T["Score again"]</button></div>
+            </form>
+            <form method="post" action="@Url.Action("Void", "Grading", new { area = "CrestApps.OrchardCore.Learning.Assessments", id = attempt.ItemId })" class="row g-2 align-items-end">
+                @Html.AntiForgeryToken()
+                <div class="col-sm-8">
+                    <label class="form-label" for="void-reason">@T["Cancel the attempt so it does not count, because"]</label>
+                    <input class="form-control" id="void-reason" name="reason" required maxlength="500" />
+                </div>
+                <div class="col-sm-4"><button type="submit" class="btn btn-danger">@T["Cancel the attempt"]</button></div>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["History"]</div>
+    <div class="card-body">
+        <ul class="mb-0">
+            @foreach (var change in attempt.ScoreHistory)
+            {
+                <li>
+                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g"))
+                    · @change.Kind · @(change.From?.ToString("0.##") ?? "-") → @(change.To?.ToString("0.##") ?? "-")
+                    @if (!string.IsNullOrEmpty(change.Actor))
+                    {
+                        <text> · </text>@Name(change.Actor)
+                    }
+                    @if (!string.IsNullOrEmpty(change.Reason))
+                    {
+                        <text> · </text><em>@change.Reason</em>
+                    }
+                </li>
+            }
+        </ul>
+    </div>
+</div>
