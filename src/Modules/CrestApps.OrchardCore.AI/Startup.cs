@@ -164,7 +164,6 @@ public sealed class Startup : StartupBase
             .AddDataMigration<AIDeploymentV1DocumentMigrations>()
             .AddDataMigration<AIDeploymentPricingMigrations>()
             .AddSiteDisplayDriver<DefaultAIDeploymentSettingsDisplayDriver>()
-            .AddSiteDisplayDriver<AICostSettingsDisplayDriver>()
             .AddSiteDisplayDriver<AIContactMemorySettingsDisplayDriver>();
 
         // Add tools core functionality.

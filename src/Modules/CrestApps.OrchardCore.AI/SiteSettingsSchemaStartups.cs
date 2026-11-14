@@ -53,7 +53,6 @@ public sealed class AISiteSettingsSchemaStartup : StartupBase
     {
         services.AddScoped<ISiteSettingsSchemaDefinition, GeneralAISettingsSchema>();
         services.AddScoped<ISiteSettingsSchemaDefinition, DefaultAIDeploymentSettingsSchema>();
-        services.AddScoped<ISiteSettingsSchemaDefinition, AICostSettingsSchema>();
         services.AddScoped<ISiteSettingsSchemaDefinition, AIContactMemorySettingsSchema>();
     }
 }

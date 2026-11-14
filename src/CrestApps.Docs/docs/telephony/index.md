@@ -151,6 +151,9 @@ walkthrough, see [Telephony settings](../user-manual/telephony-settings.md) in t
   line. A short code is not an international number, so it is refused by default; list a code here to open it
   (a carrier service number, for example). Only digits are stored. Emergency codes can never be opened this
   way — see [Dial destination safety](#dial-destination-safety).
+- The **Costs** tab sets what the carrier charges: its **Currency** and the price of a **Phone call, per minute**
+  (`TelephonyCostSettings`). The estimated cost of each AI call adds the call's minutes at this price to the AI's
+  usage; see [Cost per call](../ai/usage-analytics.md#cost-per-call).
 - Each enabled provider contributes **its own tab** (rendered by a display driver in the provider
   module) where you enable the provider and supply its credentials.
 

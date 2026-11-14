@@ -154,6 +154,7 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<TelephonyUserConnectionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();
         services.AddDataMigration<TelephonyUserConnectionIndexMigrations>();
+        services.AddDataMigration<TelephonyCostSettingsMigrations>();
 
         // The default recording media store keeps encrypted recordings under a tenant-scoped application-data
         // folder, so recordings ingested by any voice provider are namespaced per tenant and never observable
@@ -180,6 +181,7 @@ public sealed class Startup : StartupBase
             .AddPermissionProvider<TelephonyPermissionProvider>()
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddSiteDisplayDriver<TelephonySettingsDisplayDriver>()
+            .AddSiteDisplayDriver<TelephonyCostSettingsDisplayDriver>()
             .AddNavigationProvider<TelephonyAdminMenu>();
         services.AddSiteSettingsPermission(TelephonyConstants.SettingsGroupId, TelephonyPermissions.ManageTelephonySettings);
     }
