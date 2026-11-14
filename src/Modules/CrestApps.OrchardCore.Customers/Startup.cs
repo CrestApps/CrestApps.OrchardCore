@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Customers.Drivers;
 using CrestApps.OrchardCore.Customers.Handlers;
 using CrestApps.OrchardCore.Customers.Migrations;
 using CrestApps.OrchardCore.Customers.Navigation;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
@@ -164,6 +165,7 @@ public sealed class StoreCreditStartup : StartupBase
         services.AddScoped<IStoreCreditStore, StoreCreditStore>();
         services.AddScoped<StoreCreditService>();
         services.AddScoped<ICustomerCreditService, StoreCreditCustomerCreditService>();
+        services.AddScoped<ICommercePersonalDataContributor, StoreCreditPersonalDataContributor>();
         services.AddScoped<StoreCreditTenderProvider>();
         services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
         services.AddScoped<Orders.Core.Services.IOrderStoreCreditRefunder>(serviceProvider => serviceProvider.GetRequiredService<StoreCreditTenderProvider>());
