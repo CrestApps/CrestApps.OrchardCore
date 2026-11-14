@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Indexes;
@@ -37,12 +38,31 @@ public interface IStoreCreditStore : ICatalog<StoreCreditAccount>
 /// </summary>
 public sealed class StoreCreditStore : DocumentCatalog<StoreCreditAccount, StoreCreditAccountIndex>, IStoreCreditStore
 {
+    /// <summary>
+    /// The kind of balance store credit's moved-out changes are kept under (<see cref="IBalanceLedgerArchive"/>).
+    /// </summary>
+    public const string Ledger = "StoreCredit";
+
+    private readonly IBalanceLedgerArchive _archive;
+
     protected override bool CheckConcurrency => true;
 
-    public StoreCreditStore(ISession session, IClock clock)
+    public StoreCreditStore(ISession session, IClock clock, IBalanceLedgerArchive archive)
         : base(session, clock)
     {
         CollectionName = CustomersConstants.CollectionName;
+        _archive = archive;
+    }
+
+    // The account keeps its latest changes; older ones move to their own records in the same unit of work.
+    protected override async ValueTask SavingAsync(StoreCreditAccount record)
+    {
+        await base.SavingAsync(record);
+
+        if (record.Activity is not null)
+        {
+            await _archive.ArchiveAsync(Ledger, record.ItemId, record.Activity, entry => entry.Reference);
+        }
     }
 
     public Task<StoreCreditAccount> FindAsync(string customerId, string currency, CancellationToken cancellationToken = default)
@@ -92,17 +112,20 @@ public sealed class StoreCreditService
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
+    private readonly IBalanceLedgerArchive _archive;
 
     public StoreCreditService(
         IStoreCreditStore store,
         ISession session,
         IDistributedLock distributedLock,
-        IClock clock)
+        IClock clock,
+        IBalanceLedgerArchive archive)
     {
         _store = store;
         _session = session;
         _distributedLock = distributedLock;
         _clock = clock;
+        _archive = archive;
     }
 
     /// <summary>
@@ -272,8 +295,11 @@ public sealed class StoreCreditService
         {
             account = await _store.FindByIdAsync(account.ItemId, cancellationToken);
 
+            // The account keeps its latest changes; older ones were moved out, and are found by their reference with a
+            // keyed lookup, so this check never grows with the account's history.
             if (!string.IsNullOrEmpty(reference) &&
-                (account.Activity ?? []).Any(entry => string.Equals(entry.Reference, reference, StringComparison.Ordinal)))
+                ((account.Activity ?? []).Any(entry => string.Equals(entry.Reference, reference, StringComparison.Ordinal)) ||
+                await _archive.HasReferenceAsync(StoreCreditStore.Ledger, account.ItemId, reference, cancellationToken)))
             {
                 return new CustomerCreditResult { Succeeded = true, AlreadyApplied = true, Balance = account.Balance };
             }

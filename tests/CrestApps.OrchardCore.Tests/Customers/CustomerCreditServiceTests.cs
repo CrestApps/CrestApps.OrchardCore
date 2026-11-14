@@ -177,7 +177,7 @@ public sealed class CustomerCreditServiceTests
             .Callback((StoreCreditAccount account, CancellationToken _) => _accounts[account.ItemId] = account)
             .Returns(ValueTask.CompletedTask);
 
-        var storeCredit = new StoreCreditService(store.Object, Mock.Of<ISession>(), new LocalLock(NullLogger<LocalLock>.Instance), new TestClock(_now));
+        var storeCredit = new StoreCreditService(store.Object, Mock.Of<ISession>(), new LocalLock(NullLogger<LocalLock>.Instance), new TestClock(_now), Mock.Of<CrestApps.OrchardCore.Checkout.Core.Services.IBalanceLedgerArchive>());
         var services = new ServiceCollection();
 
         if (membership is not null)

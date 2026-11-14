@@ -74,6 +74,9 @@ public sealed class StoreCreditPersonalDataContributorTests
         store = new Mock<IStoreCreditStore>();
         store.Setup(candidate => candidate.ListByCustomerAsync("customer-1", It.IsAny<CancellationToken>())).ReturnsAsync([_account]);
 
-        return new StoreCreditPersonalDataContributor(customers.Object, store.Object);
+        var archive = new Mock<CrestApps.OrchardCore.Checkout.Core.Services.IBalanceLedgerArchive>();
+        archive.Setup(candidate => candidate.ListAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        return new StoreCreditPersonalDataContributor(customers.Object, store.Object, archive.Object);
     }
 }

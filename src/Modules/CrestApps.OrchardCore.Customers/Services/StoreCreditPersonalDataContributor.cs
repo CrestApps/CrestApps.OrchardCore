@@ -1,4 +1,5 @@
 using System.Globalization;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.PersonalData;
@@ -18,16 +19,19 @@ public sealed class StoreCreditPersonalDataContributor : ICommercePersonalDataCo
 
     private readonly ICustomerStore _customers;
     private readonly IStoreCreditStore _store;
+    private readonly IBalanceLedgerArchive _archive;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StoreCreditPersonalDataContributor"/> class.
     /// </summary>
     /// <param name="customers">The customer records, to find a person's.</param>
     /// <param name="store">The store credit accounts.</param>
-    public StoreCreditPersonalDataContributor(ICustomerStore customers, IStoreCreditStore store)
+    /// <param name="archive">The older changes moved out of the accounts.</param>
+    public StoreCreditPersonalDataContributor(ICustomerStore customers, IStoreCreditStore store, IBalanceLedgerArchive archive)
     {
         _customers = customers;
         _store = store;
+        _archive = archive;
     }
 
     /// <inheritdoc/>
@@ -58,14 +62,17 @@ public sealed class StoreCreditPersonalDataContributor : ICommercePersonalDataCo
 
             var index = 0;
 
+            // The moved-out older changes first, then the ones the account keeps: the whole history, oldest first.
+            foreach (var archived in await _archive.ListAsync(StoreCreditStore.Ledger, account.ItemId, cancellationToken))
+            {
+                index++;
+                record.Values[$"Activity{index}"] = Describe(archived.CreatedUtc, archived.Amount, archived.Reason);
+            }
+
             foreach (var entry in account.Activity ?? [])
             {
                 index++;
-                record.Values[$"Activity{index}"] = string.Join(
-                    " | ",
-                    entry.CreatedUtc.ToString("O", CultureInfo.InvariantCulture),
-                    entry.Amount.ToString(CultureInfo.InvariantCulture),
-                    entry.Reason);
+                record.Values[$"Activity{index}"] = Describe(entry.CreatedUtc, entry.Amount, entry.Reason);
             }
 
             context.Export.Records.Add(record);
@@ -83,6 +90,13 @@ public sealed class StoreCreditPersonalDataContributor : ICommercePersonalDataCo
             {
                 entry.Reason = context.Scrub(entry.Reason);
                 entry.Actor = context.ReplaceName(entry.Actor);
+            }
+
+            foreach (var archived in await _archive.ListAsync(StoreCreditStore.Ledger, account.ItemId, cancellationToken))
+            {
+                archived.Reason = context.Scrub(archived.Reason);
+                archived.Actor = context.ReplaceName(archived.Actor);
+                await _archive.SaveAsync(archived);
             }
 
             await _store.UpdateAsync(account, cancellationToken);
@@ -109,4 +123,7 @@ public sealed class StoreCreditPersonalDataContributor : ICommercePersonalDataCo
 
         return [.. found.Values];
     }
+
+    private static string Describe(DateTime createdUtc, decimal amount, string reason)
+        => string.Join(" | ", createdUtc.ToString("O", CultureInfo.InvariantCulture), amount.ToString(CultureInfo.InvariantCulture), reason);
 }
