@@ -55,6 +55,12 @@ On the invoice's page, **Send and share** has:
 
 The card shows when the invoice was sent and when the customer first opened it. A credit note's page has **Print** and **PDF** too. To change the e-mail, edit **Invoice sent to its customer** under the commerce e-mails; to change how invoices look, edit the **Invoices** document template.
 
+## What your customers see
+
+A customer who signs in finds **Invoices** in their account. It lists the invoices billed to them and, for an admin of a business account, the account's invoices. They open an invoice, download it, and pay it; to pay several at once, they tick them and click **Pay selected**. Invoices owed by different customers, or in different currencies, are paid separately. They need the **View own invoices** permission.
+
+On a business account's page, the **Invoices** section shows what the account owes and how much of it is overdue, its latest invoices, and **New invoice**, which starts an invoice billed to the account.
+
 ## Payments on an invoice
 
 An invoice shows what was paid, what was credited and what is still due, and its history lists each payment and each payment taken back. Payments are recorded on the invoice's balance: click **Open the transaction** on the invoice's page, then use **Record an offline payment** or **Apply customer credit** there. The invoice follows at once; if it was busy at that moment, it catches up the next time you open it.

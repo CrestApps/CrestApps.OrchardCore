@@ -73,7 +73,6 @@ public sealed class Startup : StartupBase
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Activities, LocalizationSource.Create<Startup>("Activities"), "fa-solid fa-list-check", AccountPageTabs.GetPosition(AccountPageTabs.Activities));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Orders, LocalizationSource.Create<Startup>("Orders"), "fa-solid fa-bag-shopping", AccountPageTabs.GetPosition(AccountPageTabs.Orders));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Business, LocalizationSource.Create<Startup>("Business buying"), "fa-solid fa-briefcase", AccountPageTabs.GetPosition(AccountPageTabs.Business));
-        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Invoices, LocalizationSource.Create<Startup>("Invoices"), "fa-solid fa-file-invoice-dollar", AccountPageTabs.GetPosition(AccountPageTabs.Invoices));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Service, LocalizationSource.Create<Startup>("Service"), "fa-solid fa-screwdriver-wrench", AccountPageTabs.GetPosition(AccountPageTabs.Service));
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Records, LocalizationSource.Create<Startup>("All records"), "fa-solid fa-folder-open", AccountPageTabs.GetPosition(AccountPageTabs.Records));
     }

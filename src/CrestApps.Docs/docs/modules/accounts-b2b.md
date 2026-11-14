@@ -69,8 +69,7 @@ The feature adds two tabs to an [account's page](accounts.md#the-account-page) w
 for users with `ManageB2BAccounts`:
 
 - **Business** (shown as **Business buying**): its terms, credit limit and budget, what it owes, and its buyers with their roles and contacts.
-- **Invoices**: its terms invoices, newest first, with their status, due date, total and what is still owed, each
-  linked to the transaction.
+- What the account bought on its terms is owed as transactions billed to it (its admins see and pay them on **My Transactions**); its invoices are in the **Invoices** section, from [Invoicing](invoicing.md#customer-pages-and-the-account-page). Accounts B2B no longer lists them there.
 
 Its orders are in the **Orders** tab, from the Orders module. On the editor, the B2B settings are in a **Business** tab.
 

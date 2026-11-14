@@ -122,6 +122,11 @@ public static class InvoicingConstants
         /// The PDF of the invoice a signed share link opens.
         /// </summary>
         public const string ViewPdf = "InvoicingViewPdf";
+
+        /// <summary>
+        /// The signed-in customer's invoices, in their account.
+        /// </summary>
+        public const string MyInvoices = "InvoicingMyInvoices";
     }
 
     /// <summary>

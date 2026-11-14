@@ -440,10 +440,20 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
     }
 
     // Who owes the transaction: an account, or a guest known by their email when they have no id.
+    // Who owes the transaction: the payer it names (an account owes what its buyers placed on its terms), else its owner.
     private static string GetOwnerKey(Transaction transaction)
-        => string.IsNullOrEmpty(transaction.OwnerId)
+    {
+        var payer = transaction.GetPayer();
+
+        if (!payer.IsEmpty && !string.Equals(payer.Kind, CrestApps.OrchardCore.Parties.Models.PartyKinds.Guest, StringComparison.Ordinal))
+        {
+            return $"payer|{payer}";
+        }
+
+        return string.IsNullOrEmpty(transaction.OwnerId)
             ? $"{transaction.OwnerKind}|email|{transaction.GuestContactEmail?.Trim().ToUpperInvariant()}"
             : $"{transaction.OwnerKind}|{transaction.OwnerId}";
+    }
 
     private string GetTitle(Transaction transaction)
         => string.IsNullOrEmpty(transaction.Title)

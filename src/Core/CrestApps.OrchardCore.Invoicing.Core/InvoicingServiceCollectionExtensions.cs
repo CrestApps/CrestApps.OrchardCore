@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Invoicing.Core.Handlers;
 using CrestApps.OrchardCore.Invoicing.Core.Services;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Services;
+using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -37,6 +38,10 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddScoped<IInvoiceShareLinkService, InvoiceShareLinkService>();
         services.TryAddScoped<IInvoiceSender, DefaultInvoiceSender>();
         services.TryAddScoped<InvoiceViewTracker>();
+
+        // What a signed-in customer sees as their own invoices: those billed to a party they have billing access to.
+        services.AddPartyMembership();
+        services.TryAddScoped<IInvoiceVisibilityService, DefaultInvoiceVisibilityService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, InvoiceArchiveObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Invoice>, InvoiceHandler>());
 

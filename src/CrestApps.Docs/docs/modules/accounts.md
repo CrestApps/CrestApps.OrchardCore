@@ -119,7 +119,7 @@ is a dropdown. Each feature adds its own section, or a card in one, with a conte
 | **Activities** | `Activities` (40) | The CRM: the scheduled and completed activities of the account's contacts, with **List Activities**. |
 | **Orders** | `Orders` (50) | [Orders](carts-and-orders.md#the-account-page): the latest orders placed for the account (`Order.AccountId`). |
 | **Business** | `Business` (60) | [Accounts B2B](accounts-b2b.md#the-account-page): its terms, what it owes and its buyers. |
-| **Invoices** | `Invoices` (70) | Accounts B2B: the invoices for what it bought on its terms. |
+| **Invoices** | `Invoices` (70) | [Invoicing](invoicing.md#customer-pages-and-the-account-page) (registered by Invoicing's Accounts startup): what the account owes and is overdue on, its latest invoices, and **New invoice** billed to it. |
 | **Service** | `Service` (80) | Reserved for field service: work orders, assets and service agreements. |
 | **Records** | `Records` (100) | Accounts: Orchard Core's list of every record the account holds, with the buttons that add one. |
 

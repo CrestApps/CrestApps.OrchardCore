@@ -113,6 +113,16 @@ public sealed class InvoiceStore : DocumentCatalog<Invoice, InvoiceIndex>, IInvo
 
         var billTo = (query.BillTo ?? []).Where(party => !party.IsEmpty).Distinct().ToArray();
 
+        if (query.OnlyBillTo && billTo.Length == 0)
+        {
+            return new PageResult<Invoice> { Count = 0, Entries = [] };
+        }
+
+        if (query.IssuedOnly)
+        {
+            records = records.Where(index => index.IssuedUtc != null);
+        }
+
         if (billTo.Length > 0)
         {
             Expression<Func<InvoiceIndex, bool>> predicate = null;

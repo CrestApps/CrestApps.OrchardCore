@@ -42,4 +42,15 @@ public sealed class InvoiceQuery
     /// Gets or sets the identifier of the record the invoice was made from.
     /// </summary>
     public string SourceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether only issued invoices are returned, never drafts.
+    /// </summary>
+    public bool IssuedOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether only invoices billed to <see cref="BillTo"/> are returned, so an empty list returns none
+    /// rather than every invoice.
+    /// </summary>
+    public bool OnlyBillTo { get; set; }
 }

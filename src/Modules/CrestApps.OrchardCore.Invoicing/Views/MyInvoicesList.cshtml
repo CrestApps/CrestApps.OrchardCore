@@ -1,0 +1,87 @@
+@using CrestApps.OrchardCore.Invoicing.ViewModels
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@{
+    var model = (MyInvoicesViewModel)Model.Invoices;
+    var payable = model.Invoices.Any(invoice => invoice.Status == InvoiceStatus.Open && invoice.AmountDue > 0m);
+}
+
+@* The customer's invoices; those still owed can be ticked and paid together in one checkout. *@
+@if (model.Invoices.Count == 0)
+{
+    <p class="text-muted">@T["You have no invoices yet."]</p>
+}
+else
+{
+    <form asp-action="Pay" asp-controller="MyInvoices" asp-area="@InvoicingConstants.Features.Area" method="post">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        @if (payable)
+                        {
+                            <th scope="col"><span class="visually-hidden">@T["Pay"]</span></th>
+                        }
+                        <th scope="col">@T["Invoice"]</th>
+                        <th scope="col">@T["Date"]</th>
+                        <th scope="col">@T["Due"]</th>
+                        <th scope="col" class="text-end">@T["Total"]</th>
+                        <th scope="col" class="text-end">@T["Still due"]</th>
+                        <th scope="col">@T["Status"]</th>
+                        <th scope="col"><span class="visually-hidden">@T["Actions"]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var invoice in model.Invoices)
+                    {
+                        var owed = invoice.Status == InvoiceStatus.Open && invoice.AmountDue > 0m;
+
+                        <tr>
+                            @if (payable)
+                            {
+                                <td>
+                                    @if (owed)
+                                    {
+                                        <input type="checkbox" class="form-check-input" name="itemIds" value="@invoice.ItemId" aria-label="@T["Pay invoice {0}", invoice.Number]" />
+                                    }
+                                </td>
+                            }
+                            <td><a asp-action="Show" asp-controller="MyInvoices" asp-area="@InvoicingConstants.Features.Area" asp-route-itemId="@invoice.ItemId">@invoice.Number</a></td>
+                            @* Issue and due dates are dates, kept as dates: shown as they are. *@
+                            <td>@invoice.IssueDate?.ToString("d")</td>
+                            <td>@invoice.DueDate?.ToString("d")</td>
+                            <td class="text-end text-nowrap">@MoneyFormatter.Format(invoice.Totals?.Total ?? 0m, invoice.Currency)</td>
+                            <td class="text-end text-nowrap">@MoneyFormatter.Format(invoice.AmountDue, invoice.Currency)</td>
+                            <td><partial name="_InvoiceStatusBadge" model="invoice" /></td>
+                            <td class="text-end text-nowrap">
+                                <a asp-action="Pdf" asp-controller="MyInvoices" asp-area="@InvoicingConstants.Features.Area" asp-route-itemId="@invoice.ItemId" class="btn btn-sm btn-outline-secondary">@T["PDF"]</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (payable)
+        {
+            <button type="submit" class="btn btn-success">@T["Pay selected"]</button>
+            <span class="form-text ms-2">@T["Tick the invoices to pay together. Invoices in different currencies are paid separately."]</span>
+        }
+    </form>
+
+    @if (model.Count > model.PageSize)
+    {
+        <nav class="mt-3" aria-label="@T["Pages"]">
+            <ul class="pagination">
+                @if (model.Page > 1)
+                {
+                    <li class="page-item"><a class="page-link" href="@Url.RouteUrl(InvoicingConstants.RouteNames.MyInvoices, new { page = model.Page - 1 })">@T["Newer"]</a></li>
+                }
+                @if (model.Page * model.PageSize < model.Count)
+                {
+                    <li class="page-item"><a class="page-link" href="@Url.RouteUrl(InvoicingConstants.RouteNames.MyInvoices, new { page = model.Page + 1 })">@T["Older"]</a></li>
+                }
+            </ul>
+        </nav>
+    }
+}

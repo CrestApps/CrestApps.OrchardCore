@@ -15,7 +15,10 @@ using CrestApps.OrchardCore.Taxation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.BusinessDocuments;
+using CrestApps.OrchardCore.PageSections;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Localization;
 using OrchardCore.Data.Migration;
@@ -48,6 +51,7 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<InvoicingSettingsDisplayDriver>()
             .AddNavigationProvider<InvoicingSettingsAdminMenu>()
             .AddNavigationProvider<InvoicesAdminMenu>()
+            .AddNavigationProvider<InvoicesAccountMenu>()
             .AddDisplayDriver<Invoice, InvoiceDisplayDriver>()
             .AddMoneyFormatter();
 
@@ -112,6 +116,22 @@ public sealed class RecipeSchemasStartup : StartupBase
 /// <summary>
 /// Taxes invoices from the Taxation module's rules while it is enabled, for the bill-to's party tax profile.
 /// </summary>
+/// <summary>
+/// Gives an account's page its Invoices section when the Accounts feature is on.
+/// </summary>
+[RequireFeatures(AccountsConstants.Feature)]
+public sealed class AccountsStartup : StartupBase
+{
+    private static readonly LocalizationSource _sectionTitle = LocalizationSource.Create<AccountsStartup>("Invoices");
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Invoices, _sectionTitle, "fa-solid fa-file-invoice-dollar", AccountPageTabs.GetPosition(AccountPageTabs.Invoices));
+        services.AddScoped<IContentDisplayDriver, AccountInvoicesDisplayDriver>();
+    }
+}
+
 [RequireFeatures(TaxationConstants.Feature.Taxation)]
 public sealed class TaxationStartup : StartupBase
 {

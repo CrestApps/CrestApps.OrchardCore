@@ -167,7 +167,7 @@ public sealed class InvoicesAdminController : Controller
     /// <summary>
     /// Opens a new draft, with the defaults of the invoicing settings.
     /// </summary>
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(string billTo)
     {
         if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ManageInvoices))
         {
@@ -181,6 +181,11 @@ public sealed class InvoicesAdminController : Controller
         invoice.PaymentTermId = settings.DefaultPaymentTermId;
         invoice.PricesIncludeTax = settings.PricesIncludeTax;
         invoice.AllowPartialPayment = settings.AllowPartialPayment;
+
+        if (PartyRef.TryParse(billTo, out var party))
+        {
+            invoice.BillTo.Party = party;
+        }
 
         var model = new InvoiceEditViewModel();
         InvoiceDraftEditor.Build(invoice, model);

@@ -97,6 +97,47 @@ public sealed class TransactionMultiSettlementCheckoutHandlerTests
         Assert.Equal(0, sessions.SaveCount);
     }
 
+    /// <summary>
+    /// An account's balances are owed by the account, whichever buyer placed each one: an admin of the account pays them
+    /// together.
+    /// </summary>
+    [Fact]
+    public async Task StartAsync_WithTransactionsOfDifferentOwnersOwedByTheSamePayer_ListsThemTogether()
+    {
+        // Arrange
+        var first = CreateTransaction("transaction-1", 108m);
+        var second = CreateTransaction("transaction-2", 50m);
+        second.OwnerId = "customer-2";
+        first.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.Account, "account-1"));
+        second.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.Account, "account-1"));
+
+        var (engine, _) = CreateEngine(new FakeTransactionStore(first, second));
+
+        // Act
+        var session = await engine.StartAsync(CreateRequest("transaction-1", "transaction-2"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["transaction-1", "transaction-2"], session.References.Select(reference => reference.ReferenceId));
+    }
+
+    [Fact]
+    public async Task StartAsync_WithTransactionsOwedByDifferentPayers_IsRejected()
+    {
+        // Arrange
+        var first = CreateTransaction("transaction-1", 108m);
+        var second = CreateTransaction("transaction-2", 50m);
+        first.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.Account, "account-1"));
+        second.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.Account, "account-2"));
+
+        var (engine, _) = CreateEngine(new FakeTransactionStore(first, second));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<CheckoutRejectedException>(() => engine.StartAsync(CreateRequest("transaction-1", "transaction-2"), TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains("Transactions of different customers can't be paid together.", exception.Errors);
+    }
+
     [Fact]
     public async Task StartAsync_WithTransactionsInDifferentCurrencies_IsRejected()
     {
