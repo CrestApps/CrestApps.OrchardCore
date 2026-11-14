@@ -259,6 +259,60 @@ public sealed class AttachmentTests
         Assert.Equal("a.pdf", Assert.IsType<FileContentHttpResult>(document.Result).FileDownloadName);
     }
 
+    [Fact]
+    public async Task AGuest_GetsTheSameAnswerForAnUnknownIdAsForAFileTheyMayNotRead()
+    {
+        // Arrange
+        await using var harness = await CreateAsync(new InMemoryAttachmentFileStore(), configure: services => services.AddAttachmentAccessProvider<OrdersForAgents>());
+        var result = await harness.RunAsync(services => services.GetRequiredService<IAttachmentService>().AddAsync([Upload("a.pdf", _pdf)]));
+        var guest = new ClaimsPrincipal(new ClaimsIdentity());
+
+        // Act
+        var (known, unknown, signedUnknown) = await harness.RunAsync(async services => (
+            await Download(services, result.Attachments[0].ItemId, null, guest),
+            await Download(services, "4unknownattachment00000000", null, guest),
+            await Download(services, "4unknownattachment00000000", "anything", guest)), commit: false);
+
+        // Assert
+        Assert.IsType<ChallengeHttpResult>(known.Result);
+        Assert.IsType<ChallengeHttpResult>(unknown.Result);
+        Assert.IsType<ChallengeHttpResult>(signedUnknown.Result);
+    }
+
+    [Fact]
+    public async Task ASignedLink_CarriesTheTenantsPathBase()
+    {
+        // Arrange
+        await using var harness = await CreateAsync(new InMemoryAttachmentFileStore());
+
+        // Act
+        var path = await harness.RunAsync(services =>
+        {
+            services.GetRequiredService<IHttpContextAccessor>().HttpContext = new DefaultHttpContext { Request = { PathBase = "/tenant-a" } };
+
+            return Task.FromResult(services.GetRequiredService<IAttachmentService>().CreateSignedPath("4someattachment00000000000", TimeSpan.FromDays(1)));
+        }, commit: false);
+
+        // Assert
+        Assert.StartsWith("/tenant-a/attachments/4someattachment00000000000?token=", path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AWriteThatFailsPartWay_LeavesNoFileBehind()
+    {
+        // Arrange: the second file can't be written.
+        var files = new InMemoryAttachmentFileStore { FailOnWrite = 2 };
+        await using var harness = await CreateAsync(files);
+
+        // Act
+        var exception = await Record.ExceptionAsync(() => harness.RunAsync(services => services.GetRequiredService<IAttachmentService>().AddAsync(
+            [Upload("a.pdf", _pdf), Upload("b.png", _png)])));
+
+        // Assert
+        Assert.IsType<IOException>(exception);
+        Assert.Empty(files.Files);
+    }
+
     private static async Task<(IResult Result, HttpContext Context)> Download(IServiceProvider services, string id, string token, ClaimsPrincipal user, bool? download = null)
     {
         var context = new DefaultHttpContext { User = user, RequestServices = services };
@@ -308,10 +362,19 @@ public sealed class AttachmentTests
 
     private sealed class InMemoryAttachmentFileStore : IAttachmentFileStore
     {
+        private int _writes;
+
         public Dictionary<string, byte[]> Files { get; } = new(StringComparer.Ordinal);
+
+        public int FailOnWrite { get; init; }
 
         public Task WriteAsync(string attachmentId, ReadOnlyMemory<byte> content, CancellationToken cancellationToken = default)
         {
+            if (++_writes == FailOnWrite)
+            {
+                throw new IOException("The disk is full.");
+            }
+
             Files[attachmentId] = content.ToArray();
 
             return Task.CompletedTask;

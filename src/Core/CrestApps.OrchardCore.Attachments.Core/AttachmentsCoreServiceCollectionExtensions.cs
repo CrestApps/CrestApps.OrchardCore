@@ -35,6 +35,7 @@ public static class AttachmentsCoreServiceCollectionExtensions
         }
 
         services.TryAddScoped<AttachmentStore>();
+        services.AddHttpContextAccessor();
         services.AddSignedLinks();
         services.TryAddScoped<IAttachmentService, DefaultAttachmentService>();
         services.TryAddScoped<IAttachmentAccessService, DefaultAttachmentAccessService>();
@@ -42,7 +43,8 @@ public static class AttachmentsCoreServiceCollectionExtensions
             AttachmentsConstants.FolderName,
             AttachmentsConstants.BlobStorageConfigurationSection,
             (serviceProvider, fileStore) => new EncryptedAttachmentFileStore(fileStore, serviceProvider.GetRequiredService<IDataProtectionProvider>()),
-            removeOnTenantRemoval: false);
+            // The files are customers' and staff members' uploads: they go with the tenant, like its database.
+            removeOnTenantRemoval: true);
 
         return services;
     }

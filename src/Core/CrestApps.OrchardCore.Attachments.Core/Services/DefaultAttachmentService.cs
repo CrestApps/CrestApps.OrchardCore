@@ -3,8 +3,10 @@ using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Records;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Attachments.Core.Services;
@@ -27,6 +29,7 @@ public sealed class DefaultAttachmentService : IAttachmentService
     private readonly IOptions<AttachmentOptions> _options;
     private readonly SignedTokenService _signedTokens;
     private readonly IClock _clock;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
@@ -39,6 +42,7 @@ public sealed class DefaultAttachmentService : IAttachmentService
     /// <param name="options">The upload policy.</param>
     /// <param name="signedTokens">The signed token service, for download links.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor, for the tenant's path base in links.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultAttachmentService(
         AttachmentStore store,
@@ -47,6 +51,7 @@ public sealed class DefaultAttachmentService : IAttachmentService
         IOptions<AttachmentOptions> options,
         SignedTokenService signedTokens,
         IClock clock,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<DefaultAttachmentService> stringLocalizer)
     {
         _store = store;
@@ -55,6 +60,7 @@ public sealed class DefaultAttachmentService : IAttachmentService
         _options = options;
         _signedTokens = signedTokens;
         _clock = clock;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -121,10 +127,26 @@ public sealed class DefaultAttachmentService : IAttachmentService
             }, upload));
         }
 
-        foreach (var (attachment, upload) in accepted)
+        var written = new List<string>();
+
+        try
         {
-            await _files.WriteAsync(attachment.ItemId, upload.Content, cancellationToken);
-            await _store.CreateAsync(attachment, cancellationToken);
+            foreach (var (attachment, upload) in accepted)
+            {
+                await _files.WriteAsync(attachment.ItemId, upload.Content, cancellationToken);
+                written.Add(attachment.ItemId);
+                await _store.CreateAsync(attachment, cancellationToken);
+            }
+        }
+        catch
+        {
+            // A write that fails part way leaves no file behind: the records roll back with the request.
+            foreach (var attachmentId in written)
+            {
+                await _files.DeleteAsync(attachmentId, CancellationToken.None);
+            }
+
+            throw;
         }
 
         return new AttachmentResult { Attachments = [.. accepted.Select(item => item.Attachment)] };
@@ -182,7 +204,18 @@ public sealed class DefaultAttachmentService : IAttachmentService
     {
         ArgumentException.ThrowIfNullOrEmpty(attachmentId);
 
-        return $"/attachments/{attachmentId}?token={Uri.EscapeDataString(_signedTokens.Protect(SignedLinkPurpose, attachmentId, lifetime))}";
+        // The tenant's path base is part of the link, so it reaches this tenant from an e-mail or a page alike: the
+        // request's when there is one, else the tenant's URL prefix (such as for an e-mail sent in the background).
+        var pathBase = _httpContextAccessor.HttpContext?.Request.PathBase.Value;
+
+        var prefix = ShellScope.Context?.Settings?.RequestUrlPrefix;
+
+        if (string.IsNullOrEmpty(pathBase) && !string.IsNullOrEmpty(prefix))
+        {
+            pathBase = "/" + prefix.Trim('/');
+        }
+
+        return $"{pathBase}/attachments/{attachmentId}?token={Uri.EscapeDataString(_signedTokens.Protect(SignedLinkPurpose, attachmentId, lifetime))}";
     }
 
     private static AttachmentResult Refuse(string error)

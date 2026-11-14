@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
@@ -28,6 +29,7 @@ public sealed class TimelineController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly TimelineOptions _options;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
 
@@ -39,6 +41,7 @@ public sealed class TimelineController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="options">The timeline options, for the kinds the composer offers.</param>
+    /// <param name="logger">The logger.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public TimelineController(
         ITimelineService timelineService,
@@ -46,9 +49,11 @@ public sealed class TimelineController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IOptions<TimelineOptions> options,
+        ILogger<TimelineController> logger,
         IHtmlLocalizer<TimelineController> htmlLocalizer)
     {
         _options = options.Value;
+        _logger = logger;
         _timelineService = timelineService;
         _accessService = accessService;
         _authorizationService = authorizationService;
@@ -104,50 +109,57 @@ public sealed class TimelineController : Controller
         var uploads = files?.Where(file => file is { Length: > 0 }).ToList() ?? [];
         var attached = new List<string>();
 
-        if (uploads.Count > 0)
+        if (uploads.Count > 0 && attachments is null)
         {
-            if (attachments is null)
-            {
-                await _notifier.ErrorAsync(H["Files can't be attached here."]);
+            await _notifier.ErrorAsync(H["Files can't be attached here."]);
 
-                return Back(returnUrl);
+            return Refused(record, body, returnUrl);
+        }
+
+        try
+        {
+            if (uploads.Count > 0)
+            {
+                var owner = new RecordRef(TimelineConstants.AttachmentOwnerKind, entry.ItemId);
+                var stored = await attachments.AddAsync(await ReadAsync(uploads, owner, entry.Author, cancellationToken), cancellationToken);
+
+                if (!stored.Succeeded)
+                {
+                    foreach (var error in stored.Errors)
+                    {
+                        await _notifier.ErrorAsync(H["{0}", error]);
+                    }
+
+                    return Refused(record, body, returnUrl);
+                }
+
+                attached.AddRange(stored.Attachments.Select(attachment => attachment.ItemId));
+                entry.AttachmentIds = [.. attached];
             }
 
-            var owner = new RecordRef(TimelineConstants.AttachmentOwnerKind, entry.ItemId);
-            var stored = await attachments.AddAsync(await ReadAsync(uploads, owner, entry.Author, cancellationToken), cancellationToken);
+            var result = await _timelineService.AddAsync(entry, cancellationToken);
 
-            if (!stored.Succeeded)
+            if (!result.Succeeded)
             {
-                foreach (var error in stored.Errors)
+                await DeleteFilesAsync(attachments, attached);
+
+                foreach (var error in result.Errors)
                 {
                     await _notifier.ErrorAsync(H["{0}", error]);
                 }
 
-                return Back(returnUrl);
+                return Refused(record, body, returnUrl);
             }
-
-            attached.AddRange(stored.Attachments.Select(attachment => attachment.ItemId));
-            entry.AttachmentIds = [.. attached];
         }
-
-        var result = await _timelineService.AddAsync(entry, cancellationToken);
-
-        if (result.Succeeded)
+        catch
         {
-            await _notifier.SuccessAsync(visibility == TimelineVisibility.Public ? H["The comment was added."] : H["The note was added."]);
-        }
-        else
-        {
-            foreach (var id in attached)
-            {
-                await attachments.DeleteAsync(id, cancellationToken);
-            }
+            // Whatever went wrong, the files written for this entry don't outlive it.
+            await DeleteFilesAsync(attachments, attached);
 
-            foreach (var error in result.Errors)
-            {
-                await _notifier.ErrorAsync(H["{0}", error]);
-            }
+            throw;
         }
+
+        await _notifier.SuccessAsync(visibility == TimelineVisibility.Public ? H["The comment was added."] : H["The note was added."]);
 
         return Back(returnUrl);
     }
@@ -194,6 +206,33 @@ public sealed class TimelineController : Controller
         await _notifier.SuccessAsync(H["The entry was redacted."]);
 
         return Back(returnUrl);
+    }
+
+    // Goes back with what was typed kept, so a refused file or entry doesn't lose the text.
+    private IActionResult Refused(RecordRef record, string body, string returnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(body))
+        {
+            TempData[ViewComponents.TimelineViewComponent.DraftKey] = record + "\n" + body;
+        }
+
+        return Back(returnUrl);
+    }
+
+    // Best effort: a cleanup that fails must not hide why the post failed.
+    private async Task DeleteFilesAsync(IAttachmentService attachments, List<string> attachmentIds)
+    {
+        foreach (var id in attachmentIds)
+        {
+            try
+            {
+                await attachments.DeleteAsync(id, CancellationToken.None);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning(exception, "A file attached to a timeline entry that wasn't stored couldn't be deleted.");
+            }
+        }
     }
 
     private static async Task<List<AttachmentUpload>> ReadAsync(List<IFormFile> files, RecordRef owner, PartyRef uploadedBy, CancellationToken cancellationToken)

@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Attachments.Models;
 using CrestApps.OrchardCore.Attachments.Services;
 using Microsoft.Extensions.Localization;
@@ -52,7 +53,7 @@ internal sealed class FileCreationAttachmentScanner : IAttachmentScanner
                 return null;
             }
 
-            _logger.LogWarning("An attached file was refused by the file scanners: {Reason}", result.ErrorMessage);
+            _logger.LogWarning("An attached file was refused by the file scanners: {Reason}", result.ErrorMessage.SanitizeLogValue());
 
             return string.IsNullOrWhiteSpace(result.ErrorMessage) ? S["the file scanner refused it"] : result.ErrorMessage;
         }

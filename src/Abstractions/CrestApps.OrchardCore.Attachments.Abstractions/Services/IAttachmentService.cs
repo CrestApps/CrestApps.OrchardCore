@@ -64,6 +64,9 @@ public interface IAttachmentService
     /// </summary>
     /// <param name="attachmentId">The attachment's id.</param>
     /// <param name="lifetime">How long the link works.</param>
-    /// <returns>The site-relative path of the link.</returns>
+    /// <returns>
+    /// The path of the link from the host, with the tenant's path base, such as <c>/tenant-a/attachments/{id}?token=...</c>;
+    /// put the site's scheme and host in front of it for an e-mail.
+    /// </returns>
     string CreateSignedPath(string attachmentId, TimeSpan lifetime);
 }

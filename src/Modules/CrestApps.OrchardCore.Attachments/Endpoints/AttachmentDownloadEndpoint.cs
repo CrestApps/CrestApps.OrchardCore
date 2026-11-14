@@ -46,18 +46,14 @@ internal static class AttachmentDownloadEndpoint
         var cancellationToken = httpContext.RequestAborted;
         var attachment = await attachmentService.FindAsync(id, cancellationToken);
 
-        if (attachment is null)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var signed = !string.IsNullOrEmpty(token)
+        var signed = attachment is not null
+            && !string.IsNullOrEmpty(token)
             && string.Equals(signedTokens.Unprotect(DefaultAttachmentService.SignedLinkPurpose, token), attachment.ItemId, StringComparison.Ordinal);
 
-        if (!signed && !await accessService.CanViewAsync(httpContext.User, attachment.Owner, cancellationToken))
+        if (attachment is null || (!signed && !await accessService.CanViewAsync(httpContext.User, attachment.Owner, cancellationToken)))
         {
-            // A guest without a link is asked to sign in; a signed-in user who may not see the record gets nothing,
-            // not even whether the file exists.
+            // Nobody learns whether a file exists without the right to it: a guest is asked to sign in, whether or not
+            // the id is known, and a signed-in user who may not see the record gets not found.
             return httpContext.User.Identity?.IsAuthenticated == true ? TypedResults.NotFound() : TypedResults.Challenge();
         }
 
