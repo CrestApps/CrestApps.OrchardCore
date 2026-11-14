@@ -101,6 +101,13 @@ public class PayrollSettingsViewModel
     public string DefaultCountryPack { get; set; }
 
     public string DefaultCurrency { get; set; }
+
+    public string TaxProvider { get; set; }
+
+    public string MinimumNetPay { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> TaxProviders { get; set; } = [];
 }
 
 /// <summary>
@@ -430,3 +437,89 @@ public class DatedAmountViewModel
 
     public string Amount { get; set; }
 }
+
+/// <summary>
+/// The payroll tax rule editor.
+/// </summary>
+public class PayrollTaxRuleViewModel
+{
+    public string Name { get; set; }
+
+    public string TaxCode { get; set; }
+
+    public string Jurisdiction { get; set; }
+
+    public string Category { get; set; }
+
+    public string Payer { get; set; }
+
+    public string Method { get; set; }
+
+    public string Rate { get; set; }
+
+    public string FixedAmount { get; set; }
+
+    public string TaxTableId { get; set; }
+
+    public string WageBase { get; set; }
+
+    public bool Annualize { get; set; }
+
+    public bool UsesElections { get; set; }
+
+    public string AllowanceAmount { get; set; }
+
+    public string SupplementalRate { get; set; }
+
+    public DateOnly? EffectiveFrom { get; set; }
+
+    public DateOnly? EffectiveTo { get; set; }
+
+    public bool Enabled { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Categories { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> Methods { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> Tables { get; set; } = [];
+}
+
+/// <summary>
+/// What a pay profile would be paid for the current period.
+/// </summary>
+public class PayPreviewViewModel
+{
+    public string ProfileId { get; set; }
+
+    public string StaffName { get; set; }
+
+    public DateOnly PeriodStart { get; set; }
+
+    public DateOnly PeriodEnd { get; set; }
+
+    public DateOnly PayDate { get; set; }
+
+    public string Currency { get; set; }
+
+    public IList<PayPreviewLine> Lines { get; set; } = [];
+
+    public decimal Gross { get; set; }
+
+    public decimal Net { get; set; }
+
+    public IList<PayStatementPayment> Payments { get; set; } = [];
+
+    public List<string> Warnings { get; set; } = [];
+
+    public bool MissingSchedule { get; set; }
+}
+
+/// <summary>
+/// A line of a pay preview.
+/// </summary>
+/// <param name="Line">The line.</param>
+/// <param name="Code">The pay code's code, or <see langword="null"/> for a tax.</param>
+public sealed record PayPreviewLine(PayStatementLine Line, string Code);

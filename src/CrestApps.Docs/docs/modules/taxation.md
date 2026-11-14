@@ -35,6 +35,16 @@ The framework is split into three assemblies:
 | `CrestApps.OrchardCore.Taxation.Core` | The determination engine, default calculation methods, sourcing strategies, resolvers, catalog stores, and dependency-injection wiring. |
 | `CrestApps.OrchardCore.Taxation` | The Orchard Core module: the `TaxationPart` editors, its migration, and the content-item taxable-item provider, which prices an item from its `ProductPart.Price`. |
 
+### Features
+
+| Feature | Contents |
+| --- | --- |
+| **Tax Tables** (`CrestApps.OrchardCore.Taxation.Tables`) | Tax jurisdictions, tax tables and the calculation methods, under **Taxes > Jurisdictions** and **Taxes > Tables**, with their recipe and deployment steps. No Commerce dependency: payroll uses it too (`AddTaxTablesCore()` registers the services). |
+| **Taxation** (`CrestApps.OrchardCore.Taxation`) | Depends on Tax Tables and Commerce: categories, types, rules, the `TaxationPart`, the sales tax engine and tax origin settings. Sites that had Taxation on get Tax Tables with it. |
+| **TaxJar** | See [TaxJar](#taxjar). |
+
+A module whose records point at tax tables registers an `ITaxTableUsage`, so a table in use can't be deleted.
+
 ## Getting started
 
 Enable the **Taxation** feature under **Tools → Features**, then:
@@ -71,7 +81,7 @@ The catalog is seeded with a set of well-known types on first run so existing be
 
 ### 3. Define where you tax — Jurisdictions
 
-Go to **Commerce → Taxation → Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates. **Country** is chosen from a dropdown of ISO 3166-1 countries (the stored value is the ISO country code), and **Effective from/to** are date-only pickers.
+Go to **Taxes → Jurisdictions** and add a taxing authority for each place you collect tax. Jurisdictions are hierarchical (country → region → county → city → special district) and are matched to an address by their non-empty components. Key fields include the **Level**, an optional **Parent jurisdiction**, the geographic components (**Country**, **Region**, **County**, **City**, **Postal code**), and optional **Effective from/to** dates. **Country** is chosen from a dropdown of ISO 3166-1 countries (the stored value is the ISO country code), and **Effective from/to** are date-only pickers.
 
 :::tip
 When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdown is populated from your managed `Country` content items instead of the built-in list, so you can curate the countries you operate in. The stored value is still the ISO country code, so switching the Addresses feature on or off never orphans existing jurisdictions or rules.
@@ -79,7 +89,7 @@ When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdow
 
 ### 4. Provide lookup tables — Tables (optional)
 
-Go to **Commerce → Taxation → Tables** when you need a rule whose amount depends on where the taxable base falls in a set of brackets rather than a single rate. A tax table is a named, versioned list of rows, and it is the data source for the **Tax table lookup**, **Progressive**, and **Threshold** calculation methods. Skip this step if you only use flat rates or fixed amounts. A tax table has:
+Go to **Taxes → Tables** when you need a rule whose amount depends on where the taxable base falls in a set of brackets rather than a single rate. A tax table is a named, versioned list of rows, and it is the data source for the **Tax table lookup**, **Progressive**, and **Threshold** calculation methods. Skip this step if you only use flat rates or fixed amounts. A tax table has:
 
 - **Name** — a human-readable label (the unique key, fixed after creation).
 - **Effective from/to** — optional date-only window during which the table is valid. A table is only used for a transaction whose date falls inside this window; a rule that requires a table but has no table in effect on the transaction date is **skipped** (it never silently taxes at zero).

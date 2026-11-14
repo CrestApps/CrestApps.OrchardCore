@@ -196,6 +196,7 @@ const sidebars = {
                 'user-manual/finance/pay-setup',
                 'user-manual/finance/payroll-employers',
                 'user-manual/finance/payroll-employees',
+                'user-manual/finance/payroll-taxes',
             ],
         },
         {

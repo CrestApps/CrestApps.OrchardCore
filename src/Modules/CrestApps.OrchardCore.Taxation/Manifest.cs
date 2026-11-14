@@ -11,12 +11,20 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = TaxationConstants.Feature.Tables,
+    Name = "Tax Tables",
+    Description = "Tax jurisdictions, tax tables and the calculation methods, shared by sales tax and payroll.",
+    Category = "Finance"
+)]
+
+[assembly: Feature(
     Id = TaxationConstants.Feature.Taxation,
     Name = "Taxation",
     Description = "Provides a provider-agnostic, extensible taxation framework and the TaxationPart.",
     Category = "Commerce",
     Dependencies =
     [
+        TaxationConstants.Feature.Tables,
         CommerceConstants.Features.Area,
     ]
 )]

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -151,33 +152,7 @@ public sealed class PayInputsDataSet : RecordDataSet<PayInputRow>, IPayrollDataS
     /// <param name="code">Its pay code.</param>
     /// <returns>The amount, or <see langword="null"/> when there is no rate.</returns>
     public static decimal? AmountOf(PayInput input, PayCode code)
-    {
-        ArgumentNullException.ThrowIfNull(input);
-
-        if (input.Amount is { } amount)
-        {
-            return amount;
-        }
-
-        if (code is null)
-        {
-            return null;
-        }
-
-        if (code.Kind == PayCodeKinds.Unpaid)
-        {
-            return 0;
-        }
-
-        var hours = input.Hours ?? 0;
-
-        if (code.PremiumPerHour is > 0)
-        {
-            return hours * code.PremiumPerHour.Value;
-        }
-
-        return input.Rate is { } rate ? hours * rate * code.Multiplier : null;
-    }
+        => PayInputAmount.Of(input, code);
 
     /// <inheritdoc />
     public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)

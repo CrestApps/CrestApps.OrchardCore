@@ -1,0 +1,18 @@
+@model ShapeViewModel<PayrollTaxRule>
+@using System.Globalization
+
+@{
+    var rule = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Jurisdiction"]">@rule.Jurisdiction</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Paid by"]">@(rule.Payer == PayLinePayer.Employer ? T["Employer"] : T["Employee"])</span>
+@if (rule.Rate is { } rate)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rate"]">@rate.ToString("0.####", CultureInfo.CurrentCulture) %</span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Applies"]"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@rule.EffectiveFrom.ToString("d", CultureInfo.CurrentCulture)@(rule.EffectiveTo is { } to ? " – " + to.ToString("d", CultureInfo.CurrentCulture) : string.Empty)</span>
+@if (!rule.Enabled)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Off"]</span>
+}

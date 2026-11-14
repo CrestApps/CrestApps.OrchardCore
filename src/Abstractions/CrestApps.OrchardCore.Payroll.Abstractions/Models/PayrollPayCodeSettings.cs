@@ -266,8 +266,9 @@ public static class PayrollPayCodeSettingsExtensions
             // hours not worked and overtime premiums do not.
             CountsInRegularRate = code.Class == PayCodeClass.Earning && code.Kind is PayCodeKinds.Regular or PayCodeKinds.ShiftDifferential
                 or PayCodeKinds.Weekend or PayCodeKinds.CallBack or PayCodeKinds.Bonus or PayCodeKinds.Commission,
+            // A shift differential pays a premium on hours another line already pays, so its hours are not counted again.
             CountsAsHoursWorked = code.Class == PayCodeClass.Earning && code.Kind is PayCodeKinds.Regular or PayCodeKinds.Overtime
-                or PayCodeKinds.DoubleTime or PayCodeKinds.ShiftDifferential or PayCodeKinds.Weekend or PayCodeKinds.CallBack,
+                or PayCodeKinds.DoubleTime or PayCodeKinds.Weekend or PayCodeKinds.CallBack,
             Proration = code.Kind == PayCodeKinds.Salary ? PayCodeProrationRule.WorkingDays : PayCodeProrationRule.None,
             InRetroPay = code.Class is PayCodeClass.Earning or PayCodeClass.Deduction or PayCodeClass.EmployerContribution,
         };

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
@@ -117,6 +118,16 @@ public sealed class EmployerHandler : CatalogEntryHandlerBase<Employer>
     }
 
     /// <inheritdoc />
+    public override Task InitializingAsync(InitializingContext<Employer> context, CancellationToken cancellationToken = default)
+    {
+        // A recipe or a deployment plan hands the values in; a page sets them itself and passes none.
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+        Normalize(context.Model);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public override Task InitializedAsync(InitializedContext<Employer> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
@@ -127,9 +138,21 @@ public sealed class EmployerHandler : CatalogEntryHandlerBase<Employer>
     /// <inheritdoc />
     public override Task UpdatingAsync(UpdatingContext<Employer> context, CancellationToken cancellationToken = default)
     {
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+        Normalize(context.Model);
         context.Model.ModifiedUtc = _clock.UtcNow;
 
         return Task.CompletedTask;
+    }
+
+    // Trims and upper-cases what a page, a recipe or a deployment plan typed.
+    private static void Normalize(Employer item)
+    {
+        item.Name = item.Name?.Trim();
+        item.LegalName = string.IsNullOrWhiteSpace(item.LegalName) ? null : item.LegalName.Trim();
+        item.TaxId = string.IsNullOrWhiteSpace(item.TaxId) ? null : item.TaxId.Trim();
+        item.Currency = string.IsNullOrWhiteSpace(item.Currency) ? null : item.Currency.Trim().ToUpperInvariant();
+        item.CountryPack = string.IsNullOrWhiteSpace(item.CountryPack) ? null : item.CountryPack.Trim().ToUpperInvariant();
     }
 
     /// <inheritdoc />
@@ -137,11 +160,7 @@ public sealed class EmployerHandler : CatalogEntryHandlerBase<Employer>
     {
         var item = context.Model;
 
-        item.Name = item.Name?.Trim();
-        item.LegalName = string.IsNullOrWhiteSpace(item.LegalName) ? null : item.LegalName.Trim();
-        item.TaxId = string.IsNullOrWhiteSpace(item.TaxId) ? null : item.TaxId.Trim();
-        item.Currency = string.IsNullOrWhiteSpace(item.Currency) ? null : item.Currency.Trim().ToUpperInvariant();
-        item.CountryPack = string.IsNullOrWhiteSpace(item.CountryPack) ? null : item.CountryPack.Trim().ToUpperInvariant();
+        Normalize(item);
 
         if (string.IsNullOrEmpty(item.Name))
         {

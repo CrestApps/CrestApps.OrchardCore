@@ -21,7 +21,7 @@ internal sealed class PayrollMigrations : DataMigration
         await PayrollIndexSchema.CreateAsync(SchemaBuilder);
         await _seeder.SeedAsync();
 
-        return 3;
+        return 4;
     }
 
     // Pay profiles and pay items.
@@ -38,5 +38,13 @@ internal sealed class PayrollMigrations : DataMigration
         await _seeder.SeedAsync();
 
         return 3;
+    }
+
+    // Pay statements and the line rows the accumulators sum.
+    public async Task<int> UpdateFrom3Async()
+    {
+        await PayStatementIndexSchema.CreateAsync(SchemaBuilder);
+
+        return 4;
     }
 }

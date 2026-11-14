@@ -84,3 +84,35 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
         return ValueTask.CompletedTask;
     }
 }
+
+/// <summary>
+/// Adds the payroll tax rules to Payroll &gt; Setup.
+/// </summary>
+public sealed class PayrollTaxTablesAdminMenu : AdminNavigationProvider
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PayrollTaxTablesAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public PayrollTaxTablesAdminMenu(IStringLocalizer<PayrollTaxTablesAdminMenu> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
+    {
+        builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll => payroll
+            .Add(S["Setup"], S["Setup"].PrefixPosition("90"), setup => setup
+                .Id("payrollSetup")
+                .Add(S["Tax rules"], S["Tax rules"].PrefixPosition("30"), rules => rules
+                    .Id("payrollTaxRules")
+                    .Action("Index", "PayrollTaxRules", PayrollConstants.Features.Payroll)
+                    .Permission(PayrollPermissions.ManagePayrollSettings)
+                    .LocalNav())));
+
+        return ValueTask.CompletedTask;
+    }
+}

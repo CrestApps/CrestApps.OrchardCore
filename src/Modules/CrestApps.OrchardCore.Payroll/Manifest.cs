@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Approvals;
 using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Taxation;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -29,5 +30,17 @@ using OrchardCore.Modules.Manifest;
         StaffConstants.Features.Staff,
         StaffConstants.Features.Compensation,
         ApprovalsConstants.Features.Approvals,
+    ]
+)]
+
+[assembly: Feature(
+    Id = PayrollConstants.Features.TaxTables,
+    Name = "Payroll Tax Tables",
+    Description = "The built-in tax provider: payroll tax rules for any jurisdiction (a rate, a fixed amount, a table or brackets, a wage base, elections and a supplemental rate), worked out over Taxation's tax tables.",
+    Category = "Payroll",
+    Dependencies =
+    [
+        PayrollConstants.Features.Payroll,
+        TaxationConstants.Feature.Tables,
     ]
 )]

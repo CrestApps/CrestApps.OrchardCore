@@ -36,6 +36,14 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   (`PayrollSettings`).
 - The recipe **Payroll: sample roles**.
 
+## The engine and taxes
+
+- `IPayCalculator` runs the `IPayCalculationStep`s (`PayCalculationOrder`) over a `PayCalculationContext` built by
+  `PayCalculationContextFactory`; gross-ups repeat them. `PayStatement` and its lines; accumulators from
+  `PayStatementLineIndex` (`IPayAccumulatorService`). **Preview the next pay** on a profile.
+- `IPayrollTaxProvider` (stateless); **Payroll Tax Tables** (`PayrollTaxRule`, **Payroll > Setup > Tax rules**, the
+  `PayrollTaxRules` recipe and deployment steps) over Taxation's tables.
+
 ## Pay code rules
 
 - A **Payroll** card on pay codes (`PayrollPayCodeSettings`, defaults by class and kind through `GetPayrollSettings`):

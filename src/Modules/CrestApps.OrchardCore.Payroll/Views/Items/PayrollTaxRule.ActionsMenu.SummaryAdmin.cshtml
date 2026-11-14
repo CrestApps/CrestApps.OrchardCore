@@ -1,0 +1,3 @@
+@model ShapeViewModel<PayrollTaxRule>
+
+<a asp-action="Delete" asp-route-id="@Model.Value.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete the tax rule? Statements already worked out keep their taxes. To stop a rule from a day on, give it a last day instead."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

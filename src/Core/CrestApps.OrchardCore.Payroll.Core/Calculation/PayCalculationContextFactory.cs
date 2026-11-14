@@ -1,0 +1,170 @@
+using CrestApps.Core;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Teams.Services;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Settings;
+
+namespace CrestApps.OrchardCore.Payroll.Core.Calculation;
+
+/// <summary>
+/// What a calculation of one pay is for: the period, the pay date and what the run includes.
+/// </summary>
+public sealed class PayCalculationRequest
+{
+    /// <summary>Gets or sets the first day of the period.</summary>
+    public DateOnly PeriodStart { get; set; }
+
+    /// <summary>Gets or sets the last day of the period.</summary>
+    public DateOnly PeriodEnd { get; set; }
+
+    /// <summary>Gets or sets the pay date.</summary>
+    public DateOnly PayDate { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the salary and the pay items apply (a regular run).</summary>
+    public bool Regular { get; set; } = true;
+
+    /// <summary>Gets or sets a value indicating whether inputs a run or an export already took are read again.</summary>
+    public bool IncludeConsumedInputs { get; set; }
+
+    /// <summary>Gets or sets inputs typed in for the run, added to the sources' inputs.</summary>
+    public IList<PayInput> ExtraInputs { get; set; } = [];
+
+    /// <summary>Gets or sets how supplemental pay is withheld.</summary>
+    public PayrollSupplementalMethod SupplementalMethod { get; set; }
+}
+
+/// <summary>
+/// Builds the calculation of a pay profile for a period from what the site holds: the employer, the schedule, the
+/// staff member's pay and dates, the inputs of every source, the pay items, the pay codes, the accumulators, the home
+/// and work jurisdictions and Payroll's settings.
+/// </summary>
+public sealed class PayCalculationContextFactory
+{
+    private readonly IEmployerManager _employers;
+    private readonly IPayScheduleManager _schedules;
+    private readonly IPayCodeManager _codes;
+    private readonly IPayItemManager _items;
+    private readonly IPayInputService _inputs;
+    private readonly IPayAccumulatorService _accumulators;
+    private readonly IStaffDirectory _staff;
+    private readonly IServiceProvider _services;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PayCalculationContextFactory"/> class.
+    /// </summary>
+    /// <param name="employers">The employers.</param>
+    /// <param name="schedules">The pay schedules.</param>
+    /// <param name="codes">The pay codes.</param>
+    /// <param name="items">The pay items.</param>
+    /// <param name="inputs">The pay inputs.</param>
+    /// <param name="accumulators">The accumulators.</param>
+    /// <param name="staff">The staff directory.</param>
+    /// <param name="services">The services, for the teams and the settings when they are there.</param>
+    public PayCalculationContextFactory(
+        IEmployerManager employers,
+        IPayScheduleManager schedules,
+        IPayCodeManager codes,
+        IPayItemManager items,
+        IPayInputService inputs,
+        IPayAccumulatorService accumulators,
+        IStaffDirectory staff,
+        IServiceProvider services)
+    {
+        _employers = employers;
+        _schedules = schedules;
+        _codes = codes;
+        _items = items;
+        _inputs = inputs;
+        _accumulators = accumulators;
+        _staff = staff;
+        _services = services;
+    }
+
+    /// <summary>
+    /// Builds the calculation of a profile.
+    /// </summary>
+    /// <param name="profile">The pay profile.</param>
+    /// <param name="request">The period, pay date and options.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The calculation, ready to run.</returns>
+    public async Task<PayCalculationContext> CreateAsync(EmployeePayProfile profile, PayCalculationRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var employer = await _employers.FindByIdAsync(profile.EmployerId, cancellationToken);
+        var schedule = string.IsNullOrEmpty(profile.PayScheduleId) ? null : await _schedules.FindByIdAsync(profile.PayScheduleId, cancellationToken);
+        var staff = (await _staff.GetAsync([profile.StaffMemberId], cancellationToken)).GetValueOrDefault(profile.StaffMemberId);
+        var settings = _services.GetService<ISiteService>() is { } site ? await site.GetSettingsAsync<PayrollSettings>() : null;
+        var inputs = (await _inputs.GetInputsAsync(new PayInputQuery
+        {
+            EmployerId = profile.EmployerId,
+            PeriodStart = request.PeriodStart,
+            PeriodEnd = request.PeriodEnd,
+            StaffMemberIds = [profile.StaffMemberId],
+            IncludeConsumed = request.IncludeConsumedInputs,
+        }, cancellationToken)).Where(input => input.StaffMemberId == profile.StaffMemberId).ToList();
+
+        inputs.AddRange(request.ExtraInputs);
+
+        return new PayCalculationContext
+        {
+            Profile = profile,
+            Employer = employer,
+            Schedule = schedule,
+            PeriodStart = request.PeriodStart,
+            PeriodEnd = request.PeriodEnd,
+            PayDate = request.PayDate,
+            Pay = staff is not null && staff.TryGet<StaffPayRates>(out var pay) && pay is not null ? pay : new StaffPayRates(),
+            HireDate = staff?.HireDate,
+            TerminationDate = staff?.TerminationDate,
+            Inputs = inputs,
+            Items = request.Regular ? [.. await _items.ListByProfileAsync(profile.ItemId, cancellationToken)] : [],
+            IncludePayItems = request.Regular,
+            IncludeSalary = request.Regular,
+            Codes = (await _codes.GetAllAsync(cancellationToken)).ToDictionary(code => code.ItemId, StringComparer.Ordinal),
+            Accumulators = await _accumulators.GetAsync(profile.StaffMemberId, profile.EmployerId, request.PayDate, request.PeriodStart, request.PeriodEnd, cancellationToken),
+            SupplementalMethod = request.SupplementalMethod,
+            MinimumNet = settings?.MinimumNetPay ?? 0,
+            HomeJurisdictions = Home(profile),
+            WorkJurisdictions = await WorkAsync(profile, cancellationToken),
+        };
+    }
+
+    // The country and the country with its region of the home address, such as US and US-CA.
+    private static List<string> Home(EmployeePayProfile profile)
+    {
+        var jurisdictions = new List<string>();
+
+        if (!string.IsNullOrEmpty(profile.HomeAddress?.Country))
+        {
+            var country = profile.HomeAddress.Country.ToUpperInvariant();
+
+            jurisdictions.Add(country);
+
+            if (!string.IsNullOrEmpty(profile.HomeAddress.Region))
+            {
+                jurisdictions.Add($"{country}-{profile.HomeAddress.Region.ToUpperInvariant()}");
+            }
+        }
+
+        return jurisdictions;
+    }
+
+    // The jurisdictions of the work site team.
+    private async Task<List<string>> WorkAsync(EmployeePayProfile profile, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(profile.WorkSiteTeamId) || _services.GetService<ITeamManager>() is not { } teams
+            || await teams.FindByIdAsync(profile.WorkSiteTeamId, cancellationToken) is not { } site
+            || !site.TryGet<PayrollTeamSettings>(out var settings) || settings is null)
+        {
+            return [];
+        }
+
+        return [.. settings.Jurisdictions];
+    }
+}

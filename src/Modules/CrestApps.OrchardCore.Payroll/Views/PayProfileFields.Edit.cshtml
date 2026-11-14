@@ -23,6 +23,7 @@ else if (!Model.IsNew)
         @if (!Model.IsNew)
         {
             <a class="btn btn-sm btn-secondary" asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PayItems" asp-action="Index" asp-route-profileId="@Model.ProfileId">@T["Pay items"]</a>
+            <a class="btn btn-sm btn-secondary ms-1" asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PayPreviews" asp-action="Index" asp-route-id="@Model.ProfileId">@T["Preview the next pay"]</a>
         }
     </div>
     <div class="card-body">

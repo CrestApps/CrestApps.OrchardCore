@@ -202,11 +202,58 @@ When Payroll is turned on, `PayrollPayCodeSeeder` adds SAL, BONUS, COMM, TIPS, R
 }
 ```
 
+## The engine
+
+A pay is calculated by `IPayCalculator` from a `PayCalculationContext`: the profile, the employer, the schedule, the period and pay date, the staff member's pay (`StaffPayRates`) and hire and termination dates, the inputs, the pay items, the pay codes, the accumulators, the supplemental method, the least net pay, a gross-up and the home and work jurisdictions. `PayCalculationContextFactory` builds one from what the site holds. The calculation is pure: it fills the context's `Lines`, `Warnings` and `Payments`, and keeps nothing.
+
+It runs the `IPayCalculationStep`s in order (`PayCalculationOrder`); a module adds one with its own order, or replaces a built-in one by registering a step with the same order:
+
+| Order | Step | What it does |
+| --- | --- | --- |
+| 100 | Earnings | The salary for the period (`SalaryOn` each counted day, prorated by the salary code's rule for a hire, a termination or a salary change), hours times the rate times the code's multiplier (or the premium an hour of a code with one), amounts, recurring earnings and imputed income from pay items, and the earning of a gross-up |
+| 200 | Regular rate | In each overtime week, pay for hours worked at their straight rate plus other pay that counts (premiums, bonuses and commissions of the week, or spread over the period's weeks by hours) divided by the hours: an overtime line paid below it gets the premium it requires. Exempt profiles have none |
+| 300 | Deductions before tax | Deductions not taxed for at least one category, by priority, within their limits (`PayLimits`) and with their arrears |
+| 500 | Taxes | Regular and supplemental wages of each tax category from the treatment matrix, worked out by the tax provider |
+| 600 | Deductions after tax | The other deductions, by priority, within their limits |
+| 700 | Disposable earnings | Deductions that are a percent of gross less the employee's taxes |
+| 800 | Net check | Below the least net pay, deductions taken after tax are cut, the largest priority number first; what a deduction that carries arrears could not take is owed (`ArrearsAdded`) |
+| 900 | Contributions | Employer contributions, the employer's match of a deduction item (at most a percent of earnings), and reimbursements |
+| 1000 | Distribution | Net pay split by the profile's rows: amounts, percents of net pay (`Money.Allocate`, so they add up exactly), and what is left; with no row, a check |
+
+A gross-up (`PayGrossUp`: an earning and a target net) repeats the steps, raising the earning by what net pay misses until it is within a cent.
+
+Lines are `PayStatementLine`s (type, pay code or tax code and category, hours, rate, amount, jurisdiction, payer, taxable wages, what a limit or the net check cut, arrears, pay item, cost allocation, source inputs). A `PayStatement` keeps them with its run, period, pay date, gross, net, payments, a snapshot of names and addresses, `VoidOf`/`VoidedBy` and a status (`Draft`, `Final`, `Paid`, `Voided`); one that is not a draft can't be deleted.
+
+**Accumulators** (`IPayAccumulatorService`) are never stored: they are the sums of `PayStatementLineIndex` rows, one per line of each statement that is not a draft, by pay code (`PayAccumulators.CodeKey`) and tax (`TaxKey`): the period, month, quarter, year and lifetime amounts, the year's hours and a tax's year-to-date taxable wages. A void is a statement with negative lines, so the two cancel out. The rows keep amounts as whole minor units and hours as hundredths, in integer columns.
+
+**Preview the next pay** on a pay profile runs the engine for the current period of its schedule with the inputs and items there are now, and shows the lines, net pay, its split and the warnings, without keeping anything (`ViewPayProfiles` for the employer).
+
+## Taxes
+
+`IPayrollTaxProvider.CalculateAsync(PayrollTaxRequest)` is stateless. The request carries the employer and its registrations, the worker type, the home and work jurisdictions, the elections in effect on the pay date, the pay date and frequency (periods a year), the regular and supplemental wages of each tax category, the supplemental method, the accumulators and the currency; the result is tax lines (code, name, jurisdiction, category, payer, taxable wages, amount) and warnings. **Settings > Payroll** names the provider (`PayrollSettings.TaxProvider`; empty uses the only one there is) and the least net pay. With no provider, nothing is withheld and the calculation says so. A contractor has nothing withheld.
+
+**Payroll Tax Tables** (`CrestApps.OrchardCore.Payroll.TaxTables`, on Taxation's **Tax Tables** feature) is the built-in provider, `TaxTables`. A `PayrollTaxRule` is a tax of one jurisdiction on the wages of one category, paid by the employee or the employer, with one of Taxation's calculation methods (`Percentage`, `FixedAmount`, `TaxTable`, `Progressive`, `Threshold`), a rate in percent, a fixed amount or a Taxation tax table, a yearly wage base, whether the wages are annualized, whether the person's election applies (exempt, allowances times `AllowanceAmount`, extra withholding), a flat supplemental rate, and dated versions (`EffectiveFrom`/`EffectiveTo`, never two versions of one `TaxCode` on the same day). A rule applies when the employer is registered in its jurisdiction and, for a jurisdiction below a country (with a dash), the person lives or works there (or has neither on file). A rule whose table is missing or not in effect on the pay date is skipped with a warning, and a table a rule uses can't be deleted (`ITaxTableUsage`).
+
+Rules are under **Payroll > Setup > Tax rules** (`ManagePayrollSettings` for every employer, since rules are the same for all). The `PayrollTaxRules` recipe step (`Rules`, matched by id, then by tax code and first day) and the **Payroll tax rules** deployment step carry them:
+
+```json
+{
+  "name": "PayrollTaxRules",
+  "Rules": [
+    { "Name": "Social insurance", "TaxCode": "US-SS", "Jurisdiction": "US", "Category": "SocialInsurance", "Payer": "Employee",
+      "Method": "Percentage", "Rate": 6.2, "WageBase": 176100, "EffectiveFrom": "2026-01-01" },
+    { "Name": "Income tax", "TaxCode": "US-FIT", "Jurisdiction": "US", "Category": "IncomeTax", "Payer": "Employee",
+      "Method": "Progressive", "TaxTableId": "<a tax table id>", "Annualize": true, "UsesElections": true, "AllowanceAmount": 4000,
+      "SupplementalRate": 22, "EffectiveFrom": "2026-01-01" }
+  ]
+}
+```
+
 ## Teams and settings
 
 With Teams on, people with `ManagePayrollSettings` get a **Payroll** card on the team editor: `PayrollTeamSettings` with the team's `LedgerCode` and a work site's `Jurisdictions`.
 
-`PayrollSettings` (**Settings > Payroll**): `AllowPreparerToApprove` and `AllowChangingOwnPay` (both off: separation of duties), and the default country pack and currency of a new employer.
+`PayrollSettings` (**Settings > Payroll**): `AllowPreparerToApprove` and `AllowChangingOwnPay` (both off: separation of duties), the tax provider and the least net pay, and the default country pack and currency of a new employer.
 
 ## Upgrading from the time clock's pay periods and pay codes
 

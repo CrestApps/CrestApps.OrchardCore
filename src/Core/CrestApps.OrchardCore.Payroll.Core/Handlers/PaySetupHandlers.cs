@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using Microsoft.Extensions.Localization;
@@ -29,6 +30,16 @@ public sealed class PayScheduleHandler : CatalogEntryHandlerBase<PaySchedule>
     }
 
     /// <inheritdoc />
+    public override Task InitializingAsync(InitializingContext<PaySchedule> context, CancellationToken cancellationToken = default)
+    {
+        // A recipe or a deployment plan hands the values in; a page sets them itself and passes none.
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+        Normalize(context.Model);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public override Task InitializedAsync(InitializedContext<PaySchedule> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
@@ -39,9 +50,17 @@ public sealed class PayScheduleHandler : CatalogEntryHandlerBase<PaySchedule>
     /// <inheritdoc />
     public override Task UpdatingAsync(UpdatingContext<PaySchedule> context, CancellationToken cancellationToken = default)
     {
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+        Normalize(context.Model);
         context.Model.ModifiedUtc = _clock.UtcNow;
 
         return Task.CompletedTask;
+    }
+
+    // Trims and upper-cases what a page, a recipe or a deployment plan typed.
+    private static void Normalize(PaySchedule item)
+    {
+        item.Name = item.Name?.Trim();
     }
 
     /// <inheritdoc />
@@ -49,7 +68,7 @@ public sealed class PayScheduleHandler : CatalogEntryHandlerBase<PaySchedule>
     {
         var item = context.Model;
 
-        item.Name = item.Name?.Trim();
+        Normalize(item);
 
         if (string.IsNullOrEmpty(item.Name))
         {
@@ -104,6 +123,16 @@ public sealed class PayCodeHandler : CatalogEntryHandlerBase<PayCode>
     }
 
     /// <inheritdoc />
+    public override Task InitializingAsync(InitializingContext<PayCode> context, CancellationToken cancellationToken = default)
+    {
+        // A recipe or a deployment plan hands the values in; a page sets them itself and passes none.
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+        Normalize(context.Model);
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public override Task InitializedAsync(InitializedContext<PayCode> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
@@ -114,9 +143,20 @@ public sealed class PayCodeHandler : CatalogEntryHandlerBase<PayCode>
     /// <inheritdoc />
     public override Task UpdatingAsync(UpdatingContext<PayCode> context, CancellationToken cancellationToken = default)
     {
+        CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+        Normalize(context.Model);
         context.Model.ModifiedUtc = _clock.UtcNow;
 
         return Task.CompletedTask;
+    }
+
+    // Trims and upper-cases what a page, a recipe or a deployment plan typed.
+    private static void Normalize(PayCode item)
+    {
+        item.Code = item.Code?.Trim().ToUpperInvariant();
+        item.Name = string.IsNullOrWhiteSpace(item.Name) ? item.Code : item.Name.Trim();
+        item.ExportCode = string.IsNullOrWhiteSpace(item.ExportCode) ? null : item.ExportCode.Trim();
+        item.Kind = string.IsNullOrWhiteSpace(item.Kind) ? PayCodeKinds.Regular : item.Kind.Trim();
     }
 
     /// <inheritdoc />
@@ -124,10 +164,7 @@ public sealed class PayCodeHandler : CatalogEntryHandlerBase<PayCode>
     {
         var item = context.Model;
 
-        item.Code = item.Code?.Trim().ToUpperInvariant();
-        item.Name = string.IsNullOrWhiteSpace(item.Name) ? item.Code : item.Name.Trim();
-        item.ExportCode = string.IsNullOrWhiteSpace(item.ExportCode) ? null : item.ExportCode.Trim();
-        item.Kind = string.IsNullOrWhiteSpace(item.Kind) ? PayCodeKinds.Regular : item.Kind.Trim();
+        Normalize(item);
 
         if (string.IsNullOrEmpty(item.Code))
         {

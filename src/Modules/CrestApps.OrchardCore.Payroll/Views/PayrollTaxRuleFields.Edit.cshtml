@@ -1,0 +1,151 @@
+@model PayrollTaxRuleViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The tax"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+                <span class="hint">@T["What a pay statement shows, such as State income tax."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TaxCode">
+            <label asp-for="TaxCode" class="ocat-label ocat-label-required">@T["Tax code"]</label>
+            <div class="ocat-end">
+                <input asp-for="TaxCode" class="form-control text-uppercase" style="max-width: 14rem" />
+                <span asp-validation-for="TaxCode" class="text-danger"></span>
+                <span class="hint">@T["The same for every dated version of the tax: the year's totals and the wage base add up by it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Jurisdiction">
+            <label asp-for="Jurisdiction" class="ocat-label ocat-label-required">@T["Jurisdiction"]</label>
+            <div class="ocat-end">
+                <input asp-for="Jurisdiction" class="form-control text-uppercase" style="max-width: 10rem" placeholder="US-CA" />
+                <span asp-validation-for="Jurisdiction" class="text-danger"></span>
+                <span class="hint">@T["The tax applies to employers registered there. A jurisdiction below a country (with a dash) applies only to people who live or work there."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Category" class="ocat-label">@T["Wages taxed"]</label>
+            <div class="ocat-end">
+                <select asp-for="Category" asp-items="Model.Categories" class="form-select" style="max-width: 20rem"></select>
+                <span class="hint">@T["The tax category whose wages are taxed; each pay code says whether it counts for it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Payer" class="ocat-label">@T["Paid by"]</label>
+            <div class="ocat-end">
+                <select asp-for="Payer" class="form-select" style="max-width: 20rem">
+                    <option value="Employee">@T["The employee (withheld from pay)"]</option>
+                    <option value="Employer">@T["The employer (on top of pay)"]</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["How it is worked out"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Method">
+            <label asp-for="Method" class="ocat-label">@T["Method"]</label>
+            <div class="ocat-end">
+                <select asp-for="Method" asp-items="Model.Methods" class="form-select" style="max-width: 20rem"></select>
+                <span asp-validation-for="Method" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Rate">
+            <label asp-for="Rate" class="ocat-label">@T["Rate (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="Rate" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="6.2" />
+                <span asp-validation-for="Rate" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="FixedAmount">
+            <label asp-for="FixedAmount" class="ocat-label">@T["Fixed amount"]</label>
+            <div class="ocat-end">
+                <input asp-for="FixedAmount" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="FixedAmount" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TaxTableId">
+            <label asp-for="TaxTableId" class="ocat-label">@T["Tax table"]</label>
+            <div class="ocat-end">
+                <select asp-for="TaxTableId" asp-items="Model.Tables" class="form-select" style="max-width: 20rem">
+                    <option value="">@T["None"]</option>
+                </select>
+                <span asp-validation-for="TaxTableId" class="text-danger"></span>
+                <span class="hint">@T["For a table or brackets: a table of Taxes &gt; Tables, with rates as fractions (0.1 for 10%)."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="WageBase">
+            <label asp-for="WageBase" class="ocat-label">@T["Wage base"]</label>
+            <div class="ocat-end">
+                <input asp-for="WageBase" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="WageBase" class="text-danger"></span>
+                <span class="hint">@T["The most wages taxed in a calendar year; empty for no limit."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="SupplementalRate">
+            <label asp-for="SupplementalRate" class="ocat-label">@T["Supplemental rate (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="SupplementalRate" class="form-control" inputmode="decimal" style="max-width: 8rem" />
+                <span asp-validation-for="SupplementalRate" class="text-danger"></span>
+                <span class="hint">@T["Withheld from bonuses and commissions when a run uses the flat method; empty to withhold them with regular wages."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Annualize" type="checkbox" class="form-check-input" />
+                    <label asp-for="Annualize" class="form-check-label">@T["Work it out on a year's wages"]</label>
+                    <span class="hint dashed">@T["The period's wages are turned into a year's, the method applied, and the result divided back: how income tax tables are written."]</span>
+                </div>
+                <div class="form-check">
+                    <input asp-for="UsesElections" type="checkbox" class="form-check-input" />
+                    <label asp-for="UsesElections" class="form-check-label">@T["The person's election applies"]</label>
+                    <span class="hint dashed">@T["Exempt withholds nothing, each allowance lowers a year's wages by the amount below, and extra withholding is added."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="AllowanceAmount">
+            <label asp-for="AllowanceAmount" class="ocat-label">@T["Each allowance"]</label>
+            <div class="ocat-end">
+                <input asp-for="AllowanceAmount" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="AllowanceAmount" class="text-danger"></span>
+                <span class="hint">@T["Amounts with a dot for decimals."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["When"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="EffectiveFrom">
+            <label asp-for="EffectiveFrom" class="ocat-label ocat-label-required">@T["From"]</label>
+            <div class="ocat-end">
+                <input asp-for="EffectiveFrom" type="date" class="form-control" style="max-width: 12rem" />
+                <span asp-validation-for="EffectiveFrom" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="EffectiveTo">
+            <label asp-for="EffectiveTo" class="ocat-label">@T["To"]</label>
+            <div class="ocat-end">
+                <input asp-for="EffectiveTo" type="date" class="form-control" style="max-width: 12rem" />
+                <span asp-validation-for="EffectiveTo" class="text-danger"></span>
+                <span class="hint">@T["By pay date. When a rate changes, give this version a last day and add a version from the next day with the same tax code."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="Enabled" class="form-check-label">@T["In use"]</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -49,6 +50,19 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, PayProfileUsage>(serviceProvider => serviceProvider.GetRequiredService<PayProfileUsage>()));
 
         services.TryAddScoped<PayrollPayCodeSeeder>();
+        services.TryAddScoped<PayStatementStore>();
+        services.TryAddScoped<IPayAccumulatorService, PayAccumulatorService>();
+        services.TryAddScoped<IPayCalculator, PayCalculator>();
+        services.TryAddScoped<PayCalculationContextFactory>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, EarningsPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, RegularRatePayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, PreTaxDeductionsPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, TaxesPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, PostTaxDeductionsPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, DisposableEarningsPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, NetCheckPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, ContributionsPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, DistributionPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, PayCodeBaseUsage>());
 
         // Any jurisdiction gets the usual withholding fields until a country pack gives its own form.

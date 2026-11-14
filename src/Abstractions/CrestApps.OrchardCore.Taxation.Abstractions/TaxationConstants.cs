@@ -19,6 +19,12 @@ public static class TaxationConstants
         /// Works out sales tax with TaxJar for the countries it's set up for.
         /// </summary>
         public const string TaxJar = "CrestApps.OrchardCore.Taxation.TaxJar";
+
+        /// <summary>
+        /// The feature with tax jurisdictions, tax tables and the calculation methods, with no Commerce dependency,
+        /// shared by sales tax and payroll.
+        /// </summary>
+        public const string Tables = "CrestApps.OrchardCore.Taxation.Tables";
     }
 
     /// <summary>

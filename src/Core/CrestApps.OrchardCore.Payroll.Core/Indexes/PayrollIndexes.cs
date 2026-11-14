@@ -186,7 +186,7 @@ public static class PayrollIndexSchema
     /// </summary>
     /// <returns>The providers.</returns>
     public static IIndexProvider[] Providers()
-        => [new EmployerIndexProvider(), new PayProfileIndexProvider(), new PayItemIndexProvider()];
+        => [new EmployerIndexProvider(), new PayProfileIndexProvider(), new PayItemIndexProvider(), new PayStatementIndexProvider(), new PayStatementLineIndexProvider()];
 
     /// <summary>
     /// Creates the tables.
@@ -211,6 +211,7 @@ public static class PayrollIndexSchema
             collection: collection);
 
         await CreateProfileTablesAsync(schemaBuilder);
+        await PayStatementIndexSchema.CreateAsync(schemaBuilder);
     }
 
     /// <summary>

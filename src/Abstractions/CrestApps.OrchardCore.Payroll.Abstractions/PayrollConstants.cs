@@ -71,6 +71,11 @@ public static class PayrollConstants
     public const string PayItemsRecipeStepName = "PayrollPayItems";
 
     /// <summary>
+    /// The name of the recipe step that imports payroll tax rules.
+    /// </summary>
+    public const string TaxRulesRecipeStepName = "PayrollTaxRules";
+
+    /// <summary>
     /// The data set of pay profiles.
     /// </summary>
     public const string EmployeesDataSetName = "PayrollEmployees";
@@ -89,5 +94,10 @@ public static class PayrollConstants
         /// Payroll: employers, pay profiles, pay runs, the engine and statements.
         /// </summary>
         public const string Payroll = "CrestApps.OrchardCore.Payroll";
+
+        /// <summary>
+        /// Payroll Tax Tables: the built-in tax provider, payroll tax rules over Taxation's tables.
+        /// </summary>
+        public const string TaxTables = "CrestApps.OrchardCore.Payroll.TaxTables";
     }
 }

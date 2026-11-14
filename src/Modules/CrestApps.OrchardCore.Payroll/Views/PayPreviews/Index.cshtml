@@ -1,0 +1,125 @@
+@model PayPreviewViewModel
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+
+@{
+    string Money(decimal value) => string.IsNullOrEmpty(Model.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.Format(value, Model.Currency) + " " + Model.Currency;
+    string TypeName(PayLineType type) => type switch
+    {
+        PayLineType.Earning => T["Earning"].Value,
+        PayLineType.Deduction => T["Deduction"].Value,
+        PayLineType.EmployerContribution => T["Employer contribution"].Value,
+        PayLineType.ImputedIncome => T["Imputed income"].Value,
+        PayLineType.Reimbursement => T["Reimbursement"].Value,
+        PayLineType.Memo => T["Memo"].Value,
+        _ => T["Tax"].Value,
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="PayrollPayPreview" title="@T["Next pay of {0}", Model.StaffName]">
+        <breadcrumb-item id="PayrollPayProfiles" action="Index" controller="PayProfiles" area="CrestApps.OrchardCore.Payroll">@T["Employees"]</breadcrumb-item>
+        <breadcrumb-item id="PayrollPayProfilesEdit" action="Edit" controller="PayProfiles" area="CrestApps.OrchardCore.Payroll" route-id="@Model.ProfileId">@Model.StaffName</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (Model.MissingSchedule)
+{
+    <div class="alert alert-warning">@T["Choose a pay schedule on the pay profile first."]</div>
+    return;
+}
+
+<div class="alert alert-info">
+    @T["A preview of the period {0} to {1}, paid {2}, from the inputs and pay items there are now. Nothing is kept.", Model.PeriodStart.ToString("d", CultureInfo.CurrentCulture), Model.PeriodEnd.ToString("d", CultureInfo.CurrentCulture), Model.PayDate.ToString("d", CultureInfo.CurrentCulture)]
+</div>
+
+@if (Model.Warnings.Count > 0)
+{
+    <div class="alert alert-warning">
+        <ul class="mb-0">
+            @foreach (var warning in Model.Warnings)
+            {
+                <li>@warning</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Lines"]</div>
+    <div class="card-body">
+        @if (Model.Lines.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["Nothing to pay for this period yet."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Line"]</th>
+                            <th scope="col">@T["Type"]</th>
+                            <th scope="col" class="text-end">@T["Hours"]</th>
+                            <th scope="col" class="text-end">@T["Rate"]</th>
+                            <th scope="col" class="text-end">@T["Taxable wages"]</th>
+                            <th scope="col" class="text-end">@T["Amount"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in Model.Lines)
+                        {
+                            var line = entry.Line;
+                            <tr>
+                                <td>
+                                    <span class="font-monospace me-1">@(entry.Code ?? line.TaxCode)</span>@line.Description
+                                    @if (line.Cut > 0)
+                                    {
+                                        <span class="badge text-bg-warning fw-normal ms-1">@T["{0} cut", Money(line.Cut)]</span>
+                                    }
+                                    @if (line.ArrearsAdded > 0)
+                                    {
+                                        <span class="badge text-bg-warning fw-normal ms-1">@T["{0} owed", Money(line.ArrearsAdded)]</span>
+                                    }
+                                </td>
+                                <td>@TypeName(line.Type)@(line.Type == PayLineType.Tax && line.Payer == PayLinePayer.Employer ? " · " + T["employer"].Value : string.Empty)</td>
+                                <td class="text-end">@line.Hours?.ToString("0.##", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">@line.Rate?.ToString("0.####", CultureInfo.CurrentCulture)</td>
+                                <td class="text-end">@(line.TaxableWages is { } wages ? Money(wages) : null)</td>
+                                <td class="text-end">@Money(line.Amount)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th scope="row" colspan="5" class="text-end">@T["Gross"]</th>
+                            <td class="text-end">@Money(Model.Gross)</td>
+                        </tr>
+                        <tr>
+                            <th scope="row" colspan="5" class="text-end">@T["Net pay"]</th>
+                            <td class="text-end fw-bold">@Money(Model.Net)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.Payments.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Net pay is paid"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var payment in Model.Payments)
+            {
+                <li class="list-group-item d-flex">
+                    <span class="me-auto">@(payment.Method == NetPayMethod.BankAccount ? T["By deposit"] : T["By check"])</span>
+                    <span>@Money(payment.Amount)</span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+<a class="btn btn-secondary" asp-controller="PayProfiles" asp-action="Edit" asp-route-id="@Model.ProfileId">@T["Back to the pay profile"]</a>

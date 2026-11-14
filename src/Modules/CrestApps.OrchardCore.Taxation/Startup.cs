@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Commerce;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Addresses.Services;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Taxation.Core;
 using CrestApps.OrchardCore.Taxation.Drivers;
 using CrestApps.OrchardCore.Taxation.Handlers;
@@ -33,9 +33,6 @@ public sealed class Startup : StartupBase
         services.AddTaxationCore();
         services.AddScoped<IStoreSetupStep, TaxSetupStep>();
 
-        // The Addresses module replaces this with a content-backed implementation when enabled.
-        services.TryAddScoped<ICountryService, DefaultCountryService>();
-
         services.AddContentPart<TaxationPart>()
             .UseDisplayDriver<TaxationPartDisplayDriver>();
 
@@ -57,23 +54,40 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<TaxTypeMigrations>();
 
         services
-            .AddDisplayDriver<TaxJurisdiction, TaxJurisdictionDisplayDriver>()
-            .AddScoped<ICatalogEntryHandler<TaxJurisdiction>, TaxJurisdictionHandler>();
-
-        services
             .AddDisplayDriver<TaxRule, TaxRuleDisplayDriver>()
             .AddDisplayDriver<TaxRule, TaxRuleMethodDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<TaxRule>, TaxRuleHandler>();
+
+        services.AddNavigationProvider<TaxationAdminMenu>();
+        services.AddSiteDisplayDriver<TaxOriginSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(TaxOriginSettingsDisplayDriver.GroupId, TaxationPermissions.ManageTaxation);
+    }
+}
+
+/// <summary>
+/// Registers tax jurisdictions, tax tables and the calculation methods, with no Commerce dependency.
+/// </summary>
+[Feature(TaxationConstants.Feature.Tables)]
+public sealed class TaxTablesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTaxTablesCore();
+
+        // The Addresses module replaces this with a content-backed implementation when enabled.
+        services.TryAddScoped<ICountryService, DefaultCountryService>();
+
+        services
+            .AddDisplayDriver<TaxJurisdiction, TaxJurisdictionDisplayDriver>()
+            .AddScoped<ICatalogEntryHandler<TaxJurisdiction>, TaxJurisdictionHandler>();
 
         services
             .AddDisplayDriver<TaxTable, TaxTableDisplayDriver>()
             .AddScoped<ICatalogEntryHandler<TaxTable>, TaxTableHandler>();
 
         services.AddTransient<IConfigureOptions<TaxCalculationMethodOptions>, TaxCalculationMethodOptionsConfiguration>();
-
-        services.AddNavigationProvider<TaxationAdminMenu>();
-        services.AddSiteDisplayDriver<TaxOriginSettingsDisplayDriver>();
-        services.AddSiteSettingsPermission(TaxOriginSettingsDisplayDriver.GroupId, TaxationPermissions.ManageTaxation);
+        services.AddNavigationProvider<TaxTablesAdminMenu>();
         services.AddPermissionProvider<TaxationPermissionsProvider>();
     }
 }

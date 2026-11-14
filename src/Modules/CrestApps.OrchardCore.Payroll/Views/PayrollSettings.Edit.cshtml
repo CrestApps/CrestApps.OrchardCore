@@ -25,6 +25,29 @@
 </div>
 
 <div class="card mb-3">
+    <div class="card-header">@T["Calculation"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="TaxProvider" class="ocat-label">@T["Tax provider"]</label>
+            <div class="ocat-end">
+                <select asp-for="TaxProvider" asp-items="Model.TaxProviders" class="form-select" style="max-width: 20rem">
+                    <option value="">@T["The only one there is"]</option>
+                </select>
+                <span class="hint">@T["What works out taxes. Turn on Payroll Tax Tables for the built-in one, or a module of a tax engine."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumNetPay">
+            <label asp-for="MinimumNetPay" class="ocat-label">@T["Least net pay"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumNetPay" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="0" />
+                <span asp-validation-for="MinimumNetPay" class="text-danger"></span>
+                <span class="hint">@T["Deductions taken after tax are cut, the largest priority number first, so net pay is never below it."]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
     <div class="card-header">@T["A new employer"]</div>
     <div class="card-body">
         <div class="ocat-wrapper">

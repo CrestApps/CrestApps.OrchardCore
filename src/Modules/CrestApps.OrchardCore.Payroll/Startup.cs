@@ -148,7 +148,9 @@ public sealed class PayrollStartup : StartupBase
         services.AddDataMigration<PayrollMigrations>()
             .AddIndexProvider<EmployerIndexProvider>()
             .AddIndexProvider<PayProfileIndexProvider>()
-            .AddIndexProvider<PayItemIndexProvider>();
+            .AddIndexProvider<PayItemIndexProvider>()
+            .AddIndexProvider<PayStatementIndexProvider>()
+            .AddIndexProvider<PayStatementLineIndexProvider>();
 
         services.AddScoped<PayrollNames>();
         services.AddScoped<PayProfileEditTracker>();

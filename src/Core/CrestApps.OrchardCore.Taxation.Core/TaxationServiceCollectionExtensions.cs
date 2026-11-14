@@ -20,9 +20,7 @@ public static class TaxationServiceCollectionExtensions
     /// <returns>The service collection, to allow chaining.</returns>
     public static IServiceCollection AddTaxationCore(this IServiceCollection services)
     {
-        services
-            .AddCatalogs()
-            .AddCatalogManagers();
+        services.AddTaxTablesCore();
 
         services.TryAddScoped<IExemptionCertificateStore, ExemptionCertificateStore>();
         services.TryAddScoped<IMerchantTaxRegistrationStore, MerchantTaxRegistrationStore>();
@@ -30,15 +28,44 @@ public static class TaxationServiceCollectionExtensions
         services.TryAddScoped<ITaxService, TaxService>();
         services.TryAddScoped<ITaxableBaseCalculator, DefaultTaxableBaseCalculator>();
         services.TryAddScoped<ITaxRoundingStrategy, DefaultTaxRoundingStrategy>();
-        services.TryAddScoped<ITaxCalculationMethodProvider, DefaultTaxCalculationMethodProvider>();
         services.TryAddScoped<ITaxSourcingStrategyProvider, DefaultTaxSourcingStrategyProvider>();
         services.TryAddScoped<ITaxRuleProvider, CatalogTaxRuleProvider>();
-        services.TryAddScoped<ITaxJurisdictionResolver, CatalogTaxJurisdictionResolver>();
         services.TryAddScoped<ITaxExemptionResolver, CatalogTaxExemptionResolver>();
         services.TryAddScoped<IMerchantTaxRegistrationProvider, CatalogMerchantTaxRegistrationProvider>();
         services.TryAddScoped<ITaxableItemResolver, DefaultTaxableItemResolver>();
         services.TryAddScoped<ITaxSnapshotFactory, DefaultTaxSnapshotFactory>();
         services.TryAddScoped<ITaxRefundCalculator, DefaultTaxRefundCalculator>();
+
+        services.AddTaxSourcingStrategy<OriginTaxSourcingStrategy>();
+        services.AddTaxSourcingStrategy<DestinationTaxSourcingStrategy>();
+        services.AddTaxSourcingStrategy<CustomerResidenceTaxSourcingStrategy>();
+        services.AddTaxSourcingStrategy<CustomerBusinessTaxSourcingStrategy>();
+        services.AddTaxSourcingStrategy<ServiceLocationTaxSourcingStrategy>();
+        services.AddTaxSourcingStrategy<EventLocationTaxSourcingStrategy>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds what sales tax and payroll share, with no Commerce dependency: the catalogs of tax jurisdictions and tax
+    /// tables, the jurisdiction resolver and the calculation methods. Calling it twice adds nothing twice.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection, to allow chaining.</returns>
+    public static IServiceCollection AddTaxTablesCore(this IServiceCollection services)
+    {
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(TaxTablesMarker)))
+        {
+            return services;
+        }
+
+        services.AddSingleton<TaxTablesMarker>();
+        services
+            .AddCatalogs()
+            .AddCatalogManagers();
+
+        services.TryAddScoped<ITaxCalculationMethodProvider, DefaultTaxCalculationMethodProvider>();
+        services.TryAddScoped<ITaxJurisdictionResolver, CatalogTaxJurisdictionResolver>();
 
         services.AddTaxCalculationMethod<PercentageTaxCalculationMethod>();
         services.AddTaxCalculationMethod<FixedAmountTaxCalculationMethod>();
@@ -48,13 +75,6 @@ public static class TaxationServiceCollectionExtensions
         services.AddTaxCalculationMethod<TaxTableTaxCalculationMethod>();
         services.AddTaxCalculationMethod<ProgressiveTaxCalculationMethod>();
         services.AddTaxCalculationMethod<ThresholdTaxCalculationMethod>();
-
-        services.AddTaxSourcingStrategy<OriginTaxSourcingStrategy>();
-        services.AddTaxSourcingStrategy<DestinationTaxSourcingStrategy>();
-        services.AddTaxSourcingStrategy<CustomerResidenceTaxSourcingStrategy>();
-        services.AddTaxSourcingStrategy<CustomerBusinessTaxSourcingStrategy>();
-        services.AddTaxSourcingStrategy<ServiceLocationTaxSourcingStrategy>();
-        services.AddTaxSourcingStrategy<EventLocationTaxSourcingStrategy>();
 
         return services;
     }
@@ -115,3 +135,8 @@ public static class TaxationServiceCollectionExtensions
         return services;
     }
 }
+
+/// <summary>
+/// Marks that the tax tables services are registered.
+/// </summary>
+internal sealed class TaxTablesMarker;

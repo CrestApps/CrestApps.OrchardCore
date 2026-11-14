@@ -1,0 +1,162 @@
+using System.Globalization;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Taxation.Models;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using OrchardCore;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
+
+namespace CrestApps.OrchardCore.Payroll.Drivers;
+
+/// <summary>
+/// The rows and the editor of payroll tax rules.
+/// </summary>
+internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule>
+{
+    private readonly PayrollTaxCategoryOptions _categories;
+    private readonly TaxCalculationMethodOptions _methods;
+    private readonly INamedCatalog<TaxTable> _tables;
+    private readonly IStringLocalizerFactory _localizerFactory;
+
+    internal readonly IStringLocalizer S;
+
+    public PayrollTaxRuleDisplayDriver(
+        IOptions<PayrollTaxCategoryOptions> categories,
+        IOptions<TaxCalculationMethodOptions> methods,
+        INamedCatalog<TaxTable> tables,
+        IStringLocalizerFactory localizerFactory,
+        IStringLocalizer<PayrollTaxRuleDisplayDriver> stringLocalizer)
+    {
+        _categories = categories.Value;
+        _methods = methods.Value;
+        _tables = tables;
+        _localizerFactory = localizerFactory;
+        S = stringLocalizer;
+    }
+
+    public override Task<IDisplayResult> DisplayAsync(PayrollTaxRule rule, BuildDisplayContext context)
+    {
+        if (context.DisplayType is not (OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid))
+        {
+            return Task.FromResult<IDisplayResult>(null);
+        }
+
+        if (context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = $"{rule.TaxCode} {rule.Name} {rule.Jurisdiction}".ToLowerInvariant();
+        }
+
+        return CombineAsync(
+            View("PayrollTaxRule_Fields_SummaryAdmin", rule)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("PayrollTaxRule_Tags_SummaryAdmin", rule)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"),
+            View("PayrollTaxRule_Buttons_SummaryAdmin", rule).Location("Actions:5"),
+            View("PayrollTaxRule_ActionsMenu_SummaryAdmin", rule).Location("ActionsMenu:10"));
+    }
+
+    public override IDisplayResult Edit(PayrollTaxRule rule, BuildEditorContext context)
+        => Initialize<PayrollTaxRuleViewModel>("PayrollTaxRuleFields_Edit", async model =>
+        {
+            model.Name = rule.Name;
+            model.TaxCode = rule.TaxCode;
+            model.Jurisdiction = rule.Jurisdiction;
+            model.Category = rule.Category;
+            model.Payer = rule.Payer.ToString();
+            model.Method = rule.Method;
+            model.Rate = Text(rule.Rate);
+            model.FixedAmount = Text(rule.FixedAmount);
+            model.TaxTableId = rule.TaxTableId;
+            model.WageBase = Text(rule.WageBase);
+            model.Annualize = rule.Annualize;
+            model.UsesElections = rule.UsesElections;
+            model.AllowanceAmount = Text(rule.AllowanceAmount);
+            model.SupplementalRate = Text(rule.SupplementalRate);
+            model.EffectiveFrom = context.IsNew && rule.EffectiveFrom == default ? null : rule.EffectiveFrom;
+            model.EffectiveTo = rule.EffectiveTo;
+            model.Enabled = rule.Enabled;
+            await OptionsAsync(model);
+        }).Location("Content:1");
+
+    public override async Task<IDisplayResult> UpdateAsync(PayrollTaxRule rule, UpdateEditorContext context)
+    {
+        var model = new PayrollTaxRuleViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        rule.Name = model.Name;
+        rule.TaxCode = model.TaxCode;
+        rule.Jurisdiction = model.Jurisdiction;
+        rule.Category = model.Category;
+        rule.Payer = Enum.TryParse<PayLinePayer>(model.Payer, out var payer) ? payer : PayLinePayer.Employee;
+        rule.Method = model.Method;
+        rule.Rate = Number(model.Rate, nameof(model.Rate), context);
+        rule.FixedAmount = Number(model.FixedAmount, nameof(model.FixedAmount), context);
+        rule.TaxTableId = string.IsNullOrEmpty(model.TaxTableId) ? null : model.TaxTableId;
+        rule.WageBase = Number(model.WageBase, nameof(model.WageBase), context);
+        rule.Annualize = model.Annualize;
+        rule.UsesElections = model.UsesElections;
+        rule.AllowanceAmount = Number(model.AllowanceAmount, nameof(model.AllowanceAmount), context);
+        rule.SupplementalRate = Number(model.SupplementalRate, nameof(model.SupplementalRate), context);
+        rule.EffectiveTo = model.EffectiveTo;
+        rule.Enabled = model.Enabled;
+
+        if (model.EffectiveFrom is { } from)
+        {
+            rule.EffectiveFrom = from;
+        }
+        else
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.EffectiveFrom), S["Give the first day the rule applies."]);
+        }
+
+        return Edit(rule, context);
+    }
+
+    private async Task OptionsAsync(PayrollTaxRuleViewModel model)
+    {
+        model.Categories = [.. _categories.Categories.Select(category => new SelectListItem(_localizerFactory.Localize(category.DisplayName).Value, category.Name, category.Name == model.Category))];
+
+        if (!string.IsNullOrEmpty(model.Category) && model.Categories.All(option => option.Value != model.Category))
+        {
+            model.Categories.Add(new SelectListItem(model.Category, model.Category, true));
+        }
+
+        model.Methods = [.. _methods.Methods.Values
+            .Where(method => method.Name is not ("PerUnit" or "PerWeight" or "PerVolume"))
+            .Select(method => new SelectListItem(method.DisplayName?.Value ?? method.Name, method.Name, string.Equals(method.Name, model.Method, StringComparison.OrdinalIgnoreCase)))];
+        model.Tables = [.. (await _tables.GetAllAsync())
+            .OrderBy(table => table.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(table => new SelectListItem(table.Name, table.ItemId, table.ItemId == model.TaxTableId))];
+    }
+
+    private decimal? Number(string text, string field, UpdateEditorContext context)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        if (decimal.TryParse(text.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value))
+        {
+            return value;
+        }
+
+        context.Updater.ModelState.AddModelError(Prefix, field, S["Type a number of zero or more, with a dot for decimals."]);
+
+        return null;
+    }
+
+    private static string Text(decimal? value)
+        => value?.ToString("0.##########", CultureInfo.InvariantCulture);
+}

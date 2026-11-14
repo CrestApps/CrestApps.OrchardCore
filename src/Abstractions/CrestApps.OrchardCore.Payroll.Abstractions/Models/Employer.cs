@@ -215,4 +215,15 @@ public sealed class PayrollSettings
     /// Gets or sets the currency of a new employer.
     /// </summary>
     public string DefaultCurrency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the tax provider that works out taxes, or <see langword="null"/> for the only one
+    /// there is.
+    /// </summary>
+    public string TaxProvider { get; set; }
+
+    /// <summary>
+    /// Gets or sets the least net pay a statement may have; deductions taken after tax are cut below it.
+    /// </summary>
+    public decimal MinimumNetPay { get; set; }
 }

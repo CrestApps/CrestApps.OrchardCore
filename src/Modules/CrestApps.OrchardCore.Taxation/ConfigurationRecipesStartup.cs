@@ -16,10 +16,23 @@ public sealed class ConfigurationRecipesStartup : StartupBase
     {
         services.AddRecipeExecutionStep<TaxCategoryStep>();
         services.AddRecipeExecutionStep<TaxTypeStep>();
-        services.AddRecipeExecutionStep<TaxJurisdictionStep>();
         services.AddRecipeExecutionStep<TaxRuleStep>();
-        services.AddRecipeExecutionStep<TaxTableStep>();
         services.AddRecipeExecutionStep<MerchantTaxRegistrationStep>();
         services.AddRecipeExecutionStep<ExemptionCertificateStep>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe steps that import tax jurisdictions and tax tables.
+/// </summary>
+[Feature(TaxationConstants.Feature.Tables)]
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
+public sealed class TaxTablesRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<TaxJurisdictionStep>();
+        services.AddRecipeExecutionStep<TaxTableStep>();
     }
 }

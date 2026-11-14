@@ -31,21 +31,12 @@ internal sealed class TaxationAdminMenu : AdminNavigationProvider
                         .Action("Index", "TaxTypes", "CrestApps.OrchardCore.Taxation")
                         .Permission(TaxationPermissions.ManageTaxation)
                         .LocalNav())
-                    .Add(S["Jurisdictions"], S["Jurisdictions"].PrefixPosition(), jurisdictions => jurisdictions
-                        .Id("taxationJurisdictions")
-                        .Action("Index", "TaxJurisdictions", "CrestApps.OrchardCore.Taxation")
-                        .Permission(TaxationPermissions.ManageTaxation)
-                        .LocalNav())
                     .Add(S["Rules"], S["Rules"].PrefixPosition(), rules => rules
                         .Id("taxationRules")
                         .Action("Index", "TaxRules", "CrestApps.OrchardCore.Taxation")
                         .Permission(TaxationPermissions.ManageTaxation)
                         .LocalNav())
-                    .Add(S["Tables"], S["Tables"].PrefixPosition(), tables => tables
-                        .Id("taxationTables")
-                        .Action("Index", "TaxTables", "CrestApps.OrchardCore.Taxation")
-                        .Permission(TaxationPermissions.ManageTaxation)
-                        .LocalNav())))
+))
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
                     .Add(S["Tax origin"], S["Tax origin"].PrefixPosition(), origin => origin
