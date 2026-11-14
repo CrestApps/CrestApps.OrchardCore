@@ -105,11 +105,19 @@ public sealed class ServiceLevelMonitor
                 return (raised, true);
             }
 
+            // The marks are saved; one observer that fails neither stops the others nor brings the mark back.
             foreach (var timer in timers)
             {
                 foreach (var observer in _observers)
                 {
-                    await notify(observer, timer);
+                    try
+                    {
+                        await notify(observer, timer);
+                    }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        _logger.LogError(exception, "The service level observer {Observer} failed on the timer {TimerId}.", observer.GetType().Name, timer.ItemId);
+                    }
                 }
             }
 

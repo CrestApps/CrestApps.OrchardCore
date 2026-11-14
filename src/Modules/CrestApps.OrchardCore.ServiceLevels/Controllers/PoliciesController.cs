@@ -109,7 +109,10 @@ public sealed class PoliciesController : CatalogAdminController<ServiceLevelPoli
     }
 
     /// <inheritdoc/>
-    /// <remarks>A policy that a record of another module still uses, such as a work order type, isn't deleted.</remarks>
+    /// <remarks>
+    /// A policy that a record of another module still uses, such as a work order type, or that timers still count on,
+    /// isn't deleted.
+    /// </remarks>
     protected override async Task<bool> CanDeleteAsync(ServiceLevelPolicy model)
     {
         var usages = new List<string>();
@@ -218,7 +221,7 @@ public sealed class PoliciesController : CatalogAdminController<ServiceLevelPoli
         => ClonePostAsync(id);
 
     /// <summary>
-    /// Deletes a policy. Its timers that are still running keep their due times.
+    /// Deletes a policy, unless a record of another module names it or timers still count on it.
     /// </summary>
     /// <param name="id">The policy id.</param>
     /// <returns>A redirect to the list.</returns>

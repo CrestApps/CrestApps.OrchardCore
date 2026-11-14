@@ -4,14 +4,17 @@ using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.BusinessHours.Models;
+using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.OrchardCore.Calendars;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.BusinessHours.Core.Handlers;
 
 /// <summary>
-/// Tidies and validates business hours schedules, and stamps when they were created and changed.
+/// Tidies and validates business hours schedules, stamps when they were created and changed, gives a new one the site's
+/// time zone, and tells the modules that count time on a schedule before and after its hours change.
 /// </summary>
 public sealed class BusinessHoursScheduleHandler : CatalogEntryHandlerBase<BusinessHoursSchedule>
 {
@@ -19,6 +22,8 @@ public sealed class BusinessHoursScheduleHandler : CatalogEntryHandlerBase<Busin
 
     private readonly INamedCatalog<BusinessHoursSchedule> _store;
     private readonly IClock _clock;
+    private readonly ISiteService _siteService;
+    private readonly IEnumerable<IBusinessHoursScheduleObserver> _observers;
 
     internal readonly IStringLocalizer S;
 
@@ -27,14 +32,20 @@ public sealed class BusinessHoursScheduleHandler : CatalogEntryHandlerBase<Busin
     /// </summary>
     /// <param name="store">The schedule store.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="siteService">The site settings, for a new schedule's time zone.</param>
+    /// <param name="observers">The modules that count time on schedules.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BusinessHoursScheduleHandler(
         INamedCatalog<BusinessHoursSchedule> store,
         IClock clock,
+        ISiteService siteService,
+        IEnumerable<IBusinessHoursScheduleObserver> observers,
         IStringLocalizer<BusinessHoursScheduleHandler> stringLocalizer)
     {
         _store = store;
         _clock = clock;
+        _siteService = siteService;
+        _observers = observers;
         S = stringLocalizer;
     }
 
@@ -48,11 +59,19 @@ public sealed class BusinessHoursScheduleHandler : CatalogEntryHandlerBase<Busin
     }
 
     /// <inheritdoc/>
-    public override Task InitializedAsync(InitializedContext<BusinessHoursSchedule> context, CancellationToken cancellationToken = default)
+    public override async Task InitializedAsync(InitializedContext<BusinessHoursSchedule> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
 
-        return Task.CompletedTask;
+        // A new schedule keeps the site's hours, not UTC, until someone picks another time zone.
+        context.Model.Hours ??= new HoursSchedule();
+
+        if (string.IsNullOrWhiteSpace(context.Model.Hours.TimeZoneId))
+        {
+            var timeZoneId = (await _siteService.GetSiteSettingsAsync())?.TimeZoneId;
+
+            context.Model.Hours.TimeZoneId = string.IsNullOrWhiteSpace(timeZoneId) ? null : timeZoneId;
+        }
     }
 
     /// <inheritdoc/>
@@ -76,7 +95,42 @@ public sealed class BusinessHoursScheduleHandler : CatalogEntryHandlerBase<Busin
         Tidy(context.Model);
         context.Model.ModifiedUtc = _clock.UtcNow;
 
-        return Task.CompletedTask;
+        return NotifyChangingAsync(context.Model, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public override async Task UpdatedAsync(UpdatedContext<BusinessHoursSchedule> context, CancellationToken cancellationToken = default)
+    {
+        foreach (var observer in _observers)
+        {
+            await observer.ChangedAsync(context.Model.ItemId, cancellationToken);
+        }
+    }
+
+    /// <inheritdoc/>
+    public override Task DeletingAsync(DeletingContext<BusinessHoursSchedule> context, CancellationToken cancellationToken = default)
+        => NotifyChangingAsync(context.Model, cancellationToken);
+
+    /// <inheritdoc/>
+    public override async Task DeletedAsync(DeletedContext<BusinessHoursSchedule> context, CancellationToken cancellationToken = default)
+    {
+        foreach (var observer in _observers)
+        {
+            await observer.ChangedAsync(context.Model.ItemId, cancellationToken);
+        }
+    }
+
+    private async Task NotifyChangingAsync(BusinessHoursSchedule schedule, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(schedule?.ItemId))
+        {
+            return;
+        }
+
+        foreach (var observer in _observers)
+        {
+            await observer.ChangingAsync(schedule.ItemId, cancellationToken);
+        }
     }
 
     /// <inheritdoc/>

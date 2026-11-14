@@ -71,7 +71,12 @@ internal sealed class WorkOrdersRecipeStep : NamedRecipeStepHandler
                 continue;
             }
 
-            await upgrade.ImportAsync(legacy);
+            var (_, errors) = await upgrade.ImportAsync(legacy);
+
+            if (errors.Count > 0)
+            {
+                context.Errors.Add($"The service level \"{legacy.Name}\" in the WorkOrders step was refused: {string.Join(" ", errors)}");
+            }
         }
     }
 }

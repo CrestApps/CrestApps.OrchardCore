@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 /// <summary>
 /// A target of a <see cref="LegacyServiceLevelPolicy"/>: the response and resolution minutes of one priority.
 /// </summary>
-public sealed class LegacyServiceLevelTarget
+internal sealed class LegacyServiceLevelTarget
 {
     /// <summary>
     /// Gets or sets the priority.

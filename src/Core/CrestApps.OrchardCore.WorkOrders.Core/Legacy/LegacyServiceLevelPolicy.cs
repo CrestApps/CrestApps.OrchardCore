@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 /// A service level policy as Work Orders kept it before policies moved to the shared Service Levels block. Read only
 /// to copy stored policies, and the <c>ServiceLevels</c> section of older recipes, to the shared policies.
 /// </summary>
-public sealed class LegacyServiceLevelPolicy : CatalogItem
+internal sealed class LegacyServiceLevelPolicy : CatalogItem
 {
     /// <summary>
     /// Gets or sets the name.

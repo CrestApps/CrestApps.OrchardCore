@@ -47,6 +47,22 @@ public interface IServiceLevelTimerStore
     Task<IReadOnlyList<ServiceLevelTimer>> ListBySubjectAsync(RecordRef subject, bool activeOnly, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the running timers of some policies.
+    /// </summary>
+    /// <param name="policyIds">The policies.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The timers.</returns>
+    Task<IReadOnlyList<ServiceLevelTimer>> ListRunningByPoliciesAsync(IEnumerable<string> policyIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns whether a policy has a timer that is running or paused.
+    /// </summary>
+    /// <param name="policyId">The policy.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="true"/> when it has one.</returns>
+    Task<bool> AnyActiveAsync(string policyId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists running timers that passed their target and aren't marked breached yet, the most overdue first.
     /// </summary>
     /// <param name="nowUtc">The current instant, in UTC.</param>

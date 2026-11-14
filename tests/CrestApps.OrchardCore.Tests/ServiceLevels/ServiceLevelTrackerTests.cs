@@ -297,6 +297,85 @@ public sealed class ServiceLevelTrackerTests
         Assert.Equal(2, kit.Observer.Completed.Count);
     }
 
+    [Fact]
+    public async Task CompletingLate_AnnouncesTheBreach_BeforeTheCompletion()
+    {
+        // Arrange
+        var kit = new Kit(Utc(_friday, 16, 0));
+        var timer = await kit.StartAsync(ServiceLevelMetrics.FirstResponse, "High");
+
+        // Act: due Monday 10:00, answered at 11:00, before the monitor's next pass.
+        kit.Clock.UtcNow = Utc(_monday, 11, 0);
+        await kit.Tracker.CompleteAsync(_ticket, ServiceLevelMetrics.FirstResponse, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(Utc(_monday, 10, 0), timer.BreachedUtc);
+        Assert.Same(timer, Assert.Single(kit.Observer.Breached));
+        Assert.Same(timer, Assert.Single(kit.Observer.Completed));
+    }
+
+    [Fact]
+    public async Task Reopening_CountsOnFromTheTimeUsed_AndLeavesACountingMetricAlone()
+    {
+        // Arrange: four hours used of eight, then solved.
+        var kit = new Kit(Utc(_friday, 9, 0));
+        var timer = await kit.StartAsync(ServiceLevelMetrics.Resolution, "High");
+        kit.Clock.UtcNow = Utc(_friday, 13, 0);
+        await kit.Tracker.CompleteAsync(_ticket, ServiceLevelMetrics.Resolution, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act: reopened Monday at 9:00.
+        kit.Clock.UtcNow = Utc(_monday, 9, 0);
+        var reopened = await kit.Tracker.ReopenAsync(_ticket, ServiceLevelMetrics.Resolution, TestContext.Current.CancellationToken);
+        var again = await kit.Tracker.ReopenAsync(_ticket, ServiceLevelMetrics.Resolution, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(timer, reopened);
+        Assert.Same(timer, again);
+        Assert.Equal(ServiceLevelTimerState.Running, timer.State);
+        Assert.Null(timer.EndedUtc);
+        Assert.Equal(4 * 3600, timer.UsedSeconds);
+        Assert.Equal(Utc(_monday, 13, 0), timer.DueUtc);
+        Assert.Single(kit.Store.Timers);
+    }
+
+    [Fact]
+    public async Task RetargetingAPausedTimer_MovesItsDueTime()
+    {
+        // Arrange: paused after one hour of a two-hour High target.
+        var kit = new Kit(Utc(_monday, 9, 0));
+        var timer = await kit.StartAsync(ServiceLevelMetrics.FirstResponse, "High");
+        kit.Clock.UtcNow = Utc(_monday, 10, 0);
+        await kit.Tracker.PauseAsync(_ticket, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act: made Normal (four hours) while paused, at 12:00.
+        kit.Clock.UtcNow = Utc(_monday, 12, 0);
+        await kit.Tracker.RetargetAsync(_ticket, kit.Policy.ItemId, "Normal", TestContext.Current.CancellationToken);
+
+        // Assert: three hours left from now.
+        Assert.Equal(ServiceLevelTimerState.Paused, timer.State);
+        Assert.Equal(14400, timer.TargetSeconds);
+        Assert.Equal(Utc(_monday, 15, 0), timer.DueUtc);
+    }
+
+    [Fact]
+    public async Task AFailingObserver_DoesNotStopTheOthers_NorTheMonitor()
+    {
+        // Arrange
+        var kit = new Kit(Utc(_friday, 16, 0));
+        var recording = new Observer();
+        var monitor = new ServiceLevelMonitor(kit.Store, [new FailingObserver(), recording], kit.Clock, NullLogger<ServiceLevelMonitor>.Instance);
+        var timer = await kit.StartAsync(ServiceLevelMetrics.FirstResponse, "High");
+        kit.Clock.UtcNow = Utc(_monday, 10, 5);
+
+        // Act
+        var raised = await monitor.CheckAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, raised);
+        Assert.Same(timer, Assert.Single(recording.Breached));
+        Assert.NotNull(timer.BreachedUtc);
+    }
+
     private static DateTime Utc(DateOnly date, int hour, int minute)
         => new(date.Year, date.Month, date.Day, hour, minute, 0, DateTimeKind.Utc);
 
@@ -376,6 +455,18 @@ public sealed class ServiceLevelTrackerTests
             => ValueTask.FromResult(policyId == _policy.ItemId ? _policy : null);
     }
 
+    private sealed class FailingObserver : IServiceLevelObserver
+    {
+        public Task WarningAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Warning failed.");
+
+        public Task BreachedAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Breach failed.");
+
+        public Task CompletedAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("Completion failed.");
+    }
+
     private sealed class Observer : IServiceLevelObserver
     {
         public List<ServiceLevelTimer> Warned { get; } = [];
@@ -437,6 +528,12 @@ public sealed class ServiceLevelTrackerTests
                     .Where(timer => timer.Subject == subject && (!activeOnly || timer.IsActive))
                     .OrderByDescending(timer => timer.StartedUtc),
             ]);
+
+        public Task<IReadOnlyList<ServiceLevelTimer>> ListRunningByPoliciesAsync(IEnumerable<string> policyIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<ServiceLevelTimer>>([.. Timers.Where(timer => timer.State == ServiceLevelTimerState.Running && policyIds.Contains(timer.PolicyId))]);
+
+        public Task<bool> AnyActiveAsync(string policyId, CancellationToken cancellationToken = default)
+            => Task.FromResult(Timers.Any(timer => timer.IsActive && timer.PolicyId == policyId));
 
         public Task<IReadOnlyList<ServiceLevelTimer>> ListNewlyBreachedAsync(DateTime nowUtc, int take, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ServiceLevelTimer>>(

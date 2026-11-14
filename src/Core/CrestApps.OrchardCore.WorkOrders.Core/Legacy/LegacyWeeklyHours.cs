@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 /// <summary>
 /// The same opening hours on some days of every week, as a <see cref="LegacyServiceLevelPolicy"/> kept them.
 /// </summary>
-public sealed class LegacyWeeklyHours
+internal sealed class LegacyWeeklyHours
 {
     /// <summary>
     /// Gets or sets the days open.

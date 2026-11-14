@@ -1,4 +1,6 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Locking;
+using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +34,7 @@ internal sealed class WorkOrdersMigrations : DataMigration
     {
         await WorkOrdersIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 4;
+        return 5;
     }
 
     /// <summary>
@@ -99,5 +101,24 @@ internal sealed class WorkOrdersMigrations : DataMigration
         await _notesUpgrade.RunAsync();
 
         return 4;
+    }
+
+    /// <summary>
+    /// Keeps the service level policies page for the roles that managed it as part of the work order settings: the
+    /// policies moved to the shared Service Levels block, which has its own permission.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public static int UpdateFrom4()
+    {
+        // The roles are documents; they are written once this step's own transaction has committed.
+        ShellScope.AddDeferredTask(scope => RolePermissionMigrations.GrantAsync(
+            scope.ServiceProvider,
+            new Dictionary<string, string[]>
+            {
+                [WorkOrdersPermissions.ManageWorkOrderSettings.Name] = [ServiceLevelsPermissions.ManageServiceLevelPolicies.Name],
+            },
+            scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<WorkOrdersMigrations>()));
+
+        return 5;
     }
 }

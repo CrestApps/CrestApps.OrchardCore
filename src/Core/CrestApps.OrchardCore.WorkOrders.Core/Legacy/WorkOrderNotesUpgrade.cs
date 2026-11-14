@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 /// Moves the notes stored on work orders to their timelines: each note becomes an internal note entry with its own
 /// time and author name, and the work order no longer carries it. Running it again does nothing more.
 /// </summary>
-public sealed class WorkOrderNotesUpgrade
+internal sealed class WorkOrderNotesUpgrade
 {
     private const int BatchSize = 100;
 

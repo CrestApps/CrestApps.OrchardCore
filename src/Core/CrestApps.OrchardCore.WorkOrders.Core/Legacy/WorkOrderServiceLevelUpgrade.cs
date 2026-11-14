@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.WorkOrders.Core.Legacy;
 /// Moves Work Orders onto the shared Service Levels block: each policy Work Orders kept becomes a shared policy with the
 /// same id (its weekly hours become a Business Hours schedule), and each open work order gets the timers of its policy.
 /// </summary>
-public sealed class WorkOrderServiceLevelUpgrade
+internal sealed class WorkOrderServiceLevelUpgrade
 {
     // The name the policies were stored under before the Work Orders model became the legacy one.
     internal const string StoredPolicyTypeName = "CrestApps.OrchardCore.WorkOrders.Models.ServiceLevelPolicy, CrestApps.OrchardCore.WorkOrders.Abstractions";
@@ -85,7 +85,7 @@ public sealed class WorkOrderServiceLevelUpgrade
         {
             if (await _policies.FindByIdAsync(legacy.ItemId, cancellationToken) is null)
             {
-                await ImportAsync(legacy, scheduleNames, cancellationToken);
+                await ImportAsync(legacy, scheduleNames, validate: false, cancellationToken);
                 policies++;
             }
         }
@@ -94,22 +94,30 @@ public sealed class WorkOrderServiceLevelUpgrade
     }
 
     /// <summary>
-    /// Creates or updates the shared policy of a Work Orders policy, as stored or as an older recipe carries it.
+    /// Creates or updates the shared policy of a Work Orders policy an older recipe carries, with the same checks as the
+    /// admin. A refused policy is not saved.
     /// </summary>
     /// <param name="legacy">The Work Orders policy.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
-    /// <returns>The shared policy.</returns>
-    public Task<ServiceLevelPolicy> ImportAsync(LegacyServiceLevelPolicy legacy, CancellationToken cancellationToken = default)
-        => ImportAsync(legacy, new HashSet<string>(StringComparer.OrdinalIgnoreCase), cancellationToken);
+    /// <returns>The shared policy, or the reasons it was refused.</returns>
+    public async Task<(ServiceLevelPolicy Policy, IReadOnlyList<string> Errors)> ImportAsync(LegacyServiceLevelPolicy legacy, CancellationToken cancellationToken = default)
+    {
+        var (policy, errors) = await ImportAsync(legacy, new HashSet<string>(StringComparer.OrdinalIgnoreCase), validate: true, cancellationToken);
 
-    private async Task<ServiceLevelPolicy> ImportAsync(LegacyServiceLevelPolicy legacy, HashSet<string> scheduleNames, CancellationToken cancellationToken)
+        return (policy, errors);
+    }
+
+    // The migration copies what the store already holds; a recipe's policy is checked first. The check runs before a
+    // schedule is made from the weekly hours, since a schedule created in this scope can't be read back until it commits.
+    private async Task<(ServiceLevelPolicy Policy, IReadOnlyList<string> Errors)> ImportAsync(LegacyServiceLevelPolicy legacy, HashSet<string> scheduleNames, bool validate, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(legacy);
 
         var existing = string.IsNullOrEmpty(legacy.ItemId) ? null : await _policies.FindByIdAsync(legacy.ItemId, cancellationToken);
         var policy = existing ?? await _policies.NewAsync(cancellationToken: cancellationToken);
 
-        if (existing is null && !string.IsNullOrEmpty(legacy.ItemId))
+        // A stored policy keeps its id, which its work orders name; a recipe's id is used only when it's a valid id.
+        if (existing is null && !string.IsNullOrEmpty(legacy.ItemId) && (validate ? UniqueId.IsValid(legacy.ItemId) : legacy.ItemId.Length <= 26))
         {
             policy.ItemId = legacy.ItemId;
         }
@@ -118,13 +126,25 @@ public sealed class WorkOrderServiceLevelUpgrade
         policy.Scope = WorkOrdersConstants.ServiceLevelScope;
         policy.WarningPercent = legacy.WarningPercent is >= 1 and <= 99 ? legacy.WarningPercent : 80;
         policy.Targets = [.. ToTargets(legacy.Targets)];
-        policy.HoursScheduleId = await ResolveScheduleAsync(legacy, scheduleNames, cancellationToken);
+        policy.HoursScheduleId = HasWeeklyHours(legacy) ? null : NamedCalendar(legacy);
         policy.Put(new WorkOrderServiceLevelSettings { PauseStatuses = [.. legacy.PauseStatuses ?? []] });
 
         if (legacy.CreatedUtc != default)
         {
             policy.CreatedUtc = legacy.CreatedUtc;
         }
+
+        if (validate)
+        {
+            var validation = await _policies.ValidateAsync(policy, cancellationToken);
+
+            if (!validation.Succeeded)
+            {
+                return (null, [.. validation.Errors.Select(error => error.ErrorMessage)]);
+            }
+        }
+
+        policy.HoursScheduleId = await ResolveScheduleAsync(legacy, scheduleNames, cancellationToken);
 
         if (existing is null)
         {
@@ -135,8 +155,14 @@ public sealed class WorkOrderServiceLevelUpgrade
             await _policies.UpdateAsync(policy, cancellationToken: cancellationToken);
         }
 
-        return policy;
+        return (policy, []);
     }
+
+    private static bool HasWeeklyHours(LegacyServiceLevelPolicy legacy)
+        => legacy.WeeklyHours is { Days.Count: > 0 } weekly && weekly.Closes > weekly.Opens;
+
+    private static string NamedCalendar(LegacyServiceLevelPolicy legacy)
+        => string.IsNullOrWhiteSpace(legacy.HoursCalendarId) ? null : legacy.HoursCalendarId;
 
     private static IEnumerable<ServiceLevelTarget> ToTargets(IEnumerable<LegacyServiceLevelTarget> targets)
     {
@@ -158,10 +184,12 @@ public sealed class WorkOrderServiceLevelUpgrade
     // after the policy, with a number added when another schedule already has that name.
     private async Task<string> ResolveScheduleAsync(LegacyServiceLevelPolicy legacy, HashSet<string> scheduleNames, CancellationToken cancellationToken)
     {
-        if (legacy.WeeklyHours is not { Days.Count: > 0 } weekly || weekly.Closes <= weekly.Opens)
+        if (!HasWeeklyHours(legacy))
         {
-            return string.IsNullOrWhiteSpace(legacy.HoursCalendarId) ? null : legacy.HoursCalendarId;
+            return NamedCalendar(legacy);
         }
+
+        var weekly = legacy.WeeklyHours;
 
         var baseName = $"{legacy.Name} hours";
         var name = baseName;

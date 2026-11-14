@@ -130,10 +130,13 @@ public sealed class WorkOrderServiceLevels
         }
         else if (await PausesAsync(workOrder.Sla.PolicyId, status, subStatus, cancellationToken))
         {
+            // A work order reopened into a waiting status counts again once it stops waiting.
+            await ReopenAsync(workOrder, subject, cancellationToken);
             await _tracker.PauseAsync(subject, cancellationToken: cancellationToken);
         }
         else
         {
+            await ReopenAsync(workOrder, subject, cancellationToken);
             await _tracker.ResumeAsync(subject, cancellationToken: cancellationToken);
         }
 
@@ -178,13 +181,35 @@ public sealed class WorkOrderServiceLevels
         var response = Newest(timers, ServiceLevelMetrics.FirstResponse);
         var resolution = Newest(timers, ServiceLevelMetrics.Resolution);
 
-        workOrder.Sla.RespondByUtc = response?.DueUtc;
-        workOrder.Sla.ResolveByUtc = resolution?.DueUtc;
-        workOrder.Sla.PausedSinceUtc = timers.Where(timer => timer.State == ServiceLevelTimerState.Paused).Select(timer => timer.PausedSinceUtc).Min();
-        workOrder.Sla.ResponseWarned = response?.WarnedUtc is not null || response?.IsBreached == true;
-        workOrder.Sla.ResponseBreached = response?.IsBreached == true;
-        workOrder.Sla.ResolutionWarned = resolution?.WarnedUtc is not null || resolution?.IsBreached == true;
-        workOrder.Sla.ResolutionBreached = resolution?.IsBreached == true;
+        // A metric with no timer left to read (none started yet, or only cancelled ones) keeps what the work order shows,
+        // so its due time and breach history are never wiped.
+        if (response is not null)
+        {
+            workOrder.Sla.RespondByUtc = response.DueUtc;
+            workOrder.Sla.ResponseWarned = response.WarnedUtc is not null || response.IsBreached;
+            workOrder.Sla.ResponseBreached = response.IsBreached;
+        }
+
+        if (resolution is not null)
+        {
+            workOrder.Sla.ResolveByUtc = resolution.DueUtc;
+            workOrder.Sla.ResolutionWarned = resolution.WarnedUtc is not null || resolution.IsBreached;
+            workOrder.Sla.ResolutionBreached = resolution.IsBreached;
+        }
+
+        if (response is not null || resolution is not null)
+        {
+            workOrder.Sla.PausedSinceUtc = timers.Where(timer => timer.State == ServiceLevelTimerState.Paused).Select(timer => timer.PausedSinceUtc).Min();
+        }
+    }
+
+    // A work order that leaves Completed or Closed counts its resolution again from the time it had used.
+    private async Task ReopenAsync(WorkOrder workOrder, RecordRef subject, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(workOrder.Sla?.PolicyId))
+        {
+            await _tracker.ReopenAsync(subject, ServiceLevelMetrics.Resolution, cancellationToken);
+        }
     }
 
     private static ServiceLevelTimer Newest(IEnumerable<ServiceLevelTimer> timers, string metric)

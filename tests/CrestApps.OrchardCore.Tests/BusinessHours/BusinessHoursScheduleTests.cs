@@ -8,13 +8,14 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.BusinessHours;
 
 /// <summary>
 /// The schedules the Business Hours module keeps: the editor's weekly rows and date-exception text read back exactly
 /// what they show, a disabled schedule is unknown to the open-hours service, and the rules refuse a duplicate name and
-/// an unknown time zone.
+/// an unknown time zone, and a new schedule keeps the site's time zone.
 /// </summary>
 public sealed class BusinessHoursScheduleTests
 {
@@ -191,12 +192,31 @@ public sealed class BusinessHoursScheduleTests
         Assert.Equal(DayOfWeek.Monday, schedule.Hours.Windows[0].Day);
     }
 
-    private static BusinessHoursScheduleHandler CreateHandler(INamedCatalog<BusinessHoursSchedule> store)
+    [Fact]
+    public async Task ANewSchedule_KeepsTheSitesTimeZone_NotUtc()
+    {
+        // Arrange
+        var handler = CreateHandler(new InMemoryNamedCatalog<BusinessHoursSchedule>(), siteTimeZone: "America/Chicago");
+        var schedule = new BusinessHoursSchedule();
+
+        // Act
+        await handler.InitializedAsync(new InitializedContext<BusinessHoursSchedule>(schedule), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("America/Chicago", schedule.Hours.TimeZoneId);
+    }
+
+    private static BusinessHoursScheduleHandler CreateHandler(INamedCatalog<BusinessHoursSchedule> store, string siteTimeZone = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 11, 13, 12, 0, 0, DateTimeKind.Utc));
 
-        return new BusinessHoursScheduleHandler(store, clock.Object, new PassThroughLocalizer<BusinessHoursScheduleHandler>());
+        var site = new Mock<ISite>();
+        site.SetupGet(value => value.TimeZoneId).Returns(siteTimeZone);
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+
+        return new BusinessHoursScheduleHandler(store, clock.Object, siteService.Object, [], new PassThroughLocalizer<BusinessHoursScheduleHandler>());
     }
 
     private sealed class PassThroughLocalizer<T> : IStringLocalizer<T>

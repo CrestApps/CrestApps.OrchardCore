@@ -1,9 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using CrestApps.Core;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.ServiceLevels.Core.Services;
 using CrestApps.OrchardCore.ServiceLevels.Models;
+using CrestApps.OrchardCore.ServiceLevels.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -14,18 +17,26 @@ namespace CrestApps.OrchardCore.ServiceLevels.Core.Handlers;
 /// </summary>
 internal sealed class ServiceLevelPolicyHandler : CatalogEntryHandlerBase<ServiceLevelPolicy>
 {
+    private const int NameLength = 255;
+
     private readonly ServiceLevelPolicyStore _store;
     private readonly IClock _clock;
+    private readonly IOpenHoursService _openHours;
+    private readonly IEnumerable<IServiceLevelScopeProvider> _scopes;
 
     internal readonly IStringLocalizer S;
 
     public ServiceLevelPolicyHandler(
         ServiceLevelPolicyStore store,
         IClock clock,
+        IOpenHoursService openHours,
+        IEnumerable<IServiceLevelScopeProvider> scopes,
         IStringLocalizer<ServiceLevelPolicyHandler> stringLocalizer)
     {
         _store = store;
         _clock = clock;
+        _openHours = openHours;
+        _scopes = scopes;
         S = stringLocalizer;
     }
 
@@ -83,9 +94,39 @@ internal sealed class ServiceLevelPolicyHandler : CatalogEntryHandlerBase<Servic
             context.Result.Fail(new ValidationResult(S["The name is required."], [nameof(ServiceLevelPolicy.Name)]));
         }
 
+        else if (policy.Name.Length > NameLength)
+        {
+            context.Result.Fail(new ValidationResult(S["The name can be at most {0} characters long.", NameLength], [nameof(ServiceLevelPolicy.Name)]));
+        }
+
+        if (!string.IsNullOrEmpty(policy.ItemId) && !UniqueId.IsValid(policy.ItemId))
+        {
+            context.Result.Fail(new ValidationResult(S["The policy id is not a valid id."], [nameof(ServiceLevelPolicy.ItemId)]));
+        }
+
         if (string.IsNullOrEmpty(policy.Scope))
         {
             context.Result.Fail(new ValidationResult(S["Choose what the policy is for."], [nameof(ServiceLevelPolicy.Scope)]));
+        }
+        else if (!_scopes.Any(scope => string.Equals(scope.Name, policy.Scope, StringComparison.OrdinalIgnoreCase)))
+        {
+            context.Result.Fail(new ValidationResult(S["The policy is for something this site doesn't have: {0}.", policy.Scope], [nameof(ServiceLevelPolicy.Scope)]));
+        }
+
+        // A schedule that no longer exists, or that never opens, would make every timer count around the clock.
+        if (!string.IsNullOrEmpty(policy.HoursScheduleId))
+        {
+            var now = _clock.UtcNow;
+            var windows = await _openHours.GetOpenWindowsAsync(policy.HoursScheduleId, now, now.AddDays(366), cancellationToken: cancellationToken);
+
+            if (windows is null)
+            {
+                context.Result.Fail(new ValidationResult(S["The business hours schedule no longer exists."], [nameof(ServiceLevelPolicy.HoursScheduleId)]));
+            }
+            else if (windows.Count == 0)
+            {
+                context.Result.Fail(new ValidationResult(S["The business hours schedule is never open, so no target could be met."], [nameof(ServiceLevelPolicy.HoursScheduleId)]));
+            }
         }
 
         if (policy.WarningPercent is < 1 or > 99)

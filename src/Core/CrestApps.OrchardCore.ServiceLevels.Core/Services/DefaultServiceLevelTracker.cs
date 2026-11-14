@@ -188,12 +188,15 @@ public sealed class DefaultServiceLevelTracker : IServiceLevelTracker
 
         var at = atUtc ?? _clock.UtcNow;
 
-        // Every running cycle of the metric is answered; the newest is the one returned.
+        // Every running cycle of the metric is answered; the newest is the one returned. One answered after its due
+        // time, before the monitor's next pass, is breached and announced as breached first.
         foreach (var timer in active)
         {
+            var breachedNow = false;
+
             if (timer.State == ServiceLevelTimerState.Running)
             {
-                MarkBreachedIfOverdue(timer, at);
+                breachedNow = MarkBreachedIfOverdue(timer, at);
                 await _timerClock.SettleAsync(timer, at, cancellationToken);
             }
 
@@ -203,10 +206,53 @@ public sealed class DefaultServiceLevelTracker : IServiceLevelTracker
             timer.EndedUtc = at;
 
             await _store.UpdateAsync(timer, cancellationToken);
+
+            if (breachedNow)
+            {
+                await NotifyAsync(observer => observer.BreachedAsync(timer, cancellationToken));
+            }
+
             await NotifyAsync(observer => observer.CompletedAsync(timer, cancellationToken));
         }
 
         return active[0];
+    }
+
+    /// <inheritdoc/>
+    public async Task<ServiceLevelTimer> ReopenAsync(RecordRef subject, string metric, CancellationToken cancellationToken = default)
+    {
+        if (subject.IsEmpty || string.IsNullOrEmpty(metric))
+        {
+            return null;
+        }
+
+        var timers = (await _store.ListBySubjectAsync(subject, activeOnly: false, cancellationToken))
+            .Where(timer => string.Equals(timer.Metric, metric, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        // A metric still counting has nothing to reopen.
+        if (timers.FirstOrDefault(timer => timer.IsActive) is { } active)
+        {
+            return active;
+        }
+
+        // The newest cycle answered counts on from the time it had used; a warning or breach already raised stays.
+        if (timers.FirstOrDefault() is not { State: ServiceLevelTimerState.Completed } timer)
+        {
+            return null;
+        }
+
+        var now = _clock.UtcNow;
+
+        timer.State = ServiceLevelTimerState.Running;
+        timer.ElapsedSeconds = null;
+        timer.EndedUtc = null;
+        timer.PausedSinceUtc = null;
+
+        await _timerClock.ScheduleAsync(timer, now, cancellationToken);
+        await _store.UpdateAsync(timer, cancellationToken);
+
+        return timer;
     }
 
     /// <inheritdoc/>
@@ -248,10 +294,8 @@ public sealed class DefaultServiceLevelTracker : IServiceLevelTracker
             timer.Priority = priority;
             Apply(timer, policy, target);
 
-            if (timer.State == ServiceLevelTimerState.Running)
-            {
-                await _timerClock.ScheduleAsync(timer, now, cancellationToken);
-            }
+            // A paused timer is due, on the new target, as if it went on counting now; resuming schedules it again.
+            await _timerClock.ScheduleAsync(timer, now, cancellationToken);
 
             await _store.UpdateAsync(timer, cancellationToken);
             kept.Add(timer);
