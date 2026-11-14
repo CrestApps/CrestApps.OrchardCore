@@ -1582,6 +1582,7 @@ public sealed partial class VoiceAgentConversationLoopTests
             => new(
                 new Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache(Microsoft.Extensions.Options.Options.Create(new Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions())),
                 ActivityStore,
+                Mock.Of<global::YesSql.ISession>(),
                 new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance),
                 new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider(),
                 async work =>

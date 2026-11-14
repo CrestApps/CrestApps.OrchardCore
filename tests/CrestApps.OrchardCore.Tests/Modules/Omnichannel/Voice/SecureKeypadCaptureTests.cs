@@ -321,6 +321,7 @@ public sealed class SecureKeypadCaptureTests
         return new DistributedSecureKeypadCaptureStore(
             cache ?? _cache,
             CreateActivityStore(),
+            Mock.Of<global::YesSql.ISession>(),
             _lock,
             keys ?? _keys,
             InScopeOfItsOwnAsync,
