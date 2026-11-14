@@ -158,6 +158,10 @@ public sealed class CommerceApiFoundationTests
             context.Request.Headers[CommerceApi.IdempotencyKeyHeader] = key;
         }
 
+        // A guest's cart identifies the caller a key belongs to; without one, a key isn't used.
+        context.Request.Headers[CommerceApi.CartTokenHeader] = "cart-1";
+        context.SetEndpoint(new Endpoint(null, new EndpointMetadataCollection(CommerceApi.GuestHeaders), "commerce"));
+
         return EndpointFilterInvocationContext.Create(context);
     }
 

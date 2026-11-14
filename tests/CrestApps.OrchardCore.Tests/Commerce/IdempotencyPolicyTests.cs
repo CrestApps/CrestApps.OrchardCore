@@ -139,7 +139,12 @@ public sealed class IdempotencyPolicyTests
 
     private DefaultHttpContext Request(string key, string fingerprint, IdempotencyPolicy policy = null)
     {
-        var httpContext = new DefaultHttpContext { RequestServices = _services };
+        // An agent's request is signed in as its platform, which identifies the caller its keys belong to.
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = _services,
+            User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "agent-platform-1")], "test")),
+        };
 
         httpContext.SetEndpoint(new Endpoint(null, new EndpointMetadataCollection(policy ?? _policy), "test"));
         httpContext.Request.Method = HttpMethods.Post;

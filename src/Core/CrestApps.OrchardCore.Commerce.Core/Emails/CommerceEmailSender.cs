@@ -1,7 +1,10 @@
 using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Core.Emails;
 using CrestApps.OrchardCore.Emails;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using OrchardCore.Email;
 
 namespace CrestApps.OrchardCore.Commerce.Core.Emails;
 
@@ -25,7 +28,8 @@ public sealed class CommerceEmailSender : ICommerceEmailSender
         ICommerceEmailTemplates emailTemplates,
         ILogger<CommerceEmailSender> logger)
     {
-        _sender = new TemplatedEmailSender(serviceProvider, new StoreTemplates(emailTemplates), logger);
+        // The store's sender keeps its own constructor; the shared sender takes what it needs from the services.
+        _sender = new TemplatedEmailSender(serviceProvider.GetServices<IEmailService>(), new StoreTemplates(emailTemplates), serviceProvider.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance);
     }
 
     /// <inheritdoc/>

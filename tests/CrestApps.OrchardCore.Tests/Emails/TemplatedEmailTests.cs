@@ -77,12 +77,11 @@ public sealed class TemplatedEmailTests
     public async Task TheSender_SendsTheTemplatedEmail_ToItsRecipient()
     {
         // Arrange
-        var services = new ServiceCollection().AddSingleton(EmailService()).BuildServiceProvider();
         var templates = Templates(new FixedSource("ticket-received", new TemplatedEmailOverride
         {
             Template = new TemplatedEmailTemplate { IsEnabled = true, Subject = "Re: {{ Subject }}" },
         }));
-        var sender = new TemplatedEmailSender(services, templates, NullLogger<TemplatedEmailSender>.Instance);
+        var sender = new TemplatedEmailSender([EmailService()], templates, NullLoggerFactory.Instance);
 
         // Act
         var sent = await sender.SendAsync(
@@ -97,6 +96,36 @@ public sealed class TemplatedEmailTests
         Assert.Equal("sam@example.com", message.To);
         Assert.Equal("Re: We got your request", message.Subject);
         Assert.Equal("<p>Built</p>", message.HtmlBody);
+    }
+
+    [Fact]
+    public async Task ATemplate_ReadsOnlyTheEmailsValues_NeverTheRequestOrTheSite()
+    {
+        // Arrange: a template that reaches for objects Orchard's own Liquid would hand it.
+        var templates = Templates(new FixedSource("ticket-received", new TemplatedEmailOverride
+        {
+            Template = new TemplatedEmailTemplate { IsEnabled = true, Body = "<p>[{{ Request.Headers.Cookie }}][{{ Site.SiteName }}][{{ Ticket.Number }}]</p>" },
+        }));
+        // Act
+        var message = await templates.ApplyAsync(Context("ticket-received"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("<p>[][][T-1001]</p>", message.Html);
+    }
+
+    [Fact]
+    public void AKindOfAnotherGroupWithTheSameName_IsRefused()
+    {
+        // Arrange
+        var services = new ServiceCollection()
+            .AddTemplatedEmailKind("Tickets", "notice", LocalizationSource.Create<TemplatedEmailTests>("Notice"))
+            .AddTemplatedEmailKind("Billing", "notice", LocalizationSource.Create<TemplatedEmailTests>("Notice"));
+
+        // Act
+        var exception = Record.Exception(() => services.BuildServiceProvider().GetRequiredService<IOptions<TemplatedEmailOptions>>().Value);
+
+        // Assert
+        Assert.IsType<InvalidOperationException>(exception);
     }
 
     [Fact]
@@ -124,9 +153,7 @@ public sealed class TemplatedEmailTests
 
         siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(new SiteSettings { SiteName = "Test site" });
 
-        var services = new ServiceCollection().AddSingleton(LiquidDoubles.Manager()).BuildServiceProvider();
-
-        return new LiquidTemplatedEmailTemplates(services, sources, siteService.Object, NullLogger<LiquidTemplatedEmailTemplates>.Instance);
+        return new LiquidTemplatedEmailTemplates(sources, siteService.Object, NullLoggerFactory.Instance);
     }
 
     private static TemplatedEmailContext Context(string kind)

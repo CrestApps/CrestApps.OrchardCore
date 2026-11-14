@@ -1,6 +1,5 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Emails;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Email;
 
@@ -13,44 +12,31 @@ namespace CrestApps.OrchardCore.Core.Emails;
 /// </summary>
 public sealed class TemplatedEmailSender : ITemplatedEmailSender
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IEmailService _emailService;
     private readonly ITemplatedEmailTemplates _emailTemplates;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TemplatedEmailSender"/> class.
     /// </summary>
-    /// <param name="serviceProvider">The services, to find the email service when the Email feature is on.</param>
+    /// <param name="emailServices">The email service, when the Email feature is on; none otherwise.</param>
     /// <param name="emailTemplates">The site's templates of its emails.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
     public TemplatedEmailSender(
-        IServiceProvider serviceProvider,
+        IEnumerable<IEmailService> emailServices,
         ITemplatedEmailTemplates emailTemplates,
-        ILogger<TemplatedEmailSender> logger)
-        : this(serviceProvider, emailTemplates, (ILogger)logger)
+        ILoggerFactory loggerFactory)
     {
-    }
+        ArgumentNullException.ThrowIfNull(loggerFactory);
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="TemplatedEmailSender"/> class that logs to another category, for a
-    /// module's own sender built on this one.
-    /// </summary>
-    /// <param name="serviceProvider">The services, to find the email service when the Email feature is on.</param>
-    /// <param name="emailTemplates">The templates of the emails.</param>
-    /// <param name="logger">The logger.</param>
-    public TemplatedEmailSender(
-        IServiceProvider serviceProvider,
-        ITemplatedEmailTemplates emailTemplates,
-        ILogger logger)
-    {
-        _serviceProvider = serviceProvider;
+        _emailService = emailServices?.FirstOrDefault();
         _emailTemplates = emailTemplates;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger<TemplatedEmailSender>();
     }
 
     /// <inheritdoc/>
     public bool CanSend
-        => _serviceProvider.GetService<IEmailService>() is not null;
+        => _emailService is not null;
 
     /// <inheritdoc/>
     public async Task<bool> SendAsync(TemplatedEmail email, Func<CancellationToken, Task<TemplatedEmailContent>> buildAsync, CancellationToken cancellationToken = default)
@@ -58,7 +44,7 @@ public sealed class TemplatedEmailSender : ITemplatedEmailSender
         ArgumentNullException.ThrowIfNull(email);
         ArgumentNullException.ThrowIfNull(buildAsync);
 
-        if (string.IsNullOrWhiteSpace(email.To) || _serviceProvider.GetService<IEmailService>() is not { } emailService)
+        if (string.IsNullOrWhiteSpace(email.To) || _emailService is not { } emailService)
         {
             return false;
         }

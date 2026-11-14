@@ -21,6 +21,11 @@ public static class ApiProblems
         public const string Unsupported = "unsupported";
 
         public const string IdempotencyInProgress = "idempotency-in-progress";
+
+        /// <summary>
+        /// An idempotency key sent again with another request: the caller must use a new key, not retry.
+        /// </summary>
+        public const string IdempotencyKeyReused = "idempotency-key-reused";
     }
 
     /// <summary>

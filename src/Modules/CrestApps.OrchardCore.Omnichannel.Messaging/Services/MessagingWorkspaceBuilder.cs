@@ -402,13 +402,9 @@ public sealed partial class MessagingWorkspaceBuilder
 
         var templates = new List<MessageTemplate>();
 
-        foreach (var template in await _templateManager.GetAllAsync(cancellationToken))
+        // Only the workspace's own templates are read, from the index; other scopes' never load here.
+        foreach (var template in await _templateManager.ListByScopeAsync(scope: null, cancellationToken))
         {
-            if (!string.IsNullOrEmpty(template.Scope))
-            {
-                continue;
-            }
-
             templates.Add(new MessageTemplate
             {
                 ItemId = template.ItemId,

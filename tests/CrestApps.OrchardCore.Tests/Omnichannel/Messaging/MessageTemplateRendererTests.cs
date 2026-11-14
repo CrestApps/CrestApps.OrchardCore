@@ -19,7 +19,7 @@ public sealed class MessageTemplateRendererTests
     public async Task Placeholders_AreFilledInFromTheRecords()
     {
         // Arrange
-        var renderer = Renderer(withLiquid: true);
+        var renderer = Renderer();
         var template = new MessageTemplate { Body = "Hi {{ Contact.DisplayName }}, your request {{ Ticket.Number }} is solved. <3" };
 
         // Act
@@ -34,22 +34,21 @@ public sealed class MessageTemplateRendererTests
     }
 
     [Fact]
-    public async Task APlainBody_ABrokenOne_OrASiteWithoutLiquid_GiveTheBodyAsWritten()
+    public async Task APlainBody_ABrokenOne_OrAPlainTextTemplate_GiveTheBodyAsWritten()
     {
         // Arrange
-        var renderer = Renderer(withLiquid: true);
-        var withoutLiquid = Renderer(withLiquid: false);
+        var renderer = Renderer();
         var models = new Dictionary<string, object> { ["Contact"] = new { DisplayName = "Sam" } };
 
         // Act
         var plain = await renderer.RenderAsync(new MessageTemplate { Body = "Thanks, we're on it." }, models, TestContext.Current.CancellationToken);
-        var broken = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {% if %}" }, models, TestContext.Current.CancellationToken);
-        var noLiquid = await withoutLiquid.RenderAsync(new MessageTemplate { Body = "Hi {{ Contact.DisplayName }}" }, models, TestContext.Current.CancellationToken);
+        var broken = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {{ Contact.DisplayName }" }, models, TestContext.Current.CancellationToken);
+        var plainText = await renderer.RenderAsync(new MessageTemplate { Body = "Hi {{name}}, your order is ready", IsPlainText = true }, models, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("Thanks, we're on it.", plain);
-        Assert.Equal("Hi {% if %}", broken);
-        Assert.Equal("Hi {{ Contact.DisplayName }}", noLiquid);
+        Assert.Equal("Hi {{ Contact.DisplayName }", broken);
+        Assert.Equal("Hi {{name}}, your order is ready", plainText);
     }
 
     [Fact]
@@ -68,8 +67,22 @@ public sealed class MessageTemplateRendererTests
         Assert.Equal("Tickets", scope.Key);
     }
 
-    private static LiquidMessageTemplateRenderer Renderer(bool withLiquid)
+    [Fact]
+    public async Task ATemplate_ReadsOnlyTheModelsItIsGiven()
     {
-        return new LiquidMessageTemplateRenderer(withLiquid ? [LiquidDoubles.Manager()] : [], NullLogger<LiquidMessageTemplateRenderer>.Instance);
+        // Arrange
+        var renderer = Renderer();
+
+        // Act
+        var body = await renderer.RenderAsync(
+            new MessageTemplate { Body = "[{{ Request.Headers.Cookie }}][{{ User.Identity.Name }}][{{ Contact.DisplayName }}]" },
+            new Dictionary<string, object> { ["Contact"] = new { DisplayName = "Sam" } },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("[][][Sam]", body);
     }
+
+    private static LiquidMessageTemplateRenderer Renderer()
+        => new(NullLogger<LiquidMessageTemplateRenderer>.Instance);
 }

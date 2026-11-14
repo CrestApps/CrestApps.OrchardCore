@@ -28,7 +28,7 @@ public static class CommerceEmailSenders
     /// </summary>
     /// <param name="emailService">The email service.</param>
     public static CommerceEmailSender Create(IEmailService emailService)
-        => Create(new ServiceCollection().AddSingleton(emailService).BuildServiceProvider());
+        => Create(new ServiceCollection().AddLogging().AddSingleton(emailService).BuildServiceProvider());
 
     /// <summary>
     /// Returns a sender that sends through the email service and the store's Liquid templates.
@@ -37,7 +37,7 @@ public static class CommerceEmailSenders
     /// <param name="settings">The store's templates.</param>
     public static CommerceEmailSender CreateWithTemplates(IEmailService emailService, OrderEmailTemplateSettings settings)
     {
-        var services = new ServiceCollection().AddSingleton(emailService).BuildServiceProvider();
+        var services = new ServiceCollection().AddLogging().AddSingleton(emailService).BuildServiceProvider();
 
         return new(services, Templates(settings), NullLogger<CommerceEmailSender>.Instance);
     }
@@ -55,7 +55,7 @@ public static class CommerceEmailSenders
         var siteService = new Mock<ISiteService>();
         siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site);
 
-        var services = new ServiceCollection().AddSingleton(LiquidDoubles.Manager()).BuildServiceProvider();
+        var services = new ServiceCollection().AddLogging().BuildServiceProvider();
 
         return new LiquidCommerceEmailTemplates(services, siteService.Object, NullLogger<LiquidCommerceEmailTemplates>.Instance);
     }

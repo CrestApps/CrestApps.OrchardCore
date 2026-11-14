@@ -66,7 +66,14 @@ public sealed class MessageTemplateDisplayDriver : DisplayDriver<MessageTemplate
             model.Name = template.Name;
             model.Body = template.Body;
             model.Scope = template.Scope;
+            model.IsPlainText = template.IsPlainText;
             model.Scopes = [.. _scopeOptions.Value.Scopes.Select(scope => new KeyValuePair<string, string>(scope.Key, _localizerFactory.Localize(scope.Value).Value))];
+
+            // A scope this site doesn't register (from another site's recipe) is shown as it is, so saving keeps it.
+            if (!string.IsNullOrEmpty(template.Scope) && !_scopeOptions.Value.Scopes.ContainsKey(template.Scope))
+            {
+                model.Scopes.Add(new KeyValuePair<string, string>(template.Scope, template.Scope));
+            }
         }).Location("Content:1");
     }
 
@@ -78,9 +85,13 @@ public sealed class MessageTemplateDisplayDriver : DisplayDriver<MessageTemplate
 
         template.Name = model.Name?.Trim();
         template.Body = model.Body?.Trim();
+        template.IsPlainText = model.IsPlainText;
 
-        // Only a scope another module registered is kept; anything else is the messaging workspace's.
-        template.Scope = !string.IsNullOrEmpty(model.Scope) && _scopeOptions.Value.Scopes.ContainsKey(model.Scope) ? model.Scope : null;
+        // A registered scope, or the one the template already had; anything else is the messaging workspace's.
+        template.Scope = !string.IsNullOrEmpty(model.Scope)
+            && (_scopeOptions.Value.Scopes.ContainsKey(model.Scope) || string.Equals(model.Scope, template.Scope, StringComparison.Ordinal))
+                ? model.Scope
+                : null;
 
         return Edit(template, context);
     }

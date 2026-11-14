@@ -34,6 +34,12 @@ public sealed class CommerceEmailTemplateSource : ITemplatedEmailTemplateSource
         var settings = site.GetOrCreate<OrderEmailTemplateSettings>();
         var template = settings.Templates is not null && settings.Templates.TryGetValue(kind, out var found) && found.IsEnabled ? found : null;
 
+        // Nothing written for the kind and no layout: the source has nothing to say about it.
+        if (template is null && string.IsNullOrWhiteSpace(settings.Layout))
+        {
+            return null;
+        }
+
         return new TemplatedEmailOverride
         {
             Template = template is null ? null : new TemplatedEmailTemplate { IsEnabled = true, Subject = template.Subject, Body = template.Body },

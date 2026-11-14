@@ -79,6 +79,7 @@ public sealed class IdempotencyEndpointFilterTests
         httpContext.Request.Path = "/api/commerce/v1/orders";
         httpContext.Request.Headers[CommerceApi.IdempotencyKeyHeader] = "key-1";
         httpContext.Request.Headers[CommerceApi.CartTokenHeader] = "cart-1";
+        httpContext.SetEndpoint(new Endpoint(null, new EndpointMetadataCollection(CommerceApi.GuestHeaders), "commerce"));
         httpContext.Response.Body = new MemoryStream();
 
         return httpContext;

@@ -14,9 +14,10 @@ public sealed class TemplatedEmailOptions
         => _kinds;
 
     /// <summary>
-    /// Adds a kind, or replaces the one with the same name.
+    /// Adds a kind, or replaces the one with the same name its own group registered before.
     /// </summary>
     /// <param name="kind">The kind.</param>
+    /// <exception cref="InvalidOperationException">Another group already registered a kind with the name.</exception>
     public TemplatedEmailOptions AddKind(TemplatedEmailKind kind)
     {
         ArgumentNullException.ThrowIfNull(kind);
@@ -25,6 +26,12 @@ public sealed class TemplatedEmailOptions
 
         if (index >= 0)
         {
+            // Two modules can't share a kind's name: one would silently take over the other's template.
+            if (!string.Equals(_kinds[index].Group, kind.Group, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"The email kind '{kind.Name}' of '{kind.Group}' is already registered by '{_kinds[index].Group}'.");
+            }
+
             _kinds[index] = kind;
         }
         else

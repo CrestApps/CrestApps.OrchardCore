@@ -19,7 +19,7 @@ public static class ModuleApi
     public const string IdempotencyKeyHeader = "Idempotency-Key";
 
     /// <summary>
-    /// The authentication scheme of the API, which accepts bearer tokens and the site's cookie.
+    /// The authentication scheme of the API, which accepts bearer tokens (not the site's cookie).
     /// </summary>
     public const string AuthenticationScheme = OrchardCoreConstants.AuthenticationSchemes.Api;
 

@@ -4,8 +4,8 @@ namespace CrestApps.OrchardCore.Api;
 
 /// <summary>
 /// How <see cref="IdempotencyEndpointFilter"/> treats an endpoint's idempotency keys, when the endpoint follows a
-/// protocol with rules of its own, such as an agentic commerce protocol. Endpoints without a policy keep the commerce
-/// API's rules.
+/// protocol with rules of its own, such as an agentic commerce protocol. Endpoints without a policy keep the filter's
+/// default rules.
 /// </summary>
 public sealed class IdempotencyPolicy
 {
@@ -30,7 +30,7 @@ public sealed class IdempotencyPolicy
     public Func<HttpContext, IResult> MissingKey { get; init; }
 
     /// <summary>
-    /// Gets what a request with a key that is too long gets, or <see langword="null"/> for the commerce API's answer.
+    /// Gets what a request with a key that is too long gets, or <see langword="null"/> for the default answer (400).
     /// </summary>
     public Func<HttpContext, IResult> InvalidKey { get; init; }
 
@@ -47,7 +47,7 @@ public sealed class IdempotencyPolicy
 
     /// <summary>
     /// Gets what a request gets while the first request with its key still runs, or <see langword="null"/> for the
-    /// commerce API's answer.
+    /// default answer (409).
     /// </summary>
     public Func<HttpContext, IResult> InFlight { get; init; }
 

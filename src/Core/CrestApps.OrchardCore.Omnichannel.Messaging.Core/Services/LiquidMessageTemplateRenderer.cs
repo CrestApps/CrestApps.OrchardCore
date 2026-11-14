@@ -4,28 +4,25 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Liquid;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 
 /// <summary>
-/// The default <see cref="IMessageTemplateRenderer"/>: renders a template's body with Liquid when the Liquid feature is
-/// on, reading each model as plain values (<c>{{ Contact.DisplayName }}</c>, <c>{{ Ticket.Number }}</c>). A body that
-/// fails to render, or a site without Liquid, gives the body as written.
+/// The default <see cref="IMessageTemplateRenderer"/>: fills in a template's placeholders with restricted Liquid, which
+/// reads only the models handed to it as plain values (<c>{{ Contact.DisplayName }}</c>, <c>{{ Ticket.Number }}</c>) and
+/// never the request, the user or the site. A plain-text template, or a body that doesn't parse or fails to render, gives
+/// the body as written.
 /// </summary>
 public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
 {
-    private readonly ILiquidTemplateManager _liquid;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LiquidMessageTemplateRenderer"/> class.
     /// </summary>
-    /// <param name="liquidTemplateManagers">The Liquid template manager, when the Liquid feature is on.</param>
     /// <param name="logger">The logger.</param>
-    public LiquidMessageTemplateRenderer(IEnumerable<ILiquidTemplateManager> liquidTemplateManagers, ILogger<LiquidMessageTemplateRenderer> logger)
+    public LiquidMessageTemplateRenderer(ILogger<LiquidMessageTemplateRenderer> logger)
     {
-        _liquid = liquidTemplateManagers?.FirstOrDefault();
         _logger = logger;
     }
 
@@ -37,12 +34,7 @@ public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
         var body = template.Body ?? string.Empty;
 
         // Only a body with Liquid in it is rendered, so a plain reply never changes.
-        if (!body.Contains("{{", StringComparison.Ordinal) && !body.Contains("{%", StringComparison.Ordinal))
-        {
-            return body;
-        }
-
-        if (_liquid is not { } liquid)
+        if (template.IsPlainText || !RestrictedLiquid.HasLiquid(body))
         {
             return body;
         }
@@ -53,17 +45,22 @@ public sealed class LiquidMessageTemplateRenderer : IMessageTemplateRenderer
 
             foreach (var (name, model) in models ?? new Dictionary<string, object>())
             {
-                values[name] = model is string text ? StringValue.Create(text) : LiquidModelValues.Create(model);
+                values[name] = model is string text ? StringValue.Create(text) : LiquidModelValues.Create(model, RestrictedLiquid.Options);
             }
 
             // A reply is plain text, so nothing in it is encoded as HTML.
-            return (await liquid.RenderStringAsync(body, NullEncoder.Default, values)).Trim();
+            if (await RestrictedLiquid.RenderAsync(body, values, NullEncoder.Default) is { } rendered)
+            {
+                return rendered.Trim();
+            }
+
+            _logger.LogWarning("The reply template '{TemplateId}' doesn't parse; its body was used as written.", template.ItemId.SanitizeLogValue());
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             _logger.LogWarning(exception, "The reply template '{TemplateId}' couldn't render; its body was used as written.", template.ItemId.SanitizeLogValue());
-
-            return body;
         }
+
+        return body;
     }
 }

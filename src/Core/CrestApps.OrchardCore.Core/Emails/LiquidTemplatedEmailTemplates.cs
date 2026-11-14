@@ -4,24 +4,20 @@ using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Emails;
 using Fluid;
 using Fluid.Values;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Liquid;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Core.Emails;
 
 /// <summary>
 /// The default <see cref="ITemplatedEmailTemplates"/>: asks each <see cref="ITemplatedEmailTemplateSource"/> for the
-/// site's template of the kind and its layout, and renders them with Liquid. The email's models are read as plain
-/// values, the built HTML is <c>{{ Content }}</c>, the subject <c>{{ Subject }}</c> and the site's name
-/// <c>{{ SiteName }}</c>. A template that fails to render gives the built email.
+/// site's template of the kind and its layout, and renders them with restricted Liquid (<see cref="RestrictedLiquid"/>),
+/// which reads only the email's documented values: the email's models as plain values, the built HTML as
+/// <c>{{ Content }}</c>, the subject as <c>{{ Subject }}</c> and the site's name as <c>{{ SiteName }}</c>, never the
+/// request or the site's other objects. A template that doesn't parse or fails to render gives the built email.
 /// </summary>
 public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTemplates
 {
-    private static readonly TemplateOptions _options = TemplateOptions.Default;
-
-    private readonly IServiceProvider _serviceProvider;
     private readonly IEnumerable<ITemplatedEmailTemplateSource> _sources;
     private readonly ISiteService _siteService;
     private readonly ILogger _logger;
@@ -29,37 +25,19 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
     /// <summary>
     /// Initializes a new instance of the <see cref="LiquidTemplatedEmailTemplates"/> class.
     /// </summary>
-    /// <param name="serviceProvider">The services, to find the Liquid template manager when the Liquid feature is on.</param>
     /// <param name="sources">The sources of the site's templates.</param>
     /// <param name="siteService">The site service.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
     public LiquidTemplatedEmailTemplates(
-        IServiceProvider serviceProvider,
         IEnumerable<ITemplatedEmailTemplateSource> sources,
         ISiteService siteService,
-        ILogger<LiquidTemplatedEmailTemplates> logger)
-        : this(serviceProvider, sources, siteService, (ILogger)logger)
+        ILoggerFactory loggerFactory)
     {
-    }
+        ArgumentNullException.ThrowIfNull(loggerFactory);
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LiquidTemplatedEmailTemplates"/> class that logs to another
-    /// category, for a module's own templates built on these.
-    /// </summary>
-    /// <param name="serviceProvider">The services, to find the Liquid template manager when the Liquid feature is on.</param>
-    /// <param name="sources">The sources of the site's templates.</param>
-    /// <param name="siteService">The site service.</param>
-    /// <param name="logger">The logger.</param>
-    public LiquidTemplatedEmailTemplates(
-        IServiceProvider serviceProvider,
-        IEnumerable<ITemplatedEmailTemplateSource> sources,
-        ISiteService siteService,
-        ILogger logger)
-    {
-        _serviceProvider = serviceProvider;
         _sources = sources;
         _siteService = siteService;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger<LiquidTemplatedEmailTemplates>();
     }
 
     /// <inheritdoc/>
@@ -69,7 +47,7 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
 
         var built = new TemplatedEmailMessage(context.Subject, context.Text, context.Html);
 
-        if (string.IsNullOrEmpty(context.Kind) || _serviceProvider.GetService<ILiquidTemplateManager>() is not { } liquid)
+        if (string.IsNullOrEmpty(context.Kind))
         {
             return built;
         }
@@ -109,7 +87,7 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
 
             foreach (var (name, model) in context.Models ?? new Dictionary<string, object>())
             {
-                values[name] = LiquidModelValues.Create(model, _options);
+                values[name] = LiquidModelValues.Create(model, RestrictedLiquid.Options);
             }
 
             foreach (var (name, value) in context.Values ?? new Dictionary<string, string>())
@@ -124,12 +102,12 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
             {
                 if (!string.IsNullOrWhiteSpace(template.Subject))
                 {
-                    subject = (await liquid.RenderStringAsync(template.Subject, NullEncoder.Default, values)).Trim();
+                    subject = (await RenderOrThrowAsync(template.Subject, values, NullEncoder.Default)).Trim();
                 }
 
                 if (!string.IsNullOrWhiteSpace(template.Body))
                 {
-                    html = await liquid.RenderStringAsync(template.Body, HtmlEncoder.Default, values);
+                    html = await RenderOrThrowAsync(template.Body, values, HtmlEncoder.Default);
                     values["Content"] = StringValue.Create(html, encode: false);
                 }
             }
@@ -137,7 +115,7 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
             // A text-only email stays text-only, unless the site's template wrote a body for it.
             if (!string.IsNullOrWhiteSpace(layout) && !string.IsNullOrEmpty(html))
             {
-                html = await liquid.RenderStringAsync(layout, HtmlEncoder.Default, values);
+                html = await RenderOrThrowAsync(layout, values, HtmlEncoder.Default);
             }
 
             // The text part follows the HTML a template wrote; with only a layout, the built text stays.
@@ -152,6 +130,20 @@ public sealed partial class LiquidTemplatedEmailTemplates : ITemplatedEmailTempl
             return built;
         }
     }
+
+    /// <summary>
+    /// Checks that a template of an email parses, for its editor and its import.
+    /// </summary>
+    /// <param name="source">The subject, body or layout.</param>
+    /// <param name="error">Why it doesn't parse, or <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> when it parses.</returns>
+    public static bool TryValidate(string source, out string error)
+        => RestrictedLiquid.TryValidate(source, out error);
+
+    // A part that doesn't parse sends the built email instead, never the parser's message.
+    private static async Task<string> RenderOrThrowAsync(string source, Dictionary<string, FluidValue> values, TextEncoder encoder)
+        => await RestrictedLiquid.RenderAsync(source, values, encoder)
+            ?? throw new InvalidOperationException("The template doesn't parse.");
 
     /// <summary>
     /// Writes the text part of an HTML body.

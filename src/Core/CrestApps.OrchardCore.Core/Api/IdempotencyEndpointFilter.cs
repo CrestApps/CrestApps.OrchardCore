@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
@@ -46,6 +47,15 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         if (policy?.EchoKey == true)
         {
             httpContext.Response.Headers[keyHeader] = key;
+        }
+
+        // A key is kept per caller. A caller the request doesn't identify (no user, no guest token) could share another
+        // stranger's answer, so the key isn't used: the request runs as if it had none, and nothing is kept.
+        var caller = ResolveCaller(httpContext, policy);
+
+        if (string.IsNullOrEmpty(caller))
+        {
+            return await next(context);
         }
 
         var cache = httpContext.RequestServices.GetRequiredService<IDistributedCache>();
@@ -99,17 +109,29 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         }
     }
 
-    // Only a final answer is kept. A server error, a "too many requests", and a conflict that clears by itself (someone
-    // else changing the same thing) are worth sending again with the same key.
+    // Only a final answer is kept. A server error, a "too many requests", a conflict that clears by itself (someone
+    // else changing the same thing) and a request the caller must correct (400, 422) are worth sending again with the
+    // same key. The answer is kept even when the client stopped waiting: the work is done, and its retry must get it.
+    // A cache that can't keep it doesn't turn a done request into an error: the work's answer is still sent.
     private static async Task KeepAsync(IDistributedCache cache, string cacheKey, object result, HttpContext httpContext, IdempotencyPolicy policy = null, string fingerprint = null)
     {
-        if (Capture(result, httpContext.Response.Headers, ReplayedHeaders(httpContext)) is { } response && IsFinal(response))
+        if (Capture(result, httpContext.Response.Headers, ReplayedHeaders(httpContext)) is not { } response || !IsFinal(response))
+        {
+            return;
+        }
+
+        try
         {
             await cache.SetStringAsync(
                 cacheKey,
                 JsonSerializer.Serialize(response with { Fingerprint = fingerprint }),
                 new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = policy?.Lifetime ?? _lifetime },
-                httpContext.RequestAborted);
+                CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            httpContext.RequestServices.GetService<ILoggerFactory>()?.CreateLogger<IdempotencyEndpointFilter>()
+                .LogWarning(exception, "The answer of an idempotent request couldn't be kept; a retry with its key will run it again.");
         }
     }
 
@@ -126,19 +148,22 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
     internal static string GetCacheKey(HttpContext httpContext, string key, IdempotencyPolicy policy = null)
     {
-        // A guest is known by the first guest header the endpoint's group names that the request carries, such as a
-        // cart's token, or a checkout's when there is no cart. Never both: the answer to starting a checkout hands out the
-        // checkout token, so a retry of it carries one the first request didn't.
-        var caller = policy?.Caller?.Invoke(httpContext) ??
-            httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
-            httpContext.User?.FindFirstValue("sub") ??
-            FirstGuestHeader(httpContext);
+        var caller = ResolveCaller(httpContext, policy);
 
         var scope = $"{httpContext.Request.PathBase}|{httpContext.Request.Method}|{httpContext.Request.Path}|{caller}|{key}";
 
         // The prefix predates the move out of Commerce; it stays so answers kept before an upgrade are still found.
         return "commerce-api-idempotency:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(scope)));
     }
+
+    // A guest is known by the first guest header the endpoint's group names that the request carries, such as a cart's
+    // token, or a checkout's when there is no cart. Never both: the answer to starting a checkout hands out the checkout
+    // token, so a retry of it carries one the first request didn't.
+    internal static string ResolveCaller(HttpContext httpContext, IdempotencyPolicy policy = null)
+        => policy?.Caller?.Invoke(httpContext) ??
+            httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
+            httpContext.User?.FindFirstValue("sub") ??
+            FirstGuestHeader(httpContext);
 
     private static string FirstGuestHeader(HttpContext httpContext)
     {
@@ -187,6 +212,8 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     internal static bool IsFinal(StoredResponse response)
         => response.StatusCode < StatusCodes.Status500InternalServerError &&
             response.StatusCode != StatusCodes.Status429TooManyRequests &&
+            response.StatusCode != StatusCodes.Status400BadRequest &&
+            response.StatusCode != StatusCodes.Status422UnprocessableEntity &&
             !(response.StatusCode == StatusCodes.Status409Conflict &&
                 response.Body is { } body &&
                 (body.Contains($"\"code\":\"{ApiProblems.Codes.Concurrency}\"", StringComparison.Ordinal) ||
@@ -199,7 +226,7 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
         // The same key with another request is a mistake the caller must fix, not a retry.
         if (policy?.Fingerprint is not null && !string.Equals(response.Fingerprint, fingerprint, StringComparison.Ordinal))
         {
-            return policy.Conflict?.Invoke(httpContext) ?? ApiProblems.Conflict(ApiProblems.Codes.IdempotencyInProgress, "This idempotency key was used for another request.");
+            return policy.Conflict?.Invoke(httpContext) ?? ApiProblems.Conflict(ApiProblems.Codes.IdempotencyKeyReused, "This idempotency key was used for another request; send this one with a new key.");
         }
 
         if (!string.IsNullOrEmpty(policy?.ReplayedHeader))

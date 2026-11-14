@@ -20,6 +20,8 @@ public class MessageTemplateViewModel
     /// </summary>
     public string Scope { get; set; }
 
+    public bool IsPlainText { get; set; }
+
     /// <summary>
     /// Gets or sets the scopes other modules registered, by name, with their titles; empty hides the choice.
     /// </summary>

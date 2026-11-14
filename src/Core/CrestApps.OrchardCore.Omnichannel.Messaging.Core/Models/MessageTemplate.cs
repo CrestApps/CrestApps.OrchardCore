@@ -27,6 +27,12 @@ public sealed class MessageTemplate : CatalogItem, INameAwareModel, IModifiedUtc
     public string Scope { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the body is inserted as written, without filling in placeholders. Templates
+    /// written before placeholders existed are plain text, so braces an agent typed keep their meaning.
+    /// </summary>
+    public bool IsPlainText { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the template was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
