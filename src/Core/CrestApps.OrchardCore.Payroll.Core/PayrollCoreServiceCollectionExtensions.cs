@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Payroll.Core;
 
@@ -47,8 +48,16 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IEmployerUsage, PayProfileUsage>(serviceProvider => serviceProvider.GetRequiredService<PayProfileUsage>()));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, PayProfileUsage>(serviceProvider => serviceProvider.GetRequiredService<PayProfileUsage>()));
 
+        services.TryAddScoped<PayrollPayCodeSeeder>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, PayCodeBaseUsage>());
+
         // Any jurisdiction gets the usual withholding fields until a country pack gives its own form.
         services.AddElectionFieldSet(GenericElectionFields.Create());
+
+        // The tax categories every country has; a country pack adds its own.
+        services.AddPayrollTaxCategory(PayrollTaxCategories.IncomeTax, LocalizationSource.Create("Income tax", typeof(PayrollCoreServiceCollectionExtensions)));
+        services.AddPayrollTaxCategory(PayrollTaxCategories.SocialInsurance, LocalizationSource.Create("Social insurance", typeof(PayrollCoreServiceCollectionExtensions)));
+        services.AddPayrollTaxCategory(PayrollTaxCategories.Unemployment, LocalizationSource.Create("Unemployment insurance", typeof(PayrollCoreServiceCollectionExtensions)));
 
         return services;
     }

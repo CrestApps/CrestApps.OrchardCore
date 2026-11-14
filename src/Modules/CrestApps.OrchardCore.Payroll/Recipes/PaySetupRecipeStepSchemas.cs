@@ -82,7 +82,7 @@ internal sealed class PayCodesRecipeStepSchema : IRecipeStep
                             ("PremiumPerHour", new JsonSchemaBuilder().Type(SchemaValueType.Number | SchemaValueType.Null).Description("A premium paid an hour on top.")),
                             ("ExportCode", Text("The code an outside payroll system knows the line by.")),
                             ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the code is in use.")),
-                            ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).Description("Module settings, such as WorkforcePayCodeSettings (WindowStart, WindowEnd, Weekdays) for a shift differential.")))
+                            ("Properties", new JsonSchemaBuilder().Type(SchemaValueType.Object).Description("Module settings, such as WorkforcePayCodeSettings (WindowStart, WindowEnd, Weekdays) for a shift differential, and PayrollPayCodeSettings (Calculation, BaseCodeIds, TaxTreatment by tax category, Supplemental, CountsInRegularRate, CountsAsHoursWorked, PeriodLimit, YearLimits with EffectiveFrom and Amount, LifetimeLimit, Priority, Arrears, Proration, InRetroPay, FormBoxes).")))
                         .Required("Code")
                         .AdditionalProperties(true))
                     .Description("The pay codes to create, or update by id or code.")))

@@ -36,15 +36,26 @@ When the time clock or payroll is first turned on, the usual codes are added: re
 | --- | --- |
 | **Code** | Short and unique, such as REG. |
 | **Class** | Earning, deduction, employer contribution, imputed income (taxed, not paid), reimbursement (paid, not taxed), or memo (shown only). |
-| **Pays for** | Regular hours, overtime, double time, holiday hours, weekend hours, paid time off, predictability pay, call back, a shift differential, unpaid time, salary, bonus, commission or tips. |
+| **Pays for** | Regular hours, overtime, double time, holiday hours, weekend hours, paid time off, predictability pay, call back, a shift differential, unpaid time, salary, bonus, commission, tips, a reimbursement, a loan or advance repayment, or a plan contribution. |
 | **Multiplier** | What the hourly rate is multiplied by, such as 1.5 for overtime. Type a dot for decimals. |
 | **Premium an hour** | Paid on top of the hours, such as for a shift differential. |
 | **Export code** | What an outside payroll system calls it, when that differs from the code. |
 | **Shift differential hours** | With the time clock: the hours a shift differential applies in, in the worker's time (an end before the start runs past midnight), and the days it starts on. |
 
+## How payroll calculates and taxes a code
+
+With Payroll on, people who manage payroll settings for every employer see a **Payroll** card on each pay code. When Payroll is turned on it also adds salary, bonus, commission, tips, an expense reimbursement and a loan repayment, unless a code with the same name is already there. A code nobody set up follows its class: earnings are taxed, deductions are taken after taxes, reimbursements and employer contributions aren't taxed.
+
+- **Calculated as**: hours times the rate, an amount (from a pay item or an entry), a percent of earnings (choose which under **Percent of**, or none for every earning), or a percent of disposable earnings (deductions only).
+- **Taxes**: for each tax, whether the amount counts. A deduction marked **Not taxed** for income tax, such as a retirement plan, is taken before income tax and lowers the wages it is worked out on, but not the other taxes' wages.
+- **Supplemental pay**, **Counts in the regular rate**, **Counts as hours worked** and **Recalculated by retro pay**: how overtime, supplemental withholding and retro pay treat the code.
+- **Limits**: the most taken or paid per pay period, per calendar year and ever. Add a yearly row when the limit changes for a new year. Once a person reaches a limit, the code takes nothing more until the next period or year.
+- **Priority** and **When pay is too small**: the order deductions are taken in, and whether what couldn't be taken is dropped or owed for the next pay (deductions only).
+- **Part of a period**: whether a fixed amount, such as a salary, is cut by the days a person was employed in a period they were hired in, left or had a pay change in.
+
 ## Turn off instead of delete
 
-A schedule a time clock policy or a timesheet uses, or a code a time off type or a timesheet uses, can't be deleted: the page says what uses it. Clear **In use** to stop choosing it.
+A schedule a time clock policy, a timesheet or a pay profile uses, or a code a time off type, a timesheet, a pay item or another code's percent uses, can't be deleted: the page says what uses it. Clear **In use** to stop choosing it.
 
 ## Moving from the time clock's pay periods
 

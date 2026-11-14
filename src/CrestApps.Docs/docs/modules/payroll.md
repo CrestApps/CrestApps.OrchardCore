@@ -161,6 +161,47 @@ The **Employees** data set (`PayrollEmployees`) reads profiles for `ViewPayrollR
 }
 ```
 
+## Pay code rules
+
+The Payroll feature adds a **Payroll** card to the pay code editor (shown to `ManagePayrollSettings` for every employer) that keeps `PayrollPayCodeSettings` in the code's properties. `code.GetPayrollSettings()` returns them, or the defaults for the code's class and kind (`PayrollPayCodeSettingsExtensions.DefaultsFor`) when none are stored:
+
+| Setting | Meaning |
+| --- | --- |
+| `Calculation` | `HoursByRate`, `FixedAmount`, `PercentOfEarnings` (of `BaseCodeIds`, or every earning) or `PercentOfDisposableEarnings` (deductions) |
+| `TaxTreatment` | `Taxed` or `Exempt` per tax category; a category left out takes the class's default (`DefaultTreatment`: earnings, imputed income and deductions taxed; employer contributions, reimbursements and memo lines exempt) |
+| `Supplemental`, `CountsInRegularRate`, `CountsAsHoursWorked`, `InRetroPay` | Flags the engine reads |
+| `PeriodLimit`, `YearLimits` (dated, `YearLimitOn(day)`), `LifetimeLimit` | Limits of the code |
+| `Priority`, `Arrears` (`None`, `CarryForward`), `Proration` (`None`, `WorkingDays`, `CalendarDays`) | Order, shortfall and part-period rules |
+| `FormBoxes` | Boxes of tax forms, from the ones a country pack registers with `AddPayrollFormBox` |
+
+Tax categories are an open list: `PayrollTaxCategories` holds `IncomeTax`, `SocialInsurance` and `Unemployment`, and a country pack adds its own with `AddPayrollTaxCategory(name, displayName)`.
+
+Two pure rules in `Payroll.Core` (`CrestApps.OrchardCore.Payroll.Core.Calculation`) carry the matrix and the limits for the engine:
+
+- `PayCodeTaxMatrix.WagesFor(category, lines)`: earnings and imputed income taxed for the category, less deductions exempt from it, never below zero. A deduction exempt from income tax only lowers income tax wages.
+- `PayLimits.Apply(wanted, code, item, usage, payDate)`: the code's period, yearly (in effect on the pay date) and lifetime limits and the pay item's period and yearly maximums and goal, against what the accumulators say was already taken (`PayLimitUsage`). The lowest room left wins; a reached limit leaves nothing; the result names the limit that cut the line.
+
+When Payroll is turned on, `PayrollPayCodeSeeder` adds SAL, BONUS, COMM, TIPS, REIMB and LOAN with their settings, skipping a code already used. A pay code another code takes a percent of can't be deleted (`PayCodeBaseUsage`). The `PayCodes` recipe and deployment steps carry the settings in `Properties`:
+
+```json
+{
+  "name": "PayCodes",
+  "Codes": [
+    {
+      "Code": "RET", "Name": "Retirement plan", "Class": "Deduction", "Kind": "Contribution",
+      "Properties": {
+        "PayrollPayCodeSettings": {
+          "Calculation": "PercentOfEarnings",
+          "TaxTreatment": { "IncomeTax": "Exempt" },
+          "YearLimits": [ { "EffectiveFrom": "2026-01-01", "Amount": 23500 } ],
+          "Priority": 20
+        }
+      }
+    }
+  ]
+}
+```
+
 ## Teams and settings
 
 With Teams on, people with `ManagePayrollSettings` get a **Payroll** card on the team editor: `PayrollTeamSettings` with the team's `LedgerCode` and a work site's `Jurisdictions`.

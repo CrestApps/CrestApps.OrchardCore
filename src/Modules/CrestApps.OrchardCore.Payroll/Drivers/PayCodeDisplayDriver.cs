@@ -127,6 +127,9 @@ internal sealed class PayCodeDisplayDriver : DisplayDriver<PayCode>
             new(S["Bonus"], PayCodeKinds.Bonus),
             new(S["Commission"], PayCodeKinds.Commission),
             new(S["Tips"], PayCodeKinds.Tips),
+            new(S["Reimbursement"], PayCodeKinds.Reimbursement),
+            new(S["Loan or advance repayment"], PayCodeKinds.Loan),
+            new(S["Plan contribution"], PayCodeKinds.Contribution),
         };
 
         foreach (var (name, displayName) in _kinds.Kinds)

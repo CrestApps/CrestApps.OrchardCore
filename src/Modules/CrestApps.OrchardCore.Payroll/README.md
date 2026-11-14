@@ -36,6 +36,14 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   (`PayrollSettings`).
 - The recipe **Payroll: sample roles**.
 
+## Pay code rules
+
+- A **Payroll** card on pay codes (`PayrollPayCodeSettings`, defaults by class and kind through `GetPayrollSettings`):
+  calculation, tax treatment per category (`AddPayrollTaxCategory`), flags, period, yearly and lifetime limits,
+  priority, arrears, proration, retro, form boxes (`AddPayrollFormBox`).
+- `PayLimits` and `PayCodeTaxMatrix` (Payroll.Core), the seeded SAL, BONUS, COMM, TIPS, REIMB and LOAN codes, and
+  `PayCodeBaseUsage` keeping a base code of a percent from being deleted.
+
 ## Pay profiles and pay items
 
 - `EmployeePayProfile` per staff member and employer (`IPayProfileManager`): pay schedule, worker type, overtime status,

@@ -155,6 +155,7 @@ public sealed class PayrollStartup : StartupBase
         services.AddDisplayDriver<EmployeePayProfile, PayProfileDisplayDriver>();
         services.AddDisplayDriver<EmployeePayItem, PayItemDisplayDriver>();
         services.AddDisplayDriver<StaffMember, StaffPayrollDisplayDriver>();
+        services.AddDisplayDriver<PayCode, PayrollPayCodeDisplayDriver>();
 
         services.AddDisplayDriver<Employer, EmployerDisplayDriver>();
         services.AddPermissionProvider<PayrollPermissionProvider>();

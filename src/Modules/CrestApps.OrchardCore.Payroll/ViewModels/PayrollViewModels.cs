@@ -374,3 +374,59 @@ public class PayProfileTaxIdViewModel
     [BindNever]
     public string TaxId { get; set; }
 }
+
+/// <summary>
+/// The Payroll card of the pay code editor.
+/// </summary>
+public class PayrollPayCodeViewModel
+{
+    public string Calculation { get; set; }
+
+    public string[] BaseCodeIds { get; set; } = [];
+
+    public Dictionary<string, string> Treatments { get; set; } = new(StringComparer.Ordinal);
+
+    public bool Supplemental { get; set; }
+
+    public bool CountsInRegularRate { get; set; }
+
+    public bool CountsAsHoursWorked { get; set; }
+
+    public string PeriodLimit { get; set; }
+
+    public IList<DatedAmountViewModel> YearLimits { get; set; } = [];
+
+    public string LifetimeLimit { get; set; }
+
+    public int Priority { get; set; }
+
+    public string Arrears { get; set; }
+
+    public string Proration { get; set; }
+
+    public bool InRetroPay { get; set; }
+
+    public string[] FormBoxes { get; set; } = [];
+
+    [BindNever]
+    public string ClassDefault { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Categories { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> BaseCodes { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> FormBoxOptions { get; set; } = [];
+}
+
+/// <summary>
+/// A row of dated amounts, such as a yearly limit.
+/// </summary>
+public class DatedAmountViewModel
+{
+    public DateOnly? EffectiveFrom { get; set; }
+
+    public string Amount { get; set; }
+}

@@ -149,6 +149,15 @@ public static class PayCodeKinds
     /// <summary>A salary.</summary>
     public const string Salary = "Salary";
 
+    /// <summary>Money paid back, such as expenses.</summary>
+    public const string Reimbursement = "Reimbursement";
+
+    /// <summary>The repayment of a loan or an advance.</summary>
+    public const string Loan = "Loan";
+
+    /// <summary>A contribution to a plan, by the person or the employer.</summary>
+    public const string Contribution = "Contribution";
+
     /// <summary>
     /// The kinds Workforce's pay codes had, in their stored order, to read records written before.
     /// </summary>
