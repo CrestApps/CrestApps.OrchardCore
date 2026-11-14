@@ -182,7 +182,7 @@ public sealed class MySubscriptionsController : Controller
 
 Receipts, invoices, credit notes and refund documents take their numbers from **`IFinancialDocumentNumberGenerator`** (`CrestApps.OrchardCore.Transactions.Abstractions`, namespace `CrestApps.OrchardCore.Transactions.FinancialDocuments`): it issues a `FinancialDocumentNumber` for a `FinancialDocumentNumberRequest` (a `FinancialDocumentKind` and an optional series). The Transactions feature registers `SequentialFinancialDocumentNumberGenerator`, an adapter over the shared number series (`INumberSeries`): each kind is a registered series (`FinancialDocumentSeries`: `Financial.Receipt`, `Financial.Invoice`, `Financial.CreditNote` and `Financial.RefundDocument`) with a format a site can change, by default `R-{seq}`, `INV-{seq}`, `CN-{seq}` and `RF-{seq}` from 1001. A series used for the first time carries on after the numbers the earlier generator issued, so no number repeats.
 
-The series takes its next number under a lock held until the caller's unit of work is saved, so two nodes or two requests never issue the same number. A number taken by work that then fails is not reused, so a failed payment can leave a gap.
+The series takes its next number under a lock held until the caller's unit of work is saved, so two nodes or two requests never issue the same number. A number taken by work that then fails is not saved, so the next issuer gets it and the series has no gaps. Invoicing passes over an invoice or credit note number a document imported from another site already holds (see [Invoicing](invoicing#recipes-and-deployment)).
 
 Before this release an `IFinancialDocumentPolicy` seam with a receipts-only default was registered but never asked; it is removed.
 

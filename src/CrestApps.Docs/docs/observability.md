@@ -1017,7 +1017,7 @@ New log scopes: `CheckoutSessionId` (reconciliation sweep, per session), `Stripe
 - No existing commerce instrument was renamed (there were none).
 - `DefaultCheckoutEngine` public methods are now thin wrappers over private `*CoreAsync` methods so every return is measured; behavior is unchanged.
 - `TransactionReminderBackgroundTask.RaiseOverdueAsync` now returns the number of transactions that became overdue (was `Task`); `PayLaterRenewalBackgroundTask.RenewAsync` (private) returns whether it created a cycle.
-- Not deferred-work wrapped on purpose: `SequentialFinancialDocumentNumberGenerator` lock release, and the `BookingMigrations`/`PosMigrations` index backfills (migrations).
+- Not deferred-work wrapped on purpose: the number series lock release (`DocumentNumberSequence` releases it when the caller's unit of work is saved, for every series, financial documents included), and the `BookingMigrations`/`PosMigrations` index backfills (migrations).
 
 ## Scheduling, workforce, field service, geo and tenant hierarchy
 
