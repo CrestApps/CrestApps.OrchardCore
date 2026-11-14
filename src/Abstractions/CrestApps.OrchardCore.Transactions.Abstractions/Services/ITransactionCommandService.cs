@@ -54,6 +54,17 @@ public interface ITransactionCommandService
     Task<TransactionCommandResult> ApplyCreditAsync(string transactionId, decimal amount, string note, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Completes the customer credit changes a transaction's timeline entries are waiting for: each entry is saved first,
+    /// as the intent, and its credit change is made after it, keyed by the entry's id so it is made once. A process that
+    /// stopped between the two left the entry waiting; every command completes such entries before it runs, and the
+    /// reminder sweep calls this for the transactions that have any. A spend that finds too little credit takes its
+    /// payment back with a reversing entry; a change that cannot be made is recorded as a payment issue.
+    /// </summary>
+    /// <param name="transactionId">The transaction identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> ReconcileCreditAsync(string transactionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Settles whatever is still owed on the transaction as paid offline, and tells the payment handlers about that
     /// payment.
     /// </summary>

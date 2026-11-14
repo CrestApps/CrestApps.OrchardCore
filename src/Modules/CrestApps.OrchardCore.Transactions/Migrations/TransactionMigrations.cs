@@ -59,7 +59,9 @@ internal sealed class TransactionMigrations : DataMigration
         await CreateReportIndexAsync();
         await CreatePayerColumnsAsync();
 
-        return 3;
+        await CreatePendingCreditColumnAsync();
+
+        return 4;
     }
 
     /// <summary>
@@ -90,6 +92,29 @@ internal sealed class TransactionMigrations : DataMigration
             TransactionsConstants.CollectionName));
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds the column that marks a transaction whose timeline entry waits for its customer credit change, so the sweep
+    /// finds the ones to complete. No existing transaction waits for one, so nothing is filled.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreatePendingCreditColumnAsync();
+
+        return 4;
+    }
+
+    private async Task CreatePendingCreditColumnAsync()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(
+            table => table.AddColumn<bool>("PendingCredit", column => column.Nullable()),
+            collection: TransactionsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(
+            table => table.CreateIndex("IDX_TransactionIndex_PendingCredit", "PendingCredit"),
+            collection: TransactionsConstants.CollectionName);
     }
 
     private async Task CreatePayerColumnsAsync()

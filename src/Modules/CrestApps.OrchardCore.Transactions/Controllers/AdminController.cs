@@ -506,6 +506,12 @@ public sealed class AdminController : Controller
             }
         }
 
+        // What followed the saved change but did not finish with it, such as a customer credit change left for later.
+        foreach (var warning in result.Warnings)
+        {
+            await _notifier.WarningAsync(new LocalizedHtmlString(warning, HtmlEncoder.Default.Encode(warning)));
+        }
+
         return RedirectToAction(nameof(Detail), new { itemId });
     }
 

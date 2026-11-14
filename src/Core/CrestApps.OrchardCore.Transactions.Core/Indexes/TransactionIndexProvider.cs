@@ -56,6 +56,7 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
                     NextCycleUtc = transaction.Recurrence?.GetNextCycleUtc(),
                     CreatedUtc = transaction.CreatedUtc,
                     UpdatedUtc = transaction.UpdatedUtc,
+                    PendingCredit = transaction.Events?.Any(entry => entry.CreditState == TransactionCreditState.Pending) == true ? true : null,
                 };
             });
     }

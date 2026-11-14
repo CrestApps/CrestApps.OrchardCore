@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Transactions.Tasks;
 
@@ -42,6 +43,10 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
         var clock = serviceProvider.GetRequiredService<IClock>();
         var manager = serviceProvider.GetRequiredService<ITransactionManager>();
         var logger = serviceProvider.GetRequiredService<ILogger<TransactionReminderBackgroundTask>>();
+
+        // Entries a stopped process left waiting for their customer credit change are completed first, so nothing stays
+        // half done; each completes under its transaction's lock and records a payment issue when it can't.
+        run.AddItems(await ReconcileCreditAsync(serviceProvider, logger, cancellationToken), "credit_reconciled");
 
         var utcNow = clock.UtcNow;
         var candidates = await manager.GetOutstandingDueAsync(utcNow, cancellationToken);
@@ -117,6 +122,37 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
                 logger.LogError(ex, "Failed to send an upcoming payment reminder for transaction '{TransactionId}'.", transaction.ItemId);
             }
         }
+    }
+
+    // Completes the customer credit changes left waiting, a page of transactions per sweep.
+    internal static async Task<int> ReconcileCreditAsync(IServiceProvider serviceProvider, ILogger logger, CancellationToken cancellationToken)
+    {
+        if (serviceProvider.GetService<ISession>() is not { } session)
+        {
+            return 0;
+        }
+
+        var commands = serviceProvider.GetRequiredService<ITransactionCommandService>();
+        var count = 0;
+
+        foreach (var transactionId in await TransactionCreditSettlement.GetPendingAsync(session, 100, cancellationToken))
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            var result = await commands.ReconcileCreditAsync(transactionId, cancellationToken);
+
+            foreach (var warning in result.Warnings)
+            {
+                logger.LogWarning("Transaction '{TransactionId}': {Warning}", transactionId, warning);
+            }
+
+            count++;
+        }
+
+        return count;
     }
 
     // Marks each transaction that has just become overdue, saves that, and only then raises the event, so it is raised

@@ -56,6 +56,12 @@ public sealed class TransactionCommandResult
     public IList<string> Errors { get; } = [];
 
     /// <summary>
+    /// Gets what the person who asked should know about a command that succeeded, such as customer credit that will be
+    /// changed a moment later because its balance was busy.
+    /// </summary>
+    public IList<string> Warnings { get; } = [];
+
+    /// <summary>
     /// Adds an error to the result.
     /// </summary>
     /// <param name="message">The message to show.</param>

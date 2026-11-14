@@ -118,4 +118,10 @@ public sealed class TransactionIndex : CatalogItemIndex
     /// The UTC time the transaction was last updated.
     /// </summary>
     public DateTime UpdatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a timeline entry waits for its customer credit change, so the sweep finds the transactions
+    /// to complete.
+    /// </summary>
+    public bool? PendingCredit { get; set; }
 }

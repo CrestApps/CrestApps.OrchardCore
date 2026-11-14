@@ -125,4 +125,16 @@ public sealed class TransactionEvent
     /// credit back too.
     /// </summary>
     public decimal? CreditedAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the change this entry makes to the payer's customer credit: positive when it adds to it (money paid
+    /// above what was owed, or credit given back), negative when it spends it (a payment made with credit, or credit taken
+    /// back with a payment). The credit is changed after the entry is saved; <see cref="CreditState"/> says how far.
+    /// </summary>
+    public decimal? CreditChange { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the change of <see cref="CreditChange"/> stands.
+    /// </summary>
+    public TransactionCreditState CreditState { get; set; }
 }

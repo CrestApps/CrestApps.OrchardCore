@@ -128,6 +128,8 @@ When the customer has store credit in the transaction's currency, the transactio
 
 The credit is taken from the customer's balance and recorded as a payment, with a receipt like any other. If you take that payment back, the credit is given back.
 
+The payment is recorded first and the credit changes right after it. If the credit can't change at that moment (another change to the same credit is in progress), the page says so and the credit changes within a few minutes on its own. If it can't change at all, for example because the Store Credit feature was turned off, the page warns you and a payment issue is opened for you to settle by hand. If the credit was spent elsewhere in the meantime, the payment is taken back and the page says nothing was paid.
+
 ### Take back a payment or an adjustment
 
 Use this when a payment you recorded did not arrive after all (a check bounced) or was recorded on the wrong transaction, or when an adjustment should not have been made. Nothing is deleted: the entry stays on the timeline, a **Taken back** entry is added, and what it paid or took off is owed again.
