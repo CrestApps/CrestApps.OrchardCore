@@ -1,0 +1,100 @@
+@model InvoiceDetailViewModel
+
+@{
+    var invoice = Model.Invoice;
+    var number = string.IsNullOrEmpty(invoice.Number) ? T["this draft"].Value : invoice.Number;
+}
+
+@* Each action is offered only when the invoice's state and the viewer's permissions allow it; the action checks both again. *@
+@if (Model.CanEdit || Model.CanIssue || Model.CanDelete)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Draft"]</div>
+        <div class="card-body">
+            <p class="text-muted">@T["A draft has no number and owes nothing until it is issued. Issuing it gives it its number and posts what is owed to the ledger; after that it can't be changed."]</p>
+            <div class="d-flex flex-wrap gap-2">
+                @if (Model.CanEdit)
+                {
+                    <a asp-action="Edit" asp-controller="InvoicesAdmin" asp-route-itemId="@invoice.ItemId" class="btn btn-secondary">@T["Edit draft"]</a>
+                }
+                @if (Model.CanIssue)
+                {
+                    <form asp-action="Issue" asp-controller="InvoicesAdmin" method="post">
+                        <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                        <button type="submit" class="btn btn-primary"
+                                data-url-af="RemoveUrl" data-title="@T["Issue invoice"]" data-message="@T["Issue the invoice? It gets its number, what it totals is owed, and it can't be changed after."]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
+                            @T["Issue"]
+                        </button>
+                    </form>
+                }
+                @if (Model.CanDelete)
+                {
+                    <form asp-action="Delete" asp-controller="InvoicesAdmin" method="post">
+                        <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                        <button type="submit" class="btn btn-outline-danger"
+                                data-url-af="RemoveUrl" data-title="@T["Delete draft"]" data-message="@T["Delete this draft? This can't be undone."]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]">
+                            @T["Delete draft"]
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (Model.CanWriteOff)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Write off"]</div>
+        <div class="card-body">
+            <p class="text-muted">@T["Stop collecting what is still owed on {0}. You can reinstate it later.", number]</p>
+            <form asp-action="WriteOff" asp-controller="InvoicesAdmin" method="post">
+                <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                <div class="mb-3">
+                    <label class="form-label" for="write-off-reason">@T["Reason"]</label>
+                    <input id="write-off-reason" name="reason" class="form-control" required maxlength="500" />
+                </div>
+                <button type="submit" class="btn btn-warning">@T["Write off"]</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.CanReinstate)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Reinstate"]</div>
+        <div class="card-body">
+            <p class="text-muted">@T["Make what was written off owed again."]</p>
+            <form asp-action="Reinstate" asp-controller="InvoicesAdmin" method="post">
+                <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                <div class="mb-3">
+                    <label class="form-label" for="reinstate-reason">@T["Reason"]</label>
+                    <input id="reinstate-reason" name="reason" class="form-control" required maxlength="500" />
+                </div>
+                <button type="submit" class="btn btn-secondary">@T["Reinstate"]</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.CanVoid)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Void"]</div>
+        <div class="card-body">
+            <p class="text-muted">@T["Cancel {0} as if it had never been sent. Its number is kept, and nothing is owed on it any more. An invoice with a payment can't be voided: issue a credit note instead.", number]</p>
+            <form asp-action="Void" asp-controller="InvoicesAdmin" method="post">
+                <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                <div class="mb-3">
+                    <label class="form-label" for="void-reason">@T["Reason"]</label>
+                    <input id="void-reason" name="reason" class="form-control" required maxlength="500" />
+                </div>
+                <button type="submit" class="btn btn-outline-danger"
+                        data-url-af="RemoveUrl" data-title="@T["Void invoice"]" data-message="@T["Void {0}? This can't be undone.", number]" data-ok-text="@T["Void"]" data-cancel-text="@T["Cancel"]">
+                    @T["Void"]
+                </button>
+            </form>
+        </div>
+    </div>
+}

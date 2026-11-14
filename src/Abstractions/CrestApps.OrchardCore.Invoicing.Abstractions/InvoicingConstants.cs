@@ -28,6 +28,18 @@ public static class InvoicingConstants
     /// <summary>
     /// The feature identifiers of the Invoicing modules.
     /// </summary>
+    /// <summary>
+    /// The display types an invoice is built for.
+    /// </summary>
+    public static class DisplayTypes
+    {
+        /// <summary>
+        /// The invoice's page in the admin. Each display driver adds a card: the <c>Content</c> zone is the main column
+        /// and the <c>Actions</c> zone the side column.
+        /// </summary>
+        public const string DetailAdmin = "DetailAdmin";
+    }
+
     public static class Features
     {
         /// <summary>

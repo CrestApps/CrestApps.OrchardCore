@@ -20,9 +20,11 @@ Invoicing owns the documents: an invoice is drafted with lines, issued with a nu
 
 ## Records and indexes
 
-Invoices and credit notes are catalog records in the `Invoicing` collection (`InvoicingConstants.CollectionName`), saved with concurrency checks. `InvoiceIndex` holds the number, status, settlement, bill-to (kind, id, name), reference and purchase order number, currency, total, amount due, due date, issue time, created time, transaction id and source; `CreditNoteIndex` the number, invoice id, status, currency, total and issue time. `IInvoiceManager.PageAsync(page, pageSize, InvoiceQuery)` filters by status, settlement, bill-to parties, overdue date, source and a search over number, bill-to name and reference, newest first. `FindByTransactionIdAsync` and `FindByNumberAsync` find one.
+Invoices and credit notes are catalog records in the `Invoicing` collection (`InvoicingConstants.CollectionName`, declared in `StoreCollectionOptions` by the feature's startup so its document table is created), saved with concurrency checks. `InvoiceIndex` holds the number, status, settlement, bill-to (kind, id, name), reference and purchase order number, currency, total, amount due, due date, issue time, created time, transaction id and source; `CreditNoteIndex` the number, invoice id, status, currency, total and issue time. `IInvoiceManager.PageAsync(page, pageSize, InvoiceQuery)` filters by status, settlement, bill-to parties, overdue date, source and a search over number, bill-to name and reference, newest first. `FindByTransactionIdAsync` and `FindByNumberAsync` find one.
 
 Drafts are created and changed through `IInvoiceManager` (a `CatalogManager<Invoice>`). `InvoiceHandler` audits them and refuses lines out of range: a quantity of zero or less, a discount given both as a percentage and an amount, a percentage outside 0 to 100, an amount below zero or above the line, and negative charges. It refuses any change to an invoice that is no longer a draft: after issue only the commands change it.
+
+`InvoiceCalculation` (Invoicing.Core) builds the calculator's context from an invoice and the settings (`CreateContext`) and stores the tax breakdown and totals on it (`ApplyAsync`). Issue and the draft editor both use it, so a saved draft shows the totals it will be issued with.
 
 ## Commands
 
@@ -38,6 +40,16 @@ Drafts are created and changed through `IInvoiceManager` (a `CatalogManager<Invo
 **The transaction an invoice posts** has `ReferenceType` `Invoice` and `ReferenceId` the invoice id, source `Invoicing`, the invoice number, the bill-to as payer (`SetPayer`) and its contact as `PayerContact`, the amounts and the tax lines (the rate as a fraction, as Taxation keeps it), the exchange rate, part payments when the invoice allows them, and is due at the end of the due date in the site's time zone. A user bill-to owns it; anyone else is a guest owner (the invoice id) reached at the bill-to's e-mail. An issue that finds a transaction already posted for the invoice reuses it.
 
 After a command is saved, every `IInvoiceObserver` hears of it (`IssuedAsync`, `VoidedAsync`, `WrittenOffAsync`, `ReinstatedAsync`; each has a default that does nothing). An observer that throws is logged and does not undo the command.
+
+## Admin pages
+
+**Commerce > Invoices** (`InvoicesAdminController`, routes `Admin/invoices/{action}/{itemId?}`, named `Invoices{action}`) lists invoices through the `AdminList` shape (list name `Invoices`), in the List or Grid layout: number (or *Draft invoice*), status and payment badges, who it is billed to, the total and what is still due, and the due date, with search and the **Status** and **Payment** filters in the toolbar. **View invoices** opens it.
+
+The draft editor (**New invoice**, **Edit draft**; **Create invoices and change drafts**) posts a plain form, mapped by `InvoiceDraftEditor`: each row keeps its line id (and what the editor does not show, such as a line's source or manual taxes), a row ticked **Remove** goes, and the blank row offered at the end is kept only when something was typed in it. **Update** saves and stays, **Save draft** saves and opens the invoice, **Save and issue** saves and runs `IssueAsync` (also needs **Issue invoices**). The bill-to is one `ItemSelector` over `Admin/api/crestapps/invoicing/parties/search` (route `CrestApps.Invoicing.PartySearch`, **Create invoices and change drafts**), which searches every party kind of `IPartyDirectory` but guests and posts the party as `Kind:Id` (`PartyRef.ToString()`); the feature depends on Resources for the selector. An issued invoice never opens in the editor.
+
+The invoice's page is built by the display drivers of `Invoice` for `InvoicingConstants.DisplayTypes.DetailAdmin` (`Content` is the main column, `Actions` the side), so another module adds a card with a driver of its own. `InvoiceDisplayDriver` adds the summary (bill-to, dates, purchase order, reference, total, paid, credited, still due, void reason, a link to the transaction for **Manage transactions**), the lines with the tax breakdown and totals, the history (times in the site's time zone), and the actions each viewer may take: **Edit draft**, **Issue** and **Delete draft** on a draft; **Write off**, **Reinstate** and **Void** on an issued invoice, each with its reason. The same driver builds the list rows (`SummaryAdmin` and `SummaryAdminGrid`).
+
+`InvoiceCheckoutReferenceDescriber` names the invoice a transaction was posted for (*Invoice INV-1001*, linked to its page) wherever a transaction shows its reference.
 
 ## Tax
 

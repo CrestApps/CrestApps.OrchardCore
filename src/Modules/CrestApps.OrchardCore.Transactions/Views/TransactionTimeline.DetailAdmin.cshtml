@@ -54,11 +54,11 @@
                         <div class="text-muted small">
                             @if (!string.IsNullOrEmpty(evt.PaymentMethod))
                             {
-                                @T["Paid by {0}.", DisplayText.OfflinePaymentMethodName(evt.PaymentMethod)]
+                                <span>@T["Paid by {0}.", DisplayText.OfflinePaymentMethodName(evt.PaymentMethod)]</span>
                             }
                             @if (evt.ReceivedUtc.HasValue)
                             {
-                                @T["Received {0}.", await FormatLocalAsync(evt.ReceivedUtc.Value)]
+                                <span>@T["Received {0}.", await FormatLocalAsync(evt.ReceivedUtc.Value)]</span>
                             }
                         </div>
                     }

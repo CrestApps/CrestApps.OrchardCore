@@ -1,0 +1,110 @@
+@model InvoiceDetailViewModel
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var invoice = Model.Invoice;
+    var currency = invoice.Currency;
+    string Money(decimal amount) => string.IsNullOrEmpty(currency) ? amount.ToString("0.00") : MoneyFormatter.Format(amount, currency);
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>@(string.IsNullOrEmpty(invoice.Number) ? T["Draft invoice"] : T["Invoice {0}", invoice.Number])</span>
+        <span><partial name="_InvoiceStatusBadge" model="invoice" /></span>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">@T["Billed to"]</dt>
+            <dd class="col-sm-8">
+                @(string.IsNullOrEmpty(Model.BillToName) ? T["Not chosen yet"].Value : Model.BillToName)
+                @if (!string.IsNullOrEmpty(invoice.BillTo?.Contact?.Email))
+                {
+                    <span class="d-block text-muted small">@invoice.BillTo.Contact.Email</span>
+                }
+            </dd>
+
+            @* Issue and due dates are dates in the site's time zone, kept as dates: they are shown as they are. *@
+            @if (invoice.IssueDate is { } issueDate)
+            {
+                <dt class="col-sm-4">@T["Issued"]</dt>
+                <dd class="col-sm-8">@issueDate.ToString("d")</dd>
+            }
+
+            @if (invoice.DueDate is { } dueDate)
+            {
+                <dt class="col-sm-4">@T["Due"]</dt>
+                <dd class="col-sm-8">
+                    @dueDate.ToString("d")
+                    @if (!string.IsNullOrEmpty(invoice.PaymentTermName))
+                    {
+                        <span class="text-muted">(@invoice.PaymentTermName)</span>
+                    }
+                </dd>
+            }
+
+            @if (!string.IsNullOrEmpty(invoice.PurchaseOrderNumber))
+            {
+                <dt class="col-sm-4">@T["Purchase order"]</dt>
+                <dd class="col-sm-8">@invoice.PurchaseOrderNumber</dd>
+            }
+
+            @if (!string.IsNullOrEmpty(invoice.Reference))
+            {
+                <dt class="col-sm-4">@T["Reference"]</dt>
+                <dd class="col-sm-8">@invoice.Reference</dd>
+            }
+
+            <dt class="col-sm-4">@T["Total"]</dt>
+            <dd class="col-sm-8">@Money(invoice.Totals?.Total ?? 0m)</dd>
+
+            @if (invoice.Status is not InvoiceStatus.Draft)
+            {
+                <dt class="col-sm-4">@T["Paid"]</dt>
+                <dd class="col-sm-8">@Money(invoice.AmountPaid)</dd>
+
+                @if (invoice.AmountCredited > 0m)
+                {
+                    <dt class="col-sm-4">@T["Credited"]</dt>
+                    <dd class="col-sm-8">@Money(invoice.AmountCredited)</dd>
+                }
+
+                <dt class="col-sm-4">@T["Still due"]</dt>
+                <dd class="col-sm-8 fw-semibold">@Money(invoice.AmountDue)</dd>
+            }
+
+            @if (invoice.Status == InvoiceStatus.Void)
+            {
+                <dt class="col-sm-4">@T["Voided"]</dt>
+                <dd class="col-sm-8">
+                    @if (invoice.VoidedUtc is { } voidedUtc)
+                    {
+                        @((await LocalAsync(voidedUtc)).ToString("g"))
+                    }
+                    @if (!string.IsNullOrEmpty(invoice.VoidReason))
+                    {
+                        <span class="d-block text-muted small">@invoice.VoidReason</span>
+                    }
+                </dd>
+            }
+
+            @if (Model.CanOpenTransaction)
+            {
+                <dt class="col-sm-4">@T["Ledger"]</dt>
+                <dd class="col-sm-8"><a asp-area="CrestApps.OrchardCore.Transactions" asp-controller="Admin" asp-action="Detail" asp-route-itemId="@invoice.TransactionId">@T["Open the transaction"]</a></dd>
+            }
+
+            @if (!string.IsNullOrEmpty(invoice.InternalNote))
+            {
+                <dt class="col-sm-4">@T["Internal note"]</dt>
+                <dd class="col-sm-8" style="white-space: pre-line">@invoice.InternalNote</dd>
+            }
+        </dl>
+    </div>
+</div>

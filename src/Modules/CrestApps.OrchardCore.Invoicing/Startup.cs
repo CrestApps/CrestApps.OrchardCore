@@ -1,13 +1,18 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Invoicing.Core;
 using CrestApps.OrchardCore.Invoicing.Core.Indexes;
 using CrestApps.OrchardCore.Invoicing.Drivers;
+using CrestApps.OrchardCore.Invoicing.Endpoints;
 using CrestApps.OrchardCore.Invoicing.Migrations;
+using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Navigation;
 using CrestApps.OrchardCore.Invoicing.Recipes;
 using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Taxation;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -35,11 +40,23 @@ public sealed class Startup : StartupBase
             .AddDataMigration<InvoicingMigrations>()
             .AddPermissionProvider<InvoicingPermissionProvider>()
             .AddSiteDisplayDriver<InvoicingSettingsDisplayDriver>()
-            .AddNavigationProvider<InvoicingSettingsAdminMenu>();
+            .AddNavigationProvider<InvoicingSettingsAdminMenu>()
+            .AddNavigationProvider<InvoicesAdminMenu>()
+            .AddDisplayDriver<Invoice, InvoiceDisplayDriver>()
+            .AddMoneyFormatter();
+
+        services.AddScoped<ICheckoutReferenceDescriber, InvoiceCheckoutReferenceDescriber>();
+
+        // The invoices and credit notes live in a collection of their own, whose document table is created only when
+        // the collection is declared here.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(InvoicingConstants.CollectionName));
 
         // Lets a role that holds only the settings permission open Settings > Commerce > Invoicing.
         services.AddSiteSettingsPermission(InvoicingConstants.SettingsGroupId, InvoicingPermissions.ManageInvoicingSettings);
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddInvoicePartySearchEndpoints();
 }
 
 /// <summary>

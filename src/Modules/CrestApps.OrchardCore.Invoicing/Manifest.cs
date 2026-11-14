@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Invoicing;
+using CrestApps.OrchardCore.Resources;
 using CrestApps.OrchardCore.Transactions;
 using OrchardCore.Modules.Manifest;
 
@@ -23,5 +24,8 @@ using OrchardCore.Modules.Manifest;
         TransactionsConstants.Features.Area,
         TransactionsConstants.Features.PaymentTerms,
         BusinessDocumentsConstants.Features.Area,
+
+        // The bill-to selector of the draft editor is the ItemSelector of the Resources feature.
+        ResourcesConstants.Feature.Area,
     ]
 )]

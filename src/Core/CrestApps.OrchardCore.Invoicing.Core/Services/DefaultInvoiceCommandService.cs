@@ -151,22 +151,7 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
             invoice.Currency = invoice.Currency.Trim().ToUpperInvariant();
 
             // The final calculation: what is issued is exactly what the calculator says now.
-            var calculation = await _calculator.CalculateAsync(new DocumentCalculationContext
-            {
-                Currency = invoice.Currency,
-                PricesIncludeTax = invoice.PricesIncludeTax,
-                Lines = invoice.Lines,
-                Charges = invoice.Charges,
-                TaxTreatment = invoice.BillTo.TaxTreatment,
-                ExemptionReason = invoice.BillTo.ExemptionReason,
-                CashRoundingIncrement = settings.CashRoundingIncrement,
-                BillTo = invoice.BillTo,
-                IssueDate = issueDate,
-                AutomaticTax = true,
-            }, cancellationToken);
-
-            invoice.Taxes = calculation.Taxes;
-            invoice.Totals = calculation.Totals;
+            await InvoiceCalculation.ApplyAsync(_calculator, invoice, settings, issueDate, cancellationToken);
 
             foreach (var error in InvoiceIssueRules.ValidateTotals(invoice))
             {
