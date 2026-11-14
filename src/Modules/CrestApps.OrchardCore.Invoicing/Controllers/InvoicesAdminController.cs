@@ -1,4 +1,5 @@
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Invoicing.Core;
@@ -292,6 +293,129 @@ public sealed class InvoicesAdminController : Controller
     }
 
     /// <summary>
+    /// Shows the invoice as the customer gets it, to print.
+    /// </summary>
+    public async Task<IActionResult> Document(string itemId, [FromServices] IInvoiceDocumentBuilder builder)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ViewInvoices))
+        {
+            return Forbid();
+        }
+
+        var invoice = await FindAsync(itemId);
+
+        if (invoice is null)
+        {
+            return NotFound();
+        }
+
+        return View(new InvoiceDocumentPageViewModel
+        {
+            Source = invoice,
+            Document = await builder.BuildAsync(invoice, HttpContext.RequestAborted),
+            PdfUrl = Url.Action(nameof(Pdf), new { itemId }),
+            BackUrl = Url.Action(nameof(Detail), new { itemId }),
+        });
+    }
+
+    /// <summary>
+    /// Downloads the invoice's PDF: the one stored when it was issued, or for a draft one marked as such.
+    /// </summary>
+    public async Task<IActionResult> Pdf(string itemId, [FromServices] IInvoicePdfService pdfService)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ViewInvoices))
+        {
+            return Forbid();
+        }
+
+        var invoice = await FindAsync(itemId);
+
+        if (invoice is null)
+        {
+            return NotFound();
+        }
+
+        var pdf = await pdfService.GetAsync(invoice, HttpContext.RequestAborted);
+
+        return File(pdf.Content, "application/pdf", pdf.FileName);
+    }
+
+    /// <summary>
+    /// Opens the send dialog: who the invoice goes to, with its PDF attached.
+    /// </summary>
+    public async Task<IActionResult> Send(string itemId, [FromServices] ICommerceEmailSender emailSender)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ManageInvoices))
+        {
+            return Forbid();
+        }
+
+        var invoice = await FindAsync(itemId);
+
+        if (invoice is null)
+        {
+            return NotFound();
+        }
+
+        return View(await PrepareSendAsync(new InvoiceSendViewModel
+        {
+            ItemId = invoice.ItemId,
+            To = invoice.BillTo?.Contact?.Email,
+            Cc = invoice.BillTo?.CopyTo is { Count: > 0 } copies ? string.Join(", ", copies) : null,
+        }, invoice, emailSender));
+    }
+
+    /// <summary>
+    /// Sends the invoice, issuing a draft first when the settings say sending issues it.
+    /// </summary>
+    [HttpPost]
+    [ActionName(nameof(Send))]
+    public async Task<IActionResult> SendPost(InvoiceSendViewModel model, [FromServices] IInvoiceSender sender, [FromServices] ICommerceEmailSender emailSender)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ManageInvoices))
+        {
+            return Forbid();
+        }
+
+        var invoice = await FindAsync(model.ItemId);
+
+        if (invoice is null)
+        {
+            return NotFound();
+        }
+
+        // Sending a draft issues it, which needs its own permission.
+        if (invoice.Status == InvoiceStatus.Draft && !await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.IssueInvoices))
+        {
+            return Forbid();
+        }
+
+        var result = await sender.SendAsync(new InvoiceSendRequest
+        {
+            InvoiceId = invoice.ItemId,
+            To = model.To,
+            Cc = Split(model.Cc),
+            Bcc = Split(model.Bcc),
+        }, HttpContext.RequestAborted);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error);
+            }
+
+            return View(nameof(Send), await PrepareSendAsync(model, result.Invoice ?? invoice, emailSender));
+        }
+
+        await _notifier.SuccessAsync(result.Issued
+            ? H["Invoice {0} was issued and sent.", result.Invoice.Number]
+            : H["Invoice {0} was sent.", result.Invoice.Number]);
+
+        return RedirectToAction(nameof(Detail), new { itemId = invoice.ItemId });
+    }
+
+    /// <summary>
     /// Issues a draft: numbers it and posts what is owed to the ledger.
     /// </summary>
     [HttpPost]
@@ -494,6 +618,20 @@ public sealed class InvoicesAdminController : Controller
 
         return RedirectToAction(nameof(Detail), new { itemId });
     }
+
+    private async Task<InvoiceSendViewModel> PrepareSendAsync(InvoiceSendViewModel model, Invoice invoice, ICommerceEmailSender emailSender)
+    {
+        model.Number = invoice.Number;
+        model.CanSend = emailSender.CanSend;
+        model.IssuesFirst = invoice.Status == InvoiceStatus.Draft && (await GetSettingsAsync()).IssueOnSend;
+
+        return model;
+    }
+
+    private static List<string> Split(string addresses)
+        => string.IsNullOrWhiteSpace(addresses)
+            ? []
+            : [.. addresses.Split([',', ';', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
     private async Task<Invoice> FindAsync(string itemId)
         => string.IsNullOrEmpty(itemId) ? null : await _invoiceManager.FindByIdAsync(itemId);

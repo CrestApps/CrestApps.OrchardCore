@@ -26,7 +26,12 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.BusinessDocuments.Models;
+using CrestApps.OrchardCore.BusinessDocuments.Services;
+using CrestApps.OrchardCore.Commerce.Emails;
+using Microsoft.AspNetCore.DataProtection;
 using Moq;
+using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -67,6 +72,26 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     /// Stands in for Store Credit: no one can hold credit unless a test says so.
     /// </summary>
     public Mock<ICustomerCreditService> Credit { get; } = new();
+
+    /// <summary>
+    /// Renders a business document as a "PDF" of its kind, number and watermark, and counts the renderings.
+    /// </summary>
+    public FakePdfRenderer Pdf { get; } = new();
+
+    /// <summary>
+    /// The e-mails sent, with the content each was built with.
+    /// </summary>
+    public List<(CommerceEmail Email, CommerceEmailContent Content)> Emails { get; } = [];
+
+    /// <summary>
+    /// Gets or sets whether e-mail is set up.
+    /// </summary>
+    public bool CanSendEmail { get; set; } = true;
+
+    /// <summary>
+    /// The folder the archived PDFs are kept in.
+    /// </summary>
+    public string ArchiveFolder { get; } = Path.Combine(Path.GetTempPath(), $"crestapps-invoicing-archive-{Guid.NewGuid():N}");
 
     public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null)
     {
@@ -134,6 +159,24 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddSingleton<IFinancialDocumentNumberGenerator>(_ => harness.Numbers);
         services.AddSingleton(_ => harness.Contacts.Object);
         services.AddSingleton(_ => harness.Credit.Object);
+        services.AddSingleton<IBusinessDocumentPdfRenderer>(_ => harness.Pdf);
+        services.AddSingleton(Mock.Of<IBusinessDocumentTemplateManager>());
+        services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
+        services.AddMoneyFormatter();
+        services.AddSingleton(_ => new InvoiceArchiveFileStore(new FileSystemStore(harness.ArchiveFolder, NullLogger<FileSystemStore>.Instance)));
+        services.AddSingleton<IInvoiceShareLinkService>(_ => new FakeShareLinks());
+
+        var email = new Mock<ICommerceEmailSender>();
+        email.SetupGet(sender => sender.CanSend).Returns(() => harness.CanSendEmail);
+        email
+            .Setup(sender => sender.SendWithResultAsync(It.IsAny<CommerceEmail>(), It.IsAny<Func<CancellationToken, Task<CommerceEmailContent>>>(), It.IsAny<CancellationToken>()))
+            .Returns(async (CommerceEmail message, Func<CancellationToken, Task<CommerceEmailContent>> build, CancellationToken token) =>
+            {
+                harness.Emails.Add((message, await build(token)));
+
+                return CommerceEmailResult.Success();
+            });
+        services.AddSingleton(email.Object);
 
         services.AddInvoicingCore();
 
@@ -202,6 +245,40 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     {
         await _provider.DisposeAsync();
         TemporarySqliteDatabase.DisposeAndDelete(_store, _path);
+
+        if (Directory.Exists(ArchiveFolder))
+        {
+            Directory.Delete(ArchiveFolder, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// A "PDF" that says what was rendered, so a test can tell an archived copy from a fresh rendering.
+    /// </summary>
+    internal sealed class FakePdfRenderer : IBusinessDocumentPdfRenderer
+    {
+        public int Renderings { get; private set; }
+
+        public string Version { get; set; } = "v1";
+
+        public Task<byte[]> RenderAsync(BusinessDocument document, CancellationToken cancellationToken = default)
+        {
+            Renderings++;
+
+            return Task.FromResult(System.Text.Encoding.UTF8.GetBytes($"{document.Kind}|{document.Number}|{document.Watermark}|{Version}"));
+        }
+    }
+
+    /// <summary>
+    /// Share links without a site URL: the invoice id in a fake link.
+    /// </summary>
+    internal sealed class FakeShareLinks : IInvoiceShareLinkService
+    {
+        public Task<string> CreateUrlAsync(Invoice invoice, CancellationToken cancellationToken = default)
+            => Task.FromResult($"https://contoso.example/invoices/view/{invoice.ItemId}");
+
+        public string GetInvoiceId(string token)
+            => token;
     }
 
     /// <summary>

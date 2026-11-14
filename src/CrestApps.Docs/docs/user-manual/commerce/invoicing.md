@@ -44,6 +44,17 @@ On the draft's page, click **Issue** and confirm. You need **Issue invoices**.
 - Its page shows what was paid and what is still due, and **Open the transaction** takes you to the balance under **Commerce > Transactions**, where payments are recorded. The balance's page names the invoice and links back to it.
 - It can't be changed any more: **Edit** opens its page instead.
 
+## Send, print and share an invoice
+
+On the invoice's page, **Send and share** has:
+
+- **Send**: opens the send dialog. Check **To** (the customer's billing e-mail), add **Copy to** and **Blind copy to** addresses if you like, separated by commas, and click **Send**. The invoice goes as a PDF attachment with a link to view it online and, while something is owed, a link to pay it. Sending a draft issues it first when **Sending a draft issues it** is on in the settings. E-mail must be set up for the site.
+- **Print**: shows the invoice as the customer gets it, with **Print** and **Download PDF**.
+- **PDF**: downloads the invoice. Once issued, it is always the PDF made when it was issued.
+- **Share link**: click **Copy** and paste the link anywhere. Whoever opens it sees the invoice, can pay it and download it, without signing in. It stops working after the number of days set under **Share links last (days)**.
+
+The card shows when the invoice was sent and when the customer first opened it. A credit note's page has **Print** and **PDF** too. To change the e-mail, edit **Invoice sent to its customer** under the commerce e-mails; to change how invoices look, edit the **Invoices** document template.
+
 ## Payments on an invoice
 
 An invoice shows what was paid, what was credited and what is still due, and its history lists each payment and each payment taken back. Payments are recorded on the invoice's balance: click **Open the transaction** on the invoice's page, then use **Record an offline payment** or **Apply customer credit** there. The invoice follows at once; if it was busy at that moment, it catches up the next time you open it.

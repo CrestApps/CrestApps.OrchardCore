@@ -201,6 +201,54 @@ public sealed class CreditNotesAdminController : Controller
     }
 
     /// <summary>
+    /// Shows the credit note as the customer gets it, to print.
+    /// </summary>
+    public async Task<IActionResult> Document(string itemId, [FromServices] IInvoiceDocumentBuilder builder)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ViewInvoices))
+        {
+            return Forbid();
+        }
+
+        var creditNote = await FindAsync(itemId);
+
+        if (creditNote is null)
+        {
+            return NotFound();
+        }
+
+        return View("~/Areas/CrestApps.OrchardCore.Invoicing/Views/InvoicesAdmin/Document.cshtml", new InvoiceDocumentPageViewModel
+        {
+            Source = creditNote,
+            Document = await builder.BuildAsync(creditNote, HttpContext.RequestAborted),
+            PdfUrl = Url.Action(nameof(Pdf), new { itemId }),
+            BackUrl = Url.Action(nameof(Detail), new { itemId }),
+        });
+    }
+
+    /// <summary>
+    /// Downloads the credit note's PDF.
+    /// </summary>
+    public async Task<IActionResult> Pdf(string itemId, [FromServices] IInvoicePdfService pdfService)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ViewInvoices))
+        {
+            return Forbid();
+        }
+
+        var creditNote = await FindAsync(itemId);
+
+        if (creditNote is null)
+        {
+            return NotFound();
+        }
+
+        var pdf = await pdfService.GetAsync(creditNote, HttpContext.RequestAborted);
+
+        return File(pdf.Content, "application/pdf", pdf.FileName);
+    }
+
+    /// <summary>
     /// Issues a draft credit note.
     /// </summary>
     [HttpPost]

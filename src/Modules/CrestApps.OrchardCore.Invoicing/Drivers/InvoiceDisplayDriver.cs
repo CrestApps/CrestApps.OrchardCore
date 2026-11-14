@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Invoicing.Core;
 using CrestApps.OrchardCore.Invoicing.Core.Services;
 using CrestApps.OrchardCore.Invoicing.Models;
+using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Invoicing.ViewModels;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Transactions.Core;
@@ -113,7 +114,19 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
             CreditNoteRules.GetCreditable(invoice, creditNotes).Total > 0m &&
             await _authorizationService.AuthorizeAsync(user, InvoicingPermissions.ManageCreditNotes);
 
+        // Sending, printing and the share link; a void invoice is no longer sent or shared.
+        var shareUrl = invoice.IssuedUtc.HasValue && invoice.Status != InvoiceStatus.Void && _serviceProvider.GetService<IInvoiceShareLinkService>() is { } shareLinks
+            ? await shareLinks.CreateUrlAsync(invoice)
+            : null;
+        var canSend = invoice.Status != InvoiceStatus.Void && canManage && (invoice.Status != InvoiceStatus.Draft || canIssue);
+
         return Combine(
+            Initialize<InvoiceDeliveryViewModel>("InvoiceDelivery_DetailAdmin", card =>
+            {
+                card.Invoice = invoice;
+                card.ShareUrl = shareUrl;
+                card.CanSend = canSend;
+            }).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Actions:0"),
             Card("InvoiceSummary_DetailAdmin", model).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:1"),
             Card("InvoiceLines_DetailAdmin", model).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:5"),
             Initialize<InvoiceCreditNotesViewModel>("InvoiceCreditNotes_DetailAdmin", card =>

@@ -32,6 +32,99 @@ public static class InvoicingConstants
     public const string SettingsGroupId = "invoicing";
 
     /// <summary>
+    /// The kinds of business document invoicing prints, each with its own document template.
+    /// </summary>
+    public static class BusinessDocumentKinds
+    {
+        /// <summary>
+        /// An invoice.
+        /// </summary>
+        public const string Invoice = "Invoice";
+
+        /// <summary>
+        /// A credit note.
+        /// </summary>
+        public const string CreditNote = "CreditNote";
+    }
+
+    /// <summary>
+    /// The commerce e-mail kinds invoicing sends, each with a template a site can change.
+    /// </summary>
+    public static class EmailKinds
+    {
+        /// <summary>
+        /// An invoice sent to its customer.
+        /// </summary>
+        public const string InvoiceIssued = "invoice-issued";
+
+        /// <summary>
+        /// A credit note sent to its customer.
+        /// </summary>
+        public const string CreditNoteIssued = "credit-note-issued";
+
+        /// <summary>
+        /// The name the invoice or credit note has in an e-mail template.
+        /// </summary>
+        public const string DocumentModelName = "Document";
+
+        /// <summary>
+        /// The document's number.
+        /// </summary>
+        public const string NumberValueName = "Number";
+
+        /// <summary>
+        /// The document's total, with its currency.
+        /// </summary>
+        public const string TotalValueName = "Total";
+
+        /// <summary>
+        /// What is still due on an invoice, with its currency.
+        /// </summary>
+        public const string AmountDueValueName = "AmountDue";
+
+        /// <summary>
+        /// The day an invoice is due.
+        /// </summary>
+        public const string DueDateValueName = "DueDate";
+
+        /// <summary>
+        /// The link that pays an invoice.
+        /// </summary>
+        public const string PayUrlValueName = "PayUrl";
+
+        /// <summary>
+        /// The link that shows the document without signing in.
+        /// </summary>
+        public const string ViewUrlValueName = "ViewUrl";
+
+        /// <summary>
+        /// The name of who the document is for.
+        /// </summary>
+        public const string CustomerNameValueName = "CustomerName";
+
+        /// <summary>
+        /// The store's name.
+        /// </summary>
+        public const string StoreNameValueName = "StoreName";
+    }
+
+    /// <summary>
+    /// The names of the routes other code links to.
+    /// </summary>
+    public static class RouteNames
+    {
+        /// <summary>
+        /// The public page a signed share link opens: the invoice, without signing in.
+        /// </summary>
+        public const string View = "InvoicingView";
+
+        /// <summary>
+        /// The PDF of the invoice a signed share link opens.
+        /// </summary>
+        public const string ViewPdf = "InvoicingViewPdf";
+    }
+
+    /// <summary>
     /// The display types an invoice is built for.
     /// </summary>
     public static class DisplayTypes

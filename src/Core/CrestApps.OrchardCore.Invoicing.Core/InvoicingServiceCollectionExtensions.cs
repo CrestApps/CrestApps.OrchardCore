@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Invoicing.Core.Handlers;
 using CrestApps.OrchardCore.Invoicing.Core.Services;
 using CrestApps.OrchardCore.Invoicing.Models;
@@ -27,6 +28,16 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddScoped<IInvoiceManager, InvoiceManager>();
         services.TryAddScoped<IInvoiceCommandService, DefaultInvoiceCommandService>();
         services.TryAddScoped<ICreditNoteCommandService, DefaultCreditNoteCommandService>();
+
+        // Delivery: the printable document, its PDF (archived at issue), share links, sending and viewed tracking. The
+        // feature registers the archive's file store (InvoiceArchiveFileStore).
+        services.AddSignedLinks();
+        services.TryAddScoped<IInvoiceDocumentBuilder, InvoiceDocumentBuilder>();
+        services.TryAddScoped<IInvoicePdfService, InvoicePdfService>();
+        services.TryAddScoped<IInvoiceShareLinkService, InvoiceShareLinkService>();
+        services.TryAddScoped<IInvoiceSender, DefaultInvoiceSender>();
+        services.TryAddScoped<InvoiceViewTracker>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, InvoiceArchiveObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Invoice>, InvoiceHandler>());
 
         // An issued invoice follows its transaction: payments, payments taken back, refunds and settlement.

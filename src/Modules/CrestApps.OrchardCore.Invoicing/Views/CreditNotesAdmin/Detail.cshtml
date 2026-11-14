@@ -98,6 +98,13 @@
         </div>
     </div>
     <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header">@T["Print"]</div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <a asp-action="Document" asp-route-itemId="@creditNote.ItemId" class="btn btn-secondary">@T["Print"]</a>
+                <a asp-action="Pdf" asp-route-itemId="@creditNote.ItemId" class="btn btn-secondary">@T["PDF"]</a>
+            </div>
+        </div>
         @if (Model.CanEdit || Model.CanIssue)
         {
             <div class="card mb-3">

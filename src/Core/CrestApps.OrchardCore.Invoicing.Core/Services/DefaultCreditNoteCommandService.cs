@@ -311,6 +311,23 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
             return result.Fail(S["The credit note was applied but could not be saved because the invoice was changed meanwhile. Reload the invoice and check it."]);
         }
 
+        // The PDF of what was issued is kept; without it the credit note is rendered from what it keeps.
+        if (_serviceProvider.GetService<IInvoicePdfService>() is { } pdf)
+        {
+            try
+            {
+                if (await pdf.ArchiveAsync(creditNote, cancellationToken))
+                {
+                    await _creditNotes.UpdateAsync(creditNote, cancellationToken);
+                    await _session.SaveChangesAsync(cancellationToken);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "The PDF of credit note '{CreditNoteId}' could not be archived.", creditNote.ItemId);
+            }
+        }
+
         return result;
     }
 
