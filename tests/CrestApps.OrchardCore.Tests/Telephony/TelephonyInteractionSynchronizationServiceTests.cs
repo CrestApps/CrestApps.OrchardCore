@@ -299,6 +299,51 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
             Times.Never);
     }
 
+    /// <summary>
+    /// Final security review (low): the reconciliation pass wrote the provider's raw From and To back onto the
+    /// interaction, undoing the caller-id cleaning done when it was stored, and To was never cleaned. The recent calls
+    /// list renders both.
+    /// </summary>
+    [Fact]
+    public async Task ReconcileProviderInteractionsAsync_StoresTheProvidersAddressesCleaned()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store.SetupRetryingUpdates(interaction);
+        var (hubContext, client) = CreateHubContext();
+        client
+            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(
+            store,
+            hubContext,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    ProviderName = "provider-1",
+                    From = "+1 (555) 999-0000<img src=x onerror=alert()>",
+                    To = "<b>+15550003000</b>",
+                    State = CallState.Connected,
+                },
+            },
+            lockAcquired: true);
+
+        // Act
+        await service.ReconcileProviderInteractionsAsync("provider-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("+15559990000", interaction.From);
+        Assert.Equal("+15550003000", interaction.To);
+    }
+
     [Fact]
     public async Task ReconcileProviderInteractionsAsync_WhenCallIsMissing_NotifiesUserAndDeletesOrphan()
     {

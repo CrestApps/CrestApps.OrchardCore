@@ -158,9 +158,10 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
             interaction.From = from;
         }
 
-        if (!string.IsNullOrWhiteSpace(providerEvent.ToAddress) && !IsSipUri(providerEvent.ToAddress))
+        if (!string.IsNullOrWhiteSpace(providerEvent.ToAddress) && !IsSipUri(providerEvent.ToAddress) &&
+            CallerNumbers.Sanitize(providerEvent.ToAddress) is { } to)
         {
-            interaction.To = providerEvent.ToAddress;
+            interaction.To = to;
         }
 
         // On the call, or past it: either way it is no longer ringing the user.
