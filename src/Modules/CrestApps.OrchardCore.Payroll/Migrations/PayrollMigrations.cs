@@ -12,6 +12,14 @@ internal sealed class PayrollMigrations : DataMigration
     {
         await PayrollIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 1;
+        return 2;
+    }
+
+    // Pay profiles and pay items.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await PayrollIndexSchema.CreateProfileTablesAsync(SchemaBuilder);
+
+        return 2;
     }
 }

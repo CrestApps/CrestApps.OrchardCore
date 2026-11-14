@@ -56,6 +56,26 @@ public static class PayrollConstants
     public const string SettingsGroupId = "payroll";
 
     /// <summary>
+    /// The purpose a person's tax id is protected with.
+    /// </summary>
+    public const string TaxIdPurpose = "CrestApps.OrchardCore.Payroll.TaxId";
+
+    /// <summary>
+    /// The recipe and deployment step of pay profiles.
+    /// </summary>
+    public const string PayProfilesRecipeStepName = "PayrollPayProfiles";
+
+    /// <summary>
+    /// The recipe and deployment step of pay items.
+    /// </summary>
+    public const string PayItemsRecipeStepName = "PayrollPayItems";
+
+    /// <summary>
+    /// The data set of pay profiles.
+    /// </summary>
+    public const string EmployeesDataSetName = "PayrollEmployees";
+
+    /// <summary>
     /// The feature ids of the Payroll module.
     /// </summary>
     public static class Features

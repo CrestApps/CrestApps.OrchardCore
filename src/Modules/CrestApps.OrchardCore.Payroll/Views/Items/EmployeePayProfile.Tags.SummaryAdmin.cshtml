@@ -1,0 +1,26 @@
+@model ShapeViewModel<EmployeePayProfile>
+@inject CrestApps.OrchardCore.Payroll.Services.PayrollNames Names
+@inject CrestApps.OrchardCore.Payroll.Services.IPayProfileService Profiles
+
+@{
+    var profile = Model.Value;
+    var blockers = await Profiles.GetBlockersAsync(profile);
+}
+
+@if (!string.IsNullOrEmpty(profile.PayScheduleId))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pay schedule"]"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@(await Names.ScheduleAsync(profile.PayScheduleId))</span>
+}
+<span class="badge ta-badge fw-normal">@(profile.WorkerType == PayWorkerType.Contractor ? T["Contractor"] : T["Employee"])</span>
+@if (profile.Status != PayProfileStatus.Active)
+{
+    <span class="badge ta-badge fw-normal">@(profile.Status == PayProfileStatus.OnLeave ? T["On leave"] : T["Terminated"])</span>
+}
+@if (blockers.Count > 0)
+{
+    <span class="badge text-bg-warning fw-normal" data-bs-toggle="tooltip" title="@string.Join(" ", blockers.Select(blocker => blocker.Message))"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T.Plural(blockers.Count, "1 thing to fix", "{0} things to fix")</span>
+}
+else
+{
+    <span class="badge text-bg-success fw-normal"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Ready to pay"]</span>
+}

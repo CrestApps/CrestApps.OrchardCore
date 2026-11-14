@@ -127,6 +127,40 @@ The Pay inputs data set and the Mark pay inputs exported step honor the scope: a
 
 The recipe **Payroll: sample roles** adds Payroll administrator, Payroll clerk (no approval) and Payroll approver.
 
+## Pay profiles and pay items
+
+An `EmployeePayProfile` is what one employer needs to pay one staff member: there is one per staff member and employer (`IPayProfileManager`, the store refuses a second). It holds the pay schedule, the worker type (employee or contractor), the overtime status, the status (active, on leave, terminated), a legal name and home address for forms, a work site team, where the cost goes when an input says nothing (`DefaultAllocation`), how far retro pay may reach back, the tax elections and the split of net pay.
+
+- **Tax id.** `TaxId` is a `ProtectedValue` (`ISensitiveValueProtector`, purpose `PayrollConstants.TaxIdPurpose`): the page shows only its last characters. `TaxIdHash` is a keyed hash (HMAC with a key kept in the Payroll collection) of the digits and letters, so the same number typed with or without dashes is found on another profile (`IPayProfileService.FindSameTaxIdAsync`) without being readable. `RevealTaxIdAsync` returns the clear number and records the read; the page needs `ViewTaxIds` for the employer and sends the number with `Cache-Control: no-store`.
+- **Elections.** `TaxElection` rows (jurisdiction, first day, values, who entered them and when) are never edited: a new row from a later day replaces the old one from that day on, and `ElectionOn(jurisdiction, day)` returns the row in effect. The values an editor asks for come from an `ElectionFieldSet` per jurisdiction (`AddElectionFieldSet`); the generic set (`*`) asks for a filing status, allowances, extra withholding and an exemption. Tax engines add their own sets.
+- **Net pay.** `Distribution` is an ordered list of `NetPayRow`: a deposit to one of the person's bank accounts (Banking, owner `PartyRef("Staff", id)`) or a check, for an amount, a percent or what is left. The last row takes what is left and only the last; percents can't pass 100.
+- **Blockers.** `IPayProfileService.GetBlockersAsync` lists what keeps a profile from being paid: no employer or an inactive one, no pay schedule, no tax id, no election for a jurisdiction of the employer's registrations or of the work site team, no split of net pay, no pay rate or salary on the staff member's Pay card. Banking adds a missing or unverified bank account. A module adds its own with `IPayProfileBlockerProvider`. The profile page and the staff member's **Payroll** card show them.
+- **Changes.** `IPayProfileObserver` hears every tax id reveal and change, new election, change of the net pay split and save. With Audit Trail on, each is written to the Audit Trail (category **Payroll**) with the tax id's last characters only.
+- **Separation of duties.** `MayChangePayOfAsync` refuses a user changing the pay of the staff member linked to their own user, unless **Settings > Payroll** allows it.
+
+An `EmployeePayItem` is a standing amount on a profile: a pay code, an amount or a percent (one of them), the first and last day, a goal (such as a loan) with what was paid toward it, a period and a year limit, an employer match and its limit, and arrears. `AppliesOn(day)` is false before the first day, after the last and once the goal is paid. An item copies its profile's staff member and employer; a profile with items, and a pay code or employer that profiles or items use, can't be deleted.
+
+**Payroll > Employees** lists the profiles of the employers the user may see (`ViewPayProfiles`), with an employer filter; **Pay items** opens from a profile's row and page. The staff profile gets a **Payroll** card listing the person's profiles, with their blockers.
+
+The **Employees** data set (`PayrollEmployees`) reads profiles for `ViewPayrollReports`, limited to the user's employers, with the tax id's last characters only. The `PayrollPayProfiles` and `PayrollPayItems` recipe steps import profiles by `EmployeeNumber` (or `StaffMemberId`), `EmployerName` (or `EmployerId`) and `PayScheduleName`, with a `TaxId` in clear that the step protects; items name their `PayCode`. The **Pay profiles** deployment step writes both steps; it writes nothing when run without a user, and writes tax ids only when **Include the tax ids** is checked and the user may see them (each one is recorded as a reveal).
+
+```json
+{
+  "name": "PayrollPayProfiles",
+  "Profiles": [
+    {
+      "EmployeeNumber": "1001",
+      "EmployerName": "Contoso",
+      "PayScheduleName": "Every two weeks",
+      "WorkerType": "Employee",
+      "TaxId": "987-65-4321",
+      "Elections": [ { "Jurisdiction": "US", "EffectiveFrom": "2026-01-01", "Values": { "FilingStatus": "Single" } } ],
+      "Distribution": [ { "Method": "Check", "Split": "Remainder" } ]
+    }
+  ]
+}
+```
+
 ## Teams and settings
 
 With Teams on, people with `ManagePayrollSettings` get a **Payroll** card on the team editor: `PayrollTeamSettings` with the team's `LedgerCode` and a work site's `Jurisdictions`.

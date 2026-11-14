@@ -1,0 +1,94 @@
+@model PayProfileElectionsViewModel
+@using System.Globalization
+@using OrchardCore.Localization
+@using Microsoft.Extensions.Localization
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@inject Microsoft.Extensions.Localization.IStringLocalizerFactory LocalizerFactory
+
+<div class="card mb-3">
+    <div class="card-header">@T["Tax elections"]</div>
+    <div class="card-body">
+        @if (Model.History.Count == 0)
+        {
+            <p class="text-muted">@T["No election yet."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Jurisdiction"]</th>
+                            <th scope="col">@T["From"]</th>
+                            <th scope="col">@T["Election"]</th>
+                            <th scope="col">@T["Entered"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var election in Model.History)
+                        {
+                            <tr>
+                                <td>@election.Jurisdiction</td>
+                                <td>@election.EffectiveFrom.ToString("d", CultureInfo.CurrentCulture)</td>
+                                <td>@string.Join(" · ", election.Values.Select(value => $"{(Model.FieldLabels.TryGetValue(value.Key, out var fieldLabel) ? fieldLabel : value.Key)}: {(value.Value switch { "true" => T["Yes"].Value, "false" => T["No"].Value, _ => value.Value })}"))</td>
+                                <td class="small text-muted">@((await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(election.EnteredUtc, DateTimeKind.Utc))).DateTime.ToString("g", CultureInfo.CurrentCulture)) @election.EnteredBy</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <h6 class="mt-3">@T["New election"]</h6>
+        <p class="hint">@T["An election applies from its day on; earlier ones are kept as history."]</p>
+        <div class="ocat-wrapper" asp-validation-class-for="NewEffectiveFrom">
+            <label asp-for="NewJurisdiction" class="ocat-label">@T["Jurisdiction and day"]</label>
+            <div class="ocat-end">
+                <div class="d-flex flex-wrap gap-2">
+                    <input asp-for="NewJurisdiction" class="form-control text-uppercase" style="max-width: 10rem" list="election-jurisdictions" placeholder="US" />
+                    <datalist id="election-jurisdictions">
+                        @foreach (var jurisdiction in Model.Jurisdictions)
+                        {
+                            <option value="@jurisdiction"></option>
+                        }
+                    </datalist>
+                    <input asp-for="NewEffectiveFrom" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["From"]" />
+                </div>
+                <span asp-validation-for="NewEffectiveFrom" class="text-danger"></span>
+                <span asp-validation-for="NewValues" class="text-danger"></span>
+            </div>
+        </div>
+        @foreach (var field in Model.Fields)
+        {
+            var name = Html.NameFor(m => m.NewValues) + "[" + field.Name + "]";
+            var value = Model.NewValues.GetValueOrDefault(field.Name);
+            var label = LocalizerFactory.Localize(field.Label).Value;
+
+            <div class="ocat-wrapper">
+                <label class="ocat-label" for="election-@field.Name">@label</label>
+                <div class="ocat-end">
+                    @switch (field.Kind)
+                    {
+                        case CrestApps.OrchardCore.Payroll.Services.ElectionFieldKind.Boolean:
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="election-@field.Name" name="@name" value="true" checked="@(value == "true")" />
+                            </div>
+                            break;
+                        case CrestApps.OrchardCore.Payroll.Services.ElectionFieldKind.Choice:
+                            <select class="form-select" id="election-@field.Name" name="@name" style="max-width: 18rem">
+                                <option value="">@T["Choose…"]</option>
+                                @foreach (var choice in field.Choices)
+                                {
+                                    <option value="@choice.Value" selected="@(choice.Value == value)">@LocalizerFactory.Localize(choice.Label).Value</option>
+                                }
+                            </select>
+                            break;
+                        default:
+                            <input class="form-control" id="election-@field.Name" name="@name" value="@value" style="max-width: 14rem" inputmode="@(field.Kind == CrestApps.OrchardCore.Payroll.Services.ElectionFieldKind.Text ? "text" : "decimal")" />
+                            break;
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -43,6 +43,22 @@ public static class PaySetupServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds the fields of a tax election for jurisdictions, such as a country pack's withholding form.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="fieldSet">The field set.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddElectionFieldSet(this IServiceCollection services, CrestApps.OrchardCore.Payroll.Services.ElectionFieldSet fieldSet)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(fieldSet);
+
+        services.Configure<CrestApps.OrchardCore.Payroll.Services.PayrollElectionOptions>(options => options.FieldSets.Add(fieldSet));
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds a source of pay inputs, read by pay runs and by the Pay Inputs data set.
     /// </summary>
     /// <typeparam name="TSource">The source.</typeparam>

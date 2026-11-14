@@ -195,6 +195,7 @@ const sidebars = {
                 'user-manual/finance/approvals',
                 'user-manual/finance/pay-setup',
                 'user-manual/finance/payroll-employers',
+                'user-manual/finance/payroll-employees',
             ],
         },
         {

@@ -30,7 +30,25 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddScoped<ICatalogManager<Employer>>(serviceProvider => serviceProvider.GetRequiredService<IEmployerManager>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerHandler>());
         services.TryAddScoped<IPayrollScopeService, PayrollScopeService>();
-        services.TryAddScoped<IPayrollEmployeeDirectory, EmptyPayrollEmployeeDirectory>();
+        services.AddSensitiveValueProtector();
+        services.TryAddScoped<PayProfileStore>();
+        services.TryAddScoped<PayItemStore>();
+        services.TryAddScoped<IPayProfileManager, PayProfileManager>();
+        services.TryAddScoped<IPayItemManager, PayItemManager>();
+        services.TryAddScoped<ICatalogManager<EmployeePayProfile>>(serviceProvider => serviceProvider.GetRequiredService<IPayProfileManager>());
+        services.TryAddScoped<ICatalogManager<EmployeePayItem>>(serviceProvider => serviceProvider.GetRequiredService<IPayItemManager>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<EmployeePayProfile>, PayProfileHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<EmployeePayItem>, PayItemHandler>());
+        services.TryAddScoped<PayrollTaxIdHasher>();
+        services.TryAddScoped<DefaultPayProfileService>();
+        services.TryAddScoped<IPayProfileService>(serviceProvider => serviceProvider.GetRequiredService<DefaultPayProfileService>());
+        services.TryAddScoped<IPayrollEmployeeDirectory, PayProfileEmployeeDirectory>();
+        services.TryAddScoped<PayProfileUsage>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IEmployerUsage, PayProfileUsage>(serviceProvider => serviceProvider.GetRequiredService<PayProfileUsage>()));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, PayProfileUsage>(serviceProvider => serviceProvider.GetRequiredService<PayProfileUsage>()));
+
+        // Any jurisdiction gets the usual withholding fields until a country pack gives its own form.
+        services.AddElectionFieldSet(GenericElectionFields.Create());
 
         return services;
     }

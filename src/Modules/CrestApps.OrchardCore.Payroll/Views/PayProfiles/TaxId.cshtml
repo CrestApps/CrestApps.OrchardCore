@@ -1,0 +1,15 @@
+@model PayProfileTaxIdViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollPayProfilesTaxId" title="@T["Tax id of {0}", Model.StaffName]">
+        <breadcrumb-item id="PayrollPayProfiles" action="Index" controller="PayProfiles" area="CrestApps.OrchardCore.Payroll">@T["Employees"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="hint">@T["This view was recorded. Don't copy the number anywhere it isn't needed."]</p>
+        <p class="fs-4 font-monospace mb-3">@Model.TaxId</p>
+        <a class="btn btn-secondary" asp-action="Edit" asp-route-id="@Model.ProfileId">@T["Back to the pay profile"]</a>
+    </div>
+</div>

@@ -63,6 +63,10 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
     {
         builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll => payroll
             .Id("payroll")
+            .Add(S["Employees"], S["Employees"].PrefixPosition("20"), employees => employees
+                .Id("payrollEmployees")
+                .Action("Index", "PayProfiles", PayrollConstants.Features.Payroll)
+                .LocalNav())
             .Add(S["Setup"], S["Setup"].PrefixPosition("90"), setup => setup
                 .Id("payrollSetup")
                 .Add(S["Employers"], S["Employers"].PrefixPosition("5"), employers => employers

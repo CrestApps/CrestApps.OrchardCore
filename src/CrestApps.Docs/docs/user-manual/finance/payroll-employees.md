@@ -1,0 +1,52 @@
+---
+sidebar_label: Pay profiles
+title: Pay profiles and pay items
+description: "Set up how each person is paid by each employer: the pay schedule, the tax id kept protected, tax elections with their history, where net pay goes, and standing pay items such as an allowance or a loan."
+technical_manual:
+  - modules/payroll
+---
+
+A **pay profile** is what an employer needs to pay a staff member. A person paid by two employers of the group has two profiles, one for each.
+
+| | |
+| --- | --- |
+| **Menu** | Payroll > Employees, and the **Payroll** card on a staff member's profile |
+| **Permission** | See pay profiles, Manage pay profiles (all employers, or one), See full tax ids |
+| **Feature** | Payroll |
+
+<AskYourAdmin />
+
+## Add a pay profile
+
+1. Open **Payroll > Employees** and choose **Add pay profile**, or choose **Add pay profile** on the **Payroll** card of a staff member's profile.
+2. Choose the **Staff member** and the **Employer**, then the **Pay schedule**, the **Worker type** and whether the person is paid overtime.
+3. Choose **Save**. The page opens again with every card and a list of what is still missing before the person can be paid.
+
+## Fill in what is missing
+
+The yellow box at the top lists what keeps the person from being paid, and goes green (**Ready to pay.**) once nothing is missing:
+
+- **Tax id**: type it under **New tax id**. Only its last characters show afterwards. When the same number is on file for someone else, the page says who.
+- **Tax elections**: add one for each jurisdiction the box names, with the day it starts. To change an election, add a new one from the day it changes: the old one stays in the history.
+- **Net pay**: choose how net pay is paid, in order. A deposit needs a bank account the person owns under **Banking**; the last row takes what is left.
+- **Pay rate**: enter the rate or salary on the staff member's **Pay** card.
+- **Home address**: for taxes and forms.
+
+## See a full tax id
+
+People who may see full tax ids get **Show the full number** next to the last characters. Every time the number is shown, who saw it and when is written to the Audit Trail. Don't copy the number anywhere it isn't needed.
+
+## Pay items
+
+A **pay item** is an amount paid or taken every pay period until it ends: an allowance, a loan repayment, a contribution. Choose **Pay items** on a profile's row in **Payroll > Employees** or at the top of its page, then **Add pay item**:
+
+1. Choose the **Pay code**.
+2. Enter an **Amount** or a **Percent**, not both, with a dot for decimals.
+3. Enter the first day, and the last day when there is one.
+4. For a loan, enter the **Goal**: the item stops once it has been paid. Limits per period and per year, and an employer match, are optional.
+
+A profile with pay items can't be deleted: remove its items first, or set its status to **Terminated**.
+
+## Your own pay
+
+Nobody can change their own pay profile in these pages, even with the permission, unless **Settings > Payroll** allows it.

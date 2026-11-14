@@ -117,3 +117,260 @@ public class EmployersIndexViewModel
     [BindNever]
     public AdminListContext List { get; set; }
 }
+
+/// <summary>
+/// The pay profile list.
+/// </summary>
+public class PayProfilesIndexViewModel
+{
+    public string EmployerId { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Employers { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<PayProfileRow> Profiles { get; set; } = [];
+
+    [BindNever]
+    public bool CanAdd { get; set; }
+
+    [BindNever]
+    public AdminListContext List { get; set; }
+}
+
+/// <summary>
+/// A row of the pay profile list.
+/// </summary>
+public class PayProfileRow
+{
+    public EmployeePayProfile Profile { get; set; }
+
+    public string StaffName { get; set; }
+
+    public string EmployerName { get; set; }
+
+    public string ScheduleName { get; set; }
+
+    public IReadOnlyList<CrestApps.OrchardCore.Payroll.Services.PayBlocker> Blockers { get; set; } = [];
+}
+
+/// <summary>
+/// The pay profile editor's main card.
+/// </summary>
+public class PayProfileViewModel
+{
+    public string StaffMemberId { get; set; }
+
+    public string EmployerId { get; set; }
+
+    public string PayScheduleId { get; set; }
+
+    public string WorkerType { get; set; }
+
+    public string OvertimeStatus { get; set; }
+
+    public string Status { get; set; }
+
+    public string LegalName { get; set; }
+
+    public string WorkSiteTeamId { get; set; }
+
+    public DateOnly? RetroPayFrom { get; set; }
+
+    public string DepartmentTeamId { get; set; }
+
+    public string ActivityCode { get; set; }
+
+    public string Job { get; set; }
+
+    public string TaxId { get; set; }
+
+    public bool RemoveTaxId { get; set; }
+
+    [BindNever]
+    public bool IsNew { get; set; }
+
+    [BindNever]
+    public string StaffName { get; set; }
+
+    [BindNever]
+    public string TaxIdHint { get; set; }
+
+    [BindNever]
+    public bool CanRevealTaxId { get; set; }
+
+    [BindNever]
+    public string ProfileId { get; set; }
+
+    [BindNever]
+    public IList<string> SameTaxIdStaff { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> StaffMembers { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> Employers { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> Schedules { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> Teams { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<CrestApps.OrchardCore.Payroll.Services.PayBlocker> Blockers { get; set; } = [];
+}
+
+/// <summary>
+/// The pay profile's elections card: the history and a new election.
+/// </summary>
+public class PayProfileElectionsViewModel
+{
+    public string NewJurisdiction { get; set; }
+
+    public DateOnly? NewEffectiveFrom { get; set; }
+
+    public Dictionary<string, string> NewValues { get; set; } = new(StringComparer.Ordinal);
+
+    [BindNever]
+    public IList<TaxElection> History { get; set; } = [];
+
+    [BindNever]
+    public IList<string> Jurisdictions { get; set; } = [];
+
+    [BindNever]
+    public IList<CrestApps.OrchardCore.Payroll.Services.ElectionField> Fields { get; set; } = [];
+
+    [BindNever]
+    public IDictionary<string, string> FieldLabels { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+}
+
+/// <summary>
+/// The pay profile's net pay card.
+/// </summary>
+public class PayProfileDistributionViewModel
+{
+    public IList<NetPayRowViewModel> Rows { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> BankAccounts { get; set; } = [];
+}
+
+/// <summary>
+/// A row of the net pay split, as typed.
+/// </summary>
+public class NetPayRowViewModel
+{
+    public string Method { get; set; }
+
+    public string BankAccountId { get; set; }
+
+    public string Split { get; set; }
+
+    public string Value { get; set; }
+}
+
+/// <summary>
+/// The pay profile's home address card.
+/// </summary>
+public class PayProfileAddressViewModel
+{
+    public AddressEditorViewModel Address { get; set; } = new();
+
+    [BindNever]
+    public IShape AddressEditor { get; set; }
+}
+
+/// <summary>
+/// The pay item list of a profile.
+/// </summary>
+public class PayItemsIndexViewModel
+{
+    [BindNever]
+    public EmployeePayProfile Profile { get; set; }
+
+    [BindNever]
+    public string StaffName { get; set; }
+
+    [BindNever]
+    public string EmployerName { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<EmployeePayItem> Items { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyDictionary<string, PayCode> Codes { get; set; } = new Dictionary<string, PayCode>();
+
+    [BindNever]
+    public bool CanManage { get; set; }
+
+    [BindNever]
+    public AdminListContext List { get; set; }
+}
+
+/// <summary>
+/// The pay item editor.
+/// </summary>
+public class PayItemViewModel
+{
+    public string PayCodeId { get; set; }
+
+    public string Amount { get; set; }
+
+    public string Percent { get; set; }
+
+    public DateOnly? StartDate { get; set; }
+
+    public DateOnly? EndDate { get; set; }
+
+    public string EmployerMatchPercent { get; set; }
+
+    public string EmployerMatchLimitPercent { get; set; }
+
+    public string Goal { get; set; }
+
+    public string PeriodMaximum { get; set; }
+
+    public string YearMaximum { get; set; }
+
+    public string Note { get; set; }
+
+    [BindNever]
+    public string PaidTowardGoal { get; set; }
+
+    [BindNever]
+    public string ArrearsBalance { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Codes { get; set; } = [];
+}
+
+/// <summary>
+/// The Payroll card on a staff member's profile.
+/// </summary>
+public class StaffPayrollCardViewModel
+{
+    [BindNever]
+    public string StaffMemberId { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<PayProfileRow> Profiles { get; set; } = [];
+
+    [BindNever]
+    public bool CanAdd { get; set; }
+}
+
+/// <summary>
+/// The page that shows a full tax id once.
+/// </summary>
+public class PayProfileTaxIdViewModel
+{
+    [BindNever]
+    public string ProfileId { get; set; }
+
+    [BindNever]
+    public string StaffName { get; set; }
+
+    [BindNever]
+    public string TaxId { get; set; }
+}

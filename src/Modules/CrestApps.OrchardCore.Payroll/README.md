@@ -35,3 +35,13 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - A **Payroll** card on teams (`PayrollTeamSettings`: ledger code, jurisdictions) and **Settings > Payroll**
   (`PayrollSettings`).
 - The recipe **Payroll: sample roles**.
+
+## Pay profiles and pay items
+
+- `EmployeePayProfile` per staff member and employer (`IPayProfileManager`): pay schedule, worker type, overtime status,
+  the protected tax id with a keyed hash (`IPayProfileService`), dated tax elections (`ElectionOn`, field sets from
+  `AddElectionFieldSet`), the split of net pay, and blockers (`IPayProfileBlockerProvider`). Changes and reveals reach
+  `IPayProfileObserver`; with Audit Trail on, they are written there.
+- `EmployeePayItem` (`IPayItemManager`): standing amounts or percents with dates, goal, limits and an employer match.
+- **Payroll > Employees**, the staff profile's **Payroll** card, the **Employees** data set, the `PayrollPayProfiles` and
+  `PayrollPayItems` recipe steps and the **Pay profiles** deployment step.

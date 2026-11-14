@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Payroll.AuditTrail;
 using CrestApps.OrchardCore.Payroll.Core;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Core.Services;
@@ -11,10 +12,15 @@ using CrestApps.OrchardCore.Payroll.Migrations;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Navigation;
 using CrestApps.OrchardCore.Payroll.Recipes;
+using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
+using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Teams.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataPipelines.Steps;
@@ -140,7 +146,15 @@ public sealed class PayrollStartup : StartupBase
     {
         services.AddPayrollCore();
         services.AddDataMigration<PayrollMigrations>()
-            .AddIndexProvider<EmployerIndexProvider>();
+            .AddIndexProvider<EmployerIndexProvider>()
+            .AddIndexProvider<PayProfileIndexProvider>()
+            .AddIndexProvider<PayItemIndexProvider>();
+
+        services.AddScoped<PayrollNames>();
+        services.AddScoped<PayProfileEditTracker>();
+        services.AddDisplayDriver<EmployeePayProfile, PayProfileDisplayDriver>();
+        services.AddDisplayDriver<EmployeePayItem, PayItemDisplayDriver>();
+        services.AddDisplayDriver<StaffMember, StaffPayrollDisplayDriver>();
 
         services.AddDisplayDriver<Employer, EmployerDisplayDriver>();
         services.AddPermissionProvider<PayrollPermissionProvider>();
@@ -166,6 +180,21 @@ public sealed class PayrollTeamsStartup : StartupBase
 }
 
 /// <summary>
+/// Writes tax id reveals and changes of pay profiles to the Audit Trail.
+/// </summary>
+[Feature(PayrollConstants.Features.Payroll)]
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
+public sealed class PayrollAuditTrailStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransient<IConfigureOptions<AuditTrailOptions>, PayrollAuditTrailEvents>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayProfileObserver, AuditTrailPayProfileObserver>());
+    }
+}
+
+/// <summary>
 /// Lets an employer choose the bank account it pays from.
 /// </summary>
 [Feature(PayrollConstants.Features.Payroll)]
@@ -176,6 +205,7 @@ public sealed class PayrollBankingStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<Employer, EmployerFundingDisplayDriver>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayProfileBlockerProvider, BankAccountPayBlockers>());
     }
 }
 
@@ -190,6 +220,8 @@ public sealed class PayrollRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<EmployersRecipeStep>();
+        services.AddRecipeExecutionStep<PayProfilesRecipeStep>();
+        services.AddRecipeExecutionStep<PayItemsRecipeStep>();
     }
 }
 
@@ -204,6 +236,7 @@ public sealed class PayrollDeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<EmployersDeploymentSource, EmployersDeploymentStep, SummaryDeploymentStepDisplayDriver<EmployersDeploymentStep>>();
+        services.AddDeployment<PayProfilesDeploymentSource, PayProfilesDeploymentStep, PayProfilesDeploymentStepDisplayDriver>();
         services.AddSiteSettingsPropertyDeploymentStep<PayrollSettings, PayrollDeploymentStartup>(
             S => S["Payroll settings"],
             S => S["Separation of duties and the defaults of a new employer."]);
@@ -222,6 +255,23 @@ public sealed class PayrollRecipesSchemaStartup : StartupBase
     {
         services.AddScoped<IRecipeStep, EmployersRecipeStepSchema>();
         services.AddDeploymentStepSchema<EmployersDeploymentStepSchema>();
+        services.AddScoped<IRecipeStep, PayProfilesRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, PayItemsRecipeStepSchema>();
+        services.AddDeploymentStepSchema<PayProfilesDeploymentStepSchema>();
         services.AddScoped<ISiteSettingsSchemaDefinition, PayrollSettingsSchema>();
+    }
+}
+
+/// <summary>
+/// Adds the Payroll Employees data set to Payroll's data source.
+/// </summary>
+[Feature(PayrollConstants.Features.Payroll)]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
+public sealed class PayrollDataSourcesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IPayrollDataSet, EmployeesDataSet>();
     }
 }

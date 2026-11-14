@@ -1,0 +1,21 @@
+@model ShapeViewModel<EmployeePayItem>
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+@inject CrestApps.OrchardCore.Payroll.Services.IEmployerManager Employers
+
+@{
+    var item = Model.Value;
+    var currency = (await Employers.FindByIdAsync(item.EmployerId))?.Currency;
+    string Amount(decimal value) => string.IsNullOrEmpty(currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.Format(value, currency) + " " + currency;
+}
+
+<span class="badge ta-badge fw-normal">@(item.Amount.HasValue ? Amount(item.Amount.Value) : (item.Percent?.ToString("0.##", CultureInfo.CurrentCulture) + " %"))</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Dates"]"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@item.StartDate.ToString("d", CultureInfo.CurrentCulture)@(item.EndDate is { } end ? " – " + end.ToString("d", CultureInfo.CurrentCulture) : string.Empty)</span>
+@if (item.Goal is { } goal)
+{
+    <span class="badge ta-badge fw-normal">@T["{0} of {1} paid", Amount(item.PaidTowardGoal), Amount(goal)]</span>
+}
+@if (item.ArrearsBalance > 0)
+{
+    <span class="badge text-bg-warning fw-normal">@T["{0} in arrears", Amount(item.ArrearsBalance)]</span>
+}
