@@ -1,7 +1,7 @@
 ---
 sidebar_label: Tickets
 title: Tickets
-description: Answer requests from customers and employees as tickets: desks, statuses and priorities, replies and internal notes, assignment, service-level targets, saved views, merge and links, reports and the account tab.
+description: "Answer requests from customers and employees as tickets: desks, statuses and priorities, replies and internal notes, assignment, service-level targets, saved views, merge and links, reports and the account tab."
 technical_manual:
   - modules/tickets
 ---
