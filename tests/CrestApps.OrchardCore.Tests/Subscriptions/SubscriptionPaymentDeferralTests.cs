@@ -62,7 +62,7 @@ public sealed class SubscriptionPaymentDeferralTests
             new TestClock(_now),
             [entitlements],
             NullLogger<DefaultSubscriptionLifecycleService>.Instance);
-        var paid = new SubscriptionFirstPaymentTransactionHandler(lifecycle, manager);
+        var paid = new SubscriptionFirstPaymentTransactionHandler(lifecycle, manager, new CrestApps.OrchardCore.Tests.Transactions.FakeTransactionStore());
 
         // SEC-C5: Pay Later records one transaction per obligation. Paying the checkout's one-time balance (a sign-up fee,
         // a small item next to the plan) is not paying for the plan's first cycle.

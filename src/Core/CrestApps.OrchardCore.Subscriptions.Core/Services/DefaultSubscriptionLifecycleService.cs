@@ -186,7 +186,16 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
     public Task<Subscription> ResumeAsync(string subscriptionId, CancellationToken cancellationToken = default)
         => MutateAsync(SubscriptionsTelemetry.OperationResume, subscriptionId, subscription =>
         {
-            if (subscription.Status is not (SubscriptionStatus.PastDue or SubscriptionStatus.Paused or SubscriptionStatus.Incomplete))
+            // An expired offline agreement can be restored, for example once its overdue invoice was paid after the grace
+            // window. One a gateway billed is not: the gateway owns that schedule, and an agreement active here that the
+            // gateway no longer bills would be access given away.
+            var restorable = subscription.Status is SubscriptionStatus.PastDue or SubscriptionStatus.Paused or SubscriptionStatus.Incomplete ||
+                (subscription.Status == SubscriptionStatus.Expired &&
+                    string.IsNullOrEmpty(subscription.ProviderSubscriptionId) &&
+                    subscription.CanceledUtc is null &&
+                    !subscription.CancelAtPeriodEnd);
+
+            if (!restorable)
             {
                 return SubscriptionTransition.NoChange;
             }
