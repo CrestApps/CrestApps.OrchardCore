@@ -124,6 +124,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.BusinessDocuments/CrestApps.OrchardCore.BusinessDocuments.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Invoicing.Abstractions/CrestApps.OrchardCore.Invoicing.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Invoicing.Core/CrestApps.OrchardCore.Invoicing.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Invoicing/CrestApps.OrchardCore.Invoicing.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports.Pdf/CrestApps.OrchardCore.Reports.Pdf.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" />

@@ -1,4 +1,7 @@
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Invoicing.Core.Handlers;
 using CrestApps.OrchardCore.Invoicing.Core.Services;
+using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -6,28 +9,32 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CrestApps.OrchardCore.Invoicing.Core;
 
 /// <summary>
-/// Registration helpers for the Invoicing core services.
+/// Registers the invoicing services.
 /// </summary>
 public static class InvoicingServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the document calculator. Tax providers are added with <see cref="AddDocumentTaxProvider{TProvider}"/>.
+    /// Registers the calculator, the invoice and credit note stores, the invoice manager and handler, and the invoice
+    /// commands. The ledger, the numbering and the site services come from the features Invoicing depends on.
     /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The same service collection so calls can be chained.</returns>
+    /// <param name="services">The services.</param>
     public static IServiceCollection AddInvoicingCore(this IServiceCollection services)
     {
         services.TryAddScoped<IDocumentCalculator, DocumentCalculator>();
+        services.TryAddScoped<IInvoiceStore, InvoiceStore>();
+        services.TryAddScoped<ICreditNoteStore, CreditNoteStore>();
+        services.TryAddScoped<IInvoiceManager, InvoiceManager>();
+        services.TryAddScoped<IInvoiceCommandService, DefaultInvoiceCommandService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Invoice>, InvoiceHandler>());
 
         return services;
     }
 
     /// <summary>
-    /// Registers a provider that sets the taxes of a document's lines from tax rules.
+    /// Registers a tax provider for invoices, estimates and credit notes.
     /// </summary>
-    /// <typeparam name="TProvider">The provider.</typeparam>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The same service collection so calls can be chained.</returns>
+    /// <typeparam name="TProvider">The provider type.</typeparam>
+    /// <param name="services">The services.</param>
     public static IServiceCollection AddDocumentTaxProvider<TProvider>(this IServiceCollection services)
         where TProvider : class, IDocumentTaxProvider
     {

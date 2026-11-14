@@ -73,6 +73,17 @@ public interface ITransactionCommandService
     Task<TransactionCommandResult> CancelAsync(string transactionId, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Cancels the transaction only when nothing was paid toward it, decided under the transaction's lock, so a payment
+    /// recorded a moment earlier is never canceled along with it: then the command is refused. A document that voids
+    /// the debt it posted, such as an invoice, uses it. A transaction already canceled is left as it is and reported as
+    /// canceled, so repeating the command is safe.
+    /// </summary>
+    /// <param name="transactionId">The transaction identifier.</param>
+    /// <param name="reason">An optional reason, recorded on the timeline.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> CancelUnpaidAsync(string transactionId, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lowers what is owed on the transaction without money being received: adds <paramref name="amount"/> to
     /// <see cref="Transaction.AmountAdjusted"/> and records a <see cref="TransactionEventType.Adjusted"/> event. An
     /// adjustment can never be more than what is still owed. A transaction that owes nothing after it is settled and is

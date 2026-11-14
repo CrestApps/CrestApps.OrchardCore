@@ -366,6 +366,58 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
     }
 
     /// <inheritdoc/>
+    public Task<TransactionCommandResult> CancelUnpaidAsync(string transactionId, string reason, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(transactionId, async (transaction, result) =>
+        {
+            // Asked again after it succeeded, it changes nothing.
+            if (transaction.Status == TransactionStatus.Canceled)
+            {
+                return NoFollowUp;
+            }
+
+            // Decided here, under the transaction's lock: a payment recorded a moment ago is seen, and it is never canceled
+            // along with the debt.
+            if (transaction.AmountPaid > 0m)
+            {
+                result.Fail(S["{0} {1} was already paid toward this transaction, so it can't be canceled. Refund the payments or move them to the customer's credit first.", CurrencyScale.Format(transaction.AmountPaid, transaction.Currency), transaction.Currency]);
+
+                return null;
+            }
+
+            if (!TransactionStateMachine.CanCancel(transaction))
+            {
+                result.Fail(S["This transaction has already reached a final state and cannot be canceled."]);
+
+                return null;
+            }
+
+            var now = _clock.UtcNow;
+            var trimmedReason = Trim(reason);
+
+            transaction.Status = TransactionStatus.Canceled;
+            transaction.UpdatedUtc = now;
+
+            var canceled = new TransactionEvent
+            {
+                CreatedUtc = now,
+                Type = TransactionEventType.Canceled,
+                Message = trimmedReason is null
+                    ? S["The transaction was canceled."].Value
+                    : S["The transaction was canceled. Reason: {0}", trimmedReason].Value,
+                Reason = trimmedReason,
+            };
+
+            await SetActorAsync(canceled);
+
+            transaction.Events.Add(canceled);
+            result.Event = canceled;
+
+            return null;
+        }, saveOnFailure: false, save: true, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Task<TransactionCommandResult> AdjustAsync(string transactionId, decimal amount, TransactionAdjustmentKind kind, string reason, CancellationToken cancellationToken = default)
         => AdjustAsync(transactionId, new TransactionAdjustmentRequest { Amount = amount, Kind = kind, Reason = reason }, cancellationToken);
 

@@ -136,18 +136,10 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
 
             Expression<Func<TransactionIndex, bool>> owedByKind = x => x.PayerKind == payerKind && x.PayerId.IsIn(payerIds);
 
-            predicate = predicate is null ? owedByKind : Or(predicate, owedByKind);
+            predicate = IndexPredicates.OrElse(predicate, owedByKind);
         }
 
         return predicate;
-    }
-
-    private static Expression<Func<TransactionIndex, bool>> Or(Expression<Func<TransactionIndex, bool>> left, Expression<Func<TransactionIndex, bool>> right)
-    {
-        var parameter = left.Parameters[0];
-        var rightBody = new ParameterReplacer(right.Parameters[0], parameter).Visit(right.Body);
-
-        return Expression.Lambda<Func<TransactionIndex, bool>>(Expression.OrElse(left.Body, rightBody), parameter);
     }
 
     /// <inheritdoc/>
@@ -222,20 +214,5 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
             .ListAsync(cancellationToken);
 
         return records.ToArray();
-    }
-
-    private sealed class ParameterReplacer : ExpressionVisitor
-    {
-        private readonly ParameterExpression _from;
-        private readonly ParameterExpression _to;
-
-        public ParameterReplacer(ParameterExpression from, ParameterExpression to)
-        {
-            _from = from;
-            _to = to;
-        }
-
-        protected override Expression VisitParameter(ParameterExpression node)
-            => node == _from ? _to : base.VisitParameter(node);
     }
 }
