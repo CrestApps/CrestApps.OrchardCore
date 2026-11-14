@@ -1,8 +1,10 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.Inventory.Core.Services;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.WorkOrders;
@@ -81,12 +83,37 @@ public sealed class WorkOrderIntegrationTests
         Assert.Equal(WorkOrdersConstants.ReferenceType, created.ReferenceType);
         Assert.Equal("wo-1", created.ReferenceId);
         Assert.Equal("customer-1", created.OwnerId);
+        Assert.Equal(CustomerOwnerKind.Authenticated, created.OwnerKind);
+        Assert.Equal(new PartyRef(PartyKinds.User, "customer-1"), created.GetPayer());
+        Assert.Equal("Pat", created.PayerContact.Name);
         Assert.Equal(TransactionStatus.Outstanding, created.Status);
         Assert.Equal(240m, created.TotalAmount);
         Assert.Equal("USD", created.Currency);
         Assert.Single(created.Events, item => item.Type == TransactionEventType.Created);
         invoices.VerifyAll();
         transactions.Verify(manager => manager.CreateAsync(created, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AnAccountsWorkOrder_IsOwedByTheAccount_AndNeverUsesTheAccountIdAsAUser()
+    {
+        var created = new Transaction();
+        var transactions = new Mock<ITransactionManager>();
+
+        transactions.Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(created);
+
+        var clock = new Mock<IClock>();
+        clock.Setup(item => item.UtcNow).Returns(new DateTime(2026, 11, 2, 12, 0, 0, DateTimeKind.Utc));
+
+        var billing = new TransactionsWorkOrderBilling(transactions.Object, Mock.Of<ITransactionInvoiceService>(), clock.Object, new NullStringLocalizer<TransactionsWorkOrderBilling>());
+        var workOrder = new WorkOrder { ItemId = "wo-2", Number = "WO-00002", Summary = "Rooftop unit", AccountId = "account-1", Contact = new WorkOrderContact { Name = "Lee", Email = "lee@contoso.example" } };
+
+        await billing.InvoiceAsync(workOrder, 900m, "USD", TestContext.Current.CancellationToken);
+
+        Assert.Equal(new PartyRef(PartyKinds.Account, "account-1"), created.GetPayer());
+        Assert.Equal(CustomerOwnerKind.Guest, created.OwnerKind);
+        Assert.Equal("wo-2", created.OwnerId);
+        Assert.Equal("lee@contoso.example", created.PayerContact.Email);
     }
 
     [Fact]

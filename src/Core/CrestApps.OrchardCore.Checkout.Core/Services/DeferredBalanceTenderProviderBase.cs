@@ -96,6 +96,11 @@ public abstract class DeferredBalanceTenderProviderBase : ICheckoutTenderProvide
             transaction.ParentReferenceId = debit.ParentReferenceId;
         }
 
+        if (!debit.Payer.IsEmpty)
+        {
+            transaction.SetPayer(debit.Payer);
+        }
+
         transaction.CheckoutSessionId = session.SessionId;
         transaction.ObligationId = ObligationId;
         transaction.Currency = currency;

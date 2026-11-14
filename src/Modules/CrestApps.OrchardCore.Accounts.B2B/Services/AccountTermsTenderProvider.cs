@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -120,6 +121,7 @@ public sealed class AccountTermsTenderProvider : DeferredBalanceTenderProviderBa
             // it and what the account owes stays the same when a buyer leaves.
             ParentReferenceType = AccountsConstants.ReferenceTypes.Account,
             ParentReferenceId = account.AccountId,
+            Payer = new PartyRef(PartyKinds.Account, account.AccountId),
             DueUtc = _clock.UtcNow.AddDays(account.Terms.NetDays ?? 0),
             Message = S["Put on {0}'s account, due in {1} days.", account.Name, account.Terms.NetDays ?? 0].Value,
         };

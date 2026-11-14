@@ -22,7 +22,7 @@ The module works with other features when they are on:
 | Feature on | What it adds |
 | --- | --- |
 | Inventory | Lines can name a stock item; parts used come off a stock location, such as a van's, with `IInventoryService.ConsumeAsync` and the work order as the reference. Counted parts are used in whole units. |
-| Transactions | Completing a billed work order makes an outstanding invoice (`ReferenceType` `WorkOrder`, source `WorkOrders`, due in 30 days) with an invoice number. |
+| Transactions | Completing a billed work order makes an outstanding invoice (`ReferenceType` `WorkOrder`, source `WorkOrders`, due in 30 days) with an invoice number. Its payer is the work order's account (so the account's admins see and pay it), else its customer user, else its CRM contact, with the work order's contact as `PayerContact`. The customer user owns it; a work order with no user is owned as a guest (the work order id), reached at the contact's e-mail. |
 | Geo | A new or changed service address gets the territory it is in, and is queued for geocoding (`WorkOrderServiceAddress`). |
 | Assets | A work order can be for assets; the asset page links to the asset's work orders. |
 | Workflows | The five work order events. |
