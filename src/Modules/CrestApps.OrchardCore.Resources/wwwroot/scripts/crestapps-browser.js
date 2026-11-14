@@ -30,6 +30,14 @@
 		});
 		return Promise.resolve(typeof host.confirm === "function" ? Boolean(host.confirm(message || title || "")) : true);
 	}
+	function bindRemoveLinks(root) {
+		root.addEventListener("click", (event) => {
+			const element = event.target && typeof event.target.closest === "function" ? event.target.closest("[data-url-af~=\"RemoveUrl\"][data-confirm]") : null;
+			if (!element) return;
+			element.dataset.message = escapeHtml(element.dataset.confirm);
+			if (hasValue(element.dataset.confirmTitle)) element.dataset.title = escapeHtml(element.dataset.confirmTitle);
+		}, true);
+	}
 	var submitButtons = "button[type=\"submit\"], input[type=\"submit\"], button:not([type])";
 	var agreedForm = null;
 	function questionOf(form, submitter) {
@@ -171,6 +179,7 @@
 			confirm: confirmAction
 		});
 		bindForms(document);
+		bindRemoveLinks(document);
 	})(window, document);
 	//#endregion
 })();

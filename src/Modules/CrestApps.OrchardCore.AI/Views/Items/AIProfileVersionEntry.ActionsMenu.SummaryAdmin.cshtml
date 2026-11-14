@@ -11,8 +11,9 @@
        asp-route-id="@Model.Value.Version.ItemId"
        class="dropdown-item"
        data-url-af="RemoveUrl UnsafeUrl"
-       data-title="@T["Restore version {0}", Model.Value.Version.Version]"
-       data-message="@T["The profile takes back this version's settings. The restore is saved as a new version, so nothing is lost."]"
+       data-confirm-title="@T["Restore version {0}", Model.Value.Version.Version]"
+       data-confirm="@T["The profile takes back this version's settings. The restore is saved as a new version, so nothing is lost."]"
        data-ok-text="@T["Restore"]"
        data-cancel-text="@T["Cancel"]">@T["Restore"]</a>
 }
+<script asp-name="crestapps-browser" at="Foot"></script>

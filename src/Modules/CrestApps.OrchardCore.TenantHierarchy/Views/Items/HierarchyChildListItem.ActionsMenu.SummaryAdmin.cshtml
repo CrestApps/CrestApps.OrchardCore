@@ -24,5 +24,6 @@
     {
         <hr class="dropdown-divider">
     }
-    <a class="dropdown-item text-danger" asp-controller="Platform" asp-action="Detach" asp-route-child="@child.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-message="@T["Make {0} an ordinary tenant? It keeps its data and address.", child.DisplayName]"><i class="fa-solid fa-link-slash fa-fw me-2" aria-hidden="true"></i>@T["Make ordinary"]</a>
+    <a class="dropdown-item text-danger" asp-controller="Platform" asp-action="Detach" asp-route-child="@child.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-confirm="@T["Make {0} an ordinary tenant? It keeps its data and address.", child.DisplayName]"><i class="fa-solid fa-link-slash fa-fw me-2" aria-hidden="true"></i>@T["Make ordinary"]</a>
 }
+<script asp-name="crestapps-browser" at="Foot"></script>

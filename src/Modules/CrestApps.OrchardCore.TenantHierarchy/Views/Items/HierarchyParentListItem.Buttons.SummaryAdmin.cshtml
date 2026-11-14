@@ -13,10 +13,11 @@
 }
 @if (settings.State == TenantState.Running)
 {
-    <a class="btn btn-danger btn-sm" asp-controller="Platform" asp-action="Suspend" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend"]" data-message="@T["Suspend {0} and every running child tenant? Nobody can use them until you resume.", parent.DisplayName]">@T["Suspend"]</a>
+    <a class="btn btn-danger btn-sm" asp-controller="Platform" asp-action="Suspend" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend"]" data-confirm="@T["Suspend {0} and every running child tenant? Nobody can use them until you resume.", parent.DisplayName]">@T["Suspend"]</a>
 }
 else if (settings.State == TenantState.Disabled)
 {
     <a class="btn btn-success btn-sm" asp-controller="Platform" asp-action="Resume" asp-route-id="@settings.Name" data-url-af="UnsafeUrl">@T["Resume"]</a>
 }
 <a class="btn btn-secondary btn-sm" asp-controller="Platform" asp-action="Parent" asp-route-id="@settings.Name">@T["Manage"]</a>
+<script asp-name="crestapps-browser" at="Foot"></script>

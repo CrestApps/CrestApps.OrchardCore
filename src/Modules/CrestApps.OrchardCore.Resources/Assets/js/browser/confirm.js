@@ -48,6 +48,29 @@ export function confirmAction(title, message, options = {}) {
     return Promise.resolve(typeof host.confirm === 'function' ? Boolean(host.confirm(message || title || '')) : true);
 }
 
+// The admin theme asks before a [data-url-af~="RemoveUrl"] link or button, with the element's data-title and
+// data-message, and writes both into its dialog as markup. A question that names a record (a child tenant's name) is
+// written in data-confirm instead, with data-confirm-title when the title names one too, and is handed to the theme's
+// dialog escaped, just before the theme's own click listener reads it, so the name shows as text. Without this script
+// the theme asks its default question, which names nothing.
+export function bindRemoveLinks(root) {
+    root.addEventListener('click', event => {
+        const element = event.target && typeof event.target.closest === 'function'
+            ? event.target.closest('[data-url-af~="RemoveUrl"][data-confirm]')
+            : null;
+
+        if (!element) {
+            return;
+        }
+
+        element.dataset.message = escapeHtml(element.dataset.confirm);
+
+        if (hasValue(element.dataset.confirmTitle)) {
+            element.dataset.title = escapeHtml(element.dataset.confirmTitle);
+        }
+    }, true);
+}
+
 const submitButtons = 'button[type="submit"], input[type="submit"], button:not([type])';
 
 // The form whose next submit was already agreed to. Set just before the submit this script asks the browser for and
