@@ -138,6 +138,15 @@ With **Reports** enabled, six coded reports under **Reports > Commerce**, each n
 
 The period reports default to the last 30 days. Voided invoices count for nothing in the sales and tax reports. The documents are read 500 at a time through the index columns (`IssuedUtc`, `Status` and `AmountDue`, and the transactions' `ReferenceType` and `UpdatedUtc`). The name of an offline payment method comes from `OfflinePaymentMethodText` (Transactions.Core), shared with the Transactions pages.
 
+## Personal data
+
+`InvoicingPersonalDataContributor` (an `ICommercePersonalDataContributor`) takes part in privacy requests, such as erasing or exporting a customer under **Commerce > Customers**. A person's documents are the invoices billed to them as a user, to their customer records (`IPartyMembershipService`) or to them as a guest, and those billed to one of their e-mails (the `BillToEmail` index column, lower case) without a business account; invoices billed to a business account are the business's records and are left alone. Each invoice's credit notes come with it.
+
+- **Export** adds an `Invoice` or `CreditNote` record per document: number, currency, total, issue date, bill-to name, e-mail, phone, address and tax id, and the status, paid and due amounts and due date of an invoice.
+- **Erasure** clears the bill-to's contact (name, e-mail, phone, address), shipping address and copy addresses, and scrubs the person from the notes, reference and history. It keeps numbers, amounts, dates, tax ids and the archived PDFs of issued documents, which the business must keep, and adds a warning to the result that says so. The invoice's page then shows **No name kept** for the bill-to.
+
+The contributor does not take part in the guest retention expiry. Invoices saved before the `BillToEmail` column was added are found by e-mail once they are saved again.
+
 ## Tax
 
 The calculator asks the `IDocumentTaxProvider`s in order for the lines' taxes; without one, the taxes typed on the lines are used. With **Taxation** enabled, a `[RequireFeatures]` startup registers `TaxationDocumentTaxProvider`: it builds a `TaxCalculationContext` from the lines (the line discount as an amount, services as `Service` items), the bill-to's party tax profile (`IPartyTaxProfileService`) and its shipping address, and maps the tax lines back, the rate in percent. Charges keep the taxes typed on them. Invoicing resolves nothing of Taxation's when it is off.

@@ -50,6 +50,7 @@ public sealed class InvoiceIndexProvider : IndexProvider<Invoice>
                 BillToKind = Truncate(invoice.BillTo?.Party.Kind, ShortLength),
                 BillToId = Truncate(invoice.BillTo?.Party.Id, PartyIdLength),
                 BillToName = Truncate(invoice.BillTo?.Contact?.Name, TextLength),
+                BillToEmail = Truncate(invoice.BillTo?.Contact?.Email?.Trim().ToLowerInvariant(), TextLength),
                 Reference = Truncate(string.Join(' ', new[] { invoice.Reference, invoice.PurchaseOrderNumber }.Where(value => !string.IsNullOrWhiteSpace(value))), TextLength),
                 Currency = Truncate(invoice.Currency, 3),
                 Total = invoice.Totals?.Total ?? 0m,

@@ -38,6 +38,11 @@ public sealed class InvoiceIndex : CatalogItemIndex
     public string BillToName { get; set; }
 
     /// <summary>
+    /// Gets or sets the bill-to's e-mail, in lower case, so a person's invoices can be found by it.
+    /// </summary>
+    public string BillToEmail { get; set; }
+
+    /// <summary>
     /// Gets or sets the reference and the purchase order number, for search.
     /// </summary>
     public string Reference { get; set; }

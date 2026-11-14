@@ -32,6 +32,14 @@ public interface IInvoiceStore : ICatalog<Invoice>
     Task<Invoice> FindLastIssuedAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the invoices billed to any of the e-mails, without regard to case, oldest first.
+    /// </summary>
+    /// <param name="emails">The e-mails.</param>
+    /// <param name="max">The most invoices to return.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<Invoice>> ListByBillToEmailAsync(IEnumerable<string> emails, int max, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns a page of invoices, newest first.
     /// </summary>
     Task<PageResult<Invoice>> PageAsync(int page, int pageSize, InvoiceQuery query, CancellationToken cancellationToken = default);
@@ -67,6 +75,28 @@ public sealed class InvoiceStore : DocumentCatalog<Invoice, InvoiceIndex>, IInvo
         => string.IsNullOrWhiteSpace(number)
             ? Task.FromResult<Invoice>(null)
             : Session.Query<Invoice, InvoiceIndex>(index => index.Number == number.Trim(), collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Invoice>> ListByBillToEmailAsync(IEnumerable<string> emails, int max, CancellationToken cancellationToken = default)
+    {
+        var normalized = (emails ?? [])
+            .Where(email => !string.IsNullOrWhiteSpace(email))
+            .Select(email => email.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (normalized.Length == 0 || max <= 0)
+        {
+            return [];
+        }
+
+        var invoices = await Session.Query<Invoice, InvoiceIndex>(index => index.BillToEmail.IsIn(normalized), collection: CollectionName)
+            .OrderBy(index => index.CreatedUtc)
+            .Take(max)
+            .ListAsync(cancellationToken);
+
+        return [.. invoices];
+    }
 
     /// <inheritdoc/>
     public Task<Invoice> FindLastIssuedAsync(CancellationToken cancellationToken = default)

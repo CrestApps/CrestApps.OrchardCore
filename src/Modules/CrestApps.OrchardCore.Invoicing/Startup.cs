@@ -60,6 +60,7 @@ public sealed class Startup : StartupBase
             .AddInvoicingCore()
             .AddRecipeExecutionStep<InvoicesStep>()
             .AddRecipeExecutionStep<CreditNotesStep>()
+            .AddScoped<CrestApps.OrchardCore.Customers.PersonalData.ICommercePersonalDataContributor, InvoicingPersonalDataContributor>()
             .AddIndexProvider<InvoiceIndexProvider>()
             .AddIndexProvider<CreditNoteIndexProvider>()
             .AddDataMigration<InvoicingMigrations>()

@@ -129,6 +129,10 @@ With **Reports** enabled, **Reports > Commerce** has six invoicing reports. Each
 
 Pick the period at the top of a report; it starts on the last 30 days. To build your own report or export, use the **Invoicing** data source in the Report Builder or a data pipeline.
 
+## Privacy requests
+
+When you download or erase a customer's data under **Commerce > Customers**, their invoices and credit notes are included: those billed to them, to their account on the site, or to their e-mail. Invoices billed to a business account stay the business's. Erasing removes the customer's name, e-mail, phone and addresses from their invoices, but keeps the invoice numbers, amounts, dates and tax ids and the PDFs that were issued, because a business must keep its invoices. The invoice then shows **No name kept** as who it was billed to.
+
 ## Move invoices to another site
 
 Under **Tools > Deployments > Plans**, add the **Invoices** and **Credit notes** steps to a plan to take every invoice and credit note to another site. Issued invoices keep their numbers there and don't change what customers owe: bring their balances with the transactions. An invoice the other site already issued is left as it is, and one whose number the other site already uses is not imported. New invoices on the other site skip the numbers that came in.
