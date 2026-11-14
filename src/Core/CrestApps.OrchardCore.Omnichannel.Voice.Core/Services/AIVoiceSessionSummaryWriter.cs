@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Telemetry;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -165,8 +166,8 @@ internal sealed class AIVoiceSessionSummaryWriter
 
         AICallMetrics.ApplyLatencies(summary, measured?.ResponseLatenciesMs, measured?.ModelLatenciesMs, measured?.DetectorWaitsMs);
 
-        var carrier = _siteService is null ? null : (await _siteService.GetSiteSettingsAsync()).GetOrCreate<AICostSettings>();
-        (summary.EstimatedCost, summary.CostCurrency) = AICallMetrics.EstimateCost(summary, carrier, deployment?.GetPricing());
+        var carrier = _siteService is null ? null : (await _siteService.GetSiteSettingsAsync()).GetOrCreate<TelephonyCostSettings>();
+        (summary.EstimatedCost, summary.CostCurrency) = AICallMetrics.EstimateCost(summary, carrier?.PerMinute ?? 0, carrier?.Currency, deployment?.GetPricing());
 
         await _summaries.SaveAsync(summary, cancellationToken);
 

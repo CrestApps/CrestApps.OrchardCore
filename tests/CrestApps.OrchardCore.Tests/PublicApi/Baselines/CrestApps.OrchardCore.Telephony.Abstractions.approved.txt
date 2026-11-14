@@ -355,6 +355,12 @@ namespace CrestApps.OrchardCore.Telephony
             public static readonly System.Collections.Generic.IReadOnlyCollection<string> All;
         }
     }
+    public sealed class TelephonyCostSettings
+    {
+        public TelephonyCostSettings() { }
+        public string Currency { get; set; }
+        public decimal PerMinute { get; set; }
+    }
     public static class TelephonyPermissions
     {
         public static readonly OrchardCore.Security.Permissions.Permission ManageExtensions;
