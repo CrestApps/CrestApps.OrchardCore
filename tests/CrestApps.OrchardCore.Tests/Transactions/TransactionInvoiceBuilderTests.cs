@@ -59,8 +59,8 @@ public sealed class TransactionInvoiceBuilderTests
         transaction.TaxAmount = 13m;
         transaction.TaxLines =
         [
-            new TaxLine { TaxName = "GST", Rate = 5m, TaxAmount = 5m },
-            new TaxLine { TaxName = "PST", Rate = 8m, TaxAmount = 8m },
+            new TaxLine { TaxName = "GST", Rate = 0.05m, TaxAmount = 5m },
+            new TaxLine { TaxName = "PST", Rate = 0.08m, TaxAmount = 8m },
         ];
         transaction.PayerContact = new ContactInfo { Name = "Contoso Ltd.", Email = "ap@contoso.example" };
 

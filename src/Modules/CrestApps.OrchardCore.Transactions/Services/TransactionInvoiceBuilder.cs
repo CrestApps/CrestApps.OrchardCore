@@ -179,8 +179,9 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
 
                 request.TaxLines.Add(new ReceiptTaxLine
                 {
+                    // The ledger keeps a rate as a fraction, such as 0.05 for 5%.
                     Description = group.Key.Rate > 0m
-                        ? S["{0} ({1}%)", name, group.Key.Rate.ToString("0.####", CultureInfo.CurrentCulture)].Value
+                        ? S["{0} ({1}%)", name, (group.Key.Rate * 100m).ToString("0.####", CultureInfo.CurrentCulture)].Value
                         : name,
                     Amount = group.Sum(line => line.TaxAmount),
                 });
