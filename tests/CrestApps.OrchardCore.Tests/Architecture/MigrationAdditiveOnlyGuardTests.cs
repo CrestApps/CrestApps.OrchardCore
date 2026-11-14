@@ -825,7 +825,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Modules/CrestApps.OrchardCore.Subscriptions/Migrations/TenantOnboardingMigrations.cs",
             "TenantOnboardingMigrations",
             "UpdateFrom1",
-            "9bf72fdfc8957714",
+            "4c99b64503848adf",
             "Not SQL text at all: a YesSql LINQ query, in a deferred task, that reads the tenant provisioning jobs once to decide whether an existing store keeps offering custom prefixes and domains. It only reads documents and saves the site settings; it never creates, alters or drops a schema object."),
     ];
 
