@@ -47,6 +47,7 @@ internal sealed class DisbursementsTestContext
         services.AddSingleton<IBankAccountService>(Banking.Service);
         services.AddSingleton<IDisbursementManager>(Manager);
         services.AddSingleton<IDisbursementService>(provider => Service);
+        services.AddSingleton<global::OrchardCore.Locking.Distributed.IDistributedLock>(Locks);
         Services = services.BuildServiceProvider();
 
         Providers = new List<IDisbursementProvider>

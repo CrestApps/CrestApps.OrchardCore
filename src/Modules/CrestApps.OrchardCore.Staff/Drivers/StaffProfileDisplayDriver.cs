@@ -89,7 +89,7 @@ internal sealed class StaffProfileDisplayDriver : DisplayDriver<StaffMember>
                 .Location(StaffProfileSections.DisplayType, StaffProfileSections.Location(StaffProfileSections.History, "1")));
     }
 
-    private async Task<List<StaffHistoryRowViewModel>> HistoryAsync(StaffMember staff)
+    internal async Task<List<StaffHistoryRowViewModel>> HistoryAsync(StaffMember staff)
     {
         var history = await _historyService.ListAsync(staff.ItemId, HistoryRows);
         var userIds = history.Select(entry => entry.ChangedByUserId).Where(userId => !string.IsNullOrEmpty(userId)).Distinct(StringComparer.Ordinal).ToArray();

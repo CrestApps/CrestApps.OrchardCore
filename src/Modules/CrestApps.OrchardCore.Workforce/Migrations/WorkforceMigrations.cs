@@ -1,12 +1,10 @@
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell;
-using CrestApps.OrchardCore.Staff;
-using Microsoft.Extensions.DependencyInjection;
-using CrestApps.OrchardCore.Teams.Services;
-using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Workforce.Migrations;
@@ -17,16 +15,13 @@ internal sealed class WorkforceMigrations : DataMigration
     private readonly IStore _store;
     private readonly ISession _session;
     private readonly IShellFeaturesManager _shellFeaturesManager;
-    private readonly ShellSettings _shellSettings;
 
     public WorkforceMigrations(
         ActivityCodeSeeder activityCodeSeeder,
         IStore store,
         ISession session,
-        IShellFeaturesManager shellFeaturesManager,
-        ShellSettings shellSettings)
+        IShellFeaturesManager shellFeaturesManager)
     {
-        _shellSettings = shellSettings;
         _shellFeaturesManager = shellFeaturesManager;
         _activityCodeSeeder = activityCodeSeeder;
         _store = store;
@@ -81,17 +76,10 @@ internal sealed class WorkforceMigrations : DataMigration
         return 3;
     }
 
-    // A team's address moved from Workforce's one line to the team's own structured address. The move runs once the
-    // tenant's scope ends, through the team manager, so it never opens a second connection during activation.
+    // A team's address moved from Workforce's one line to the team's own structured address. The move is not run
+    // here: WorkforceTeamAddressMoveTenantEvents runs it after each start of the tenant until it has finished once,
+    // so a move that failed or was cut short is never lost with the migration already recorded.
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Orchard Core calls migration steps on the migration instance.")]
     public int UpdateFrom3()
-    {
-        if (_shellSettings.IsInitializing())
-        {
-            return 4;
-        }
-
-        ShellScope.AddDeferredTask(scope => WorkforceTeamAddressMove.MoveAsync(scope.ServiceProvider.GetRequiredService<ITeamManager>()));
-
-        return 4;
-    }
+        => 4;
 }

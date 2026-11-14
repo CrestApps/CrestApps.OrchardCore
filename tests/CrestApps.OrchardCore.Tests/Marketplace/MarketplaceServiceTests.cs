@@ -141,6 +141,28 @@ public sealed class MarketplaceServiceTests
     }
 
     [Fact]
+    public async Task TwoPayoutsOfTheSameVendorAndOrderAtOnce_SendOneTransfer()
+    {
+        var service = Create(new MarketplaceSettings { CommissionPercent = 10m, HoldDays = 0, ReleaseOnFulfillment = false });
+
+        await service.RecordSaleAsync(_order, TestContext.Current.CancellationToken);
+        await service.ReleaseDueAsync(10, TestContext.Current.CancellationToken);
+
+        _provider.Delay = TimeSpan.FromMilliseconds(200);
+
+        var results = await Task.WhenAll(
+            Task.Run(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken),
+            Task.Run(() => service.PayOutAsync(_vendor, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken));
+
+        // The second waits for the first, then finds nothing left to pay.
+        Assert.Equal(1, _provider.Calls);
+        Assert.Single(_disbursements.Store.Entries);
+        Assert.Equal(VendorPayoutStatus.Paid, Assert.Single(_payouts).Status);
+        Assert.Equal([0m, 48.6m], results.Select(result => result.Paid).Order());
+        Assert.All(results, result => Assert.Empty(result.Failures));
+    }
+
+    [Fact]
     public async Task APayout_UsesTheProviderNamedInTheSettings()
     {
         var other = new FakePayoutProvider("Other");
@@ -322,9 +344,16 @@ public sealed class MarketplaceServiceTests
 
         public string Failure { get; set; }
 
-        public Task<DisbursementSubmitResult> SubmitAsync(DisbursementBatch batch, IReadOnlyList<Disbursement> disbursements, CancellationToken cancellationToken = default)
+        public TimeSpan Delay { get; set; }
+
+        public async Task<DisbursementSubmitResult> SubmitAsync(DisbursementBatch batch, IReadOnlyList<Disbursement> disbursements, CancellationToken cancellationToken = default)
         {
             var result = new DisbursementSubmitResult { Succeeded = true };
+
+            if (Delay > TimeSpan.Zero)
+            {
+                await Task.Delay(Delay, cancellationToken);
+            }
 
             foreach (var disbursement in disbursements)
             {
@@ -345,7 +374,7 @@ public sealed class MarketplaceServiceTests
                 }
             }
 
-            return Task.FromResult(result);
+            return result;
         }
     }
 }

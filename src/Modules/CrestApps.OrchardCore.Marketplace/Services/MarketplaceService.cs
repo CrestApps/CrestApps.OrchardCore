@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -271,92 +272,118 @@ public sealed class MarketplaceService
             return (0m, [S["Turn on Disbursements: vendor payouts are sent as disbursements."].Value]);
         }
 
-        var paid = 0m;
-        var now = _clock.UtcNow;
-        var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+        // One payout of a vendor at a time, committed before the next one reads the earnings, so two payouts started
+        // together never send the same earnings twice.
+        var (locker, locked) = _serviceProvider.GetService<IDistributedLock>() is { } locks
+            ? await locks.TryAcquireLockAsync($"Marketplace:Payout:{vendor.ItemId}", TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(5))
+            : (null, true);
 
-        foreach (var group in (await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken)).GroupBy(earning => (earning.OrderId, earning.Currency)))
+        if (!locked)
         {
-            var amount = Money.Round(group.Sum(earning => earning.Net), group.Key.Currency);
-
-            // A refund bigger than what's left of the order waits for later sales to make up for it.
-            if (amount <= 0m)
-            {
-                continue;
-            }
-
-            var order = await _orders.FindByIdAsync(group.Key.OrderId, cancellationToken);
-            var payout = new VendorPayout
-            {
-                ItemId = global::OrchardCore.IdGenerator.GenerateId(),
-                VendorId = vendor.ItemId,
-                OrderId = group.Key.OrderId,
-                OrderNumber = order?.OrderNumber ?? group.First().OrderNumber,
-                Amount = amount,
-                Currency = group.Key.Currency,
-                EarningIds = [.. group.Select(earning => earning.ItemId)],
-                Provider = provider.Name,
-                CreatedUtc = now,
-            };
-
-            // Stable for the same vendor, order and earnings, so a retry after a transfer went through but its save
-            // failed is answered with the same transfer instead of paying the vendor twice.
-            payout.IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, group.Key.OrderId, payout.EarningIds, group.Max(earning => earning.RefusedPayouts));
-
-            string transferId;
-            string failure;
-
-            try
-            {
-                (transferId, failure, payout.DisbursementId) = await DisburseAsync(disbursements, provider, vendor, payout, today, cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                MarketplaceTelemetry.RecordPayout(provider.Name, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
-
-                throw;
-            }
-
-            MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
-
-            payout.TransferId = transferId;
-            payout.Failure = failure;
-            payout.Status = failure is null ? VendorPayoutStatus.Paid : VendorPayoutStatus.Failed;
-
-            await _payouts.CreateAsync(payout, cancellationToken);
-
-            if (failure is not null)
-            {
-                // The provider keeps its answer for a key, so the next try of these earnings needs a new key.
-                foreach (var earning in group)
-                {
-                    earning.RefusedPayouts++;
-
-                    await _earnings.UpdateAsync(earning, cancellationToken);
-                }
-
-                failures.Add(failure);
-                _logger.LogWarning("Order '{OrderNumber}' couldn't be paid out to vendor '{VendorId}': {Failure}", payout.OrderNumber, vendor.ItemId, failure);
-
-                continue;
-            }
-
-            // Read again, since the transfer may have committed what was read before it.
-            foreach (var earningId in payout.EarningIds)
-            {
-                if (await _earnings.FindByIdAsync(earningId, cancellationToken) is { } earning)
-                {
-                    earning.Status = VendorEarningStatus.PaidOut;
-                    earning.PayoutId = payout.ItemId;
-
-                    await _earnings.UpdateAsync(earning, cancellationToken);
-                }
-            }
-
-            paid += amount;
+            return (0m, [S["A payout of this vendor is already running. Try again in a moment."].Value]);
         }
 
-        return (paid, failures);
+        try
+        {
+            var paid = 0m;
+            var now = _clock.UtcNow;
+            var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+
+            foreach (var group in (await _earnings.ListAvailableAsync(vendor.ItemId, cancellationToken)).GroupBy(earning => (earning.OrderId, earning.Currency)))
+            {
+                var amount = Money.Round(group.Sum(earning => earning.Net), group.Key.Currency);
+
+                // A refund bigger than what's left of the order waits for later sales to make up for it.
+                if (amount <= 0m)
+                {
+                    continue;
+                }
+
+                var order = await _orders.FindByIdAsync(group.Key.OrderId, cancellationToken);
+                var payout = new VendorPayout
+                {
+                    ItemId = global::OrchardCore.IdGenerator.GenerateId(),
+                    VendorId = vendor.ItemId,
+                    OrderId = group.Key.OrderId,
+                    OrderNumber = order?.OrderNumber ?? group.First().OrderNumber,
+                    Amount = amount,
+                    Currency = group.Key.Currency,
+                    EarningIds = [.. group.Select(earning => earning.ItemId)],
+                    Provider = provider.Name,
+                    CreatedUtc = now,
+                };
+
+                // Stable for the same vendor, order and earnings, so a retry after a transfer went through but its save
+                // failed is answered with the same transfer instead of paying the vendor twice.
+                payout.IdempotencyKey = MarketplaceLedger.GetPayoutKey(vendor.ItemId, group.Key.OrderId, payout.EarningIds, group.Max(earning => earning.RefusedPayouts));
+
+                string transferId;
+                string failure;
+
+                try
+                {
+                    (transferId, failure, payout.DisbursementId) = await DisburseAsync(disbursements, provider, vendor, payout, today, cancellationToken);
+                }
+                catch (Exception exception)
+                {
+                    MarketplaceTelemetry.RecordPayout(provider.Name, CrestAppsOrchardCoreTelemetry.GetOutcome(exception));
+
+                    throw;
+                }
+
+                MarketplaceTelemetry.RecordPayout(provider.Name, failure is null ? MarketplaceTelemetry.OutcomePaid : MarketplaceTelemetry.OutcomeFailed);
+
+                payout.TransferId = transferId;
+                payout.Failure = failure;
+                payout.Status = failure is null ? VendorPayoutStatus.Paid : VendorPayoutStatus.Failed;
+
+                await _payouts.CreateAsync(payout, cancellationToken);
+
+                if (failure is not null)
+                {
+                    // The provider keeps its answer for a key, so the next try of these earnings needs a new key.
+                    foreach (var earning in group)
+                    {
+                        earning.RefusedPayouts++;
+
+                        await _earnings.UpdateAsync(earning, cancellationToken);
+                    }
+
+                    failures.Add(failure);
+                    _logger.LogWarning("Order '{OrderNumber}' couldn't be paid out to vendor '{VendorId}': {Failure}", payout.OrderNumber, vendor.ItemId, failure);
+
+                    continue;
+                }
+
+                // Read again, since the transfer may have committed what was read before it.
+                foreach (var earningId in payout.EarningIds)
+                {
+                    if (await _earnings.FindByIdAsync(earningId, cancellationToken) is { } earning)
+                    {
+                        earning.Status = VendorEarningStatus.PaidOut;
+                        earning.PayoutId = payout.ItemId;
+
+                        await _earnings.UpdateAsync(earning, cancellationToken);
+                    }
+                }
+
+                paid += amount;
+            }
+
+            if (_serviceProvider.GetService<global::YesSql.ISession>() is { } session)
+            {
+                await session.SaveChangesAsync(cancellationToken);
+            }
+
+            return (paid, failures);
+        }
+        finally
+        {
+            if (locker is not null)
+            {
+                await locker.DisposeAsync();
+            }
+        }
     }
 
     /// <summary>
