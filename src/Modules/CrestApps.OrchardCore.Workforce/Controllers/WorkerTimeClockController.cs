@@ -1,6 +1,8 @@
 using System.Globalization;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
+using CrestApps.OrchardCore.Payroll;
+using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Workforce.Models;
@@ -102,7 +104,7 @@ public sealed class WorkerTimeClockController : Controller
             Worker = worker,
             HasPin = !string.IsNullOrEmpty(settings.PinHash),
             LockedUntilUtc = settings.LockedUntilUtc,
-            CanViewRates = await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ViewPayRates),
+            CanViewRates = await _authorizationService.AuthorizeAsync(User, StaffPermissions.ManageStaffPay) || await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ExportPayrollData),
             Policy = await _timeClock.GetPolicyAsync(worker, today, HttpContext.RequestAborted),
             Status = await _timeClock.GetStatusAsync(worker, HttpContext.RequestAborted),
             Points = await _attendance.GetPointsAsync(worker, today, HttpContext.RequestAborted),

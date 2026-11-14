@@ -30,6 +30,7 @@ public static class WorkforceTimeClockServiceCollectionExtensions
         // Pay periods and pay codes are Pay Setup's.
         services.AddPaySetupCore();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, TimeClockPaySetupUsage>());
+        services.AddPayInputSource<TimeClockPayInputSource>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayCode>, ShiftDifferentialPayCodeHandler>());
         services.TryAddScoped<TimeClockPolicyStore>();
         services.TryAddScoped<TimeClockKioskStore>();
@@ -38,7 +39,6 @@ public static class WorkforceTimeClockServiceCollectionExtensions
         services.TryAddScoped<AttendanceExceptionStore>();
         services.TryAddScoped<PunchCorrectionStore>();
         services.TryAddScoped<PayrollExportBatchStore>();
-        services.TryAddScoped<PayrollCsvSettingsStore>();
         services.TryAddScoped<ITimeClockPolicyManager, TimeClockPolicyManager>();
         services.TryAddScoped<ITimeClockKioskManager, TimeClockKioskManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TimeClockPolicy>, TimeClockPolicyCatalogHandler>());
@@ -49,8 +49,6 @@ public static class WorkforceTimeClockServiceCollectionExtensions
         services.TryAddScoped<ITimeClockService, DefaultTimeClockService>();
         services.TryAddScoped<ITimesheetService, DefaultTimesheetService>();
         services.TryAddScoped<IAttendanceService, DefaultAttendanceService>();
-        services.TryAddScoped<IPayrollExportService, DefaultPayrollExportService>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayrollExportProvider, CsvPayrollExportProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAttendancePointsHandler, ManagerPointsNotice>());
         services.TryAddScoped<TimesheetRefresher>();
         services.Replace(ServiceDescriptor.Scoped<IWorkedTimeSource, TimeClockWorkedTimeSource>());

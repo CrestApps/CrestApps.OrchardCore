@@ -16,3 +16,12 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   uses is not deleted.
 - Admin: **Payroll > Setup > Pay Schedules** and **Pay Codes** under `ManagePaySetup`.
 - Recipe and deployment steps `PaySchedules` and `PayCodes`.
+
+## Pay inputs
+
+- `IPayInputSource` (`AddPayInputSource<T>()`): a module hands hours and amounts to payroll and records what a pay run or
+  an export took (`MarkConsumedAsync`, `ReleaseAsync`). `IPayInputService` reads every source. Workforce's locked
+  timesheets are the first source.
+- With Data Pipelines on: the **Payroll** data source with the **Pay inputs** data set (`ExportPayrollData`), the
+  **Mark pay inputs exported** step (marks once the run succeeds), and the recipe **Payroll: export pay inputs to a CSV
+  file**, a draft pipeline to publish.

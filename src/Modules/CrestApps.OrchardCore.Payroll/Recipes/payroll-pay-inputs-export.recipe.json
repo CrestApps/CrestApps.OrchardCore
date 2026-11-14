@@ -1,0 +1,256 @@
+{
+  "name": "PayrollPayInputsExport",
+  "displayName": "Payroll: export pay inputs to a CSV file",
+  "description": "Adds a draft data pipeline that writes the pay inputs not exported yet, such as locked timesheets, as a CSV file for an outside payroll system: one row per person, period, pay code and rate, with the hours and the amount. It marks them exported only when the run succeeds. Publish it under Tools > Data Pipelines, add a delivery step (SFTP, web API or email) and schedule it with a workflow timer.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "pay inputs",
+    "data pipelines"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Payroll.PaySetup",
+        "OrchardCore.DataPipelines"
+      ]
+    },
+    {
+      "name": "DataPipelines",
+      "Pipelines": [
+        {
+          "PipelineId": "payrollpayinputsexport0001",
+          "Name": "Pay inputs export",
+          "Description": "The pay inputs not exported yet, such as locked timesheets, as a CSV file with a row per person, period, pay code and rate. They are marked exported once the run succeeds, so a failed run exports them again.",
+          "IsEnabled": true,
+          "Definition": {
+            "Steps": [
+              {
+                "StepId": "inputs",
+                "Type": "DataSource",
+                "Title": "Pay inputs",
+                "X": 120,
+                "Y": 320,
+                "Properties": {
+                  "DataSourceStepSettings": {
+                    "Source": "Payroll",
+                    "DataSet": "PayInputs",
+                    "Fields": [
+                      "StaffMemberId",
+                      "PayrollId",
+                      "StaffMemberName",
+                      "PeriodStart",
+                      "PeriodEnd",
+                      "PayCodeId",
+                      "PayCode",
+                      "Hours",
+                      "Rate",
+                      "Amount",
+                      "SourceKind",
+                      "SourceId"
+                    ]
+                  }
+                }
+              },
+              {
+                "StepId": "mark",
+                "Type": "MarkPayInputsExported",
+                "Title": "Mark exported",
+                "X": 360,
+                "Y": 320,
+                "Properties": {}
+              },
+              {
+                "StepId": "group",
+                "Type": "Aggregate",
+                "Title": "A row per person, period, code and rate",
+                "X": 600,
+                "Y": 320,
+                "Properties": {
+                  "AggregateStepSettings": {
+                    "GroupBy": [
+                      "StaffMemberId",
+                      "StaffMemberName",
+                      "PeriodStart",
+                      "PayCodeId",
+                      "PayCode",
+                      "PayrollId",
+                      "PeriodEnd",
+                      "Rate"
+                    ],
+                    "Measures": [
+                      {
+                        "Name": "Hours",
+                        "Function": "Sum",
+                        "Field": "Hours"
+                      },
+                      {
+                        "Name": "Amount",
+                        "Function": "Sum",
+                        "Field": "Amount"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "StepId": "round",
+                "Type": "CalculatedFields",
+                "Title": "Round the amounts",
+                "X": 840,
+                "Y": 320,
+                "Properties": {
+                  "CalculatedFieldsStepSettings": {
+                    "Fields": [
+                      {
+                        "Name": "Hours",
+                        "Formula": "ROUND([Hours], 2)"
+                      },
+                      {
+                        "Name": "Amount",
+                        "Formula": "ROUND([Amount], 2)"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "StepId": "sort",
+                "Type": "Sort",
+                "Title": "By person, period and code",
+                "X": 1080,
+                "Y": 320,
+                "Properties": {
+                  "SortStepSettings": {
+                    "Keys": [
+                      {
+                        "Field": "StaffMemberName",
+                        "Descending": false
+                      },
+                      {
+                        "Field": "StaffMemberId",
+                        "Descending": false
+                      },
+                      {
+                        "Field": "PeriodStart",
+                        "Descending": false
+                      },
+                      {
+                        "Field": "PayCode",
+                        "Descending": false
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "StepId": "columns",
+                "Type": "SelectFields",
+                "Title": "Columns",
+                "X": 1320,
+                "Y": 320,
+                "Properties": {
+                  "SelectFieldsStepSettings": {
+                    "Fields": [
+                      {
+                        "Field": "PayrollId",
+                        "Name": "EmployeeId"
+                      },
+                      {
+                        "Field": "StaffMemberName",
+                        "Name": "Name"
+                      },
+                      {
+                        "Field": "PeriodStart",
+                        "Name": "PeriodStart"
+                      },
+                      {
+                        "Field": "PeriodEnd",
+                        "Name": "PeriodEnd"
+                      },
+                      {
+                        "Field": "PayCode",
+                        "Name": "PayCode"
+                      },
+                      {
+                        "Field": "Hours",
+                        "Name": "Hours"
+                      },
+                      {
+                        "Field": "Rate",
+                        "Name": "Rate"
+                      },
+                      {
+                        "Field": "Amount",
+                        "Name": "Amount"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "StepId": "file",
+                "Type": "CreateFile",
+                "Title": "Payroll CSV",
+                "X": 1560,
+                "Y": 320,
+                "Properties": {
+                  "CreateFileStepSettings": {
+                    "Format": "csv",
+                    "FileName": "payroll-{Date:yyyyMMdd-HHmmss}",
+                    "UseDisplayNames": false
+                  }
+                }
+              }
+            ],
+            "Connections": [
+              {
+                "SourceStepId": "inputs",
+                "SourcePort": "Output",
+                "TargetStepId": "mark",
+                "TargetPort": "Input"
+              },
+              {
+                "SourceStepId": "mark",
+                "SourcePort": "Output",
+                "TargetStepId": "group",
+                "TargetPort": "Input"
+              },
+              {
+                "SourceStepId": "group",
+                "SourcePort": "Output",
+                "TargetStepId": "round",
+                "TargetPort": "Input"
+              },
+              {
+                "SourceStepId": "round",
+                "SourcePort": "Output",
+                "TargetStepId": "sort",
+                "TargetPort": "Input"
+              },
+              {
+                "SourceStepId": "sort",
+                "SourcePort": "Output",
+                "TargetStepId": "columns",
+                "TargetPort": "Input"
+              },
+              {
+                "SourceStepId": "columns",
+                "SourcePort": "Output",
+                "TargetStepId": "file",
+                "TargetPort": "Input"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
 using CrestApps.OrchardCore.Workforce.PersonalData;
 using CrestApps.OrchardCore.Workforce.Portal;
+using CrestApps.OrchardCore.Workforce.Recipes;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -56,6 +57,7 @@ public sealed class TimeClockStartup : StartupBase
         services.AddDisplayDriver<PayrollExportBatch, PayrollExportBatchRowDisplayDriver>();
         services.AddDisplayDriver<StaffMember, WorkerTimeClockRowDisplayDriver>();
         services.AddDisplayDriver<PayCode, WorkforcePayCodeDisplayDriver>();
+        services.AddScoped<PayrollCsvPipelineImporter>();
         services.AddSingleton<IBackgroundTask, TimesheetRefreshBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TimeClockTrackerBackfillBackgroundTask>();
         services.AddPermissionProvider<TimeClockPermissionsProvider>();

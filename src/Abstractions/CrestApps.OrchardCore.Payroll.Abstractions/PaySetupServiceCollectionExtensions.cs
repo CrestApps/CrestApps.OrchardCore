@@ -41,4 +41,20 @@ public static class PaySetupServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Adds a source of pay inputs, read by pay runs and by the Pay Inputs data set.
+    /// </summary>
+    /// <typeparam name="TSource">The source.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddPayInputSource<TSource>(this IServiceCollection services)
+        where TSource : class, IPayInputSource
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayInputSource, TSource>());
+
+        return services;
+    }
 }

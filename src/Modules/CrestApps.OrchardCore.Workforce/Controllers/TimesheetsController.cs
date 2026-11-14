@@ -284,7 +284,7 @@ public sealed class TimesheetsController : Controller
     [Admin("workforce/timesheets/lock", "WorkforceTimesheetsLock")]
     public async Task<IActionResult> Lock(string calendarId, DateOnly periodStart)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ExportPayroll))
+        if (!await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.LockTimesheets))
         {
             return Forbid();
         }

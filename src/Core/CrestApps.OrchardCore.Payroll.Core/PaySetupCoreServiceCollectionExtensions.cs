@@ -35,6 +35,7 @@ public static class PaySetupCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PaySchedule>, PayScheduleHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayCode>, PayCodeHandler>());
         services.TryAddScoped<PayCodeSeeder>();
+        services.TryAddScoped<IPayInputService, DefaultPayInputService>();
 
         return services;
     }

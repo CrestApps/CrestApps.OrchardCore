@@ -61,6 +61,16 @@ public sealed class MyPaySetupUsage : IPaySetupUsage
 
 The admin pages list what uses the record, and the stores refuse the delete too. The time clock reports the policies and timesheets that name a schedule, and the time off types and timesheet lines that name a code.
 
+## Pay inputs
+
+Modules hand hours and amounts to payroll through `IPayInputSource` (`AddPayInputSource<T>()`): `GetInputsAsync(PayInputQuery)` returns `PayInput` rows (staff member, pay schedule and period, pay code, day, hours or amount, rate, cost allocation, the record it comes from, and whether a pay run or an export already took it); `MarkConsumedAsync` and `ReleaseAsync` record that a consumer (a pay run, or a data pipeline run) took the inputs of some records, or gave them back. `IPayInputService` reads every source and tells each source about its own records. Workforce's time clock is the first source: one input per locked timesheet, pay code, day, activity and job.
+
+With Data Pipelines on, Pay Setup adds Orchard's **Payroll** data source with the **Pay inputs** data set (`PayInputs`), read only by people with `ExportPayrollData`. It holds the inputs not taken yet; the parameter `IncludeExported=true` adds the others; filters on `PayScheduleId` and `PeriodStart` narrow the read. `Amount` is not rounded (its own amount, or hours times the code's premium, or times the rate and the multiplier; unpaid time pays nothing): sum, then round.
+
+The **Mark pay inputs exported** step (`MarkPayInputsExported`) passes the rows on unchanged and, once the whole run succeeds, records the records they come from (`SourceKind`, `SourceId`) as taken by the run (`pipeline:{runId}`). A preview, a failed or a cancelled run marks nothing. The publisher of the pipeline must have `ExportPayrollData`.
+
+The recipe **Payroll: export pay inputs to a CSV file** (`PayrollPayInputsExport`) adds the draft pipeline **Pay inputs export**: read the pay inputs, mark them, group by person, period, pay code and rate summing the hours and amounts, round, sort, choose the columns (EmployeeId, Name, PeriodStart, PeriodEnd, PayCode, Hours, Rate, Amount) and write a CSV file. Add a delivery step and publish it.
+
 ## Admin
 
 **Payroll > Setup > Pay Schedules** and **Pay Codes**, under `ManagePaySetup`. The schedule editor shows the next four periods and their pay dates, counted from today in the site's time zone.

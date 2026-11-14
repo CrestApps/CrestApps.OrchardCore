@@ -130,7 +130,6 @@ internal sealed class WorkforceSettingsDeploymentSource : DeploymentSourceBase<W
 
                     return (JsonNode)node;
                 })]),
-                ["PayrollCsv"] = Serialize(await _services.GetRequiredService<IPayrollExportService>().GetCsvSettingsAsync()),
             });
         }
 

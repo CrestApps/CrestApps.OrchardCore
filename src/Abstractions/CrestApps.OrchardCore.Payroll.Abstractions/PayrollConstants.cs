@@ -21,6 +21,26 @@ public static class PayrollConstants
     public const string PayCodesRecipeStepName = "PayCodes";
 
     /// <summary>
+    /// The technical name of Payroll's data source of Orchard Core.
+    /// </summary>
+    public const string DataSourceName = "Payroll";
+
+    /// <summary>
+    /// The data set of pay inputs: the hours and amounts other modules hand to payroll.
+    /// </summary>
+    public const string PayInputsDataSetName = "PayInputs";
+
+    /// <summary>
+    /// The Data Pipelines step that records the pay inputs a run read as exported, once the run succeeds.
+    /// </summary>
+    public const string MarkPayInputsExportedStepName = "MarkPayInputsExported";
+
+    /// <summary>
+    /// The prefix of the consumer id a data pipeline run records on the inputs it exported.
+    /// </summary>
+    public const string PipelineConsumerPrefix = "pipeline:";
+
+    /// <summary>
     /// The feature ids of the Payroll module.
     /// </summary>
     public static class Features

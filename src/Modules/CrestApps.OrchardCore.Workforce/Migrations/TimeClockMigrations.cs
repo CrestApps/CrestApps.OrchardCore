@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Core.Services;
+using CrestApps.OrchardCore.Workforce.Recipes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
@@ -20,6 +21,13 @@ internal sealed class TimeClockMigrations : DataMigration
     private static readonly Dictionary<string, string[]> _paySetupGrants = new(StringComparer.Ordinal)
     {
         [WorkforcePermissions.ManageTimeClockPolicies.Name] = [PayrollPermissions.ManagePaySetup.Name],
+    };
+
+    // The export moved to Payroll's data and a data pipeline, and locking timesheets got its own permission.
+    private static readonly Dictionary<string, string[]> _exportGrants = new(StringComparer.Ordinal)
+    {
+        ["ExportPayroll"] = [PayrollPermissions.ExportPayrollData.Name, WorkforcePermissions.LockTimesheets.Name],
+        ["ViewPayRates"] = [PayrollPermissions.ExportPayrollData.Name],
     };
 
     private readonly TimeClockStageSeeder _stageSeeder;
@@ -48,7 +56,7 @@ internal sealed class TimeClockMigrations : DataMigration
         await TimeClockIndexSchema.CreateAsync(SchemaBuilder);
         await _stageSeeder.SeedAsync();
 
-        return 3;
+        return 4;
     }
 
     // The time clock now keeps people's time in Time Tracker; the backfill task brings earlier punches in.
@@ -78,5 +86,25 @@ internal sealed class TimeClockMigrations : DataMigration
         }
 
         return 3;
+    }
+
+    // The payroll export is a data pipeline over the Pay Inputs data set now: roles keep what they could do, and the
+    // columns a site chose become a draft pipeline to publish.
+    public int UpdateFrom3()
+    {
+        if (!_shellSettings.IsInitializing())
+        {
+            ShellScope.AddDeferredTask(async scope =>
+            {
+                await RolePermissionMigrations.GrantAsync(
+                    scope.ServiceProvider,
+                    _exportGrants,
+                    scope.ServiceProvider.GetRequiredService<ILogger<TimeClockMigrations>>());
+
+                await scope.ServiceProvider.GetRequiredService<PayrollCsvPipelineImporter>().ImportSavedColumnsAsync();
+            });
+        }
+
+        return 4;
     }
 }

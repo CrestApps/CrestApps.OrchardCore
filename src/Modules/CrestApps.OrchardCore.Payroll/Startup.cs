@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Payroll.Core;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
+using CrestApps.OrchardCore.Payroll.DataPipelines;
+using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Deployments;
 using CrestApps.OrchardCore.Payroll.Drivers;
 using CrestApps.OrchardCore.Payroll.Migrations;
@@ -11,6 +13,8 @@ using CrestApps.OrchardCore.Recipes.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataPipelines.Steps;
+using OrchardCore.DataSources;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -86,5 +90,35 @@ public sealed class PaySetupRecipesSchemaStartup : StartupBase
         services.AddScoped<IRecipeStep, PayCodesRecipeStepSchema>();
         services.AddDeploymentStepSchema<PaySchedulesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<PayCodesDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Adds Payroll's data source with the Pay Inputs data set, so a data pipeline exports pay inputs.
+/// </summary>
+[Feature(PayrollConstants.Features.PaySetup)]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
+public sealed class PaySetupDataSourcesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataSource<PayrollDataSource>();
+        services.AddScoped<IPayrollDataSet, PayInputsDataSet>();
+    }
+}
+
+/// <summary>
+/// Adds the Mark pay inputs exported step to Data Pipelines.
+/// </summary>
+[Feature(PayrollConstants.Features.PaySetup)]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelines)]
+public sealed class PaySetupDataPipelinesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<MarkPayInputsExportedStep>();
+        services.Configure<DataPipelineStepTypeOptions>(options => options.Add(DataPipelineStepTypeDescriptor.Create<MarkPayInputsExportedStep>()));
     }
 }

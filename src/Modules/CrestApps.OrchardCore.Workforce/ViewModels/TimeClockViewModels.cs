@@ -243,40 +243,12 @@ public sealed class AttendanceRowViewModel
 }
 
 /// <summary>
-/// The payroll export screen.
+/// The files the earlier payroll export wrote.
 /// </summary>
 public sealed class PayrollExportViewModel
 {
-    public string CalendarId { get; set; }
-
-    public DateOnly? PeriodStart { get; set; }
-
-    public string Provider { get; set; }
-
-    public bool IncludeExported { get; set; }
-
-    [BindNever]
-    public IList<SelectListItem> CalendarOptions { get; set; } = [];
-
-    [BindNever]
-    public IList<SelectListItem> PeriodOptions { get; set; } = [];
-
-    [BindNever]
-    public IList<SelectListItem> ProviderOptions { get; set; } = [];
-
-    [BindNever]
-    public IDictionary<TimesheetStatus, int> Counts { get; set; } = new Dictionary<TimesheetStatus, int>();
-
     [BindNever]
     public AdminListContext List { get; set; }
-}
-
-/// <summary>
-/// The payroll CSV column editor.
-/// </summary>
-public sealed class PayrollColumnsViewModel
-{
-    public IList<PayrollCsvColumn> Columns { get; set; } = [];
 }
 
 /// <summary>

@@ -10,8 +10,8 @@ The time clock records when workers start and stop work, turns their punches int
 
 | | |
 | --- | --- |
-| **Menu** | Workforce > Time Management > Timesheets, Attendance, Payroll Export, Time Clock Policies, Time Clock Kiosks; Payroll > Setup > Pay Schedules, Pay Codes |
-| **Permission** | Manage time clock policies, Approve timesheets, Edit punches, Export payroll, View pay rates, Clock in and out |
+| **Menu** | Workforce > Time Management > Timesheets, Attendance, Past Payroll Exports, Time Clock Policies, Time Clock Kiosks; Tools > Data Pipelines; Payroll > Setup > Pay Schedules, Pay Codes |
+| **Permission** | Manage time clock policies, Approve timesheets, Edit punches, Lock timesheets for payroll, Export payroll data, Clock in and out |
 | **Feature** | Workforce Time Clock (it needs Workforce and Time Tracker) |
 
 <AskYourAdmin />
@@ -116,9 +116,17 @@ Several timesheets can be approved at once from the list. **Make this period's t
 
 ## Payroll export
 
-Under **Workforce > Time Management > Payroll Export**, choose the pay period. The counts show how many timesheets are open, submitted, approved and locked. **Export locked timesheets** writes a CSV file with a row per worker and pay code, which you download from the list of exports. Each timesheet is exported once; tick **Export again the ones already exported** to include them again.
+Locked timesheets go to payroll as **pay inputs**. To send them to an outside payroll system, use a data pipeline:
 
-**Choose the CSV columns** sets the file's columns and headings: payroll id, employee number, name, pay code, day, hours, rate, amount, period, activity and job. A day, activity or job column gives a row per day, activity or job. Rates come from the staff member's **Pay** card (Staff Compensation): a rate an hour from a day on, for all work or one activity. People with the View pay rates permission see them, read only, under **Workers > Actions > Time clock**; people who manage staff pay change them in the **Pay** card. The amount is the hours times the rate and the code's multiplier, or the hours times a differential's premium.
+1. Under **Configuration > Recipes**, run **Payroll: export pay inputs to a CSV file**. It adds the draft pipeline **Pay inputs export**: one row per person, period, pay code and rate, with the hours and the amount (the hours times the rate and the code's multiplier, or times a differential's premium).
+2. Under **Tools > Data Pipelines**, open it. Add how the file is delivered, such as **Upload to an SFTP server** or **Send by email**, after **Payroll CSV**, then **Publish**.
+3. Choose **Run**, or schedule it with a workflow timer. The **Export to payroll** link on **Timesheets** opens Data Pipelines.
+
+Each timesheet is exported once: the pipeline marks the timesheets it read as exported only when the whole run succeeds, so a failed delivery exports them again next time. To export again what was already exported, add the parameter `IncludeExported=true` to its **Pay inputs** step. Change the columns, their headings or their order in the **Columns** step.
+
+Rates come from the staff member's **Pay** card (Staff Compensation). People who manage staff pay or may export payroll data see them, read only, under **Workers > Actions > Time clock**.
+
+If your site had chosen CSV columns for the earlier export, the update turned them into the draft pipeline **Payroll CSV export**, to publish the same way. The files the earlier export wrote stay under **Workforce > Time Management > Past Payroll Exports**.
 
 ## Pay codes
 

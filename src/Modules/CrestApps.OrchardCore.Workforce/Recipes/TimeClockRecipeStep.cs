@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -16,7 +17,7 @@ namespace CrestApps.OrchardCore.Workforce.Recipes;
 /// <summary>
 /// The WorkforceTimeClock recipe step: pay periods, pay codes (matched by code) and time clock policies, with their
 /// pay periods by name and the teams that use them; time clock kiosks, with their team by name; and the columns of the
-/// payroll CSV file.
+/// payroll CSV file, which becomes a draft data pipeline over the Pay Inputs data set.
 /// </summary>
 /// <remarks>
 /// A kiosk's sign-in token is never carried: an imported kiosk keeps the token it has, and a new kiosk gets one when an
@@ -31,7 +32,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
     private readonly ITimeClockPolicyManager _policyManager;
     private readonly ITeamManager _teamManager;
     private readonly ITimeClockKioskManager _kioskManager;
-    private readonly IPayrollExportService _payrollExportService;
+    private readonly IServiceProvider _services;
 
     public TimeClockRecipeStep(
         IPayScheduleManager calendarManager,
@@ -39,7 +40,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
         ITimeClockPolicyManager policyManager,
         ITeamManager teamManager,
         ITimeClockKioskManager kioskManager,
-        IPayrollExportService payrollExportService)
+        IServiceProvider services)
         : base(TimeClockStepName)
     {
         _calendarManager = calendarManager;
@@ -47,7 +48,7 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
         _policyManager = policyManager;
         _teamManager = teamManager;
         _kioskManager = kioskManager;
-        _payrollExportService = payrollExportService;
+        _services = services;
     }
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
@@ -205,11 +206,8 @@ internal sealed class TimeClockRecipeStep : NamedRecipeStepHandler
             return;
         }
 
-        var settings = await _payrollExportService.GetCsvSettingsAsync();
-
-        settings.Columns = incoming.Columns.Where(column => !string.IsNullOrWhiteSpace(column.Header)).ToList();
-
-        await _payrollExportService.SaveCsvSettingsAsync(settings);
+        // The export is a data pipeline now: the columns become its draft, to publish under Tools > Data Pipelines.
+        await ActivatorUtilities.GetServiceOrCreateInstance<PayrollCsvPipelineImporter>(_services).ImportAsync(incoming.Columns.Where(column => !string.IsNullOrWhiteSpace(column.Header)), context.Errors);
     }
 
     private static void ReadWindow(JsonObject node, PayCode code)

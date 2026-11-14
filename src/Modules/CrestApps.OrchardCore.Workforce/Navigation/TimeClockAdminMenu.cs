@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
@@ -31,10 +32,10 @@ internal sealed class TimeClockAdminMenu : AdminNavigationProvider
                     .Action("Index", "Attendance", WorkforceConstants.Features.Workforce)
                     .Permission(WorkforcePermissions.ApproveTimesheets)
                     .LocalNav())
-                .Add(S["Payroll Export"], S["Payroll Export"].PrefixPosition("12"), export => export
+                .Add(S["Past Payroll Exports"], S["Past Payroll Exports"].PrefixPosition("12"), export => export
                     .Id("workforcePayrollExport")
                     .Action("Index", "PayrollExport", WorkforceConstants.Features.Workforce)
-                    .Permission(WorkforcePermissions.ExportPayroll)
+                    .Permission(PayrollPermissions.ExportPayrollData)
                     .LocalNav())
                 .Add(S["Time Clock Policies"], S["Time Clock Policies"].PrefixPosition("50"), policies => policies
                     .Id("workforceTimeClockPolicies")
