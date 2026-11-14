@@ -115,7 +115,19 @@ public static class SubscriptionConstants
         /// that job created, so it can never suspend another customer's site that happens to have the same name.
         /// </summary>
         public const string ProvisioningJobId = "ProvisioningJobId";
+
+        /// <summary>
+        /// The Orchard Core tenant id of the site a tenant entitlement names. A site removed and then sold again under the
+        /// same name is a new tenant with a new id, so the old subscription can't reach it.
+        /// </summary>
+        public const string TenantId = "TenantId";
     }
+
+    /// <summary>
+    /// The shell setting the Sites feature sets on a sold tenant it disabled because its subscription stopped being
+    /// current, so a payment brings back only a site billing took down, never one an operator disabled.
+    /// </summary>
+    public const string SuspendedBySubscriptionSetting = "SuspendedBySubscription";
 
     /// <summary>
     /// The content type name for the subscription summary dashboard widget.

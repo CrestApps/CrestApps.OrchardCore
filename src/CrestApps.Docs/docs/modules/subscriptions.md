@@ -314,6 +314,10 @@ The recipe is the plan's: the setup recipe recorded on the checkout when the pla
 
 A site sold this way carries a `Tenant` entitlement naming it, so the site runs for as long as the subscription is current and is **disabled** when it is not. Disabled, never deleted: a disabled tenant stops serving immediately but keeps every byte of the customer's data, so somebody who pays a late invoice gets their site back exactly as it was.
 
+- Only a site the subscription itself disabled comes back with it (it is marked `SuspendedBySubscription` in the tenant's settings). A site an operator disabled under **Tenants** stays disabled whatever the subscriber does.
+- The entitlement names the job that created the site and the site's tenant id, so after a site is removed and its name sold again, the old subscription can't reach the new site.
+- A subscription canceled at period end is expired by the lifecycle sweep once the paid period ends, which disables the site. Canceling a suspended (paused) subscription ends access at once.
+
 ## Installment plans
 
 **Subscriptions - Installment Plans** lets an administrator sell something on a payment plan from one admin screen, without the customer going through the storefront:

@@ -501,14 +501,22 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             return;
         }
 
+        var data = new Dictionary<string, string>
+        {
+            [SubscriptionConstants.EntitlementData.ProvisioningJobId] = job.ItemId,
+        };
+
+        // The tenant's own id, so the entitlement can never reach a later site sold under the same name.
+        if (_shellHost.TryGetSettings(job.TenantName, out var created) && !string.IsNullOrEmpty(created.TenantId))
+        {
+            data[SubscriptionConstants.EntitlementData.TenantId] = created.TenantId;
+        }
+
         subscription.Entitlements.Add(new SubscriptionEntitlement
         {
             Kind = SubscriptionConstants.EntitlementKinds.Tenant,
             Value = job.TenantName,
-            Data = new Dictionary<string, string>
-            {
-                [SubscriptionConstants.EntitlementData.ProvisioningJobId] = job.ItemId,
-            },
+            Data = data,
         });
 
         await _subscriptionManager.UpdateAsync(subscription, cancellationToken: cancellationToken);

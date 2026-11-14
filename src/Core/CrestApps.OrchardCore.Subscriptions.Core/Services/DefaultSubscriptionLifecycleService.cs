@@ -155,6 +155,13 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
             var now = _clock.UtcNow;
 
+            // A suspended agreement has no access left to run to. Canceling it "at period end" made it current again
+            // until then, which gave the subscriber back, by pressing Cancel, everything an operator had suspended.
+            if (subscription.Status == SubscriptionStatus.Paused)
+            {
+                atPeriodEnd = false;
+            }
+
             subscription.Status = SubscriptionStatus.Canceled;
             subscription.CancelAtPeriodEnd = atPeriodEnd;
             subscription.CanceledUtc = now;
