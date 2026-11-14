@@ -1,0 +1,39 @@
+@model PayrollSettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Separation of duties"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowPreparerToApprove" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowPreparerToApprove" class="form-check-label">@T["The person who prepared a pay run may approve it"]</label>
+                    <span class="hint dashed">@T["Off by default. Turn it on only for a business where one person runs payroll."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowChangingOwnPay" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowChangingOwnPay" class="form-check-label">@T["People may change their own pay in the admin pages"]</label>
+                    <span class="hint dashed">@T["Off by default: nobody changes their own pay rate, pay items, inputs or garnishments."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["A new employer"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="DefaultCountryPack" class="ocat-label">@T["Country pack"]</label>
+            <div class="ocat-end"><input asp-for="DefaultCountryPack" class="form-control text-uppercase" style="max-width: 8rem" placeholder="US" /></div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="DefaultCurrency" class="ocat-label">@T["Currency"]</label>
+            <div class="ocat-end"><input asp-for="DefaultCurrency" class="form-control text-uppercase" style="max-width: 8rem" maxlength="3" placeholder="USD" /></div>
+        </div>
+    </div>
+</div>

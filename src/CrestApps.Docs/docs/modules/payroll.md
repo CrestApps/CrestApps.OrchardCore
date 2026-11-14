@@ -4,6 +4,7 @@ title: Payroll
 description: "Payroll for Orchard Core. Pay Setup owns pay schedules (periods, the overtime week and pay dates) and pay codes (class, open kind, multiplier, premium, export code), shared by Workforce's time clock, with usage checks, recipe and deployment steps, and the migration that moved the time clock's pay periods and pay codes."
 user_manual:
   - user-manual/finance/pay-setup
+  - user-manual/finance/payroll-employers
 ---
 
 The **Payroll** module (`CrestApps.OrchardCore.Payroll`) runs payroll. Its first feature, **Pay Setup**, owns the two records both payroll and time keeping need: pay schedules and pay codes. Workforce's time clock depends on Pay Setup, and Payroll never references Workforce.
@@ -11,6 +12,7 @@ The **Payroll** module (`CrestApps.OrchardCore.Payroll`) runs payroll. Its first
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Payroll.PaySetup` | Pay Setup | none (turned on by Workforce Time Clock or Payroll) |
+| `CrestApps.OrchardCore.Payroll` | Payroll | Pay Setup, Staff, Staff Compensation, Approvals (uses Teams, Banking, Recipes, Deployment and CrestApps Recipes when they are on) |
 
 Projects: `CrestApps.OrchardCore.Payroll.Abstractions` (models, managers, `IPaySetupUsage`, `AddPayCodeKind`), `CrestApps.OrchardCore.Payroll.Core` (stores, managers, handlers, index providers and schema, the pay code seeder), `CrestApps.OrchardCore.Payroll` (the module).
 
@@ -95,6 +97,41 @@ The `PaySchedules` step (`Schedules`, matched by id then name) and the `PayCodes
 ```
 
 Workforce's `WorkforceTimeClock` step still reads its `PayPeriods` and `PayCodes` keys and saves them through these managers, so older recipes keep working. Its deployment step keeps exporting the pay schedules its policies name, and leaves pay codes to the `PayCodes` step.
+
+## Employers
+
+An `Employer` (catalog entry, `IEmployerManager`, name unique) is the legal entity that pays people: `Name`, `LegalName` (`PrintedName` falls back to the name), its own `TaxId`, `Address` (the shared address editor), `LogoPath` (media library), `CountryPack`, `Currency`, `FundingBankAccountId` (with Banking on, one of the bank accounts the employer owns: `PartyRef("Employer", id)`), signatory and contact, `Registrations` (`EmployerTaxRegistration`: jurisdiction, agency, account id, deposit frequency and dated `Rates`, `RateOn(day)`) and `Status`. Employers are a party kind (`EmployerPartySource`). A module that points at an employer registers an `IEmployerUsage`; an employer in use can't be deleted (the page and the store both refuse).
+
+The `PayrollEmployers` recipe step (`Employers`, matched by id then name) and the **Employers** deployment step carry them; Payroll's settings use Orchard's `Settings` step (`PayrollSettings`) and a site settings deployment step.
+
+## Permissions per employer
+
+`PayrollPermissions` holds the Payroll feature's permissions. Every one in `PayrollPermissions.PerEmployer` also exists per employer through `PayrollPermissionTemplates.For(permission, employerId)` (named `{Permission}_{employerId}`, implied by the global permission; a per-employer "view" is also implied by the same employer's "do" permissions). `PayrollPermissionProvider` lists each employer's copies, so the role editor shows a **Payroll: {employer}** group per employer.
+
+`IPayrollScopeService.GetScopeAsync(user, permission)` returns a `PayrollScope`: every employer with the global permission, otherwise the employers of the per-employer permissions the user holds. `AuthorizeAsync(user, permission, employerId)` checks one employer. Pages, data sets, reports and exports all use it. `IPayrollEmployeeDirectory` maps employers to the staff members they pay (pay profiles answer it; until then it knows none, so data limited to some employers is empty, never too wide).
+
+The Pay inputs data set and the Mark pay inputs exported step honor the scope: a reader of some employers reads their people's inputs only.
+
+| Permission | Allows |
+| --- | --- |
+| `ManagePayrollSettings` | Employers, registrations, ledger codes, tax setup and settings. Adding or deleting an employer needs it for every employer |
+| `ViewPayProfiles` / `ManagePayProfiles` | See or change pay profiles, pay items and elections |
+| `ViewTaxIds` | See a full tax id (every view is recorded) |
+| `ManageGarnishments` | Garnishment orders |
+| `PreparePayRuns`, `ApprovePayRuns`, `ProcessPayRuns`, `VoidPayStatements` | Each step of a pay run |
+| `ViewPayRuns` | See runs and their statements |
+| `ViewPayrollReports` / `ExportPayrollData` | Reports and data sets; exports |
+| `ManagePayrollFilings` | Liabilities, deposits, filings, year-end |
+| `ViewPayOfManagedStaff` | A manager sees the pay of the staff they manage (off by default, not per employer) |
+| `ViewOwnPay`, `ManageOwnPayDetails` | One's own pay and details (the Staff role gets them) |
+
+The recipe **Payroll: sample roles** adds Payroll administrator, Payroll clerk (no approval) and Payroll approver.
+
+## Teams and settings
+
+With Teams on, people with `ManagePayrollSettings` get a **Payroll** card on the team editor: `PayrollTeamSettings` with the team's `LedgerCode` and a work site's `Jurisdictions`.
+
+`PayrollSettings` (**Settings > Payroll**): `AllowPreparerToApprove` and `AllowChangingOwnPay` (both off: separation of duties), and the default country pack and currency of a new employer.
 
 ## Upgrading from the time clock's pay periods and pay codes
 

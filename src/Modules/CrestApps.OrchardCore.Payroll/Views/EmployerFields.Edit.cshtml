@@ -1,0 +1,119 @@
+@model EmployerViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["The employer"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="Name">
+            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="Name" class="form-control" maxlength="255" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="LegalName" class="ocat-label">@T["Legal name"]</label>
+            <div class="ocat-end">
+                <input asp-for="LegalName" class="form-control" />
+                <span class="hint">@T["Printed on statements, checks and forms. Empty for the name."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="TaxId" class="ocat-label">@T["Employer tax id"]</label>
+            <div class="ocat-end">
+                <input asp-for="TaxId" class="form-control" style="max-width: 16rem" autocomplete="off" />
+                <span class="hint">@T["The employer's own tax id, such as its employer identification number."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="CountryPack" class="ocat-label">@T["Country pack"]</label>
+            <div class="ocat-end">
+                <input asp-for="CountryPack" class="form-control text-uppercase" style="max-width: 8rem" placeholder="US" />
+                <span class="hint">@T["Where the employer's taxes and forms come from, such as US."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="Currency">
+            <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+            <div class="ocat-end">
+                <input asp-for="Currency" class="form-control text-uppercase" style="max-width: 8rem" maxlength="3" placeholder="USD" />
+                <span asp-validation-for="Currency" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="LogoPath" class="ocat-label">@T["Logo"]</label>
+            <div class="ocat-end">
+                <input asp-for="LogoPath" class="form-control" placeholder="payroll/logo.png" />
+                <span class="hint">@T["A path in the media library, printed on statements and checks."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Active" type="checkbox" class="form-check-input" />
+                    <label asp-for="Active" class="form-check-label">@T["Runs payroll"]</label>
+                    <span class="hint dashed">@T["Clear it for an employer that no longer pays anyone; its history stays."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Signatory and contact"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="SignatoryName" class="ocat-label">@T["Signatory"]</label>
+            <div class="ocat-end">
+                <div class="d-flex flex-wrap gap-2">
+                    <input asp-for="SignatoryName" class="form-control" style="max-width: 18rem" placeholder="@T["Name"]" />
+                    <input asp-for="SignatoryTitle" class="form-control" style="max-width: 14rem" placeholder="@T["Title"]" aria-label="@T["Title"]" />
+                </div>
+                <span class="hint">@T["Printed as the signatory of checks."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ContactName" class="ocat-label">@T["Payroll contact"]</label>
+            <div class="ocat-end">
+                <div class="d-flex flex-wrap gap-2">
+                    <input asp-for="ContactName" class="form-control" style="max-width: 16rem" placeholder="@T["Name"]" />
+                    <input asp-for="ContactEmail" type="email" class="form-control" style="max-width: 16rem" placeholder="@T["Email"]" aria-label="@T["Email"]" />
+                    <input asp-for="ContactPhone" type="tel" class="form-control" style="max-width: 12rem" placeholder="@T["Phone"]" aria-label="@T["Phone"]" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Tax registrations"]</div>
+    <div class="card-body">
+        <p class="hint">@T["The employer's accounts with tax agencies. For an agency rate that changes, add a row with the same jurisdiction, agency and account and the day the new rate starts. Leave a row empty to drop it."]</p>
+        <span asp-validation-for="Registrations" class="text-danger"></span>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Jurisdiction"]</th>
+                        <th scope="col">@T["Agency"]</th>
+                        <th scope="col">@T["Account id"]</th>
+                        <th scope="col">@T["Deposits"]</th>
+                        <th scope="col">@T["Rate %"]</th>
+                        <th scope="col">@T["From"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Registrations.Count; i++)
+                    {
+                        <tr>
+                            <td><input asp-for="Registrations[i].Jurisdiction" class="form-control form-control-sm text-uppercase" placeholder="US-CA" aria-label="@T["Jurisdiction"]" /></td>
+                            <td><input asp-for="Registrations[i].Agency" class="form-control form-control-sm" aria-label="@T["Agency"]" /></td>
+                            <td><input asp-for="Registrations[i].AccountId" class="form-control form-control-sm" autocomplete="off" aria-label="@T["Account id"]" /></td>
+                            <td><input asp-for="Registrations[i].DepositFrequency" class="form-control form-control-sm" placeholder="@T["Monthly"]" aria-label="@T["Deposits"]" /></td>
+                            <td><input asp-for="Registrations[i].Rate" class="form-control form-control-sm" inputmode="decimal" style="max-width: 6rem" placeholder="2.7" aria-label="@T["Rate %"]" /></td>
+                            <td><input asp-for="Registrations[i].RateFrom" type="date" class="form-control form-control-sm" aria-label="@T["From"]" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

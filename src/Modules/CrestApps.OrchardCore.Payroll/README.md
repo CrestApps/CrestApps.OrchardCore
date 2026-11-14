@@ -25,3 +25,13 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - With Data Pipelines on: the **Payroll** data source with the **Pay inputs** data set (`ExportPayrollData`), the
   **Mark pay inputs exported** step (marks once the run succeeds), and the recipe **Payroll: export pay inputs to a CSV
   file**, a draft pipeline to publish.
+
+## Payroll (employers and access)
+
+- `Employer` (`IEmployerManager`, `IEmployerUsage`), a party kind; **Payroll > Setup > Employers**; the `PayrollEmployers`
+  recipe and deployment steps.
+- Per-employer permissions (`PayrollPermissionTemplates.For`) listed per employer in the role editor, and
+  `IPayrollScopeService` for pages, data sets and exports. `IPayrollEmployeeDirectory` maps employers to staff.
+- A **Payroll** card on teams (`PayrollTeamSettings`: ledger code, jurisdictions) and **Settings > Payroll**
+  (`PayrollSettings`).
+- The recipe **Payroll: sample roles**.

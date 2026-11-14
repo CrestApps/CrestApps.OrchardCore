@@ -233,6 +233,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Approvals` | Approvals | [Approvals](./modules/approvals) |
 | `CrestApps.OrchardCore.Payroll.PaySetup` | Pay Setup | [Payroll](./modules/payroll) |
+| `CrestApps.OrchardCore.Payroll` | Payroll | [Payroll](./modules/payroll) |
 | `CrestApps.OrchardCore.Banking` | Banking | [Banking](./modules/banking) |
 | `CrestApps.OrchardCore.Checks` | Checks | [Checks](./modules/checks) |
 | `CrestApps.OrchardCore.Disbursements` | Disbursements | [Disbursements](./modules/disbursements) |

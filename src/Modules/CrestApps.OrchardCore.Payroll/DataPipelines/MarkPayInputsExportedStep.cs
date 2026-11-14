@@ -87,8 +87,9 @@ public sealed class MarkPayInputsExportedStep : DataPipelineStepType<MarkPayInpu
             return;
         }
 
-        // The publisher of the pipeline vouches for the export: they must be allowed to export payroll data.
-        if (!await context.Services.GetRequiredService<IAuthorizationService>().AuthorizeAsync(context.Run.User, PayrollPermissions.ExportPayrollData))
+        // The publisher of the pipeline vouches for the export: they must be allowed to export payroll data, for every
+        // employer or for some, whose people are the only rows the Pay inputs data set gave them.
+        if (!await MayExportAsync(context))
         {
             throw new InvalidOperationException("The user who published the pipeline may not export payroll data, so nothing is marked exported.");
         }
@@ -103,6 +104,16 @@ public sealed class MarkPayInputsExportedStep : DataPipelineStepType<MarkPayInpu
             ConsumerId = consumerId,
             Sources = consumed,
         }, cancellationToken));
+    }
+
+    private static async Task<bool> MayExportAsync(DataPipelineStepContext context)
+    {
+        if (context.Services.GetService<IPayrollScopeService>() is { } scope)
+        {
+            return !(await scope.GetScopeAsync(context.Run.User, PayrollPermissions.ExportPayrollData, context.CancellationToken)).IsEmpty;
+        }
+
+        return await context.Services.GetRequiredService<IAuthorizationService>().AuthorizeAsync(context.Run.User, PayrollPermissions.ExportPayrollData);
     }
 
     /// <summary>

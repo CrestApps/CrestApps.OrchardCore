@@ -41,6 +41,21 @@ public static class PayrollConstants
     public const string PipelineConsumerPrefix = "pipeline:";
 
     /// <summary>
+    /// The party kind of an employer, such as the payer of a check.
+    /// </summary>
+    public const string EmployerPartyKind = "Employer";
+
+    /// <summary>
+    /// The recipe and deployment step of employers.
+    /// </summary>
+    public const string EmployersRecipeStepName = "PayrollEmployers";
+
+    /// <summary>
+    /// The group of Payroll's site settings.
+    /// </summary>
+    public const string SettingsGroupId = "payroll";
+
+    /// <summary>
     /// The feature ids of the Payroll module.
     /// </summary>
     public static class Features

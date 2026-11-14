@@ -1,0 +1,19 @@
+@model ShapeViewModel<Employer>
+
+@{
+    var employer = Model.Value;
+}
+
+@if (!string.IsNullOrEmpty(employer.CountryPack))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Country pack"]"><i class="fa-solid fa-flag text-secondary me-1" aria-hidden="true"></i>@employer.CountryPack</span>
+}
+@if (!string.IsNullOrEmpty(employer.Currency))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Currency"]">@employer.Currency</span>
+}
+<span class="badge ta-badge fw-normal">@T.Plural(employer.Registrations.Count, "1 registration", "{0} registrations")</span>
+@if (employer.Status == EmployerStatus.Inactive)
+{
+    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Inactive"]</span>
+}

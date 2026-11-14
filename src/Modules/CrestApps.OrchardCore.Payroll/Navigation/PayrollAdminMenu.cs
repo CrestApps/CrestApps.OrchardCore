@@ -41,3 +41,42 @@ public sealed class PaySetupAdminMenu : AdminNavigationProvider
         return ValueTask.CompletedTask;
     }
 }
+
+/// <summary>
+/// Adds the employers to Payroll &gt; Setup and Payroll's settings to Settings.
+/// </summary>
+public sealed class PayrollAdminMenu : AdminNavigationProvider
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PayrollAdminMenu"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public PayrollAdminMenu(IStringLocalizer<PayrollAdminMenu> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    protected override ValueTask BuildAsync(NavigationBuilder builder)
+    {
+        builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll => payroll
+            .Id("payroll")
+            .Add(S["Setup"], S["Setup"].PrefixPosition("90"), setup => setup
+                .Id("payrollSetup")
+                .Add(S["Employers"], S["Employers"].PrefixPosition("5"), employers => employers
+                    .Id("payrollEmployers")
+                    .Action("Index", "Employers", PayrollConstants.Features.Payroll)
+                    .LocalNav())));
+
+        builder.Add(S["Settings"], settings => settings
+            .Add(S["Payroll"], S["Payroll"].PrefixPosition(), payroll => payroll
+                .Id("payrollSettings")
+                .Action("Index", "Admin", new Microsoft.AspNetCore.Routing.RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", PayrollConstants.SettingsGroupId } })
+                .Permission(PayrollPermissions.ManagePayrollSettings)
+                .LocalNav()));
+
+        return ValueTask.CompletedTask;
+    }
+}

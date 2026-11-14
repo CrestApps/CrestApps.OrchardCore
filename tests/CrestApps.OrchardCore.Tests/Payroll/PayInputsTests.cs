@@ -169,7 +169,7 @@ public sealed class PayInputsTests
     }
 
     private static PayInputsDataSet CreateDataSet(IAuthorizationService authorization)
-        => new(Mock.Of<IPayInputService>(), Mock.Of<IPayCodeManager>(), Mock.Of<IPayScheduleManager>(), authorization, RecipeRoundTrip.Localizer<PayInputsDataSet>());
+        => new(Mock.Of<IPayInputService>(), Mock.Of<IPayCodeManager>(), Mock.Of<IPayScheduleManager>(), authorization, Mock.Of<IServiceProvider>(), RecipeRoundTrip.Localizer<PayInputsDataSet>());
 
     private static string FindRepositoryRoot()
     {

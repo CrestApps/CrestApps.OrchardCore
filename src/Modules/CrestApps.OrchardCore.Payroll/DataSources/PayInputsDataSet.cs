@@ -82,6 +82,7 @@ public sealed class PayInputsDataSet : RecordDataSet<PayInputRow>, IPayrollDataS
     private readonly IPayCodeManager _codes;
     private readonly IPayScheduleManager _schedules;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IServiceProvider _services;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PayInputsDataSet"/> class.
@@ -90,12 +91,14 @@ public sealed class PayInputsDataSet : RecordDataSet<PayInputRow>, IPayrollDataS
     /// <param name="codes">The pay codes.</param>
     /// <param name="schedules">The pay schedules.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="services">The services, for the payroll scope when the Payroll feature is on.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PayInputsDataSet(
         IPayInputService inputs,
         IPayCodeManager codes,
         IPayScheduleManager schedules,
         IAuthorizationService authorizationService,
+        IServiceProvider services,
         IStringLocalizer<PayInputsDataSet> stringLocalizer)
         : base(new DataSetDescriptor(
             PayrollConstants.PayInputsDataSetName,
@@ -106,6 +109,7 @@ public sealed class PayInputsDataSet : RecordDataSet<PayInputRow>, IPayrollDataS
         _codes = codes;
         _schedules = schedules;
         _authorizationService = authorizationService;
+        _services = services;
 
         var S = stringLocalizer;
         var person = S["Staff member"].Value;
@@ -177,7 +181,29 @@ public sealed class PayInputsDataSet : RecordDataSet<PayInputRow>, IPayrollDataS
 
     /// <inheritdoc />
     public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
-        => context?.User is not null && await _authorizationService.AuthorizeAsync(context.User, PayrollPermissions.ExportPayrollData);
+        => !(await GetScopeAsync(context?.User, cancellationToken)).IsEmpty;
+
+    /// <summary>
+    /// Gets the employers a reader may export the data of: every one with Export payroll data, otherwise those of the
+    /// per-employer permissions they hold when the Payroll feature is on.
+    /// </summary>
+    /// <param name="user">The reader.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The scope.</returns>
+    internal async Task<PayrollScope> GetScopeAsync(System.Security.Claims.ClaimsPrincipal user, CancellationToken cancellationToken)
+    {
+        if (user is null)
+        {
+            return PayrollScope.None;
+        }
+
+        if (_services.GetService(typeof(IPayrollScopeService)) is IPayrollScopeService scope)
+        {
+            return await scope.GetScopeAsync(user, PayrollPermissions.ExportPayrollData, cancellationToken);
+        }
+
+        return await _authorizationService.AuthorizeAsync(user, PayrollPermissions.ExportPayrollData) ? PayrollScope.Everyone : PayrollScope.None;
+    }
 
     /// <inheritdoc />
     protected override async IAsyncEnumerable<PayInputRow> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -192,9 +218,31 @@ public sealed class PayInputsDataSet : RecordDataSet<PayInputRow>, IPayrollDataS
             yield break;
         }
 
+        // A reader of some employers reads the inputs of their people only.
+        var scope = await GetScopeAsync(query.Context?.User, cancellationToken);
+        IReadOnlyCollection<string> staff = [];
+
+        if (scope.IsEmpty)
+        {
+            yield break;
+        }
+
+        if (!scope.All)
+        {
+            staff = _services.GetService(typeof(IPayrollEmployeeDirectory)) is IPayrollEmployeeDirectory directory
+                ? await directory.GetStaffMemberIdsAsync([.. scope.EmployerIds], cancellationToken)
+                : [];
+
+            if (staff.Count == 0)
+            {
+                yield break;
+            }
+        }
+
         var (from, to) = DataConditions.DateRange(conditions, "PeriodStart");
         var inputQuery = new PayInputQuery
         {
+            StaffMemberIds = staff,
             PayScheduleId = schedules is { Count: 1 } ? schedules.First() : null,
             PeriodStart = from.HasValue ? DateOnly.FromDateTime(from.Value) : null,
             PeriodEnd = to.HasValue ? DateOnly.FromDateTime(to.Value) : null,
