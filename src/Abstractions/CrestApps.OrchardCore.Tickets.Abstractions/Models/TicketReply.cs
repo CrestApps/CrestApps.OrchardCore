@@ -43,6 +43,12 @@ public sealed class TicketReply
     public List<string> AttachmentIds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the id the reply's timeline entry gets, when its files were stored first as files of that entry.
+    /// Leave empty for a new id.
+    /// </summary>
+    public string EntryId { get; set; }
+
+    /// <summary>
     /// Gets or sets the status to set with it, such as solved; <see langword="null"/> leaves the status to the rules.
     /// </summary>
     public string SetStatusId { get; set; }

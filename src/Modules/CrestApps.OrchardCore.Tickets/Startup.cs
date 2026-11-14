@@ -5,15 +5,21 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Tickets.Core;
 using CrestApps.OrchardCore.Tickets.Core.Handlers;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
+using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Deployments;
 using CrestApps.OrchardCore.Tickets.Drivers;
 using CrestApps.OrchardCore.Tickets.Migrations;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Navigation;
 using CrestApps.OrchardCore.Tickets.Recipes;
+using CrestApps.OrchardCore.Tickets.ViewModels;
+using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Records;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -38,11 +44,16 @@ public sealed class Startup : StartupBase
             .AddCatalogs()
             .AddCatalogManagers();
 
-        services.AddContentPart<TicketPart>();
         services.AddDataMigration<TicketsMigrations>()
             .AddIndexProvider<TicketIndexProvider>();
 
         services.AddTicketsCore();
+        services.AddScoped<IContentHandler, TicketContentCleanup>();
+        services.AddTimelineAccessProvider<TicketTimelineAccess>();
+        services.AddRecordSource<TicketRecordSource>();
+        services.AddContentPart<TicketPart>()
+            .UseDisplayDriver<TicketPartDisplayDriver>();
+        services.AddDisplayDriver<TicketRow, TicketRowDisplayDriver>();
 
         // The settings records' rules come with the feature that imports them.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketStatus>, TicketSettingsRecordHandler<TicketStatus>>());

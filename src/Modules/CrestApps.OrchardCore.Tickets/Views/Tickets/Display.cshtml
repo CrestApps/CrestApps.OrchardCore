@@ -1,0 +1,153 @@
+@model TicketPageViewModel
+
+@{
+    var part = Model.Part;
+    var ticketId = Model.Ticket.ContentItemId;
+    dynamic display = Model.Display;
+    var canWrite = Model.CanReply || Model.CanNote;
+}
+
+<zone Name="Title"><breadcrumb name="TicketsDisplay" title="@T["{0} {1}", part.Number, Model.Ticket.DisplayText]">
+    <breadcrumb-item id="Tickets" action="Index" controller="Tickets" area="CrestApps.OrchardCore.Tickets">@T["Tickets"]</breadcrumb-item>
+</breadcrumb></zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col">
+                @if (Model.Status is not null)
+                {
+                    <span class="badge text-bg-primary fw-normal" title="@T["Status"]">@Model.Status.Name</span>
+                }
+                @if (Model.Priority is not null)
+                {
+                    <span class="badge ta-badge fw-normal" title="@T["Priority"]">
+                        @if (!string.IsNullOrEmpty(Model.Priority.Color))
+                        {
+                            <i class="fa-solid fa-flag me-1" style="color: @Model.Priority.Color" aria-hidden="true"></i>
+                        }
+                        @Model.Priority.Name
+                    </span>
+                }
+                <span class="text-muted small">@T["Opened"] @await DisplayAsync(await New.DateTime(Utc: Model.Ticket.CreatedUtc, Format: "g"))</span>
+            </div>
+            <div class="col-auto d-flex gap-1">
+                @if (Model.CanEdit)
+                {
+                    <a asp-action="Edit" asp-route-id="@ticketId" class="btn btn-secondary">@T["Edit fields"]</a>
+                }
+                @if (Model.CanMerge)
+                {
+                    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#ticket-merge">@T["Merge"]</button>
+                }
+                @if (Model.CanDelete)
+                {
+                    <form asp-action="Delete" asp-route-id="@ticketId" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger" data-url-af="RemoveUrl" data-title="@T["Delete"]" data-message="@T["Delete this ticket with its replies, notes and files? This can't be undone."]">@T["Delete"]</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.MergedInto is not null)
+{
+    <div class="alert alert-info">@T["This ticket was merged into"] <a asp-action="Display" asp-route-id="@Model.MergedInto.ContentItemId">@(Model.MergedInto.GetOrCreate<TicketPart>().Number) @Model.MergedInto.DisplayText</a>.</div>
+}
+else if (Model.IsReadOnly)
+{
+    <div class="alert alert-secondary">@T["This ticket is closed and can't change. A reply from the requester opens a follow-up ticket."]</div>
+}
+@if (Model.FollowUpOf is not null)
+{
+    <div class="alert alert-light border">@T["Follows up"] <a asp-action="Display" asp-route-id="@Model.FollowUpOf.ContentItemId">@(Model.FollowUpOf.GetOrCreate<TicketPart>().Number) @Model.FollowUpOf.DisplayText</a>.</div>
+}
+
+<div class="row g-3">
+    <div class="col-12 col-lg-8">
+        @{
+            var fields = await DisplayAsync(display.Content);
+        }
+        @if (!string.IsNullOrWhiteSpace(fields?.ToString()))
+        {
+            <div class="card mb-3"><div class="card-body">@fields</div></div>
+        }
+
+        @if (canWrite)
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form asp-action="Reply" asp-route-id="@ticketId" method="post" enctype="multipart/form-data" class="no-multisubmit">
+                        @if (Model.CanReply && Model.CanNote)
+                        {
+                            <div class="btn-group mb-2" role="group" aria-label="@T["Who sees it"]">
+                                <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-public" value="false" checked autocomplete="off" />
+                                <label class="btn btn-sm btn-outline-primary" for="ticket-reply-public"><i class="fa-solid fa-reply me-1" aria-hidden="true"></i>@T["Reply to the requester"]</label>
+                                <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-note" value="true" autocomplete="off" />
+                                <label class="btn btn-sm btn-outline-warning" for="ticket-reply-note"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Internal note"]</label>
+                            </div>
+                        }
+                        else
+                        {
+                            <input type="hidden" name="isInternal" value="@(Model.CanReply ? "false" : "true")" />
+                            <p class="small text-muted mb-2">@(Model.CanReply ? T["Your reply goes to the requester."] : T["You add internal notes; the requester doesn't see them."])</p>
+                        }
+                        <label for="ticket-reply-body" class="visually-hidden">@T["Message"]</label>
+                        <textarea id="ticket-reply-body" name="body" class="form-control mb-2" rows="5" placeholder="@T["Write a reply or a note"]">@Model.Draft</textarea>
+                        <div class="row gx-2 gy-2 align-items-center">
+                            @if (Model.CanAttach)
+                            {
+                                <div class="col-12 col-md">
+                                    <label for="ticket-reply-files" class="visually-hidden">@T["Files"]</label>
+                                    <input id="ticket-reply-files" type="file" name="files" class="form-control form-control-sm" multiple />
+                                </div>
+                            }
+                            <div class="col-auto">
+                                <label for="ticket-reply-status" class="visually-hidden">@T["Status after sending"]</label>
+                                <select id="ticket-reply-status" name="setStatusId" class="form-select form-select-sm">
+                                    <option value="">@T["Keep the status"]</option>
+                                    @foreach (var status in Model.Statuses)
+                                    {
+                                        <option value="@status.Value">@T["Send and set {0}", status.Text]</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-primary btn-sm">@T["Send"]</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["Conversation"].Value })
+    </div>
+    <div class="col-12 col-lg-4">
+        @await DisplayAsync(display.Sidebar)
+    </div>
+</div>
+
+@if (Model.CanMerge)
+{
+    <div class="modal fade" id="ticket-merge" tabindex="-1" aria-labelledby="ticket-merge-title" aria-hidden="true">
+        <div class="modal-dialog">
+            <form asp-action="Merge" asp-route-id="@ticketId" method="post" class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="ticket-merge-title">@T["Merge into another ticket"]</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="ticket-merge-number" class="form-label">@T["Number of the ticket to keep"]</label>
+                    <input id="ticket-merge-number" name="intoNumber" class="form-control" placeholder="T-1001" required autocomplete="off" />
+                    <span class="hint">@T["The requester and the participants of this ticket join that one, both get a note that links them, and this ticket closes."]</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                    <button type="submit" class="btn btn-primary">@T["Merge"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

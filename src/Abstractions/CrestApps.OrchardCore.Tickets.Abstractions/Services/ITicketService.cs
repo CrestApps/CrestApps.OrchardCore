@@ -89,6 +89,26 @@ public interface ITicketService
     Task<TicketResult> LinkAsync(string ticketId, RecordRef record, string kind, TicketActor actor = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes a ticket, with its timeline and service-level timers.
+    /// </summary>
+    /// <param name="ticketId">The ticket.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The ticket as it was, or why it couldn't be deleted.</returns>
+    Task<TicketResult> DeleteAsync(string ticketId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Changes a ticket's own fields (the ticket type's fields and its title) under the ticket's lock, and records the
+    /// change on its timeline. The ticket's values (status, priority, desk, team, assignee) change through
+    /// <see cref="UpdateAsync"/>.
+    /// </summary>
+    /// <param name="ticketId">The ticket.</param>
+    /// <param name="edit">Changes the item; returns <see langword="false"/> when the change is refused.</param>
+    /// <param name="actor">Who edits, for the timeline.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The ticket, or why it couldn't change.</returns>
+    Task<TicketResult> EditAsync(string ticketId, Func<ContentItem, Task<bool>> edit, TicketActor actor = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists tickets.
     /// </summary>
     /// <param name="query">Which tickets, narrowed to those the user may view.</param>

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Parties.Models;
+using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tickets.Models;
 
@@ -27,6 +28,19 @@ public sealed class TicketCreateRequest
     /// Gets or sets the files of the first reply.
     /// </summary>
     public List<string> AttachmentIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the id the first reply's timeline entry gets, when its files were stored first as files of that
+    /// entry. Leave empty for a new id.
+    /// </summary>
+    public string EntryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a new, unsaved item of the ticket type whose fields an editor already filled, or
+    /// <see langword="null"/> for an empty one. Its content type wins over <see cref="ContentType"/>, and its display
+    /// text is the subject when <see cref="Subject"/> is empty.
+    /// </summary>
+    public ContentItem Ticket { get; set; }
 
     /// <summary>
     /// Gets or sets the desk.

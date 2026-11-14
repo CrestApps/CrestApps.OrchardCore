@@ -93,6 +93,38 @@ public static class TicketsConstants
     }
 
     /// <summary>
+    /// The channels a ticket or a reply comes from. The value is an open string; channel modules add their own.
+    /// </summary>
+    public static class Channels
+    {
+        /// <summary>
+        /// Written by an agent on the ticket pages.
+        /// </summary>
+        public const string Agent = "Agent";
+
+        /// <summary>
+        /// Written by the requester on the portal.
+        /// </summary>
+        public const string Portal = "Portal";
+
+        /// <summary>
+        /// Sent through the API.
+        /// </summary>
+        public const string Api = "Api";
+    }
+
+    /// <summary>
+    /// The display types of a ticket.
+    /// </summary>
+    public static class DisplayTypes
+    {
+        /// <summary>
+        /// The ticket page of the admin: the drivers of <see cref="Models.TicketPart"/> and other parts add panels.
+        /// </summary>
+        public const string DetailAdmin = "DetailAdmin";
+    }
+
+    /// <summary>
     /// The feature identifiers of the Tickets module.
     /// </summary>
     public static class Features

@@ -58,7 +58,10 @@ internal sealed class TicketsMigrations : DataMigration
             await _contentDefinitionManager.AlterTypeDefinitionAsync(TicketsConstants.DefaultContentType, type => type
                 .WithDisplayName("Ticket")
                 .Stereotype(TicketsConstants.Stereotype)
-                .WithPart<TitlePart>(part => part.WithPosition("1"))
+                .WithPart<TitlePart>(part => part
+                    .WithDisplayName("Subject")
+                    .WithPosition("1")
+                    .WithSettings(new TitlePartSettings { Options = TitlePartOptions.EditableRequired }))
                 .WithPart(TicketsConstants.PartName, part => part.WithPosition("2")));
         }
 

@@ -228,6 +228,81 @@ public sealed class TicketServiceTests
         Assert.Contains("merged", _observed);
     }
 
+    [Fact]
+    public async Task ATicketFromAnEditor_KeepsItsFields_AndItsTitleIsTheSubject()
+    {
+        // Arrange: the new-ticket page fills the type's fields and its title before the service saves the item.
+        var service = Create();
+        var prepared = new ContentItem { ContentItemId = "prepared", ContentType = "Ticket", DisplayText = "Laptop won't boot", CreatedUtc = _clockNow };
+        prepared.Content.TicketForm = new JsonObject { ["AssetTag"] = "LT-42" };
+
+        // Act
+        var result = await service.CreateAsync(new TicketCreateRequest { Ticket = prepared, Requester = _requester, EntryId = "first-entry", Body = "It beeps." }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Same(prepared, result.Ticket);
+        Assert.Equal("Laptop won't boot", result.Ticket.DisplayText);
+        Assert.Equal("LT-42", (string)result.Ticket.Content.TicketForm.AssetTag);
+        Assert.Contains(_timeline.Of(Subject(result.Ticket)), entry => entry.ItemId == "first-entry" && entry.Body == "It beeps.");
+    }
+
+    [Fact]
+    public async Task EditingTheFields_RecordsAnEvent_AndARefusedEditChangesNothing()
+    {
+        // Arrange
+        var service = Create();
+        var ticket = (await service.CreateAsync(new TicketCreateRequest { Subject = "Printer jams", Requester = _requester }, TestContext.Current.CancellationToken)).Ticket;
+
+        // Act
+        var refused = await service.EditAsync(ticket.ContentItemId, item => Task.FromResult(false), cancellationToken: TestContext.Current.CancellationToken);
+        var renamed = await service.EditAsync(ticket.ContentItemId, item =>
+        {
+            item.DisplayText = "Printer jams on tray 2";
+
+            return Task.FromResult(true);
+        }, TicketActor.User("agent-1"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(refused.Succeeded);
+        Assert.True(renamed.Succeeded);
+        Assert.Equal("Printer jams on tray 2", _items[ticket.ContentItemId].DisplayText);
+        Assert.Contains(_timeline.Of(Subject(ticket)), entry => entry.Kind == TicketsConstants.EntryKinds.Event && entry.Changes.Any(change => change.To == "Printer jams on tray 2"));
+    }
+
+    [Fact]
+    public async Task AReply_TakesTheEntryIdItsFilesWereStoredUnder()
+    {
+        // Arrange
+        var service = Create();
+        var ticket = (await service.CreateAsync(new TicketCreateRequest { Subject = "Printer jams", Requester = _requester }, TestContext.Current.CancellationToken)).Ticket;
+
+        // Act
+        var result = await service.ReplyAsync(ticket.ContentItemId, new TicketReply { Body = "Photo attached.", Author = _agent, EntryId = "entry-with-files", AttachmentIds = ["file-1"] }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Contains(_timeline.Of(Subject(ticket)), entry => entry.ItemId == "entry-with-files" && entry.AttachmentIds.Contains("file-1"));
+    }
+
+    [Fact]
+    public async Task Deleting_RemovesTheItem_AndTellsTheObservers()
+    {
+        // Arrange
+        var service = Create();
+        var ticket = (await service.CreateAsync(new TicketCreateRequest { Subject = "Printer jams", Requester = _requester }, TestContext.Current.CancellationToken)).Ticket;
+
+        // Act
+        var deleted = await service.DeleteAsync(ticket.ContentItemId, TestContext.Current.CancellationToken);
+        var again = await service.DeleteAsync(ticket.ContentItemId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(deleted.Succeeded);
+        Assert.False(_items.ContainsKey(ticket.ContentItemId));
+        Assert.Contains("deleted", _observed);
+        Assert.False(again.Succeeded);
+    }
+
     private static RecordRef Subject(ContentItem ticket)
         => new(TicketsConstants.RecordKind, ticket.ContentItemId);
 
@@ -245,6 +320,9 @@ public sealed class TicketServiceTests
             .Returns(Task.CompletedTask);
         contentManager.Setup(value => value.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
             .ReturnsAsync((string id, VersionOptions _) => _items.GetValueOrDefault(id));
+        contentManager.Setup(value => value.RemoveAsync(It.IsAny<ContentItem>()))
+            .Callback((ContentItem item) => _items.Remove(item.ContentItemId))
+            .ReturnsAsync(true);
 
         var settings = new JsonObject { [nameof(TicketPartSettings)] = new JsonObject() };
         var ticketType = new ContentTypeDefinition("Ticket", "Ticket", [new ContentTypePartDefinition(TicketsConstants.PartName, new ContentPartDefinition(TicketsConstants.PartName), settings)], new JsonObject());
@@ -270,6 +348,7 @@ public sealed class TicketServiceTests
 
         observer.Setup(value => value.CreatedAsync(It.IsAny<ContentItem>(), It.IsAny<CancellationToken>())).Callback(() => _observed.Add("created")).Returns(Task.CompletedTask);
         observer.Setup(value => value.MergedAsync(It.IsAny<ContentItem>(), It.IsAny<ContentItem>(), It.IsAny<CancellationToken>())).Callback(() => _observed.Add("merged")).Returns(Task.CompletedTask);
+        observer.Setup(value => value.DeletedAsync(It.IsAny<ContentItem>(), It.IsAny<CancellationToken>())).Callback(() => _observed.Add("deleted")).Returns(Task.CompletedTask);
 
         return new DefaultTicketService(
             contentManager.Object,

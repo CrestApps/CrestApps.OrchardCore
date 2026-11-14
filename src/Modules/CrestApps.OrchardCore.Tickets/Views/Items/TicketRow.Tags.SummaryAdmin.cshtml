@@ -1,0 +1,29 @@
+@model ShapeViewModel<TicketRow>
+
+@{
+    var row = Model.Value;
+}
+@if (row.Status is not null)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Status"]">
+        @if (!string.IsNullOrEmpty(row.Status.Color))
+        {
+            <i class="fa-solid fa-circle me-1" style="color: @row.Status.Color" aria-hidden="true"></i>
+        }
+        @row.Status.Name
+    </span>
+}
+@if (row.Priority is not null)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Priority"]">
+        @if (!string.IsNullOrEmpty(row.Priority.Color))
+        {
+            <i class="fa-solid fa-flag me-1" style="color: @row.Priority.Color" aria-hidden="true"></i>
+        }
+        @row.Priority.Name
+    </span>
+}
+@if (!string.IsNullOrEmpty(row.DeskName))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Desk"]"><i class="fa-solid fa-inbox me-1" aria-hidden="true"></i>@row.DeskName</span>
+}

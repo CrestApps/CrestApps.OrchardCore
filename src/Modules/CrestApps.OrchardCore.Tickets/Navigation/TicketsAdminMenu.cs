@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Tickets.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -8,20 +10,42 @@ namespace CrestApps.OrchardCore.Tickets.Navigation;
 /// </summary>
 internal sealed class TicketsAdminMenu : AdminNavigationProvider
 {
+    private readonly ITicketAccessService _access;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketsAdminMenu"/> class.
     /// </summary>
+    /// <param name="access">The ticket access service.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public TicketsAdminMenu(IStringLocalizer<TicketsAdminMenu> stringLocalizer)
+    public TicketsAdminMenu(ITicketAccessService access, IHttpContextAccessor httpContextAccessor, IStringLocalizer<TicketsAdminMenu> stringLocalizer)
     {
+        _access = access;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
-    protected override ValueTask BuildAsync(NavigationBuilder builder)
+    protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
+        // The list is for whoever may view the tickets of at least one desk; desk permissions are dynamic, so a menu
+        // permission can't say it.
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        if (httpContext is not null && (await _access.GetViewScopesAsync(httpContext.User, httpContext.RequestAborted)).Count > 0)
+        {
+            builder.Add(S["Tickets"], S["Tickets"].PrefixPosition("6"), tickets => tickets
+                .AddClass("tickets")
+                .AddClass("icon-class-fa-solid")
+                .AddClass("icon-class-fa-ticket")
+                .Id("tickets")
+                .Action("Index", "Tickets", TicketsConstants.Features.Tickets)
+                .LocalNav());
+        }
+
         builder
             .Add(S["Configuration"], configuration => configuration
                 .Add(S["Tickets"], S["Tickets"].PrefixPosition(), settings => settings
@@ -43,6 +67,5 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
                         .Permission(TicketsPermissions.ManageTicketSettings)
                         .LocalNav())));
 
-        return ValueTask.CompletedTask;
     }
 }

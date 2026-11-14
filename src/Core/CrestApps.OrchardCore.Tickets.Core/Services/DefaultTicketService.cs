@@ -128,7 +128,8 @@ public sealed class DefaultTicketService : ITicketService
         ArgumentNullException.ThrowIfNull(request);
 
         var errors = new List<string>();
-        var contentType = string.IsNullOrWhiteSpace(request.ContentType) ? TicketsConstants.DefaultContentType : request.ContentType.Trim();
+        var contentType = request.Ticket?.ContentType
+            ?? (string.IsNullOrWhiteSpace(request.ContentType) ? TicketsConstants.DefaultContentType : request.ContentType.Trim());
         var typeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentType);
         var partDefinition = typeDefinition?.Parts.FirstOrDefault(part => part.PartDefinition.Name == TicketsConstants.PartName);
 
@@ -153,7 +154,7 @@ public sealed class DefaultTicketService : ITicketService
             errors.Add(S["The {0} desk does not take this kind of ticket.", desk.Name]);
         }
 
-        var subject = request.Subject?.Trim();
+        var subject = FirstNonEmpty(request.Subject, request.Ticket?.DisplayText)?.Trim();
 
         if (string.IsNullOrEmpty(subject))
         {
@@ -180,7 +181,7 @@ public sealed class DefaultTicketService : ITicketService
         }
 
         var now = _clock.UtcNow;
-        var ticket = await _contentManager.NewAsync(contentType);
+        var ticket = request.Ticket ?? await _contentManager.NewAsync(contentType);
         var part = ticket.GetOrCreate<TicketPart>();
 
         part.Number = $"T-{await _numbers.NextAsync(NumberSeries, cancellationToken: cancellationToken)}";
@@ -221,11 +222,14 @@ public sealed class DefaultTicketService : ITicketService
         {
             await _timeline.AddAsync(new TimelineEntry
             {
+                ItemId = string.IsNullOrEmpty(request.EntryId) ? null : request.EntryId,
                 Subject = SubjectOf(ticket.ContentItemId),
                 Kind = TicketsConstants.EntryKinds.Reply,
                 Visibility = TimelineVisibility.Public,
-                Author = request.Requester.IsEmpty ? request.CreatedBy : request.Requester,
-                AuthorName = request.RequesterContact?.Name,
+                // The first message is the requester's: a known party, a guest kept by name, or the agent who wrote it
+                // for nobody in particular.
+                Author = !request.Requester.IsEmpty ? request.Requester : request.RequesterContact is { HasAnyValue: true } ? default : request.CreatedBy,
+                AuthorName = request.RequesterContact?.Name ?? request.RequesterContact?.Email,
                 Body = request.Body?.Trim(),
                 AttachmentIds = [.. request.AttachmentIds],
                 Channel = request.Channel,
@@ -372,6 +376,7 @@ public sealed class DefaultTicketService : ITicketService
 
             var entry = new TimelineEntry
             {
+                ItemId = string.IsNullOrEmpty(reply.EntryId) ? null : reply.EntryId,
                 Subject = SubjectOf(ticket.ContentItemId),
                 Kind = reply.IsInternal ? TicketsConstants.EntryKinds.Note : TicketsConstants.EntryKinds.Reply,
                 Visibility = reply.IsInternal ? TimelineVisibility.Internal : TimelineVisibility.Public,
@@ -998,6 +1003,57 @@ public sealed class DefaultTicketService : ITicketService
         await NotifyAsync(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
 
         return true;
+    }
+
+    /// <inheritdoc/>
+    public Task<TicketResult> DeleteAsync(string ticketId, CancellationToken cancellationToken = default)
+        => WithLockAsync(ticketId, async ticket =>
+        {
+            // The ticket's timeline and timers go with it (TicketContentCleanup), whichever way the item is removed.
+            await _contentManager.RemoveAsync(ticket);
+            await NotifyAsync(observer => observer.DeletedAsync(ticket, cancellationToken));
+
+            return new TicketResult { Ticket = ticket };
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TicketResult> EditAsync(string ticketId, Func<ContentItem, Task<bool>> edit, TicketActor actor = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(edit);
+
+        return WithLockAsync(ticketId, async ticket =>
+        {
+            if (TicketLifecycle.IsReadOnly(ticket.GetOrCreate<TicketPart>()))
+            {
+                return Refuse(S["A closed or merged ticket can't change."], ticket);
+            }
+
+            var subjectBefore = ticket.DisplayText;
+
+            if (!await edit(ticket))
+            {
+                return Refuse(S["Correct the fields and try again."], ticket);
+            }
+
+            var changes = new List<TimelineFieldChange>();
+
+            if (!string.Equals(subjectBefore, ticket.DisplayText, StringComparison.Ordinal))
+            {
+                if (string.IsNullOrWhiteSpace(ticket.DisplayText))
+                {
+                    return Refuse(S["Write a subject."], ticket);
+                }
+
+                changes.Add(new TimelineFieldChange { Field = S["Subject"], From = subjectBefore, To = ticket.DisplayText });
+            }
+
+            // The editor changes the type's fields; the ticket's own values are read back from the edited item.
+            await SaveAsync(ticket, ticket.GetOrCreate<TicketPart>(), cancellationToken);
+            await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, S["Changed the ticket's fields."], changes, cancellationToken);
+            await NotifyAsync(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+
+            return new TicketResult { Ticket = ticket };
+        }, cancellationToken);
     }
 
     private async Task<TicketResult> WithLockAsync(string ticketId, Func<ContentItem, Task<TicketResult>> work, CancellationToken cancellationToken)

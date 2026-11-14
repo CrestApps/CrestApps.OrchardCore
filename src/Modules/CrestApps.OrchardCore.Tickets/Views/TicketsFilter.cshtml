@@ -1,0 +1,94 @@
+@using CrestApps.OrchardCore.Tickets.Controllers
+@{
+    var filter = (TicketsListViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="btn-group filter">
+    <select id="tickets-state" name="state" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["State"]" data-dropdown-align-right="auto" aria-label="@T["State"]" onchange="this.form.submit()">
+        <option value="">@T["Any state"]</option>
+        <option value="@TicketListQueries.States.Open" selected="@(filter.State == TicketListQueries.States.Open)">@T["Still being worked on"]</option>
+        <option value="@TicketListQueries.States.Solved" selected="@(filter.State == TicketListQueries.States.Solved)">@T["Solved"]</option>
+        <option value="@TicketListQueries.States.Closed" selected="@(filter.State == TicketListQueries.States.Closed)">@T["Closed"]</option>
+        <option value="@TicketListQueries.States.All" selected="@(filter.State == TicketListQueries.States.All)">@T["Every state"]</option>
+    </select>
+</div>
+<div class="btn-group filter">
+    <select id="tickets-status" name="statusId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.submit()">
+        <option value="">@T["Every status"]</option>
+        @foreach (var option in filter.Options.Statuses)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select id="tickets-priority" name="priorityId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Priority"]" data-dropdown-align-right="auto" aria-label="@T["Priority"]" onchange="this.form.submit()">
+        <option value="">@T["Every priority"]</option>
+        @foreach (var option in filter.Options.Priorities)
+        {
+            <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select id="tickets-assignee" name="assignee" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Assignee"]" data-dropdown-align-right="auto" aria-label="@T["Assignee"]" onchange="this.form.submit()">
+        <option value="">@T["Anyone"]</option>
+        <option value="@TicketAssignees.Me" selected="@(filter.Assignee == TicketAssignees.Me)">@T["Me"]</option>
+        <option value="@TicketAssignees.Unassigned" selected="@(filter.Assignee == TicketAssignees.Unassigned)">@T["Nobody"]</option>
+    </select>
+</div>
+@if (filter.Options.Teams.Count > 0)
+{
+    <div class="btn-group filter">
+        <select id="tickets-team" name="teamId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Team"]" data-dropdown-align-right="auto" aria-label="@T["Team"]" onchange="this.form.submit()">
+            <option value="">@T["Every team"]</option>
+            @foreach (var option in filter.Options.Teams)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    </div>
+}
+@if (filter.Options.Desks.Count > 1)
+{
+    <div class="btn-group filter">
+        <select id="tickets-desk" name="deskId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Desk"]" data-dropdown-align-right="auto" aria-label="@T["Desk"]" onchange="this.form.submit()">
+            <option value="">@T["Every desk"]</option>
+            @foreach (var option in filter.Options.Desks)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    </div>
+}
+@if (filter.Options.Types.Count > 1)
+{
+    <div class="btn-group filter">
+        <select id="tickets-type" name="contentType" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Type"]" data-dropdown-align-right="auto" aria-label="@T["Type"]" onchange="this.form.submit()">
+            <option value="">@T["Every type"]</option>
+            @foreach (var option in filter.Options.Types)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    </div>
+}
+<div class="btn-group filter">
+    <select id="tickets-due" name="due" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Service level"]" data-dropdown-align-right="auto" aria-label="@T["Service level"]" onchange="this.form.submit()">
+        <option value="">@T["Any service level"]</option>
+        <option value="@TicketListQueries.DueFilters.Breached" selected="@(filter.Due == TicketListQueries.DueFilters.Breached)">@T["Past a target"]</option>
+        <option value="@TicketListQueries.DueFilters.Soon" selected="@(filter.Due == TicketListQueries.DueFilters.Soon)">@T["Due within 4 hours"]</option>
+    </select>
+</div>
+<div class="btn-group filter">
+    <select id="tickets-sort" name="sort" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Sort"]" data-dropdown-align-right="auto" aria-label="@T["Sort"]" onchange="this.form.submit()">
+        <option value="">@T["Default order"]</option>
+        <option value="@nameof(TicketSort.Updated)" selected="@(filter.Sort == nameof(TicketSort.Updated))">@T["Last changed"]</option>
+        <option value="@nameof(TicketSort.Created)" selected="@(filter.Sort == nameof(TicketSort.Created))">@T["Newest"]</option>
+        <option value="@nameof(TicketSort.Due)" selected="@(filter.Sort == nameof(TicketSort.Due))">@T["Due first"]</option>
+        <option value="@nameof(TicketSort.Priority)" selected="@(filter.Sort == nameof(TicketSort.Priority))">@T["Highest priority"]</option>
+    </select>
+</div>

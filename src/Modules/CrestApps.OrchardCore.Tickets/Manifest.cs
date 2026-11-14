@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.Teams;
 using CrestApps.OrchardCore.Tickets;
 using CrestApps.OrchardCore.Timeline;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -24,6 +25,7 @@ using OrchardCore.Modules.Manifest;
         ServiceLevelsConstants.Features.ServiceLevels,
         TeamsConstants.Features.Teams,
         ResourcesConstants.Feature.Area,
+        UsersConstants.Feature.Area,
         OrchardCoreFeatureIds.Contents,
         OrchardCoreFeatureIds.Title,
     ]

@@ -45,4 +45,12 @@ public interface ITicketObserver
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
     Task MergedAsync(ContentItem ticket, ContentItem into, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// A ticket was deleted.
+    /// </summary>
+    /// <param name="ticket">The ticket, as it was.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task DeletedAsync(ContentItem ticket, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }
