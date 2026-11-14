@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Parties.Models;
 namespace CrestApps.OrchardCore.Tests.Transactions;
 
 /// <summary>
-/// An in-memory <see cref="ICustomerCreditService"/> with the same rules as store credit: users and customer records hold
+/// An in-memory <see cref="ICustomerCreditService"/> with the same rules as store credit: every party but a guest holds
 /// credit, a change is made once per reference, and spending never takes more than there is.
 /// </summary>
 internal sealed class FakeCustomerCreditService : ICustomerCreditService
@@ -21,7 +21,10 @@ internal sealed class FakeCustomerCreditService : ICustomerCreditService
         => _balances.GetValueOrDefault((party, currency));
 
     public bool CanHold(PartyRef party)
-        => party.Kind is PartyKinds.User or PartyKinds.Customer;
+        => !party.IsEmpty && party.Kind != PartyKinds.Guest;
+
+    public Task<bool> CanSpendAsync(PartyRef party, string userId, CancellationToken cancellationToken = default)
+        => Task.FromResult(CanHold(party) && party.Kind == PartyKinds.User && party.Id == userId);
 
     public Task<decimal> GetBalanceAsync(PartyRef party, string currency, CancellationToken cancellationToken = default)
         => Task.FromResult(Balance(party, currency));

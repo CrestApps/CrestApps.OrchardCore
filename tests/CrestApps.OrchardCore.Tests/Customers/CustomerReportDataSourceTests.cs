@@ -63,7 +63,9 @@ public sealed class CustomerReportDataSourceTests : IAsyncLifetime
 
             await new CustomerMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
             await new LoyaltyMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
-            await new StoreCreditMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
+            var storeCreditMigrations = new StoreCreditMigrations { SchemaBuilder = schemaBuilder };
+            await storeCreditMigrations.CreateAsync();
+            await storeCreditMigrations.UpdateFrom1Async();
             await new ReferralMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
 
             await transaction.CommitAsync(cancellationToken);

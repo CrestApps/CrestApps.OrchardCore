@@ -47,7 +47,7 @@ public enum CustomerCreditError
     None,
 
     /// <summary>
-    /// The party can't hold customer credit, such as a guest, an account or a contact.
+    /// The party can't hold customer credit: a guest.
     /// </summary>
     UnsupportedParty,
 

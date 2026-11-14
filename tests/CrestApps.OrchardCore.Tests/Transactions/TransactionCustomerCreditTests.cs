@@ -54,12 +54,12 @@ public sealed class TransactionCustomerCreditTests
     }
 
     [Fact]
-    public async Task RecordPayment_AboveWhatIsOwed_ForAPayerThatCantHoldCredit_IsRefused()
+    public async Task RecordPayment_AboveWhatIsOwed_ForAGuestPayer_IsRefused()
     {
-        // Arrange
-        var owedByAccount = CreateOutstanding();
-        owedByAccount.SetPayer(new PartyRef(PartyKinds.Account, "account-1"));
-        var context = new CreditContext(owedByAccount);
+        // Arrange: a guest has no identity to keep credit for.
+        var owedByGuest = CreateOutstanding();
+        owedByGuest.OwnerKind = CustomerOwnerKind.Guest;
+        var context = new CreditContext(owedByGuest);
 
         // Act
         var result = await context.Service.RecordPaymentAsync("transaction-1", new TransactionPaymentRequest { Amount = 130m, CreditExcess = true }, TestContext.Current.CancellationToken);
@@ -67,6 +67,27 @@ public sealed class TransactionCustomerCreditTests
         // Assert
         Assert.False(result.Succeeded);
         Assert.Empty(context.Credit.Changes);
+    }
+
+    [Fact]
+    public async Task AnAccountPayer_KeepsTheExcessAsTheAccountsCredit_AndPaysWithIt()
+    {
+        // Arrange: the account owes the invoice, whoever ordered.
+        var account = new PartyRef(PartyKinds.Account, "account-1");
+        var owedByAccount = CreateOutstanding();
+        owedByAccount.SetPayer(account);
+        var context = new CreditContext(owedByAccount, CreateOutstanding("transaction-2", account));
+
+        // Act
+        var paid = await context.Service.RecordPaymentAsync("transaction-1", new TransactionPaymentRequest { Amount = 160m, CreditExcess = true }, TestContext.Current.CancellationToken);
+        var applied = await context.Service.ApplyCreditAsync("transaction-2", 60m, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(paid.Succeeded, string.Join(" ", paid.Errors));
+        Assert.True(applied.Succeeded, string.Join(" ", applied.Errors));
+        Assert.Equal(0m, context.Credit.Balance(account, "USD"));
+        Assert.Equal(40m, applied.Transaction.OutstandingAmount);
+        Assert.Equal(0m, context.Credit.Balance(new PartyRef(PartyKinds.User, "customer-1"), "USD"));
     }
 
     [Fact]
@@ -162,10 +183,11 @@ public sealed class TransactionCustomerCreditTests
         Assert.DoesNotContain(stored.Events, entry => entry.Type == TransactionEventType.Reversed);
     }
 
-    private static Transaction CreateOutstanding()
-        => new()
+    private static Transaction CreateOutstanding(string itemId = "transaction-1", PartyRef payer = default)
+    {
+        var transaction = new Transaction
         {
-            ItemId = "transaction-1",
+            ItemId = itemId,
             OwnerId = "customer-1",
             OwnerKind = CustomerOwnerKind.Authenticated,
             Title = "Invoice INV-1001",
@@ -177,11 +199,29 @@ public sealed class TransactionCustomerCreditTests
             UpdatedUtc = _now.AddDays(-10),
         };
 
+        if (!payer.IsEmpty)
+        {
+            transaction.SetPayer(payer);
+        }
+
+        return transaction;
+    }
+
     private sealed class CreditContext
     {
         public CreditContext(Transaction transaction, bool withCredit = true)
+            : this(withCredit, transaction)
         {
-            Store = new FakeTransactionStore(transaction);
+        }
+
+        public CreditContext(Transaction transaction, params Transaction[] others)
+            : this(true, [transaction, .. others])
+        {
+        }
+
+        private CreditContext(bool withCredit, params Transaction[] transactions)
+        {
+            Store = new FakeTransactionStore(transactions);
             var manager = TransactionManagerFactory.Resolve(Store, new RecordingTransactionEventHandler());
             var services = new ServiceCollection();
 

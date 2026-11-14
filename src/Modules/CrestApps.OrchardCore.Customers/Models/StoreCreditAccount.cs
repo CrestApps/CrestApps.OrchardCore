@@ -17,9 +17,21 @@ public sealed class StoreCreditAccount : CatalogItem, ITimestampedModel
     public long Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer the credit belongs to.
+    /// Gets or sets the customer the credit belongs to, or <see langword="null"/> when it belongs to another party, such as
+    /// a business account (<see cref="PartyKind"/> and <see cref="PartyId"/>).
     /// </summary>
     public string CustomerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of the party the credit belongs to when it is not a customer record, such as <c>Account</c>.
+    /// Accounts kept for a customer leave it empty, as they always have.
+    /// </summary>
+    public string PartyKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the party named by <see cref="PartyKind"/>.
+    /// </summary>
+    public string PartyId { get; set; }
 
     /// <summary>
     /// Gets or sets the ISO-4217 currency it holds. It pays only toward checkouts in that currency.

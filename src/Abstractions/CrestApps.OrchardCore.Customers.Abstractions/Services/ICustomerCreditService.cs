@@ -10,8 +10,9 @@ namespace CrestApps.OrchardCore.Customers.Services;
 /// resolves it when it is registered, and offers nothing to do with credit when it is not.
 /// </summary>
 /// <remarks>
-/// Store credit belongs to a customer, so the parties that can hold it are a user (<see cref="PartyKinds.User"/>, through
-/// their customer record) and a customer record (<see cref="PartyKinds.Customer"/>). Other parties are refused with
+/// Every party a debt can have holds credit except a guest: a user (<see cref="PartyKinds.User"/>) and a customer record
+/// (<see cref="PartyKinds.Customer"/>) on the customer record, and any other party, such as a business account
+/// (<see cref="PartyKinds.Account"/>), on store credit of its own. A guest is refused with
 /// <see cref="CustomerCreditError.UnsupportedParty"/>. Each change takes the credit's lock and is saved before it returns.
 /// </remarks>
 public interface ICustomerCreditService
@@ -21,6 +22,16 @@ public interface ICustomerCreditService
     /// </summary>
     /// <param name="party">The party.</param>
     bool CanHold(PartyRef party);
+
+    /// <summary>
+    /// Returns whether a signed-in user may spend a party's credit themselves, such as toward the party's invoices: their
+    /// own, or a party they have <see cref="PartyAccess.Billing"/> for (an account's admins, never a plain member). Staff who
+    /// manage transactions apply credit through their permission instead.
+    /// </summary>
+    /// <param name="party">The party whose credit is spent.</param>
+    /// <param name="userId">The user's id.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<bool> CanSpendAsync(PartyRef party, string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns a party's credit in a currency, or zero when they have none.
