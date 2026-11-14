@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Disbursements;
 using CrestApps.OrchardCore.Marketplace;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Stripe.Core;
@@ -27,11 +28,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = MarketplaceConstants.StripeConnectFeature,
     Name = "Marketplace payouts with Stripe Connect",
-    Description = "Pays vendors to their own Stripe accounts: each vendor sets one up through Stripe's onboarding from their vendor page, and what they've earned on an order is transferred to it from that order's payment.",
+    Description = "Pays vendors to their own Stripe accounts: each vendor sets one up through Stripe's onboarding from their vendor page, and what they've earned on an order is transferred to it from that order's payment, as a disbursement.",
     Category = "Commerce",
     Dependencies =
     [
         MarketplaceConstants.Feature,
         StripeConstants.Feature.ModuleId,
+        DisbursementsConstants.Features.Disbursements,
     ]
 )]

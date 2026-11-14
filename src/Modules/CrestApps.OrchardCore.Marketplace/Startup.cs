@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Customers.PersonalData;
+using CrestApps.OrchardCore.Disbursements.Services;
 using CrestApps.OrchardCore.Marketplace.BackgroundTasks;
 using CrestApps.OrchardCore.Marketplace.Deployments;
 using CrestApps.OrchardCore.Marketplace.Drivers;
@@ -14,6 +15,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -73,6 +75,10 @@ public sealed class StripeConnectStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<StripeConnectVendorService>();
-        services.AddScoped<IVendorPayoutProvider, StripeConnectPayoutProvider>();
+
+        // One instance answers as a Disbursements provider and as a vendor payout provider.
+        services.AddScoped<StripeConnectPayoutProvider>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IDisbursementProvider, StripeConnectPayoutProvider>(serviceProvider => serviceProvider.GetRequiredService<StripeConnectPayoutProvider>()));
+        services.AddScoped<IVendorPayoutProvider>(serviceProvider => serviceProvider.GetRequiredService<StripeConnectPayoutProvider>());
     }
 }

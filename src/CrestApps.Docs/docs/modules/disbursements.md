@@ -6,7 +6,7 @@ user_manual:
   - user-manual/finance/disbursements
 ---
 
-The **Disbursements** module records the money the business sends out and sends it in batches through a provider. Payroll net pay is the first consumer; Marketplace vendor payouts move onto it next. It never holds the business's money: it writes the bank file, issues the checks or records a payment made elsewhere.
+The **Disbursements** module records the money the business sends out and sends it in batches through a provider. Payroll net pay and Marketplace vendor payouts (through the Stripe Connect transfer provider) both send money through it. It never holds the business's money: it writes the bank file, issues the checks or records a payment made elsewhere.
 
 | Feature ID | Name | Depends on |
 | --- | --- | --- |

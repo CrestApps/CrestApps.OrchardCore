@@ -26,7 +26,7 @@ internal sealed class DisbursementsTestContext
 {
     public const string OriginRoutingNumber = BankingTestContext.ValidRoutingNumber;
 
-    public DisbursementsTestContext()
+    public DisbursementsTestContext(params IDisbursementProvider[] extraProviders)
     {
         Checks = new ChecksTestContext();
 
@@ -49,12 +49,13 @@ internal sealed class DisbursementsTestContext
         services.AddSingleton<IDisbursementService>(provider => Service);
         Services = services.BuildServiceProvider();
 
-        var providers = new List<IDisbursementProvider>
+        Providers = new List<IDisbursementProvider>
         {
             new ManualDisbursementProvider(RecipeRoundTrip.Localizer<ManualDisbursementProvider>()),
             new NachaDisbursementProvider(Banking.Manager, Banking.Service, Batches, new InMemoryNumberSequence(), Checks.LocalClock, clock.Object, RecipeRoundTrip.Localizer<NachaDisbursementProvider>()),
             new CheckDisbursementProvider(Checks.Service, RecipeRoundTrip.Localizer<CheckDisbursementProvider>()),
         };
+        Providers.AddRange(extraProviders);
 
         Service = new DisbursementService(
             Manager,
@@ -63,7 +64,7 @@ internal sealed class DisbursementsTestContext
             Files,
             Banking.Manager,
             Banking.Service,
-            providers,
+            Providers,
             [Observer, new NachaPrenoteObserver(Banking.Manager, Banking.Service)],
             Banking.HttpContextAccessor,
             clock.Object,
@@ -74,6 +75,11 @@ internal sealed class DisbursementsTestContext
     }
 
     public ChecksTestContext Checks { get; }
+
+    /// <summary>
+    /// Gets the providers the service sends batches through: the built-in ones and those the test gave.
+    /// </summary>
+    public List<IDisbursementProvider> Providers { get; }
 
     public BankingTestContext Banking => Checks.Banking;
 
