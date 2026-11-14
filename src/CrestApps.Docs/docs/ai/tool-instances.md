@@ -110,6 +110,8 @@ AI profiles and profile templates that use post-session processing can also invo
 
 This selection is stored separately from the **Capabilities** selection, so an instance that a live conversation may call is not automatically available during post-session analysis, and vice versa. Selecting only tool instances is enough to run post-session processing through the tool-enabled path; no regular tools are required.
 
+Post-session analysis always runs as no one, whether the background close task, an API call, a workflow or a person's request starts it, because its tools act on what a visitor wrote. A tool that checks its caller's permissions refuses there.
+
 ## Permissions
 
 The feature adds two permissions:
