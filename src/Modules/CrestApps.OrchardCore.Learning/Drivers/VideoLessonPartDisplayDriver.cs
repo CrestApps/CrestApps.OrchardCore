@@ -25,6 +25,7 @@ internal sealed class VideoLessonPartDisplayDriver : ContentPartDisplayDriver<Vi
         {
             model.RequiredPercent = part.RequiredPercent;
             model.Transcript = part.Transcript;
+            model.DurationMinutes = part.DurationSeconds is { } seconds ? Math.Round(seconds / 60m, 2) : null;
         });
     }
 
@@ -41,6 +42,7 @@ internal sealed class VideoLessonPartDisplayDriver : ContentPartDisplayDriver<Vi
 
         part.RequiredPercent = Math.Clamp(model.RequiredPercent, 1, 100);
         part.Transcript = model.Transcript?.Trim();
+        part.DurationSeconds = model.DurationMinutes is > 0 ? (int)Math.Round(model.DurationMinutes.Value * 60) : null;
 
         return Edit(part, context);
     }

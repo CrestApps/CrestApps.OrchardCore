@@ -17,4 +17,10 @@ public sealed class VideoLessonPart : ContentPart
     /// Gets or sets the transcript, shown under the player.
     /// </summary>
     public string Transcript { get; set; }
+
+    /// <summary>
+    /// Gets or sets the length of the video in seconds, when known. With it, a share watched is checked against the time
+    /// since the learner opened the video; without it, the share is the browser's claim and is marked self-reported.
+    /// </summary>
+    public int? DurationSeconds { get; set; }
 }

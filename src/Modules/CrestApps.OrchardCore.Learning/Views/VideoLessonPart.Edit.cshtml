@@ -8,6 +8,13 @@
         <span class="hint">@T["How much of the video file the learner must watch for the item to be completed by watching."]</span>
     </div>
 </div>
+<div class="ocat-wrapper">
+    <label asp-for="DurationMinutes" class="ocat-label">@T["Length (minutes)"]</label>
+    <div class="ocat-end ocat-end-sm">
+        <input asp-for="DurationMinutes" type="number" min="0.1" step="0.1" class="form-control" />
+        <span class="hint">@T["With the length, the share a learner watched is checked against the time since they opened the video. Without it, the share is what the browser reports, and reports mark it so."]</span>
+    </div>
+</div>
 <div class="ocat-wrapper" asp-validation-class-for="Transcript">
     <label asp-for="Transcript" class="ocat-label">@T["Transcript"]</label>
     <div class="ocat-end">

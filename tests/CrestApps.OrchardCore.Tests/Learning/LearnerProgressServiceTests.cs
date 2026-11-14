@@ -13,7 +13,8 @@ public sealed class LearnerProgressServiceTests
     public async Task RecordAccessAsync_OnAViewedItem_CompletesIt_AndTheLastRequiredItemCompletesTheCourse()
     {
         // Arrange
-        var (harness, courses, observer) = await LearningTestHarness.CreateAsync();
+        var clock = new LearningTestClock();
+        var (harness, courses, observer) = await LearningTestHarness.CreateAsync(clock.Use);
         await using var _ = harness;
         courses.AddCourse("course1", part => part.Code = "SAFE-101", title: "Safety");
         courses.AddItem("course1", "intro");
@@ -23,6 +24,7 @@ public sealed class LearnerProgressServiceTests
 
         // Act
         var first = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "intro", 30), enrollment.ItemId);
+        clock.UtcNow = LearningTestHarness.Now.AddSeconds(45);
         var last = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "policy", 45), enrollment.ItemId);
 
         // Assert
@@ -39,7 +41,7 @@ public sealed class LearnerProgressServiceTests
         Assert.Equal("Safety", completed.Completion.CourseTitle);
         Assert.Equal("SAFE-101", completed.Completion.CourseCode);
         Assert.Equal("course1-v1", completed.Completion.CourseVersionId);
-        Assert.Equal(75, completed.Completion.SecondsSpent);
+        Assert.Equal(45, completed.Completion.SecondsSpent);
         Assert.Equal(3, completed.Completion.Items.Count);
         Assert.Equal("Item intro", completed.Completion.Items[0].Title);
         Assert.Equal(CourseItemState.NotStarted, completed.Completion.Items.Single(item => item.ContentItemId == "extra").State);
@@ -47,25 +49,101 @@ public sealed class LearnerProgressServiceTests
     }
 
     [Fact]
-    public async Task RecordAccessAsync_OnAMinimumTimeItem_CompletesOnceTheTimeIsSpent_AndCapsEachCall()
+    public async Task RecordAccessAsync_AddsNoMoreThanTheWallTimeSinceTheLastAccess_AndNeverMoreThanAMinuteACall()
     {
         // Arrange
-        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        var clock = new LearningTestClock();
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync(clock.Use);
         await using var __ = harness;
         courses.AddCourse("course1");
         courses.AddItem("course1", "reading", completionMode: CompletionModes.MinimumTime, configure: part => part.MinimumMinutes = 2);
         courses.AddItem("course1", "other");
         var enrollment = await EnrollAsync(harness, "user1", "course1");
 
-        // Act
-        var capped = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "reading", 100_000), enrollment.ItemId);
-        var second = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "reading", 60), enrollment.ItemId);
+        // Act: the first call adds nothing, a burst in the same second adds nothing, then the clock bounds each call.
+        var first = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "reading", 100_000), enrollment.ItemId);
+
+        for (var i = 0; i < 20; i++)
+        {
+            await Progress(harness, (service, e) => service.RecordAccessAsync(e, "reading", 60), enrollment.ItemId);
+        }
+
+        var burst = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "reading", 60), enrollment.ItemId);
+        clock.UtcNow = LearningTestHarness.Now.AddSeconds(30);
+        var half = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "reading", 60), enrollment.ItemId);
+        clock.UtcNow = LearningTestHarness.Now.AddSeconds(200);
+        var capped = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "reading", 60), enrollment.ItemId);
+        clock.UtcNow = LearningTestHarness.Now.AddSeconds(260);
+        var done = await Progress(harness, (service, e) => service.RecordAccessAsync(e, "reading", 60), enrollment.ItemId);
 
         // Assert
+        Assert.Equal(0, first.Item.SecondsSpent);
+        Assert.Equal(0, burst.Item.SecondsSpent);
+        Assert.Equal(30, half.Item.SecondsSpent);
+        Assert.Equal(90, capped.Item.SecondsSpent);
         Assert.False(capped.ItemCompleted);
-        Assert.Equal(60, capped.Item.SecondsSpent);
-        Assert.True(second.ItemCompleted);
-        Assert.Equal(120, second.Item.SecondsSpent);
+        Assert.True(done.ItemCompleted);
+        Assert.Equal(150, done.Item.SecondsSpent);
+    }
+
+    [Fact]
+    public async Task RecordAccessAsync_FromTwoTabsAtOnce_CountsTheWallTimeOnce()
+    {
+        // Arrange
+        var clock = new LearningTestClock();
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync(clock.Use);
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "a", completionMode: CompletionModes.MinimumTime, configure: part => part.MinimumMinutes = 60);
+        courses.AddItem("course1", "b", completionMode: CompletionModes.MinimumTime, configure: part => part.MinimumMinutes = 60);
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act: two tabs send a heartbeat every 30 seconds, one for each item.
+        await Progress(harness, (service, e) => service.RecordAccessAsync(e, "a", 30), enrollment.ItemId);
+        await Progress(harness, (service, e) => service.RecordAccessAsync(e, "b", 30), enrollment.ItemId);
+
+        for (var step = 1; step <= 4; step++)
+        {
+            clock.UtcNow = LearningTestHarness.Now.AddSeconds(30 * step);
+            await Progress(harness, (service, e) => service.RecordAccessAsync(e, "a", 30), enrollment.ItemId);
+            await Progress(harness, (service, e) => service.RecordAccessAsync(e, "b", 30), enrollment.ItemId);
+        }
+
+        var progress = await harness.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().GetAsync(enrollment.ItemId), commit: false);
+
+        // Assert: two minutes of wall time are two minutes of learning, not four.
+        Assert.Equal(120, progress.Items.Sum(item => item.SecondsSpent));
+    }
+
+    [Fact]
+    public async Task RecordViewedAsync_OfAVideoOfKnownLength_IsCappedByTheTimeSinceItOpened()
+    {
+        // Arrange
+        var clock = new LearningTestClock();
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync(clock.Use);
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        var video = courses.AddItem("course1", "video", LearningConstants.CourseItemKinds.Video, CompletionModes.Watched);
+        video.Alter<VideoLessonPart>(part =>
+        {
+            part.RequiredPercent = 90;
+            part.DurationSeconds = 600;
+        });
+        courses.AddItem("course1", "other");
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act
+        await Progress(harness, (service, e) => service.RecordAccessAsync(e, "video", 0), enrollment.ItemId);
+        clock.UtcNow = LearningTestHarness.Now.AddSeconds(60);
+        var early = await Progress(harness, (service, e) => service.RecordViewedAsync(e, "video", 100), enrollment.ItemId);
+        clock.UtcNow = LearningTestHarness.Now.AddSeconds(600);
+        var late = await Progress(harness, (service, e) => service.RecordViewedAsync(e, "video", 100), enrollment.ItemId);
+
+        // Assert
+        Assert.False(early.ItemCompleted);
+        Assert.True(early.Item.PercentViewed <= 15);
+        Assert.True(late.ItemCompleted);
+        Assert.False(late.Item.SelfReported);
     }
 
     [Fact]
@@ -89,6 +167,9 @@ public sealed class LearnerProgressServiceTests
         Assert.False(partly.ItemCompleted);
         Assert.Equal(50, lower.Item.PercentViewed);
         Assert.True(enough.ItemCompleted);
+
+        // The length of the video is not known, so the share watched is the browser's claim and is marked so.
+        Assert.True(enough.Item.SelfReported);
     }
 
     [Fact]

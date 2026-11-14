@@ -19,6 +19,12 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     /// </summary>
     public const int MaxSecondsPerCall = 60;
 
+    /// <summary>
+    /// The share of a video, in percent, a learner may claim beyond what the time since opening it allows, for seeking
+    /// and rounding.
+    /// </summary>
+    public const int ViewedSlackPercent = 5;
+
     private static readonly TimeSpan _activityWriteInterval = TimeSpan.FromHours(1);
 
     private readonly EnrollmentStore _enrollmentStore;
@@ -80,7 +86,11 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     {
         return UpdateAsync(enrollment, itemId, context =>
         {
-            context.Item.SecondsSpent += Math.Clamp(secondsSpent, 0, MaxSecondsPerCall);
+            // Time counts by the clock: a call adds no more than the wall time since the last access to any item of the
+            // enrollment, so a burst of calls or two tabs at once never add more time than passed.
+            var elapsed = context.LastAccessUtc is { } last ? Math.Max(0, (int)(context.UtcNow - last).TotalSeconds) : 0;
+
+            context.Item.SecondsSpent += Math.Min(Math.Clamp(secondsSpent, 0, MaxSecondsPerCall), elapsed);
 
             return null;
         }, cancellationToken);
@@ -91,7 +101,24 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     {
         return UpdateAsync(enrollment, itemId, context =>
         {
-            context.Item.PercentViewed = Math.Max(context.Item.PercentViewed, Math.Clamp(percentViewed, 0, 100));
+            var claimed = Math.Clamp(percentViewed, 0, 100);
+            var duration = context.Entry.Item.Get<VideoLessonPart>(nameof(VideoLessonPart))?.DurationSeconds;
+
+            if (duration is > 0)
+            {
+                // With the length known, no more can have been watched than the time since the video was opened allows.
+                var watched = context.Item.FirstAccessUtc is { } first ? Math.Max(0, (context.UtcNow - first).TotalSeconds) : 0;
+                var possible = (int)Math.Min(100, Math.Floor(watched * 100 / duration.Value) + ViewedSlackPercent);
+
+                claimed = Math.Min(claimed, possible);
+            }
+            else if (claimed > 0)
+            {
+                // Without the length the share is only the browser's claim, and reports show it as such.
+                context.Item.SelfReported = true;
+            }
+
+            context.Item.PercentViewed = Math.Max(context.Item.PercentViewed, claimed);
 
             return null;
         }, cancellationToken);
@@ -345,6 +372,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             Entry = entry,
             Item = item,
             UtcNow = now,
+            LastAccessUtc = progress.Items.Max(candidate => candidate.LastAccessUtc),
         };
 
         var refused = apply(context);
@@ -599,6 +627,8 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
     private sealed class UpdateContext
     {
+        public DateTime? LastAccessUtc { get; init; }
+
         public CourseOutlineEntry Entry { get; init; }
 
         public CourseItemProgress Item { get; init; }

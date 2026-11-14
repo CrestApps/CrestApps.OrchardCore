@@ -68,12 +68,16 @@ public sealed class LearningReportDataSourceTests
     public async Task Enrollments_ReturnTypedValues_NewestFirst_AndStopAtMaxRows()
     {
         // Arrange
-        var (harness, courses, _) = await CreateAsync();
+        var clock = new LearningTestClock();
+        var (harness, courses, _) = await CreateAsync(clock);
         await using var __ = harness;
         courses.AddCourse("course1", title: "Safety");
-        courses.AddItem("course1", "lesson");
+        courses.AddItem("course1", "lesson", completionMode: CompletionModes.MarkedDone);
         var first = await EnrollAsync(harness, "learner1");
+        await harness.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().RecordAccessAsync(first, "lesson", 0));
+        clock.UtcNow = LearningTestHarness.Now.AddSeconds(40);
         await harness.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().RecordAccessAsync(first, "lesson", 40));
+        await harness.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().MarkDoneAsync(first, "lesson"));
         await EnrollAsync(harness, "learner2");
 
         // Act
@@ -118,9 +122,10 @@ public sealed class LearningReportDataSourceTests
         Assert.Equal(40L, completion["SecondsSpent"]);
     }
 
-    private static Task<(CalendarTestHarness Harness, InMemoryCourses Courses, RecordingEnrollmentObserver Observer)> CreateAsync()
+    private static Task<(CalendarTestHarness Harness, InMemoryCourses Courses, RecordingEnrollmentObserver Observer)> CreateAsync(LearningTestClock clock = null)
         => LearningTestHarness.CreateAsync(services =>
         {
+            clock?.Use(services);
             services.AddScoped<ILearningReportDataSet, LearningEnrollmentsReportDataSet>();
             services.AddScoped<ILearningReportDataSet, LearningItemProgressReportDataSet>();
             services.AddScoped<ILearningReportDataSet, LearningCompletionsReportDataSet>();
