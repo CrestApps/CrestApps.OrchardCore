@@ -33,7 +33,7 @@ A stopped buyer reads *We can't take another payment attempt right now. Please t
 The provider is never asked to charge the card.
 
 The first decline that stops a network or a customer records a **Suspected card testing** payment issue, and the store-wide
-limit records **Card declines across the store**. Both are listed under **Commerce › Payment issues**. Check the payment
+limit records **Card declines across the store**. A decline from a network or customer that is already stopped counts against nothing more: it doesn't add to the store-wide count, so one address can't raise the store-wide action alone. Both are listed under **Commerce › Payment issues**. Check the payment
 provider's dashboard for the declines, and consider turning on the stronger store-wide action while it lasts.
 
 Each decline is counted once: when its payment attempt becomes failed, whether the provider said so at once or when the
