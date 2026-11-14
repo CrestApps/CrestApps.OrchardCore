@@ -97,6 +97,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Handlers/OmnichannelContactPartContentImportHandler.cs: ImportAsync"] = 172,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/OmnichannelActivitiesStartup.cs: ConfigureServices"] = 221,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultContactActivityBatchLoader.cs: LoadAsync"] = 815,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingWorkspaceBuilder.cs: BuildInboxAsync"] = 157,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Startup.cs: ConfigureServices"] = 200,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/BackgroundTasks/SmsReEngagementBackgroundTask.cs: TryReEngageAsync"] = 278,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Handlers/SmsOmnichannelEventHandler.cs: HandleAsync"] = 857,

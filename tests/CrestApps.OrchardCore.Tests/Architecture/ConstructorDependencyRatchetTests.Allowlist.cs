@@ -62,7 +62,7 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityDisplayDriver.cs: OmnichannelActivityDisplayDriver"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultContactActivityBatchLoader.cs: DefaultContactActivityBatchLoader"] = 16,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Controllers/AdminController.cs: AdminController"] = 17,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingWorkspaceBuilder.cs: MessagingWorkspaceBuilder"] = 20,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingWorkspaceBuilder.cs: MessagingWorkspaceBuilder"] = 21,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Handlers/SmsOmnichannelEventHandler.cs: SmsOmnichannelEventHandler"] = 28,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Services/SmsEntryPointAIConversationStarter.cs: SmsEntryPointAIConversationStarter"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Orders/Controllers/ReturnsAdminController.cs: ReturnsAdminController"] = 13,

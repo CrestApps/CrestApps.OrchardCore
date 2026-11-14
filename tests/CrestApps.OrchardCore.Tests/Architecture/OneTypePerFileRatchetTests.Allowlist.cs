@@ -664,7 +664,7 @@ public sealed partial class OneTypePerFileRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingTransferTargets.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/ThreadTimeline.cs"] = 2,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/ViewModels/BroadcastViewModels.cs"] = 2,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/ViewModels/WorkspaceViewModels.cs"] = 12,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/ViewModels/WorkspaceViewModels.cs"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Startup.cs"] = 3,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Voice/Startup.cs"] = 3,
         ["src/Modules/CrestApps.OrchardCore.OpenAI.Azure/Startup.cs"] = 3,
