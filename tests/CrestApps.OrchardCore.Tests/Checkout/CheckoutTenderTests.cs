@@ -166,6 +166,44 @@ public sealed class CheckoutTenderTests : IAsyncLifetime
         Assert.Equal(30m, _provider.Balances["card-1"]);
     }
 
+    /// <summary>
+    /// M3 (final review): a second return read the holds before the first committed (a till return, a cancel with refund
+    /// and a booking cancel all read them before any lock). Inside the balance's lock its session handed back that copy,
+    /// which said nothing was returned, so the money went back twice, and the hold was saved with no version check.
+    /// </summary>
+    [Fact]
+    public async Task ASecondReturn_ThatReadTheHoldsBeforeTheFirstCommitted_PutsNothingBackTwice()
+    {
+        _provider.Balances["card-1"] = 30m;
+
+        var session = Session("session-a", "card-1");
+        var invoice = await ApplyAsync(Invoice(), session);
+        var flow = new CheckoutFlow(session);
+
+        await UseLedgerAsync(ledger => ledger.HoldAsync(flow, invoice.Tenders[0], TestContext.Current.CancellationToken));
+        await UseLedgerAsync(async ledger =>
+        {
+            await ledger.RedeemAsync(flow, TestContext.Current.CancellationToken);
+
+            return 0;
+        });
+
+        // Request B reads what can be returned, as the callers do before any lock.
+        await using var second = _store.CreateSession();
+        var secondLedger = new CheckoutTenderLedger(second, _lock, [_provider], new TestClock(_now), NullLogger<CheckoutTenderLedger>.Instance);
+        Assert.Equal(30m, (await secondLedger.GetRedeemedAsync("session-a", TestContext.Current.CancellationToken)).Sum(hold => hold.Amount - hold.ReturnedAmount));
+
+        // Request A returns everything and commits.
+        Assert.Equal(30m, await UseLedgerAsync(ledger => ledger.ReturnAsync("session-a", 30m, "Refund", TestContext.Current.CancellationToken)));
+
+        // Act: B returns everything too.
+        var returnedAgain = await secondLedger.ReturnAsync("session-a", 30m, "Refund", TestContext.Current.CancellationToken);
+        await second.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0m, returnedAgain);
+        Assert.Equal(30m, _provider.Balances["card-1"]);
+    }
+
     private async Task<CheckoutInvoice> ApplyAsync(CheckoutInvoice invoice, CheckoutSession session)
     {
         await using var yesSql = _store.CreateSession();

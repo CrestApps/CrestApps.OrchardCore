@@ -141,6 +141,29 @@ public sealed class PaymentVelocityGateTests
     }
 
     /// <summary>
+    /// L-checkout-card-testing (final review): the store-wide counter also counted declines from a network that was
+    /// already blocked, so one address with client secrets it opened before its block reached the store's thirty alone,
+    /// and with "require sign-in" or "pause guest cards" kept every guest from paying by card.
+    /// </summary>
+    [Fact]
+    public async Task DeclinesFromANetworkThatIsAlreadyBlocked_DoNotCountTowardTheStoreSpike()
+    {
+        var (gate, recorder) = Create(DeclineSpikeAction.PauseGuestCards);
+
+        for (var i = 0; i < 40; i++)
+        {
+            await recorder.RecordAsync(Session($"s{i}", network: "203.0.113.7"), Attempt(CardProvider), TestContext.Current.CancellationToken);
+        }
+
+        Assert.DoesNotContain(_issues, issue => issue.Kind == PaymentIssueKinds.DeclineSpike);
+
+        var guest = Context(Session("guest", network: "198.51.100.1"), CardProvider);
+        await gate.BeginningAsync(guest, TestContext.Current.CancellationToken);
+
+        Assert.False(guest.IsRefused);
+    }
+
+    /// <summary>
     /// RL-4 (review): the recorder peeked without the lock and then recorded, so two declines at the limit in parallel
     /// both saw "allowed" before and "blocked" after, and recorded two issues.
     /// </summary>

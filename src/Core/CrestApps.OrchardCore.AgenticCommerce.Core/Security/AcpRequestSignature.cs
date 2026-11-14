@@ -96,7 +96,8 @@ public static partial class AcpRequestSignature
 
         try
         {
-            input = GetSigningInput(JsonNode.Parse(body));
+            // A property named twice isn't JSON that can be canonicalized.
+            input = GetSigningInput(JsonNode.Parse(body, documentOptions: new JsonDocumentOptions { AllowDuplicateProperties = false }));
 
             return true;
         }

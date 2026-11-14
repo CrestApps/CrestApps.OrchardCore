@@ -959,6 +959,7 @@ namespace CrestApps.OrchardCore.Orders.Services
         public System.Collections.Generic.List<string> Errors { get; }
         public System.Collections.Generic.List<string> Messages { get; }
         public decimal Refunded { get; set; }
+        public System.Collections.Generic.Dictionary<string, decimal> ReturnedToBalances { get; }
         public bool Succeeded { get; }
     }
 }

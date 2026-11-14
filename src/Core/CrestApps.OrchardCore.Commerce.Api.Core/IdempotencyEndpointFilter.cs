@@ -162,18 +162,15 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     internal static string GetCacheKey(HttpContext httpContext, string key, IdempotencyPolicy policy = null)
     {
         // A guest is known by their cart's token, or their checkout's when they have no cart. Never both: the answer to
-        // starting a checkout hands out the checkout token, so a retry of it carries one the first request didn't.
-        var caller = policy?.Caller?.Invoke(httpContext) ??
-            httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
-            httpContext.User?.FindFirstValue("sub") ??
-            FirstNonEmpty(httpContext.Request.Headers[CommerceApi.CartTokenHeader].ToString(), httpContext.Request.Headers[CommerceApi.CheckoutTokenHeader].ToString());
+        // starting a checkout hands out the checkout token, so a retry of it carries one the first request didn't. Each kind
+        // of caller has its own prefix, so a guest whose token is a user's id is never in that user's scope.
+        var caller = Prefixed("caller:", policy?.Caller?.Invoke(httpContext)) ??
+            Prefixed("user:", httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? httpContext.User?.FindFirstValue("sub")) ??
+            Prefixed("guest:", FirstNonEmpty(httpContext.Request.Headers[CommerceApi.CartTokenHeader].ToString(), httpContext.Request.Headers[CommerceApi.CheckoutTokenHeader].ToString()));
 
         // A caller with no identity and no token isn't anyone in particular: it is kept apart by its address, so one
         // guest's key never answers another guest with the first one's response.
-        if (string.IsNullOrEmpty(caller))
-        {
-            caller = "anonymous:" + ClientNetworkKey.NetworkOnly(httpContext);
-        }
+        caller ??= "anonymous:" + ClientNetworkKey.NetworkOnly(httpContext);
 
         var scope = $"{httpContext.Request.PathBase}|{httpContext.Request.Method}|{httpContext.Request.Path}|{caller}|{key}";
 
@@ -182,6 +179,9 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
 
     private static string FirstNonEmpty(string first, string second)
         => string.IsNullOrEmpty(first) ? second : first;
+
+    private static string Prefixed(string prefix, string caller)
+        => string.IsNullOrEmpty(caller) ? null : prefix + caller;
 
     // The headers a client acts on: the guest tokens the first answer handed out, and where a created thing is.
     private static readonly string[] _replayedHeaders = [CommerceApi.CartTokenHeader, CommerceApi.CheckoutTokenHeader, HeaderNames.Location];

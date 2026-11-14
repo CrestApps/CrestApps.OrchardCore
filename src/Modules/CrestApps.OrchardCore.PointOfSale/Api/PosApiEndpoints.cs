@@ -387,8 +387,7 @@ internal static class PosApiEndpoints
         IRegisterShiftStore shiftStore,
         PosShiftService shifts,
         IOrderOperationsService operations,
-        IAuthorizationService authorizationService,
-        ICheckoutTenderLedger ledger)
+        IAuthorizationService authorizationService)
     {
         if (request?.Amount is <= 0m)
         {
@@ -421,7 +420,6 @@ internal static class PosApiEndpoints
             return ApiProblems.Conflict(PosCodes.ShiftClosed, "Open a shift at the register first.");
         }
 
-        var cashBefore = await GetCashHeldAsync(ledger, order, httpContext.RequestAborted);
         var result = await operations.RefundAsync(order, request.Amount, request.Reason ?? "Returned at the till", request.Restock != false, PosShiftService.GetName(httpContext.User), asStoreCredit: false, httpContext.RequestAborted);
 
         if (!result.Succeeded)
@@ -429,9 +427,10 @@ internal static class PosApiEndpoints
             return ApiProblems.Conflict(ApiProblems.Codes.NotAvailable, string.Join(" ", result.Errors));
         }
 
-        // What the refund put back on the sale's cash goes back in cash, out of this register's drawer. The card is
-        // refunded first, so this is only what the card didn't cover.
-        var cashBack = Math.Max(0m, cashBefore - await GetCashHeldAsync(ledger, order, httpContext.RequestAborted));
+        // What this refund put back on the sale's cash goes back in cash, out of this register's drawer. The card is refunded
+        // first, so this is only what the card didn't cover. It is what the refund measured under the order's lock, not what
+        // the sale held before it: another return of the same sale may have given that cash back in between.
+        var cashBack = result.ReturnedToBalances.GetValueOrDefault(PosConstants.CashTenderKey);
 
         if (cashBack > 0m)
         {
@@ -441,7 +440,6 @@ internal static class PosApiEndpoints
         return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), result.Messages));
     }
 
-    // The cash a sale was paid with that hasn't been given back yet.
     // A counter sale belongs to the store its register is in.
     private static async Task<bool> IsSameStoreAsync(Order order, Register register, IRegisterStore registers, CancellationToken cancellationToken)
     {
@@ -459,13 +457,6 @@ internal static class PosApiEndpoints
 
         return string.Equals(soldAt.LocationId ?? string.Empty, register.LocationId ?? string.Empty, StringComparison.Ordinal);
     }
-
-    private static async Task<decimal> GetCashHeldAsync(ICheckoutTenderLedger ledger, Order order, CancellationToken cancellationToken)
-        => string.IsNullOrEmpty(order.CheckoutSessionId)
-            ? 0m
-            : (await ledger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken))
-                .Where(hold => hold.ProviderKey == PosConstants.CashTenderKey)
-                .Sum(hold => hold.Amount - hold.ReturnedAmount);
 
     // A shift opens for whoever may sell at its register.
     private static async Task<(RegisterShift Shift, Register Register)?> FindShiftAsync(string shiftId, HttpContext httpContext, IRegisterShiftStore shiftStore, IRegisterStore registers, PosShiftService shifts)

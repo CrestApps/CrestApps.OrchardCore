@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
@@ -52,7 +53,8 @@ public sealed class UcpProfileClient
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task<(JsonObject Profile, string Error)> GetAsync(string profileUrl, CancellationToken cancellationToken = default)
     {
-        if (!Uri.TryCreate(profileUrl, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        // A profile holds the keys a platform's signatures are checked with, so it is read over https only.
+        if (!Uri.TryCreate(profileUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
         {
             return (null, "invalid_profile_url");
         }
@@ -159,11 +161,20 @@ public sealed class UcpProfileClient
     }
 
     /// <summary>
-    /// Returns the made-up id an unregistered platform's checkouts are kept under, from its profile's address.
+    /// Returns the made-up id an unregistered platform's checkouts are kept under, from its profile's origin: scheme, host
+    /// and port, in lower case. The path and query are left out, so a caller can't be a new platform for each spelling of
+    /// its profile's address.
     /// </summary>
     /// <param name="profileUrl">The profile's address.</param>
     public static string GetUnregisteredPlatformId(string profileUrl)
-        => $"ucp-{Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(profileUrl ?? string.Empty)).AsSpan(0, 11))}";
+        => AgentPlatform.UnregisteredIdPrefix + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(GetOrigin(profileUrl) ?? profileUrl ?? string.Empty)).AsSpan(0, 11));
+
+    /// <summary>
+    /// Returns an address's origin (scheme, host and port, in lower case), or <see langword="null"/> when it isn't one.
+    /// </summary>
+    /// <param name="url">The address.</param>
+    public static string GetOrigin(string url)
+        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.IdnHost}:{uri.Port}".ToLowerInvariant() : null;
 
     /// <summary>
     /// The storage key of where a UCP platform's order updates go, on an agent checkout.

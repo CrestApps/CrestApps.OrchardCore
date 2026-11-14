@@ -83,28 +83,38 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
 
         try
         {
+            var alreadyBlocked = false;
+
             if (session.TryGet<CheckoutClientInfo>(out var client) && !string.IsNullOrEmpty(client.NetworkKey))
             {
-                await CountAsync(
+                alreadyBlocked |= WasBlocked(await CountAsync(
                     CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork,
                     client.NetworkKey,
                     session,
                     attempt,
                     PaymentIssueKinds.SuspectedCardTesting,
                     "Card payments from one network were declined until the store stopped taking card payments from it for a while. Someone may be testing stolen cards.",
-                    cancellationToken);
+                    cancellationToken));
             }
 
             if (!string.IsNullOrEmpty(session.OwnerId))
             {
-                await CountAsync(
+                alreadyBlocked |= WasBlocked(await CountAsync(
                     CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer,
                     session.OwnerId,
                     session,
                     attempt,
                     PaymentIssueKinds.SuspectedCardTesting,
                     "A customer's card payments were declined until the store stopped taking card payments from them for a while. Their account may be used to test stolen cards.",
-                    cancellationToken);
+                    cancellationToken));
+            }
+
+            // A decline from a network or customer the store stopped already is not counted for the store as well: with the
+            // client secrets it opened before its block, one address could otherwise raise the store-wide spike alone, and
+            // with "require sign-in" or "pause guest cards" keep every guest from paying by card.
+            if (alreadyBlocked)
+            {
+                return;
             }
 
             await CountAsync(
@@ -123,7 +133,11 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
         }
     }
 
-    private async Task CountAsync(string policy, string key, CheckoutSession session, PaymentAttempt attempt, string kind, string message, CancellationToken cancellationToken)
+    // Whether the key was stopped before this decline: refused, and not by this decline reaching the limit.
+    private static bool WasBlocked(AttemptLimitResult result)
+        => !result.Allowed && !result.ReachedLimit;
+
+    private async Task<AttemptLimitResult> CountAsync(string policy, string key, CheckoutSession session, PaymentAttempt attempt, string kind, string message, CancellationToken cancellationToken)
     {
         // Only the decline that blocks the key records an issue, even when declines arrive in parallel: the limiter says
         // which one used up the window, under its lock. A refusal because the counter couldn't be reached is not a block.
@@ -131,7 +145,7 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
 
         if (!result.ReachedLimit)
         {
-            return;
+            return result;
         }
 
         var limit = _options.Policies.TryGetValue(policy, out var registered) ? registered : null;
@@ -153,6 +167,8 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
             Amount = attempt.ExpectedAmount,
             Currency = session.Currency,
         }, cancellationToken);
+
+        return result;
     }
 
     // Who was blocked, as staff may read it: a network masked to /24 (an IPv6 key is a /64 already), a customer, or the

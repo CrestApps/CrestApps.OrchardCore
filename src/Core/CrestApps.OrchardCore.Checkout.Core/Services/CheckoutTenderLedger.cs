@@ -184,7 +184,15 @@ public sealed class CheckoutTenderLedger : ICheckoutTenderLedger
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<CheckoutTenderHold>> GetRedeemedAsync(string sessionId, CancellationToken cancellationToken = default)
-        => [.. (await ListAsync(sessionId, _redeemed, cancellationToken)).Where(hold => hold.Amount > hold.ReturnedAmount)];
+    {
+        // The session hands back a hold it read before as that copy, which can be from before another request put money
+        // back on it. What can still be returned is read from the database.
+        var holds = await ListAsync(sessionId, _redeemed, cancellationToken);
+
+        _session.Detach(holds);
+
+        return [.. (await ListAsync(sessionId, _redeemed, cancellationToken)).Where(hold => hold.Amount > hold.ReturnedAmount)];
+    }
 
     /// <inheritdoc/>
     public async Task<decimal> ReturnAsync(string sessionId, decimal amount, string reason, CancellationToken cancellationToken = default)
@@ -209,6 +217,10 @@ public sealed class CheckoutTenderLedger : ICheckoutTenderLedger
 
             await using (locker)
             {
+                // Read again under the lock, from the database, and saved only if no one changed it since: another return of
+                // the same hold may have committed since it was read.
+                _session.Detach(redeemed);
+
                 var hold = await FindAsync(redeemed.SessionId, redeemed.ProviderKey, redeemed.Reference, _redeemed, cancellationToken);
                 var portion = hold is null ? 0m : Money.Round(Math.Min(amount - returned, hold.Amount - hold.ReturnedAmount), hold.Currency);
 
@@ -222,7 +234,7 @@ public sealed class CheckoutTenderLedger : ICheckoutTenderLedger
                 hold.ReturnedAmount += portion;
                 returned += portion;
 
-                await _session.SaveAsync(hold, cancellationToken: cancellationToken);
+                await _session.SaveAsync(hold, checkConcurrency: true, cancellationToken: cancellationToken);
                 await _session.SaveChangesAsync(cancellationToken);
             }
         }

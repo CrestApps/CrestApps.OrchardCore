@@ -46,4 +46,20 @@ public sealed class AgentPlatformStore : DocumentCatalog<AgentPlatform, AgentPla
         return Session.Query<AgentPlatform, AgentPlatformIndex>(index => index.ProfileUrl == profileUrl, collection: AgenticCommerceStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<AgentPlatform> FindByProfileHostAsync(string host, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(host);
+
+        // The text search narrows it down; the host itself is compared here, so another host that contains this one never
+        // matches. The pattern is one value: YesSql turns a concatenation in the expression into SQL, not one parameter.
+        var pattern = "://" + host;
+        var candidates = await Session.Query<AgentPlatform, AgentPlatformIndex>(index => index.ProfileUrl.Contains(pattern), collection: AgenticCommerceStorage.CollectionName)
+            .Take(100)
+            .ListAsync(cancellationToken);
+
+        return candidates.FirstOrDefault(platform =>
+            Uri.TryCreate(platform.ProfileUrl, UriKind.Absolute, out var uri) && string.Equals(uri.IdnHost, host, StringComparison.OrdinalIgnoreCase));
+    }
 }

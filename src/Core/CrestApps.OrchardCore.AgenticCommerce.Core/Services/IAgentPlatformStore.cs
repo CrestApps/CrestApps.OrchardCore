@@ -28,4 +28,11 @@ public interface IAgentPlatformStore : ICatalog<AgentPlatform>
     /// <param name="profileUrl">The profile's address.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<AgentPlatform> FindByProfileUrlAsync(string profileUrl, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a platform whose UCP profile is on a host, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="host">The host, as <see cref="Uri.IdnHost"/> gives it.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<AgentPlatform> FindByProfileHostAsync(string host, CancellationToken cancellationToken = default);
 }
