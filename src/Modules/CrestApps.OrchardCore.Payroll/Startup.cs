@@ -155,6 +155,7 @@ public sealed class PayrollStartup : StartupBase
             .AddIndexProvider<PayRunInputIndexProvider>();
 
         services.AddScoped<PayrollNames>();
+        services.AddScoped<PayStubService>();
         services.AddScoped<PayRunApprovalPolicySeeder>();
         services.AddScoped<PayProfileEditTracker>();
         services.AddDisplayDriver<EmployeePayProfile, PayProfileDisplayDriver>();

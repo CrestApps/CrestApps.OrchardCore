@@ -41,6 +41,11 @@ public static class PayrollConstants
     public const string PipelineConsumerPrefix = "pipeline:";
 
     /// <summary>
+    /// The prefix of the consumer id a processed pay run takes its source inputs under, followed by the run's id.
+    /// </summary>
+    public const string PayRunConsumerPrefix = "payrun:";
+
+    /// <summary>
     /// The party kind of an employer, such as the payer of a check.
     /// </summary>
     public const string EmployerPartyKind = "Employer";
@@ -96,6 +101,16 @@ public static class PayrollConstants
     public const string PayRunNumberSeries = "Payroll:PayRuns";
 
     /// <summary>
+    /// The number sequence pay statements are numbered from when they become final.
+    /// </summary>
+    public const string PayStatementNumberSeries = "Payroll:PayStatements";
+
+    /// <summary>
+    /// The notification type of a pay statement that is ready.
+    /// </summary>
+    public const string PayStatementReadyNotificationType = "PayStatementReady";
+
+    /// <summary>
     /// The data set of pay profiles.
     /// </summary>
     public const string EmployeesDataSetName = "PayrollEmployees";
@@ -119,5 +134,15 @@ public static class PayrollConstants
         /// Payroll Tax Tables: the built-in tax provider, payroll tax rules over Taxation's tables.
         /// </summary>
         public const string TaxTables = "CrestApps.OrchardCore.Payroll.TaxTables";
+
+        /// <summary>
+        /// Direct Deposit: net pay deposited to people's bank accounts through Disbursements.
+        /// </summary>
+        public const string DirectDeposit = "CrestApps.OrchardCore.Payroll.DirectDeposit";
+
+        /// <summary>
+        /// Paychecks: net pay paid by printed checks through Checks.
+        /// </summary>
+        public const string Paychecks = "CrestApps.OrchardCore.Payroll.Checks";
     }
 }

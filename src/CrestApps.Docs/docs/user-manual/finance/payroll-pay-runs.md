@@ -1,7 +1,7 @@
 ---
 sidebar_label: Pay runs
 title: Pay runs
-description: "Add a pay run, enter one-time hours and amounts or a file of bonuses, calculate it, review the register, and have someone else approve it."
+description: "Add a pay run, enter one-time hours and amounts or a file of bonuses, calculate it, have someone else approve it, then process it to pay by deposit and check, and void or reissue a statement."
 technical_manual:
   - modules/payroll
 ---
@@ -11,8 +11,8 @@ A **pay run** pays the people of one employer for one period. Payroll works out 
 | | |
 | --- | --- |
 | **Menu** | Payroll > Pay Runs |
-| **Permission** | Prepare pay runs, Approve pay runs, See pay runs (all employers, or one) |
-| **Feature** | Payroll |
+| **Permission** | Prepare pay runs, Approve pay runs, Process pay runs, Void pay statements, See pay runs (all employers, or one) |
+| **Feature** | Payroll; Direct Deposit to pay to bank accounts; Paychecks to pay by check |
 
 <AskYourAdmin />
 
@@ -38,3 +38,21 @@ Choose **Calculate**. The page shows the totals (gross, taxes, deductions, net p
 Choose **Submit for approval**. People who approve pay runs for the employer see **Approve** and **Reject** on the run's page; the person who prepared the run can't approve it unless **Settings > Payroll** allows it. Any change after the approval, such as a new input, returns the run to calculated: submit it again.
 
 **Cancel the run** removes its statements; a cancelled run can't be calculated again.
+
+## Process and pay
+
+Once the run is approved, someone who processes pay runs for the employer chooses **Process and pay**. Each statement becomes final and gets a number, pay items with a goal (such as a loan) move toward it and keep what a cut left owed, and the hours the time clock locked are marked as paid. Net pay is paid as each person's pay profile splits it:
+
+- a deposit row becomes a payment in **Disbursements** from the employer's funding account (choose it on the employer under **Funding account**). Make the bank file there, as for any other payment;
+- a check row becomes a check in the **Check register**, on the same account, with the statement printed as the stub of the check. Print it there.
+
+A deposit is paid by check when Direct Deposit is off and Paychecks is on. When a payment can't be made, such as an employer with no funding account, the run is **partly paid** and the statement shows why: fix it and choose **Pay what is left**.
+
+Each person whose staff record has a user is told their statement is ready, by the notification center and the methods they chose (it holds no amount). **Download the stub** on a statement's page gives its PDF.
+
+## Void or reissue
+
+A final statement never changes. On its page, someone who voids pay statements for the employer can:
+
+- **Reissue** a payment, such as a lost check: say why, and the old check is voided (or the deposit cancelled if it was not sent to the bank yet) and a new one is made;
+- **Void** the statement: say why, and a reversing statement with the opposite amounts cancels it in the year's totals, its pay items go back, its time clock hours can be paid again and its checks and deposits are stopped where they have not gone out. Pay what is owed in a new run.

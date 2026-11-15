@@ -281,7 +281,7 @@ public sealed class PayRunTests
         Assert.IsType<Microsoft.AspNetCore.Mvc.ForbidResult>(selfInput);
     }
 
-    private static CrestApps.OrchardCore.Payroll.Controllers.PayRunsController Controller(IServiceProvider services, ClaimsPrincipal user)
+    internal static CrestApps.OrchardCore.Payroll.Controllers.PayRunsController Controller(IServiceProvider services, ClaimsPrincipal user)
     {
         var shapes = new Moq.Mock<global::OrchardCore.DisplayManagement.IShapeFactory>();
 
@@ -323,9 +323,9 @@ public sealed class PayRunTests
         return controller;
     }
 
-    private sealed record Setup(string EmployerId, string StaffMemberId, string RunId, string RunNumber, string BonusCodeId);
+    internal sealed record Setup(string EmployerId, string StaffMemberId, string RunId, string RunNumber, string BonusCodeId);
 
-    private static async Task<Setup> SetUpAsync(CalendarTestHarness harness, bool withElection = true)
+    internal static async Task<Setup> SetUpAsync(CalendarTestHarness harness, bool withElection = true, Action<Employer> employerSetup = null, Func<EmployeePayProfile, Task> profileSetup = null)
     {
         var lee = await WorkforceTests.AddWorkerAsync(harness, "Lee Park", worker =>
         {
@@ -356,6 +356,7 @@ public sealed class PayRunTests
             employer.Name = "Contoso";
             employer.Currency = "USD";
             employer.Registrations = [new EmployerTaxRegistration { Jurisdiction = "US" }];
+            employerSetup?.Invoke(employer);
             await employers.CreateAsync(employer);
 
             var schedules = services.GetRequiredService<IPayScheduleManager>();
@@ -389,6 +390,11 @@ public sealed class PayRunTests
                 profile.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2020, 1, 1) }];
             }
 
+            if (profileSetup is not null)
+            {
+                await profileSetup(profile);
+            }
+
             await services.GetRequiredService<IPayProfileService>().SetTaxIdAsync(profile, "123456789");
             await profiles.CreateAsync(profile);
 
@@ -416,7 +422,7 @@ public sealed class PayRunTests
         });
     }
 
-    private static Task<CalendarTestHarness> CreateHarnessAsync()
+    internal static Task<CalendarTestHarness> CreateHarnessAsync(Action<IServiceCollection> configure = null)
         => WorkforceTests.CreateAsync(
             services =>
             {
@@ -428,11 +434,13 @@ public sealed class PayRunTests
                 services.AddSingleton<INamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>>(new InMemoryNamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>());
                 services.AddSingleton<INamedCatalog<ApprovalPolicy>>(new InMemoryNamedCatalog<ApprovalPolicy>());
                 services.AddSingleton<IApprovalRequestStore>(new InMemoryApprovalRequestStore());
-                services.AddSingleton<IApprovalCommitter, NoopApprovalCommitter>();
+                // Approvals commits the session as it does on a site: records read before must not be saved twice.
+                services.AddScoped<IApprovalCommitter, YesSqlApprovalCommitter>();
                 services.AddScoped<IApproverDirectory, PermissionApproverDirectory>();
                 services.AddSingleton<IDistributedLock, KeyedDistributedLock>();
                 services.AddSingleton<ILocalClock>(new FixedOffsetLocalClock(() => DateTime.UtcNow, TimeSpan.Zero));
                 services.AddScoped<CrestApps.OrchardCore.Payroll.Services.PayrollNames>();
+                configure?.Invoke(services);
             },
             async schemaBuilder =>
             {

@@ -10,6 +10,7 @@
 			clientSideSearch: true,
 			selectedLabel: "",
 			selectionEnabled: true,
+			minimumSelection: 2,
 			filterSubmit: false,
 			itemInputName: "itemIds",
 			bulkActionInputName: "Options.BulkAction",
@@ -80,6 +81,7 @@
 				selectedLabel: root.dataset.selectedLabel ?? defaultOptions.selectedLabel,
 				clientSideSearch,
 				selectionEnabled: parseBoolean(root.dataset.selectionEnabled, defaultOptions.selectionEnabled),
+				minimumSelection: Math.max(1, Number.parseInt(root.dataset.minimumSelection ?? "", 10) || defaultOptions.minimumSelection),
 				filterSubmit: parseBoolean(root.dataset.filterSubmit, !clientSideSearch),
 				itemInputName: root.dataset.itemInputName ?? defaultOptions.itemInputName,
 				bulkActionInputName: root.dataset.bulkActionInputName ?? defaultOptions.bulkActionInputName,
@@ -221,7 +223,7 @@
 				selectedItems.textContent = `${selectedCount}${label}`;
 			};
 			const displayActionsOrFilters = () => {
-				const showActions = getCheckedItemCheckboxes(root, options).length > 1;
+				const showActions = getCheckedItemCheckboxes(root, options).length >= options.minimumSelection;
 				if (actions) actions.classList.toggle("d-none", !showActions);
 				filters.forEach((filterElement) => {
 					filterElement.classList.toggle("d-none", showActions);

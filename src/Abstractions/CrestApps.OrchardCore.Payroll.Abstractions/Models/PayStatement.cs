@@ -105,6 +105,11 @@ public sealed class PayStatement : CatalogItem, IModifiedUtcAwareModel
     /// </summary>
     public DateTime CreatedUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets when it became final.
+    /// </summary>
+    public DateTime? ProcessedUtc { get; set; }
+
     /// <inheritdoc />
     public DateTime? ModifiedUtc { get; set; }
 }
@@ -179,6 +184,11 @@ public sealed class PayStatementLine
     /// Gets or sets what a deduction could not take and is owed for the next pay, or zero.
     /// </summary>
     public decimal ArrearsAdded { get; set; }
+
+    /// <summary>
+    /// Gets or sets the arrears of the line's pay item before the statement became final, so a void puts it back.
+    /// </summary>
+    public decimal? ArrearsBefore { get; set; }
 
     /// <summary>
     /// Gets or sets the pay item the line comes from, or <see langword="null"/>.
@@ -259,6 +269,21 @@ public sealed class PayStatementPayment
     /// Gets or sets the disbursement or check that paid it, once paid.
     /// </summary>
     public string ReferenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a short text for the statement, such as a check number.
+    /// </summary>
+    public string Reference { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many times the payment was paid (a reissue pays it again), for its idempotency key.
+    /// </summary>
+    public int Attempt { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the payment could not be paid, or <see langword="null"/>.
+    /// </summary>
+    public string Problem { get; set; }
 }
 
 /// <summary>

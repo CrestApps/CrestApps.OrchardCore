@@ -67,6 +67,16 @@ public sealed class PayRun : CatalogItem, IModifiedUtcAwareModel
     /// <summary>Gets or sets when it was approved.</summary>
     public DateTime? ApprovedUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets when it was last processed.
+    /// </summary>
+    public DateTime? ProcessedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user name of who last processed it.
+    /// </summary>
+    public string ProcessedBy { get; set; }
+
     /// <summary>Gets or sets when it was added.</summary>
     public DateTime CreatedUtc { get; set; }
 

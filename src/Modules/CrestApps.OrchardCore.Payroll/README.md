@@ -41,6 +41,9 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - `PayRun` (`IPayRunManager`) with its `PayRunInput`s, statuses on `PayRunStatuses.Transitions`; `IPayRunService`
   calculates draft statements, submits to Approvals' `PayRunApproval` policy and cancels; `PayRunApprovalSubjectHandler`
   and `PayRunSourceAccess`. **Payroll > Pay Runs**; the **Save pay inputs** pipeline step on `PayRunInputImporter`.
+- Processing: `IPayRunService.ProcessAsync`, `VoidStatementAsync` and `ReissuePaymentAsync`; payment methods
+  (`IPayStatementPaymentMethod`) from **Direct Deposit** (Disbursements) and **Paychecks** (Checks, with
+  `PayStatementCheckVoucherSource`); `PayStatementSourceAccess`; the `PayStatementReady` notification; `PayStubDocument`.
 
 ## The engine and taxes
 

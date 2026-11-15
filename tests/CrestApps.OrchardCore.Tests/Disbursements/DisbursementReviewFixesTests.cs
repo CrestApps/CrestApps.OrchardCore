@@ -295,6 +295,32 @@ public sealed class DisbursementReviewFixesTests
         Assert.Throws<ArgumentException>(() => NachaFileWriter.Write(request));
     }
 
+    [Fact]
+    public async Task BankFileCard_NotOnTheForm_KeepsTheStoredSettings()
+    {
+        // Arrange: an account that sends bank files, saved from a form drawn while it had an owner (no card on it).
+        var context = new DisbursementsTestContext();
+        var origin = await context.OriginAsync();
+        var driver = new CrestApps.OrchardCore.Disbursements.Drivers.NachaOriginSettingsDisplayDriver(RecipeRoundTrip.Localizer<CrestApps.OrchardCore.Disbursements.Drivers.NachaOriginSettingsDisplayDriver>());
+
+        async Task<NachaOriginSettings> SaveAsync(CrestApps.OrchardCore.Disbursements.ViewModels.NachaOriginSettingsViewModel posted)
+        {
+            var updater = new CrestApps.OrchardCore.Tests.Taxation.Fakes.FakeUpdateModel(posted);
+
+            await driver.UpdateAsync(origin, new global::OrchardCore.DisplayManagement.Handlers.UpdateEditorContext(null, string.Empty, false, string.Empty, null, null, updater));
+
+            return origin.TryGet<NachaOriginSettings>(out var stored) ? stored : null;
+        }
+
+        // Act
+        var kept = await SaveAsync(new CrestApps.OrchardCore.Disbursements.ViewModels.NachaOriginSettingsViewModel());
+        var turnedOff = await SaveAsync(new CrestApps.OrchardCore.Disbursements.ViewModels.NachaOriginSettingsViewModel { Shown = true });
+
+        // Assert
+        Assert.Equal((true, "CONTOSO LTD"), (kept.Enabled, kept.CompanyName));
+        Assert.False(turnedOff.Enabled);
+    }
+
     private static DateOnly Arrival
         => new(2026, 11, 16);
 

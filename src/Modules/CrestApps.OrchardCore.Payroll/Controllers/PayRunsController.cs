@@ -381,12 +381,116 @@ public sealed class PayRunsController : Controller
             return Forbid();
         }
 
+        var linkedId = statement.VoidOf ?? statement.VoidedBy;
+
         return View(new PayStatementViewModel
         {
             Statement = statement,
             Run = string.IsNullOrEmpty(statement.RunId) ? null : await _runs.FindByIdAsync(statement.RunId),
             Codes = (await _codes.GetAllAsync()).ToDictionary(code => code.ItemId, code => code.Code, StringComparer.Ordinal),
+            CanVoid = await _scope.AuthorizeAsync(User, PayrollPermissions.VoidPayStatements, statement.EmployerId),
+            LinkedNumber = string.IsNullOrEmpty(linkedId) ? null : (await statements.FindByIdAsync(linkedId))?.Number,
         });
+    }
+
+    /// <summary>
+    /// Downloads a statement's stub as a PDF.
+    /// </summary>
+    /// <param name="id">The statement's id.</param>
+    /// <param name="statements">The statements.</param>
+    /// <param name="stubs">Writes the stub.</param>
+    /// <returns>The file.</returns>
+    [Admin("payroll/pay-runs/statements/{id}/pdf", "PayrollPayRunsStatementPdf")]
+    public async Task<IActionResult> StatementPdf(string id, [FromServices] PayStatementStore statements, [FromServices] PayStubService stubs)
+    {
+        if (string.IsNullOrEmpty(id) || await statements.FindByIdAsync(id) is not { } statement)
+        {
+            return NotFound();
+        }
+
+        if (!await _scope.AuthorizeAsync(User, PayrollPermissions.ViewPayRuns, statement.EmployerId))
+        {
+            return Forbid();
+        }
+
+        return File(await stubs.WriteAsync(statement, HttpContext.RequestAborted), "application/pdf", PayStubService.FileName(statement));
+    }
+
+    /// <summary>
+    /// Processes an approved run: its statements become final and net pay is paid.
+    /// </summary>
+    /// <param name="id">The run's id.</param>
+    /// <returns>The run page.</returns>
+    [HttpPost]
+    [Admin("payroll/pay-runs/{id}/process", "PayrollPayRunsProcess")]
+    public async Task<IActionResult> Process(string id)
+    {
+        if (await FindAsync(id) is not { } run)
+        {
+            return NotFound();
+        }
+
+        if (!await _scope.AuthorizeAsync(User, PayrollPermissions.ProcessPayRuns, run.EmployerId))
+        {
+            return Forbid();
+        }
+
+        await NotifyAsync(await _service.ProcessAsync(run, User, HttpContext.RequestAborted), H["Pay run {0} has been processed.", run.Number]);
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    /// <summary>
+    /// Voids a final statement.
+    /// </summary>
+    /// <param name="id">The statement's id.</param>
+    /// <param name="reason">Why.</param>
+    /// <param name="statements">The statements.</param>
+    /// <returns>The statement page.</returns>
+    [HttpPost]
+    [Admin("payroll/pay-runs/statements/{id}/void", "PayrollPayRunsVoidStatement")]
+    public async Task<IActionResult> VoidStatement(string id, string reason, [FromServices] PayStatementStore statements)
+    {
+        if (string.IsNullOrEmpty(id) || await statements.FindByIdAsync(id) is not { } statement)
+        {
+            return NotFound();
+        }
+
+        if (!await _scope.AuthorizeAsync(User, PayrollPermissions.VoidPayStatements, statement.EmployerId))
+        {
+            return Forbid();
+        }
+
+        await NotifyAsync(await _service.VoidStatementAsync(statement, User, reason, HttpContext.RequestAborted), H["Statement {0} has been voided.", statement.Number]);
+
+        return RedirectToAction(nameof(Statement), new { id });
+    }
+
+    /// <summary>
+    /// Pays a payment of a final statement again, such as a lost check.
+    /// </summary>
+    /// <param name="id">The statement's id.</param>
+    /// <param name="index">The payment's place.</param>
+    /// <param name="reason">Why.</param>
+    /// <param name="statements">The statements.</param>
+    /// <returns>The statement page.</returns>
+    [HttpPost]
+    [Admin("payroll/pay-runs/statements/{id}/payments/{index}/reissue", "PayrollPayRunsReissuePayment")]
+    public async Task<IActionResult> ReissuePayment(string id, int index, string reason, [FromServices] PayStatementStore statements)
+    {
+        if (string.IsNullOrEmpty(id) || await statements.FindByIdAsync(id) is not { } statement)
+        {
+            return NotFound();
+        }
+
+        if (!await _scope.AuthorizeAsync(User, PayrollPermissions.VoidPayStatements, statement.EmployerId))
+        {
+            return Forbid();
+        }
+
+        await NotifyAsync(await _service.ReissuePaymentAsync(statement, index, User, reason, HttpContext.RequestAborted), H["The payment has been reissued."]);
+
+        return RedirectToAction(nameof(Statement), new { id });
     }
 
     private async Task<PayRunDetailsViewModel> DetailsModelAsync(PayRun run)
@@ -411,6 +515,7 @@ public sealed class PayRunsController : Controller
             ScheduleName = string.IsNullOrEmpty(run.PayScheduleId) ? null : (await _schedules.FindByIdAsync(run.PayScheduleId))?.Name,
             Currency = employer?.Currency,
             CanPrepare = await _scope.AuthorizeAsync(User, PayrollPermissions.PreparePayRuns, run.EmployerId),
+            CanProcess = await _scope.AuthorizeAsync(User, PayrollPermissions.ProcessPayRuns, run.EmployerId),
             Inputs = [.. (await _inputs.ListByRunAsync(run.ItemId)).OrderBy(input => NameOf(input.StaffMemberId), StringComparer.CurrentCultureIgnoreCase)
                 .Select(input => (input, NameOf(input.StaffMemberId), codes.GetValueOrDefault(input.PayCodeId)?.Code ?? input.PayCodeId))],
             Issues = [.. run.Issues.Select(issue => (issue, NameOf(issue.StaffMemberId)))],

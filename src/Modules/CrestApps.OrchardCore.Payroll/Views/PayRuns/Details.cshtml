@@ -194,16 +194,27 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
     </div>
 </div>
 
-@if (Model.CanPrepare && run.IsOpen)
+@{
+    var canWork = Model.CanPrepare && run.IsOpen;
+    var canProcess = Model.CanProcess && run.Status is PayRunStatus.Approved or PayRunStatus.PartiallyPaid or PayRunStatus.Failed;
+}
+@if (canWork || canProcess)
 {
     <form method="post" class="no-multisubmit">
         <div class="action-bar-bottom">
-            <button class="btn btn-primary" type="submit" formaction="@Url.Action("Calculate", new { id = run.ItemId })">@T["Calculate"]</button>
-            @if (run.Status == PayRunStatus.Calculated)
+            @if (canProcess)
             {
-                <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)">@T["Submit for approval"]</button>
+                <button class="btn btn-success" type="submit" formaction="@Url.Action("Process", new { id = run.ItemId })" data-title="@T["Process and pay"]" data-message="@T["Process the pay run? Its statements become final and net pay is paid: deposits go to the bank file and checks to the check register."]">@(run.Status == PayRunStatus.Approved ? T["Process and pay"] : T["Pay what is left"])</button>
             }
-            <button class="btn btn-danger action-bar-secondary" type="submit" formaction="@Url.Action("Cancel", new { id = run.ItemId })" data-title="@T["Cancel the run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]">@T["Cancel the run"]</button>
+            @if (canWork)
+            {
+                <button class="btn @(canProcess ? "btn-secondary" : "btn-primary")" type="submit" formaction="@Url.Action("Calculate", new { id = run.ItemId })">@T["Calculate"]</button>
+                @if (run.Status == PayRunStatus.Calculated)
+                {
+                    <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)">@T["Submit for approval"]</button>
+                }
+                <button class="btn btn-danger action-bar-secondary" type="submit" formaction="@Url.Action("Cancel", new { id = run.ItemId })" data-title="@T["Cancel the run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]">@T["Cancel the run"]</button>
+            }
         </div>
     </form>
 }

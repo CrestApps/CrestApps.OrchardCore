@@ -631,6 +631,9 @@ public class PayRunDetailsViewModel
     [BindNever]
     public string DecideRefusal { get; set; }
 
+    /// <summary>Gets or sets a value indicating whether the user may process the run.</summary>
+    public bool CanProcess { get; set; }
+
     [BindNever]
     public AdminListContext Statements { get; set; }
 
@@ -650,4 +653,10 @@ public class PayStatementViewModel
 
     [BindNever]
     public IDictionary<string, string> Codes { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>Gets or sets a value indicating whether the user may void the statement and reissue its payments.</summary>
+    public bool CanVoid { get; set; }
+
+    /// <summary>Gets or sets the number of the statement this one reverses, or of the one that reversed it.</summary>
+    public string LinkedNumber { get; set; }
 }

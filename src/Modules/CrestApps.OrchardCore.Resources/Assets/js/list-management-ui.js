@@ -5,6 +5,9 @@ window.listManagementUI = (function () {
         clientSideSearch: true,
         selectedLabel: '',
         selectionEnabled: true,
+        // How many items must be checked before the bulk actions show. Two by default, as row actions cover one item;
+        // a list whose rows have no action of their own for a bulk action (such as printing one check) sets 1.
+        minimumSelection: 2,
         filterSubmit: false,
         itemInputName: 'itemIds',
         bulkActionInputName: 'Options.BulkAction',
@@ -118,6 +121,7 @@ window.listManagementUI = (function () {
             selectedLabel: root.dataset.selectedLabel ?? defaultOptions.selectedLabel,
             clientSideSearch,
             selectionEnabled: parseBoolean(root.dataset.selectionEnabled, defaultOptions.selectionEnabled),
+            minimumSelection: Math.max(1, Number.parseInt(root.dataset.minimumSelection ?? '', 10) || defaultOptions.minimumSelection),
             filterSubmit: parseBoolean(root.dataset.filterSubmit, !clientSideSearch),
             itemInputName: root.dataset.itemInputName ?? defaultOptions.itemInputName,
             bulkActionInputName: root.dataset.bulkActionInputName ?? defaultOptions.bulkActionInputName,
@@ -350,7 +354,7 @@ window.listManagementUI = (function () {
 
         const displayActionsOrFilters = () => {
             const checkedCount = getCheckedItemCheckboxes(root, options).length;
-            const showActions = checkedCount > 1;
+            const showActions = checkedCount >= options.minimumSelection;
 
             if (actions) {
                 actions.classList.toggle('d-none', !showActions);

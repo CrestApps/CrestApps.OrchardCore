@@ -182,6 +182,12 @@ public class DisbursementReturnsViewModel
 public class NachaOriginSettingsViewModel
 {
     /// <summary>
+    /// Gets or sets a value indicating whether the card was on the posted form. A form drawn while the account was not
+    /// the business's (its owner changed in the same save) has no card, and its empty fields must not clear the settings.
+    /// </summary>
+    public bool Shown { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether bank files are sent from the account.
     /// </summary>
     public bool Enabled { get; set; }

@@ -5,8 +5,8 @@ using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Disbursements.Core.Nacha;
 using CrestApps.OrchardCore.Disbursements.Models;
 using CrestApps.OrchardCore.Disbursements.Services;
-using Microsoft.AspNetCore.Http;
 using CrestApps.OrchardCore.SourceAccess;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -411,7 +411,7 @@ public sealed class DisbursementService : IDisbursementService
             // Read again inside the lock: the copy the caller holds may be from before another release.
             var current = await _batches.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
 
-            var errors = await ReleaseLockedAsync(current, cancellationToken);
+            (var errors, current) = await ReleaseLockedAsync(current, cancellationToken);
 
             if (!ReferenceEquals(current, batch))
             {
@@ -427,33 +427,30 @@ public sealed class DisbursementService : IDisbursementService
         }
     }
 
-    private async Task<IReadOnlyList<string>> ReleaseLockedAsync(DisbursementBatch batch, CancellationToken cancellationToken)
+    // Returns the errors and the batch as saved: the commit below makes the session forget what it read, so the batch and
+    // its disbursements are read again after it, and saving the copies read before would insert them a second time.
+    private async Task<(IReadOnlyList<string> Errors, DisbursementBatch Batch)> ReleaseLockedAsync(DisbursementBatch batch, CancellationToken cancellationToken)
     {
         if (batch.Status == DisbursementBatchStatus.Releasing)
         {
-            return [S["The batch was being sent when something failed. Check with the provider what it received, then reopen the batch to send it again."]];
+            return ([S["The batch was being sent when something failed. Check with the provider what it received, then reopen the batch to send it again."]], batch);
         }
 
         if (batch.Status != DisbursementBatchStatus.Open)
         {
-            return [S["The batch was already released or cancelled."]];
+            return ([S["The batch was already released or cancelled."]], batch);
         }
 
         var provider = Providers.FirstOrDefault(entry => entry.Name == batch.Provider);
 
         if (provider is null)
         {
-            return [S["The feature that sends this batch is off."]];
+            return ([S["The feature that sends this batch is off."]], batch);
         }
 
-        var disbursements = (await _manager.ListAsync(batch.DisbursementIds, cancellationToken))
-            .Where(entry => entry.BatchId == batch.ItemId && entry.Status == DisbursementStatus.Batched)
-            .OrderBy(entry => batch.DisbursementIds.IndexOf(entry.ItemId))
-            .ToList();
-
-        if (disbursements.Count == 0)
+        if ((await BatchedAsync(batch, cancellationToken)).Count == 0)
         {
-            return [S["The batch has no disbursement left to send."]];
+            return ([S["The batch has no disbursement left to send."]], batch);
         }
 
         // Saved before the provider is called: a throw after it may have sent leaves the batch Releasing, never Open.
@@ -461,6 +458,9 @@ public sealed class DisbursementService : IDisbursementService
         await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
         await _committer.CommitAsync(cancellationToken);
 
+        batch = await _batches.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
+
+        var disbursements = await BatchedAsync(batch, cancellationToken);
         var result = await provider.SubmitAsync(batch, disbursements, cancellationToken);
 
         if (!result.Succeeded)
@@ -469,7 +469,7 @@ public sealed class DisbursementService : IDisbursementService
             batch.Status = DisbursementBatchStatus.Open;
             await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
 
-            return result.Errors.Count > 0 ? result.Errors : [S["The batch could not be sent."]];
+            return (result.Errors.Count > 0 ? result.Errors : [S["The batch could not be sent."]], batch);
         }
 
         if (result.File is { Length: > 0 })
@@ -517,8 +517,13 @@ public sealed class DisbursementService : IDisbursementService
         await _batches.UpdateAsync(batch, cancellationToken: cancellationToken);
         await _committer.CommitAsync(cancellationToken);
 
-        return [];
+        return ([], batch);
     }
+
+    private async Task<List<Disbursement>> BatchedAsync(DisbursementBatch batch, CancellationToken cancellationToken)
+        => [.. (await _manager.ListAsync(batch.DisbursementIds, cancellationToken))
+            .Where(entry => entry.BatchId == batch.ItemId && entry.Status == DisbursementStatus.Batched)
+            .OrderBy(entry => batch.DisbursementIds.IndexOf(entry.ItemId))];
 
     /// <inheritdoc />
     public async Task<bool> ReopenReleasingBatchAsync(DisbursementBatch batch, string reason, CancellationToken cancellationToken = default)

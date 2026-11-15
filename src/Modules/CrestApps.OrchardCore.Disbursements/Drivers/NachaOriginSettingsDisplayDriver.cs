@@ -62,6 +62,12 @@ internal sealed class NachaOriginSettingsDisplayDriver : DisplayDriver<BankAccou
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        // The card was not on the form (the account became the business's in this save): keep what is stored.
+        if (!model.Shown)
+        {
+            return Edit(account, context);
+        }
+
         var settings = new NachaOriginSettings
         {
             Enabled = model.Enabled,

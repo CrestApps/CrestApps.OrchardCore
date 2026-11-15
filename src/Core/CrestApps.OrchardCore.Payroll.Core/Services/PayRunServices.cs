@@ -438,7 +438,7 @@ public sealed class PayRunInputHandler : CatalogEntryHandlerBase<PayRunInput>
 /// The default <see cref="IPayRunService"/>. A run is calculated in the request, one profile at a time, under a lock
 /// on the run, so two calculations of one run never interleave.
 /// </summary>
-public sealed class DefaultPayRunService : IPayRunService
+public sealed partial class DefaultPayRunService : IPayRunService
 {
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(10);
@@ -532,7 +532,7 @@ public sealed class DefaultPayRunService : IPayRunService
             // An approval is for one calculation: a run waiting for one, or approved, goes back to calculated.
             if (run.Status is PayRunStatus.PendingApproval or PayRunStatus.Approved)
             {
-                await CancelApprovalAsync(run, S["The pay run was calculated again."], cancellationToken);
+                run = await CancelApprovalAsync(run, S["The pay run was calculated again."], cancellationToken);
             }
 
             var profiles = await ProfilesAsync(run, cancellationToken);
@@ -688,15 +688,19 @@ public sealed class DefaultPayRunService : IPayRunService
             return result;
         }
 
+        // Approvals commits the request, so the session forgot what it read before: read the run and the request again.
+        run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
+
         // The policy names who approves for every employer; the approvers of this employer only may decide too.
-        if (submitted.Request.Status == ApprovalStatus.Pending && _services.GetService<IApprovalRequestManager>() is { } requests)
+        if (submitted.Request.Status == ApprovalStatus.Pending && _services.GetService<IApprovalRequestManager>() is { } requests
+            && await requests.FindByIdAsync(submitted.Request.ItemId, cancellationToken) is { } request)
         {
             var perEmployer = PayrollPermissionTemplates.For(PayrollPermissions.ApprovePayRuns, run.EmployerId).Name;
 
-            if (!submitted.Request.Approvers.Any(rule => rule.Kind == ApproverKind.Permission && rule.Value == perEmployer))
+            if (!request.Approvers.Any(rule => rule.Kind == ApproverKind.Permission && rule.Value == perEmployer))
             {
-                submitted.Request.Approvers.Add(new ApproverRule { Kind = ApproverKind.Permission, Value = perEmployer });
-                await requests.UpdateAsync(submitted.Request, cancellationToken: cancellationToken);
+                request.Approvers.Add(new ApproverRule { Kind = ApproverKind.Permission, Value = perEmployer });
+                await requests.UpdateAsync(request, cancellationToken: cancellationToken);
             }
         }
 
@@ -727,7 +731,7 @@ public sealed class DefaultPayRunService : IPayRunService
             return result;
         }
 
-        await CancelApprovalAsync(run, reason, cancellationToken);
+        run = await CancelApprovalAsync(run, reason, cancellationToken);
 
         foreach (var draft in (await ListStatementsAsync(run, cancellationToken)).Where(statement => statement.Status == PayStatementStatus.Draft))
         {
@@ -801,22 +805,27 @@ public sealed class DefaultPayRunService : IPayRunService
                 && (run.Type != PayRunType.Contractor || profile.WorkerType == PayWorkerType.Contractor))];
     }
 
-    private async Task CancelApprovalAsync(PayRun run, string reason, CancellationToken cancellationToken)
+    // Cancels the run's pending approval. Approvals commits the cancellation, so the run is read again: the caller goes
+    // on with the run this returns.
+    private async Task<PayRun> CancelApprovalAsync(PayRun run, string reason, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(run.ApprovalRequestId))
         {
-            return;
+            return run;
         }
 
         if (_services.GetService<IApprovalRequestManager>() is { } requests && await requests.FindByIdAsync(run.ApprovalRequestId, cancellationToken) is { Status: ApprovalStatus.Pending } request
             && _services.GetService<IApprovalService>() is { } approvals)
         {
             await approvals.CancelAsync(request, reason, cancellationToken);
+            run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
         }
 
         run.ApprovalRequestId = null;
         run.ApprovedUtc = null;
         run.Status = PayRunStatus.Calculated;
+
+        return run;
     }
 
     private static PayInput ToPayInput(PayRun run, PayRunInput input)

@@ -69,6 +69,40 @@ public interface IPayRunService
     Task<PayRunResult> CancelAsync(PayRun run, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Processes an approved run: its statements become final and numbered, pay items move toward their goals and keep
+    /// their arrears, the sources are told their inputs were paid, and each payment of net pay is paid by the feature of
+    /// its method (a deposit with no way to pay falls back to a check). A partly paid run is processed again to pay what
+    /// is left.
+    /// </summary>
+    /// <param name="run">The run.</param>
+    /// <param name="user">Who processes.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<PayRunResult> ProcessAsync(PayRun run, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Voids a final statement: a reversing statement with the opposite lines cancels it in the accumulators, its pay
+    /// items go back, its inputs are released, and its payments are stopped where they have not gone out.
+    /// </summary>
+    /// <param name="statement">The statement.</param>
+    /// <param name="user">Who voids.</param>
+    /// <param name="reason">Why.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<PayRunResult> VoidStatementAsync(PayStatement statement, ClaimsPrincipal user, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Pays a payment of a final statement again, such as a lost check: the old one is stopped and a new one made.
+    /// </summary>
+    /// <param name="statement">The statement.</param>
+    /// <param name="index">The payment's place.</param>
+    /// <param name="user">Who reissues.</param>
+    /// <param name="reason">Why.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<PayRunResult> ReissuePaymentAsync(PayStatement statement, int index, ClaimsPrincipal user, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the draft statements of a run (or its final ones, once processed).
     /// </summary>
     /// <param name="run">The run.</param>
@@ -82,6 +116,11 @@ public interface IPayRunService
 /// </summary>
 public sealed class PayRunResult
 {
+    /// <summary>
+    /// Gets or sets the statement the work made, such as the reversing statement of a void.
+    /// </summary>
+    public PayStatement Statement { get; set; }
+
     /// <summary>Gets the errors; none when the move succeeded.</summary>
     public IList<string> Errors { get; } = [];
 

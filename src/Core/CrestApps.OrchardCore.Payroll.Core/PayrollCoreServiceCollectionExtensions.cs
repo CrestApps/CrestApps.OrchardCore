@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Approvals.Services;
+using CrestApps.OrchardCore.Checks;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Core.Services;
@@ -69,6 +70,7 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddScoped<IPayRunService>(serviceProvider => serviceProvider.GetRequiredService<DefaultPayRunService>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IApprovalSubjectHandler, PayRunApprovalSubjectHandler>());
         services.AddSourceAccess<PayRunSourceAccess>();
+        services.AddSourceAccess<PayStatementSourceAccess>();
         services.TryAddScoped<PayRunInputImporter>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, EarningsPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, RegularRatePayCalculationStep>());
@@ -88,6 +90,35 @@ public static class PayrollCoreServiceCollectionExtensions
         services.AddPayrollTaxCategory(PayrollTaxCategories.IncomeTax, LocalizationSource.Create("Income tax", typeof(PayrollCoreServiceCollectionExtensions)));
         services.AddPayrollTaxCategory(PayrollTaxCategories.SocialInsurance, LocalizationSource.Create("Social insurance", typeof(PayrollCoreServiceCollectionExtensions)));
         services.AddPayrollTaxCategory(PayrollTaxCategories.Unemployment, LocalizationSource.Create("Unemployment insurance", typeof(PayrollCoreServiceCollectionExtensions)));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Direct Deposit: net pay deposited to bank accounts through Disbursements.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddPayrollDirectDepositCore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayStatementPaymentMethod, DirectDepositPaymentMethod>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Paychecks: net pay paid by checks through Checks, with the statement printed as the voucher.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddPayrollPaychecksCore(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayStatementPaymentMethod, PaycheckPaymentMethod>());
+        services.AddCheckVoucherSource<PayStatementCheckVoucherSource>();
 
         return services;
     }
