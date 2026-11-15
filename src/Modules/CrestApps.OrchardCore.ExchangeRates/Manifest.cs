@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.ExchangeRates;
 using OrchardCore.Modules.Manifest;
 
@@ -15,5 +16,11 @@ using OrchardCore.Modules.Manifest;
     Id = ExchangeRatesConstants.Features.Area,
     Name = "Exchange Rates",
     Description = "Dated exchange rates to the store's reporting currency: entered by hand or fetched daily by a provider, and copied onto invoices and the ledger when they are issued.",
-    Category = "Commerce"
+    Category = "Commerce",
+
+    // Its pages are under the Commerce menu, which the Commerce feature draws with its icon.
+    Dependencies =
+    [
+        CommerceConstants.Features.Area,
+    ]
 )]
