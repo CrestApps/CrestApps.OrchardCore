@@ -88,9 +88,19 @@ function trackVideo(root) {
             return;
         }
 
+        const previous = reported;
+
         reported = percent;
         lastReport = now;
-        showCompleted(root, await post(root, root.dataset.viewedUrl, { percent: String(percent) }));
+
+        const result = await post(root, root.dataset.viewedUrl, { percent: String(percent) });
+
+        // The enrollment was busy with another change: report the same share again on the next update.
+        if (result?.retry) {
+            reported = previous;
+        }
+
+        showCompleted(root, result);
     };
 
     video.addEventListener('timeupdate', () => report(false));
@@ -109,8 +119,20 @@ function trackTime(root) {
         showCompleted(root, await post(root, root.dataset.heartbeatUrl, { seconds: String(seconds) }));
     };
 
-    // The first call records that the item was opened, which completes an item completed by viewing it.
-    post(root, root.dataset.heartbeatUrl, { seconds: '0' }).then(result => showCompleted(root, result));
+    // The first call records that the item was opened, which completes an item completed by viewing it. When the
+    // enrollment is busy with another change, it is sent again shortly; the half-minute calls need no retry, because the
+    // server counts the time since the last access it recorded.
+    const open = attempt => post(root, root.dataset.heartbeatUrl, { seconds: '0' }).then(result => {
+        if (result?.retry && attempt < 3) {
+            setTimeout(() => open(attempt + 1), 2000);
+
+            return;
+        }
+
+        showCompleted(root, result);
+    });
+
+    open(1);
 
     setInterval(() => {
         if (document.visibilityState === 'visible') {

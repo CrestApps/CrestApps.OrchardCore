@@ -131,7 +131,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         {
             if (!string.Equals(context.Entry.Part?.CompletionMode, CompletionModes.MarkedDone, StringComparison.Ordinal))
             {
-                return "This item is not completed by marking it done.";
+                return LearningRefusals.NotMarkedDone;
             }
 
             context.Complete = true;
@@ -147,7 +147,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         {
             if (!string.Equals(context.Entry.Part?.CompletionMode, CompletionModes.Acknowledged, StringComparison.Ordinal))
             {
-                return "This item has no statement to confirm.";
+                return LearningRefusals.NoStatement;
             }
 
             if (context.Item.AttestedUtc is null)
@@ -192,7 +192,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     {
         if (string.IsNullOrWhiteSpace(reason))
         {
-            return Task.FromResult(new ProgressUpdate { Enrollment = enrollment, RefusedReason = "A reason is required." });
+            return Task.FromResult(new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.ReasonRequired });
         }
 
         return UpdateAsync(enrollment, itemId, context =>
@@ -214,13 +214,13 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     {
         if (enrollment is null)
         {
-            return Task.FromResult(new ProgressUpdate { RefusedReason = "Only an active enrollment can be approved." });
+            return Task.FromResult(new ProgressUpdate { RefusedReason = LearningRefusals.NotActive });
         }
 
         return _writeGate.RunAsync(
             enrollment.ItemId,
             notifications => ApproveCompletionCoreAsync(enrollment, actor, notifications, cancellationToken),
-            () => new ProgressUpdate { Enrollment = enrollment, RefusedReason = "Busy" },
+            () => new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.Busy },
             cancellationToken);
     }
 
@@ -230,14 +230,14 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (enrollment is null || enrollment.Status != EnrollmentStatus.Active)
         {
-            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "Only an active enrollment can be approved." };
+            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.NotActive };
         }
 
         var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
 
         if (course is null)
         {
-            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course is not available." };
+            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.CourseUnavailable };
         }
 
         var now = _clock.UtcNow;
@@ -293,13 +293,13 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     {
         if (enrollment is null || string.IsNullOrEmpty(itemId))
         {
-            return Task.FromResult(new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course item was not found." });
+            return Task.FromResult(new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.ItemNotFound });
         }
 
         return _writeGate.RunAsync(
             enrollment.ItemId,
             notifications => UpdateCoreAsync(enrollment, itemId, apply, notifications, manual, cancellationToken),
-            () => new ProgressUpdate { Enrollment = enrollment, RefusedReason = "Busy" },
+            () => new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.Busy },
             cancellationToken);
     }
 
@@ -314,7 +314,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (course is null)
         {
-            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course is not available." };
+            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.CourseUnavailable };
         }
 
         var outline = await _courseStructure.GetOutlineAsync(course);
@@ -322,7 +322,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (entry is null)
         {
-            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = "The course item was not found." };
+            return new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.ItemNotFound };
         }
 
         var progress = await _progressStore.FindFreshByEnrollmentAsync(enrollment.ItemId, cancellationToken);
@@ -344,7 +344,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (manual ? enrollment.Status != EnrollmentStatus.Active : !EnrollmentAccess.HasAccess(enrollment, now))
         {
-            return new ProgressUpdate { Enrollment = enrollment, Progress = progress, RefusedReason = "You do not have access to this course." };
+            return new ProgressUpdate { Enrollment = enrollment, Progress = progress, RefusedReason = LearningRefusals.NoAccess };
         }
 
         if (!manual)
@@ -353,7 +353,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
             if (!release.IsReleased)
             {
-                return new ProgressUpdate { Enrollment = enrollment, Progress = progress, RefusedReason = release.Reason ?? "This item is not available yet." };
+                return new ProgressUpdate { Enrollment = enrollment, Progress = progress, RefusedReason = release.Reason ?? LearningRefusals.NotAvailableYet };
             }
         }
 

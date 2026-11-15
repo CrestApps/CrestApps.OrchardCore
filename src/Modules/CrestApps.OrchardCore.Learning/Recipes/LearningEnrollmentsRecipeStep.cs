@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
 
@@ -26,13 +27,17 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
     private readonly LearnerUserLookup _userLookup;
     private readonly CourseEnrollmentKeyStore _keyStore;
 
+    internal readonly IStringLocalizer S;
+
     public LearningEnrollmentsRecipeStep(
         EnrollmentStore enrollmentStore,
         EnrollmentProgressStore progressStore,
         LearnerUserLookup userLookup,
-        CourseEnrollmentKeyStore keyStore)
+        CourseEnrollmentKeyStore keyStore,
+        IStringLocalizer<LearningEnrollmentsRecipeStep> stringLocalizer)
         : base(LearningConstants.EnrollmentsRecipeStep)
     {
+        S = stringLocalizer;
         _enrollmentStore = enrollmentStore;
         _progressStore = progressStore;
         _userLookup = userLookup;
@@ -51,7 +56,7 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
 
                 if (string.IsNullOrWhiteSpace(courseId) || string.IsNullOrWhiteSpace(hash))
                 {
-                    context.Errors.Add("An enrollment key has no course or no hash; it was skipped.");
+                    context.Errors.Add(S["An enrollment key has no course or no hash; it was skipped."]);
 
                     continue;
                 }
@@ -73,7 +78,7 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
 
             if (userId is null)
             {
-                context.Errors.Add($"The user '{userName}' of enrollment {number} is not on this site; the enrollment was skipped.");
+                context.Errors.Add(S["The user '{0}' of enrollment {1} is not on this site; the enrollment was skipped.", userName, number]);
 
                 continue;
             }
@@ -86,14 +91,14 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
             }
             catch (JsonException exception)
             {
-                context.Errors.Add($"Enrollment {number} could not be read: {exception.Message}");
+                context.Errors.Add(S["Enrollment {0} could not be read: {1}", number, exception.Message]);
 
                 continue;
             }
 
             if (incoming is null || string.IsNullOrWhiteSpace(incoming.CourseId))
             {
-                context.Errors.Add($"Enrollment {number} has no course; it was skipped.");
+                context.Errors.Add(S["Enrollment {0} has no course; it was skipped.", number]);
 
                 continue;
             }

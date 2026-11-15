@@ -20,13 +20,13 @@ public sealed class DateReleaseRule : ICourseItemReleaseRule
 
         if (value is null || !DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var fromUtc))
         {
-            return Task.FromResult(ReleaseDecision.Locked("This item is not available yet."));
+            return Task.FromResult(ReleaseDecision.Locked(LearningRefusals.NotAvailableYet));
         }
 
         fromUtc = DateTime.SpecifyKind(fromUtc, DateTimeKind.Utc);
 
         return Task.FromResult(context.UtcNow >= fromUtc
             ? ReleaseDecision.Released
-            : ReleaseDecision.Locked("This item opens later.", fromUtc));
+            : ReleaseDecision.Locked(LearningRefusals.OpensLater, fromUtc));
     }
 }

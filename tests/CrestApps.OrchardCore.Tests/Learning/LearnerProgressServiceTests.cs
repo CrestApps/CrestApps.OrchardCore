@@ -190,7 +190,7 @@ public sealed class LearnerProgressServiceTests
         // Assert
         Assert.True(done.ItemCompleted);
         Assert.False(refused.ItemCompleted);
-        Assert.NotNull(refused.RefusedReason);
+        Assert.Equal(LearningRefusals.NotMarkedDone, refused.RefusedReason);
     }
 
     [Fact]

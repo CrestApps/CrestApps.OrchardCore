@@ -57,9 +57,12 @@
 			const percent = watchedPercent(video);
 			const now = Date.now();
 			if (percent <= reported || !force && now - lastReport < viewedReportSeconds * 1e3) return;
+			const previous = reported;
 			reported = percent;
 			lastReport = now;
-			showCompleted(root, await post(root, root.dataset.viewedUrl, { percent: String(percent) }));
+			const result = await post(root, root.dataset.viewedUrl, { percent: String(percent) });
+			if (result?.retry) reported = previous;
+			showCompleted(root, result);
 		};
 		video.addEventListener("timeupdate", () => report(false));
 		video.addEventListener("pause", () => report(true));
@@ -73,7 +76,14 @@
 			last = now;
 			showCompleted(root, await post(root, root.dataset.heartbeatUrl, { seconds: String(seconds) }));
 		};
-		post(root, root.dataset.heartbeatUrl, { seconds: "0" }).then((result) => showCompleted(root, result));
+		const open = (attempt) => post(root, root.dataset.heartbeatUrl, { seconds: "0" }).then((result) => {
+			if (result?.retry && attempt < 3) {
+				setTimeout(() => open(attempt + 1), 2e3);
+				return;
+			}
+			showCompleted(root, result);
+		});
+		open(1);
 		setInterval(() => {
 			if (document.visibilityState === "visible") beat();
 			else last = Date.now();

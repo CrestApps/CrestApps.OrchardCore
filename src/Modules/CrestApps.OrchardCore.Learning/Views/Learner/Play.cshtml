@@ -1,3 +1,4 @@
+@inject CrestApps.OrchardCore.Learning.Services.LearningRefusalText RefusalText
 @model PlayerViewModel
 
 @{
@@ -103,7 +104,7 @@
                         @switch (Model.Access)
                         {
                             case CourseItemAccessReason.NotReleased:
-                                <p class="mb-0">@(Model.LockedReason ?? T["This item is not available yet."].Value)</p>
+                                <p class="mb-0">@(RefusalText.Get(Model.LockedReason)?.Value ?? T["This item is not available yet."].Value)</p>
                                 @if (Model.AvailableFromUtc is { } availableFrom)
                                 {
                                     <p class="mb-0">@T["It opens on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(availableFrom, DateTimeKind.Utc), Format: "g")).</p>

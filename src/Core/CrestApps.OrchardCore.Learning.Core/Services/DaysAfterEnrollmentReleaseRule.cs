@@ -20,13 +20,13 @@ public sealed class DaysAfterEnrollmentReleaseRule : ICourseItemReleaseRule
 
         if (value is null || !int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var days) || days < 0 || context.Enrollment is null)
         {
-            return Task.FromResult(ReleaseDecision.Locked("This item is not available yet."));
+            return Task.FromResult(ReleaseDecision.Locked(LearningRefusals.NotAvailableYet));
         }
 
         var opensUtc = DateTime.SpecifyKind(context.Enrollment.CreatedUtc, DateTimeKind.Utc).AddDays(days);
 
         return Task.FromResult(context.UtcNow >= opensUtc
             ? ReleaseDecision.Released
-            : ReleaseDecision.Locked("This item opens later.", opensUtc));
+            : ReleaseDecision.Locked(LearningRefusals.OpensLater, opensUtc));
     }
 }

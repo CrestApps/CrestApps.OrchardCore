@@ -50,7 +50,7 @@ public sealed class CourseReleaseEvaluator
 
             if (rule is null)
             {
-                return ReleaseDecision.Locked("This item is not available.");
+                return ReleaseDecision.Locked(LearningRefusals.NotAvailable);
             }
 
             var decision = await rule.EvaluateAsync(new ReleaseRuleContext

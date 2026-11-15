@@ -35,6 +35,7 @@ public sealed class EnrollmentsController : Controller
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
     private readonly EnrollmentSourceOptions _sourceOptions;
+    private readonly LearningRefusalText _refusalText;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -52,6 +53,7 @@ public sealed class EnrollmentsController : Controller
     /// <param name="localClock">The local clock, for times people type.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="sourceOptions">The registered enrollment sources.</param>
+    /// <param name="refusalText">The text of refusal codes.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public EnrollmentsController(
@@ -66,8 +68,10 @@ public sealed class EnrollmentsController : Controller
         INotifier notifier,
         IOptions<EnrollmentSourceOptions> sourceOptions,
         IHtmlLocalizer<EnrollmentsController> htmlLocalizer,
+        LearningRefusalText refusalText,
         IStringLocalizer<EnrollmentsController> stringLocalizer)
     {
+        _refusalText = refusalText;
         _authorizationService = authorizationService;
         _enrollmentService = enrollmentService;
         _enrollmentStore = enrollmentStore;
@@ -394,7 +398,7 @@ public sealed class EnrollmentsController : Controller
         }
         else
         {
-            await _notifier.ErrorAsync(H["The item was not marked complete: {0}", update.RefusedReason]);
+            await _notifier.ErrorAsync(H["The item was not marked complete: {0}", _refusalText.Get(update.RefusedReason)]);
         }
 
         return RedirectToAction(nameof(Detail), new { id });
@@ -425,7 +429,7 @@ public sealed class EnrollmentsController : Controller
         }
         else
         {
-            await _notifier.ErrorAsync(H["The completion was not approved: {0}", update.RefusedReason]);
+            await _notifier.ErrorAsync(H["The completion was not approved: {0}", _refusalText.Get(update.RefusedReason)]);
         }
 
         return RedirectToAction(nameof(Detail), new { id });
@@ -451,7 +455,7 @@ public sealed class EnrollmentsController : Controller
         }
         else
         {
-            await _notifier.ErrorAsync(new LocalizedHtmlString(result.ErrorCode, ErrorText(result.ErrorCode)));
+            await _notifier.ErrorAsync(H["{0}", ErrorText(result.ErrorCode)]);
         }
     }
 

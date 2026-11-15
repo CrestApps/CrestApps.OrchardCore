@@ -166,7 +166,7 @@ public sealed class DefaultCourseAccessService : ICourseAccessService
         if (entry is null)
         {
             access.Reason = CourseItemAccessReason.NotReleased;
-            access.LockedReason = "This item is not part of the course outline.";
+            access.LockedReason = LearningRefusals.NotInOutline;
 
             return access;
         }

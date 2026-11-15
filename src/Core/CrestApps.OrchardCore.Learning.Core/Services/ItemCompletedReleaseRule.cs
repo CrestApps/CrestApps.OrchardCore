@@ -21,14 +21,14 @@ public sealed class ItemCompletedReleaseRule : ICourseItemReleaseRule
 
         if (itemId is null)
         {
-            return Task.FromResult(ReleaseDecision.Locked("This item is not available yet."));
+            return Task.FromResult(ReleaseDecision.Locked(LearningRefusals.NotAvailableYet));
         }
 
         var progress = context.Progress?.Find(itemId);
 
         if (progress is null || progress.State != CourseItemState.Completed)
         {
-            return Task.FromResult(ReleaseDecision.Locked("Complete the earlier item first."));
+            return Task.FromResult(ReleaseDecision.Locked(LearningRefusals.CompleteEarlierItem));
         }
 
         var minimum = context.Settings.Get("MinimumScore");
@@ -37,7 +37,7 @@ public sealed class ItemCompletedReleaseRule : ICourseItemReleaseRule
         {
             if (!decimal.TryParse(minimum, NumberStyles.Number, CultureInfo.InvariantCulture, out var minimumScore) || progress.Score is null || progress.Score < minimumScore)
             {
-                return Task.FromResult(ReleaseDecision.Locked("Reach the required score on the earlier item first."));
+                return Task.FromResult(ReleaseDecision.Locked(LearningRefusals.ReachEarlierScore));
             }
         }
 

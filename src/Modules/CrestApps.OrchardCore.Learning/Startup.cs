@@ -81,6 +81,7 @@ public sealed class Startup : StartupBase
         services.Configure<LearningUpkeepOptions>(_configuration.GetSection("CrestApps:Learning:Upkeep"));
         services.AddScoped<CourseEditorOptions>();
         services.AddScoped<EnrollmentListService>();
+        services.AddScoped<LearningRefusalText>();
         services.AddScoped<LearnerUserLookup>();
         services.AddPersonalDataContributor<LearningPersonalDataContributor>();
         services.AddScoped<LearnerRecordSummaryService>();

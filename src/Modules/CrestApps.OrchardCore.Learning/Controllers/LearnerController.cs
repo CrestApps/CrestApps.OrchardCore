@@ -28,6 +28,7 @@ public sealed class LearnerController : Controller
     private readonly ISelfEnrollmentService _selfEnrollment;
     private readonly IContentManager _contentManager;
     private readonly INotifier _notifier;
+    private readonly LearningRefusalText _refusalText;
 
     internal readonly IHtmlLocalizer H;
 
@@ -43,6 +44,7 @@ public sealed class LearnerController : Controller
     /// <param name="selfEnrollment">The self enrollment service.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="refusalText">The text of refusal codes.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public LearnerController(
         IAuthorizationService authorizationService,
@@ -54,8 +56,10 @@ public sealed class LearnerController : Controller
         ISelfEnrollmentService selfEnrollment,
         IContentManager contentManager,
         INotifier notifier,
+        LearningRefusalText refusalText,
         IHtmlLocalizer<LearnerController> htmlLocalizer)
     {
+        _refusalText = refusalText;
         _authorizationService = authorizationService;
         _pageService = pageService;
         _enrollmentStore = enrollmentStore;
@@ -224,7 +228,7 @@ public sealed class LearnerController : Controller
     {
         if (!confirm)
         {
-            return FormProgressAsync(enrollmentId, itemId, (enrollment, item) => Task.FromResult(new ProgressUpdate { Enrollment = enrollment, RefusedReason = H["Tick the statement to confirm it."].Value }));
+            return FormProgressAsync(enrollmentId, itemId, (enrollment, item) => Task.FromResult(new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.ConfirmStatement }));
         }
 
         return FormProgressAsync(enrollmentId, itemId, (enrollment, item) => _progressService.AcknowledgeAsync(enrollment, item));
@@ -244,6 +248,9 @@ public sealed class LearnerController : Controller
         return Json(new
         {
             accepted = update.RefusedReason is null,
+
+            // Someone else was changing the enrollment at that moment; the player sends the report again.
+            retry = update.RefusedReason == LearningRefusals.Busy,
             state = update.Item?.State.ToString(),
             itemCompleted = update.ItemCompleted,
             courseCompleted = update.CourseCompleted,
@@ -264,7 +271,7 @@ public sealed class LearnerController : Controller
 
         if (update.RefusedReason is not null)
         {
-            await _notifier.WarningAsync(new LocalizedHtmlString(update.RefusedReason, update.RefusedReason));
+            await _notifier.WarningAsync(H["{0}", _refusalText.Get(update.RefusedReason)]);
         }
         else if (update.CourseCompleted)
         {

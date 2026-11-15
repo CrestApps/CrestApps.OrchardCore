@@ -45,6 +45,7 @@ public sealed class CourseAccessTests
         Assert.Equal(CourseItemAccessReason.Anonymous, (await Access(new ClaimsPrincipal(new ClaimsIdentity()), lesson)).Reason);
         Assert.Equal(CourseItemAccessReason.Enrolled, (await Access(CalendarTestHarness.User("learner"), lesson)).Reason);
         Assert.Equal(CourseItemAccessReason.NotReleased, (await Access(CalendarTestHarness.User("learner"), later)).Reason);
+        Assert.Equal(LearningRefusals.CompleteEarlierItem, (await Access(CalendarTestHarness.User("learner"), later)).LockedReason);
         Assert.Equal(CourseItemAccessReason.NotEnrolled, (await Access(CalendarTestHarness.User("stranger"), lesson)).Reason);
         Assert.Equal(CourseItemAccessReason.Pending, (await Access(CalendarTestHarness.User("waiting"), lesson)).Reason);
         Assert.Equal(CourseItemAccessReason.Suspended, (await Access(CalendarTestHarness.User("paused"), lesson)).Reason);
