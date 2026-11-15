@@ -84,6 +84,7 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, DisposableEarningsPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, NetCheckPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, ContributionsPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, AfterTaxMatchesPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, DistributionPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, PayCodeBaseUsage>());
 

@@ -26,7 +26,7 @@ public sealed class PayAdjustmentsTests
     public async Task RetroPay_PaysTheRaiseOnEarlierHours_LessWhatEarlierRetroAlreadyPaid()
     {
         // 80 hours paid at 20 from 18 to 31 October; the rate on file from 1 October is now 22: 80 x 2 = 160 owed.
-        var earlier = Statement("s1", new DateOnly(2026, 10, 18), new DateOnly(2026, 10, 31), new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Hours = 80, Rate = 20, Amount = 1600 });
+        var earlier = Statement("s1", new DateOnly(2026, 10, 18), new DateOnly(2026, 10, 31), new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Hours = 80, Rate = 20, Amount = 1600, RatedHours = [new PayLineRatedHours { Date = new DateOnly(2026, 10, 25), Hours = 80 }] });
         var context = Context(rates: [(new DateOnly(2020, 1, 1), 20m), (new DateOnly(2026, 10, 1), 22m)]);
 
         context.History = [earlier];
@@ -78,6 +78,69 @@ public sealed class PayAdjustmentsTests
         await Step<RetroPayCalculationStep>().ExecuteAsync(context, TestContext.Current.CancellationToken);
 
         Assert.Equal(200m, Assert.Single(context.Lines).Amount);
+    }
+
+    [Fact]
+    public async Task RetroPay_OwesNothingForARaiseInThePeriodAlreadyPaidByDay_LeavesAnInputsOwnRateAlone_AndPaysALaterRaiseByDay()
+    {
+        // 4 to 17 October, 20 an hour, 22 from 12 October: 40 hours before it were paid at 20 and 40 after at 22, the
+        // training hours at their own 15. The rates on file haven't changed since: nothing is owed (the old comparison
+        // with the period's last rate paid 40 x 2 = 80, and 10 x 7 = 70 on the training hours).
+        var earlier = Statement("s1", new DateOnly(2026, 10, 4), new DateOnly(2026, 10, 17),
+            new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Hours = 40, Rate = 20, Amount = 800, RatedHours = [new PayLineRatedHours { Date = new DateOnly(2026, 10, 6), Hours = 40 }] },
+            new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Hours = 40, Rate = 22, Amount = 880, RatedHours = [new PayLineRatedHours { Date = new DateOnly(2026, 10, 13), Hours = 40 }] },
+            new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Hours = 10, Rate = 15, Amount = 150 });
+        var unchanged = Context(rates: [(new DateOnly(2020, 1, 1), 20m), (new DateOnly(2026, 10, 12), 22m)]);
+
+        unchanged.History = [earlier];
+        await Step<RetroPayCalculationStep>().ExecuteAsync(unchanged, TestContext.Current.CancellationToken);
+
+        Assert.Empty(unchanged.Lines);
+
+        // A raise to 24 back to 1 October, entered later: 40 x (24 - 20) + 40 x (24 - 22) = 240; the training hours
+        // still nothing.
+        var raised = Context(rates: [(new DateOnly(2020, 1, 1), 20m), (new DateOnly(2026, 10, 1), 24m)]);
+
+        raised.History = [earlier];
+        await Step<RetroPayCalculationStep>().ExecuteAsync(raised, TestContext.Current.CancellationToken);
+
+        Assert.Equal(240m, Assert.Single(raised.Lines).Amount);
+    }
+
+    [Fact]
+    public async Task RetroPay_OwesNothingForASalaryChangeInThePeriodAlreadyProratedByDay()
+    {
+        // 52000 a year, 62400 from 11 October, in the period of 4 to 17 October: the period was paid day by day at the
+        // salary of each day; with the same salaries on file, nothing is owed (the old comparison paid 62400 / 26 = 2400
+        // less what was paid).
+        var context = Context(salaries: [(new DateOnly(2020, 1, 1), 52000m), (new DateOnly(2026, 10, 11), 62400m)]);
+        var paid = context.Round(EarningsPayCalculationStep.SalaryFor(context, _salary, new DateOnly(2026, 10, 4), new DateOnly(2026, 10, 17)));
+
+        Assert.InRange(paid, 2000.01m, 2399.99m);
+
+        context.History = [Statement("s1", new DateOnly(2026, 10, 4), new DateOnly(2026, 10, 17), new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "sal", Amount = paid })];
+        await Step<RetroPayCalculationStep>().ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.Empty(context.Lines);
+    }
+
+    [Fact]
+    public async Task ABonusEarnedOverPartOfAPeriod_CountsThatPeriodsShareOfHours_AndSaysSo()
+    {
+        // Earned 10 to 17 October: the period of 4 to 17 October is 8 of its 14 days in the window. Its 80 regular and
+        // 10 overtime hours count 8/14 each: the 900 raises the rate by 900 / (90 x 8/14) = 17.50, owed half on each of
+        // the 10 x 8/14 overtime hours = 50.00. Before, the period was left out and nothing was owed.
+        var earlier = Statement("s1", new DateOnly(2026, 10, 4), new DateOnly(2026, 10, 17),
+            new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Hours = 80, Rate = 20, Amount = 1600 },
+            new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "ot", Hours = 10, Rate = 30, Amount = 300 });
+        var context = Context(rates: [(new DateOnly(2020, 1, 1), 20m)]);
+
+        context.History = [earlier];
+        context.Inputs = [new PayInput { PayCodeId = "bonus", Amount = 900, EarnedFrom = new DateOnly(2026, 10, 10), EarnedTo = new DateOnly(2026, 10, 17), PeriodStart = context.PeriodStart, PeriodEnd = context.PeriodEnd }];
+        await Step<EarnedRegularRatePayCalculationStep>().ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.Equal(50m, Assert.Single(context.Lines).Amount);
+        Assert.Contains(context.Warnings, warning => warning.Contains("partly in it", StringComparison.Ordinal));
     }
 
     [Theory]

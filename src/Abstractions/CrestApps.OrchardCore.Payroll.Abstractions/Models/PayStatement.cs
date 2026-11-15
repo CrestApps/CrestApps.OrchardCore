@@ -313,6 +313,18 @@ public sealed class PayStatementLine
     public string RetroFor { get; set; }
 
     /// <summary>
+    /// Gets or sets the hours of an hours line priced at the rate on file, by the day whose rate priced them; empty for
+    /// hours that came with their own rate (a training rate). Retro pay compares each day with the rate now on file.
+    /// </summary>
+    public IList<PayLineRatedHours> RatedHours { get; set; }
+
+    /// <summary>
+    /// Gets or sets the part of a tax line's taxable wages withheld on at the flat supplemental rate, which a second pay
+    /// in the period doesn't count as wages already withheld on by the tables.
+    /// </summary>
+    public decimal? FlatWages { get; set; }
+
+    /// <summary>
     /// Gets or sets where the cost goes.
     /// </summary>
     public PayInputAllocation Allocation { get; set; }
@@ -321,6 +333,18 @@ public sealed class PayStatementLine
     /// Gets or sets the inputs the line comes from.
     /// </summary>
     public IList<PayInputReference> Sources { get; set; } = [];
+}
+
+/// <summary>
+/// Hours of a day priced at the rate on file that day.
+/// </summary>
+public sealed class PayLineRatedHours
+{
+    /// <summary>Gets or sets the day.</summary>
+    public DateOnly Date { get; set; }
+
+    /// <summary>Gets or sets the hours.</summary>
+    public decimal Hours { get; set; }
 }
 
 /// <summary>

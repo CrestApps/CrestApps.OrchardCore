@@ -240,8 +240,14 @@ public static class PayCalculationOrder
     /// <summary>The overtime of earlier weeks re-priced by a bonus earned in them.</summary>
     public const int EarnedRegularRate = 210;
 
-    /// <summary>Employer contributions and reimbursements.</summary>
-    public const int Contributions = 900;
+    /// <summary>
+    /// Employer contributions and reimbursements, after the deductions taken before tax and before the taxes, so the
+    /// taxes see a taxable contribution or reimbursement.
+    /// </summary>
+    public const int Contributions = 400;
+
+    /// <summary>The employer's match of deductions taken after tax.</summary>
+    public const int AfterTaxMatches = 900;
 
     /// <summary>The split of net pay.</summary>
     public const int Distribution = 1000;
@@ -328,6 +334,12 @@ public sealed class PayAccumulator
     /// period), so a second pay in a period is withheld on the period's total.
     /// </summary>
     public decimal PeriodTaxableWages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the part of <see cref="PeriodTaxableWages"/> withheld on at a flat supplemental rate, such as a bonus
+    /// paid on its own: a later pay of the period is withheld by the tables as if it were not there.
+    /// </summary>
+    public decimal PeriodFlatWages { get; set; }
 }
 
 /// <summary>
@@ -471,6 +483,9 @@ public sealed class PayrollTaxLine
 
     /// <summary>Gets or sets the wages the tax was worked out on.</summary>
     public decimal TaxableWages { get; set; }
+
+    /// <summary>Gets or sets the part of the taxable wages withheld on at a flat supplemental rate.</summary>
+    public decimal FlatWages { get; set; }
 
     /// <summary>Gets or sets the amount.</summary>
     public decimal Amount { get; set; }

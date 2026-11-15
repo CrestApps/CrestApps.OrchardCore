@@ -141,6 +141,16 @@ public static class PayCodeTaxMatrix
     /// <param name="lines">The lines of the pay.</param>
     /// <returns>The wages.</returns>
     public static decimal WagesFor(string category, IEnumerable<PayCodeAmount> lines)
+        => Math.Max(0, NetWagesFor(category, lines));
+
+    /// <summary>
+    /// Gets the wages of a tax category as <see cref="WagesFor"/> does, but below zero when deductions taken before the
+    /// tax are more than the wages, so the rest can lower other wages.
+    /// </summary>
+    /// <param name="category">The tax category.</param>
+    /// <param name="lines">The lines of the pay.</param>
+    /// <returns>The wages, possibly below zero.</returns>
+    public static decimal NetWagesFor(string category, IEnumerable<PayCodeAmount> lines)
     {
         ArgumentException.ThrowIfNullOrEmpty(category);
         ArgumentNullException.ThrowIfNull(lines);
@@ -164,6 +174,6 @@ public static class PayCodeTaxMatrix
             }
         }
 
-        return Math.Max(0, wages);
+        return wages;
     }
 }

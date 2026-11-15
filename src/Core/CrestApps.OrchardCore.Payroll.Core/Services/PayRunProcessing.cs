@@ -63,6 +63,30 @@ public sealed partial class DefaultPayRunService
             }
 
             var runId = run.ItemId;
+
+            // A draft was calculated with the year's totals of its time: a pay of the same person finalized since (another
+            // run, an off-cycle pay, a void) changes them, and so the taxes and limits. Calculate again first.
+            var stale = new List<string>();
+
+            foreach (var draft in (await OpenStatementsAsync(run, cancellationToken)).Where(statement => statement.Status == PayStatementStatus.Draft))
+            {
+                var staffMemberId = draft.StaffMemberId;
+                var employerId = draft.EmployerId;
+                var others = await _statements.ListAsync(index => index.StaffMemberId == staffMemberId && index.EmployerId == employerId && index.Status != nameof(PayStatementStatus.Draft), cancellationToken);
+
+                if (others.Any(other => other.RunId != runId && (other.ProcessedUtc ?? other.CreatedUtc) > draft.CreatedUtc))
+                {
+                    stale.Add(draft.Snapshot?.EmployeeName ?? draft.StaffMemberId);
+                }
+            }
+
+            if (stale.Count > 0)
+            {
+                result.Errors.Add(S["Calculate the run again: {0} had another pay statement finalized after it was calculated.", string.Join(", ", stale)]);
+
+                return result;
+            }
+
             var employer = await _employers.FindByIdAsync(run.EmployerId, cancellationToken);
             var methods = PaymentMethods();
             var numbers = _services.GetRequiredService<INumberSequence>();
@@ -582,6 +606,7 @@ public sealed partial class DefaultPayRunService
             Jurisdiction = line.Jurisdiction,
             Payer = line.Payer,
             TaxableWages = -line.TaxableWages,
+            FlatWages = -line.FlatWages,
             PayItemId = line.PayItemId,
             Allocation = line.Allocation,
         };

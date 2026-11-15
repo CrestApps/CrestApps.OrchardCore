@@ -90,9 +90,9 @@
     "Lines": [
       "Earning REG 2000.00 for 80h",
       "Deduction RET 100.00",
-      "Tax US-FIT Employee 190.00 on 1900.00",
       "EmployerContribution RET 50.00",
-      "Reimbursement REIMB 75.00"
+      "Reimbursement REIMB 75.00",
+      "Tax US-FIT Employee 190.00 on 1900.00"
     ],
     "Gross": 2000.0,
     "Net": 1785.0,

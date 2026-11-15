@@ -77,6 +77,9 @@ public sealed class PayStatementLineIndex : MapIndex
     /// <summary>Gets or sets the taxable wages of a tax line, in minor units.</summary>
     public long TaxableWagesMinor { get; set; }
 
+    /// <summary>Gets or sets the part of a tax line's taxable wages withheld on at a flat rate, in minor units.</summary>
+    public long FlatWagesMinor { get; set; }
+
     /// <summary>
     /// Turns a day into the number the index keeps.
     /// </summary>
@@ -152,6 +155,7 @@ public sealed class PayStatementLineIndexProvider : IndexProvider<PayStatement>
                     AmountMinor = Minor(line.Amount, statement.Currency),
                     HoursHundredths = (long)Math.Round((line.Hours ?? 0) * 100, MidpointRounding.AwayFromZero),
                     TaxableWagesMinor = Minor(line.TaxableWages ?? 0, statement.Currency),
+                    FlatWagesMinor = Minor(line.FlatWages ?? 0, statement.Currency),
                 }));
     }
 
@@ -164,6 +168,20 @@ public sealed class PayStatementLineIndexProvider : IndexProvider<PayStatement>
 /// </summary>
 public static class PayStatementIndexSchema
 {
+    /// <summary>
+    /// Adds the flat-rate wages of tax lines to the line rows of a site made before them.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static Task AddFlatWagesAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        return schemaBuilder.AlterIndexTableAsync<PayStatementLineIndex>(
+            table => table.AddColumn<long>("FlatWagesMinor", column => column.NotNull().WithDefault(0L)),
+            collection: PayrollConstants.CollectionName);
+    }
+
     /// <summary>
     /// Creates the tables.
     /// </summary>
@@ -205,7 +223,8 @@ public static class PayStatementIndexSchema
             .Column<string>("Jurisdiction", column => column.Nullable().WithLength(50))
             .Column<long>("AmountMinor")
             .Column<long>("HoursHundredths")
-            .Column<long>("TaxableWagesMinor"),
+            .Column<long>("TaxableWagesMinor")
+            .Column<long>("FlatWagesMinor", column => column.WithDefault(0L)),
             collection: collection);
 
         await schemaBuilder.AlterIndexTableAsync<PayStatementLineIndex>(table =>

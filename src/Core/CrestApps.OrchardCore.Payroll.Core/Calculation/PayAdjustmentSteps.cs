@@ -37,7 +37,6 @@ public sealed class RetroPayCalculationStep : IPayCalculationStep
             return Task.CompletedTask;
         }
 
-        var periods = context.SalaryPeriods ?? PayCalculator.PeriodsPerYear(context.Schedule?.Frequency ?? PayFrequency.Biweekly);
         var paidBack = context.History
             .SelectMany(statement => statement.Lines)
             .Where(line => !string.IsNullOrEmpty(line.RetroFor))
@@ -64,14 +63,15 @@ public sealed class RetroPayCalculationStep : IPayCalculationStep
 
                 if (code.Kind == PayCodeKinds.Salary)
                 {
-                    // Only a full period's salary: a hire or a termination in it was prorated on its own days.
-                    var fullPeriod = (context.HireDate is null || context.HireDate <= statement.PeriodStart) && (context.TerminationDate is null || context.TerminationDate >= statement.PeriodEnd);
-
-                    difference = fullPeriod && context.Pay.SalaryOn(statement.PeriodEnd) is { } salary ? context.Round(salary / periods) - line.Amount : 0;
+                    // The period priced again from the salary on file now, day by day as it was paid: a change in the
+                    // period, a hire or a termination prorate the same way, so only a salary changed since is owed.
+                    difference = context.Round(EarningsPayCalculationStep.SalaryFor(context, code, statement.PeriodStart, statement.PeriodEnd)) - line.Amount;
                 }
-                else if (line.Hours is > 0 && line.Rate is > 0 && code.PremiumPerHour is not > 0 && context.Pay.RateOn(statement.PeriodEnd) is { } rate)
+                else if (line.RatedHours is { Count: > 0 } rated && line.Rate is > 0 && code.PremiumPerHour is not > 0)
                 {
-                    difference = line.Hours.Value * ((rate * code.Multiplier) - line.Rate.Value);
+                    // Each day's hours against the rate on file now for that day; hours that came with their own rate
+                    // (a training rate) were never priced from the rate on file and are left out.
+                    difference = rated.Sum(day => context.Pay.RateOn(day.Date) is { } rate ? day.Hours * ((rate * code.Multiplier) - line.Rate.Value) : 0);
                 }
                 else
                 {
@@ -239,18 +239,30 @@ public sealed class EarnedRegularRatePayCalculationStep : IPayCalculationStep
                 continue;
             }
 
-            var lines = context.History
-                .Where(statement => statement.PeriodStart >= input.EarnedFrom && statement.PeriodEnd <= input.EarnedTo)
-                .SelectMany(statement => statement.Lines)
-                .Where(line => line.Type == PayLineType.Earning && line.Hours is > 0 && string.IsNullOrEmpty(line.RetroFor))
-                .Select(line => (Line: line, Code: context.Code(line.PayCodeId)))
-                .Where(pair => pair.Code is not null && pair.Code.GetPayrollSettings().CountsAsHoursWorked)
+            // A statement whose period is only partly in the earning window counts the share of its hours in it: the
+            // hours of its days in the window, when its lines kept them by day, or else its hours by the share of days.
+            var from = input.EarnedFrom.Value;
+            var to = input.EarnedTo.Value;
+            var overlapping = context.History
+                .Where(statement => statement.VoidOf is null && statement.PeriodEnd >= from && statement.PeriodStart <= to)
                 .ToList();
-            var hours = lines.Sum(pair => pair.Line.Hours.Value);
+            var partial = overlapping.Where(statement => statement.PeriodStart < from || statement.PeriodEnd > to).ToList();
+            var lines = overlapping
+                .SelectMany(statement => statement.Lines.Select(line => (Statement: statement, Line: line)))
+                .Where(pair => pair.Line.Type == PayLineType.Earning && pair.Line.Hours is > 0 && string.IsNullOrEmpty(pair.Line.RetroFor))
+                .Select(pair => (pair.Line, Code: context.Code(pair.Line.PayCodeId), Hours: HoursIn(pair.Statement, pair.Line, from, to)))
+                .Where(pair => pair.Code is not null && pair.Code.GetPayrollSettings().CountsAsHoursWorked && pair.Hours > 0)
+                .ToList();
+            var hours = lines.Sum(pair => pair.Hours);
             var overtime = lines.Where(pair => pair.Code.Multiplier > 1)
                 .GroupBy(pair => pair.Code.ItemId)
-                .Select(group => (CodeId: group.Key, Weighted: group.Sum(pair => pair.Line.Hours.Value * (pair.Code.Multiplier - 1))))
+                .Select(group => (CodeId: group.Key, Weighted: group.Sum(pair => pair.Hours * (pair.Code.Multiplier - 1))))
                 .ToList();
+
+            if (partial.Count > 0)
+            {
+                context.Warnings.Add(S["{0} earned {1} to {2}: the pay periods {3} are partly in it, so only their share of hours in it counts.", code.Name, from.ToString("d", CultureInfo.CurrentCulture), to.ToString("d", CultureInfo.CurrentCulture), string.Join(", ", partial.Select(statement => statement.PeriodStart.ToString("d", CultureInfo.CurrentCulture) + "–" + statement.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)))]);
+            }
             var weighted = overtime.Sum(entry => entry.Weighted);
 
             if (hours <= 0 || weighted <= 0)
@@ -278,5 +290,25 @@ public sealed class EarnedRegularRatePayCalculationStep : IPayCalculationStep
         }
 
         return Task.CompletedTask;
+    }
+
+    // The hours of a line in a window: by day when the line kept them, else by the share of its period's days.
+    private static decimal HoursIn(PayStatement statement, PayStatementLine line, DateOnly from, DateOnly to)
+    {
+        if (statement.PeriodStart >= from && statement.PeriodEnd <= to)
+        {
+            return line.Hours ?? 0;
+        }
+
+        if (line.RatedHours is { Count: > 0 } days && days.Sum(day => day.Hours) == line.Hours)
+        {
+            return days.Where(day => day.Date >= from && day.Date <= to).Sum(day => day.Hours);
+        }
+
+        var first = statement.PeriodStart > from ? statement.PeriodStart : from;
+        var last = statement.PeriodEnd < to ? statement.PeriodEnd : to;
+        var periodDays = statement.PeriodEnd.DayNumber - statement.PeriodStart.DayNumber + 1;
+
+        return last < first || periodDays <= 0 ? 0 : (line.Hours ?? 0) * (last.DayNumber - first.DayNumber + 1) / periodDays;
     }
 }

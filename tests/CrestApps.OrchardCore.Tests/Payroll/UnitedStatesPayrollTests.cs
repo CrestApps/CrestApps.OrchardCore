@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Payroll.Core;
@@ -165,6 +166,97 @@ public sealed class UnitedStatesPayrollTests
     }
 
     [Fact]
+    public async Task RegularPayAfterAFlatRateBonusInThePeriod_IsWithheldByTheTablesAlone_WithItsExtraWithholding()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        Assert.Empty(await ImportRecipeAsync(harness));
+
+        var request = Request(2000m);
+
+        // A 5000 bonus paid on its own earlier in the period, withheld on at the flat 22% (1100).
+        request.Accumulators.Totals[PayAccumulators.TaxKey("US-FIT")] = new PayAccumulator { PeriodTaxableWages = 5000m, PeriodFlatWages = 5000m, Period = 1100m };
+        request.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single" } }];
+
+        // W(2000) = 156.15, as for a period with no bonus; counting the bonus as wages already withheld on by the tables
+        // gave W(7000) - W(5000) = 480.00.
+        Assert.Equal((156.15m, 2000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
+
+        // Step 4(c) applies to that pay: 10 more.
+        request.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single", ["ExtraWithholding"] = "10" } }];
+
+        Assert.Equal((166.15m, 2000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
+
+        // The bonus itself records its flat wages, and no extra withholding.
+        var bonus = Request(0m);
+
+        bonus.SupplementalMethod = PayrollSupplementalMethod.Flat;
+        bonus.SupplementalWages[PayrollTaxCategories.IncomeTax] = 5000m;
+        bonus.Elections = request.Elections;
+
+        var line = Assert.Single(await CalculateAsync(harness, bonus), candidate => candidate.TaxCode == "US-FIT");
+
+        Assert.Equal((1100.00m, 5000m), (Math.Round(line.Amount, 2), line.FlatWages));
+    }
+
+    [Fact]
+    public void TaxRequest_LowersSupplementalWagesByWhatPreTaxDeductionsLeft_AndSeesATaxableReimbursementAndContribution()
+    {
+        var regular = new PayCode { ItemId = "reg", Code = "REG", Class = PayCodeClass.Earning, Kind = PayCodeKinds.Regular };
+        var bonus = new PayCode { ItemId = "bonus", Code = "BONUS", Class = PayCodeClass.Earning, Kind = PayCodeKinds.Bonus };
+        var retirement = new PayCode { ItemId = "401k", Code = "401K", Class = PayCodeClass.Deduction, Kind = "Retirement" };
+        var allowance = new PayCode { ItemId = "car", Code = "CAR", Class = PayCodeClass.Reimbursement, Kind = "Reimbursement" };
+
+        static void Treat(PayCode code, PayCodeTaxTreatment treatment, bool supplemental = false)
+        {
+            var settings = PayrollPayCodeSettingsExtensions.DefaultsFor(code);
+
+            settings.TaxTreatment[PayrollTaxCategories.IncomeTax] = treatment;
+            settings.Supplemental = supplemental;
+            code.Put(settings);
+        }
+
+        Treat(regular, PayCodeTaxTreatment.Taxed);
+        Treat(bonus, PayCodeTaxTreatment.Taxed, supplemental: true);
+        Treat(retirement, PayCodeTaxTreatment.Exempt);
+        Treat(allowance, PayCodeTaxTreatment.Taxed);
+
+        var context = new PayCalculationContext
+        {
+            Codes = new Dictionary<string, PayCode> { ["reg"] = regular, ["bonus"] = bonus, ["401k"] = retirement, ["car"] = allowance },
+            PayDate = new DateOnly(2026, 11, 20),
+        };
+
+        context.Lines.Add(new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "reg", Amount = 1000 });
+        context.Lines.Add(new PayStatementLine { Type = PayLineType.Earning, PayCodeId = "bonus", Amount = 2000 });
+        context.Lines.Add(new PayStatementLine { Type = PayLineType.Deduction, PayCodeId = "401k", Amount = 1500, PayItemId = "item" });
+
+        // The employer's match carries the deduction's code: it never lowers wages again.
+        context.Lines.Add(new PayStatementLine { Type = PayLineType.EmployerContribution, PayCodeId = "401k", Amount = 500, PayItemId = "item", Payer = PayLinePayer.Employer });
+
+        var categories = new PayrollTaxCategoryOptions();
+
+        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.IncomeTax, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesPayrollTests>("Income tax")));
+
+        var step = new TaxesPayCalculationStep([], Options.Create(categories), new ServiceCollection().BuildServiceProvider(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<TaxesPayCalculationStep>());
+
+        // 1000 regular less 1500 taken before tax: 0 regular, and the 500 left lowers the 2000 bonus to 1500.
+        var request = step.Request(context);
+
+        Assert.Equal((0m, 1500m), (request.Wages[PayrollTaxCategories.IncomeTax], request.SupplementalWages[PayrollTaxCategories.IncomeTax]));
+
+        // Contributions and reimbursements now come before the taxes: a taxable car allowance adds to the wages.
+        Assert.True(PayCalculationOrder.Contributions < PayCalculationOrder.Taxes && PayCalculationOrder.Contributions > PayCalculationOrder.PreTaxDeductions);
+
+        context.Lines.Add(new PayStatementLine { Type = PayLineType.Reimbursement, PayCodeId = "car", Amount = 300, Payer = PayLinePayer.Employer });
+
+        // 1000 + 300 - 1500 = -200: still no regular wages, and the bonus is lowered by 200 to 1800.
+        var withAllowance = step.Request(context);
+
+        Assert.Equal((0m, 1800m), (withAllowance.Wages[PayrollTaxCategories.IncomeTax], withAllowance.SupplementalWages[PayrollTaxCategories.IncomeTax]));
+    }
+
+    [Fact]
     public async Task AFormW4Rule_NeedsEveryTable_AndATableItUsesIsKept()
     {
         await using var harness = await CreateHarnessAsync();
@@ -262,6 +354,12 @@ public sealed class UnitedStatesPayrollTests
         var totals = PayAccumulatorService.Sum(rows, new DateOnly(2026, 11, 27), 20261101, 20261114, "USD").For(PayAccumulators.TaxKey("US-FIT"));
 
         Assert.Equal((2000m, 4000m), (totals.PeriodTaxableWages, totals.YearTaxableWages));
+
+        // A bonus withheld on at the flat rate in the same period is kept apart.
+        var withBonus = rows.Append(new PayStatementLineIndex { LineKey = PayAccumulators.TaxKey("US-FIT"), PayDay = 20261118, PeriodStartDay = 20261101, PeriodEndDay = 20261114, AmountMinor = 110000, TaxableWagesMinor = 500000, FlatWagesMinor = 500000 });
+        var bonusTotals = PayAccumulatorService.Sum(withBonus, new DateOnly(2026, 11, 27), 20261101, 20261114, "USD").For(PayAccumulators.TaxKey("US-FIT"));
+
+        Assert.Equal((7000m, 5000m), (bonusTotals.PeriodTaxableWages, bonusTotals.PeriodFlatWages));
     }
 
     private static (decimal Amount, decimal TaxableWages) Taxed(IReadOnlyList<PayrollTaxLine> lines, string taxCode)

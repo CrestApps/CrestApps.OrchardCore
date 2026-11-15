@@ -226,37 +226,7 @@ public sealed class EarningsPayCalculationStep : IPayCalculationStep
             return;
         }
 
-        var periods = context.SalaryPeriods ?? PayCalculator.PeriodsPerYear(context.Schedule?.Frequency ?? PayFrequency.Biweekly);
-        var proration = code.GetPayrollSettings().Proration;
-        var first = context.HireDate is { } hired && hired > context.PeriodStart ? hired : context.PeriodStart;
-        var last = context.TerminationDate is { } left && left < context.PeriodEnd ? left : context.PeriodEnd;
-
-        if (last < first)
-        {
-            return;
-        }
-
-        decimal amount;
-
-        if (proration == PayCodeProrationRule.None)
-        {
-            amount = (context.Pay.SalaryOn(last) ?? 0) / periods;
-        }
-        else
-        {
-            // Each counted day of the period pays its share of the salary in effect that day, so a hire, a termination
-            // and a salary change in the period are all prorated the same way.
-            var days = CountedDays(context.PeriodStart, context.PeriodEnd, proration).ToList();
-
-            if (days.Count == 0)
-            {
-                return;
-            }
-
-            amount = days
-                .Where(day => day >= first && day <= last)
-                .Sum(day => (context.Pay.SalaryOn(day) ?? 0) / periods / days.Count);
-        }
+        var amount = SalaryFor(context, code, context.PeriodStart, context.PeriodEnd);
 
         if (amount <= 0)
         {
@@ -271,6 +241,43 @@ public sealed class EarningsPayCalculationStep : IPayCalculationStep
             Amount = context.Round(amount),
             Allocation = context.Profile?.DefaultAllocation,
         });
+    }
+
+    /// <summary>
+    /// Gets the salary of a period, unrounded, from the salary on file: each counted day pays its share of the salary in
+    /// effect that day, so a hire, a termination and a salary change in the period are all prorated the same way (or
+    /// the salary of the last day, for a code that doesn't prorate). Retro pay prices an earlier period with it again.
+    /// </summary>
+    /// <param name="context">The calculation.</param>
+    /// <param name="code">The salary pay code.</param>
+    /// <param name="periodStart">The period's first day.</param>
+    /// <param name="periodEnd">The period's last day.</param>
+    /// <returns>The salary of the period.</returns>
+    public static decimal SalaryFor(PayCalculationContext context, PayCode code, DateOnly periodStart, DateOnly periodEnd)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(code);
+
+        var periods = context.SalaryPeriods ?? PayCalculator.PeriodsPerYear(context.Schedule?.Frequency ?? PayFrequency.Biweekly);
+        var proration = code.GetPayrollSettings().Proration;
+        var first = context.HireDate is { } hired && hired > periodStart ? hired : periodStart;
+        var last = context.TerminationDate is { } left && left < periodEnd ? left : periodEnd;
+
+        if (last < first)
+        {
+            return 0;
+        }
+
+        if (proration == PayCodeProrationRule.None)
+        {
+            return (context.Pay.SalaryOn(last) ?? 0) / periods;
+        }
+
+        var days = CountedDays(periodStart, periodEnd, proration).ToList();
+
+        return days.Count == 0
+            ? 0
+            : days.Where(day => day >= first && day <= last).Sum(day => (context.Pay.SalaryOn(day) ?? 0) / periods / days.Count);
     }
 
     private void AddInputs(PayCalculationContext context)
@@ -322,6 +329,13 @@ public sealed class EarningsPayCalculationStep : IPayCalculationStep
 
             line.Hours = input.Hours is { } hours ? (line.Hours ?? 0) + hours : line.Hours;
             line.Amount += amount.Value;
+
+            // Hours priced at the rate on file, by the day whose rate priced them, for retro pay.
+            if (input.Rate is null && input.Amount is null && input.Hours is { } rated && rated != 0 && code.PremiumPerHour is not > 0)
+            {
+                line.RatedHours ??= [];
+                line.RatedHours.Add(new PayLineRatedHours { Date = input.Date ?? context.PeriodEnd, Hours = rated });
+            }
             line.Sources.Add(new PayInputReference(input.SourceKind, input.SourceId));
         }
 
@@ -561,6 +575,7 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
                 Jurisdiction = tax.Jurisdiction,
                 Payer = tax.Payer,
                 TaxableWages = context.Round(tax.TaxableWages),
+                FlatWages = tax.FlatWages > 0 ? context.Round(tax.FlatWages) : null,
                 Amount = context.Round(tax.Amount),
             });
         }
@@ -577,8 +592,10 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        // The employer's match of a deduction carries the deduction's code: it is not the deduction, and never lowers wages.
         var amounts = context.Lines
             .Where(line => line.Type != PayLineType.Tax && context.Code(line.PayCodeId) is not null)
+            .Where(line => !(line.Type == PayLineType.EmployerContribution && context.Code(line.PayCodeId).Class == PayCodeClass.Deduction))
             .Select(line => (Line: line, Code: context.Code(line.PayCodeId)))
             .ToList();
         var regular = amounts.Where(pair => !pair.Code.GetPayrollSettings().Supplemental).Select(pair => new PayCodeAmount(pair.Code, pair.Line.Amount)).ToList();
@@ -617,12 +634,16 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
         var yearRegular = year.Where(pair => !pair.Code.GetPayrollSettings().Supplemental).Select(pair => new PayCodeAmount(pair.Code, pair.Year)).ToList();
         var yearSupplemental = year.Where(pair => pair.Code.GetPayrollSettings().Supplemental && pair.Code.Class != PayCodeClass.Deduction).Select(pair => new PayCodeAmount(pair.Code, pair.Year)).ToList();
 
+        // Deductions taken before tax lower regular wages first; what regular wages can't absorb lowers supplemental ones.
         foreach (var category in categories)
         {
-            request.Wages[category] = PayCodeTaxMatrix.WagesFor(category, regular);
-            request.SupplementalWages[category] = PayCodeTaxMatrix.WagesFor(category, supplemental);
-            request.YearSupplementalWages[category] = PayCodeTaxMatrix.WagesFor(category, yearSupplemental);
-            request.YearWages[category] = PayCodeTaxMatrix.WagesFor(category, yearRegular) + request.YearSupplementalWages[category];
+            var net = PayCodeTaxMatrix.NetWagesFor(category, regular);
+            var yearNet = PayCodeTaxMatrix.NetWagesFor(category, yearRegular);
+
+            request.Wages[category] = Math.Max(0, net);
+            request.SupplementalWages[category] = Math.Max(0, PayCodeTaxMatrix.WagesFor(category, supplemental) + Math.Min(0, net));
+            request.YearSupplementalWages[category] = Math.Max(0, PayCodeTaxMatrix.WagesFor(category, yearSupplemental) + Math.Min(0, yearNet));
+            request.YearWages[category] = Math.Max(0, yearNet) + request.YearSupplementalWages[category];
         }
 
         return request;
@@ -808,8 +829,36 @@ public sealed class ContributionsPayCalculationStep : IPayCalculationStep
             PayStepHelpers.AddLimited(context, code, null, input, input.Amount ?? 0, PayLinePayer.Employer);
         }
 
-        // The employer's match of a deduction: a percent of what was taken, at most a percent of the earnings.
-        foreach (var line in context.Lines.Where(line => line.Type == PayLineType.Deduction && line.PayItemId is not null).ToList())
+        AddMatches(context, S);
+
+        bool Reimbursement(PayCode code)
+            => code.Class == PayCodeClass.Reimbursement;
+
+        foreach (var (item, code) in PayStepHelpers.ItemsOf(context, Reimbursement))
+        {
+            PayStepHelpers.AddLimited(context, code, item, null, PayStepHelpers.WantedOf(context, code, item, null), PayLinePayer.Employer);
+        }
+
+        foreach (var (input, code) in PayStepHelpers.InputsOf(context, Reimbursement))
+        {
+            PayStepHelpers.AddLimited(context, code, null, input, input.Amount ?? 0, PayLinePayer.Employer);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Adds the employer's match of each deduction item that has one and isn't matched yet: a percent of what was
+    /// taken, at most a percent of the earnings.
+    /// </summary>
+    /// <param name="context">The calculation.</param>
+    /// <param name="localizer">The localizer of the match's description.</param>
+    internal static void AddMatches(PayCalculationContext context, IStringLocalizer localizer)
+    {
+        var matched = context.Lines.Where(line => line.Type == PayLineType.EmployerContribution && line.PayItemId is not null).Select(line => line.PayItemId).ToHashSet(StringComparer.Ordinal);
+        var S = localizer;
+
+        foreach (var line in context.Lines.Where(line => line.Type == PayLineType.Deduction && line.PayItemId is not null && !matched.Contains(line.PayItemId)).ToList())
         {
             var item = context.Items.FirstOrDefault(candidate => candidate.ItemId == line.PayItemId);
 
@@ -841,19 +890,34 @@ public sealed class ContributionsPayCalculationStep : IPayCalculationStep
                 });
             }
         }
+    }
+}
 
-        bool Reimbursement(PayCode code)
-            => code.Class == PayCodeClass.Reimbursement;
+/// <summary>
+/// The employer's match of deductions taken after tax, once they are taken.
+/// </summary>
+public sealed class AfterTaxMatchesPayCalculationStep : IPayCalculationStep
+{
+    internal readonly IStringLocalizer S;
 
-        foreach (var (item, code) in PayStepHelpers.ItemsOf(context, Reimbursement))
-        {
-            PayStepHelpers.AddLimited(context, code, item, null, PayStepHelpers.WantedOf(context, code, item, null), PayLinePayer.Employer);
-        }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AfterTaxMatchesPayCalculationStep"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AfterTaxMatchesPayCalculationStep(IStringLocalizer<ContributionsPayCalculationStep> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
 
-        foreach (var (input, code) in PayStepHelpers.InputsOf(context, Reimbursement))
-        {
-            PayStepHelpers.AddLimited(context, code, null, input, input.Amount ?? 0, PayLinePayer.Employer);
-        }
+    /// <inheritdoc />
+    public int Order => PayCalculationOrder.AfterTaxMatches;
+
+    /// <inheritdoc />
+    public Task ExecuteAsync(PayCalculationContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        ContributionsPayCalculationStep.AddMatches(context, S);
 
         return Task.CompletedTask;
     }

@@ -221,6 +221,7 @@ public sealed class PayEngineGoldenTests
             new DisposableEarningsPayCalculationStep(),
             new NetCheckPayCalculationStep(new PassThroughStringLocalizer<NetCheckPayCalculationStep>()),
             new ContributionsPayCalculationStep(new PassThroughStringLocalizer<ContributionsPayCalculationStep>()),
+            new AfterTaxMatchesPayCalculationStep(new PassThroughStringLocalizer<ContributionsPayCalculationStep>()),
             new DistributionPayCalculationStep(new PassThroughStringLocalizer<DistributionPayCalculationStep>()),
         ], new PassThroughStringLocalizer<PayCalculator>());
     }

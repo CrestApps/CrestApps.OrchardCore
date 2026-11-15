@@ -421,7 +421,7 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
 
         if (election?.Values.GetValueOrDefault("Exempt") == "true")
         {
-            return excess > 0 ? Line(rule, excess, excessTax) : null;
+            return excess > 0 ? Line(rule, excess, excessTax, excess) : null;
         }
 
         var flat = request.SupplementalMethod == PayrollSupplementalMethod.Flat && rule.SupplementalRate is not null;
@@ -452,9 +452,11 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
         }
 
         // A second pay in a period (a bonus paid on its own, a correction) is withheld on the period's total less
-        // what the earlier pays of the period were withheld on, as an income tax table expects a whole period.
+        // what the earlier pays of the period were withheld on, as an income tax table expects a whole period. Wages
+        // an earlier pay withheld on at the flat supplemental rate are not part of that total.
+        var periodTotals = request.Accumulators.For(PayAccumulators.TaxKey(rule.TaxCode));
         var prior = rule.Annualize || withholding is not null
-            ? Math.Max(0, request.Accumulators.For(PayAccumulators.TaxKey(rule.TaxCode)).PeriodTaxableWages)
+            ? Math.Max(0, periodTotals.PeriodTaxableWages - periodTotals.PeriodFlatWages)
             : 0;
         var tax = 0m;
 
@@ -470,8 +472,9 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
             tax += supplemental * rule.SupplementalRate.Value / 100m;
         }
 
-        // Extra withholding is once a period.
-        if (election is not null && prior == 0 && decimal.TryParse(election.Values.GetValueOrDefault("ExtraWithholding"), System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var extra) && regular + supplemental > 0)
+        // Extra withholding (step 4(c)) is once a period, with the wages the tables withhold on: never on supplemental
+        // wages withheld on at the flat rate.
+        if (election is not null && prior == 0 && decimal.TryParse(election.Values.GetValueOrDefault("ExtraWithholding"), System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var extra) && regular > 0)
         {
             tax += extra;
         }
@@ -485,12 +488,13 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
             return null;
         }
 
-        return Line(rule, taxable, tax);
+        return Line(rule, taxable, tax, supplemental + excess);
     }
 
-    private static PayrollTaxLine Line(PayrollTaxRule rule, decimal taxableWages, decimal tax)
+    private static PayrollTaxLine Line(PayrollTaxRule rule, decimal taxableWages, decimal tax, decimal flatWages)
         => new()
         {
+            FlatWages = flatWages,
             TaxCode = rule.TaxCode,
             Name = rule.Name,
             Jurisdiction = rule.Jurisdiction,

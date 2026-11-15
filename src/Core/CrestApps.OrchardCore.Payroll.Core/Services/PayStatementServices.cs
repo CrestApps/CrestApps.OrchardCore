@@ -143,6 +143,7 @@ public sealed class PayAccumulatorService : IPayAccumulatorService
             {
                 totals.Period += amount;
                 totals.PeriodTaxableWages += row.TaxableWagesMinor * unit;
+                totals.PeriodFlatWages += row.FlatWagesMinor * unit;
             }
         }
 

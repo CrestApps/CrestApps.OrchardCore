@@ -26,7 +26,7 @@ internal sealed class PayrollMigrations : DataMigration
         await _seeder.SeedAsync();
         await _policySeeder.SeedAsync();
 
-        return 7;
+        return 8;
     }
 
     // Pay profiles and pay items.
@@ -76,5 +76,13 @@ internal sealed class PayrollMigrations : DataMigration
         await PayrollFilingIndexSchema.CreateAsync(SchemaBuilder);
 
         return 7;
+    }
+
+    // The flat-rate wages of tax lines, so a bonus paid on its own isn't counted as wages the tables withheld on.
+    public async Task<int> UpdateFrom7Async()
+    {
+        await PayStatementIndexSchema.AddFlatWagesAsync(SchemaBuilder);
+
+        return 8;
     }
 }
