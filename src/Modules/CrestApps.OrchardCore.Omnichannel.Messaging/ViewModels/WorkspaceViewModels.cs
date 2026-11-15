@@ -182,6 +182,79 @@ public class InboxViewModel
     public IReadOnlyList<ChannelViewModel> Channels { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets a value indicating whether the viewer may narrow the list to one person's conversations, which only
+    /// someone who sees everybody's conversations can.
+    /// </summary>
+    public bool CanFilterByAgent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent profile whose conversations the list is narrowed to, or <see langword="null"/>.
+    /// </summary>
+    public string AgentFilter { get; set; }
+
+    /// <summary>
+    /// Gets or sets the queue whose conversations the list is narrowed to, or <see langword="null"/>.
+    /// </summary>
+    public string QueueFilter { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign whose conversations the list is narrowed to, or <see langword="null"/>.
+    /// </summary>
+    public string CampaignFilter { get; set; }
+
+    /// <summary>
+    /// Gets or sets the people the list can be narrowed to. Filled for the full page only.
+    /// </summary>
+    public IReadOnlyList<InboxFilterOption> Agents { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the queues the list can be narrowed to. Filled for the full page only.
+    /// </summary>
+    public IReadOnlyList<InboxFilterOption> Queues { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the campaigns the list can be narrowed to. Filled for the full page only.
+    /// </summary>
+    public IReadOnlyList<InboxFilterOption> Campaigns { get; set; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether the list is narrowed to a person, a queue or a campaign.
+    /// </summary>
+    public bool IsNarrowed => AgentFilter is not null || QueueFilter is not null || CampaignFilter is not null;
+
+    /// <summary>
+    /// Gets a value indicating whether the page has any person, queue or campaign to narrow the list to.
+    /// </summary>
+    public bool HasNarrowingOptions => Agents.Count > 0 || Queues.Count > 0 || Campaigns.Count > 0;
+
+    /// <summary>
+    /// Returns new route values that keep the person, queue and campaign filters, for a link to start from. Every call
+    /// returns its own dictionary, since a link's <c>asp-route-*</c> values are added to it.
+    /// </summary>
+    /// <returns>The route values.</returns>
+    public IDictionary<string, string> NarrowingRouteValues()
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (AgentFilter is not null)
+        {
+            values["agent"] = AgentFilter;
+        }
+
+        if (QueueFilter is not null)
+        {
+            values["queue"] = QueueFilter;
+        }
+
+        if (CampaignFilter is not null)
+        {
+            values["campaign"] = CampaignFilter;
+        }
+
+        return values;
+    }
+
+    /// <summary>
     /// Gets or sets the customer whose conversation is open, so their row is highlighted.
     /// </summary>
     public string SelectedCustomerKey { get; set; }
@@ -204,9 +277,12 @@ public class InboxViewModel
 }
 
 /// <summary>
-/// One customer in the list: their most recent conversation, with the unread messages and channels of every
-/// conversation of theirs on the page folded in.
+/// One person, queue or campaign the customer list can be narrowed to.
 /// </summary>
+/// <param name="Value">The agent profile, queue or campaign identifier.</param>
+/// <param name="Text">The name shown for it.</param>
+public sealed record InboxFilterOption(string Value, string Text);
+
 /// <summary>
 /// A starred customer, as the row of favorites above the customer list shows them.
 /// </summary>
@@ -229,6 +305,10 @@ public class FavoriteViewModel
     public MessagingConversation Conversation { get; set; }
 }
 
+/// <summary>
+/// One customer in the list: their most recent conversation, with the unread messages and channels of every
+/// conversation of theirs on the page folded in.
+/// </summary>
 public class InboxRow
 {
     public MessagingConversation Conversation { get; set; }

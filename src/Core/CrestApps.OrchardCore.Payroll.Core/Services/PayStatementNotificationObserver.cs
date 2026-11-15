@@ -64,7 +64,7 @@ public sealed class PayStatementNotificationObserver : IPayStatementObserver
         // Told once: observers run again for a statement whose first telling stopped half-way.
         if (_serviceProvider.GetService<INotificationManager>() is { } manager
             && await manager.ListAsync(new NotificationFilter { UserId = userId, Type = PayrollConstants.PayStatementReadyNotificationType, ReferenceId = statement.ItemId, Take = 1 }, cancellationToken) is { } sent
-            && sent.Any())
+            && sent.Count > 0)
         {
             return;
         }

@@ -494,6 +494,109 @@ public sealed class SmsInboxQueryTests
         Assert.Null(inbox.UnreadRouteValue);
     }
 
+    [Fact]
+    public async Task QueryAsync_NarrowedToAPerson_ListsOnlyTheConversationsTheyHold()
+    {
+        await using var harness = await Harness.CreateAsync();
+
+        // A personal thread a colleague claimed is held by the colleague, not by its owner.
+        var claimedByColleague = Personal("personal-claimed", ownerId: "agent-1");
+        claimedByColleague.AssignedAgentId = "agent-2";
+        claimedByColleague.AssignmentStatus = ConversationAssignmentStatus.Assigned;
+
+        await harness.SeedAsync(
+            Personal("own-personal", ownerId: "agent-1"),
+            Assigned("assigned-to-me", "agent-1"),
+            Queue("queue-taken-by-me", "queue-1", assignedAgentId: "agent-1"),
+            Queue("queue-pooled", "queue-1", assignedAgentId: null),
+            claimedByColleague,
+            Assigned("someone-elses", "agent-2"));
+
+        var results = await harness.Store.QueryAsync(
+            new MessagingInboxQuery { IncludeAll = true, HolderAgentId = "agent-1", Take = 50 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(["assigned-to-me", "own-personal", "queue-taken-by-me"], results.Select(conversation => conversation.ItemId).Order());
+    }
+
+    [Fact]
+    public async Task QueryAsync_NarrowedToAQueue_ListsOnlyThatQueuesConversations_WithinWhatTheAgentMaySee()
+    {
+        await using var harness = await Harness.CreateAsync();
+
+        await harness.SeedAsync(
+            Personal("own-personal", ownerId: "agent-1"),
+            Queue("queue-1-pooled", "queue-1", assignedAgentId: null),
+            Queue("queue-1-mine", "queue-1", assignedAgentId: "agent-1"),
+            Queue("queue-1-colleague", "queue-1", assignedAgentId: "agent-2"),
+            Queue("queue-2-pooled", "queue-2", assignedAgentId: null));
+
+        var results = await harness.Store.QueryAsync(
+            new MessagingInboxQuery { AgentId = "agent-1", QueueIds = ["queue-1", "queue-2"], QueueId = "queue-1", Take = 50 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(["queue-1-mine", "queue-1-pooled"], results.Select(conversation => conversation.ItemId).Order());
+    }
+
+    [Fact]
+    public async Task QueryAsync_NarrowedToACampaign_ListsOnlyThatCampaignsConversations_AndCountsTheSame()
+    {
+        await using var harness = await Harness.CreateAsync();
+
+        var fromSpring = Assigned("from-spring", "agent-1");
+        fromSpring.CampaignId = "campaign-spring";
+
+        var fromFall = Assigned("from-fall", "agent-1");
+        fromFall.CampaignId = "campaign-fall";
+
+        await harness.SeedAsync(fromSpring, fromFall, Assigned("no-campaign", "agent-1"));
+
+        var query = new MessagingInboxQuery { AgentId = "agent-1", CampaignId = "campaign-spring", Take = 50 };
+
+        var results = await harness.Store.QueryAsync(query, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["from-spring"], results.Select(conversation => conversation.ItemId));
+        Assert.Equal(1, await harness.Store.CountAsync(query, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task BuildInboxAsync_PersonFilter_IsIgnoredForAnAgentWhoCannotSeeEverybodysConversations()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(harness.Store, null, MessagingPermissions.ViewOwnConversations, MessagingPermissions.ViewQueueConversations);
+        var agent = new AgentProfile { ItemId = "agent-1", UserId = "user-1", QueueIds = ["q-1"] };
+
+        var inbox = await builder.BuildInboxAsync(
+            User(), agent, null, null, unreadOnly: false, 1, null,
+            new MessagingInboxNarrowing("agent-2", null, null), includeFilterOptions: false, TestContext.Current.CancellationToken);
+
+        Assert.False(inbox.CanFilterByAgent);
+        Assert.Null(inbox.AgentFilter);
+        Assert.Contains(inbox.Rows, row => row.Conversation.ItemId == "mine-unread");
+    }
+
+    [Fact]
+    public async Task BuildInboxAsync_PersonFilter_NarrowsTheListAndTheTabCountsForASupervisor()
+    {
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(AttentionSeed());
+
+        var (builder, _) = CreateBuilder(harness.Store, null, MessagingPermissions.ViewAllConversations);
+
+        var inbox = await builder.BuildInboxAsync(
+            User(), null, null, null, unreadOnly: false, 1, null,
+            new MessagingInboxNarrowing("agent-2", null, null), includeFilterOptions: false, TestContext.Current.CancellationToken);
+
+        Assert.True(inbox.CanFilterByAgent);
+        Assert.Equal("agent-2", inbox.AgentFilter);
+        Assert.Equal(["colleagues"], inbox.Rows.Select(row => row.Conversation.ItemId));
+        Assert.Equal(1, inbox.AllCount);
+        Assert.Equal(0, inbox.UnassignedCount);
+        Assert.Equal("agent-2", inbox.NarrowingRouteValues()["agent"]);
+    }
+
     // What agent-1, serving q-1, has around them.
     private static MessagingConversation[] AttentionSeed()
     {
@@ -564,6 +667,7 @@ public sealed class SmsInboxQueryTests
             Mock.Of<IMessagingAvailabilityService>(service => service.Get(It.IsAny<AgentProfile>()) == new MessagingAgentAvailability()),
             Mock.Of<IMessagingAgentNameProvider>(),
             new MessagingFavoritesService(Mock.Of<IAgentProfileManager>(), Mock.Of<IClock>()),
+            [],
             [],
             Mock.Of<IContentManager>(),
             new PermissionGrants(granted.Select(permission => permission.Name).ToHashSet()),
@@ -666,7 +770,8 @@ public sealed class SmsInboxQueryTests
                     .Column<DateTime>("LastActivityUtc", column => column.Nullable())
                     .Column<int>("UnreadCount", column => column.NotNull().WithDefault(0))
                     .Column<DateTime>("AssignedUtc", column => column.Nullable())
-                    .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable()),
+                    .Column<DateTime>("FirstResponseDueUtc", column => column.Nullable())
+                    .Column<string>("CampaignId", column => column.Nullable().WithLength(26)),
                     collection: MessagingStorage.CollectionName);
 
                 await transaction.CommitAsync(cancellationToken);

@@ -101,6 +101,15 @@ On the **Soft Phone** tab of the same page, pick the **Default telephony provide
 
 When you turn off the provider that is the default, the default is cleared and the soft phone stops working until you choose another one.
 
+## Set what the carrier charges
+
+On the **Costs** tab of the same page, set what your phone carrier charges, so the AI voice usage report can estimate what each AI call cost.
+
+| Field | What it does |
+| --- | --- |
+| **Currency** | The currency of the carrier's price, such as USD. |
+| **Phone call, per minute** | What a minute of a phone call costs with the carrier. Each AI call's estimated cost adds its minutes at this price to what the AI used, at the prices set on its AI deployment. |
+
 ## Set up SMS
 
 1. Open **Settings > Communication > SMS**.

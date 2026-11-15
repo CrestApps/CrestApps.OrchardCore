@@ -78,6 +78,23 @@ public class SmsAgentHandoffServiceTests
     }
 
     [Fact]
+    public async Task RequestHandoff_RecordsTheActivitysCampaign_OnTheConversation()
+    {
+        var harness = new Harness();
+
+        var result = await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = new OmnichannelActivity { Channel = "SMS", ItemId = "act1", AISessionId = "s1", CampaignId = "campaign-1" },
+            TargetQueueId = "queue-1",
+            ServiceAddress = "+15553334444",
+            ContactAddress = "+15551112222",
+        }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("campaign-1", harness.CreatedConversation.CampaignId);
+    }
+
+    [Fact]
     public async Task RequestHandoff_StoresSummary_OnTheConversation()
     {
         var harness = new Harness();

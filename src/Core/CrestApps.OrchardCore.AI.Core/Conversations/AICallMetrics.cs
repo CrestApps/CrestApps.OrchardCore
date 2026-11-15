@@ -51,24 +51,24 @@ public static class AICallMetrics
     }
 
     /// <summary>
-    /// Estimates what a call cost: its minutes and the texts sent during it with the carrier, at the site's carrier
-    /// prices, and its tokens or minutes with the AI deployment, at the prices set on the deployment. The AI part is
-    /// priced like any metered request: input and output text and audio tokens, cached tokens, and the call's length
-    /// for deployments billed by the minute (<see cref="AIUsageMeters.AudioSeconds"/>).
+    /// Estimates what a call cost: its minutes with the carrier, at the carrier's price of a minute, and its tokens or
+    /// minutes with the AI deployment, at the prices set on the deployment. The AI part is priced like any metered
+    /// request: input and output text and audio tokens, cached tokens, and the call's length for deployments billed
+    /// by the minute (<see cref="AIUsageMeters.AudioSeconds"/>).
     /// </summary>
     /// <param name="summary">The call's summary.</param>
-    /// <param name="carrier">The carrier's prices, or <see langword="null"/>.</param>
+    /// <param name="carrierPerMinute">What a minute of a phone call costs with the carrier, or zero when not set.</param>
+    /// <param name="carrierCurrency">The currency of the carrier's price.</param>
     /// <param name="pricing">The prices of the deployment that answered the call, or <see langword="null"/>.</param>
-    /// <param name="textsSent">How many texts were sent during the call.</param>
     /// <returns>The cost and its currency, or <see langword="null"/> for both when no price is set. When the carrier's
     /// and the deployment's prices are in different currencies they cannot be added, and the AI part is returned.</returns>
-    public static (decimal? Cost, string Currency) EstimateCost(AIVoiceSessionSummary summary, AICostSettings carrier, AIDeploymentPricing pricing, int textsSent = 0)
+    public static (decimal? Cost, string Currency) EstimateCost(AIVoiceSessionSummary summary, decimal carrierPerMinute, string carrierCurrency, AIDeploymentPricing pricing)
     {
         ArgumentNullException.ThrowIfNull(summary);
 
         var minutes = (decimal)(summary.SessionDurationMs ?? 0) / 60_000m;
-        decimal? carrierCost = carrier is { TelephonyPerMinute: > 0 } or { SmsPerMessage: > 0 }
-            ? minutes * carrier.TelephonyPerMinute + textsSent * carrier.SmsPerMessage
+        decimal? carrierCost = carrierPerMinute > 0
+            ? minutes * carrierPerMinute
             : null;
         var aiCost = AIUsageCostEstimator.Estimate(ToUsageRecord(summary), pricing);
 
@@ -76,10 +76,10 @@ public static class AICallMetrics
         {
             return carrierCost is null
                 ? (null, null)
-                : (decimal.Round(carrierCost.Value, 4), carrier.Currency);
+                : (decimal.Round(carrierCost.Value, 4), carrierCurrency);
         }
 
-        if (carrierCost is null || !string.Equals(carrier.Currency, pricing.Currency, StringComparison.OrdinalIgnoreCase))
+        if (carrierCost is null || !string.Equals(carrierCurrency, pricing.Currency, StringComparison.OrdinalIgnoreCase))
         {
             return (decimal.Round(aiCost.Value, 4), pricing.Currency);
         }

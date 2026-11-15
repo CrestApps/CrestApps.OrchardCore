@@ -1,0 +1,117 @@
+@model PosDepartmentEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PosDepartmentsEdit" title="@(Model.IsNew ? T["Add department"] : T["Edit department"])">
+        <breadcrumb-item id="PosDepartmentsIndex" action="Index" controller="PosDepartmentsAdmin" area="CrestApps.OrchardCore.PointOfSale" permission="@PosPermissions.ManageRegisters.Name">@T["Departments"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="@(Model.IsNew ? "Create" : "Edit")" asp-route-itemId="@Model.ItemId" method="post" class="no-multisubmit">
+    <div asp-validation-summary="All"></div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Department"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Name">
+                <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" maxlength="255" />
+                    <span class="hint">@T["What its key on the register, receipts and reports say, such as Candy."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="Number">
+                <label asp-for="Number" class="ocat-label">@T["Number"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="Number" class="form-control" maxlength="50" />
+                    <span class="hint">@T["The department's number, such as 4, if your store numbers them. Sales keep it as their SKU."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="TaxCategoryCode" class="ocat-label">@T["Tax category"]</label>
+                <div class="ocat-end">
+                    @if (Model.HasTaxCategories)
+                    {
+                        <select asp-for="TaxCategoryCode" asp-items="Model.TaxCategories" class="form-select"></select>
+                        <span class="hint">@T["What its sales are taxed as, from the tax categories under Taxation, such as groceries taxed at a lower rate."]</span>
+                    }
+                    else
+                    {
+                        <input asp-for="TaxCategoryCode" class="form-control" maxlength="255" />
+                        <span class="hint">@T["The tax category code its sales are taxed by; blank uses the store's default rate. Turn on Taxation to pick from your tax categories."]</span>
+                    }
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="Position">
+                <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="Position" type="number" step="1" class="form-control" />
+                    <span class="hint">@T["Where its key comes on registers whose keys aren't programmed: a smaller number first."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check form-switch">
+                        <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+                        <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
+                        <span class="hint dashed">@T["Registers can't ring amounts up in a department that's off, and drop its key."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Key and limits"]</div>
+        <div class="card-body">
+            <div class="ocat-limited-wrapper" asp-validation-class-for="Color">
+                <label asp-for="Color" class="ocat-label">@T["Key color"]</label>
+                <div class="ocat-limited">
+                    <div class="input-group">
+                        <input type="color" class="form-control form-control-color" id="department-color-picker" value="@(Model.Color ?? "#6C757D")" aria-label="@T["Pick a color"]" />
+                        <input asp-for="Color" class="form-control" maxlength="7" placeholder="#6C757D" />
+                    </div>
+                    <span class="hint">@T["The color of its key on the register; blank shows a plain key."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="MinimumAmount">
+                <label asp-for="MinimumAmount" class="ocat-label">@T["Least amount"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="MinimumAmount" type="number" min="0.01" step="0.01" class="form-control" />
+                    <span class="hint">@T["The least one ring-up can be; blank allows any amount."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="MaximumAmount">
+                <label asp-for="MaximumAmount" class="ocat-label">@T["Most amount"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="MaximumAmount" type="number" min="0.01" step="0.01" class="form-control" />
+                    <span class="hint">@T["The most one ring-up can be, so a mistyped amount such as 1000.00 for 10.00 is caught; blank has no limit."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script at="Foot">
+    (() => {
+        const picker = document.getElementById('department-color-picker');
+        const text = document.getElementById('@Html.IdFor(model => model.Color)');
+
+        picker.addEventListener('input', () => text.value = picker.value.toUpperCase());
+        text.addEventListener('change', () => {
+            if (/^#[0-9a-fA-F]{6}$/.test(text.value.trim())) {
+                picker.value = text.value.trim();
+            }
+        });
+    })();
+</script>

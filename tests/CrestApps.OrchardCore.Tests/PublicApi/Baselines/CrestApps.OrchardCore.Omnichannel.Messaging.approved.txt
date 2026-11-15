@@ -124,11 +124,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers
         [OrchardCore.Admin.Admin("messaging/conversation/{id}/claim", "MessagingClaim")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Claim(string id) { }
         [OrchardCore.Admin.Admin("messaging/conversation/{id}", "MessagingConversation")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Conversation(string id, string show, string channel, bool unread = false, int page = 1, long beforeTicks = 0) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Conversation(string id, string show, string channel, bool unread = false, int page = 1, long beforeTicks = 0, string agent = null, string queue = null, string campaign = null) { }
         [OrchardCore.Admin.Admin("messaging/inbox", "MessagingInboxList")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> InboxList(string show, string channel, string selected, bool unread = false, int page = 1) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> InboxList(string show, string channel, string selected, bool unread = false, int page = 1, string agent = null, string queue = null, string campaign = null) { }
         [OrchardCore.Admin.Admin("messaging", "MessagingIndex")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(string show, string channel, bool unread = false, int page = 1) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(string show, string channel, bool unread = false, int page = 1, string agent = null, string queue = null, string campaign = null) { }
         [Microsoft.AspNetCore.Mvc.HttpPost]
         [OrchardCore.Admin.Admin("messaging/conversation/{id}/read", "MessagingConversationRead")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> MarkRead(string id) { }
@@ -418,6 +418,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
         public static bool MarkRead(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation) { }
         public static bool PollReads(bool seen, int newMessages) { }
     }
+    public sealed class MessagingInboxNarrowing : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingInboxNarrowing>
+    {
+        public MessagingInboxNarrowing(string AgentId, string QueueId, string CampaignId) { }
+        public string AgentId { get; init; }
+        public string CampaignId { get; init; }
+        public string QueueId { get; init; }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingInboxNarrowing None { get; }
+    }
     public sealed class MessagingRealTimeNotifier : CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier
     {
         public MessagingRealTimeNotifier(Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Omnichannel.Messaging.Hubs.MessagingHub, CrestApps.OrchardCore.Omnichannel.Messaging.Hubs.IMessagingHubClient> hubContext, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingRealTimeNotifier> logger) { }
@@ -455,6 +463,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
                     CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingAgentNameProvider agentNames,
                     CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingFavoritesService favoritesService,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager> queueManagers,
+                    System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign>> campaignCatalogs,
                     OrchardCore.ContentManagement.IContentManager contentManager,
                     Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService,
                     CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingQuietHoursGuard quietHoursGuard,
@@ -472,6 +481,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
                 "EndpointChannels"})]
         public System.Threading.Tasks.Task<System.ValueTuple<System.Collections.Generic.IReadOnlyList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>, System.Collections.Generic.IReadOnlyDictionary<string, string>>> BuildEndpointOptionsAsync(string preferredChannel, string selectedEndpointId = null) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxViewModel> BuildInboxAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile currentAgent, string show, string channel, bool unreadOnly, int page, string selectedCustomerKey, System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxViewModel> BuildInboxAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile currentAgent, string show, string channel, bool unreadOnly, int page, string selectedCustomerKey, CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingInboxNarrowing narrowing, bool includeFilterOptions, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.ThreadViewModel> BuildThreadAsync(System.Security.Claims.ClaimsPrincipal user, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation conversation, System.DateTime? beforeUtc, System.Func<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation, string> conversationUrl, System.Func<string, string, string> startUrl, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<int> CountNeedingAttentionAsync(System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<int> CountNeedingAttentionAsync(System.Security.Claims.ClaimsPrincipal user, bool refresh, System.Threading.CancellationToken cancellationToken) { }
@@ -573,6 +583,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
         public bool IsSelected { get; set; }
         public string Name { get; set; }
     }
+    public sealed class InboxFilterOption : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxFilterOption>
+    {
+        public InboxFilterOption(string Value, string Text) { }
+        public string Text { get; init; }
+        public string Value { get; init; }
+    }
     public class InboxRow
     {
         public InboxRow() { }
@@ -587,19 +603,28 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
     public class InboxViewModel
     {
         public InboxViewModel() { }
+        public string AgentFilter { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxFilterOption> Agents { get; set; }
         public int AllCount { get; set; }
         public bool Available { get; set; }
+        public string CampaignFilter { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxFilterOption> Campaigns { get; set; }
+        public bool CanFilterByAgent { get; set; }
         public string ChannelFilter { get; set; }
         public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.ChannelViewModel> Channels { get; set; }
         public string CurrentAgentId { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.FavoriteViewModel> Favorites { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingInboxFilter Filter { get; set; }
         public bool HasAgentProfile { get; set; }
+        public bool HasNarrowingOptions { get; }
         public bool HasNextPage { get; }
         public bool HasPreviousPage { get; }
+        public bool IsNarrowed { get; }
         public int MineCount { get; set; }
         public int Page { get; set; }
         public int PageSize { get; set; }
+        public string QueueFilter { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxFilterOption> Queues { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.InboxRow> Rows { get; set; }
         public string SelectedCustomerKey { get; set; }
         public bool ShowFavorites { get; set; }
@@ -608,6 +633,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
         public int UnassignedCount { get; set; }
         public bool UnreadOnly { get; set; }
         public bool? UnreadRouteValue { get; }
+        public System.Collections.Generic.IDictionary<string, string> NarrowingRouteValues() { }
     }
     public class MessageBubbleViewModel
     {

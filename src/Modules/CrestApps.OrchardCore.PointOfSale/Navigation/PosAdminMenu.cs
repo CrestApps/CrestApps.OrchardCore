@@ -7,7 +7,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.PointOfSale.Navigation;
 
 /// <summary>
-/// Commerce › Point of sale › Registers and Shifts.
+/// Commerce › Point of sale › Registers, Shifts and Departments.
 /// </summary>
 public sealed class PosAdminMenu : AdminNavigationProvider
 {
@@ -23,6 +23,13 @@ public sealed class PosAdminMenu : AdminNavigationProvider
         { "area", PosConstants.Feature },
         { "controller", typeof(RegistersAdminController).ControllerName() },
         { "action", nameof(RegistersAdminController.Shifts) },
+    };
+
+    private static readonly RouteValueDictionary _departments = new()
+    {
+        { "area", PosConstants.Feature },
+        { "controller", typeof(PosDepartmentsAdminController).ControllerName() },
+        { "action", nameof(PosDepartmentsAdminController.Index) },
     };
 
     internal readonly IStringLocalizer S;
@@ -44,6 +51,10 @@ public sealed class PosAdminMenu : AdminNavigationProvider
                         .LocalNav())
                     .Add(S["Shifts"], S["Shifts"].PrefixPosition("2"), shifts => shifts
                         .Action(_shifts)
+                        .Permission(PosPermissions.ManageRegisters)
+                        .LocalNav())
+                    .Add(S["Departments"], S["Departments"].PrefixPosition("3"), departments => departments
+                        .Action(_departments)
                         .Permission(PosPermissions.ManageRegisters)
                         .LocalNav())
                 )

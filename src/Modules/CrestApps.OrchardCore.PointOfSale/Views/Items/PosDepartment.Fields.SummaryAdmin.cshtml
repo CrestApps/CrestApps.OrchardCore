@@ -1,0 +1,10 @@
+@model ShapeViewModel<PosDepartment>
+
+<span class="d-inline-flex align-items-center gap-2">
+    <span class="d-inline-block rounded border" style="width:1rem;height:1rem;background:@(Model.Value.Color ?? "transparent")" aria-hidden="true"></span>
+    <a asp-action="Edit" asp-controller="PosDepartmentsAdmin" asp-route-itemId="@Model.Value.ItemId">@Model.Value.Name</a>
+    @if (!string.IsNullOrEmpty(Model.Value.Number))
+    {
+        <span class="text-body-secondary small">#@Model.Value.Number</span>
+    }
+</span>

@@ -64,7 +64,7 @@ public sealed class ContactCenterAIToolTests
         });
 
         var result = await InvokeAsync<ForecastSummaryTool>(harness, CalendarTestHarness.User("planner", WorkforcePermissions.ManageForecasts.Name), new() { ["planningGroupName"] = "sales VOICE", ["date"] = "2026-11-09" });
-        var forecast = JsonDocument.Parse(result).RootElement.GetProperty("forecasts")[0];
+        var forecast = JsonElement.Parse(result).GetProperty("forecasts")[0];
 
         Assert.Equal(40, forecast.GetProperty("contacts").GetDouble());
         Assert.Equal(225, forecast.GetProperty("averageHandleSeconds").GetDouble());

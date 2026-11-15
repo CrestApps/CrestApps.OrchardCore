@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "web-register.js",
+    "source": "Assets/js/web-register.js",
+    "dest": "wwwroot/scripts/web-register.js"
+  }
+]

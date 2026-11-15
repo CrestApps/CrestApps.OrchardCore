@@ -34,9 +34,9 @@ public sealed class BalanceLedgerTests
     [InlineData("USD", 10.005, 10.01)]
     public void ABalance_IsKeptAtItsCurrencysPrecision(string currency, double amount, double expected)
     {
-        var balance = BalanceLedger.ChangeBalance(0m, (decimal)amount, currency, new List<BalanceLedgerEntry>(), "Issued", _now);
+        var balance = BalanceLedger.ChangeBalance(0m, DecimalConversion.FromDouble(amount), currency, new List<BalanceLedgerEntry>(), "Issued", _now);
 
-        Assert.Equal((decimal)expected, balance);
+        Assert.Equal(DecimalConversion.FromDouble(expected), balance);
     }
 
     [Fact]

@@ -23,6 +23,7 @@ namespace CrestApps.OrchardCore.PointOfSale.Services;
 public sealed class PosSaleService
 {
     private readonly ICartService _cartService;
+    private readonly IPosDepartmentStore _departments;
     private readonly IOrderService _orderService;
     private readonly ICheckoutEngine _engine;
     private readonly ICheckoutSessionStore _sessionStore;
@@ -35,6 +36,7 @@ public sealed class PosSaleService
 
     public PosSaleService(
         ICartService cartService,
+        IPosDepartmentStore departments,
         IOrderService orderService,
         ICheckoutEngine engine,
         ICheckoutSessionStore sessionStore,
@@ -45,6 +47,7 @@ public sealed class PosSaleService
         IStringLocalizer<PosSaleService> stringLocalizer)
     {
         _cartService = cartService;
+        _departments = departments;
         _orderService = orderService;
         _engine = engine;
         _sessionStore = sessionStore;
@@ -65,14 +68,18 @@ public sealed class PosSaleService
 
         var now = _clock.UtcNow;
 
+        // A register without its own currency sells products in theirs; amounts keyed in are in its drawer's.
+        var drawerCurrency = register.Currency ?? shift.Currency;
+        var productLines = (lines ?? []).Where(line => line is not null && line.Quantity > 0 && string.IsNullOrEmpty(line.DepartmentId) && !string.IsNullOrEmpty(line.ProductId)).ToList();
+        var departmentLines = (lines ?? []).Where(line => line is not null && !string.IsNullOrEmpty(line.DepartmentId)).ToList();
+
         // Priced as a cart is, so the store's prices, sales and volume prices apply, without keeping a cart.
         var cart = new Cart
         {
             ItemId = UniqueId.GenerateId(),
             UserId = buyer?.UserId,
             Currency = register.Currency,
-            Lines = (lines ?? [])
-                .Where(line => line.Quantity > 0 && !string.IsNullOrEmpty(line.ProductId))
+            Lines = productLines
                 .Select(line => new CartLine
                 {
                     LineId = UniqueId.GenerateId(),
@@ -89,16 +96,71 @@ public sealed class PosSaleService
             ExpiresUtc = now.AddHours(1),
         };
 
-        if (cart.Lines.Count == 0)
+        if (cart.Lines.Count == 0 && departmentLines.Count == 0)
         {
-            return PosSaleResult.Fail(S["Ring up at least one product."]);
+            return PosSaleResult.Fail(S["Ring up at least one product or department."]);
         }
 
-        var pricing = await _cartService.PriceAsync(cart, cancellationToken);
+        var pricing = cart.Lines.Count > 0
+            ? await _cartService.PriceAsync(cart, cancellationToken)
+            : new CartPricing { Cart = cart, Currency = drawerCurrency, Lines = [] };
 
-        if (!pricing.CanCheckout)
+        if (cart.Lines.Count > 0 && !pricing.CanCheckout)
         {
             return PosSaleResult.Fail([.. pricing.Lines.Where(line => line.Problem is not null).Select(line => $"{line.Title}: {line.Problem.Value}")]);
+        }
+
+        // Amounts rung up in departments are what was keyed in: nothing to look up, nor any stock to hold.
+        if (departmentLines.Count > 0)
+        {
+            var departments = (await _departments.GetAllAsync(cancellationToken)).ToDictionary(department => department.ItemId, StringComparer.Ordinal);
+            var problems = new List<string>();
+            var priced = new List<CartLinePricing>(pricing.Lines);
+            var saleCurrency = pricing.Currency ?? drawerCurrency;
+
+            foreach (var line in departmentLines)
+            {
+                if (!departments.TryGetValue(line.DepartmentId, out var department))
+                {
+                    problems.Add(S["That department no longer exists."]);
+
+                    continue;
+                }
+
+                var amount = line.Amount ?? 0m;
+
+                if (line.Quantity <= 0)
+                {
+                    problems.Add(S["Ring up at least one in {0}.", department.Name]);
+
+                    continue;
+                }
+
+                if (PosDepartments.CheckAmount(department, amount, saleCurrency, S) is { } problem)
+                {
+                    problems.Add(problem);
+
+                    continue;
+                }
+
+                var departmentLine = PosDepartmentLines.Price(department, amount, line.Quantity, saleCurrency, now);
+
+                cart.Lines.Add(departmentLine.Line);
+                priced.Add(departmentLine);
+            }
+
+            if (problems.Count > 0)
+            {
+                return PosSaleResult.Fail([.. problems]);
+            }
+
+            cart.Currency = saleCurrency;
+            pricing = new CartPricing
+            {
+                Cart = cart,
+                Currency = saleCurrency,
+                Lines = priced,
+            };
         }
 
         var created = await _orderService.CreateFromCartAsync(pricing, order =>
@@ -256,11 +318,21 @@ public sealed class PosSaleService
 }
 
 /// <summary>
-/// A product rung up.
+/// A product rung up, or an amount rung up in a department.
 /// </summary>
 public sealed class PosSaleLine
 {
     public string ProductId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the department an amount is rung up in, in place of a product.
+    /// </summary>
+    public string DepartmentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount of one, keyed in, for a line rung up in a department.
+    /// </summary>
+    public decimal? Amount { get; set; }
 
     public string VariantId { get; set; }
 

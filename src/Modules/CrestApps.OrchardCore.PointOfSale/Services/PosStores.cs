@@ -30,6 +30,42 @@ public sealed class RegisterStore : DocumentCatalog<Register, RegisterIndex>, IR
     }
 }
 
+public interface IPosDepartmentStore : ICatalog<PosDepartment>
+{
+    /// <summary>
+    /// Returns a page of departments in their order.
+    /// </summary>
+    Task<(int Count, IReadOnlyList<PosDepartment> Departments)> PageAsync(int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns every department in its order: by position, then by name.
+    /// </summary>
+    Task<IReadOnlyList<PosDepartment>> ListOrderedAsync(CancellationToken cancellationToken = default);
+}
+
+public sealed class PosDepartmentStore : DocumentCatalog<PosDepartment, PosDepartmentIndex>, IPosDepartmentStore
+{
+    public PosDepartmentStore(ISession session)
+        : base(session)
+    {
+        CollectionName = PosConstants.CollectionName;
+    }
+
+    public async Task<(int Count, IReadOnlyList<PosDepartment> Departments)> PageAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var query = Session.Query<PosDepartment, PosDepartmentIndex>(collection: CollectionName);
+        var count = await query.CountAsync(cancellationToken);
+        var page = await query.OrderBy(index => index.Position).ThenBy(index => index.Name).Skip(skip).Take(take).ListAsync(cancellationToken);
+
+        return (count, [.. page]);
+    }
+
+    public async Task<IReadOnlyList<PosDepartment>> ListOrderedAsync(CancellationToken cancellationToken = default)
+        => [.. (await GetAllAsync(cancellationToken))
+            .OrderBy(department => department.Position)
+            .ThenBy(department => department.Name, StringComparer.OrdinalIgnoreCase)];
+}
+
 public interface IRegisterShiftStore : ICatalog<RegisterShift>
 {
     /// <summary>

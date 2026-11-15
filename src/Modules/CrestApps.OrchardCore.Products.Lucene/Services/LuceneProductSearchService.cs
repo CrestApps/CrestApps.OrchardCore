@@ -76,8 +76,8 @@ public sealed class LuceneProductSearchService : IProductIndexSearchService
                 results[facet.Key] = new ProductFacetResult
                 {
                     Key = facet.Key,
-                    Min = range.Min is { } min ? (decimal)min : null,
-                    Max = range.Max is { } max ? (decimal)max : null,
+                    Min = range.Min is { } min ? DecimalConversion.FromDouble(min) : null,
+                    Max = range.Max is { } max ? DecimalConversion.FromDouble(max) : null,
                 };
 
                 continue;
