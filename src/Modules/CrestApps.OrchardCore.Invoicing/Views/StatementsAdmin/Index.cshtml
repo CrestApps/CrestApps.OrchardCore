@@ -1,0 +1,115 @@
+@model InvoiceStatementViewModel
+
+@{
+    var partyJson = string.IsNullOrEmpty(Model.Party)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.Party, text = Model.PartyName ?? Model.Party, selected = true } });
+    var route = new Dictionary<string, string>
+    {
+        ["Party"] = Model.Party,
+        ["Kind"] = Model.Kind.ToString(),
+        ["From"] = Model.From?.ToString("yyyy-MM-dd"),
+        ["To"] = Model.To?.ToString("yyyy-MM-dd"),
+        ["Currency"] = Model.Currency,
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="InvoiceStatementsIndex" title="@T["Statements"]" />
+</zone>
+
+<form asp-action="Index" method="get" class="card mb-3">
+    <div class="card-header">@T["Statement"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Customer"]</label>
+            <div class="ocat-end">
+                @await Component.InvokeAsync("ItemSelector", new
+                {
+                    id = "statement-party",
+                    inputName = "Party",
+                    endpoint = Model.PartySearchEndpoint,
+                    initialItemsJson = partyJson,
+                    multiple = false,
+                    enableSearch = true,
+                    buttonText = T["Find a customer"].Value,
+                    searchPlaceholder = T["Search users, customers and accounts"].Value,
+                    emptyResultsText = T["No one found."].Value,
+                    noSelectionText = T["No one chosen."].Value,
+                    selectedItemsLabel = T["Customer"].Value,
+                    availableItemsLabel = T["Found"].Value,
+                    smallButton = false,
+                })
+                <span class="hint">@T["A user, customer or business account the invoices are billed to."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="Kind" class="ocat-label">@T["Statement of"]</label>
+            <div class="ocat-end">
+                <select asp-for="Kind" class="form-select">
+                    <option value="@InvoiceStatementKind.OpenItem">@T["The invoices still owed, with how late each is"]</option>
+                    <option value="@InvoiceStatementKind.Activity">@T["What was charged and paid in a period"]</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="From" class="ocat-label">@T["From"]</label>
+            <div class="ocat-limited">
+                <input asp-for="From" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                <span class="hint">@T["For a statement of a period: its first day. Left empty, the first of the month."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="To" class="ocat-label">@T["To"]</label>
+            <div class="ocat-limited">
+                <input asp-for="To" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                <span class="hint">@T["The last day of the period, or the day of the statement of open invoices. Left empty, today."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+            <div class="ocat-limited">
+                <input asp-for="Currency" class="form-control text-uppercase" maxlength="3" autocomplete="off" />
+                <span class="hint">@T["Left empty, the currency of the customer's latest invoice. Each currency is a statement of its own."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <button type="submit" class="btn btn-primary">@T["Show the statement"]</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Document is not null)
+{
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>@Model.PartyName</span>
+            <div class="d-flex gap-2">
+                @if (Model.CanPrint)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Pdf" asp-all-route-data="route">@T["Download PDF"]</a>
+                }
+                <form asp-action="Send" asp-all-route-data="route" method="post" class="d-flex gap-2">
+                    <input name="SendTo" type="email" class="form-control form-control-sm" placeholder="@(Model.Statement?.Recipient?.Contact?.Email ?? T["E-mail address"].Value)" />
+                    <button type="submit" class="btn btn-sm btn-secondary">@T["E-mail"]</button>
+                </form>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (Model.Statement.OpenItems.Count == 0 && Model.Statement.Lines.Count == 0 && Model.Statement.OpeningBalance == 0m)
+            {
+                <p class="text-muted">@T["Nothing to show: the customer has no issued invoice in this currency for this statement."]</p>
+            }
+            @await DisplayAsync(await New.BusinessDocument(Document: Model.Document))
+        </div>
+    </div>
+}
+
+<script asp-name="item-selector" depends-on="bootstrap-select" at="Foot"></script>

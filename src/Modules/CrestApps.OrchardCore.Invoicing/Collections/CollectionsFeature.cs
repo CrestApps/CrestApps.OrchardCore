@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using CrestApps.OrchardCore.BusinessDocuments;
+using CrestApps.OrchardCore.Commerce.Emails;
 using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Core.Models;
@@ -60,7 +62,12 @@ public sealed class CollectionsStartup : StartupBase
             .AddRecipeExecutionStep<LateFeePoliciesStep>()
             .AddDisplayDriver<LateFeePolicy, LateFeePolicyDisplayDriver>()
             .AddDisplayDriver<Invoice, InvoiceLateFeesDisplayDriver>()
-            .AddNavigationProvider<LateFeePoliciesAdminMenu>();
+            .AddNavigationProvider<LateFeePoliciesAdminMenu>()
+            .AddBusinessDocumentKind(InvoicingConstants.BusinessDocumentKinds.Statement, LocalizationSource.Create<CollectionsStartup>("Customer statements"))
+            .AddCommerceEmailKind(
+                InvoicingConstants.EmailKinds.Statement,
+                LocalizationSource.Create<CollectionsStartup>("Statement e-mailed to a customer"),
+                LocalizationSource.Create<CollectionsStartup>("{{ CustomerName }}, {{ BalanceDue }} and {{ StoreName }}. The statement's PDF is attached."));
 
         services.AddSingleton<IBackgroundTask, LateFeeBackgroundTask>();
     }
@@ -115,6 +122,11 @@ public sealed class LateFeePoliciesAdminMenu : AdminNavigationProvider
                     .Id("latefees")
                     .Action("Index", "LateFeePolicies", _routeValues)
                     .Permission(InvoicingPermissions.ManageInvoicingSettings)
+                    .LocalNav())
+                .Add(S["Statements"], S["Statements"].PrefixPosition("4.5"), statements => statements
+                    .Id("invoicestatements")
+                    .Action("Index", "StatementsAdmin", new RouteValueDictionary { { "area", InvoicingConstants.Features.Area } })
+                    .Permission(InvoicingPermissions.ViewInvoices)
                     .LocalNav()));
 
         return ValueTask.CompletedTask;

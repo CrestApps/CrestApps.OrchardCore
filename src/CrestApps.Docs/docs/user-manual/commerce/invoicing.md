@@ -155,6 +155,17 @@ With **Invoicing Collections** enabled, **Commerce > Late fees** holds the polic
 
 Fees are charged automatically every hour. An overdue invoice's page lists its late fees and has **Charge the late fee due now**; a debit note's page links to the invoice it charges a fee on. To spare one invoice, tick **No late fees** in its editor. A late fee can be voided or credited like any invoice.
 
+## Send a customer their statement
+
+With **Invoicing Collections** enabled, **Commerce > Statements** prints a customer's statement:
+
+1. Choose the customer (a user, customer or business account).
+2. Choose **The invoices still owed, with how late each is**, or **What was charged and paid in a period** and its dates.
+3. Click **Show the statement**.
+4. Click **Download PDF**, or **E-mail** it (to the address on their latest invoice, or one you type).
+
+A statement of a period starts with the balance brought forward, lists every invoice, payment, credit and refund in the period with the balance after each, and ends with the balance due (or the credit the customer holds). Each currency has a statement of its own.
+
 ## Recurring invoices
 
 With **Invoicing Recurring** enabled, **Commerce > Recurring invoices** lists the plans that bill a customer on a schedule, such as monthly hosting or a yearly support contract.

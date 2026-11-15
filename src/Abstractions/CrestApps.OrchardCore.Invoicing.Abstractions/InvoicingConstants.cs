@@ -70,6 +70,11 @@ public static class InvoicingConstants
         /// An estimate.
         /// </summary>
         public const string Estimate = "Estimate";
+
+        /// <summary>
+        /// A customer's statement.
+        /// </summary>
+        public const string Statement = "InvoiceStatement";
     }
 
     /// <summary>
@@ -91,6 +96,11 @@ public static class InvoicingConstants
         /// An estimate sent to its customer, with its PDF and a link to accept or decline it.
         /// </summary>
         public const string EstimateSent = "estimate-sent";
+
+        /// <summary>
+        /// The statement e-mailed to a customer.
+        /// </summary>
+        public const string Statement = "invoice-statement";
 
         /// <summary>
         /// The name the invoice or credit note has in an e-mail template.

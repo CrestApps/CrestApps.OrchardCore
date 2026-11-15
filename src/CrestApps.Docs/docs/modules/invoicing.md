@@ -11,7 +11,7 @@ user_manual:
 | --- | --- | --- |
 | **Invoicing** | `CrestApps.OrchardCore.Invoicing` | Invoices and credit notes, their stores and indexes, the invoice commands, the permissions and the invoicing settings. Depends on Transactions, Payment Terms and Business Documents. |
 | **Invoicing Estimates** | `CrestApps.OrchardCore.Invoicing.Estimates` | Estimates (quotes): drafted, sent with a number, accepted or declined by the customer online, revised, expired, and turned into a draft invoice or a deposit invoice. Depends on Invoicing. |
-| **Invoicing Collections** | `CrestApps.OrchardCore.Invoicing.Collections` | Late-fee policies that charge overdue invoices with debit notes linked to them; customer statements. Depends on Invoicing. |
+| **Invoicing Collections** | `CrestApps.OrchardCore.Invoicing.Collections` | Late-fee policies that charge overdue invoices with debit notes linked to them; customers' open-item and activity statements as a page, a PDF and an e-mail. Depends on Invoicing. |
 | **Invoicing Recurring** | `CrestApps.OrchardCore.Invoicing.Recurring` | Recurring plans that make an invoice on a schedule (a draft, issued, issued and sent, or issued and charged), with the period written into their lines, catch-up within a limit, pause and resume, price rises, and an end by date or number of runs. Depends on Invoicing. |
 
 Invoicing owns the documents: an invoice is drafted with lines, issued with a number, and posted to [Transactions](transactions) as what the customer owes. Everything about the money (payments, refunds, adjustments, reminders, pay links) stays in the ledger; the invoice mirrors what the ledger says. Prices, discounts and tax are worked out by one calculator (EN 16931 arithmetic) shared with credit notes, estimates and recurring plans.
@@ -108,6 +108,15 @@ With **Invoicing Collections** enabled, `LateFeePolicy` (Invoicing.Abstractions,
 A late fee is its own document (ID16), never a line added to an issued invoice: `ILateFeeService` (`DefaultLateFeeService`, under the lock `Invoicing:LateFee:{invoiceId}`) charges the next step due under each enabled policy as a debit note, an `Invoice` with `Kind` `DebitNote`, `RelatedInvoiceId` the invoice (indexed as `InvoiceIndex.RelatedInvoiceId`, migration `UpdateFrom2Async`), `SourceType` `LateFee` and `SourceId` `{invoiceId}:{policyId}:{step}`, so a step is never charged twice. It reads the balance from the ledger right before each fee, takes one step per invoice and policy at a time, makes the draft, then issues it (and sends it) in a unit of work of its own, due on the day. A debit note is numbered in the invoice series, titled **Debit note** on its page, PDF and customer pages, and is paid, reminded and reported like any invoice. An invoice with `LateFeesExempt` (the editor's **No late fees**), a debit note, or one paid, void or within its grace gets none.
 
 `LateFeeBackgroundTask` (**Invoice Late Fees**, hourly at quarter past) assesses up to 200 overdue invoices on the site's date. The invoice's page lists its late fees and, when it is overdue, offers **Charge the late fee due now** (**Issue invoices**); the debit note's page links back to the invoice. Recipes and deployment plans carry the `LateFeePolicies` step. Per-party exclusion is not built yet; exempt an invoice instead.
+
+## Statements
+
+Also with **Invoicing Collections**, `IInvoiceStatementService` (`DefaultInvoiceStatementService`) builds a customer's statement (`InvoiceStatement`) in one currency from their issued invoices (void ones left out), their credit notes and the ledger:
+
+- An **open-item** statement (`InvoiceStatementKind.OpenItem`) lists the invoices still owed on a day, oldest due first, with how many days late each is, and what is owed by age: not due yet, 1 to 30, 31 to 60, 61 to 90 and over 90 days.
+- An **activity** statement (`Activity`) carries the balance from before its period, then lists what happened in it with the running balance: each invoice, debit note or deposit invoice issued (up), each payment, adjustment (a credit note that lowers the balance is the ledger's credit adjustment) and debt canceled on the ledger (down), each payment taken back or refund (up), and each credit note that refunded or kept the amount as credit (down). A negative closing balance is credit the customer holds. Entries take the day they happened in the site's time zone.
+
+`BuildDocumentAsync` prints it as a business document of kind `InvoiceStatement` (with the site's business document template), and `SendAsync` e-mails it with its PDF (the `invoice-statement` e-mail kind, to the address on the customer's latest invoice unless one is given). Other currencies are named on the statement, each on one of its own. **Commerce > Statements** (`StatementsAdminController`, **View invoices**) picks the customer (any party kind), the kind, the period and the currency, shows the statement, and downloads its PDF or e-mails it.
 
 ## Estimates
 

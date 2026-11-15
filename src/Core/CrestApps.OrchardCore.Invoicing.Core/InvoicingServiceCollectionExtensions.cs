@@ -67,7 +67,7 @@ public static class InvoicingServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers collections: the late-fee policies, their store and manager, and the late-fee service.
+    /// Registers collections: the late-fee policies, their store and manager, the late-fee service and the statements.
     /// </summary>
     /// <param name="services">The services.</param>
     public static IServiceCollection AddInvoicingCollections(this IServiceCollection services)
@@ -76,6 +76,7 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddScoped<ILateFeePolicyManager, LateFeePolicyManager>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<LateFeePolicy>, LateFeePolicyHandler>());
         services.TryAddScoped<ILateFeeService, DefaultLateFeeService>();
+        services.TryAddScoped<IInvoiceStatementService, DefaultInvoiceStatementService>();
 
         return services;
     }

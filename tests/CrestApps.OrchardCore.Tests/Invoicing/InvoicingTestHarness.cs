@@ -209,6 +209,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         var localClock = new Mock<ILocalClock>();
         localClock.Setup(value => value.GetLocalNowAsync()).ReturnsAsync(new DateTimeOffset(Now));
         localClock.Setup(value => value.GetLocalTimeZoneAsync()).ReturnsAsync(Mock.Of<ITimeZone>(zone => zone.TimeZoneId == "UTC"));
+        localClock.Setup(value => value.ConvertToLocalAsync(It.IsAny<DateTimeOffset>())).ReturnsAsync((DateTimeOffset utc) => utc);
         services.AddSingleton(localClock.Object);
 
         var site = new SiteSettings();
