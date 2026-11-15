@@ -1,59 +1,91 @@
-using CrestApps.OrchardCore.Workforce.Core.Indexes;
+using CrestApps.OrchardCore.Ledgers;
 using CrestApps.OrchardCore.Workforce.Models;
-using CrestApps.OrchardCore.YesSql.Core.Services;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
 
 /// <summary>
-/// Stores the time-off ledger.
+/// Names the time-off ledger among the quantity ledgers.
 /// </summary>
-internal sealed class TimeOffLedgerStore : DocumentCatalog<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>
+public sealed class TimeOffLedger
 {
-    public TimeOffLedgerStore(ISession session)
-        : base(session)
+}
+
+/// <summary>
+/// The time-off ledger: a quantity ledger with one balance per worker and policy, read and written as time-off
+/// entries.
+/// </summary>
+internal sealed class TimeOffLedgerStore
+{
+    private readonly IQuantityLedger<TimeOffLedger> _ledger;
+
+    public TimeOffLedgerStore(IQuantityLedger<TimeOffLedger> ledger)
     {
-        CollectionName = WorkforceConstants.CollectionName;
+        _ledger = ledger;
     }
 
-    /// <summary>
-    /// Lists a worker's entries under a policy, oldest first. A worker has a few entries a month under a policy.
-    /// </summary>
     public async Task<IReadOnlyList<TimeOffLedgerEntry>> ListAsync(string workerId, string policyId, CancellationToken cancellationToken = default)
-    {
-        var entries = await Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.WorkerId == workerId && index.PolicyId == policyId, collection: CollectionName)
-            .OrderBy(index => index.EffectiveDate)
-            .ThenBy(index => index.CreatedUtc)
-            .ListAsync(cancellationToken);
+        => (await _ledger.ListAsync(workerId, policyId, cancellationToken)).Select(TimeOffLedgerMapping.ToTimeOff).ToArray();
 
-        return entries.ToArray();
-    }
-
-    /// <summary>
-    /// Lists every grant. Grants are given by hand, so there are few.
-    /// </summary>
     public async Task<IReadOnlyList<TimeOffLedgerEntry>> ListGrantsAsync(CancellationToken cancellationToken = default)
-    {
-        var entries = await Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.Kind == TimeOffLedgerKind.Grant, collection: CollectionName)
-            .ListAsync(cancellationToken);
+        => (await _ledger.ListByKindAsync(nameof(TimeOffLedgerKind.Grant), cancellationToken)).Select(TimeOffLedgerMapping.ToTimeOff).ToArray();
 
-        return entries.ToArray();
-    }
+    public async Task<TimeOffLedgerEntry> FindByKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
+        => await _ledger.FindByKeyAsync(idempotencyKey, cancellationToken) is { } entry ? TimeOffLedgerMapping.ToTimeOff(entry) : null;
 
-    public Task<TimeOffLedgerEntry> FindByKeyAsync(string idempotencyKey, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(TimeOffLedgerEntry entry, CancellationToken cancellationToken = default)
     {
-        return Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.IdempotencyKey == idempotencyKey, collection: CollectionName)
-            .FirstOrDefaultAsync(cancellationToken);
+        ArgumentNullException.ThrowIfNull(entry);
+
+        var posted = await _ledger.PostAsync(TimeOffLedgerMapping.ToQuantity(entry), cancellationToken);
+
+        entry.ItemId = posted.Entry.ItemId;
+        entry.CreatedUtc = posted.Entry.CreatedUtc;
     }
 
     public async Task<(int Count, IReadOnlyList<TimeOffLedgerEntry> Items)> PageAsync(string workerId, string policyId, int skip, int take, CancellationToken cancellationToken = default)
     {
-        var query = string.IsNullOrEmpty(policyId)
-            ? Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.WorkerId == workerId, collection: CollectionName)
-            : Session.Query<TimeOffLedgerEntry, TimeOffLedgerEntryIndex>(index => index.WorkerId == workerId && index.PolicyId == policyId, collection: CollectionName);
-        var count = await query.CountAsync(cancellationToken);
-        var page = await query.OrderByDescending(index => index.EffectiveDate).ThenByDescending(index => index.CreatedUtc).Skip(skip).Take(take).ListAsync(cancellationToken);
+        var (count, items) = await _ledger.PageAsync(workerId, policyId, skip, take, cancellationToken);
 
-        return (count, page.ToArray());
+        return (count, items.Select(TimeOffLedgerMapping.ToTimeOff).ToArray());
     }
+}
+
+/// <summary>
+/// Maps time-off entries to and from quantity ledger entries: the worker is the account and the policy the bucket.
+/// </summary>
+internal static class TimeOffLedgerMapping
+{
+    public static QuantityLedgerEntry ToQuantity(TimeOffLedgerEntry entry) => new()
+    {
+        ItemId = entry.ItemId,
+        AccountId = entry.WorkerId,
+        Bucket = entry.PolicyId,
+        Kind = entry.Kind.ToString(),
+        Amount = entry.Amount,
+        EffectiveDate = entry.EffectiveDate,
+        ExpiresOn = entry.ExpiresOn,
+        SourceRef = entry.SourceRef,
+        IdempotencyKey = entry.IdempotencyKey,
+        Actor = entry.Actor,
+        Note = entry.Note,
+        CreatedUtc = entry.CreatedUtc,
+        Properties = entry.Properties,
+    };
+
+    public static TimeOffLedgerEntry ToTimeOff(QuantityLedgerEntry entry) => new()
+    {
+        ItemId = entry.ItemId,
+        WorkerId = entry.AccountId,
+        PolicyId = entry.Bucket,
+        Kind = Enum.TryParse<TimeOffLedgerKind>(entry.Kind, out var kind) ? kind : TimeOffLedgerKind.Adjustment,
+        Amount = entry.Amount,
+        EffectiveDate = entry.EffectiveDate,
+        ExpiresOn = entry.ExpiresOn,
+        SourceRef = entry.SourceRef,
+        IdempotencyKey = entry.IdempotencyKey,
+        Actor = entry.Actor,
+        Note = entry.Note,
+        CreatedUtc = entry.CreatedUtc,
+        Properties = entry.Properties,
+    };
 }

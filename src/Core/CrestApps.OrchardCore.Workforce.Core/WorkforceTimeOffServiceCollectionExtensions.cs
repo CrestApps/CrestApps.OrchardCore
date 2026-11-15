@@ -29,6 +29,7 @@ public static class WorkforceTimeOffServiceCollectionExtensions
         services.TryAddScoped<TimeOffTypeStore>();
         services.TryAddScoped<TimeOffPolicyStore>();
         services.TryAddScoped<TimeOffLedgerStore>();
+        services.AddQuantityLedger<TimeOffLedger>(options => options.CollectionName = WorkforceConstants.TimeOffLedgerCollectionName);
         services.TryAddScoped<TimeOffRequestStore>();
         services.TryAddScoped<TimeOffAllotmentStore>();
         services.TryAddScoped<BlackoutPeriodStore>();
