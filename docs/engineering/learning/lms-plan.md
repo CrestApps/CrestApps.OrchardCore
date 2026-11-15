@@ -913,6 +913,8 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 | Workflow hints show `{ x }` instead of `{{ x }}` | Liquid examples are arguments of the localized hint; a view lint guards every Learning view. | `ab8d4ae85` |
 | GET/POST route guard | `CertificationPathsController.People` says `HttpGet`. | `9c2bd7bd3` |
 
+**Fixed after review round 4.** A certificate is revoked from a review only when it rests on that enrollment and the review is open; evidence skips failed and reviewed enrollments and attempts made in none or in such an enrollment; the upkeep pages everyone in a stable order, leaves disabled paths out and reads every completion since the last look; a second revocation changes nothing; progress is revoked under its lock; the certification path actions check the antiforgery token. The last valid day is the same for path and hand-recorded certificates.
+
 ### Phase 4: Programs and required learning (branch `ma/learning-phase-4`, stacked on `ma/learning-phase-3`)
 
 **Built.**
@@ -945,3 +947,8 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 - Feature id literals in the Programs module were replaced by constants (the feature-id ratchet).
 - The education credits editor on a course refused to save: its empty spare rows posted an empty amount into a number that cannot be empty. The amount of a row may now be empty, and empty rows are skipped.
 - Accepting external learning marked it accepted before posting its credits, so a request that stopped in between (the browser left the page) kept an accepted submission without credits. The credits are now posted first, once per submission, and the submission is marked after.
+
+**Fixed after review round 5.** The time-off copy runs at each start until it records that it read to the end, skips by id and key, commits in batches, and accrual waits for it. Nobody reviews their own external learning, and accept and reject are locked; awards are keyed by person; pipeline rows are recorded once. Required learning retries refused or interrupted starts and records their result, tolerates duplicate assignments, counts a prior completion, announces overdue once, refreshes on a certificate and saves reminder marks before sending them under a lock. Paths respect course enrollment controls. Audiences have one meaning for "not limited", resolve once per scope, the Team rule uses today's memberships and the Skills rules check one person. Credits can be reversed from a review, the credits evidence records what it rests on and counts only credits still valid. A missing audience fails the run and a used audience cannot be deleted; evidence files are cleaned up and opened only through protected links; the recipe steps read enum names.
+
+**Still open from review round 5.** A learner-record recipe step for credits (10.1), exemptions in the Audit Trail (9.1), and tests of the evidence policies, audience permissions and Team Learning scope.
+
