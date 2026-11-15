@@ -30,4 +30,9 @@ public static class ContentFieldsConstants
     /// The name of the script that shows and hides conditional fields in the browser.
     /// </summary>
     public const string ConditionalFieldsScript = "crestapps-conditional-fields";
+
+    /// <summary>
+    /// The name of the script of the <c>TaxonomyCascadingPicker</c> shape.
+    /// </summary>
+    public const string CascadingPickerScript = "crestapps-cascading-picker";
 }

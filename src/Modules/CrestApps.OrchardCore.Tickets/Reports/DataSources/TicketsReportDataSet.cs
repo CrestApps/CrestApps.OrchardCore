@@ -58,6 +58,11 @@ internal sealed class TicketsReportDataSet : IndexedReportDataSet<ContentItem, T
         AddField(nameof(TicketPart.StatusCategory), S["Status category"], DataFieldType.Text, record => Part(record).StatusCategory.ToString(), ticket).Description = S["New, Open, Pending, OnHold, Solved or Closed."].Value;
         AddField(nameof(TicketPart.PriorityId), S["Priority ID"], DataFieldType.Text, record => Part(record).PriorityId, ticket);
         AddField("Priority", S["Priority"], DataFieldType.Text, record => _names?.Priority(Part(record).PriorityId), ticket);
+        AddField(nameof(TicketPart.CategoryId), S["Category ID"], DataFieldType.Text, record => Part(record).CategoryId, ticket);
+        AddField("Category", S["Category"], DataFieldType.Text, record => _names?.Category(Part(record).CategoryId)?.Name ?? Part(record).CategoryId, ticket).Description = S["The category's own name, such as Laptop."].Value;
+        AddField("CategoryPathText", S["Category path"], DataFieldType.Text, record => _names?.Category(Part(record).CategoryId)?.PathText, ticket).Description = S["The category with those above it, such as Hardware > Laptop."].Value;
+        AddField("CategoryLevel1", S["Top category"], DataFieldType.Text, record => CategoryAt(Part(record).CategoryPath, 0), ticket).Description = S["The top category, to group by, such as Hardware."].Value;
+        AddField("CategoryLevel2", S["Second-level category"], DataFieldType.Text, record => CategoryAt(Part(record).CategoryPath, 1), ticket);
         AddField(nameof(TicketPart.Channel), S["Channel"], DataFieldType.Text, record => Part(record).Channel, ticket).Description = S["Where the ticket came from, such as Agent, Portal, Api or Email."].Value;
         AddField(nameof(TicketPart.MergedIntoId), S["Merged into"], DataFieldType.Text, record => Part(record).MergedIntoId, ticket).Identifier(TicketReportDataSets.Ticket());
         AddField(nameof(TicketPart.FollowUpOfId), S["Follow-up of"], DataFieldType.Text, record => Part(record).FollowUpOfId, ticket).Identifier(TicketReportDataSets.Ticket());
@@ -118,6 +123,14 @@ internal sealed class TicketsReportDataSet : IndexedReportDataSet<ContentItem, T
         var predicate = TicketScopeFilter.ToPredicate(scope);
 
         return rows => rows.Where(predicate);
+    }
+
+    // The name of the category at a depth of a ticket's category path (0 at the top), or none.
+    private string CategoryAt(string path, int level)
+    {
+        var ids = (path ?? string.Empty).Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        return level < ids.Length ? _names?.Category(ids[level])?.Name ?? ids[level] : null;
     }
 
     // Each field reads the part; it is read from the item once per row.

@@ -16,5 +16,11 @@
     "name": "conditional-fields.js",
     "source": "Assets/js/conditional-fields.js",
     "dest": "wwwroot/scripts/conditional-fields.js"
+  },
+  {
+    "action": "vite",
+    "name": "cascading-picker.js",
+    "source": "Assets/js/cascading-picker.js",
+    "dest": "wwwroot/scripts/cascading-picker.js"
   }
 ]

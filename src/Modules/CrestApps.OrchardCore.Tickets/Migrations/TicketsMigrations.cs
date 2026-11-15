@@ -74,9 +74,10 @@ internal sealed class TicketsMigrations : DataMigration
 
         await TicketIndexSchema.CreateAsync(SchemaBuilder);
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
+        await DefineCategoriesAsync();
         await SeedAsync();
 
-        return 11;
+        return 12;
     }
 
     /// <summary>
@@ -225,6 +226,46 @@ internal sealed class TicketsMigrations : DataMigration
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TicketReindexStep.StepName));
 
         return 11;
+    }
+
+    /// <summary>
+    /// Adds the category to the ticket index, and the ticket category part and term type. Tickets saved before have no
+    /// category, so nothing is reindexed.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom11Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
+        {
+            table.AddColumn<string>("CategoryId", column => column.Nullable().WithLength(26));
+            table.AddColumn<string>("CategoryPath", column => column.Nullable().WithLength(TicketIndexProvider.CategoryPathLength));
+        });
+        await TicketIndexSchema.CreateCategoryIndexAsync(SchemaBuilder);
+        await DefineCategoriesAsync();
+
+        return 12;
+    }
+
+    // The part a ticket category's term carries, and a term type with it for taxonomies of ticket categories.
+    private async Task DefineCategoriesAsync()
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(TicketsConstants.CategoryPartName, part => part
+            .Attachable()
+            .WithDisplayName("Ticket category")
+            .WithDescription("Makes a taxonomy term a ticket category: the desk, team, priority and service level its tickets start with, and whether customers can choose it."));
+
+        if (await _contentDefinitionManager.GetTypeDefinitionAsync(TicketsConstants.CategoryTermType) is null)
+        {
+            await _contentDefinitionManager.AlterTypeDefinitionAsync(TicketsConstants.CategoryTermType, type => type
+                .WithDisplayName("Ticket category")
+                .Stereotype("Term")
+                .Listable(false)
+                .Creatable(false)
+                .WithPart<TitlePart>(part => part
+                    .WithPosition("1")
+                    .WithSettings(new TitlePartSettings { Options = TitlePartOptions.EditableRequired }))
+                .WithPart(TicketsConstants.CategoryPartName, part => part.WithPosition("2")));
+        }
     }
 
     private async Task SeedAsync()

@@ -182,4 +182,16 @@ public sealed class TicketPart : ContentPart
     /// Gets or sets when the ticket was last given to its assignee, so team assignment can take turns.
     /// </summary>
     public DateTime? AssignedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category: a term of the taxonomy the ticket type names
+    /// (<see cref="TicketPartSettings.CategoryTaxonomyId"/>), or none.
+    /// </summary>
+    public string CategoryId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category and the categories above it as ids, top first, written <c>/top/child/category/</c>, so
+    /// a filter on a category finds its sub-categories too. Kept with <see cref="CategoryId"/>.
+    /// </summary>
+    public string CategoryPath { get; set; }
 }

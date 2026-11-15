@@ -135,6 +135,39 @@ internal sealed class TicketPartDisplayDriver : ContentPartDisplayDriver<TicketP
             .Where(desk => desk.ItemId == part.DeskId || scopes.ContainsKey(desk.ItemId))
             .OrderBy(desk => desk.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(desk => new SelectListItem(desk.Name, desk.ItemId, desk.ItemId == part.DeskId))];
+
+        if (_serviceProvider.GetService<ITicketCategoryService>() is { } categoryService)
+        {
+            var categories = await categoryService.ListAsync(ticket.ContentType, cancellationToken: CancellationToken);
+            var category = categories.FirstOrDefault(item => item.Id == part.CategoryId);
+
+            model.Categories = Categories.TicketCategoryForm.Items(categories, leavesOnly: false);
+            model.CategoryText = category?.PathText ?? (string.IsNullOrEmpty(part.CategoryId) ? null : S["Removed category"].Value);
+
+            // What applying the category's routing would change, as names, so the agent knows before applying it.
+            if (category is not null && model.CanEdit)
+            {
+                var desks = model.Desks.ToDictionary(item => item.Value, item => item.Text, StringComparer.Ordinal);
+
+                if (!string.IsNullOrEmpty(category.DeskId) && category.DeskId != part.DeskId && desks.TryGetValue(category.DeskId, out var deskName))
+                {
+                    model.CategoryRoutingChanges.Add(S["desk {0}", deskName]);
+                }
+
+                if (!string.IsNullOrEmpty(category.PriorityId) && category.PriorityId != part.PriorityId
+                    && model.Priorities.FirstOrDefault(item => item.Value == category.PriorityId) is { } priority)
+                {
+                    model.CategoryRoutingChanges.Add(S["priority {0}", priority.Text]);
+                }
+
+                if (model.CanAssign && !string.IsNullOrEmpty(category.TeamId) && category.TeamId != part.TeamId
+                    && _serviceProvider.GetService<ITeamManager>() is { } teamManager
+                    && await teamManager.FindByIdAsync(category.TeamId, CancellationToken) is { } team)
+                {
+                    model.CategoryRoutingChanges.Add(S["team {0}", team.Name]);
+                }
+            }
+        }
     }
 
     private async ValueTask BuildRequesterAsync(TicketRequesterViewModel model, ContentItem ticket, TicketPart part)

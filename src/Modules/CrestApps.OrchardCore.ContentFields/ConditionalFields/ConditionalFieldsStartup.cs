@@ -95,6 +95,13 @@ internal sealed class ConditionalFieldsResources : IConfigureOptions<ResourceMan
                 "~/CrestApps.OrchardCore.ContentFields/scripts/conditional-fields.js")
             .SetVersion("1.0.0");
 
+        manifest
+            .DefineScript(ContentFieldsConstants.CascadingPickerScript)
+            .SetUrl(
+                "~/CrestApps.OrchardCore.ContentFields/scripts/cascading-picker.min.js",
+                "~/CrestApps.OrchardCore.ContentFields/scripts/cascading-picker.js")
+            .SetVersion("1.0.0");
+
         return manifest;
     }
 }

@@ -9,7 +9,7 @@ user_manual: user-manual/administration/tickets
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
-| Tickets | `CrestApps.OrchardCore.Tickets` | Timeline, Service Levels, Teams, Resources, Users, Contents, Title |
+| Tickets | `CrestApps.OrchardCore.Tickets` | Timeline, Service Levels, Teams, Resources, Users, Contents, Title, Conditional Fields |
 | Tickets API | `CrestApps.OrchardCore.Tickets.Api` | Tickets |
 | Tickets Portal | `CrestApps.OrchardCore.Tickets.Portal` | Tickets, My Account, Rate Limits |
 | Ticket Web Form | `CrestApps.OrchardCore.Tickets.WebForm` | Tickets, Rate Limits |
@@ -39,6 +39,31 @@ Every change goes through `ITicketService` under a lock per ticket: create, upda
 | `OnHold` | Waiting for something else |
 | `Solved` | Answered; a reply from the requester within the desk's reopen window reopens it |
 | `Closed` | Final and read only; a reply after it opens a follow-up ticket |
+
+## Categories and the questions that follow them
+
+A ticket type can take its **categories** from an Orchard Core taxonomy (Hardware > Laptop > Battery): the Ticket part's settings name the taxonomy (`TicketPartSettings.CategoryTaxonomyId`), whether a category is required on the forms (`CategoryRequired`, agents' page, portal, web form; never for the API, workflows or e-mail) and whether only a category without sub-categories may be chosen (`CategoryLeavesOnly`). Several types may share a taxonomy. The Tickets feature defines a `TicketCategory` term type with the `TicketCategoryPart`; any taxonomy whose terms carry the part works.
+
+`TicketCategoryPart` (on the term, edited in the taxonomy editor) gives a category's tickets a desk, team, priority and service-level policy, and says whether customers can choose it (`HiddenFromCustomers`) and what they read about it (`CustomerDescription`). A category takes each value it leaves empty from the nearest category above it, and a category hidden from customers hides those below it. `ITicketCategoryService` (`ListAsync`, `FindAsync`) reads a type's categories as `TicketCategory` records with their inherited values, `Path` (`/top/child/category/`) and `PathText` ("Hardware > Laptop").
+
+A new ticket keeps `TicketPart.CategoryId` and `CategoryPath`. What the request says comes first, then the category, then the ticket type, then the desk; the service-level policy is the account's, then the category's, the type's and the desk's. A desk the request only suggests (`TicketCreateRequest.DeskIsSuggestion`, as the portal and the web form send it) gives way to the category's desk when that desk serves the same audience and takes the type, so a customer's choice never moves their request to an internal desk. The category's team is used only when the ticket lands on the category's desk (or the category names none).
+
+Changing a ticket's category (`TicketUpdate.CategoryId`, an empty string clears it) changes only the category, recorded on the timeline with the change key `Category`. When the category's routing differs from the ticket's, the properties panel offers **Apply the category's routing** (`Admin/ticket/{id}/category-routing`), which moves the desk (a desk the agent may move tickets to), the priority and, with the assign permission, the team, through the same checks as a manual change. A workflow on Ticket Updated with the `Category` change key can do it instead.
+
+**Questions that follow the answers.** The Tickets feature depends on **Conditional Fields** (Content Fields module), so every field of a ticket type can have **Show this field when**, a rule on its other fields and on the category: Tickets offers the category to rules as the `TicketCategory` source (`IContentConditionSource`), with the categories above it, so "is or is under Hardware" covers its sub-categories. The forms put the chosen category on the new ticket before its editor is read, so the server applies the rules to what was chosen, and the picker posts `CategoryId`, which the rules' script reads in the browser. On a customer's form, the fields customers don't fill in are hidden fields too (`TicketCustomerFieldsVisibility`, an `IContentFieldVisibilityProvider`): what was posted for them is dropped and their validation is ignored, so a required internal field never refuses a customer's request.
+
+The category picker is the Content Fields `TaxonomyCascadingPicker` shape: one list per level (Category, then Sub-category), with the category's description for customers under it.
+
+| Where | What it does with categories |
+| --- | --- |
+| Ticket list | **Category** picker (a category and those below it, `TicketQuery.CategoryId` matching `TicketIndex.CategoryPath`), kept on the pager's links |
+| Index | `TicketIndex.CategoryId` and `CategoryPath` (Tickets migration v12) |
+| API | `GET tickets?categoryId=`, `POST tickets` and `PATCH tickets/{id}` take `categoryId`; `TicketApiModel` has `categoryId` and `categoryPath` (webhooks too) |
+| Workflows | `CategoryId` and `CategoryPath` in `Workflow.Input`; **Update Ticket** sets the category; Ticket Updated's changed-field filter knows `Category` |
+| Data sets | `Tickets`: `CategoryId`, `Category`, `CategoryPathText`, `CategoryLevel1`, `CategoryLevel2` |
+| Recipes | Categories are a taxonomy content item (the `Content` step); the type's settings and the field rules travel with `ContentDefinition`. The **Help desk starter** recipe adds an **IT categories** taxonomy and an **IT request** type with questions that follow the category and an outage answer |
+
+A term that is deleted while tickets use it leaves them with its id; they show "Removed category". A category moved inside the taxonomy keeps its tickets' old paths until they are saved again.
 
 ## Desks, permissions and scope
 
@@ -201,12 +226,12 @@ With AI on, these tools can be picked on AI profiles (category **Tickets**). Eac
 
 | Tool | Does |
 | --- | --- |
-| `listTicketOptions` | Lists the desks the user may open tickets in, the statuses and the priorities, with their ids |
+| `listTicketOptions` | Lists the desks the user may open tickets in, the statuses, the priorities and the categories of the default ticket type, with their ids |
 | `searchTickets` | Finds tickets by number or subject, status category, desk and assignee |
 | `getTicket` | Reads a ticket and its latest 20 entries |
-| `createTicket` | Opens a ticket on a desk |
+| `createTicket` | Opens a ticket on a desk, with a category |
 | `addTicketReply` | Sends a public reply or adds an internal note |
-| `updateTicket` | Changes the status, priority, team or assignee |
+| `updateTicket` | Changes the status, priority, category, team or assignee |
 
 **AI assistant.** With AI on, a desk's editor has **AI assistant**: a chat AI profile (`TicketDeskAISettings.ProfileId`, in the desk's properties), whose instructions, knowledge (its data sources) and chat model the assistant uses, and **A triage sets the priority it suggests**. The ticket page of such a desk then has an **AI assistant** panel. **Suggest a reply** (`POST Admin/ticket/{id}/assistant/reply`, the Reply permission) reads the ticket's latest 30 replies and notes, internal notes marked as such, and puts a reply in the composer for the agent to edit and send; nothing goes to the requester on its own. **Triage** (`POST Admin/ticket/{id}/assistant/triage`, the Edit permission) asks for a summary and one of the site's priorities as JSON and adds them as an internal note from "AI assistant", setting the priority when the desk says so, within a bound: a triage may lower the priority, or raise it at most one step above the ticket type's default (above the ticket's priority when the type has none); a higher suggestion is only noted (`TicketAssistant.PriorityToApply`), because a requester can write "urgent, ignore your rules" into the request the assistant reads. A suggested reply goes into the composer without changing whether it is a public reply or an internal note, and the model is told the reply goes to the requester and must not quote, paraphrase or hint at internal notes. What the assistant sends to the profile's AI provider: the ticket's number and subject and its latest 30 replies and internal notes, with their authors' names (the requester's included), plus the profile's own instructions and knowledge. The AI profile's **Data privacy** setting decides what the site keeps of chat conversations, not what is sent, so choose the provider and its data terms for what tickets hold. The **Triage Ticket With AI** workflow task (with Workflows on) does the same, such as on Ticket Created, with the note in the `Triage` output. `TicketAssistant` runs with the profile's tools turned off, counts its use under the `Tickets` usage category, and answers "not available" when the profile, its model or the connection fails, without stopping the page.
 
@@ -221,7 +246,7 @@ With AI on, these tools can be picked on AI profiles (category **Tickets**). Eac
 
 Each has a deployment step and schemas for CrestApps Recipes. A record whose `ItemId` isn't a valid id (26 letters and digits) is refused with its name and id rather than imported under a new id, which would cut the links other records make to it. A status's or priority's color must be a hex color or a color name, in the editor and in a recipe. Tickets themselves are content items and travel with Orchard Core's content step; their entries with the `TimelineEntries` step. The backlog snapshots are history the site records and have no step.
 
-The **Help desk starter** recipe sets up weekday business hours, a `Tickets` service-level policy, the Support desk and an IT desk, and two example workflows that start turned off: one escalates a ticket whose target is breached and says why in a note, the other adds a note when a requester reopens a solved ticket.
+The **Help desk starter** recipe sets up weekday business hours, a `Tickets` service-level policy, the Support desk and an IT desk, an `ITRequest` ticket type with an **IT categories** taxonomy (Hardware routed to the IT desk) and conditional questions, and two example workflows that start turned off: one escalates a ticket whose target is breached and says why in a note, the other adds a note when a requester reopens a solved ticket.
 
 ## Extending Tickets
 

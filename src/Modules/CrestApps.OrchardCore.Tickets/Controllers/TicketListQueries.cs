@@ -39,6 +39,7 @@ internal static class TicketListQueries
             ContentTypes = [.. start?.ContentTypes ?? []],
             Requester = start?.Requester,
             AccountId = start?.AccountId,
+            CategoryId = start?.CategoryId,
             DueWithin = start?.DueWithin,
             Sort = start?.Sort ?? TicketSort.Updated,
         };
@@ -77,6 +78,11 @@ internal static class TicketListQueries
         if (!string.IsNullOrEmpty(form.AccountId))
         {
             query.AccountId = form.AccountId;
+        }
+
+        if (!string.IsNullOrEmpty(form.CategoryId))
+        {
+            query.CategoryId = form.CategoryId;
         }
 
         if (!string.IsNullOrEmpty(form.PriorityId))

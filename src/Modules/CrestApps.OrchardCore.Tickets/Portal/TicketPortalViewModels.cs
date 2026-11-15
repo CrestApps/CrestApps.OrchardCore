@@ -49,6 +49,14 @@ public class TicketPortalCreateViewModel
 {
     public string ContentType { get; set; }
 
+    public string CategoryId { get; set; }
+
+    [BindNever]
+    public List<CrestApps.OrchardCore.ContentFields.Taxonomies.CascadingPickerItem> Categories { get; set; } = [];
+
+    [BindNever]
+    public bool CategoryRequired { get; set; }
+
     public string DeskId { get; set; }
 
     public string Body { get; set; }

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Teams.Services;
+using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -176,6 +177,7 @@ public sealed class TicketsController : Controller
             Priorities = [.. lookups.Priorities.Values.OrderByDescending(item => item.Rank).Select(item => new SelectListItem(item.Name, item.ItemId, item.ItemId == form.PriorityId))],
             Teams = [.. (await TeamOptionsAsync(cancellationToken)).Select(item => new SelectListItem(item.Text, item.Value, item.Value == form.TeamId))],
             Types = [.. (await TicketTypesAsync()).Select(item => new SelectListItem(item.Text, item.Value, item.Value == form.ContentType))],
+            Categories = await CategoryFilterOptionsAsync(form.CategoryId, cancellationToken),
         };
 
         foreach (var desk in lookups.Desks.Values)
@@ -363,13 +365,34 @@ public sealed class TicketsController : Controller
         }
 
         var cancellationToken = HttpContext.RequestAborted;
+        var ticket = await _contentManager.NewAsync(model.ContentType);
+
+        // The category goes on the item before its editor is read, so the type's field rules on the category apply.
+        var category = await TicketCategoryForm.ApplyAsync(_serviceProvider.GetService<ITicketCategoryService>(), ticket, model.CategoryId, customersOnly: false);
+
+        if (!string.IsNullOrWhiteSpace(model.CategoryId) && category is null)
+        {
+            ModelState.AddModelError(nameof(model.CategoryId), S["Choose one of this ticket type's categories."]);
+        }
+        else if (category is null && model.CategoryRequired)
+        {
+            ModelState.AddModelError(nameof(model.CategoryId), S["Choose a category."]);
+        }
+
+        // A desk left to the category: the category's, then the ticket type's, then the first the user may use.
+        if (string.IsNullOrEmpty(model.DeskId))
+        {
+            var settings = await TypeSettingsAsync(model.ContentType);
+
+            model.DeskId = new[] { category?.DeskId, settings.DefaultDeskId }.FirstOrDefault(id => model.Desks.Any(desk => desk.Value == id))
+                ?? model.Desks.FirstOrDefault()?.Value;
+        }
 
         if (!model.Desks.Any(desk => desk.Value == model.DeskId))
         {
             ModelState.AddModelError(nameof(model.DeskId), S["Choose a desk you may create tickets in."]);
         }
 
-        var ticket = await _contentManager.NewAsync(model.ContentType);
         model.Editor = await _contentItemDisplayManager.UpdateEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: true);
 
         if (!string.IsNullOrWhiteSpace(model.Subject))
@@ -424,6 +447,7 @@ public sealed class TicketsController : Controller
             EntryId = entryId,
             AttachmentIds = attached,
             DeskId = model.DeskId,
+            CategoryId = category?.Id,
             PriorityId = model.PriorityId,
             Requester = requester,
             RequesterContact = requester.IsEmpty && (!string.IsNullOrWhiteSpace(model.RequesterName) || !string.IsNullOrWhiteSpace(model.RequesterEmail))
@@ -786,6 +810,86 @@ public sealed class TicketsController : Controller
     }
 
     /// <summary>
+    /// Gives the ticket what its category gives a new ticket: its desk and priority (edit permission, and the desk only one
+    /// the user may move tickets to) and its team (assign permission). Changing a category alone never moves a ticket.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="categoryId">The category the page showed, so a category changed meanwhile isn't applied.</param>
+    /// <returns>The ticket page.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/category-routing", "TicketsApplyCategoryRouting")]
+    public async Task<IActionResult> ApplyCategoryRouting(string id, string categoryId)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+
+        if (await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        if (!await _access.CanAsync(User, ticket, TicketOperation.Edit, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var part = ticket.GetOrCreate<TicketPart>();
+
+        if (string.IsNullOrEmpty(part.CategoryId)
+            || part.CategoryId != categoryId
+            || _serviceProvider.GetService<ITicketCategoryService>() is not { } categories
+            || await categories.FindAsync(ticket.ContentType, part.CategoryId, cancellationToken) is not { } category)
+        {
+            await _notifier.WarningAsync(H["The ticket's category changed while you had it open. Check it and try again."]);
+
+            return RedirectToAction(nameof(Display), new { id });
+        }
+
+        var canAssign = await _access.CanAsync(User, ticket, TicketOperation.Assign, cancellationToken);
+        var change = new TicketUpdate
+        {
+            PriorityId = !string.IsNullOrEmpty(category.PriorityId) && category.PriorityId != part.PriorityId ? category.PriorityId : null,
+            TeamId = canAssign && !string.IsNullOrEmpty(category.TeamId) && category.TeamId != part.TeamId ? category.TeamId : null,
+        };
+
+        if (!string.IsNullOrEmpty(category.DeskId) && category.DeskId != part.DeskId)
+        {
+            if (await _desks.FindByIdAsync(category.DeskId, cancellationToken) is { } desk
+                && (await _access.GetViewScopesAsync(User, cancellationToken)).ContainsKey(desk.ItemId)
+                && await _authorizationService.AuthorizeAsync(User, TicketsPermissions.ForDesk(TicketOperation.Edit, desk)))
+            {
+                change.DeskId = desk.ItemId;
+            }
+            else
+            {
+                await _notifier.WarningAsync(H["You may not move tickets to the category's desk, so the ticket stays on its desk."]);
+            }
+        }
+
+        if (change.DeskId is null && change.PriorityId is null && change.TeamId is null)
+        {
+            return RedirectToAction(nameof(Display), new { id });
+        }
+
+        var result = await _tickets.UpdateAsync(id, change, Actor(), cancellationToken);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                await _notifier.ErrorAsync(H["{0}", error]);
+            }
+        }
+        else
+        {
+            await _notifier.SuccessAsync(H["The category's routing was applied."]);
+        }
+
+        return result.Succeeded && !await _access.CanAsync(User, result.Ticket, TicketOperation.ViewAssigned, cancellationToken)
+            ? RedirectToAction(nameof(Index))
+            : RedirectToAction(nameof(Display), new { id });
+    }
+
+    /// <summary>
     /// Changes the ticket's values from the properties panel: status, priority and desk need the edit permission, team
     /// and assignee the assign permission.
     /// </summary>
@@ -818,11 +922,19 @@ public sealed class TicketsController : Controller
         loaded ??= new TicketUpdate();
         var userChanged = (Edited(update.StatusId, loaded.StatusId), Edited(update.PriorityId, loaded.PriorityId), Edited(update.DeskId, loaded.DeskId), Edited(update.TeamId, loaded.TeamId), Edited(update.AssigneeId, loaded.AssigneeId));
 
+        // The category is posted only when the type has categories and the user may edit (the panel shows the picker);
+        // an empty choice (posted as nothing) clears it.
+        var categoryPosted = Request.HasFormContentType && Request.Form.ContainsKey(nameof(TicketUpdate.CategoryId));
+        var categoryChanged = categoryPosted && Edited(update.CategoryId, loaded.CategoryId);
+
+        update.CategoryId = categoryPosted ? update.CategoryId ?? string.Empty : null;
+
         if ((userChanged.Item1 && Edited(part.StatusId, loaded.StatusId))
             || (userChanged.Item2 && Edited(part.PriorityId, loaded.PriorityId))
             || (userChanged.Item3 && Edited(part.DeskId, loaded.DeskId))
             || (userChanged.Item4 && Edited(part.TeamId, loaded.TeamId))
-            || (userChanged.Item5 && Edited(part.AssigneeId, loaded.AssigneeId)))
+            || (userChanged.Item5 && Edited(part.AssigneeId, loaded.AssigneeId))
+            || (categoryChanged && Edited(part.CategoryId, loaded.CategoryId)))
         {
             await _notifier.WarningAsync(H["Someone else changed this ticket while you had it open. Check its values and try again."]);
 
@@ -836,6 +948,7 @@ public sealed class TicketsController : Controller
             DeskId = canEdit && userChanged.Item3 && !string.IsNullOrEmpty(update.DeskId) ? update.DeskId : null,
             TeamId = canAssign && userChanged.Item4 ? update.TeamId ?? string.Empty : null,
             AssigneeId = canAssign && userChanged.Item5 ? update.AssigneeId ?? string.Empty : null,
+            CategoryId = canEdit && categoryChanged ? update.CategoryId : null,
         };
 
         if (change.DeskId is not null && await _desks.FindByIdAsync(change.DeskId, cancellationToken) is { } newDesk
@@ -1162,8 +1275,20 @@ public sealed class TicketsController : Controller
         model.Types = [.. types.Select(type => new SelectListItem(type.Text, type.Value, type.Value == model.ContentType))];
 
         var offered = desks.Where(desk => desk.TicketTypes.Count == 0 || desk.TicketTypes.Contains(model.ContentType ?? string.Empty, StringComparer.OrdinalIgnoreCase)).ToList();
+        var settings = await TypeSettingsAsync(model.ContentType);
+        var categories = _serviceProvider.GetService<ITicketCategoryService>() is { } categoryService && !string.IsNullOrEmpty(model.ContentType)
+            ? await categoryService.ListAsync(model.ContentType, cancellationToken: cancellationToken)
+            : [];
 
-        model.DeskId ??= offered.FirstOrDefault()?.ItemId;
+        model.Categories = TicketCategoryForm.Items(categories, settings.CategoryLeavesOnly);
+        model.CategoryRequired = settings.CategoryRequired && model.Categories.Count > 0;
+
+        // With categories, the desk can be left to the category (then the ticket type); otherwise it is chosen.
+        if (model.Categories.Count == 0)
+        {
+            model.DeskId ??= offered.FirstOrDefault()?.ItemId;
+        }
+
         model.Desks = [.. offered.Select(desk => new SelectListItem(desk.Name, desk.ItemId, desk.ItemId == model.DeskId))];
         model.Priorities = [.. (await _priorities.GetAllAsync(cancellationToken)).OrderByDescending(item => item.Rank).Select(item => new SelectListItem(item.Name, item.ItemId, item.ItemId == model.PriorityId))];
         model.CanAttach = _serviceProvider.GetService<IAttachmentService>() is not null;
@@ -1192,6 +1317,37 @@ public sealed class TicketsController : Controller
             .Where(type => type.Parts.Any(part => part.PartDefinition.Name == TicketsConstants.PartName))
             .OrderBy(type => type.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .Select(type => new SelectListItem(type.DisplayName, type.Name))];
+
+    // The categories of every ticket type (types sharing a taxonomy list it once), indented under the category above.
+    private async Task<List<SelectListItem>> CategoryFilterOptionsAsync(string selectedId, CancellationToken cancellationToken)
+    {
+        if (_serviceProvider.GetService<ITicketCategoryService>() is not { } categories)
+        {
+            return [];
+        }
+
+        var options = new List<SelectListItem>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var type in await TicketTypesAsync())
+        {
+            foreach (var category in await categories.ListAsync(type.Value, cancellationToken: cancellationToken))
+            {
+                if (seen.Add(category.Id))
+                {
+                    options.Add(new SelectListItem(new string(' ', category.Level * 3) + category.Name, category.Id, category.Id == selectedId));
+                }
+            }
+        }
+
+        return options;
+    }
+
+    private async Task<TicketPartSettings> TypeSettingsAsync(string contentType)
+        => string.IsNullOrEmpty(contentType)
+            ? new TicketPartSettings()
+            : (await _contentDefinitionManager.GetTypeDefinitionAsync(contentType))?.Parts
+                .FirstOrDefault(part => part.PartDefinition.Name == TicketsConstants.PartName)?.GetSettings<TicketPartSettings>() ?? new TicketPartSettings();
 
     private async Task<List<SelectListItem>> TeamOptionsAsync(CancellationToken cancellationToken)
         => _serviceProvider.GetService<ITeamManager>() is { } teams

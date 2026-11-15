@@ -49,7 +49,9 @@ public static class TicketIndexSchema
             .Column<int>("ReopenCount", column => column.Nullable())
             .Column<int>("EscalationLevel", column => column.Nullable())
             .Column<int>("SatisfactionScore", column => column.Nullable())
-            .Column<DateTime>("RatingRequestedUtc", column => column.Nullable()));
+            .Column<DateTime>("RatingRequestedUtc", column => column.Nullable())
+            .Column<string>("CategoryId", column => column.Nullable().WithLength(26))
+            .Column<string>("CategoryPath", column => column.Nullable().WithLength(TicketIndexProvider.CategoryPathLength)));
 
         await schemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
         {
@@ -71,7 +73,17 @@ public static class TicketIndexSchema
         await CreateTimeElapsedMarksAsync(schemaBuilder);
         await CreateEmailOutboxAsync(schemaBuilder);
         await CreateLinkIndexAsync(schemaBuilder);
+        await CreateCategoryIndexAsync(schemaBuilder);
     }
+
+    /// <summary>
+    /// Creates the index the category filter reads.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static Task CreateCategoryIndexAsync(ISchemaBuilder schemaBuilder)
+        => schemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table
+            .CreateIndex("IDX_TicketIndex_Category", "CategoryId", "DocumentId"));
 
     /// <summary>
     /// Creates the table of ticket-to-ticket links.

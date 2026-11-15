@@ -89,6 +89,18 @@
         </select>
     </div>
 }
+@if (filter.Options.Categories.Count > 0)
+{
+    <div class="btn-group filter">
+        <select id="tickets-category" name="categoryId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-live-search="true" data-header="@T["Category"]" data-dropdown-align-right="auto" aria-label="@T["Category"]" onchange="this.form.submit()">
+            <option value="">@T["Every category"]</option>
+            @foreach (var option in filter.Options.Categories)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    </div>
+}
 <div class="btn-group filter">
     <select id="tickets-due" name="due" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Service level"]" data-dropdown-align-right="auto" aria-label="@T["Service level"]" onchange="this.form.submit()">
         <option value="">@T["Any service level"]</option>

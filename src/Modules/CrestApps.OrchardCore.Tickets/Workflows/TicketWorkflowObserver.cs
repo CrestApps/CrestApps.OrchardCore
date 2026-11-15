@@ -45,6 +45,12 @@ public static class TicketWorkflowInput
     /// <summary>The ticket type.</summary>
     public const string ContentType = "ContentType";
 
+    /// <summary>The ticket's category (a term id).</summary>
+    public const string CategoryId = "CategoryId";
+
+    /// <summary>The ticket's category and those above it, as <c>/top/child/category/</c>.</summary>
+    public const string CategoryPath = "CategoryPath";
+
     /// <summary>The fields an update changed.</summary>
     public const string ChangedFields = "ChangedFields";
 
@@ -100,6 +106,8 @@ public static class TicketWorkflowInput
             [AssigneeId] = part.AssigneeId,
             [Requester] = part.Requester.IsEmpty ? null : part.Requester.ToString(),
             [ContentType] = ticket.ContentType,
+            [CategoryId] = part.CategoryId,
+            [CategoryPath] = part.CategoryPath,
         };
     }
 }

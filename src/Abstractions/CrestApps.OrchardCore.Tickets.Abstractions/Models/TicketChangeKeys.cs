@@ -22,5 +22,7 @@ public static class TicketChangeKeys
 
     public const string Link = "Link";
 
+    public const string Category = "Category";
+
     public const string Fields = "Fields";
 }

@@ -16,6 +16,21 @@
             <input type="hidden" name="loaded.DeskId" value="@part.DeskId" />
             <input type="hidden" name="loaded.TeamId" value="@part.TeamId" />
             <input type="hidden" name="loaded.AssigneeId" value="@part.AssigneeId" />
+            <input type="hidden" name="loaded.CategoryId" value="@part.CategoryId" />
+            @if (Model.Categories.Count > 0 || !string.IsNullOrEmpty(Model.CategoryText))
+            {
+                <div class="mb-2">
+                    <label for="ticket-category" class="form-label small mb-1">@T["Category"]</label>
+                    @if (Model.CanEdit && Model.Categories.Count > 0)
+                    {
+                        @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "ticket-category", Items: Model.Categories, SelectedId: part.CategoryId, EmptyText: T["No category"].Value))
+                    }
+                    else
+                    {
+                        <div class="small">@(Model.CategoryText ?? T["No category"].Value)</div>
+                    }
+                </div>
+            }
             <div class="mb-2">
                 <label for="ticket-status" class="form-label small mb-1">@T["Status"]</label>
                 <select id="ticket-status" name="StatusId" class="form-select form-select-sm" asp-items="Model.Statuses" disabled="@(!Model.CanEdit)"></select>
@@ -55,6 +70,14 @@
                 <button type="submit" class="btn btn-primary btn-sm">@T["Save"]</button>
             }
         </form>
+        @if (Model.CategoryRoutingChanges.Count > 0)
+        {
+            <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="ApplyCategoryRouting" asp-route-id="@ticketId" method="post" class="mt-2">
+                <input type="hidden" name="categoryId" value="@part.CategoryId" />
+                <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Apply the category's routing"]</button>
+                <span class="hint d-block">@T["Changes the {0}.", string.Join(", ", Model.CategoryRoutingChanges)]</span>
+            </form>
+        }
         @if (Model.CanAssign && part.AssigneeId != Context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value)
         {
             <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Take" asp-route-id="@ticketId" method="post" class="d-inline">

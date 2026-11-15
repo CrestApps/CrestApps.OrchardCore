@@ -348,6 +348,135 @@ public sealed class TicketServiceTests
         Assert.Equal(["assigned - -> agent-1", "assigned agent-1 -> agent-2", "status new -> solved"], _observed.Where(line => line.StartsWith("assigned", StringComparison.Ordinal) || line.StartsWith("status", StringComparison.Ordinal)));
     }
 
+    [Fact]
+    public async Task ACategory_GivesItsPriorityTeamAndPolicy_AndIsKeptWithItsPath()
+    {
+        // Arrange: Hardware > Laptop, where Laptop sets the priority and inherits Hardware's team and policy.
+        var service = Create(services: Categories(new TicketCategory
+        {
+            Id = "laptop",
+            Name = "Laptop",
+            ParentId = "hardware",
+            Path = "/hardware/laptop/",
+            PathText = "Hardware > Laptop",
+            PriorityId = "urgent",
+            TeamId = "hardware-team",
+            ServiceLevelPolicyId = "hardware-sla",
+        }));
+
+        // Act
+        var result = await service.CreateAsync(new TicketCreateRequest { Subject = "Won't start", Requester = _requester, CategoryId = "laptop" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var part = result.Ticket.GetOrCreate<TicketPart>();
+        Assert.True(result.Succeeded);
+        Assert.Equal("laptop", part.CategoryId);
+        Assert.Equal("/hardware/laptop/", part.CategoryPath);
+        Assert.Equal("urgent", part.PriorityId);
+        Assert.Equal("hardware-team", part.TeamId);
+        Assert.All(_tracker.Timers, timer => Assert.Equal("hardware-sla", timer.PolicyId));
+    }
+
+    [Fact]
+    public async Task WhatTheRequestSays_ComesBeforeTheCategory()
+    {
+        // Arrange
+        var service = Create(services: Categories(new TicketCategory { Id = "laptop", Name = "Laptop", Path = "/laptop/", PriorityId = "urgent", TeamId = "hardware-team" }));
+
+        // Act
+        var result = await service.CreateAsync(new TicketCreateRequest { Subject = "Won't start", Requester = _requester, CategoryId = "laptop", PriorityId = "low", TeamId = "front-line" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("low", result.Ticket.GetOrCreate<TicketPart>().PriorityId);
+        Assert.Equal("front-line", result.Ticket.GetOrCreate<TicketPart>().TeamId);
+    }
+
+    [Fact]
+    public async Task ACategoryTheTypeDoesntHave_IsRefused()
+    {
+        // Arrange
+        var service = Create(services: Categories());
+
+        // Act
+        var result = await service.CreateAsync(new TicketCreateRequest { Subject = "Won't start", Requester = _requester, CategoryId = "elsewhere" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Empty(_items);
+    }
+
+    [Fact]
+    public async Task ChangingTheCategory_ChangesOnlyTheCategory_AndIsOnTheTimeline()
+    {
+        // Arrange
+        var service = Create(services: Categories(
+            new TicketCategory { Id = "laptop", Name = "Laptop", Path = "/hardware/laptop/", PathText = "Hardware > Laptop", PriorityId = "urgent", DeskId = "it" },
+            new TicketCategory { Id = "printer", Name = "Printer", Path = "/hardware/printer/", PathText = "Hardware > Printer" }));
+        var ticket = (await service.CreateAsync(new TicketCreateRequest { Subject = "Jams", Requester = _requester, CategoryId = "printer" }, TestContext.Current.CancellationToken)).Ticket;
+
+        // Act
+        var result = await service.UpdateAsync(ticket.ContentItemId, new TicketUpdate { CategoryId = "laptop" }, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert: the desk and priority stay; the change is recorded with its stable key and ids.
+        var part = result.Ticket.GetOrCreate<TicketPart>();
+        Assert.True(result.Succeeded);
+        Assert.Equal("laptop", part.CategoryId);
+        Assert.Equal("/hardware/laptop/", part.CategoryPath);
+        Assert.Equal("support", part.DeskId);
+        Assert.Equal("normal", part.PriorityId);
+        Assert.Contains(_timeline.Of(Subject(ticket)), entry => entry.Changes.Any(change =>
+            change.Key == TicketChangeKeys.Category && change.From == "Hardware > Printer" && change.To == "Hardware > Laptop" && change.FromValue == "printer" && change.ToValue == "laptop"));
+    }
+
+    [Fact]
+    public async Task AnEmptyCategory_ClearsIt()
+    {
+        // Arrange
+        var service = Create(services: Categories(new TicketCategory { Id = "printer", Name = "Printer", Path = "/printer/" }));
+        var ticket = (await service.CreateAsync(new TicketCreateRequest { Subject = "Jams", Requester = _requester, CategoryId = "printer" }, TestContext.Current.CancellationToken)).Ticket;
+
+        // Act
+        var result = await service.UpdateAsync(ticket.ContentItemId, new TicketUpdate { CategoryId = string.Empty }, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(result.Ticket.GetOrCreate<TicketPart>().CategoryId);
+        Assert.Null(result.Ticket.GetOrCreate<TicketPart>().CategoryPath);
+    }
+
+    [Theory]
+    [InlineData("support", false, TicketDeskAudience.Customers, "support")]
+    [InlineData("support", true, TicketDeskAudience.Customers, "billing")]
+    [InlineData("support", true, TicketDeskAudience.Internal, "support")]
+    [InlineData(null, false, TicketDeskAudience.Internal, "billing")]
+    public void TheDesk_IsTheRequestsThenTheCategorysThenTheTypes(string requested, bool suggestion, TicketDeskAudience categoryDeskAudience, string expected)
+    {
+        // Arrange: the support desk serves customers; the category sends its tickets to billing.
+        var desks = new[]
+        {
+            new TicketDesk { ItemId = "support", Name = "Support", Audience = TicketDeskAudience.Customers },
+            new TicketDesk { ItemId = "billing", Name = "Billing", Audience = categoryDeskAudience },
+        };
+        var request = new TicketCreateRequest { DeskId = requested, DeskIsSuggestion = suggestion };
+        var category = new TicketCategory { Id = "invoice", DeskId = "billing" };
+
+        // Act
+        var desk = DefaultTicketService.ChooseDesk(request, category, new TicketPartSettings { DefaultDeskId = "support" }, desks, "Ticket");
+
+        // Assert: a customer's suggested desk only gives way to a desk serving the same requesters.
+        Assert.Equal(expected, desk);
+    }
+
+    private static ServiceProvider Categories(params TicketCategory[] categories)
+    {
+        var service = new Mock<ITicketCategoryService>();
+
+        service.Setup(value => value.ListAsync(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(categories);
+        service.Setup(value => value.FindAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, string id, CancellationToken _) => categories.FirstOrDefault(category => category.Id == id));
+
+        return new ServiceCollection().AddSingleton(service.Object).BuildServiceProvider();
+    }
+
     private static RecordRef Subject(ContentItem ticket)
         => new(TicketsConstants.RecordKind, ticket.ContentItemId);
 

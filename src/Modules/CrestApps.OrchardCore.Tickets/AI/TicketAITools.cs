@@ -87,7 +87,7 @@ public sealed class ListTicketOptionsTool : TicketAITool
 
     public override string Name => TheName;
 
-    public override string Description => "Lists the ticket desks the user may open tickets in, and every status (with its category: New, Open, Pending, OnHold, Solved or Closed) and priority, each with the id the other ticket tools take.";
+    public override string Description => "Lists the ticket desks the user may open tickets in, every status (with its category: New, Open, Pending, OnHold, Solved or Closed) and priority, and the categories of tickets (such as Hardware > Laptop), each with the id the other ticket tools take.";
 
     protected override async Task<object> InvokeAsync(AIFunctionArguments arguments, ClaimsPrincipal user, CancellationToken cancellationToken)
     {
@@ -110,7 +110,10 @@ public sealed class ListTicketOptionsTool : TicketAITool
             .OrderBy(priority => priority.Rank)
             .Select(priority => new { id = priority.ItemId, name = priority.Name });
 
-        return Json(new { desks, statuses, priorities });
+        var categories = (await services.GetRequiredService<ITicketCategoryService>().ListAsync(TicketsConstants.DefaultContentType, cancellationToken: cancellationToken))
+            .Select(category => new { id = category.Id, name = category.PathText });
+
+        return Json(new { desks, statuses, priorities, categories });
     }
 }
 
@@ -211,7 +214,8 @@ public sealed class CreateTicketTool : TicketAITool
             "subject": { "type": "string", "description": "A short summary of the problem." },
             "body": { "type": "string", "description": "The description, as the requester gave it." },
             "deskId": { "type": "string", "description": "The desk, from listTicketOptions." },
-            "priorityId": { "type": "string", "description": "The priority, from listTicketOptions. The desk's default when left out." },
+            "priorityId": { "type": "string", "description": "The priority, from listTicketOptions. The category's or the desk's default when left out." },
+            "categoryId": { "type": "string", "description": "The category, from listTicketOptions, when tickets have categories." },
             "requesterName": { "type": "string", "description": "The requester's name." },
             "requesterEmail": { "type": "string", "description": "The requester's e-mail." }
             """, "subject", "body", "deskId")
@@ -247,6 +251,7 @@ public sealed class CreateTicketTool : TicketAITool
             Body = Text(arguments, "body"),
             DeskId = desk.ItemId,
             PriorityId = Text(arguments, "priorityId"),
+            CategoryId = Text(arguments, "categoryId"),
             RequesterContact = name is null && email is null ? null : new ContactInfo { Name = name, Email = email },
             Channel = TicketsConstants.Channels.Agent,
             CreatedBy = CallerOf(user),
@@ -327,14 +332,15 @@ public sealed class UpdateTicketTool : TicketAITool
             "statusId": { "type": "string", "description": "The new status, from listTicketOptions." },
             "priorityId": { "type": "string", "description": "The new priority, from listTicketOptions." },
             "teamId": { "type": "string", "description": "The new team; an empty text clears it." },
-            "assigneeId": { "type": "string", "description": "The user to assign it to; an empty text unassigns it." }
+            "assigneeId": { "type": "string", "description": "The user to assign it to; an empty text unassigns it." },
+            "categoryId": { "type": "string", "description": "The new category, from listTicketOptions; an empty text clears it. Only the category changes." }
             """, "ticket")
     {
     }
 
     public override string Name => TheName;
 
-    public override string Description => "Changes a ticket's status or priority (the user needs to be able to edit it) or its team or assignee (the user needs to be able to assign it). Values left out stay as they are.";
+    public override string Description => "Changes a ticket's status, priority or category (the user needs to be able to edit it) or its team or assignee (the user needs to be able to assign it). Values left out stay as they are.";
 
     protected override async Task<object> InvokeAsync(AIFunctionArguments arguments, ClaimsPrincipal user, CancellationToken cancellationToken)
     {
@@ -350,11 +356,12 @@ public sealed class UpdateTicketTool : TicketAITool
             PriorityId = Text(arguments, "priorityId"),
             TeamId = arguments.TryGetFirstString("teamId", out var teamId) ? teamId?.Trim() ?? string.Empty : null,
             AssigneeId = arguments.TryGetFirstString("assigneeId", out var assigneeId) ? assigneeId?.Trim() ?? string.Empty : null,
+            CategoryId = arguments.TryGetFirstString("categoryId", out var categoryId) ? categoryId?.Trim() ?? string.Empty : null,
         };
 
-        if ((update.StatusId is not null || update.PriorityId is not null) && !await access.CanAsync(user, ticket, TicketOperation.Edit, cancellationToken))
+        if ((update.StatusId is not null || update.PriorityId is not null || update.CategoryId is not null) && !await access.CanAsync(user, ticket, TicketOperation.Edit, cancellationToken))
         {
-            return "The user may not change this ticket's status or priority.";
+            return "The user may not change this ticket's status, priority or category.";
         }
 
         if ((update.TeamId is not null || update.AssigneeId is not null) && !await access.CanAsync(user, ticket, TicketOperation.Assign, cancellationToken))
