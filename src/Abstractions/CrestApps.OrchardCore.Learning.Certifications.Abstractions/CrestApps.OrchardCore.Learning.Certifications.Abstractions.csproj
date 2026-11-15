@@ -16,6 +16,11 @@
     <PackageReference Include="CrestApps.Core.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

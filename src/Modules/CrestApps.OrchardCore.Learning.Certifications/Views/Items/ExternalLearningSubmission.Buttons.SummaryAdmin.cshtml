@@ -1,0 +1,3 @@
+@model ExternalLearningRowViewModel
+
+<a asp-controller="ExternalLearning" asp-action="Review" asp-route-id="@Model.Submission.ItemId" class="btn btn-primary btn-sm">@(Model.Submission.State == ExternalLearningState.Submitted ? T["Review"] : T["Open"])</a>

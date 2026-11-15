@@ -25,6 +25,7 @@ internal sealed class CertificationPathDisplayDriver : DisplayDriver<Certificati
     private readonly IEnumerable<ICertificationRequirement> _requirements;
     private readonly PendingCertificationPath _pending;
     private readonly ISession _session;
+    private readonly IEducationCreditService _credits;
 
     internal readonly IStringLocalizer S;
 
@@ -33,8 +34,10 @@ internal sealed class CertificationPathDisplayDriver : DisplayDriver<Certificati
         IEnumerable<ICertificationRequirement> requirements,
         PendingCertificationPath pending,
         ISession session,
+        IEducationCreditService credits,
         IStringLocalizer<CertificationPathDisplayDriver> stringLocalizer)
     {
+        _credits = credits;
         _paths = paths;
         _requirements = requirements;
         _pending = pending;
@@ -163,12 +166,17 @@ internal sealed class CertificationPathDisplayDriver : DisplayDriver<Certificati
             .OrderBy(index => index.DisplayText)
             .ListAsync();
 
-        return items
+        var creditGroup = new SelectListGroup { Name = S["Education credits"] };
+        var options = items
             .Select(index => new SelectListItem(index.DisplayText, index.ContentItemId)
             {
                 Group = index.ContentType == LearningConstants.ContentTypes.Course ? courseGroup : quizGroup,
             })
             .OrderBy(item => item.Group == courseGroup ? 0 : 1)
             .ToList();
+
+        options.AddRange((await _credits.ListTypesAsync()).Select(type => new SelectListItem(type.Name, type.ItemId) { Group = creditGroup }));
+
+        return options;
     }
 }

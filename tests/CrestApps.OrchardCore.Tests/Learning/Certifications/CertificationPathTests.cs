@@ -364,9 +364,10 @@ internal sealed class CertificationHarness : IAsyncDisposable
             {
                 await SkillsIndexSchema.CreateAsync(schemaBuilder);
                 await CertificationsIndexSchema.CreateAsync(schemaBuilder);
+                await EducationCreditsIndexSchema.CreateAsync(schemaBuilder);
             },
             [.. SkillsIndexProviders.All(), .. CertificationsIndexProviders.All(), new LeasedWorkItemIndexProvider<CertificationRenewalWork>(CertificationsConstants.RenewalWorkCollectionName)],
-            [SkillsConstants.CollectionName, CertificationsConstants.CollectionName, CertificationsConstants.RenewalWorkCollectionName]);
+            [SkillsConstants.CollectionName, CertificationsConstants.CollectionName, CertificationsConstants.RenewalWorkCollectionName, CertificationsConstants.CreditLedgerCollectionName]);
 
         inner.Courses.AddCourse("safety");
         inner.Courses.AddItem("safety", "lesson");

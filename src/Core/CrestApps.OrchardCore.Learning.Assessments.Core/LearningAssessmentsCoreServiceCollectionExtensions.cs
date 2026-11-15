@@ -50,25 +50,25 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
             kind.Icon = "fa-solid fa-circle-question";
         });
 
-        AddQuestionType<SingleChoiceScorer>(services, AssessmentsConstants.QuestionTypes.SingleChoice, AssessmentsConstants.ContentTypes.SingleChoiceQuestion, "Single choice");
-        AddQuestionType<MultipleChoiceScorer>(services, AssessmentsConstants.QuestionTypes.MultipleChoice, AssessmentsConstants.ContentTypes.MultipleChoiceQuestion, "Multiple choice");
-        AddQuestionType<TrueFalseScorer>(services, AssessmentsConstants.QuestionTypes.TrueFalse, AssessmentsConstants.ContentTypes.TrueFalseQuestion, "True or false");
-        AddQuestionType<ShortTextScorer>(services, AssessmentsConstants.QuestionTypes.ShortText, AssessmentsConstants.ContentTypes.ShortTextQuestion, "Short text");
-        AddQuestionType<NumericScorer>(services, AssessmentsConstants.QuestionTypes.Numeric, AssessmentsConstants.ContentTypes.NumericQuestion, "Numeric");
-        AddQuestionType<MatchingScorer>(services, AssessmentsConstants.QuestionTypes.Matching, AssessmentsConstants.ContentTypes.MatchingQuestion, "Matching");
-        AddQuestionType<OrderingScorer>(services, AssessmentsConstants.QuestionTypes.Ordering, AssessmentsConstants.ContentTypes.OrderingQuestion, "Ordering");
-        AddQuestionType<FillInBlanksScorer>(services, AssessmentsConstants.QuestionTypes.FillInBlanks, AssessmentsConstants.ContentTypes.FillInBlanksQuestion, "Fill in the blanks");
-        AddQuestionType<EssayScorer>(services, AssessmentsConstants.QuestionTypes.Essay, AssessmentsConstants.ContentTypes.EssayQuestion, "Essay", manuallyGraded: true);
+        AddQuestionType<SingleChoiceScorer>(services, AssessmentsConstants.QuestionTypes.SingleChoice, AssessmentsConstants.ContentTypes.SingleChoiceQuestion, LocalizationSource.Create("Single choice", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<MultipleChoiceScorer>(services, AssessmentsConstants.QuestionTypes.MultipleChoice, AssessmentsConstants.ContentTypes.MultipleChoiceQuestion, LocalizationSource.Create("Multiple choice", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<TrueFalseScorer>(services, AssessmentsConstants.QuestionTypes.TrueFalse, AssessmentsConstants.ContentTypes.TrueFalseQuestion, LocalizationSource.Create("True or false", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<ShortTextScorer>(services, AssessmentsConstants.QuestionTypes.ShortText, AssessmentsConstants.ContentTypes.ShortTextQuestion, LocalizationSource.Create("Short text", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<NumericScorer>(services, AssessmentsConstants.QuestionTypes.Numeric, AssessmentsConstants.ContentTypes.NumericQuestion, LocalizationSource.Create("Numeric", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<MatchingScorer>(services, AssessmentsConstants.QuestionTypes.Matching, AssessmentsConstants.ContentTypes.MatchingQuestion, LocalizationSource.Create("Matching", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<OrderingScorer>(services, AssessmentsConstants.QuestionTypes.Ordering, AssessmentsConstants.ContentTypes.OrderingQuestion, LocalizationSource.Create("Ordering", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<FillInBlanksScorer>(services, AssessmentsConstants.QuestionTypes.FillInBlanks, AssessmentsConstants.ContentTypes.FillInBlanksQuestion, LocalizationSource.Create("Fill in the blanks", typeof(LearningAssessmentsCoreServiceCollectionExtensions)));
+        AddQuestionType<EssayScorer>(services, AssessmentsConstants.QuestionTypes.Essay, AssessmentsConstants.ContentTypes.EssayQuestion, LocalizationSource.Create("Essay", typeof(LearningAssessmentsCoreServiceCollectionExtensions)), manuallyGraded: true);
 
         return services;
     }
 
-    private static void AddQuestionType<TScorer>(IServiceCollection services, string name, string contentType, string displayName, bool manuallyGraded = false)
+    private static void AddQuestionType<TScorer>(IServiceCollection services, string name, string contentType, LocalizationSource displayName, bool manuallyGraded = false)
         where TScorer : class, IQuestionScorer
         => services.AddQuestionType<TScorer>(name, type =>
         {
             type.ContentType = contentType;
-            type.DisplayName = LocalizationSource.Create(displayName, typeof(LearningAssessmentsCoreServiceCollectionExtensions));
+            type.DisplayName = displayName;
             type.ManuallyGraded = manuallyGraded;
         });
 }

@@ -145,4 +145,26 @@ public sealed class YesSqlQuantityLedger<TLedger> : IQuantityLedger<TLedger>
 
         return entries.Sum(entry => entry.Amount);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyCollection<string>> ListAccountsSinceAsync(string bucket, DateTime postedSinceUtc, CancellationToken cancellationToken = default)
+        => (await _session.QueryIndex<QuantityLedgerEntryIndex>(index => index.Bucket == bucket && index.CreatedUtc >= postedSinceUtc, collection: _collection).ListAsync(cancellationToken))
+            .Select(index => index.AccountId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+    /// <inheritdoc />
+    public async Task<int> DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default)
+    {
+        var entries = await _session.Query<QuantityLedgerEntry, QuantityLedgerEntryIndex>(index => index.AccountId == accountId, collection: _collection).ListAsync(cancellationToken);
+        var count = 0;
+
+        foreach (var entry in entries)
+        {
+            _session.Delete(entry, _collection);
+            count++;
+        }
+
+        return count;
+    }
 }

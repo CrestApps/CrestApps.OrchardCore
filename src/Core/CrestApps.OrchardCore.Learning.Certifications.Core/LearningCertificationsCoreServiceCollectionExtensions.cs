@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.YesSql.Core.Ledgers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -37,6 +38,12 @@ public static class LearningCertificationsCoreServiceCollectionExtensions
             options.RemoveCompletedItems = true;
         });
         services.AddEnrollmentObserver<CertificationEnrollmentObserver>();
+        services.TryAddScoped<EducationCreditTypeStore>();
+        services.TryAddScoped<ExternalLearningSubmissionStore>();
+        services.AddQuantityLedger<EducationCreditLedger>(options => options.CollectionName = CertificationsConstants.CreditLedgerCollectionName);
+        services.TryAddScoped<IEducationCreditService, DefaultEducationCreditService>();
+        services.AddCertificationRequirement<CreditsEarnedRequirement>();
+        services.AddEnrollmentObserver<EducationCreditEnrollmentObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICertificationExpiryObserver, CertificationSkillsObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICertificationRecordObserver, CertificationSkillsObserver>());
 

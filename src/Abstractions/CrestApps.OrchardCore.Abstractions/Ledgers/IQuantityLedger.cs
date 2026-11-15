@@ -50,6 +50,24 @@ public interface IQuantityLedger<TLedger>
     /// <summary>
     /// Sums the entries of a balance effective within a period, inclusive.
     /// </summary>
+    /// <summary>
+    /// Lists the accounts with an entry in a bucket posted since a time, such as the people who earned credits of a
+    /// type since a check last ran.
+    /// </summary>
+    /// <param name="bucket">The bucket.</param>
+    /// <param name="postedSinceUtc">The time.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The account ids.</returns>
+    Task<IReadOnlyCollection<string>> ListAccountsSinceAsync(string bucket, DateTime postedSinceUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes every entry of an account, when the person it belongs to is erased.
+    /// </summary>
+    /// <param name="accountId">The account.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many entries were deleted.</returns>
+    Task<int> DeleteAccountAsync(string accountId, CancellationToken cancellationToken = default);
+
     Task<decimal> SumAsync(string accountId, string bucket, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
 }
 

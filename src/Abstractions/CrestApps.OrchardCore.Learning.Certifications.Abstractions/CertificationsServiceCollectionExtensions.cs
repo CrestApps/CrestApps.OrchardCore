@@ -35,4 +35,15 @@ public static class CertificationsServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers an observer of education credits.
+    /// </summary>
+    public static IServiceCollection AddEducationCreditObserver<TObserver>(this IServiceCollection services)
+        where TObserver : class, IEducationCreditObserver
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IEducationCreditObserver, TObserver>());
+
+        return services;
+    }
 }

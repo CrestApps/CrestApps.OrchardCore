@@ -26,6 +26,16 @@ public static class CertificationsConstants
     public const string RecipeStepName = "LearningCertificationPaths";
 
     /// <summary>
+    /// The YesSql collection of the education credit ledger.
+    /// </summary>
+    public const string CreditLedgerCollectionName = "LearningCreditLedger";
+
+    /// <summary>
+    /// The recipe and deployment step of education credit types.
+    /// </summary>
+    public const string CreditTypesRecipeStepName = "LearningCreditTypes";
+
+    /// <summary>
     /// The name of the data source.
     /// </summary>
     public const string DataSourceName = "LearningCertifications";
@@ -59,6 +69,32 @@ public static class CertificationsConstants
     /// <summary>
     /// The feature ids.
     /// </summary>
+    /// <summary>
+    /// What awards education credits, and the kinds of ledger entries.
+    /// </summary>
+    public static class CreditSources
+    {
+        /// <summary>
+        /// A completed course.
+        /// </summary>
+        public const string Course = "Learning.Course";
+
+        /// <summary>
+        /// A completed learning path.
+        /// </summary>
+        public const string LearningPath = "Learning.LearningPath";
+
+        /// <summary>
+        /// Accepted external learning.
+        /// </summary>
+        public const string External = "Learning.ExternalLearning";
+
+        /// <summary>
+        /// Credits a person awarded by hand or a workflow.
+        /// </summary>
+        public const string Manual = "Learning.Manual";
+    }
+
     public static class Features
     {
         /// <summary>
@@ -81,5 +117,10 @@ public static class CertificationsConstants
         /// A quiz passed, with a minimum percent when one is set.
         /// </summary>
         public const string AssessmentPassed = "AssessmentPassed";
+
+        /// <summary>
+        /// A number of education credits of a type earned in the cycle; the number is the requirement's minimum.
+        /// </summary>
+        public const string CreditsEarned = "CreditsEarned";
     }
 }

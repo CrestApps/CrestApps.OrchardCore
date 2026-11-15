@@ -167,5 +167,5 @@ public static class CertificationsIndexProviders
     /// Lists them.
     /// </summary>
     /// <returns>The providers.</returns>
-    public static IIndexProvider[] All() => [new CertificationPathIndexProvider(), new CertificationPathProgressIndexProvider()];
+    public static IIndexProvider[] All() => [new CertificationPathIndexProvider(), new CertificationPathProgressIndexProvider(), new EducationCreditTypeIndexProvider(), new ExternalLearningSubmissionIndexProvider(), new CrestApps.OrchardCore.YesSql.Core.Ledgers.QuantityLedgerEntryIndexProvider(CertificationsConstants.CreditLedgerCollectionName)];
 }

@@ -1,5 +1,6 @@
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Certifications.BackgroundTasks;
 using CrestApps.OrchardCore.Learning.Certifications.Core;
@@ -23,6 +24,8 @@ using CrestApps.OrchardCore.Skills.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataSources;
@@ -30,8 +33,10 @@ using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 using OrchardCore.Notifications;
 using OrchardCore.Recipes;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Learning.Certifications;
@@ -49,10 +54,13 @@ public sealed class Startup : StartupBase
         {
             options.Collections.Add(CertificationsConstants.CollectionName);
             options.Collections.Add(CertificationsConstants.RenewalWorkCollectionName);
+            options.Collections.Add(CertificationsConstants.CreditLedgerCollectionName);
         });
         services.AddDataMigration<CertificationsMigrations>()
             .AddIndexProvider<CertificationPathIndexProvider>()
-            .AddIndexProvider<CertificationPathProgressIndexProvider>();
+            .AddIndexProvider<CertificationPathProgressIndexProvider>()
+            .AddIndexProvider<EducationCreditTypeIndexProvider>()
+            .AddIndexProvider<ExternalLearningSubmissionIndexProvider>();
 
         services.AddLearningCertificationsCore();
 
@@ -65,6 +73,14 @@ public sealed class Startup : StartupBase
         services.AddCertificationPathObserver<CertificationTelemetryObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICertificationRecordObserver, CertificationTelemetryObserver>());
         services.AddPersonalDataContributor<CertificationsPersonalDataContributor>();
+        services.AddContentPart<EducationCreditsPart>()
+            .UseDisplayDriver<EducationCreditsPartDisplayDriver>();
+        services.AddDisplayDriver<EducationCreditType, EducationCreditTypeRowDisplayDriver>();
+        services.AddDisplayDriver<ExternalLearningSubmission, ExternalLearningRowDisplayDriver>();
+        services.AddPermissionProvider<CreditsPermissionProvider>();
+        services.AddNavigationProvider<CreditsAdminMenu>();
+        services.AddProtectedFileArea<ExternalLearningEvidence>(ExternalLearningEvidence.Folder);
+        services.AddScoped<IProtectedFileAccessPolicy<ExternalLearningEvidence>, ExternalLearningEvidencePolicy>();
     }
 }
 
