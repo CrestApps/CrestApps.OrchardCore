@@ -51,7 +51,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
-            "OrchardCore.Workflows"})]
+            "OrchardCore.Workflows",
+            "CrestApps.OrchardCore.AI"})]
     public sealed class AIActivityWorkflowsStartup : OrchardCore.Modules.StartupBase
     {
         public AIActivityWorkflowsStartup() { }
