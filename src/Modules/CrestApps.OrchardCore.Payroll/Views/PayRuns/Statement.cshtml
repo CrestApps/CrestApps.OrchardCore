@@ -13,16 +13,6 @@
         _ => T["Voided"].Value,
     };
     var final = statement.VoidOf is null && statement.Status is PayStatementStatus.Final or PayStatementStatus.Paid;
-    string TypeName(PayLineType type) => type switch
-    {
-        PayLineType.Earning => T["Earning"].Value,
-        PayLineType.Deduction => T["Deduction"].Value,
-        PayLineType.EmployerContribution => T["Employer contribution"].Value,
-        PayLineType.ImputedIncome => T["Imputed income"].Value,
-        PayLineType.Reimbursement => T["Reimbursement"].Value,
-        PayLineType.Memo => T["Memo"].Value,
-        _ => T["Tax"].Value,
-    };
 }
 
 <zone Name="Title">
@@ -69,48 +59,7 @@
     </div>
 }
 
-<div class="card mb-3">
-    <div class="card-header">@T["Lines"]</div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-sm align-middle">
-                <thead>
-                    <tr>
-                        <th scope="col">@T["Line"]</th>
-                        <th scope="col">@T["Type"]</th>
-                        <th scope="col" class="text-end">@T["Hours"]</th>
-                        <th scope="col" class="text-end">@T["Rate"]</th>
-                        <th scope="col" class="text-end">@T["Taxable wages"]</th>
-                        <th scope="col" class="text-end">@T["Amount"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var line in statement.Lines)
-                    {
-                        <tr>
-                            <td>
-                                <span class="font-monospace me-1">@(line.PayCodeId is { } codeId ? (Model.Codes.TryGetValue(codeId, out var codeText) ? codeText : codeId) : line.TaxCode)</span>@line.Description
-                                @if (line.Cut > 0)
-                                {
-                                    <span class="badge text-bg-warning fw-normal ms-1">@T["{0} cut", Money(line.Cut)]</span>
-                                }
-                            </td>
-                            <td>@TypeName(line.Type)@(line.Type == PayLineType.Tax && line.Payer == PayLinePayer.Employer ? " · " + T["employer"].Value : string.Empty)</td>
-                            <td class="text-end">@line.Hours?.ToString("0.##", CultureInfo.CurrentCulture)</td>
-                            <td class="text-end">@line.Rate?.ToString("0.####", CultureInfo.CurrentCulture)</td>
-                            <td class="text-end">@(line.TaxableWages is { } wages ? Money(wages) : null)</td>
-                            <td class="text-end">@Money(line.Amount)</td>
-                        </tr>
-                    }
-                </tbody>
-                <tfoot>
-                    <tr><th scope="row" colspan="5" class="text-end">@T["Gross"]</th><td class="text-end">@Money(statement.Gross)</td></tr>
-                    <tr><th scope="row" colspan="5" class="text-end">@T["Net pay"]</th><td class="text-end fw-bold">@Money(statement.Net)</td></tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
-</div>
+<partial name="PayStatementLines" model="Model" />
 
 @if (statement.Payments.Count > 0)
 {

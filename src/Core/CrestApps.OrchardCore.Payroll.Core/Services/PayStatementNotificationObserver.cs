@@ -39,7 +39,7 @@ public sealed class PayStatementNotificationObserver : IPayStatementObserver
     /// <param name="statement">The statement.</param>
     /// <returns>The address.</returns>
     public static string StatementUrl(PayStatement statement)
-        => "~/my-pay/statements/" + statement.ItemId;
+        => MyPayUrls.Statement(statement.ItemId);
 
     /// <inheritdoc />
     public async Task IssuedAsync(PayStatement statement, CancellationToken cancellationToken = default)

@@ -49,6 +49,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = PayrollConstants.Features.SelfService,
+    Name = "My Pay",
+    Description = "A person's own pay in the admin: their pay statements and stubs, their tax elections and where their pay goes, linked from Staff > My Profile.",
+    Category = "Payroll",
+    Dependencies =
+    [
+        PayrollConstants.Features.Payroll,
+    ]
+)]
+
+[assembly: Feature(
     Id = PayrollConstants.Features.DirectDeposit,
     Name = "Direct Deposit",
     Description = "Pays net pay to people's bank accounts: each deposit row of a processed statement becomes an ACH disbursement from the employer's funding account, sent in the bank file of Disbursements.",

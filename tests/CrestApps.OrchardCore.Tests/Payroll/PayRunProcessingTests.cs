@@ -502,7 +502,7 @@ public sealed class PayRunProcessingTests
         Assert.Same(lee, to);
         Assert.Equal(PayrollConstants.PayStatementReadyNotificationType, message.Type);
         Assert.Equal(statement.ItemId, message.ReferenceId);
-        Assert.Equal("~/my-pay/statements/" + statement.ItemId, message.Url);
+        Assert.Equal("~/Admin/my-pay/statements/" + statement.ItemId, message.Url);
 
         // No amount in a notice: it may be sent by e-mail or SMS.
         Assert.DoesNotContain(statement.Net.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), message.Subject + message.Summary + message.TextBody, StringComparison.Ordinal);

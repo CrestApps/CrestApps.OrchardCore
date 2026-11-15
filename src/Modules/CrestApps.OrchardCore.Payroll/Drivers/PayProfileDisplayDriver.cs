@@ -106,14 +106,33 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
     }
 
     public override async Task<IDisplayResult> EditAsync(EmployeePayProfile profile, BuildEditorContext context)
-        => Combine(
+    {
+        // My Pay: the person's own elections and net pay split, nothing else of the profile.
+        if (context.GroupId == PayrollConstants.MyPayEditorGroup)
+        {
+            return Combine(
+                (await ElectionsAsync(profile, new PayProfileElectionsViewModel { NewEffectiveFrom = await TodayAsync() })).OnGroup(PayrollConstants.MyPayEditorGroup),
+                (await DistributionAsync(profile, null)).OnGroup(PayrollConstants.MyPayEditorGroup));
+        }
+
+        return Combine(
             await MainAsync(profile, context.IsNew),
             await AddressAsync(await _addressEditor.BuildAsync(profile.HomeAddress, AddressOptions(profile.HomeAddress?.Country))),
             await ElectionsAsync(profile, new PayProfileElectionsViewModel()),
             await DistributionAsync(profile, null));
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(EmployeePayProfile profile, UpdateEditorContext context)
     {
+        if (context.GroupId == PayrollConstants.MyPayEditorGroup)
+        {
+            var (typedElections, typedRows) = await UpdateElectionsAndDistributionAsync(profile, context);
+
+            return Combine(
+                (await ElectionsAsync(profile, typedElections)).OnGroup(PayrollConstants.MyPayEditorGroup),
+                (await DistributionAsync(profile, typedRows)).OnGroup(PayrollConstants.MyPayEditorGroup));
+        }
+
         var model = new PayProfileViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -172,6 +191,18 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
 
         await _addressEditor.PopulateAsync(address.Address, AddressOptions(address.Address.Country));
 
+        var (elections, typedDistribution) = await UpdateElectionsAndDistributionAsync(profile, context);
+
+        return Combine(
+            await MainAsync(profile, context.IsNew),
+            await AddressAsync(address.Address),
+            await ElectionsAsync(profile, elections),
+            await DistributionAsync(profile, typedDistribution));
+    }
+
+    // Reads a new election and the net pay split, shared by the profile page and My Pay. Returns what to show again.
+    private async Task<(PayProfileElectionsViewModel Elections, IList<NetPayRowViewModel> Rows)> UpdateElectionsAndDistributionAsync(EmployeePayProfile profile, UpdateEditorContext context)
+    {
         var elections = new PayProfileElectionsViewModel();
 
         await context.Updater.TryUpdateModelAsync(elections, Prefix + "Elections");
@@ -219,12 +250,14 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
 
         profile.Distribution = rows;
 
-        return Combine(
-            await MainAsync(profile, context.IsNew),
-            await AddressAsync(address.Address),
-            await ElectionsAsync(profile, elections),
-            await DistributionAsync(profile, distribution.Rows));
+        return (elections, distribution.Rows);
     }
+
+    // Today in the site's or the user's time zone: the default first day of an election typed in My Pay.
+    private async Task<DateOnly> TodayAsync()
+        => _services.GetService<ILocalClock>() is { } localClock
+            ? DateOnly.FromDateTime((await localClock.GetLocalNowAsync()).DateTime)
+            : DateOnly.FromDateTime(_clock.UtcNow);
 
     /// <summary>
     /// Reads the typed values of an election: whole numbers and amounts with a dot for decimals, yes or no, a choice.

@@ -45,5 +45,10 @@ public sealed class PayrollNotificationsStartup : StartupBase
             LocalizationSource.Create<PayrollNotificationsStartup>("Pay statement ready"),
             type => type.Description = LocalizationSource.Create<PayrollNotificationsStartup>("When a pay statement of yours is issued."));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayStatementObserver, PayStatementNotificationObserver>());
+        services.AddNotificationType(
+            PayrollConstants.PayDetailsChangedNotificationType,
+            LocalizationSource.Create<PayrollNotificationsStartup>("Pay details changed"),
+            type => type.Description = LocalizationSource.Create<PayrollNotificationsStartup>("When your tax elections or where your pay goes change: a security notice."));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayProfileObserver, PayDetailsChangedNotificationObserver>());
     }
 }

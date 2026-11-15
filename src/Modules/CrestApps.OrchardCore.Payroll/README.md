@@ -44,6 +44,8 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - Processing: `IPayRunService.ProcessAsync`, `VoidStatementAsync` and `ReissuePaymentAsync`; payment methods
   (`IPayStatementPaymentMethod`) from **Direct Deposit** (Disbursements) and **Paychecks** (Checks, with
   `PayStatementCheckVoucherSource`); `PayStatementSourceAccess`; the `PayStatementReady` notification; `PayStubDocument`.
+- My Pay (`CrestApps.OrchardCore.Payroll.SelfService`): `MyPayController` (own statements, stubs, elections and net
+  pay split through the profile editor's `MyPay` group), `MyPayStaffHomeLinks`, the `PayDetailsChanged` security notice.
 
 ## The engine and taxes
 

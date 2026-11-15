@@ -1,0 +1,50 @@
+@model MyPayIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollMyPay" title="@T["My pay"]" />
+</zone>
+
+@if (!Model.IsStaff)
+{
+    <div class="alert alert-info">@T["Your user is not linked to a staff member, so there is no pay to show. Ask your payroll contact to link it."]</div>
+}
+else
+{
+    @if (Model.Profiles.Count > 0)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Your pay details"]</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var (profile, employerName) in Model.Profiles)
+                {
+                    <li class="list-group-item d-flex align-items-center">
+                        <span class="me-auto">@employerName</span>
+                        @if (Model.CanManageDetails)
+                        {
+                            <a class="btn btn-sm btn-secondary" asp-action="Details" asp-route-id="@profile.ItemId">@T["Tax elections and where your pay goes"]</a>
+                        }
+                    </li>
+                }
+            </ul>
+            @if (Model.CanManageBankAccounts)
+            {
+                <div class="card-footer">
+                    <a href="@Url.Content("~/Admin/banking/my-accounts")">@T["My bank accounts"]</a>
+                </div>
+            }
+        </div>
+    }
+
+    <form method="get" class="no-multisubmit" data-list-management data-client-side-search="false">
+        <admin-list name="PayrollMyPayStatements" context="Model.Statements"
+                    show-select-all="false"
+                    empty-message="@T["No pay statement yet. Your statements show here once your pay is processed."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Name" position="20" title="@T["Pay date"]" />
+                <admin-list-column name="Details" position="30" title="@T["Pay"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
+    </form>
+}

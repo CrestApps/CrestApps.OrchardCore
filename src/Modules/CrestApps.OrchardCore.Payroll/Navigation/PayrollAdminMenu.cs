@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Payroll.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -43,40 +45,64 @@ public sealed class PaySetupAdminMenu : AdminNavigationProvider
 }
 
 /// <summary>
-/// Adds the employers to Payroll &gt; Setup and Payroll's settings to Settings.
+/// Payroll &gt; Pay Runs, Employees and Setup &gt; Employers, each shown only to users who hold its permission for at
+/// least one employer (globally or for that employer), and the payroll settings.
 /// </summary>
 public sealed class PayrollAdminMenu : AdminNavigationProvider
 {
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IPayrollScopeService _scope;
+
     internal readonly IStringLocalizer S;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PayrollAdminMenu"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public PayrollAdminMenu(IStringLocalizer<PayrollAdminMenu> stringLocalizer)
+    public PayrollAdminMenu(IHttpContextAccessor httpContextAccessor, IPayrollScopeService scope, IStringLocalizer<PayrollAdminMenu> stringLocalizer)
     {
+        _httpContextAccessor = httpContextAccessor;
+        _scope = scope;
         S = stringLocalizer;
     }
 
-    /// <inheritdoc />
-    protected override ValueTask BuildAsync(NavigationBuilder builder)
+    protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll => payroll
-            .Id("payroll")
-            .Add(S["Pay Runs"], S["Pay Runs"].PrefixPosition("10"), runs => runs
-                .Id("payrollPayRuns")
-                .Action("Index", "PayRuns", PayrollConstants.Features.Payroll)
-                .LocalNav())
-            .Add(S["Employees"], S["Employees"].PrefixPosition("20"), employees => employees
-                .Id("payrollEmployees")
-                .Action("Index", "PayProfiles", PayrollConstants.Features.Payroll)
-                .LocalNav())
-            .Add(S["Setup"], S["Setup"].PrefixPosition("90"), setup => setup
-                .Id("payrollSetup")
-                .Add(S["Employers"], S["Employers"].PrefixPosition("5"), employers => employers
-                    .Id("payrollEmployers")
-                    .Action("Index", "Employers", PayrollConstants.Features.Payroll)
-                    .LocalNav())));
+        // The pages follow permissions per employer, which a menu permission can't express: ask the payroll scope.
+        var user = _httpContextAccessor.HttpContext?.User;
+        var runs = await AnyAsync(user, PayrollPermissions.ViewPayRuns);
+        var profiles = await AnyAsync(user, PayrollPermissions.ViewPayProfiles);
+        var employers = await AnyAsync(user, PayrollPermissions.ManagePayrollSettings);
+
+        if (runs || profiles || employers)
+        {
+            builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll =>
+            {
+                payroll.Id("payroll");
+
+                if (runs)
+                {
+                    payroll.Add(S["Pay Runs"], S["Pay Runs"].PrefixPosition("10"), item => item
+                        .Id("payrollPayRuns")
+                        .Action("Index", "PayRuns", PayrollConstants.Features.Payroll)
+                        .LocalNav());
+                }
+
+                if (profiles)
+                {
+                    payroll.Add(S["Employees"], S["Employees"].PrefixPosition("20"), item => item
+                        .Id("payrollEmployees")
+                        .Action("Index", "PayProfiles", PayrollConstants.Features.Payroll)
+                        .LocalNav());
+                }
+
+                if (employers)
+                {
+                    payroll.Add(S["Setup"], S["Setup"].PrefixPosition("90"), setup => setup
+                        .Id("payrollSetup")
+                        .Add(S["Employers"], S["Employers"].PrefixPosition("5"), item => item
+                            .Id("payrollEmployers")
+                            .Action("Index", "Employers", PayrollConstants.Features.Payroll)
+                            .LocalNav()));
+                }
+            });
+        }
 
         builder.Add(S["Settings"], settings => settings
             .Add(S["Payroll"], S["Payroll"].PrefixPosition(), payroll => payroll
@@ -84,14 +110,12 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
                 .Action("Index", "Admin", new Microsoft.AspNetCore.Routing.RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", PayrollConstants.SettingsGroupId } })
                 .Permission(PayrollPermissions.ManagePayrollSettings)
                 .LocalNav()));
-
-        return ValueTask.CompletedTask;
     }
+
+    private async Task<bool> AnyAsync(System.Security.Claims.ClaimsPrincipal user, global::OrchardCore.Security.Permissions.Permission permission)
+        => user?.Identity?.IsAuthenticated == true && !(await _scope.GetScopeAsync(user, permission)).IsEmpty;
 }
 
-/// <summary>
-/// Adds the payroll tax rules to Payroll &gt; Setup.
-/// </summary>
 public sealed class PayrollTaxTablesAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;

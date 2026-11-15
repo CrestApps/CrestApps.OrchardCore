@@ -111,6 +111,16 @@ public static class PayrollConstants
     public const string PayStatementReadyNotificationType = "PayStatementReady";
 
     /// <summary>
+    /// The notification type of a change to a person's tax elections or to where their pay goes: a security notice.
+    /// </summary>
+    public const string PayDetailsChangedNotificationType = "PayDetailsChanged";
+
+    /// <summary>
+    /// The editor group of a pay profile that a person edits in My Pay: their tax elections and net pay split only.
+    /// </summary>
+    public const string MyPayEditorGroup = "MyPay";
+
+    /// <summary>
     /// The data set of pay profiles.
     /// </summary>
     public const string EmployeesDataSetName = "PayrollEmployees";
@@ -144,5 +154,10 @@ public static class PayrollConstants
         /// Paychecks: net pay paid by printed checks through Checks.
         /// </summary>
         public const string Paychecks = "CrestApps.OrchardCore.Payroll.Checks";
+
+        /// <summary>
+        /// My Pay: a person's own statements, tax elections and where their pay goes.
+        /// </summary>
+        public const string SelfService = "CrestApps.OrchardCore.Payroll.SelfService";
     }
 }

@@ -660,3 +660,48 @@ public class PayStatementViewModel
     /// <summary>Gets or sets the number of the statement this one reverses, or of the one that reversed it.</summary>
     public string LinkedNumber { get; set; }
 }
+
+/// <summary>
+/// My Pay: the person's statements and pay profiles.
+/// </summary>
+public class MyPayIndexViewModel
+{
+    /// <summary>Gets or sets a value indicating whether the signed-in user is a staff member.</summary>
+    public bool IsStaff { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the person may change their elections and net pay split.</summary>
+    public bool CanManageDetails { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the person may manage their own bank accounts in Banking.</summary>
+    public bool CanManageBankAccounts { get; set; }
+
+    [BindNever]
+    public AdminListContext Statements { get; set; }
+
+    [BindNever]
+    public IList<(EmployeePayProfile Profile, string EmployerName)> Profiles { get; set; } = [];
+}
+
+/// <summary>
+/// A row of My Pay's statements.
+/// </summary>
+public sealed class MyPayStatementRow
+{
+    /// <summary>Gets or sets the statement.</summary>
+    public PayStatement Statement { get; set; }
+
+    /// <summary>Gets or sets the name of the employer that paid it.</summary>
+    public string EmployerName { get; set; }
+}
+
+/// <summary>
+/// My Pay: the person's tax elections and net pay split with one employer.
+/// </summary>
+public class MyPayDetailsViewModel
+{
+    [BindNever]
+    public string EmployerName { get; set; }
+
+    [BindNever]
+    public IShape Editor { get; set; }
+}
