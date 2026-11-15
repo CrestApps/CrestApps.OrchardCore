@@ -8,7 +8,6 @@ public class CertificationEditViewModel
     /// <summary>
     /// Gets or sets the certification id, or empty for a new certification.
     /// </summary>
-    public string Id { get; set; }
 
     /// <summary>
     /// Gets or sets the name.

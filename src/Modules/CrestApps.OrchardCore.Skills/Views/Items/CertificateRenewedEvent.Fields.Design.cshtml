@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Skills.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CertificateRenewedEvent>
+
+<header><h4><i class="fa-solid fa-rotate" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Certificate Renewed"])</h4></header>

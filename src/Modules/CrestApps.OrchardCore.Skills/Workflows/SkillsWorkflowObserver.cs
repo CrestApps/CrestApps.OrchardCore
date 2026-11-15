@@ -10,8 +10,35 @@ namespace CrestApps.OrchardCore.Skills.Workflows;
 /// <summary>
 /// Starts the Skills workflow events once the change that raised them is committed.
 /// </summary>
-internal sealed class SkillsWorkflowObserver : ICertificationExpiryObserver, ISkillAssignmentHandler
+internal sealed class SkillsWorkflowObserver : ICertificationExpiryObserver, ICertificationRecordObserver, ISkillAssignmentHandler
 {
+    public Task IssuedAsync(CertificationRecordContext context, CancellationToken cancellationToken = default)
+    {
+        Trigger(nameof(CertificateIssuedEvent), ChangeInput(context), context.Record.ItemId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task RenewedAsync(CertificationRecordContext context, CancellationToken cancellationToken = default)
+    {
+        var input = ChangeInput(context);
+
+        input["PreviousRecordId"] = context.PreviousRecord?.ItemId;
+        Trigger(nameof(CertificateRenewedEvent), input, context.Record.ItemId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task RevokedAsync(CertificationRecordContext context, CancellationToken cancellationToken = default)
+    {
+        var input = ChangeInput(context);
+
+        input["Reason"] = context.Record.RevokedReason;
+        Trigger(nameof(CertificateRevokedEvent), input, context.Record.ItemId);
+
+        return Task.CompletedTask;
+    }
+
     public Task ExpiringAsync(CertificationRecord record, Certification certification, int daysBefore, CancellationToken cancellationToken = default)
     {
         var input = RecordInput(record, certification);
@@ -60,6 +87,18 @@ internal sealed class SkillsWorkflowObserver : ICertificationExpiryObserver, ISk
             ["Number"] = record.Number,
             ["ExpiresOn"] = record.ExpiresOn?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
         };
+    }
+
+    private static Dictionary<string, object> ChangeInput(CertificationRecordContext context)
+    {
+        var input = RecordInput(context.Record, context.Certification);
+
+        input["IssuedOn"] = context.Record.IssuedOn?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        input["Source"] = context.Record.Source;
+        input["SourceId"] = context.Record.SourceId;
+        input["Actor"] = context.Actor;
+
+        return input;
     }
 
     private static void Trigger(string name, Dictionary<string, object> input, string correlationId)

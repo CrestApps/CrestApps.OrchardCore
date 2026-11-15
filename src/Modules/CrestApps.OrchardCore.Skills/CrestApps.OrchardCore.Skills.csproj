@@ -36,13 +36,17 @@
     <PackageReference Include="OrchardCore.Settings" />
     <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="OrchardCore.DataSources.Core" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Skills.Abstractions\CrestApps.OrchardCore.Skills.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions\CrestApps.OrchardCore.Webhooks.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Skills.Core\CrestApps.OrchardCore.Skills.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Users.Core\CrestApps.OrchardCore.Users.Core.csproj" />
   </ItemGroup>

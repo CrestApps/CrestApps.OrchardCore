@@ -36,6 +36,33 @@ internal sealed class CertificationExpiredEventSchema : SkillsEventActivitySchem
     protected override string Description => "Starts when a certificate expires";
 }
 
+internal sealed class CertificateIssuedEventSchema : SkillsEventActivitySchemaBase
+{
+    public override string Name => "CertificateIssuedEvent";
+
+    protected override string DisplayText => "Certificate Issued";
+
+    protected override string Description => "Starts when the site issues a certificate";
+}
+
+internal sealed class CertificateRenewedEventSchema : SkillsEventActivitySchemaBase
+{
+    public override string Name => "CertificateRenewedEvent";
+
+    protected override string DisplayText => "Certificate Renewed";
+
+    protected override string Description => "Starts when the site renews a certificate with a new one";
+}
+
+internal sealed class CertificateRevokedEventSchema : SkillsEventActivitySchemaBase
+{
+    public override string Name => "CertificateRevokedEvent";
+
+    protected override string DisplayText => "Certificate Revoked";
+
+    protected override string Description => "Starts when a certificate is revoked";
+}
+
 internal sealed class SkillsChangedEventSchema : SkillsEventActivitySchemaBase
 {
     public override string Name => "SkillsChangedEvent";
