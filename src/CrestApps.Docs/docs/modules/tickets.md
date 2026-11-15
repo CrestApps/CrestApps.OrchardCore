@@ -68,7 +68,7 @@ Every requester e-mail goes through an outbox: it is stored, tried at once, and 
 
 ## Workflows
 
-With Workflows on, these events start workflows. Each can be narrowed to desks; the ticket's values are in `Workflow.Input` (`TicketId`, `Number`, `Subject`, `DeskId`, `StatusId`, `StatusCategory`, `PriorityId`, `TeamId`, `AssigneeId`, `Requester`, `ContentType`) with what the event adds (`ChangedFields`, `Previous`, `Body`, `Metric`, `MergedIntoId`, `ActionName`).
+With Workflows on, these events start workflows. Each can be narrowed to desks; the ticket's values are in `Workflow.Input` (`TicketId`, `Number`, `Subject`, `DeskId`, `StatusId`, `StatusCategory`, `PriorityId`, `TeamId`, `AssigneeId`, `Requester`, `ContentType`) with what the event adds (`ChangedFields`, `Previous`, `Body`, `Metric`, `MergedIntoId`, `ActionName`). `ChangedFields` and the changed-field filter use stable keys (`TicketChangeKeys`: `Subject`, `Desk`, `Status`, `Priority`, `Team`, `Assignee`, `EscalationLevel`, `Link`), not the shown labels, which are translated; each change also carries the ids it moved from and to (`FromValue`, `ToValue`). A workflow starts after the change is committed and the ticket's lock is released, so it reads the saved ticket.
 
 | Event | When |
 | --- | --- |
@@ -83,7 +83,7 @@ Tasks: Create Ticket, Update Ticket, Assign Ticket, Add Ticket Reply, Add Ticket
 
 ## Webhooks and audit trail
 
-With Webhooks on, subscribers get `ticket.created`, `ticket.updated`, `ticket.assigned`, `ticket.reply_added` (public replies only; internal notes never leave the site), `ticket.solved` and `ticket.closed`, with the ticket as the API gives it. With Audit Trail on, ticket created, changed, assigned, status changed, merged and deleted are recorded with who did it.
+With Webhooks on, subscribers get `ticket.created`, `ticket.updated`, `ticket.assigned`, `ticket.reply_added` (public replies only; internal notes never leave the site), `ticket.solved` and `ticket.closed`, with the ticket as the API gives it. With Audit Trail on, the security-relevant events are recorded with who did it (the agent, or a workflow): a ticket moved to another desk, merged, or deleted, with ids only (`TicketAuditData`), never contact details. Everyday changes are already on the ticket's timeline.
 
 ## Data sets
 
