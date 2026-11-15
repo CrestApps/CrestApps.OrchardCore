@@ -12,6 +12,25 @@ namespace CrestApps.OrchardCore.Tests.Tickets;
 public sealed class TicketListQueryTests
 {
     [Fact]
+    public void AnAccount_NarrowsTheList_ToItsTickets_OverASavedViewsAccount()
+    {
+        // Arrange: the account's Tickets tab links to the list with its account.
+        var view = new TicketView { Name = "Contoso", Query = new TicketQuery { AccountId = "contoso" } };
+
+        // Act
+        var fromTab = TicketListQueries.Build(new TicketsListViewModel { AccountId = "fabrikam", State = TicketListQueries.States.All }, view: null);
+        var overView = TicketListQueries.Build(new TicketsListViewModel { AccountId = "fabrikam" }, view);
+        var viewOnly = TicketListQueries.Build(new TicketsListViewModel(), view);
+
+        // Assert
+        Assert.Equal("fabrikam", fromTab.AccountId);
+        Assert.Empty(fromTab.Categories);
+        Assert.Equal("fabrikam", overView.AccountId);
+        Assert.Equal("contoso", viewOnly.AccountId);
+        Assert.Equal("contoso", view.Query.AccountId);
+    }
+
+    [Fact]
     public void WithNothingChosen_TheListShowsTheTicketsStillBeingWorkedOn()
     {
         // Act

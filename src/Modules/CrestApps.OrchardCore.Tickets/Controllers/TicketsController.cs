@@ -160,6 +160,14 @@ public sealed class TicketsController : Controller
         var (tickets, total) = await _tickets.ListAsync(await _access.ApplyScopeAsync(User, query, cancellationToken), cancellationToken);
         var lookups = await LookupsAsync(cancellationToken);
 
+        // The account filter names its account to whoever may see it; the tickets are scoped to the user's desks either way.
+        if (!string.IsNullOrEmpty(form.AccountId)
+            && await _contentManager.GetAsync(form.AccountId, VersionOptions.Latest) is { } account
+            && await _authorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, account))
+        {
+            form.AccountName = account.DisplayText;
+        }
+
         form.Options = new TicketsListOptions
         {
             Views = [.. views.Select(item => new SelectListItem(item.Name, item.ItemId, item.ItemId == form.ViewId))],

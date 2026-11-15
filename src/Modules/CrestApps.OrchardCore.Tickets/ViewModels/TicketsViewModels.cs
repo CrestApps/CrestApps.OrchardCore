@@ -44,6 +44,17 @@ public sealed class TicketsListViewModel
     public string DeskId { get; set; }
 
     /// <summary>
+    /// Gets or sets the account whose tickets are listed, from the account's Tickets tab.
+    /// </summary>
+    public string AccountId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of <see cref="AccountId"/>, when the user may see the account.
+    /// </summary>
+    [BindNever]
+    public string AccountName { get; set; }
+
+    /// <summary>
     /// Gets or sets the priority picker.
     /// </summary>
     public string PriorityId { get; set; }

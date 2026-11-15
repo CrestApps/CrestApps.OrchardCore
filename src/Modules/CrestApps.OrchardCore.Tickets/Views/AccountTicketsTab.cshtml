@@ -51,9 +51,12 @@
                 </li>
             }
         </ul>
-        @if (Model.Total > Model.Tickets.Count)
-        {
-            <div class="card-footer small text-body-secondary">@T["Showing the latest {0} of {1}.", Model.Tickets.Count, Model.Total]</div>
-        }
+        <div class="card-footer small d-flex flex-wrap justify-content-between gap-2">
+            @if (Model.Total > Model.Tickets.Count)
+            {
+                <span class="text-body-secondary">@T["Showing the latest {0} of {1}.", Model.Tickets.Count, Model.Total]</span>
+            }
+            <a href="@Url.RouteUrl("Tickets", new { area = "CrestApps.OrchardCore.Tickets", accountId = Model.AccountId, state = CrestApps.OrchardCore.Tickets.Controllers.TicketListQueries.States.All })">@T["View all in the ticket list"]</a>
+        </div>
     }
 </div>

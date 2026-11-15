@@ -74,6 +74,11 @@ internal static class TicketListQueries
             query.DeskIds = [form.DeskId];
         }
 
+        if (!string.IsNullOrEmpty(form.AccountId))
+        {
+            query.AccountId = form.AccountId;
+        }
+
         if (!string.IsNullOrEmpty(form.PriorityId))
         {
             query.PriorityIds = [form.PriorityId];
