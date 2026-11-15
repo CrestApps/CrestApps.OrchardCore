@@ -150,14 +150,19 @@ public sealed class PayrollStartup : StartupBase
             .AddIndexProvider<PayProfileIndexProvider>()
             .AddIndexProvider<PayItemIndexProvider>()
             .AddIndexProvider<PayStatementIndexProvider>()
-            .AddIndexProvider<PayStatementLineIndexProvider>();
+            .AddIndexProvider<PayStatementLineIndexProvider>()
+            .AddIndexProvider<PayRunIndexProvider>()
+            .AddIndexProvider<PayRunInputIndexProvider>();
 
         services.AddScoped<PayrollNames>();
+        services.AddScoped<PayRunApprovalPolicySeeder>();
         services.AddScoped<PayProfileEditTracker>();
         services.AddDisplayDriver<EmployeePayProfile, PayProfileDisplayDriver>();
         services.AddDisplayDriver<EmployeePayItem, PayItemDisplayDriver>();
         services.AddDisplayDriver<StaffMember, StaffPayrollDisplayDriver>();
         services.AddDisplayDriver<PayCode, PayrollPayCodeDisplayDriver>();
+        services.AddDisplayDriver<PayRun, PayRunDisplayDriver>();
+        services.AddDisplayDriver<PayStatement, PayStatementDisplayDriver>();
 
         services.AddDisplayDriver<Employer, EmployerDisplayDriver>();
         services.AddPermissionProvider<PayrollPermissionProvider>();
@@ -276,5 +281,20 @@ public sealed class PayrollDataSourcesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IPayrollDataSet, EmployeesDataSet>();
+    }
+}
+
+/// <summary>
+/// Adds the Save pay inputs pipeline step, which saves rows as the inputs of pay runs.
+/// </summary>
+[Feature(PayrollConstants.Features.Payroll)]
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelines)]
+public sealed class PayrollDataPipelinesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<SavePayInputsStep>();
+        services.Configure<DataPipelineStepTypeOptions>(options => options.Add(DataPipelineStepTypeDescriptor.Create<SavePayInputsStep>()));
     }
 }

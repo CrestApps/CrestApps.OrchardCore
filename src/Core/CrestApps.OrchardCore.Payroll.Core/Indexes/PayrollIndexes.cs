@@ -186,7 +186,7 @@ public static class PayrollIndexSchema
     /// </summary>
     /// <returns>The providers.</returns>
     public static IIndexProvider[] Providers()
-        => [new EmployerIndexProvider(), new PayProfileIndexProvider(), new PayItemIndexProvider(), new PayStatementIndexProvider(), new PayStatementLineIndexProvider()];
+        => [new EmployerIndexProvider(), new PayProfileIndexProvider(), new PayItemIndexProvider(), new PayStatementIndexProvider(), new PayStatementLineIndexProvider(), new CrestApps.OrchardCore.Payroll.Core.Services.PayRunIndexProvider(), new CrestApps.OrchardCore.Payroll.Core.Services.PayRunInputIndexProvider()];
 
     /// <summary>
     /// Creates the tables.
@@ -212,6 +212,7 @@ public static class PayrollIndexSchema
 
         await CreateProfileTablesAsync(schemaBuilder);
         await PayStatementIndexSchema.CreateAsync(schemaBuilder);
+        await CrestApps.OrchardCore.Payroll.Core.Services.PayRunIndexSchema.CreateAsync(schemaBuilder);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Core.Services;
+using CrestApps.OrchardCore.Payroll.Services;
 using OrchardCore.Data.Migration;
 
 namespace CrestApps.OrchardCore.Payroll.Migrations;
@@ -10,18 +11,21 @@ namespace CrestApps.OrchardCore.Payroll.Migrations;
 internal sealed class PayrollMigrations : DataMigration
 {
     private readonly PayrollPayCodeSeeder _seeder;
+    private readonly PayRunApprovalPolicySeeder _policySeeder;
 
-    public PayrollMigrations(PayrollPayCodeSeeder seeder)
+    public PayrollMigrations(PayrollPayCodeSeeder seeder, PayRunApprovalPolicySeeder policySeeder)
     {
         _seeder = seeder;
+        _policySeeder = policySeeder;
     }
 
     public async Task<int> CreateAsync()
     {
         await PayrollIndexSchema.CreateAsync(SchemaBuilder);
         await _seeder.SeedAsync();
+        await _policySeeder.SeedAsync();
 
-        return 4;
+        return 5;
     }
 
     // Pay profiles and pay items.
@@ -46,5 +50,14 @@ internal sealed class PayrollMigrations : DataMigration
         await PayStatementIndexSchema.CreateAsync(SchemaBuilder);
 
         return 4;
+    }
+
+    // Pay runs, their inputs, and the approval policy runs are approved by.
+    public async Task<int> UpdateFrom4Async()
+    {
+        await PayRunIndexSchema.CreateAsync(SchemaBuilder);
+        await _policySeeder.SeedAsync();
+
+        return 5;
     }
 }

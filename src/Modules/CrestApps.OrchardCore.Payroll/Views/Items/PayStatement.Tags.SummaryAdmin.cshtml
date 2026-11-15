@@ -1,0 +1,15 @@
+@model ShapeViewModel<PayStatement>
+@using System.Globalization
+@using CrestApps.OrchardCore.Currencies
+
+@{
+    var statement = Model.Value;
+    string Money(decimal value) => string.IsNullOrEmpty(statement.Currency) ? value.ToString("N2", CultureInfo.CurrentCulture) : CurrencyScale.Format(value, statement.Currency) + " " + statement.Currency;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Gross"]">@T["Gross {0}", Money(statement.Gross)]</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Net pay"]">@T["Net {0}", Money(statement.Net)]</span>
+@if (statement.Warnings.Count > 0)
+{
+    <span class="badge text-bg-warning fw-normal">@T.Plural(statement.Warnings.Count, "1 warning", "{0} warnings")</span>
+}

@@ -27,6 +27,9 @@ public sealed class PayCalculationRequest
     /// <summary>Gets or sets a value indicating whether the salary and the pay items apply (a regular run).</summary>
     public bool Regular { get; set; } = true;
 
+    /// <summary>Gets or sets a value indicating whether the inputs of the pay input sources are read (a run of inputs only reads none).</summary>
+    public bool IncludeSourceInputs { get; set; } = true;
+
     /// <summary>Gets or sets a value indicating whether inputs a run or an export already took are read again.</summary>
     public bool IncludeConsumedInputs { get; set; }
 
@@ -100,7 +103,7 @@ public sealed class PayCalculationContextFactory
         var schedule = string.IsNullOrEmpty(profile.PayScheduleId) ? null : await _schedules.FindByIdAsync(profile.PayScheduleId, cancellationToken);
         var staff = (await _staff.GetAsync([profile.StaffMemberId], cancellationToken)).GetValueOrDefault(profile.StaffMemberId);
         var settings = _services.GetService<ISiteService>() is { } site ? await site.GetSettingsAsync<PayrollSettings>() : null;
-        var inputs = (await _inputs.GetInputsAsync(new PayInputQuery
+        var inputs = !request.IncludeSourceInputs ? [] : (await _inputs.GetInputsAsync(new PayInputQuery
         {
             EmployerId = profile.EmployerId,
             PeriodStart = request.PeriodStart,

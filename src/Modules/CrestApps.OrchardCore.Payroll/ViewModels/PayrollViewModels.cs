@@ -523,3 +523,131 @@ public class PayPreviewViewModel
 /// <param name="Line">The line.</param>
 /// <param name="Code">The pay code's code, or <see langword="null"/> for a tax.</param>
 public sealed record PayPreviewLine(PayStatementLine Line, string Code);
+
+/// <summary>
+/// The pay run list.
+/// </summary>
+public class PayRunsIndexViewModel
+{
+    public string EmployerId { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Employers { get; set; } = [];
+
+    [BindNever]
+    public bool CanAdd { get; set; }
+
+    [BindNever]
+    public AdminListContext List { get; set; }
+}
+
+/// <summary>
+/// The editor of a new pay run.
+/// </summary>
+public class PayRunViewModel
+{
+    public string EmployerId { get; set; }
+
+    public string PayScheduleId { get; set; }
+
+    public string Type { get; set; }
+
+    public DateOnly? PeriodStart { get; set; }
+
+    public DateOnly? PeriodEnd { get; set; }
+
+    public DateOnly? PayDate { get; set; }
+
+    public string SupplementalMethod { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Employers { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> Schedules { get; set; } = [];
+}
+
+/// <summary>
+/// An input typed on a pay run's page.
+/// </summary>
+public class PayRunInputViewModel
+{
+    public string StaffMemberId { get; set; }
+
+    public string PayCodeId { get; set; }
+
+    public string Hours { get; set; }
+
+    public string Amount { get; set; }
+
+    public string Rate { get; set; }
+
+    public DateOnly? Date { get; set; }
+
+    public string Note { get; set; }
+}
+
+/// <summary>
+/// A pay run's page.
+/// </summary>
+public class PayRunDetailsViewModel
+{
+    [BindNever]
+    public PayRun Run { get; set; }
+
+    [BindNever]
+    public string EmployerName { get; set; }
+
+    [BindNever]
+    public string ScheduleName { get; set; }
+
+    [BindNever]
+    public string Currency { get; set; }
+
+    [BindNever]
+    public IList<(PayRunInput Input, string StaffName, string Code)> Inputs { get; set; } = [];
+
+    [BindNever]
+    public IList<(PayRunIssue Issue, string StaffName)> Issues { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> StaffOptions { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> CodeOptions { get; set; } = [];
+
+    [BindNever]
+    public bool CanPrepare { get; set; }
+
+    [BindNever]
+    public string ApprovalStatus { get; set; }
+
+    [BindNever]
+    public string ApprovalUrl { get; set; }
+
+    [BindNever]
+    public bool CanDecide { get; set; }
+
+    [BindNever]
+    public string DecideRefusal { get; set; }
+
+    [BindNever]
+    public AdminListContext Statements { get; set; }
+
+    public PayRunInputViewModel NewInput { get; set; } = new();
+}
+
+/// <summary>
+/// A pay statement's page.
+/// </summary>
+public class PayStatementViewModel
+{
+    [BindNever]
+    public PayStatement Statement { get; set; }
+
+    [BindNever]
+    public PayRun Run { get; set; }
+
+    [BindNever]
+    public IDictionary<string, string> Codes { get; set; } = new Dictionary<string, string>();
+}

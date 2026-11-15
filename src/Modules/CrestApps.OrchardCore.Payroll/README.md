@@ -36,6 +36,12 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   (`PayrollSettings`).
 - The recipe **Payroll: sample roles**.
 
+## Pay runs
+
+- `PayRun` (`IPayRunManager`) with its `PayRunInput`s, statuses on `PayRunStatuses.Transitions`; `IPayRunService`
+  calculates draft statements, submits to Approvals' `PayRunApproval` policy and cancels; `PayRunApprovalSubjectHandler`
+  and `PayRunSourceAccess`. **Payroll > Pay Runs**; the **Save pay inputs** pipeline step on `PayRunInputImporter`.
+
 ## The engine and taxes
 
 - `IPayCalculator` runs the `IPayCalculationStep`s (`PayCalculationOrder`) over a `PayCalculationContext` built by

@@ -76,6 +76,26 @@ public static class PayrollConstants
     public const string TaxRulesRecipeStepName = "PayrollTaxRules";
 
     /// <summary>
+    /// The name of the pipeline step that saves rows as the inputs of a pay run.
+    /// </summary>
+    public const string SavePayInputsStepName = "SavePayInputs";
+
+    /// <summary>
+    /// The name of the Approvals policy pay runs are approved by.
+    /// </summary>
+    public const string PayRunApprovalPolicy = "PayRunApproval";
+
+    /// <summary>
+    /// The kind of approval subject, and of source, a pay run is.
+    /// </summary>
+    public const string PayRunSubjectKind = "PayRun";
+
+    /// <summary>
+    /// The number sequence pay runs are numbered from.
+    /// </summary>
+    public const string PayRunNumberSeries = "Payroll:PayRuns";
+
+    /// <summary>
     /// The data set of pay profiles.
     /// </summary>
     public const string EmployeesDataSetName = "PayrollEmployees";

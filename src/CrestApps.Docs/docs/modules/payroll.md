@@ -228,6 +228,21 @@ Lines are `PayStatementLine`s (type, pay code or tax code and category, hours, r
 
 **Preview the next pay** on a pay profile runs the engine for the current period of its schedule with the inputs and items there are now, and shows the lines, net pay, its split and the warnings, without keeping anything (`ViewPayProfiles` for the employer).
 
+## Pay runs
+
+A `PayRun` is one payroll of one employer (`IPayRunManager`): a number from the `Payroll:PayRuns` sequence, a pay schedule (or named people), a type (`Regular`, `Supplemental`, `OffCycle`, `Final`, `Correction`, `Contractor`, and `Reversal` and `Historical` for later slices), a period, a pay date, the supplemental method, the totals and issues of its last calculation, a version stamp, the approval request and a status on `PayRunStatuses.Transitions`: Draft, Calculating, Calculated, PendingApproval, Approved, Processing, Paid, PartiallyPaid, Failed, Canceled. A regular, final or correction run pays salaries, pay items and the pay input sources; the others pay only their own inputs.
+
+`IPayRunService`:
+
+- `CalculateAsync(run, user, staffMemberIds)` calculates a draft `PayStatement` per active profile of the employer on the schedule (or per named person), with the source inputs and the run's own `PayRunInput`s, under a distributed lock on the run; a subset recalculates only those people. Issues are the profiles' blockers and the calculation's warnings; the totals are gross, both sides' taxes, deductions, contributions, reimbursements, net and cash needed. A run waiting for approval or approved goes back to Calculated, and its pending request is cancelled: an approval is for one calculation (the request carries the run's version).
+- `SubmitAsync(run, user)` asks Approvals' `PayRunApproval` policy (seeded by the migration with the `ApprovePayRuns` permission as approver) when the run is calculated and has no blocker. The request is limited to the employer (`AccessScope`, and the `PayRun` source access answers by the payroll scope), adds the employer's own `ApprovePayRuns` permission to the request's approvers, and names the preparer as a subject who may not decide unless **Settings > Payroll** allows it (which also sets the policy's requester and subject rules).
+- `PayRunApprovalSubjectHandler` takes the decision: approved for the current version moves the run to Approved; rejected or cancelled returns it to Calculated.
+- `CancelAsync` cancels an open run and removes its drafts. Processing comes with P8.
+
+`PayRunInputImporter` saves rows (run number, employee number, pay code, hours or amount, rate, date, note) as run inputs and refuses a row with the reason; the **Save pay inputs** pipeline step (a destination: rows in, **Rejected** out with an `Error` field, like **Save content items**) uses it, so a file of bonuses read with **Read a media file** goes straight into a run. The run is named by a `PayRun` field or the `PayRun` run parameter; the user the pipeline runs for must prepare the employer's runs. Runs already calculated are calculated again for the people whose inputs changed.
+
+**Payroll > Pay Runs** lists the runs of the employers the user may see (`ViewPayRuns`), with an employer filter. A run's page shows its totals, issues, inputs (add or remove, `PreparePayRuns`; nobody enters their own pay), the register of statements and **Calculate**, **Submit for approval** and **Cancel the run** in the action bar; people who may approve see **Approve** and **Reject** there (decided through Approvals). A statement's page shows its lines and payments.
+
 ## Taxes
 
 `IPayrollTaxProvider.CalculateAsync(PayrollTaxRequest)` is stateless. The request carries the employer and its registrations, the worker type, the home and work jurisdictions, the elections in effect on the pay date, the pay date and frequency (periods a year), the regular and supplemental wages of each tax category, the supplemental method, the accumulators and the currency; the result is tax lines (code, name, jurisdiction, category, payer, taxable wages, amount) and warnings. **Settings > Payroll** names the provider (`PayrollSettings.TaxProvider`; empty uses the only one there is) and the least net pay. With no provider, nothing is withheld and the calculation says so. A contractor has nothing withheld.

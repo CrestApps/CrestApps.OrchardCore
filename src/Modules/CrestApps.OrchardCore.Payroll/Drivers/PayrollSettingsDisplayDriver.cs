@@ -22,6 +22,7 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IEnumerable<IPayrollTaxProvider> _taxProviders;
+    private readonly PayRunApprovalPolicySeeder _policySeeder;
     private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
@@ -30,12 +31,14 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IEnumerable<IPayrollTaxProvider> taxProviders,
+        PayRunApprovalPolicySeeder policySeeder,
         IStringLocalizerFactory localizerFactory,
         IStringLocalizer<PayrollSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _taxProviders = taxProviders;
+        _policySeeder = policySeeder;
         _localizerFactory = localizerFactory;
         S = stringLocalizer;
     }
@@ -67,6 +70,11 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
         var model = new PayrollSettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (settings.AllowPreparerToApprove != model.AllowPreparerToApprove)
+        {
+            await _policySeeder.SyncAsync(model.AllowPreparerToApprove);
+        }
 
         settings.AllowPreparerToApprove = model.AllowPreparerToApprove;
         settings.AllowChangingOwnPay = model.AllowChangingOwnPay;
