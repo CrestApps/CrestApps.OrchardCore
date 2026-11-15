@@ -10,5 +10,11 @@
     "name": "international-telephone-editor.css",
     "source": "Assets/css/international-telephone-editor.css",
     "dest": "wwwroot/styles/international-telephone-editor.css"
+  },
+  {
+    "action": "vite",
+    "name": "conditional-fields.js",
+    "source": "Assets/js/conditional-fields.js",
+    "dest": "wwwroot/scripts/conditional-fields.js"
   }
 ]

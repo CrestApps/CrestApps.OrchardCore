@@ -15,7 +15,7 @@ A **content field** is one box on a content item's form, such as a title, a date
 | --- | --- |
 | **Menu** | Design > Content Definition > Content Types |
 | **Permission** | Edit content types |
-| **Feature** | CrestApps Content Fields (Phone Field), Address Field |
+| **Feature** | CrestApps Content Fields (Phone Field), Address Field, Conditional Fields |
 
 <AskYourAdmin />
 
@@ -115,3 +115,18 @@ When the **Address Suggestions (Google Places)** feature is on, people typing a 
 2. Paste the **Google Places API key** and save. Create the key for the *Places API (New)* in the Google Cloud console, and restrict it to that API.
 
 The site keeps the key on the server and never shows it again: leave the box blank to keep the saved key, tick **Remove the key** to stop suggesting addresses. Without a key, people type their address themselves.
+
+## Show a field only when it applies
+
+With the **Conditional Fields** feature on, any field of a content type can show only when other answers say so: ask "Laptop model" only for laptop problems, or "Who else is affected?" only when someone ticked "Is this an outage?". People then see only the questions that apply to them, and the form stays short.
+
+1. Open **Design > Content Definition > Content Types**, edit the content type and click **Edit** on the field that should show only sometimes.
+2. Under **Show this field when**, choose another field (or a value such as a ticket's category), a condition (**is**, **is not**, **is one of**, **is or is under**, **has an answer** and so on) and the value. Fields with a list of choices, yes-or-no fields and categories offer their choices; for other fields, type the values, one per line.
+3. Add more conditions on the next rows and choose whether **all** of them must be met or **any** one. Leave every row empty to always show the field.
+4. Save the field.
+
+On the form, the field appears as soon as its condition is met and disappears when it isn't. A field that depends on a hidden field is hidden too.
+
+What a hidden field holds is never saved from the form: when someone sends it, the site checks the conditions again and drops any answer a hidden field received, and a hidden field's **Required** setting doesn't count. When a later edit hides a field that already had an answer, the answer is kept but not shown, so nothing is lost if the condition is met again.
+
+The site refuses conditions that depend on each other in a circle (A shows when B, B shows when A). If you delete or rename a field that a condition reads, the field's settings say so and the condition is ignored, so the field always shows until you change it.
