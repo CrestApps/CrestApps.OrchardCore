@@ -40,6 +40,9 @@ using OrchardCore.Modules.Manifest;
     [
         TicketsConstants.Features.Tickets,
         CrestApps.OrchardCore.Users.UsersConstants.Feature.Account,
+
+        // The requester posts are limited through Orchard Core's Rate Limits, so it is always on with the portal.
+        OrchardCoreFeatureIds.RateLimits,
     ]
 )]
 
@@ -51,6 +54,9 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TicketsConstants.Features.Tickets,
+
+        // The anonymous form is limited through Orchard Core's Rate Limits, so it is always on with the form.
+        OrchardCoreFeatureIds.RateLimits,
     ]
 )]
 

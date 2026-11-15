@@ -20,5 +20,8 @@ using OrchardCore.Modules.Manifest;
         OrchardCoreFeatureIds.Title,
         OrchardCoreFeatureIds.Autoroute,
         OrchardCoreFeatureIds.Markdown,
+
+        // The anonymous "Was this helpful?" answers are limited through Orchard Core's Rate Limits.
+        OrchardCoreFeatureIds.RateLimits,
     ]
 )]

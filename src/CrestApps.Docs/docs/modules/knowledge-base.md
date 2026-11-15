@@ -9,7 +9,7 @@ The **Knowledge Base** holds help articles. It has no dependency on [Tickets](./
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
-| Knowledge Base | `CrestApps.OrchardCore.KnowledgeBase` | Contents, Title, Autoroute, Markdown |
+| Knowledge Base | `CrestApps.OrchardCore.KnowledgeBase` | Contents, Title, Autoroute, Markdown, Rate Limits |
 
 ## Articles
 
@@ -26,7 +26,7 @@ The audience is enforced wherever an article is shown: an authorization handler 
 
 ## Help center
 
-`/help` (route `KnowledgeBaseHome`) shows the categories with their article counts and the most helpful articles; `?category=` lists a category and `?q=` searches. A search matches articles with every word (up to five, two letters or more) in the title or the summary, most helpful first, among the articles the reader may read (`KnowledgeArticleSearch`). Each article ends with **Was this helpful?**, posted to `help/articles/{id}/feedback` and counted once per browser, under a lock on the article so answers given at the same time all count. With Orchard Core's **Rate Limits** on, a visitor address gives at most 20 answers in 10 minutes (group `knowledge-base-feedback`), so a script can't push an article up.
+`/help` (route `KnowledgeBaseHome`) shows the categories with their article counts and the most helpful articles; `?category=` lists a category and `?q=` searches. A search matches articles with every word (up to five, two letters or more) in the title or the summary, most helpful first, among the articles the reader may read (`KnowledgeArticleSearch`). Each article ends with **Was this helpful?**, posted to `help/articles/{id}/feedback` and counted once per browser, under a lock on the article so answers given at the same time all count. Through Orchard Core's **Rate Limits** (the feature turns it on), a visitor address gives at most 20 answers in 10 minutes (group `knowledge-base-feedback`), so a script can't push an article up.
 
 `help/api/suggest?q=` (route `KnowledgeBaseSuggest`) answers up to five articles as JSON (`title`, `summary`, `url`) for the reader, so other modules can suggest articles while someone writes: articles with any of the text's longer words (four letters or more, common words left out, the last eight) in the title or summary, those matching the most words first. With [Tickets](./tickets) on, the requester's **New request** form and the agent's reply box show these suggestions as they type; an agent adds an article's link to the reply with one click. `&reader=public` or `&reader=signedin` keeps the answer to articles that reader can open: a public reply offers only what its requester can read (public, plus signed-in articles when the requester has a login), while an internal note offers every article the agent may read.
 

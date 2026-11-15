@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Addresses.Models;
@@ -185,6 +186,21 @@ public sealed class TicketPortalControllerTests
         Assert.All(posts, method => Assert.True(method.GetCustomAttributes(typeof(global::OrchardCore.RateLimits.RateLimitGroupAttribute), inherit: false).Length > 0, method.Name + " has no rate-limit group."));
         Assert.All(posts.Where(method => method.GetParameters().Any(parameter => parameter.ParameterType == typeof(List<IFormFile>))), method =>
             Assert.True(method.GetCustomAttributes(typeof(RequestSizeLimitAttribute), inherit: false).Length > 0, method.Name + " has no size limit."));
+    }
+
+    [Theory]
+    [InlineData(TicketsConstants.Features.Portal)]
+    [InlineData(TicketsConstants.Features.WebForm)]
+    [InlineData("CrestApps.OrchardCore.KnowledgeBase")]
+    public void TheFeaturesWithAnonymousPosts_TurnOnRateLimits_SoTheirLimitsAlwaysApply(string featureId)
+    {
+        // The limits are registered only with Orchard Core's Rate Limits on; without the dependency a site could serve the
+        // portal, the web form or the help center's feedback with no limit at all.
+        var feature = new[] { typeof(TicketPortalController).Assembly, typeof(CrestApps.OrchardCore.KnowledgeBase.Startup).Assembly }
+            .SelectMany(assembly => assembly.GetCustomAttributes(typeof(global::OrchardCore.Modules.Manifest.FeatureAttribute), inherit: false).Cast<global::OrchardCore.Modules.Manifest.FeatureAttribute>())
+            .Single(attribute => attribute.Id == featureId && attribute.GetType() == typeof(global::OrchardCore.Modules.Manifest.FeatureAttribute));
+
+        Assert.Contains(OrchardCoreFeatureIds.RateLimits, feature.Dependencies);
     }
 
     private sealed class Kit
