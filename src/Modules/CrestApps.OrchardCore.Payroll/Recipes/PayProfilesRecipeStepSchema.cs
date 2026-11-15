@@ -48,6 +48,7 @@ internal sealed class PayProfilesRecipeStepSchema : IRecipeStep
                             ("PayScheduleName", Text("The pay schedule's name, instead of the id.")),
                             ("WorkerType", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Employee", "Contractor")),
                             ("OvertimeStatus", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("NonExempt", "Exempt")),
+                            ("BackupWithholding", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a contractor's payments are withheld on.")),
                             ("Tipped", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the person is paid a tipped wage, made up to the minimum wage when tips fall short.")),
                             ("Status", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Active", "OnLeave", "Terminated")),
                             ("TaxId", Text("The person's tax id in clear, protected with this site's keys on import. Only in a file exported with sensitive data.")),

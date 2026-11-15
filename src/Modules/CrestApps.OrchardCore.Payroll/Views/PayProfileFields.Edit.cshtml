@@ -66,7 +66,7 @@ else if (!Model.IsNew)
             <div class="ocat-end">
                 <select asp-for="WorkerType" class="form-select" style="max-width: 16rem">
                     <option value="Employee">@T["Employee"]</option>
-                    <option value="Contractor">@T["Contractor (no withholding)"]</option>
+                    <option value="Contractor">@T["Contractor (no withholding unless backup withholding applies)"]</option>
                 </select>
             </div>
         </div>
@@ -85,6 +85,11 @@ else if (!Model.IsNew)
                     <input asp-for="Tipped" type="checkbox" class="form-check-input" />
                     <label asp-for="Tipped" class="form-check-label">@T["Paid a tipped wage"]</label>
                     <span class="hint dashed">@T["A cash wage below the minimum wage, with tips making up the rest: a week whose wage and tips fall short of the minimum wage in Settings > Payroll is made up."]</span>
+                </div>
+                <div class="form-check">
+                    <input asp-for="BackupWithholding" type="checkbox" class="form-check-input" />
+                    <label asp-for="BackupWithholding" class="form-check-label">@T["Withhold on a contractor's payments"]</label>
+                    <span class="hint dashed">@T["For a contractor the tax agency told you to withhold on (backup withholding). A contractor with no tax id on file is withheld on anyway."]</span>
                 </div>
             </div>
         </div>

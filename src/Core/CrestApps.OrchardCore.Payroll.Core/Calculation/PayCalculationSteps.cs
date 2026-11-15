@@ -532,7 +532,8 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (context.Profile?.WorkerType == PayWorkerType.Contractor)
+        // A contractor has nothing withheld, unless contractor withholding applies.
+        if (context.Profile?.WorkerType == PayWorkerType.Contractor && !WithholdsOnContractor(context.Profile))
         {
             return;
         }
@@ -590,6 +591,7 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
             Employer = context.Employer,
             StaffMemberId = context.Profile?.StaffMemberId,
             WorkerType = context.Profile?.WorkerType ?? PayWorkerType.Employee,
+            ContractorWithholding = context.Profile is { WorkerType: PayWorkerType.Contractor } profile && WithholdsOnContractor(profile),
             HomeJurisdictions = context.HomeJurisdictions,
             WorkJurisdictions = context.WorkJurisdictions,
             PayDate = context.PayDate,
@@ -625,6 +627,10 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
 
         return request;
     }
+
+    // A contractor is withheld on when the profile says so or no tax id is on file.
+    private static bool WithholdsOnContractor(EmployeePayProfile profile)
+        => profile.BackupWithholding || profile.TaxId is not { HasValue: true };
 
     private async Task<IPayrollTaxProvider> ProviderAsync()
     {

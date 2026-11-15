@@ -676,7 +676,8 @@ public sealed class DefaultPayProfileService : IPayProfileService
         {
             var pay = staff.TryGet<StaffPayRates>(out var rates) ? rates : new StaffPayRates();
 
-            if (pay.PayBasis == StaffPayBasis.Salary ? pay.SalaryOn(today) is null : pay.RateOn(today) is null)
+            // A contractor is paid the amounts of their invoices: no rate is needed.
+            if (profile.WorkerType != PayWorkerType.Contractor && (pay.PayBasis == StaffPayBasis.Salary ? pay.SalaryOn(today) is null : pay.RateOn(today) is null))
             {
                 blockers.Add(new PayBlocker("NoPayRate", pay.PayBasis == StaffPayBasis.Salary
                     ? S["Enter the salary in the staff member's Pay card."]

@@ -80,6 +80,21 @@ public static class UnitedStatesFilingSums
             .Where(line => line.Type is PayLineType.Earning or PayLineType.ImputedIncome && line.PayCodeId is not null && codes.TryGetValue(line.PayCodeId, out var code) && code.Kind == PayCodeKinds.Tips)
             .Sum(line => line.Amount);
 
+    /// <summary>Gets the statements of employees (contractors are reported on their own form).</summary>
+    /// <param name="context">The filing context.</param>
+    /// <returns>The statements.</returns>
+    public static IReadOnlyList<PayStatement> Employees(PayrollFilingContext context)
+        => [.. context.Statements.Where(statement => !IsContractor(context, statement))];
+
+    /// <summary>Gets the statements of contractors.</summary>
+    /// <param name="context">The filing context.</param>
+    /// <returns>The statements.</returns>
+    public static IReadOnlyList<PayStatement> Contractors(PayrollFilingContext context)
+        => [.. context.Statements.Where(statement => IsContractor(context, statement))];
+
+    private static bool IsContractor(PayrollFilingContext context, PayStatement statement)
+        => statement.ProfileId is not null && context.Profiles.TryGetValue(statement.ProfileId, out var profile) && profile.WorkerType == PayWorkerType.Contractor;
+
     /// <summary>Gets the deposits of a group of taxes.</summary>
     /// <param name="deposits">The deposits.</param>
     /// <param name="group">The group.</param>
@@ -120,7 +135,7 @@ public sealed class Form941 : IPayrollFilingForm
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var statements = context.Statements;
+        var statements = UnitedStatesFilingSums.Employees(context);
         var boxes = context.Filing.Boxes;
         var twelfth = new DateOnly(context.To.Year, context.To.Month, 12);
         var tips = UnitedStatesFilingSums.Tips(statements, context.Codes);
@@ -191,9 +206,10 @@ public sealed class Form940 : IPayrollFilingForm
         var wageBase = rule?.WageBase ?? 7000m;
         var rate = (rule?.Rate ?? 0.6m) / 100m;
         var boxes = context.Filing.Boxes;
-        var payments = context.Statements.Sum(statement => statement.Gross);
-        var subject = UnitedStatesFilingSums.Wages(context.Statements, context.Codes, PayrollTaxCategories.Unemployment);
-        var overBase = context.Statements.GroupBy(statement => statement.StaffMemberId, StringComparer.Ordinal)
+        var employees = UnitedStatesFilingSums.Employees(context);
+        var payments = employees.Sum(statement => statement.Gross);
+        var subject = UnitedStatesFilingSums.Wages(employees, context.Codes, PayrollTaxCategories.Unemployment);
+        var overBase = employees.GroupBy(statement => statement.StaffMemberId, StringComparer.Ordinal)
             .Sum(person => Math.Max(0, UnitedStatesFilingSums.Wages(person, context.Codes, PayrollTaxCategories.Unemployment) - wageBase));
 
         boxes["3"] = payments;
@@ -244,7 +260,7 @@ public sealed class FormW2 : IPayrollFilingForm
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        foreach (var person in context.Statements.GroupBy(statement => statement.ProfileId ?? statement.StaffMemberId, StringComparer.Ordinal).OrderBy(group => group.Last().Snapshot?.EmployeeName, StringComparer.CurrentCultureIgnoreCase))
+        foreach (var person in UnitedStatesFilingSums.Employees(context).GroupBy(statement => statement.ProfileId ?? statement.StaffMemberId, StringComparer.Ordinal).OrderBy(group => group.Last().Snapshot?.EmployeeName, StringComparer.CurrentCultureIgnoreCase))
         {
             var statements = person.ToList();
             var latest = statements.Where(statement => statement.VoidOf is null).OrderBy(statement => statement.PayDate).LastOrDefault() ?? statements.Last();
@@ -327,6 +343,89 @@ public sealed class FormW2 : IPayrollFilingForm
         }
 
         return boxes;
+    }
+}
+
+/// <summary>
+/// Form 1099-NEC, nonemployee compensation, of each contractor paid at least the reporting threshold in a year (2,000
+/// from 2026, 600 before) or withheld on, and the Form 1096 totals: box 1 the contractor's payments, box 4 the backup
+/// withholding. A contractor with no tax id on file is noted.
+/// </summary>
+public sealed class Form1099Nec : IPayrollFilingForm
+{
+    private static readonly LocalizationSource _displayName = LocalizationSource.Create<Form1099Nec>("Forms 1099-NEC and 1096 (nonemployee compensation)");
+
+    /// <summary>The form's stored name.</summary>
+    public const string FormName = "US-1099NEC";
+
+    /// <summary>The tax code of backup withholding.</summary>
+    public const string BackupWithholdingCode = "US-BWH";
+
+    /// <inheritdoc />
+    public string Name => FormName;
+
+    /// <inheritdoc />
+    public LocalizationSource DisplayName => _displayName;
+
+    /// <inheritdoc />
+    public string Jurisdiction => UnitedStatesPayroll.Jurisdiction;
+
+    /// <inheritdoc />
+    public bool IsQuarterly => false;
+
+    /// <inheritdoc />
+    public bool HasPersonStatements => true;
+
+    /// <summary>
+    /// Gets the payments a year that call for the form (the One Big Beautiful Bill Act raised it from 600 to 2,000 for
+    /// payments from 2026; it is indexed for inflation from 2027).
+    /// </summary>
+    /// <param name="year">The year.</param>
+    /// <returns>The threshold.</returns>
+    public static decimal ThresholdFor(int year)
+        => year >= 2026 ? 2000m : 600m;
+
+    /// <inheritdoc />
+    public Task PrepareAsync(PayrollFilingContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var threshold = ThresholdFor(context.Filing.Year);
+
+        foreach (var contractor in UnitedStatesFilingSums.Contractors(context).GroupBy(statement => statement.ProfileId, StringComparer.Ordinal))
+        {
+            var statements = contractor.ToList();
+            var profile = context.Profiles[contractor.Key];
+            var paid = statements.Sum(statement => statement.Gross);
+            var withheld = UnitedStatesFilingSums.Tax(statements, BackupWithholdingCode);
+
+            if (paid < threshold && withheld <= 0)
+            {
+                continue;
+            }
+
+            if (profile.TaxId is null)
+            {
+                context.Filing.Notes.Add($"{statements[^1].Snapshot?.EmployeeName}: no tax id on file.");
+            }
+
+            context.Filing.People.Add(new PayrollFilingPerson
+            {
+                StaffMemberId = profile.StaffMemberId,
+                ProfileId = profile.ItemId,
+                Name = string.IsNullOrEmpty(profile.LegalName) ? statements[^1].Snapshot?.EmployeeName : profile.LegalName,
+                Address = [.. statements[^1].Snapshot?.EmployeeAddress ?? []],
+                TaxIdHint = profile.TaxId?.Hint,
+                Boxes = new Dictionary<string, decimal>(StringComparer.Ordinal) { ["1"] = paid, ["4"] = withheld },
+            });
+        }
+
+        // Form 1096: the number of forms and their totals.
+        context.Filing.Boxes["3"] = context.Filing.People.Count;
+        context.Filing.Boxes["4"] = context.Filing.People.Sum(person => person.Boxes["4"]);
+        context.Filing.Boxes["5"] = context.Filing.People.Sum(person => person.Boxes["1"]);
+
+        return Task.CompletedTask;
     }
 }
 
@@ -566,6 +665,107 @@ public sealed class FormW2Texts
 
     /// <summary>Gets or sets the label of the employer's tax id.</summary>
     public string EmployerTaxId { get; set; } = "Employer identification number (EIN)";
+}
+
+/// <summary>
+/// The texts of a printed Form 1099-NEC, in the reader's language.
+/// </summary>
+public sealed class Form1099NecTexts
+{
+    /// <summary>Gets or sets the title.</summary>
+    public string Title { get; set; } = "Form 1099-NEC Nonemployee Compensation";
+
+    /// <summary>Gets or sets the copy's name.</summary>
+    public string Copy { get; set; } = "Copy B, for the recipient";
+
+    /// <summary>Gets or sets the payer's tax id label.</summary>
+    public string PayerTaxId { get; set; } = "Payer's TIN";
+
+    /// <summary>Gets or sets the recipient's tax id label.</summary>
+    public string RecipientTaxId { get; set; } = "Recipient's TIN";
+
+    /// <summary>Gets or sets box 1's label.</summary>
+    public string Box1 { get; set; } = "1 Nonemployee compensation";
+
+    /// <summary>Gets or sets box 4's label.</summary>
+    public string Box4 { get; set; } = "4 Federal income tax withheld";
+}
+
+/// <summary>
+/// Prints a contractor's Form 1099-NEC for their records: the payer, the recipient (the tax id by its last characters),
+/// box 1 and box 4.
+/// </summary>
+public static class Form1099NecDocument
+{
+    private const double Margin = 48;
+
+    /// <summary>Writes the PDF.</summary>
+    /// <param name="filing">The filing.</param>
+    /// <param name="person">The contractor's statement.</param>
+    /// <param name="employer">The payer.</param>
+    /// <param name="payerAddress">The payer's address lines.</param>
+    /// <param name="texts">The texts.</param>
+    /// <returns>The PDF.</returns>
+    public static byte[] Write(PayrollFiling filing, PayrollFilingPerson person, Employer employer, IReadOnlyList<string> payerAddress, Form1099NecTexts texts)
+    {
+        ArgumentNullException.ThrowIfNull(filing);
+        ArgumentNullException.ThrowIfNull(person);
+        ArgumentNullException.ThrowIfNull(texts);
+
+        using var writer = new PdfDocumentWriter(texts.Title);
+        var regular = writer.AddStandardFont();
+        var bold = writer.AddStandardFont(bold: true);
+        var page = writer.AddPage(PdfPageSize.Letter);
+        var right = PdfPageSize.Letter.Width - Margin;
+        var y = Margin;
+
+        void Text(string text, PdfFontFace font, double size, double x, double top)
+            => page.DrawText(font.Prepare(PdfText.Clean(text ?? string.Empty)), font, size, x, top, PdfColor.Black);
+
+        void TextRight(string text, PdfFontFace font, double size, double at, double top)
+            => page.DrawTextRight(font.Prepare(PdfText.Clean(text ?? string.Empty)), font, size, at, top, PdfColor.Black);
+
+        Text(texts.Title, bold, 14, Margin, y);
+        TextRight(filing.Year.ToString(CultureInfo.InvariantCulture), bold, 14, right, y);
+        y += 18;
+        Text(texts.Copy, regular, 7, Margin, y);
+        y += 20;
+        Text(employer?.PrintedName, bold, 10, Margin, y);
+        TextRight($"{texts.PayerTaxId}: {employer?.TaxId}", regular, 8, right, y);
+        y += 13;
+
+        foreach (var line in payerAddress)
+        {
+            Text(line, regular, 9, Margin, y);
+            y += 12;
+        }
+
+        y += 10;
+        Text(person.Name, bold, 10, Margin, y);
+        TextRight($"{texts.RecipientTaxId}: {(string.IsNullOrEmpty(person.TaxIdHint) ? "-" : "XXXXX" + person.TaxIdHint)}", regular, 8, right, y);
+        y += 13;
+
+        foreach (var line in person.Address)
+        {
+            Text(line, regular, 9, Margin, y);
+            y += 12;
+        }
+
+        y += 14;
+        page.DrawLine(Margin, y, right, y, PdfColor.Black, 0.5);
+        y += 8;
+
+        var half = (right - Margin) / 2;
+
+        page.DrawRectangle(Margin, y, half - 6, 30, PdfColor.Black, 0.5);
+        Text(texts.Box1, regular, 7, Margin + 4, y + 3);
+        TextRight(person.Boxes.GetValueOrDefault("1").ToString("N2", CultureInfo.InvariantCulture), bold, 10, Margin + half - 10, y + 15);
+        page.DrawRectangle(Margin + half, y, half - 6, 30, PdfColor.Black, 0.5);
+        Text(texts.Box4, regular, 7, Margin + half + 4, y + 3);
+        TextRight(person.Boxes.GetValueOrDefault("4").ToString("N2", CultureInfo.InvariantCulture), bold, 10, right - 10, y + 15);
+
+        return writer.Build();
+    }
 }
 
 /// <summary>

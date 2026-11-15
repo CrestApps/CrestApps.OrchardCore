@@ -35,6 +35,10 @@ To correct a filed form, open it and choose **Amend**: a new draft is prepared f
 
 For the Social Security Administration's wage report, run **United States Payroll: W-2 wage records as an SSA EFW2 file** from **Tools > Recipes**, then publish the pipeline it adds with a delivery step that keeps the file private, such as an SFTP server. Add a registration to the employer with the agency **SSA** and your SSA user id as its account id. Only a user who may see full tax ids gets the social security numbers in the file, and each one read is recorded.
 
+## Contractors and Form 1099-NEC
+
+Pay contractors with a pay run of type **Contractors** and an amount for each invoice; their profile's worker type is **Contractor**. Nothing is withheld, unless the contractor has no tax id on file or you checked **Withhold on a contractor's payments** on their profile because the IRS told you to: then backup withholding (24%) is taken. At year end, prepare **Forms 1099-NEC and 1096** like the wage statements: each contractor paid at least 2,000 in the year (600 before 2026), or withheld on, has a 1099-NEC with a PDF.
+
 ## Close a year
 
 1. Open **Year end**, choose the employer and the year, and choose **Show**.

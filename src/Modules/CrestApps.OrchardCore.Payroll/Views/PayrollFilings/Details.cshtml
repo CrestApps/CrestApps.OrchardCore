@@ -58,16 +58,28 @@
         <div class="card-header">@T["Statements of each person"]</div>
         <div class="card-body">
             <table class="table table-sm mb-0">
-                <thead><tr><th>@T["Person"]</th><th class="text-end">1</th><th class="text-end">2</th><th class="text-end">3</th><th class="text-end">5</th><th></th></tr></thead>
+                @{
+                    var columns = filing.People.SelectMany(person => person.Boxes.Keys).Distinct(StringComparer.Ordinal).Take(6).ToList();
+                }
+                <thead>
+                    <tr>
+                        <th>@T["Person"]</th>
+                        @foreach (var column in columns)
+                        {
+                            <th class="text-end">@column</th>
+                        }
+                        <th></th>
+                    </tr>
+                </thead>
                 <tbody>
                     @foreach (var person in filing.People)
                     {
                         <tr>
                             <td>@person.Name <span class="text-muted small">@(string.IsNullOrEmpty(person.TaxIdHint) ? string.Empty : "· " + person.TaxIdHint)</span></td>
-                            <td class="text-end">@person.Boxes.GetValueOrDefault("1").ToString("N2", CultureInfo.CurrentCulture)</td>
-                            <td class="text-end">@person.Boxes.GetValueOrDefault("2").ToString("N2", CultureInfo.CurrentCulture)</td>
-                            <td class="text-end">@person.Boxes.GetValueOrDefault("3").ToString("N2", CultureInfo.CurrentCulture)</td>
-                            <td class="text-end">@person.Boxes.GetValueOrDefault("5").ToString("N2", CultureInfo.CurrentCulture)</td>
+                            @foreach (var column in columns)
+                            {
+                                <td class="text-end">@person.Boxes.GetValueOrDefault(column).ToString("N2", CultureInfo.CurrentCulture)</td>
+                            }
                             <td class="text-end"><a asp-action="PersonPdf" asp-route-id="@filing.ItemId" asp-route-profileId="@person.ProfileId" class="btn btn-sm btn-secondary">@T["PDF"]</a></td>
                         </tr>
                     }

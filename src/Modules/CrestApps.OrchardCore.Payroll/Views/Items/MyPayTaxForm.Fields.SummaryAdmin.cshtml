@@ -1,4 +1,11 @@
 @model ShapeViewModel<MyPayTaxFormViewModel>
 
-<strong>@T["Form W-2 for {0}", Model.Value.Filing.Year]</strong>
+@if (Model.Value.Filing.Form == CrestApps.OrchardCore.Payroll.Core.UnitedStates.Form1099Nec.FormName)
+{
+    <strong>@T["Form 1099-NEC for {0}", Model.Value.Filing.Year]</strong>
+}
+else
+{
+    <strong>@T["Form W-2 for {0}", Model.Value.Filing.Year]</strong>
+}
 <span class="text-muted small ms-1">@Model.Value.EmployerName</span>

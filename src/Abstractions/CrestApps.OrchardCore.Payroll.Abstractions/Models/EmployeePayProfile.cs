@@ -44,6 +44,12 @@ public sealed class EmployeePayProfile : CatalogItem, IModifiedUtcAwareModel
     public bool Tipped { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a contractor's payments are withheld on (the agency said so); a contractor with no tax id on
+    /// file is withheld on anyway.
+    /// </summary>
+    public bool BackupWithholding { get; set; }
+
+    /// <summary>
     /// Gets or sets the person's tax id, protected; only its last characters show.
     /// </summary>
     public ProtectedValue TaxId { get; set; }

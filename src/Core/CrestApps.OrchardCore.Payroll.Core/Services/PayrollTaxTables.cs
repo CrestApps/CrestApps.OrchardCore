@@ -335,7 +335,10 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
 
         var result = new PayrollTaxResult();
 
-        if (request.WorkerType == PayWorkerType.Contractor)
+        // A contractor has only contractor withholding, and only when it applies; an employee never has it.
+        var contractor = request.WorkerType == PayWorkerType.Contractor;
+
+        if (contractor && !request.ContractorWithholding)
         {
             return result;
         }
@@ -347,6 +350,7 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
         var personal = request.HomeJurisdictions.Concat(request.WorkJurisdictions).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var rules = (await _rules.ListAsync(cancellationToken))
             .Where(rule => rule.AppliesOn(request.PayDate) && registered.Contains(rule.Jurisdiction)
+                && contractor == (rule.Category == PayrollTaxCategories.ContractorWithholding)
                 && (!rule.Jurisdiction.Contains('-', StringComparison.Ordinal) || personal.Count == 0 || personal.Contains(rule.Jurisdiction)))
             .OrderBy(rule => rule.Jurisdiction, StringComparer.Ordinal)
             .ThenBy(rule => rule.TaxCode, StringComparer.Ordinal);

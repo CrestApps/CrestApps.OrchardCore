@@ -182,6 +182,8 @@ public class PayProfileViewModel
 
     public bool Tipped { get; set; }
 
+    public bool BackupWithholding { get; set; }
+
     public string Status { get; set; }
 
     public string LegalName { get; set; }

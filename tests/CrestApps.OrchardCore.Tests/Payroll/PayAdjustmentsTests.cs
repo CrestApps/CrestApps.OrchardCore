@@ -56,6 +56,15 @@ public sealed class PayAdjustmentsTests
 
         Assert.Empty(cut.Lines);
         Assert.Empty(bonusRun.Lines);
+
+        // A profile whose retro pay reaches back only to 1 November owes nothing for October.
+        var limited = Context(rates: [(new DateOnly(2020, 1, 1), 20m), (new DateOnly(2026, 10, 1), 22m)]);
+
+        limited.History = [earlier];
+        limited.Profile.RetroPayFrom = new DateOnly(2026, 11, 1);
+        await Step<RetroPayCalculationStep>().ExecuteAsync(limited, TestContext.Current.CancellationToken);
+
+        Assert.Empty(limited.Lines);
     }
 
     [Fact]

@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Payroll.Core.Calculation;
 /// Retro pay, in a regular pay: for each earlier statement of the year, an hours line of a code paid in retro pay at a
 /// rate below the rate now on file for its period, and a full period's salary below the salary now on file, owe the
 /// difference; what earlier retro lines already paid for that statement is taken off. Only raises are paid back: a rate
-/// that went down is left to a person to settle.
+/// that went down is left to a person to settle. A profile's <c>RetroPayFrom</c> limits how far back it reaches.
 /// </summary>
 public sealed class RetroPayCalculationStep : IPayCalculationStep
 {
@@ -44,7 +44,10 @@ public sealed class RetroPayCalculationStep : IPayCalculationStep
             .GroupBy(line => (line.RetroFor, line.PayCodeId))
             .ToDictionary(group => group.Key, group => group.Sum(line => line.Amount));
 
-        foreach (var statement in context.History.Where(statement => statement.VoidOf is null && statement.PeriodEnd < context.PeriodStart).OrderBy(statement => statement.PayDate))
+        // Retro pay reaches back only to the profile's first day for it, when it has one.
+        var reach = context.Profile?.RetroPayFrom;
+
+        foreach (var statement in context.History.Where(statement => statement.VoidOf is null && statement.PeriodEnd < context.PeriodStart && (reach is null || statement.PeriodEnd >= reach)).OrderBy(statement => statement.PayDate))
         {
             var owed = new Dictionary<string, decimal>(StringComparer.Ordinal);
 

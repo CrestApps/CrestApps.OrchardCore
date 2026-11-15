@@ -39,6 +39,19 @@ public sealed class PayrollTaxFormDocuments
             ? await formatter.GetLinesAsync(employer.Address)
             : [];
 
+        if (filing.Form == Form1099Nec.FormName)
+        {
+            return Form1099NecDocument.Write(filing, person, employer, address, new Form1099NecTexts
+            {
+                Title = S["Form 1099-NEC Nonemployee Compensation"],
+                Copy = S["Copy B, for the recipient"],
+                PayerTaxId = S["Payer's TIN"],
+                RecipientTaxId = S["Recipient's TIN"],
+                Box1 = S["1 Nonemployee compensation"],
+                Box4 = S["4 Federal income tax withheld"],
+            });
+        }
+
         return FormW2Document.Write(filing, person, employer, address, new FormW2Texts
         {
             Title = S["Form W-2 Wage and Tax Statement"],
@@ -64,5 +77,5 @@ public sealed class PayrollTaxFormDocuments
     /// <param name="filing">The filing.</param>
     /// <returns>The file name.</returns>
     public static string FileName(PayrollFiling filing)
-        => $"W-2-{filing?.Year}.pdf";
+        => filing?.Form == Form1099Nec.FormName ? $"1099-NEC-{filing.Year}.pdf" : $"W-2-{filing?.Year}.pdf";
 }

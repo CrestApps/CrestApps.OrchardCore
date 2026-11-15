@@ -320,6 +320,10 @@ The calculation step (`GarnishmentsPayCalculationStep`, order 750, after the ded
 
 Pages: **Payroll > Garnishments** (`ManageGarnishments`, per employer) lists the orders of the employers a user manages, with an editor of three cards (the order, how much, the payee) plus the payee's address and what was sent; nobody manages their own order unless the setting allows changing one's own pay; an order that withheld anything is released, never deleted. The `PayrollGarnishments` recipe step (`Orders`, matched by id) and the **Garnishment orders** deployment step (fails closed without a user, for `ExportPayrollData`; case numbers and payee accounts only with **Include sensitive data**; never what was withheld or sent) carry them, and the **Garnishments** data set (for `ExportPayrollData`) has one row per order.
 
+## Contractors
+
+A pay profile of worker type **Contractor** is paid by a **Contractors** pay run (or with others) from the amounts entered, with no pay rate needed and nothing withheld, except contractor withholding: the tax category `PayrollTaxCategories.ContractorWithholding` (registered by a country pack) applies only to contractors, and only when the profile's `BackupWithholding` is on or no tax id is on file (`PayrollTaxRequest.ContractorWithholding`); employees never have it. The United States recipe adds `US-BWH`, backup withholding at 24%. Contractors are left out of Forms W-2, 941 and 940; **Forms 1099-NEC and 1096** (`US-1099NEC`) list each contractor paid at least the year's threshold (2,000 from 2026, 600 before, `Form1099Nec.ThresholdFor`) or withheld on, with box 1 (payments) and box 4 (backup withholding) and the 1096 count and totals, a contractor with no tax id noted, a 1099-NEC PDF per contractor (also in My Pay) and the same filing, amending and notice as the W-2.
+
 ## Liabilities, filings and year end
 
 Payroll calculates and prepares; the business deposits and files (decision 4).

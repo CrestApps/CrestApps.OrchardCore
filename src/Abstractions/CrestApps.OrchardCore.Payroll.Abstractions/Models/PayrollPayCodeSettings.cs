@@ -199,6 +199,13 @@ public static class PayrollTaxCategories
 
     /// <summary>Unemployment insurance.</summary>
     public const string Unemployment = "Unemployment";
+
+    /// <summary>
+    /// Withholding on a contractor's payments (backup withholding in the United States), registered by the country pack
+    /// that has it. Only rules of this category apply to contractors, and only when the profile says so or the
+    /// contractor gave no tax id.
+    /// </summary>
+    public const string ContractorWithholding = "ContractorWithholding";
 }
 
 /// <summary>

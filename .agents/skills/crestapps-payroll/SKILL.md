@@ -42,6 +42,10 @@ Add a calculation step with `IPayCalculationStep` (orders in `PayCalculationOrde
 
 `ITaxLiabilityService` derives the taxes owed by deposit period from the final statements and `ITaxDepositManager`'s deposits. A country pack adds its forms with `services.AddPayrollFilingForm<T>()` (`IPayrollFilingForm.PrepareAsync(PayrollFilingContext)`); `IPayrollFilingService` prepares, files, amends and closes a year (`Employer.ClosedYears` stops runs and voids). Never keep another liability or filing record.
 
+## Contractors
+
+A contractor profile has nothing withheld except rules of the `ContractorWithholding` tax category, and only when `BackupWithholding` is on or no tax id is on file. Report contractors on their own form (`Form1099Nec` in the United States pack), never on employees' forms.
+
 ## Garnishments
 
 `IGarnishmentOrderManager` keeps garnishment orders (a pay profile, the kind, an amount or percent of disposable earnings, limits, a total owed, the payee). `GarnishmentsPayCalculationStep` applies the limits; `GarnishmentStatementObserver` moves what was withheld and pays the payee through Checks or Disbursements. Never withhold a garnishment as a pay item.

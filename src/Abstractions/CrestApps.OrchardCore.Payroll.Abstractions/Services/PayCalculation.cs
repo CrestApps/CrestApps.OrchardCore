@@ -384,8 +384,13 @@ public sealed class PayrollTaxRequest
     /// <summary>Gets or sets the staff member.</summary>
     public string StaffMemberId { get; set; }
 
-    /// <summary>Gets or sets the worker type: a contractor has nothing withheld.</summary>
+    /// <summary>Gets or sets the worker type: a contractor has only contractor withholding, when it applies.</summary>
     public PayWorkerType WorkerType { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a contractor's payments are withheld on: the profile says so or no tax id is on file.
+    /// </summary>
+    public bool ContractorWithholding { get; set; }
 
     /// <summary>Gets or sets the jurisdictions of the person's home.</summary>
     public IList<string> HomeJurisdictions { get; set; } = [];
