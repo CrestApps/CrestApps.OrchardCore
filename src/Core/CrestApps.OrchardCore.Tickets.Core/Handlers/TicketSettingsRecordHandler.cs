@@ -4,7 +4,10 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Teams.Models;
+using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -20,6 +23,7 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
 {
     private readonly ICatalog<T> _store;
     private readonly IClock _clock;
+    private readonly IServiceProvider _services;
 
     internal readonly IStringLocalizer S;
 
@@ -29,8 +33,9 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
     /// <param name="store">The records.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public TicketSettingsRecordHandler(ICatalog<T> store, IClock clock, IStringLocalizer<TicketSettingsRecordHandler<T>> stringLocalizer)
+    public TicketSettingsRecordHandler(ICatalog<T> store, IClock clock, IServiceProvider services, IStringLocalizer<TicketSettingsRecordHandler<T>> stringLocalizer)
     {
+        _services = services;
         _store = store;
         _clock = clock;
         S = stringLocalizer;
@@ -69,6 +74,23 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
     }
 
     /// <inheritdoc/>
+    /// <inheritdoc/>
+    public override async Task UpdatedAsync(UpdatedContext<T> context, CancellationToken cancellationToken = default)
+    {
+        // Tickets keep copies of a status's category and a priority's rank; a step brings them in line with the record.
+        var key = context.Model switch
+        {
+            TicketStatus status => TicketSettingsChangesStep.StatusPrefix + status.ItemId,
+            TicketPriority priority => TicketSettingsChangesStep.PriorityPrefix + priority.ItemId,
+            _ => null,
+        };
+
+        if (key is not null && _services.GetService<ResumableSteps>() is { } steps)
+        {
+            await steps.RequestAsync(TicketSettingsChangesStep.StepName, new Dictionary<string, string> { [key] = "0" });
+        }
+    }
+
     public override async Task ValidatingAsync(ValidatingContext<T> context, CancellationToken cancellationToken = default)
     {
         var name = context.Model.Name?.Trim();

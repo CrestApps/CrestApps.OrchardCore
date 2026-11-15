@@ -88,7 +88,7 @@ public sealed class TicketServiceTests
         Assert.Equal(TimelineVisibility.Public, reply.Visibility);
         Assert.Equal(_requester, reply.Author);
         Assert.Equal([ServiceLevelMetrics.FirstResponse, ServiceLevelMetrics.Resolution], _tracker.Timers.Select(timer => timer.Metric));
-        Assert.All(_tracker.Timers, timer => Assert.Equal("Normal", timer.Priority));
+        Assert.All(_tracker.Timers, timer => Assert.Equal("normal", timer.Priority));
         Assert.Equal(_now.AddHours(1), part.NextDueUtc);
         Assert.Contains("created", _observed);
     }

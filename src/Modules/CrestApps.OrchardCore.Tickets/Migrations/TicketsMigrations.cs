@@ -73,7 +73,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 6;
+        return 7;
     }
 
     /// <summary>
@@ -145,6 +145,18 @@ internal sealed class TicketsMigrations : DataMigration
         }
 
         return 6;
+    }
+
+    /// <summary>
+    /// Keys the targets of ticket policies, and the priority of running ticket timers, by the priority's id instead of
+    /// its name, so renaming a priority no longer detaches its targets.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public static int UpdateFrom6()
+    {
+        ShellScope.AddDeferredTask(scope => TicketPriorityKeys.MoveToIdsAsync(scope.ServiceProvider));
+
+        return 7;
     }
 
     private async Task SeedAsync()

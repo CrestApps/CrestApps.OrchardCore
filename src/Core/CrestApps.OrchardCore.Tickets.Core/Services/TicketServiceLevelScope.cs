@@ -53,5 +53,5 @@ public sealed class TicketServiceLevelScope : IServiceLevelScopeProvider
     public async Task<IReadOnlyList<ServiceLevelOption>> GetPrioritiesAsync(CancellationToken cancellationToken = default)
         => [.. (await _priorities.GetAllAsync(cancellationToken))
             .OrderByDescending(priority => priority.Rank)
-            .Select(priority => new ServiceLevelOption(priority.Name, priority.Name))];
+            .Select(priority => new ServiceLevelOption(priority.ItemId, priority.Name))];
 }

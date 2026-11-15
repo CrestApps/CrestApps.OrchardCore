@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -28,6 +29,9 @@ public static class TicketsCoreServiceCollectionExtensions
         services.TryAddScoped<ITicketAccessService, DefaultTicketAccessService>();
         services.TryAddScoped<TicketAutoCloser>();
         services.TryAddScoped<TicketBacklogRecorder>();
+        services.TryAddScoped<TicketSettingsUsage>();
+        services.AddResumableStep<TicketSettingsChangesStep>();
+        services.AddServiceLevelPolicyUsage<TicketSettingsUsage>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberLoadSource, TicketTeamMemberLoadSource>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketEmailObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceLevelObserver, TicketServiceLevelObserver>());

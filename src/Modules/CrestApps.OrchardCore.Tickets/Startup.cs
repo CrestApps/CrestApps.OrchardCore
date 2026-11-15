@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.Tickets.BackgroundTasks;
 using CrestApps.OrchardCore.Tickets.Core;
 using CrestApps.OrchardCore.Tickets.Core.Handlers;
@@ -81,6 +82,7 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketPriority>, TicketSettingsRecordHandler<TicketPriority>>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketDesk>, TicketSettingsRecordHandler<TicketDesk>>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketView>, TicketSettingsRecordHandler<TicketView>>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ServiceLevelPolicy>, TicketServiceLevelPolicyHandler>());
 
         services.AddDisplayDriver<TicketStatus, TicketStatusDisplayDriver>();
         services.AddDisplayDriver<TicketPriority, TicketPriorityDisplayDriver>();

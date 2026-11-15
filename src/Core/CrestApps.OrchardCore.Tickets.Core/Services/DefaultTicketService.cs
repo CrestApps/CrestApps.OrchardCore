@@ -279,7 +279,7 @@ public sealed class DefaultTicketService : ITicketService
                     Subject = SubjectOf(ticket.ContentItemId),
                     Metric = metric,
                     PolicyId = policyId,
-                    Priority = priority.Name,
+                    Priority = priority.ItemId,
                     StartUtc = now,
                     Paused = status.PausesTimers,
                 }, cancellationToken);
@@ -845,7 +845,7 @@ public sealed class DefaultTicketService : ITicketService
                 if (string.IsNullOrEmpty(settings.ServiceLevelPolicyId) && !string.IsNullOrEmpty(desk.ServiceLevelPolicyId) && desk.ServiceLevelPolicyId != from?.ServiceLevelPolicyId)
                 {
                     var current = await _priorities.FindByIdAsync(part.PriorityId, cancellationToken);
-                    await _serviceLevels.RetargetAsync(subject, desk.ServiceLevelPolicyId, current?.Name, cancellationToken);
+                    await _serviceLevels.RetargetAsync(subject, desk.ServiceLevelPolicyId, current?.ItemId, cancellationToken);
                 }
 
                 changes.Add(new TimelineFieldChange { Field = S["Desk"], Key = TicketChangeKeys.Desk, From = from?.Name, To = desk.Name, FromValue = part.DeskId, ToValue = desk.ItemId });
@@ -870,7 +870,7 @@ public sealed class DefaultTicketService : ITicketService
 
                 foreach (var timer in await _serviceLevels.GetTimersAsync(subject, activeOnly: true, cancellationToken))
                 {
-                    await _serviceLevels.RetargetAsync(subject, timer.PolicyId, priority.Name, cancellationToken);
+                    await _serviceLevels.RetargetAsync(subject, timer.PolicyId, priority.ItemId, cancellationToken);
 
                     break;
                 }
@@ -1009,7 +1009,7 @@ public sealed class DefaultTicketService : ITicketService
             Subject = SubjectOf(ticket.ContentItemId),
             Metric = ServiceLevelMetrics.Resolution,
             PolicyId = policyId,
-            Priority = priority?.Name,
+            Priority = priority?.ItemId,
             StartUtc = now,
         }, cancellationToken);
     }
@@ -1038,7 +1038,7 @@ public sealed class DefaultTicketService : ITicketService
             Subject = subject,
             Metric = ServiceLevelMetrics.NextResponse,
             PolicyId = policyId,
-            Priority = priority?.Name,
+            Priority = priority?.ItemId,
             StartUtc = now,
         }, cancellationToken);
     }

@@ -1,10 +1,12 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Models;
+using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -49,6 +51,22 @@ public sealed class TicketDesksController : CatalogAdminController<TicketDesk>
     }
 
     /// <inheritdoc/>
+    /// <inheritdoc/>
+    protected override async Task<bool> CanDeleteAsync(TicketDesk model)
+    {
+        // A record tickets still use isn't deleted: they would point at nothing.
+        var usages = await HttpContext.RequestServices.GetRequiredService<TicketSettingsUsage>().GetUsagesAsync(model, HttpContext.RequestAborted);
+
+        if (usages.Count == 0)
+        {
+            return true;
+        }
+
+        await Notifier.ErrorAsync(H["{0} is still used by {1}, so it can't be deleted.", model.Name, string.Join(", ", usages)]);
+
+        return false;
+    }
+
     protected override Permission ManagePermission
         => TicketsPermissions.ManageTicketSettings;
 
