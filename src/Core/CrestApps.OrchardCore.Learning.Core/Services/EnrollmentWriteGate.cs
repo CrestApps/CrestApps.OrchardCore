@@ -8,6 +8,12 @@ namespace CrestApps.OrchardCore.Learning.Core.Services;
 /// enrollment again inside the lock, the session is committed before the lock is let go, so the next writer reads the
 /// change, and the observers it queued run after the commit, only for what this request changed.
 /// </summary>
+/// <remarks>
+/// The commit is the request's: <see cref="ISession.SaveChangesAsync(CancellationToken)"/> writes everything pending in
+/// the session, not only the enrollment. That is what the player and the admin pages want. A caller in the middle of a
+/// larger unit of work (a workflow task, a pipeline step, a recipe step, an order handler) must finish its own writes
+/// first, or accept that they are committed with the enrollment; an order handler enrolls after the order is saved.
+/// </remarks>
 public sealed class EnrollmentWriteGate
 {
     private static readonly TimeSpan _timeout = TimeSpan.FromSeconds(10);
@@ -26,6 +32,15 @@ public sealed class EnrollmentWriteGate
         _distributedLock = distributedLock;
         _session = session;
     }
+
+    /// <summary>
+    /// Commits the session inside a lock the caller holds, such as the enrollment lock of a new enrollment, so the next
+    /// holder of that lock reads the write.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    public Task CommitAsync(CancellationToken cancellationToken = default)
+        => _session.SaveChangesAsync(cancellationToken);
 
     /// <summary>
     /// Gets the lock key of an enrollment.

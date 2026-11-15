@@ -78,6 +78,91 @@ public sealed class EnrollmentWriteLockTests
         Assert.Equal(EnrollmentStatus.Completed, stored.Status);
     }
 
+    [Fact]
+    public async Task TwoScopesEnrollingTheSameLearnerAtOnce_EndWithOneEnrollment_CarryingEveryGrant()
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IDistributedLock>();
+            services.AddSingleton<IDistributedLock, KeyedLock>();
+        });
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "lesson");
+
+        // Act: a double click and an order arriving together, each in its own scope.
+        var results = await Task.WhenAll(Enumerable.Range(0, 4).Select(index => Task.Run(() => harness.RunAsync(services =>
+            services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest
+            {
+                UserId = "learner",
+                CourseId = "course1",
+                Source = LearningConstants.EnrollmentSources.Manual,
+                SourceId = "source-" + index,
+            })))));
+
+        // Assert
+        Assert.All(results, result => Assert.True(result.Succeeded, result.ErrorCode));
+        var stored = await harness.RunAsync(services => services.GetRequiredService<EnrollmentStore>().ListByUserAsync("learner"), commit: false);
+        var enrollment = Assert.Single(stored);
+        Assert.Equal(4, enrollment.Grants.Count);
+    }
+
+    [Fact]
+    public async Task EnrollmentObservers_RunAfterTheEnrollmentIsCommitted()
+    {
+        // Arrange
+        var committed = new CommitCheckingObserver();
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync(services => services.AddSingleton<IEnrollmentObserver>(committed));
+        await using var __ = harness;
+        committed.Harness = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "lesson");
+
+        // Act
+        var first = await EnrollAsync(harness, "learner", "m-1", requiresApproval: true);
+        await EnrollAsync(harness, "learner", "m-2");
+
+        // Assert: the request, and the activation by a second grant, were each heard after their write was committed.
+        Assert.Equal(["Requested:True", "Status:True", "Enrolled:True"], committed.Seen);
+        Assert.NotNull(first);
+    }
+
+    [Fact]
+    public async Task TheUpkeep_RaisesANoticeUnderTheEnrollmentLock_AndAfterItsMarkerIsCommitted()
+    {
+        // Arrange
+        var locks = new RecordingLock();
+        var committed = new CommitCheckingObserver();
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync(services =>
+        {
+            services.RemoveAll<IDistributedLock>();
+            services.AddSingleton<IDistributedLock>(locks);
+            services.AddSingleton<IEnrollmentObserver>(committed);
+        });
+        await using var __ = harness;
+        committed.Harness = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "lesson");
+        var result = await harness.RunAsync(services => services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest
+        {
+            UserId = "learner",
+            CourseId = "course1",
+            Source = LearningConstants.EnrollmentSources.Manual,
+            SourceId = "m-1",
+            DueUtc = LearningTestHarness.Now.AddDays(2),
+        }));
+        committed.Seen.Clear();
+        locks.Keys.Clear();
+
+        // Act
+        await harness.RunAsync(services => services.GetRequiredService<LearningUpkeep>().RunAsync());
+
+        // Assert
+        Assert.Contains(EnrollmentWriteGate.Key(result.Enrollment.ItemId), locks.Keys);
+        Assert.Equal(["DueSoon:True"], committed.Seen);
+    }
+
     private static async Task<Enrollment> EnrollAsync(CalendarTestHarness harness, string userId, string sourceId, DateTime? accessEndsUtc = null, bool requiresApproval = false)
     {
         var result = await harness.RunAsync(services => services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest
@@ -93,6 +178,49 @@ public sealed class EnrollmentWriteLockTests
         Assert.True(result.Succeeded, result.ErrorCode);
 
         return result.Enrollment;
+    }
+
+    /// <summary>
+    /// Records, for each event, whether another scope already reads the enrollment as the observer was given it: the
+    /// same status and the same markers, which is true only once the write is committed.
+    /// </summary>
+    private sealed class CommitCheckingObserver : IEnrollmentObserver
+    {
+        public CalendarTestHarness Harness { get; set; }
+
+        public List<string> Seen { get; } = [];
+
+        public Task RequestedAsync(Enrollment enrollment, CancellationToken cancellationToken = default) => CheckAsync("Requested", enrollment);
+
+        public Task EnrolledAsync(Enrollment enrollment, CancellationToken cancellationToken = default) => CheckAsync("Enrolled", enrollment);
+
+        public Task StatusChangedAsync(Enrollment enrollment, EnrollmentStatus previous, CancellationToken cancellationToken = default) => CheckAsync("Status", enrollment);
+
+        public Task DueSoonAsync(Enrollment enrollment, CancellationToken cancellationToken = default) => CheckAsync("DueSoon", enrollment);
+
+        private async Task CheckAsync(string name, Enrollment enrollment)
+        {
+            Enrollment stored;
+
+            try
+            {
+                // Another scope, as a webhook sender or a notification job would read it; an open write must not block it
+                // for long, so a timeout counts as not committed.
+                stored = await Task.Run(() => Harness.RunAsync(async services => await services.GetRequiredService<EnrollmentStore>().FindByIdAsync(enrollment.ItemId), commit: false))
+                    .WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            catch (TimeoutException)
+            {
+                stored = null;
+            }
+
+            var same = stored is not null
+                && stored.Status == enrollment.Status
+                && stored.Grants.Count == enrollment.Grants.Count
+                && stored.Properties.Keys.OrderBy(key => key, StringComparer.Ordinal).SequenceEqual(enrollment.Properties.Keys.OrderBy(key => key, StringComparer.Ordinal));
+
+            Seen.Add(name + ":" + same);
+        }
     }
 
     private sealed class RecordingLock : IDistributedLock

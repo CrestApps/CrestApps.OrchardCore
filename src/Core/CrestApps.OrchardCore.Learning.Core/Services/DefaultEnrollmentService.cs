@@ -97,14 +97,18 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
             return EnrollmentResult.Fail(EnrollmentErrors.Busy);
         }
 
+        var notifications = new List<Func<Task>>();
+        EnrollmentResult created;
+
         await using (locker)
         {
-            var now = _clock.UtcNow;
             var open = await _enrollmentStore.FindOpenAsync(request.UserId, request.CourseId, offeringId, cancellationToken);
 
             if (open is not null)
             {
-                return await AddGrantAsync(open, request, now, cancellationToken);
+                // A change to an existing enrollment goes through its own lock, like every other write to it; the gate
+                // commits and tells the observers after the commit.
+                return await WriteAsync(open.ItemId, (enrollment, queued) => AddGrantAsync(enrollment, request, _clock.UtcNow, queued, cancellationToken), cancellationToken);
             }
 
             if (!request.IgnorePrerequisites && !await MeetsPrerequisitesAsync(request.UserId, course.Get<CoursePart>(nameof(CoursePart)), cancellationToken))
@@ -112,6 +116,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
                 return EnrollmentResult.Fail(EnrollmentErrors.PrerequisitesNotMet);
             }
 
+            var now = _clock.UtcNow;
             var previous = await FindPreviousAsync(request, cancellationToken);
             var number = await _numberSequence.NextAsync(LearningConstants.EnrollmentNumberSeries, cancellationToken: cancellationToken);
             var enrollment = new Enrollment
@@ -143,22 +148,27 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
 
             await _enrollmentStore.CreateAsync(enrollment, cancellationToken);
 
-            if (enrollment.Status == EnrollmentStatus.Pending)
-            {
-                await NotifyAsync(observer => observer.RequestedAsync(enrollment, cancellationToken));
-            }
-            else
-            {
-                await NotifyAsync(observer => observer.EnrolledAsync(enrollment, cancellationToken));
-            }
+            // Commit before the lock is let go, so a second request for the same learner and course finds this one.
+            await _writeGate.CommitAsync(cancellationToken);
 
-            return new EnrollmentResult
+            notifications.Add(enrollment.Status == EnrollmentStatus.Pending
+                ? () => NotifyAsync(observer => observer.RequestedAsync(enrollment, cancellationToken))
+                : () => NotifyAsync(observer => observer.EnrolledAsync(enrollment, cancellationToken)));
+
+            created = new EnrollmentResult
             {
                 Enrollment = enrollment,
                 Created = true,
                 Changed = true,
             };
         }
+
+        foreach (var notify in notifications)
+        {
+            await notify();
+        }
+
+        return created;
     }
 
     /// <inheritdoc />
@@ -437,7 +447,7 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
         Move(enrollment, EnrollmentStatus.Completed, actor, reason);
     }
 
-    private async Task<EnrollmentResult> AddGrantAsync(Enrollment open, EnrollmentRequest request, DateTime now, CancellationToken cancellationToken)
+    private async Task<EnrollmentResult> AddGrantAsync(Enrollment open, EnrollmentRequest request, DateTime now, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
         if (open.Grants.Any(grant => string.Equals(grant.Source, request.Source, StringComparison.Ordinal) && string.Equals(grant.SourceId, request.SourceId, StringComparison.Ordinal)))
         {
@@ -471,8 +481,8 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
 
         if (previous != open.Status)
         {
-            await NotifyAsync(observer => observer.StatusChangedAsync(open, previous, cancellationToken));
-            await NotifyAsync(observer => observer.EnrolledAsync(open, cancellationToken));
+            notifications.Add(() => NotifyAsync(observer => observer.StatusChangedAsync(open, previous, cancellationToken)));
+            notifications.Add(() => NotifyAsync(observer => observer.EnrolledAsync(open, cancellationToken)));
         }
 
         return new EnrollmentResult { Enrollment = open, Changed = true };
