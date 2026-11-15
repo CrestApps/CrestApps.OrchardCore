@@ -32,9 +32,11 @@ internal sealed class TaxationDocumentTaxProvider : IDocumentTaxProvider
 
         var lines = (context.Lines ?? [])
             .Where(line => line is not null && line.Kind is not DocumentLineKind.Text and not DocumentLineKind.Section && !string.IsNullOrEmpty(line.Id))
+            .Where(line => !context.KeepTypedTaxes || line.Taxes is not { Count: > 0 })
             .ToList();
 
-        if (lines.Count == 0)
+        // Without a currency there is nothing to work tax out in: the taxes typed on the lines are used.
+        if (lines.Count == 0 || string.IsNullOrWhiteSpace(context.Currency))
         {
             return false;
         }

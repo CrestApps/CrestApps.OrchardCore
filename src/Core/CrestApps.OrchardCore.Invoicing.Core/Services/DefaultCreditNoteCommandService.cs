@@ -418,7 +418,13 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
     // single amount, which staff can change on the draft.
     private static DocumentLine CreditLine(DocumentLine line, decimal left, string currency)
     {
-        var credited = new DocumentLine
+        // Part of the line is left to credit: that part of its net, at its own taxes.
+        if (left < line.Total && line.Total > 0m)
+        {
+            return CreditNoteLines.ForPartOf(line, line.Net * left / line.Total, currency);
+        }
+
+        return new DocumentLine
         {
             Id = IdGenerator.GenerateId(),
             Kind = line.Kind,
@@ -439,16 +445,6 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
             ServiceEnd = line.ServiceEnd,
             CreditedLineId = line.Id,
         };
-
-        if (left < line.Total && line.Total > 0m)
-        {
-            credited.Quantity = 1m;
-            credited.DiscountPercent = null;
-            credited.DiscountAmount = null;
-            credited.UnitPrice = CurrencyScale.Round(line.Net * left / line.Total, currency);
-        }
-
-        return credited;
     }
 
     private async Task<CreditNoteDisposition> GetDefaultDispositionAsync(Invoice invoice, CancellationToken cancellationToken)

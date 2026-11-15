@@ -80,6 +80,17 @@ public sealed class OrderDocumentSendResult
     public string Message { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the document was e-mailed to the buyer. When it was only made (e-mail isn't set up), the
+    /// order says so, and staff share the document's link instead.
+    /// </summary>
+    public bool Emailed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of the document the order was sent as, such as an invoice or estimate number.
+    /// </summary>
+    public string DocumentNumber { get; set; }
+
+    /// <summary>
     /// Gets the reasons the order was not sent.
     /// </summary>
     public IList<string> Errors { get; } = [];

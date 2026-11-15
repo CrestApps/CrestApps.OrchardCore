@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Invoicing.ViewModels;
 using CrestApps.OrchardCore.Transactions;
+using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -60,10 +61,22 @@ public sealed class MyInvoicesController : Controller
 
         var invoices = result.Entries.ToList();
 
+        var payable = await HttpContext.RequestServices.GetRequiredService<InvoiceLedgerAvailability>().PayableAsync(invoices, HttpContext.RequestAborted);
+        var paidElsewhere = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var invoice in invoices.Where(invoice => payable.Contains(invoice.ItemId)))
+        {
+            if (await GetOwnPayUrlAsync(invoice) is { } payUrl)
+            {
+                paidElsewhere[invoice.ItemId] = payUrl;
+            }
+        }
+
         return View(new MyInvoicesViewModel
         {
             Invoices = invoices,
-            Payable = await HttpContext.RequestServices.GetRequiredService<InvoiceLedgerAvailability>().PayableAsync(invoices, HttpContext.RequestAborted),
+            Payable = payable.Where(id => !paidElsewhere.ContainsKey(id)).ToHashSet(StringComparer.Ordinal),
+            PaidElsewhere = paidElsewhere,
             Count = result.Count,
             Page = Math.Max(1, page),
             PageSize = _pageSize,
@@ -124,6 +137,7 @@ public sealed class MyInvoicesController : Controller
         }
 
         var transactionIds = new List<string>();
+        var paidElsewhere = new List<(Invoice Invoice, string PayUrl)>();
         var availability = HttpContext.RequestServices.GetRequiredService<InvoiceLedgerAvailability>();
 
         foreach (var itemId in (itemIds ?? []).Distinct(StringComparer.Ordinal))
@@ -134,8 +148,27 @@ public sealed class MyInvoicesController : Controller
             if (await availability.CanPayAsync(invoice, HttpContext.RequestAborted) &&
                 await _visibility.CanViewAsync(invoice, userId, HttpContext.RequestAborted))
             {
+                // An order's invoice is paid through the order's own checkout, so the order hears of it.
+                if (await GetOwnPayUrlAsync(invoice) is { } payUrl)
+                {
+                    paidElsewhere.Add((invoice, payUrl));
+
+                    continue;
+                }
+
                 transactionIds.Add(invoice.TransactionId);
             }
+        }
+
+        // Only an invoice paid elsewhere was chosen: it is paid there.
+        if (transactionIds.Count == 0 && paidElsewhere.Count == 1)
+        {
+            return Redirect(paidElsewhere[0].PayUrl);
+        }
+
+        foreach (var (invoice, _) in paidElsewhere)
+        {
+            await _notifier.InformationAsync(H["{0} is paid through its order's checkout, so it was left out of this payment. Pay it with its own Pay button.", invoice.Number]);
         }
 
         if (transactionIds.Count == 0)
@@ -181,6 +214,26 @@ public sealed class MyInvoicesController : Controller
 
             return RedirectToRoute(InvoicingConstants.RouteNames.MyInvoices);
         }
+    }
+
+    // The page of its own an invoice's transaction is paid through, such as its order's checkout, or none.
+    private async Task<string> GetOwnPayUrlAsync(Invoice invoice)
+    {
+        if (string.IsNullOrEmpty(invoice?.TransactionId) ||
+            await HttpContext.RequestServices.GetRequiredService<ITransactionManager>().FindByIdAsync(invoice.TransactionId, HttpContext.RequestAborted) is not { } transaction)
+        {
+            return null;
+        }
+
+        foreach (var provider in HttpContext.RequestServices.GetServices<ITransactionPayUrlProvider>())
+        {
+            if (await provider.GetPayUrlAsync(transaction, HttpContext.RequestAborted) is { Length: > 0 } url)
+            {
+                return url;
+            }
+        }
+
+        return null;
     }
 
     private async Task<Invoice> FindVisibleAsync(string itemId)

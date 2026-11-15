@@ -60,4 +60,11 @@ public sealed class DocumentCalculationContext
     /// on the lines are used as they are.
     /// </summary>
     public bool AutomaticTax { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether lines that already carry taxes keep them, so a tax provider taxes only the lines without any.
+    /// A credit note sets it: it credits the tax that was charged (its lines copy the invoice's, or the rates of the
+    /// payment's tax snapshot), never what today's rules would give.
+    /// </summary>
+    public bool KeepTypedTaxes { get; set; }
 }

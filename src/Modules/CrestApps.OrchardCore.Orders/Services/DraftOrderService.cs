@@ -248,6 +248,8 @@ public sealed class DraftOrderService
         }
 
         order.Invoice.SentUtc = _clock.UtcNow;
+        order.Invoice.NotEmailed = handled is not null && !handled.Emailed;
+        order.Invoice.SentAs = handled?.DocumentNumber;
 
         // A quote is offered once it's sent, until the date to pay by.
         if (order.Quote is { Status: OrderQuoteStatus.Requested or OrderQuoteStatus.Sent } quote)

@@ -210,7 +210,8 @@ public sealed class OrderInvoiceBuilder
         invoice.SourceType = InvoicingConstants.OrderReferenceType;
         invoice.SourceId = order.ItemId;
         invoice.TransactionId = transaction?.ItemId;
-        invoice.Currency = order.Currency ?? transaction?.Currency;
+        // A draft order the store is putting together has no currency until its checkout: the site's default is used.
+        invoice.Currency = order.Currency ?? transaction?.Currency ?? invoice.Currency ?? settings.DefaultCurrency;
         invoice.Reference = order.OrderNumber;
         invoice.PurchaseOrderNumber = order.PurchaseOrderNumber;
         invoice.PricesIncludeTax = order.TaxLines.Any(line => line.IncludedInPrice);

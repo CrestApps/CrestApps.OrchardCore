@@ -1,9 +1,15 @@
 using CrestApps.OrchardCore.Invoicing;
+using CrestApps.OrchardCore.Invoicing.Core.Services;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Orders;
 using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Taxation.Core.Models;
+using CrestApps.OrchardCore.Taxation.Core.Services;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Core.Services;
@@ -11,6 +17,7 @@ using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 
@@ -44,6 +51,7 @@ public sealed class OrderDocumentsTests
 
         // Assert
         Assert.True(sent.Sent, string.Join(" ", sent.Errors));
+        Assert.Equal((true, invoice.Number), (sent.Emailed, sent.DocumentNumber));
         Assert.Equal((InvoiceStatus.Open, InvoicingConstants.OrderReferenceType, "1042", 100m), (invoice.Status, invoice.SourceType, invoice.Reference, invoice.Totals.Total));
         Assert.Equal(PayUrlPrefix + order.ItemId, payUrl);
         Assert.Single(harness.Emails);
@@ -132,6 +140,137 @@ public sealed class OrderDocumentsTests
     }
 
     [Fact]
+    public async Task ACouponTakenAtTheOrdersCheckout_IsCreditedWithItsTaxByRate_AndTheInvoiceSettles()
+    {
+        // Arrange: a widget ($100 at 10%) and a setup service ($50 at 20%), invoiced at $170. At the order's checkout a
+        // 10% coupon took $15 off before tax, so the buyer paid $153: $90 + $9 tax and $45 + $9 tax.
+        await using var harness = await CreateHarnessAsync(taxed: true);
+        var order = NewTaxedDraftOrder();
+        harness.Orders.Setup(store => store.FindByIdAsync(order.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+        await OnBridgeAsync(harness, bridge => bridge.SendInvoiceAsync(order, TestContext.Current.CancellationToken));
+        order.Discounts = [new OrderDiscount { Code = "TEN", Amount = 15m }];
+        order.Total = 153m;
+
+        // Act
+        await PayOrderAsync(harness, order, 153m);
+
+        // Assert: a $17 credit note lowered the invoice to what was paid, with its tax split by rate as the discount's
+        // was: $10 at 10% ($1 tax) and $5 at 20% ($1 tax).
+        var invoice = await OnBridgeAsync(harness, bridge => bridge.FindInvoiceAsync(order.ItemId, TestContext.Current.CancellationToken));
+        Assert.Equal((170m, InvoiceSettlement.Paid, 153m, 17m, 0m), (invoice.Totals.Total, invoice.Settlement, invoice.AmountPaid, invoice.AmountCredited, invoice.AmountDue));
+
+        var creditNote = Assert.Single(await CreditNotesAsync(harness, invoice.ItemId));
+        Assert.Equal(CreditNoteDisposition.ReduceBalance, creditNote.Disposition);
+        Assert.Equal([(10m, 10m, 1m), (20m, 5m, 1m)], creditNote.Taxes.Where(tax => tax.Rate > 0m).OrderBy(tax => tax.Rate).Select(tax => (tax.Rate, tax.TaxableAmount, tax.TaxAmount)));
+        Assert.Equal(TransactionStatus.Paid, Assert.Single(await DebtsAsync(harness)).Status);
+    }
+
+    [Fact]
+    public async Task AGiftCardThatPaidPartOfTheOrder_IsRecordedOnTheInvoice_SoItSettles()
+    {
+        // Arrange: a $100 invoice; at the order's checkout a $30 gift card paid part and the card the rest.
+        await using var harness = await CreateHarnessAsync();
+        var order = NewDraftOrder();
+        harness.Orders.Setup(store => store.FindByIdAsync(order.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+        await OnBridgeAsync(harness, bridge => bridge.SendInvoiceAsync(order, TestContext.Current.CancellationToken));
+        order.Tenders = [new OrderTender { ProviderKey = "GiftCard", Reference = "GC-1", Description = "Gift card GC-1", Amount = 30m }];
+
+        // Act
+        await PayOrderAsync(harness, order, 70m);
+
+        // Assert
+        var invoice = await OnBridgeAsync(harness, bridge => bridge.FindInvoiceAsync(order.ItemId, TestContext.Current.CancellationToken));
+        Assert.Equal((InvoiceSettlement.Paid, 100m, 0m), (invoice.Settlement, invoice.AmountPaid, invoice.AmountCredited));
+        Assert.Equal((TransactionStatus.Paid, 100m), (Assert.Single(await DebtsAsync(harness)).Status, Assert.Single(await DebtsAsync(harness)).AmountPaid));
+    }
+
+    [Fact]
+    public async Task APartRefundOfTheOrder_IsCreditedWithTheTaxItsPaymentsSnapshotGivesIt_ByRate()
+    {
+        // Arrange: the $170 invoice paid in full, the payment's tax snapshot taxing $100 at 10% and $50 at 20%.
+        await using var harness = await CreateHarnessAsync(taxed: true);
+        var order = NewTaxedDraftOrder();
+        harness.Orders.Setup(store => store.FindByIdAsync(order.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+        await OnBridgeAsync(harness, bridge => bridge.SendInvoiceAsync(order, TestContext.Current.CancellationToken));
+        await PayOrderAsync(harness, order, 170m, new TaxSnapshot
+        {
+            Currency = "USD",
+            TaxableAmount = 150m,
+            TaxAmount = 20m,
+            TotalAmount = 170m,
+            Lines =
+            [
+                new TaxLine { ItemId = "l1", TaxCode = "VAT10", TaxName = "VAT", Rate = 0.1m, TaxableAmount = 100m, TaxAmount = 10m, Treatment = TaxTreatment.Taxable },
+                new TaxLine { ItemId = "l2", TaxCode = "VAT20", TaxName = "VAT", Rate = 0.2m, TaxableAmount = 50m, TaxAmount = 10m, Treatment = TaxTreatment.Taxable },
+            ],
+        });
+
+        // Act: half the order is refunded ($85).
+        await harness.InScopeAsync(async services =>
+        {
+            foreach (var handler in services.GetServices<IOrderEventHandler>())
+            {
+                await handler.RefundedAsync(new OrderRefundedContext(order, new OrderRefund { Amount = 85m }), TestContext.Current.CancellationToken);
+            }
+
+            return true;
+        });
+
+        // Assert: credited $85 as lines by rate, the tax from the snapshot: $50 at 10% ($5) and $25 at 20% ($5).
+        var invoice = await OnBridgeAsync(harness, bridge => bridge.FindInvoiceAsync(order.ItemId, TestContext.Current.CancellationToken));
+        var creditNote = Assert.Single(await CreditNotesAsync(harness, invoice.ItemId));
+        Assert.Equal((CreditNoteDisposition.RefundedElsewhere, 85m), (creditNote.Disposition, creditNote.Totals.Total));
+        Assert.Equal([(10m, 50m, 5m), (20m, 25m, 5m)], creditNote.Taxes.Where(tax => tax.Rate > 0m).OrderBy(tax => tax.Rate).Select(tax => (tax.Rate, tax.TaxableAmount, tax.TaxAmount)));
+        Assert.Equal(85m, invoice.AmountCredited);
+    }
+
+    [Fact]
+    public async Task AFullRefundOfATaxedOrder_CreditsTheWholeInvoiceLineForLine()
+    {
+        // Arrange
+        await using var harness = await CreateHarnessAsync(taxed: true);
+        var order = NewTaxedDraftOrder();
+        harness.Orders.Setup(store => store.FindByIdAsync(order.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+        await OnBridgeAsync(harness, bridge => bridge.SendInvoiceAsync(order, TestContext.Current.CancellationToken));
+        await PayOrderAsync(harness, order, 170m);
+
+        // Act
+        await harness.InScopeAsync(async services =>
+        {
+            foreach (var handler in services.GetServices<IOrderEventHandler>())
+            {
+                await handler.RefundedAsync(new OrderRefundedContext(order, new OrderRefund { Amount = 170m }), TestContext.Current.CancellationToken);
+            }
+
+            return true;
+        });
+
+        // Assert: each invoice line credited as it was invoiced.
+        var invoice = await OnBridgeAsync(harness, bridge => bridge.FindInvoiceAsync(order.ItemId, TestContext.Current.CancellationToken));
+        var creditNote = Assert.Single(await CreditNotesAsync(harness, invoice.ItemId));
+        Assert.Equal(invoice.Lines.Select(line => line.Id), creditNote.Lines.Select(line => line.CreditedLineId));
+        Assert.Equal((170m, 170m), (creditNote.Totals.Total, invoice.AmountCredited));
+    }
+
+    [Fact]
+    public async Task ADraftOrderWithNoCurrencyYet_IsInvoicedInTheSitesDefaultCurrency_WithTaxRulesOn()
+    {
+        // Arrange: a draft order put together in the admin has no currency until its checkout; tax rules are on.
+        await using var harness = await CreateHarnessAsync(taxed: true, settings: new InvoicingSettings { DefaultCurrency = "USD" });
+        var order = NewTaxedDraftOrder();
+        order.Currency = null;
+        harness.Orders.Setup(store => store.FindByIdAsync(order.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+
+        // Act
+        var sent = await OnBridgeAsync(harness, bridge => bridge.SendInvoiceAsync(order, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.True(sent.Sent, string.Join(" ", sent.Errors));
+        var invoice = await OnBridgeAsync(harness, bridge => bridge.FindInvoiceAsync(order.ItemId, TestContext.Current.CancellationToken));
+        Assert.Equal(("USD", InvoiceStatus.Open, 170m), (invoice.Currency, invoice.Status, invoice.Totals.Total));
+    }
+
+    [Fact]
     public async Task SendingTheOrderAgain_SendsTheSameInvoice_WithoutASecondOne()
     {
         // Arrange
@@ -172,8 +311,9 @@ public sealed class OrderDocumentsTests
 
         await PayOrderAsync(harness, order, 100m);
 
-        // Assert
+        // Assert: made but not e-mailed, as e-mail isn't set up.
         Assert.True(sent.Sent, string.Join(" ", sent.Errors));
+        Assert.Equal((false, estimate.Number), (sent.Emailed, sent.DocumentNumber));
         Assert.Equal((EstimateConversion.None, 100m), (estimate.OnAcceptance, estimate.Totals.Total));
         Assert.True(accepted.Succeeded, string.Join(" ", accepted.Errors));
         Assert.Equal(OrderQuoteStatus.Accepted, order.Quote.Status);
@@ -250,9 +390,37 @@ public sealed class OrderDocumentsTests
             Invoice = new OrderInvoice { CreatedBy = "admin", DueUtc = InvoicingTestHarness.Now.AddDays(14) },
         };
 
-    private static Task<InvoicingTestHarness> CreateHarnessAsync(bool withBridge = true)
-        => InvoicingTestHarness.CreateAsync(configureServices: services =>
+    // A widget and a setup service, taxed at 10% and 20% by the test's tax rules.
+    private static Order NewTaxedDraftOrder()
+        => new()
         {
+            ItemId = "order-43",
+            OrderNumber = "1043",
+            Currency = "USD",
+            Status = OrderStatus.Draft,
+            Total = 170m,
+            CustomerName = "Pat Doe",
+            CustomerEmail = "pat@example.com",
+            Lines =
+            [
+                new OrderLine { LineId = "l1", Title = "Widget", Sku = "W-1", Quantity = 1, UnitPrice = 100m, LineTotal = 100m, ProductType = ProductType.Good },
+                new OrderLine { LineId = "l2", Title = "Setup", Sku = "S-1", Quantity = 1, UnitPrice = 50m, LineTotal = 50m, ProductType = ProductType.Service },
+            ],
+            Invoice = new OrderInvoice { CreatedBy = "admin", DueUtc = InvoicingTestHarness.Now.AddDays(14) },
+        };
+
+    private static Task<IReadOnlyList<CreditNote>> CreditNotesAsync(InvoicingTestHarness harness, string invoiceId)
+        => harness.InScopeAsync(services => services.GetRequiredService<ICreditNoteStore>().ListByInvoiceAsync(invoiceId, TestContext.Current.CancellationToken));
+
+    private static Task<InvoicingTestHarness> CreateHarnessAsync(bool withBridge = true, bool taxed = false, InvoicingSettings settings = null)
+        => InvoicingTestHarness.CreateAsync(settings, configureServices: services =>
+        {
+            if (taxed)
+            {
+                services.AddSingleton<IDocumentTaxProvider, KindTaxProvider>();
+                services.AddSingleton<ITaxRefundCalculator>(new DefaultTaxRefundCalculator(new DefaultTaxRoundingStrategy(Options.Create(new TaxationOptions()))));
+            }
+
             var links = new Mock<IOrderLinkService>();
             links.Setup(service => service.CreatePayUrlAsync(It.IsAny<Order>())).ReturnsAsync((Order order) => PayUrlPrefix + order.ItemId);
 
@@ -277,7 +445,7 @@ public sealed class OrderDocumentsTests
         => harness.InScopeAsync(services => work(services.GetRequiredService<OrderDocumentBridge>()));
 
     // The order's own checkout took the money; the order is marked paid and its handlers run, as Orders does.
-    private static async Task PayOrderAsync(InvoicingTestHarness harness, Order order, decimal amount)
+    private static async Task PayOrderAsync(InvoicingTestHarness harness, Order order, decimal amount, TaxSnapshot taxSnapshot = null)
     {
         order.CheckoutSessionId = "checkout-" + order.ItemId;
         order.Status = OrderStatus.Paid;
@@ -296,6 +464,7 @@ public sealed class OrderDocumentsTests
                 Currency = "USD",
                 ConfirmedAmount = amount,
                 State = PaymentAttemptState.Succeeded,
+                TaxSnapshot = taxSnapshot,
             }, TestContext.Current.CancellationToken);
 
             foreach (var handler in services.GetServices<IOrderEventHandler>())
@@ -316,6 +485,37 @@ public sealed class OrderDocumentsTests
         });
 
     // The ledger's pay links as the Transactions module makes them: the page of its own a provider names, or the ledger's.
+    private sealed class KindTaxProvider : IDocumentTaxProvider
+    {
+        public int Order => 0;
+
+        public Task<bool> ApplyTaxesAsync(DocumentCalculationContext context, CancellationToken cancellationToken = default)
+        {
+            // As the Taxation module's tax service does.
+            if (string.IsNullOrWhiteSpace(context.Currency))
+            {
+                throw new InvalidOperationException("A tax calculation context must specify the currency the amounts are expressed in.");
+            }
+
+            foreach (var line in context.Lines ?? [])
+            {
+                if (context.KeepTypedTaxes && line.Taxes is { Count: > 0 })
+                {
+                    continue;
+                }
+
+                line.Taxes = line.Kind switch
+                {
+                    DocumentLineKind.Item => [new DocumentLineTax { Treatment = TaxTreatment.Taxable, Code = "VAT10", Name = "VAT", Rate = 10m }],
+                    DocumentLineKind.Service => [new DocumentLineTax { Treatment = TaxTreatment.Taxable, Code = "VAT20", Name = "VAT", Rate = 20m }],
+                    _ => line.Taxes ?? [],
+                };
+            }
+
+            return Task.FromResult(true);
+        }
+    }
+
     private sealed class FixedTransactionPayLinks : ITransactionPayLinkService
     {
         private readonly IServiceProvider _services;

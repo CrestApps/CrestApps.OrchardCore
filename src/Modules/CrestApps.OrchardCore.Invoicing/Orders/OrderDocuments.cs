@@ -7,7 +7,9 @@ using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Http;
@@ -162,6 +164,7 @@ public sealed class OrderDocumentBridge
         {
             result.Note = S["Sent as invoice {0}. E-mail isn't set up, so share the invoice's link with the buyer.", invoice.Number];
             result.Message = result.Note;
+            result.DocumentNumber = invoice.Number;
 
             return result;
         }
@@ -182,6 +185,8 @@ public sealed class OrderDocumentBridge
 
         result.Note = S["Sent as invoice {0} to {1}.", invoice.Number, order.CustomerEmail];
         result.Message = result.Note;
+        result.Emailed = true;
+        result.DocumentNumber = invoice.Number;
 
         return result;
     }
@@ -246,6 +251,7 @@ public sealed class OrderDocumentBridge
 
             result.Note = S["Sent as estimate {0}. E-mail isn't set up, so share the estimate's link with the buyer.", estimate.Number];
             result.Message = result.Note;
+            result.DocumentNumber = estimate.Number;
 
             return result;
         }
@@ -264,6 +270,8 @@ public sealed class OrderDocumentBridge
 
         result.Note = S["Sent as estimate {0} to {1}.", sent.Estimate?.Number ?? estimate.Number, order.CustomerEmail];
         result.Message = result.Note;
+        result.Emailed = true;
+        result.DocumentNumber = sent.Estimate?.Number ?? estimate.Number;
 
         return result;
     }
@@ -338,10 +346,38 @@ public sealed class OrderDocumentBridge
             transaction = await _transactions.FindByIdAsync(transaction.ItemId, cancellationToken);
         }
 
+        // What the order's checkout came to: its payment, and what gift cards or store credit paid of it.
+        var confirmed = paid.Sum(attempt => attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount);
+        var tenders = (order.Tenders ?? []).Where(tender => tender.Amount > 0m).ToArray();
+        var owed = transaction.OutstandingAmount;
+
+        // A discount the checkout took (a coupon), or any checkout total below the invoice: a credit note lowers the
+        // invoice to what was charged, so it settles.
+        if (await CreditCheckoutShortfallAsync(order, invoice, owed, confirmed + tenders.Sum(tender => tender.Amount), cancellationToken))
+        {
+            // The credit note committed in a unit of work of its own: saving detaches what this one read, so the debt is
+            // read again as the credit note left it.
+            await _session.SaveChangesAsync(cancellationToken);
+            transaction = await _transactions.FindByIdAsync(transaction.ItemId, cancellationToken);
+            owed = transaction.OutstandingAmount;
+        }
+
+        // A gift card or store credit paid part of the order: recorded on the invoice as the payment it was.
+        if (tenders.Length > 0 && owed > 0m)
+        {
+            await RecordTendersAsync(order, transaction, tenders, cancellationToken);
+
+            transaction = await _transactions.FindByIdAsync(transaction.ItemId, cancellationToken);
+            owed = transaction.OutstandingAmount;
+        }
+
+        if (owed <= 0m && confirmed <= 0.01m)
+        {
+            return;
+        }
+
         // The checkout adds shipping and tax the store's draft didn't have; what the buyer paid above the invoice is put
         // on a debit note of it, and the one payment settles both.
-        var confirmed = paid.Sum(attempt => attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount);
-        var owed = transaction.OutstandingAmount;
 
         if (paid.Length == 1 &&
             confirmed - owed > 0.01m &&
@@ -367,6 +403,170 @@ public sealed class OrderDocumentBridge
 
         await settlement.ApplyAsync(transaction, paid, order.CheckoutSessionId, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
+    }
+
+    // A credit note of the order's invoice for what its checkout took off: the discounts it applied beyond the invoice's
+    // own, spread over the lines they could apply to at each line's own taxes (so the credit's tax is split by rate as the
+    // discount's was), and anything else the checkout charged less than the invoice. It lowers the invoice's balance.
+    private async Task<bool> CreditCheckoutShortfallAsync(Order order, Invoice invoice, decimal owed, decimal charged, CancellationToken cancellationToken)
+    {
+        var currency = invoice.Currency;
+        var invoiceDiscounts = -invoice.Lines.Where(line => line.Net < 0m).Sum(line => line.Net);
+        var discount = (order.Discounts ?? []).Where(discount => discount.Amount > 0m).Sum(discount => discount.Amount) - invoiceDiscounts;
+        var lines = new List<DocumentLine>();
+
+        if (discount > 0.005m)
+        {
+            var excluded = (order.Lines ?? []).Where(line => line.ExcludeFromDiscounts).Select(line => line.LineId).ToHashSet(StringComparer.Ordinal);
+            var eligible = invoice.Lines
+                .Where(line => line.Net > 0m && string.Equals(line.SourceType, InvoicingConstants.OrderReferenceType, StringComparison.Ordinal) && !excluded.Contains(line.SourceId ?? string.Empty))
+                .ToArray();
+
+            if (eligible.Length == 0)
+            {
+                eligible = [.. invoice.Lines.Where(line => line.Net > 0m)];
+            }
+
+            var spreadBase = eligible.Sum(line => line.Net);
+            var toSpread = Math.Min(discount, spreadBase);
+            var left = toSpread;
+
+            for (var i = 0; i < eligible.Length && left > 0m; i++)
+            {
+                var share = i == eligible.Length - 1
+                    ? left
+                    : Math.Min(left, Math.Round(toSpread * eligible[i].Net / spreadBase, 2, MidpointRounding.AwayFromZero));
+
+                if (share <= 0m)
+                {
+                    continue;
+                }
+
+                lines.Add(CreditNoteLines.ForPartOf(eligible[i], share, currency, S["Discount at checkout: {0}", eligible[i].Name].Value));
+                left -= share;
+            }
+        }
+
+        var settings = await _serviceProvider.GetRequiredService<ISiteService>().GetSettingsAsync<InvoicingSettings>();
+        var preview = new CreditNote { Currency = currency, PricesIncludeTax = invoice.PricesIncludeTax, BillTo = invoice.BillTo, Lines = lines };
+
+        await InvoiceCalculation.ApplyAsync(_calculator, preview, settings, invoice.IssueDate, cancellationToken);
+
+        // Anything else the checkout charged less than the invoice, after the discount.
+        var remainder = owed - (preview.Totals?.Total ?? 0m) - charged;
+
+        if (remainder > 0.01m)
+        {
+            lines.Add(OutOfScopeLine(S["Charged less at the checkout of order {0}", order.OrderNumber].Value, remainder, currency));
+            preview.Lines = lines;
+            await InvoiceCalculation.ApplyAsync(_calculator, preview, settings, invoice.IssueDate, cancellationToken);
+        }
+
+        if (lines.Count == 0)
+        {
+            return false;
+        }
+
+        if ((preview.Totals?.Total ?? 0m) > owed + 0.005m)
+        {
+            _logger.LogWarning("The checkout of order '{OrderNumber}' took off {Credit}, more than invoice {Number} still owes; it was not credited.", order.OrderNumber, preview.Totals?.Total, invoice.Number);
+
+            return false;
+        }
+
+        return await IssueCreditNoteAsync(order, invoice, lines, CreditNoteDisposition.ReduceBalance, S["Discount and difference at the checkout of order {0}", order.OrderNumber].Value, cancellationToken);
+    }
+
+    // Gift cards and store credit the order's checkout took, recorded on the invoice as payments.
+    private async Task RecordTendersAsync(Order order, Transaction transaction, IEnumerable<OrderTender> tenders, CancellationToken cancellationToken)
+    {
+        if (_serviceProvider.GetService<ITransactionCommandService>() is not { } commands)
+        {
+            return;
+        }
+
+        var owed = transaction.OutstandingAmount;
+
+        foreach (var tender in tenders)
+        {
+            var amount = Math.Min(tender.Amount, owed);
+
+            if (amount <= 0m)
+            {
+                break;
+            }
+
+            var recorded = await commands.RecordPaymentAsync(transaction.ItemId, new TransactionPaymentRequest
+            {
+                Amount = amount,
+                PaymentMethod = tender.ProviderKey,
+                Reference = tender.Reference,
+                Note = tender.Description ?? S["Paid at the checkout of order {0}", order.OrderNumber].Value,
+            }, cancellationToken);
+
+            if (!recorded.Succeeded)
+            {
+                _logger.LogWarning("What {Tender} paid of order '{OrderNumber}' was not recorded on its invoice: {Errors}", tender.ProviderKey, order.OrderNumber, string.Join(" ", recorded.Errors));
+
+                continue;
+            }
+
+            owed -= amount;
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private DocumentLine OutOfScopeLine(string name, decimal amount, string currency)
+        => new()
+        {
+            Id = IdGenerator.GenerateId(),
+            Kind = DocumentLineKind.Fee,
+            Name = name,
+            Quantity = 1m,
+            UnitPrice = CurrencyScale.Round(amount, currency),
+            TaxTreatment = TaxTreatment.OutOfScope,
+            TaxTreatmentReason = S["Refund"].Value,
+        };
+
+    // Drafts a credit note of the document with the lines given, and issues it.
+    private async Task<bool> IssueCreditNoteAsync(Order order, Invoice document, IReadOnlyList<DocumentLine> lines, CreditNoteDisposition disposition, string reason, CancellationToken cancellationToken)
+    {
+        await using var scope = _serviceProvider.CreateAsyncScope();
+
+        var commands = scope.ServiceProvider.GetRequiredService<ICreditNoteCommandService>();
+        var draft = await commands.CreateDraftAsync(document.ItemId, cancellationToken);
+
+        if (!draft.Succeeded || draft.CreditNote is not { } creditNote)
+        {
+            _logger.LogWarning("No credit note was drafted for order '{OrderNumber}' on {Number}: {Errors}", order.OrderNumber, document.Number, string.Join(" ", draft.Errors));
+
+            return false;
+        }
+
+        creditNote.Disposition = disposition;
+        creditNote.Reason = reason;
+
+        if (lines is not null)
+        {
+            creditNote.Lines.Clear();
+
+            foreach (var line in lines)
+            {
+                creditNote.Lines.Add(line);
+            }
+        }
+
+        await scope.ServiceProvider.GetRequiredService<ICreditNoteStore>().UpdateAsync(creditNote, cancellationToken);
+        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
+
+        var issued = await commands.IssueAsync(creditNote.ItemId, cancellationToken);
+
+        if (!issued.Succeeded)
+        {
+            _logger.LogWarning("The credit note for order '{OrderNumber}' on {Number} was left as a draft: {Errors}", order.OrderNumber, document.Number, string.Join(" ", issued.Errors));
+        }
+
+        return issued.Succeeded;
     }
 
     // A debit note of the order's invoice for what its checkout added (shipping, tax), already included in the amount.
@@ -473,7 +673,7 @@ public sealed class OrderDocumentBridge
         }
 
         // The order's invoice first, then the debit notes for what its checkout added, each up to what it can still be
-        // credited: a refund of the whole order credits all of them.
+        // credited: a refund of the whole order credits all of them, line for line.
         var made = await _invoices.PageAsync(1, 20, new InvoiceQuery { SourceType = InvoicingConstants.OrderReferenceType, SourceId = order.ItemId }, cancellationToken);
         var documents = made.Entries
             .Where(document => document.Status == InvoiceStatus.Open)
@@ -492,7 +692,24 @@ public sealed class OrderDocumentBridge
                 continue;
             }
 
-            if (await CreditAsync(order, document, portion, reason, cancellationToken))
+            // A part of the invoice is refunded: its tax is what the payment's tax snapshot gives that part, by rate, as
+            // the checkout's own refund worked it out. A whole document is credited line for line.
+            var whole = document.AmountCredited <= 0m && Math.Abs((document.Totals?.Total ?? 0m) - portion) <= 0.01m;
+            IReadOnlyList<DocumentLine> lines = whole
+                ? null
+                : document.Kind == InvoiceKind.DebitNote
+                    ? [OutOfScopeLine(S["Refund of order {0}", order.OrderNumber].Value, portion, document.Currency)]
+                    : await GetPartRefundLinesAsync(order, document, portion, cancellationToken);
+
+            var issued = await IssueCreditNoteAsync(
+                order,
+                document,
+                lines,
+                CreditNoteDisposition.RefundedElsewhere,
+                string.IsNullOrWhiteSpace(reason) ? S["Refund of order {0}", order.OrderNumber].Value : S["Refund of order {0}: {1}", order.OrderNumber, reason].Value,
+                cancellationToken);
+
+            if (issued)
             {
                 left -= portion;
             }
@@ -504,53 +721,50 @@ public sealed class OrderDocumentBridge
         }
     }
 
-    // A credit note of the document for the refund, which the order already gave back (nothing more moves).
-    private async Task<bool> CreditAsync(Order order, Invoice document, decimal amount, string reason, CancellationToken cancellationToken)
+    // The credit lines of a part refund of the order's invoice: by rate, from the order payment's tax snapshot
+    // (ITaxRefundCalculator), with anything the snapshot doesn't tax out of scope. Without a snapshot with tax, one amount
+    // out of scope of tax, as nothing was taxed.
+    private async Task<IReadOnlyList<DocumentLine>> GetPartRefundLinesAsync(Order order, Invoice document, decimal amount, CancellationToken cancellationToken)
     {
-        await using var scope = _serviceProvider.CreateAsyncScope();
+        var name = S["Refund of order {0}", order.OrderNumber].Value;
+        var currency = document.Currency;
 
-        var commands = scope.ServiceProvider.GetRequiredService<ICreditNoteCommandService>();
-        var draft = await commands.CreateDraftAsync(document.ItemId, cancellationToken);
-
-        if (!draft.Succeeded || draft.CreditNote is not { } creditNote)
+        if (string.IsNullOrEmpty(order.CheckoutSessionId) ||
+            _serviceProvider.GetService<IPaymentAttemptStore>() is not { } attempts ||
+            _serviceProvider.GetService<ITaxRefundCalculator>() is not { } calculator ||
+            (await attempts.GetBySessionAsync(order.CheckoutSessionId, cancellationToken))
+                .FirstOrDefault(attempt => attempt.State == PaymentAttemptState.Succeeded && attempt.TaxSnapshot is { TaxAmount: > 0m }) is not { } attempt)
         {
-            _logger.LogWarning("No credit note was drafted for the refund of order '{OrderNumber}' on {Number}: {Errors}", order.OrderNumber, document.Number, string.Join(" ", draft.Errors));
-
-            return false;
+            return [OutOfScopeLine(name, amount, currency)];
         }
 
-        creditNote.Disposition = CreditNoteDisposition.RefundedElsewhere;
-        creditNote.Reason = string.IsNullOrWhiteSpace(reason)
-            ? S["Refund of order {0}", order.OrderNumber].Value
-            : S["Refund of order {0}: {1}", order.OrderNumber, reason].Value;
+        var refunded = calculator.CalculateProportionalRefund(attempt.TaxSnapshot, amount);
+        var lines = new List<DocumentLine>(CreditNoteLines.ForRefundedTax(refunded.Lines, name, document.PricesIncludeTax, currency));
+        var settings = await _serviceProvider.GetRequiredService<ISiteService>().GetSettingsAsync<InvoicingSettings>();
+        var preview = new CreditNote { Currency = currency, PricesIncludeTax = document.PricesIncludeTax, BillTo = document.BillTo, Lines = lines };
 
-        // A part of the document is credited as one amount, outside tax: the order's refund was an amount, not lines.
-        if (document.AmountCredited > 0m || Math.Abs((document.Totals?.Total ?? 0m) - amount) > 0.01m)
+        await InvoiceCalculation.ApplyAsync(_calculator, preview, settings, document.IssueDate, cancellationToken);
+
+        var rest = amount - (preview.Totals?.Total ?? 0m);
+
+        // A cent either way from rounding the tax by rate is taken on the line out of scope.
+        if (rest < -0.02m)
         {
-            creditNote.Lines.Clear();
-            creditNote.Lines.Add(new DocumentLine
-            {
-                Id = IdGenerator.GenerateId(),
-                Kind = DocumentLineKind.Fee,
-                Name = S["Refund of order {0}", order.OrderNumber].Value,
-                Quantity = 1m,
-                UnitPrice = amount,
-                TaxTreatment = TaxTreatment.OutOfScope,
-                TaxTreatmentReason = S["Refund"].Value,
-            });
+            _logger.LogWarning("The tax of a part refund of order '{OrderNumber}' came to more than the refund; it was credited as one amount.", order.OrderNumber);
+
+            return [OutOfScopeLine(name, amount, currency)];
         }
 
-        await scope.ServiceProvider.GetRequiredService<ICreditNoteStore>().UpdateAsync(creditNote, cancellationToken);
-        await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
-
-        var issued = await commands.IssueAsync(creditNote.ItemId, cancellationToken);
-
-        if (!issued.Succeeded)
+        if (rest > 0.005m)
         {
-            _logger.LogWarning("The credit note for the refund of order '{OrderNumber}' on {Number} was left as a draft: {Errors}", order.OrderNumber, document.Number, string.Join(" ", issued.Errors));
+            lines.Add(OutOfScopeLine(name, rest, currency));
+        }
+        else if (rest < 0m && lines.Count > 0)
+        {
+            lines[^1].UnitPrice += rest;
         }
 
-        return issued.Succeeded;
+        return lines;
     }
 
     /// <summary>

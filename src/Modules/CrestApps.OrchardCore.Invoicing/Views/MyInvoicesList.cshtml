@@ -6,7 +6,8 @@
     var payable = model.Payable.Count > 0;
 }
 
-@* The customer's invoices; those still owed can be ticked and paid together in one checkout. *@
+@* The customer's invoices; those still owed can be ticked and paid together in one checkout, except an order's invoice,
+   paid through the order's own checkout with its own Pay button. *@
 @if (model.Invoices.Count == 0)
 {
     <p class="text-muted">@T["You have no invoices yet."]</p>
@@ -54,6 +55,10 @@ else
                             <td class="text-end text-nowrap">@MoneyFormatter.Format(invoice.AmountDue, invoice.Currency)</td>
                             <td><partial name="_InvoiceStatusBadge" model="invoice" /></td>
                             <td class="text-end text-nowrap">
+                                @if (model.PaidElsewhere.TryGetValue(invoice.ItemId, out var ownPayUrl))
+                                {
+                                    <a href="@ownPayUrl" class="btn btn-sm btn-success" title="@T["Paid through its order's checkout, so it isn't paid with other invoices."]">@T["Pay"]</a>
+                                }
                                 <a asp-action="Pdf" asp-controller="MyInvoices" asp-area="@InvoicingConstants.Features.Area" asp-route-itemId="@invoice.ItemId" class="btn btn-sm btn-outline-secondary">@T["PDF"]</a>
                             </td>
                         </tr>
@@ -66,6 +71,10 @@ else
         {
             <button type="submit" class="btn btn-success">@T["Pay selected"]</button>
             <span class="form-text ms-2">@T["Tick the invoices to pay together. Invoices in different currencies are paid separately."]</span>
+        }
+        @if (model.PaidElsewhere.Count > 0)
+        {
+            <p class="form-text">@T["An invoice for an order is paid through the order's own checkout, with its own Pay button, so it can't be ticked with others."]</p>
         }
     </form>
 

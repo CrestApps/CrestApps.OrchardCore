@@ -32,6 +32,7 @@ public static class InvoiceCalculation
             BillTo = invoice.BillTo,
             IssueDate = issueDate,
             AutomaticTax = true,
+            KeepTypedTaxes = invoice is CreditNote,
         };
     }
 

@@ -112,6 +112,15 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
+        // Paid through a checkout of its own, such as the order an invoice bills: paying it here would settle it without
+        // that checkout ever hearing of it.
+        if (await IsPaidElsewhereAsync(transaction))
+        {
+            context.Reject(S["{0} is paid through its own checkout, such as its order's. Pay it from its own pay link.", GetTitle(transaction)]);
+
+            return;
+        }
+
         if (string.IsNullOrEmpty(session.Currency))
         {
             session.Currency = transaction.Currency;
@@ -247,6 +256,20 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 
     // A checkout that settles several transactions with one payment: each is a line of its own, at what is still owed on
     // it. They are paid together only when one customer owes them all in one currency and each still has a balance.
+    // Whether a module pays the transaction through a page of its own (ITransactionPayUrlProvider).
+    private async Task<bool> IsPaidElsewhereAsync(Transaction transaction)
+    {
+        foreach (var provider in _serviceProvider.GetServices<ITransactionPayUrlProvider>())
+        {
+            if (!string.IsNullOrEmpty(await provider.GetPayUrlAsync(transaction)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task ActivateSeveralAsync(CheckoutFlowActivatingContext context)
     {
         var session = context.Session;
@@ -273,6 +296,13 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             if (!TransactionStateMachine.CanRecordPayment(transaction))
             {
                 context.Reject(S["{0} can no longer be paid.", GetTitle(transaction)]);
+
+                continue;
+            }
+
+            if (await IsPaidElsewhereAsync(transaction))
+            {
+                context.Reject(S["{0} is paid through its own checkout, such as its order's, so it can't be paid with other balances. Pay it from its own pay link.", GetTitle(transaction)]);
 
                 continue;
             }

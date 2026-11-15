@@ -31,6 +31,7 @@ public sealed class DraftOrderDocumentSenderTests
         // Assert
         Assert.True(result.Sent, string.Join(" ", result.Errors));
         Assert.Equal(_now, order.Invoice.SentUtc);
+        Assert.Equal((false, null), (order.Invoice.NotEmailed, order.Invoice.SentAs));
         email.Verify(sender => sender.SendAsync(It.Is<CommerceEmail>(message => message.Kind == OrderEmailKinds.Invoice), It.IsAny<Func<CancellationToken, Task<CommerceEmailContent>>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -52,6 +53,23 @@ public sealed class DraftOrderDocumentSenderTests
         Assert.Equal("Sent as invoice INV-1001.", result.Message);
         Assert.Equal(_now, order.Invoice.SentUtc);
         email.Verify(emails => emails.SendAsync(It.IsAny<CommerceEmail>(), It.IsAny<Func<CancellationToken, Task<CommerceEmailContent>>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ADocumentMadeButNotEmailed_IsRecordedAsNotEmailed_WithItsNumber()
+    {
+        // Arrange: e-mail isn't set up, so the invoicing module made INV-1002 without e-mailing it.
+        var sender = new Mock<IOrderDocumentSender>();
+        sender.Setup(documents => documents.SendAsync(It.IsAny<Order>(), It.IsAny<CancellationToken>())).ReturnsAsync(new OrderDocumentSendResult { Note = "Sent as invoice INV-1002.", DocumentNumber = "INV-1002", Emailed = false });
+        var order = NewDraftOrder();
+        var services = new ServiceCollection().AddSingleton(sender.Object).BuildServiceProvider();
+
+        // Act
+        var result = await CreateService(Mock.Of<ICommerceEmailSender>(), services).SendAsync(order, "admin", TestContext.Current.CancellationToken);
+
+        // Assert: the order says it was made, not emailed.
+        Assert.True(result.Sent);
+        Assert.Equal((true, "INV-1002", _now), (order.Invoice.NotEmailed, order.Invoice.SentAs, order.Invoice.SentUtc));
     }
 
     private static DraftOrderService CreateService(ICommerceEmailSender email, IServiceProvider services)
