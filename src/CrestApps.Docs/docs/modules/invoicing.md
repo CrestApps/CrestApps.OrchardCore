@@ -11,6 +11,7 @@ user_manual:
 | --- | --- | --- |
 | **Invoicing** | `CrestApps.OrchardCore.Invoicing` | Invoices and credit notes, their stores and indexes, the invoice commands, the permissions and the invoicing settings. Depends on Transactions, Payment Terms and Business Documents. |
 | **Invoicing Estimates** | `CrestApps.OrchardCore.Invoicing.Estimates` | Estimates (quotes): drafted, sent with a number, accepted or declined by the customer online, revised, expired, and turned into a draft invoice or a deposit invoice. Depends on Invoicing. |
+| **Invoicing Collections** | `CrestApps.OrchardCore.Invoicing.Collections` | Late-fee policies that charge overdue invoices with debit notes linked to them; customer statements. Depends on Invoicing. |
 | **Invoicing Recurring** | `CrestApps.OrchardCore.Invoicing.Recurring` | Recurring plans that make an invoice on a schedule (a draft, issued, issued and sent, or issued and charged), with the period written into their lines, catch-up within a limit, pause and resume, price rises, and an end by date or number of runs. Depends on Invoicing. |
 
 Invoicing owns the documents: an invoice is drafted with lines, issued with a number, and posted to [Transactions](transactions) as what the customer owes. Everything about the money (payments, refunds, adjustments, reminders, pay links) stays in the ledger; the invoice mirrors what the ledger says. Prices, discounts and tax are worked out by one calculator (EN 16931 arithmetic) shared with credit notes, estimates and recurring plans.
@@ -87,6 +88,14 @@ With Work Orders enabled, Invoicing's `WorkOrdersStartup` registers `InvoicingWo
 ## Charging a saved card
 
 An invoice with `AutoCharge` (the editor's **Charge the customer's saved card**, or a recurring plan in `IssueAndCharge` mode) is charged by `InvoiceAutoCharge` (Invoicing.Core, an `IInvoiceObserver` and an `ITransactionEventHandler`) when it is issued: it schedules the charge of its transaction to the payer's default saved card through `ISavedPaymentMethodChargeService` ([Transactions](transactions#charging-on-a-schedule-with-retries)) on the morning of the due day in the site's time zone, or charges it at once when it is due on issue. A declined card is retried on the ledger's retry schedule. When the payer kept no card that can be charged (a guest payer never has one), or the retries run out (`AutoChargeAbandonedAsync`), the invoice is sent to the payer with `IInvoiceSender` instead.
+
+## Late fees and debit notes
+
+With **Invoicing Collections** enabled, `LateFeePolicy` (Invoicing.Abstractions, a catalog record with `LateFeePolicyIndex`) says how late fees are charged: a fixed `Amount` or a `Percent` of what is still due, after `GraceDays`, once or again every `RepeatEveryDays` up to `MaxFees`, within `CapAmount` per invoice, while at least `MinimumBalance` is due; `Taxable` (otherwise the fee line is `OutOfScope`) and `SendDebitNote`. `LateFeePolicyHandler` refuses a policy with no name, no amount or percent, or a cap or count below one. **Commerce > Late fees** lists and edits them (`CatalogAdminController`, both list layouts); they need **Manage invoicing settings**.
+
+A late fee is its own document (ID16), never a line added to an issued invoice: `ILateFeeService` (`DefaultLateFeeService`, under the lock `Invoicing:LateFee:{invoiceId}`) charges the next step due under each enabled policy as a debit note, an `Invoice` with `Kind` `DebitNote`, `RelatedInvoiceId` the invoice (indexed as `InvoiceIndex.RelatedInvoiceId`, migration `UpdateFrom2Async`), `SourceType` `LateFee` and `SourceId` `{invoiceId}:{policyId}:{step}`, so a step is never charged twice. It reads the balance from the ledger right before each fee, takes one step per invoice and policy at a time, makes the draft, then issues it (and sends it) in a unit of work of its own, due on the day. A debit note is numbered in the invoice series, titled **Debit note** on its page, PDF and customer pages, and is paid, reminded and reported like any invoice. An invoice with `LateFeesExempt` (the editor's **No late fees**), a debit note, or one paid, void or within its grace gets none.
+
+`LateFeeBackgroundTask` (**Invoice Late Fees**, hourly at quarter past) assesses up to 200 overdue invoices on the site's date. The invoice's page lists its late fees and, when it is overdue, offers **Charge the late fee due now** (**Issue invoices**); the debit note's page links back to the invoice. Recipes and deployment plans carry the `LateFeePolicies` step. Per-party exclusion is not built yet; exempt an invoice instead.
 
 ## Estimates
 
@@ -202,6 +211,7 @@ The calculator asks the `IDocumentTaxProvider`s in order for the lines' taxes; w
 | **Record invoice payments** | Record payments received outside the site (security critical). |
 | **Manage invoicing settings** | Change the settings. |
 | **Manage estimates** | Create, send, revise and cancel estimates, record the customer's answer, and invoice them (with Invoicing Estimates). |
+| **Manage invoicing settings** (Collections) | Also lists and edits the late-fee policies. |
 | **Manage recurring invoices** | Create, start, pause, resume, cancel and run recurring plans (security critical; with Invoicing Recurring). |
 | **View own invoices** | See the invoices billed to them and to the parties they have billing access to. |
 

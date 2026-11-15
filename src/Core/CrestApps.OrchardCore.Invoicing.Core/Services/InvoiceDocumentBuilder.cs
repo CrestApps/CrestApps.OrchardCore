@@ -67,7 +67,7 @@ public sealed class InvoiceDocumentBuilder : IInvoiceDocumentBuilder
         var business = new BusinessDocument
         {
             Kind = estimate is not null ? InvoicingConstants.BusinessDocumentKinds.Estimate : creditNote is null ? InvoicingConstants.BusinessDocumentKinds.Invoice : InvoicingConstants.BusinessDocumentKinds.CreditNote,
-            Title = estimate is not null ? S["Estimate"] : creditNote is null ? S["Invoice"] : S["Credit note"],
+            Title = estimate is not null ? S["Estimate"] : creditNote is not null ? S["Credit note"] : invoice?.Kind == InvoiceKind.DebitNote ? S["Debit note"] : S["Invoice"],
             Number = document.Number,
             Culture = document.Culture,
             Status = GetStatus(document),

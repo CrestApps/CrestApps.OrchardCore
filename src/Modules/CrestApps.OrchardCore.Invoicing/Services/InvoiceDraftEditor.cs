@@ -32,6 +32,7 @@ internal static class InvoiceDraftEditor
         model.PricesIncludeTax = invoice.PricesIncludeTax;
         model.AllowPartialPayment = invoice.AllowPartialPayment;
         model.AutoCharge = invoice.AutoCharge;
+        model.LateFeesExempt = invoice.LateFeesExempt;
         model.Notes = invoice.Notes;
         model.Terms = invoice.Terms;
         model.Footer = invoice.Footer;
@@ -121,6 +122,7 @@ internal static class InvoiceDraftEditor
         invoice.PricesIncludeTax = model.PricesIncludeTax;
         invoice.AllowPartialPayment = model.AllowPartialPayment;
         invoice.AutoCharge = model.AutoCharge;
+        invoice.LateFeesExempt = model.LateFeesExempt;
         invoice.Notes = Clean(model.Notes);
         invoice.Terms = Clean(model.Terms);
         invoice.Footer = Clean(model.Footer);

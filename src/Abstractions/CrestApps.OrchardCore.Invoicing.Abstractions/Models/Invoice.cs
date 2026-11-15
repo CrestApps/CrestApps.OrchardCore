@@ -111,4 +111,9 @@ public sealed class Invoice : InvoicingDocument
     /// Gets or sets whether reminders are paused for the invoice.
     /// </summary>
     public bool RemindersPaused { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether no late fee is charged on the invoice, whatever the late-fee policies say.
+    /// </summary>
+    public bool LateFeesExempt { get; set; }
 }

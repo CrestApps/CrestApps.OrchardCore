@@ -61,6 +61,7 @@ public sealed class InvoiceIndexProvider : IndexProvider<Invoice>
                 TransactionId = Truncate(invoice.TransactionId, IdLength),
                 SourceType = Truncate(invoice.SourceType, ShortLength),
                 SourceId = Truncate(invoice.SourceId, PartyIdLength),
+                RelatedInvoiceId = Truncate(invoice.RelatedInvoiceId, IdLength),
             });
     }
 

@@ -1,7 +1,7 @@
 @model InvoiceDocumentPageViewModel
 
 <zone Name="Title">
-    <breadcrumb name="InvoicingMyInvoice" title="@T["Invoice {0}", Model.Source.Number]">
+    <breadcrumb name="InvoicingMyInvoice" title="@(Model.Source is Invoice { Kind: InvoiceKind.DebitNote } ? T["Debit note {0}", Model.Source.Number] : T["Invoice {0}", Model.Source.Number])">
         <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
         <breadcrumb-item id="InvoicingMyInvoices" url="@Model.BackUrl">@T["Invoices"]</breadcrumb-item>
     </breadcrumb>

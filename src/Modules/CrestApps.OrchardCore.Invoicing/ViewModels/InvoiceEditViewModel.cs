@@ -40,6 +40,8 @@ public class InvoiceEditViewModel
 
     public bool AutoCharge { get; set; }
 
+    public bool LateFeesExempt { get; set; }
+
     public string Notes { get; set; }
 
     public string Terms { get; set; }

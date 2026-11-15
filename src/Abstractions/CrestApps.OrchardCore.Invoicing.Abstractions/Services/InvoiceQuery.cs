@@ -44,6 +44,11 @@ public sealed class InvoiceQuery
     public string SourceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the invoice the returned debit notes relate to (<see cref="Models.Invoice.RelatedInvoiceId"/>).
+    /// </summary>
+    public string RelatedInvoiceId { get; set; }
+
+    /// <summary>
     /// Gets or sets whether only issued invoices are returned, never drafts.
     /// </summary>
     public bool IssuedOnly { get; set; }

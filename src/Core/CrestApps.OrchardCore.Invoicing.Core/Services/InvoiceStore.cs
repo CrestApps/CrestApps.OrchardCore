@@ -141,6 +141,11 @@ public sealed class InvoiceStore : DocumentCatalog<Invoice, InvoiceIndex>, IInvo
             records = records.Where(index => index.SourceId == query.SourceId);
         }
 
+        if (!string.IsNullOrEmpty(query.RelatedInvoiceId))
+        {
+            records = records.Where(index => index.RelatedInvoiceId == query.RelatedInvoiceId);
+        }
+
         var billTo = (query.BillTo ?? []).Where(party => !party.IsEmpty).Distinct().ToArray();
 
         if (query.OnlyBillTo && billTo.Length == 0)

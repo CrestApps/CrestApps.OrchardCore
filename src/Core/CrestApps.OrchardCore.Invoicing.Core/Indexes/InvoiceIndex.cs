@@ -91,4 +91,9 @@ public sealed class InvoiceIndex : CatalogItemIndex
     /// Gets or sets the identifier of the record it was made from.
     /// </summary>
     public string SourceId { get; set; }
+
+    /// <summary>
+    /// The invoice a debit note relates to.
+    /// </summary>
+    public string RelatedInvoiceId { get; set; }
 }

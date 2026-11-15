@@ -1,7 +1,7 @@
 @model InvoiceDocumentPageViewModel
 
 <zone Name="Title">
-    <breadcrumb name="InvoicingView" title="@T["Invoice {0}", Model.Source.Number]" />
+    <breadcrumb name="InvoicingView" title="@(Model.Source is Invoice { Kind: InvoiceKind.DebitNote } ? T["Debit note {0}", Model.Source.Number] : T["Invoice {0}", Model.Source.Number])" />
 </zone>
 
 <style>

@@ -6,6 +6,7 @@ Invoices and credit notes posted to the [Transactions](../CrestApps.OrchardCore.
 | --- | --- | --- |
 | Invoicing | `CrestApps.OrchardCore.Invoicing` | Transactions, Payment Terms, Business Documents, Resources |
 | Invoicing Estimates | `CrestApps.OrchardCore.Invoicing.Estimates` | Invoicing |
+| Invoicing Collections | `CrestApps.OrchardCore.Invoicing.Collections` | Invoicing |
 | Invoicing Recurring | `CrestApps.OrchardCore.Invoicing.Recurring` | Invoicing |
 
 - **Documents.** `Invoice` and `CreditNote` (Invoicing.Abstractions) are catalog records in the `Invoicing` collection with `InvoiceIndex` and `CreditNoteIndex`. Drafts go through `IInvoiceManager`; `InvoiceHandler` refuses lines out of range and any change after issue.
@@ -20,6 +21,7 @@ Invoices and credit notes posted to the [Transactions](../CrestApps.OrchardCore.
 - **Personal data.** `InvoicingPersonalDataContributor` exports a person's invoices and credit notes (by their user, customer records and e-mails) and on erasure clears the contact details, keeping numbers, amounts, dates, tax ids and archived PDFs.
 - **Estimates.** `IEstimateCommandService` (send, accept, decline, revise, cancel, convert to an invoice or a deposit invoice, expire), Commerce > Estimates, the public page `estimates/view/{token}` to accept or decline, the `estimate-sent` e-mail, workflow events, webhooks, the recipe step and the data set.
 - **Saved card charges.** `InvoiceAutoCharge` charges an issued invoice marked `AutoCharge` to the payer's default saved card through the ledger's `ISavedPaymentMethodChargeService`, and sends the invoice when there is no card or the retries run out.
+- **Late fees.** `LateFeePolicy` (Commerce > Late fees) and `ILateFeeService`: each fee a debit note linked to the overdue invoice, once per policy step, the balance re-read first; the hourly task, the invoice page's late fees and **Charge the late fee due now**, the `LateFeePolicies` recipe step.
 - **Recurring plans.** `IRecurringPlanService` (activate, pause, resume, cancel, run the due occurrences once each, catch up within a limit, price rises, end by date or runs), the 30-minute run task, Commerce > Recurring invoices, workflow events, webhooks, the `RecurringPlans` recipe step and the data set.
 - **Tax.** `IDocumentCalculator` with the `IDocumentTaxProvider`s; with Taxation enabled, `TaxationDocumentTaxProvider` taxes lines for the bill-to's party tax profile.
 - **Admin.** Commerce > Invoices: the list (`AdminList`, List and Grid), the draft editor with line rows and a bill-to selector over every party kind, and the invoice's page built by display drivers for `InvoicingConstants.DisplayTypes.DetailAdmin`, with issue, void, write off, reinstate and delete draft. `InvoiceCheckoutReferenceDescriber` names the invoice on its transaction.

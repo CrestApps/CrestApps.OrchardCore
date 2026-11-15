@@ -132,6 +132,18 @@ With **Invoicing Estimates** enabled, **Commerce > Estimates** lists the quotes 
 
 To change a sent estimate, click **Revise**: you get a copy to change, sent as **EST-1001-2**, and the old one is canceled. An estimate nobody answered expires the day after **Valid until**. How long estimates are valid by default is set under **Settings > Commerce > Invoicing**.
 
+## Late fees
+
+With **Invoicing Collections** enabled, **Commerce > Late fees** holds the policies that charge customers who pay late. Each late fee is a separate **debit note**, numbered like an invoice and linked to the overdue invoice; the invoice itself never changes.
+
+1. Click **Add late-fee policy** and give it a name.
+2. Choose whether **Each fee is** a fixed amount or a percent of what is still due, and enter it.
+3. Set the **Grace days** after the due date before the first fee. For a monthly fee, set **Repeat every (days)** to 30, and optionally **Most fees** and a **Cap** on the total.
+4. Optionally, set a **Minimum balance** below which no fee is charged, tick **Tax the fee** if late fees are taxed where you are, and tick **E-mail each fee to the customer**.
+5. Click **Save**.
+
+Fees are charged automatically every hour. An overdue invoice's page lists its late fees and has **Charge the late fee due now**; a debit note's page links to the invoice it charges a fee on. To spare one invoice, tick **No late fees** in its editor. A late fee can be voided or credited like any invoice.
+
 ## Recurring invoices
 
 With **Invoicing Recurring** enabled, **Commerce > Recurring invoices** lists the plans that bill a customer on a schedule, such as monthly hosting or a yearly support contract.

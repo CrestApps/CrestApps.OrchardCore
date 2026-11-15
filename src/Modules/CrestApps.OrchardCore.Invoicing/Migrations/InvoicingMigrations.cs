@@ -80,7 +80,9 @@ internal sealed class InvoicingMigrations : DataMigration
             .CreateIndex("IDX_CreditNoteIndex_Invoice", "InvoiceId", "Status", "DocumentId"),
             collection: InvoicingConstants.CollectionName);
 
-        return 2;
+        await CreateRelatedInvoiceColumnAsync();
+
+        return 3;
     }
 
     /// <summary>
@@ -97,6 +99,28 @@ internal sealed class InvoicingMigrations : DataMigration
         await CreateBillToEmailIndexAsync();
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the invoice a debit note relates to, so an invoice's late fees are found by it. No debit note was made before.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await CreateRelatedInvoiceColumnAsync();
+
+        return 3;
+    }
+
+    private async Task CreateRelatedInvoiceColumnAsync()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<InvoiceIndex>(table => table
+            .AddColumn<string>("RelatedInvoiceId", column => column.Nullable().WithLength(InvoiceIndexProvider.IdLength)),
+            collection: InvoicingConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<InvoiceIndex>(table => table
+            .CreateIndex("IDX_InvoiceIndex_Related", "RelatedInvoiceId", "DocumentId"),
+            collection: InvoicingConstants.CollectionName);
     }
 
     private Task CreateBillToEmailIndexAsync()

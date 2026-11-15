@@ -31,6 +31,11 @@ public static class InvoicingConstants
     public const string RecurringPlanReferenceType = "RecurringPlan";
 
     /// <summary>
+    /// The source type of a debit note that charges a late fee.
+    /// </summary>
+    public const string LateFeeReferenceType = "LateFee";
+
+    /// <summary>
     /// The number series of estimates.
     /// </summary>
     public const string EstimateNumberSeries = "Invoicing.Estimate";

@@ -42,6 +42,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = InvoicingConstants.Features.Collections,
+    Name = "Invoicing Collections",
+    Description = "Late-fee policies that charge overdue invoices with debit notes linked to them, and customer statements.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        InvoicingConstants.Features.Area,
+    ]
+)]
+
+[assembly: Feature(
     Id = InvoicingConstants.Features.Recurring,
     Name = "Invoicing Recurring",
     Description = "Recurring plans that make an invoice on a schedule, as a draft, issued, issued and sent, or issued and charged, with the period written into their lines.",
