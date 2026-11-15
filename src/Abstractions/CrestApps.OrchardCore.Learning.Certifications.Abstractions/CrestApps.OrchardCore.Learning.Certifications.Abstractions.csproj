@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Certifications</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Certifications Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of Learning certification paths: how a Skills certification is earned and renewed through
+      courses and assessments, each person's progress and cycles, and the requirement kinds other modules add.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Certification Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+  </ItemGroup>
+
+</Project>

@@ -268,6 +268,25 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
     }
 
     /// <summary>
+    /// Lists the enrollments of a course completed since a time, oldest completion first.
+    /// </summary>
+    /// <param name="courseId">The course.</param>
+    /// <param name="sinceUtc">The earliest completion time, in UTC.</param>
+    /// <param name="take">The most enrollments to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The enrollments.</returns>
+    public async Task<IReadOnlyList<Enrollment>> ListCompletedForCourseAsync(string courseId, DateTime sinceUtc, int take, CancellationToken cancellationToken = default)
+    {
+        return (await Session.Query<Enrollment, EnrollmentIndex>(
+            index => index.CourseId == courseId && index.Status == EnrollmentStatus.Completed && index.CompletedUtc >= sinceUtc,
+            collection: CollectionName)
+            .OrderBy(index => index.CompletedUtc)
+            .ThenBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <summary>
     /// Lists active enrollments due within a window, soonest first.
     /// </summary>
     /// <param name="fromUtc">The start of the window, in UTC, excluded.</param>

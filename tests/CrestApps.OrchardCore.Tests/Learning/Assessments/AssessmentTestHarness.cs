@@ -37,7 +37,11 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
 
     public TestClock Clock { get; }
 
-    public static async Task<AssessmentTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
+    public static async Task<AssessmentTestHarness> CreateAsync(
+        Action<IServiceCollection> configure = null,
+        Func<global::YesSql.Sql.ISchemaBuilder, Task> extraSchema = null,
+        global::YesSql.Indexes.IIndexProvider[] extraIndexProviders = null,
+        string[] extraCollections = null)
     {
         var clock = new TestClock { UtcNow = LearningTestHarness.Now };
         InMemoryQuestions questions = null;
@@ -53,10 +57,18 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
                 services.AddSingleton<global::OrchardCore.Infrastructure.Html.IHtmlSanitizerService, global::OrchardCore.Infrastructure.Html.HtmlSanitizerService>();
                 configure?.Invoke(services);
             },
-            AssessmentsIndexSchema.CreateAsync,
+            async schemaBuilder =>
+            {
+                await AssessmentsIndexSchema.CreateAsync(schemaBuilder);
+
+                if (extraSchema is not null)
+                {
+                    await extraSchema(schemaBuilder);
+                }
+            },
             // The deadline queue's index provider comes from DI on a site; the harness store needs it listed.
-            [.. AssessmentsIndexProviders.All(), new LeasedWorkItemIndexProvider<AttemptDeadlineWork>(AttemptDeadlineWork.CollectionName)],
-            [AttemptDeadlineWork.CollectionName]);
+            [.. AssessmentsIndexProviders.All(), new LeasedWorkItemIndexProvider<AttemptDeadlineWork>(AttemptDeadlineWork.CollectionName), .. extraIndexProviders ?? []],
+            [AttemptDeadlineWork.CollectionName, .. extraCollections ?? []]);
 
         questions = new InMemoryQuestions(courses);
 

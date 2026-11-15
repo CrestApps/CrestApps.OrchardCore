@@ -133,6 +133,25 @@ public sealed class AssessmentAttemptStore : DocumentCatalog<AssessmentAttempt, 
     }
 
     /// <summary>
+    /// Lists the passed attempts at a quiz submitted since a time, oldest first.
+    /// </summary>
+    /// <param name="quizId">The quiz.</param>
+    /// <param name="sinceUtc">The earliest submission time, in UTC.</param>
+    /// <param name="take">The most attempts to read.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The attempts.</returns>
+    public async Task<IReadOnlyList<AssessmentAttempt>> ListPassedSinceAsync(string quizId, DateTime sinceUtc, int take, CancellationToken cancellationToken = default)
+    {
+        return (await Session.Query<AssessmentAttempt, AssessmentAttemptIndex>(
+            index => index.QuizId == quizId && index.Passed == true && index.SubmittedUtc >= sinceUtc,
+            collection: CollectionName)
+            .OrderBy(index => index.SubmittedUtc)
+            .ThenBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <summary>
     /// Reads an attempt again from the store, leaving out any copy the session already holds, so a write under the
     /// attempt lock sees what the last writer committed.
     /// </summary>
