@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Accounts.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<AccountInvitationSentEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-envelope" aria-hidden="true"></i> @T["Account Invitation Sent"]</h4>
+<p>@T["Starts when a person is invited to an account. The input holds InvitationId, AccountId, Email, Role, Source and SourceId."]</p>

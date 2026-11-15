@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Accounts.Core.Indexes;
+using CrestApps.OrchardCore.Accounts.Core.Services;
 using CrestApps.OrchardCore.Accounts.Deployments;
 using CrestApps.OrchardCore.Accounts.Drivers;
 using CrestApps.OrchardCore.Accounts.Endpoints;
@@ -8,13 +10,17 @@ using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Navigation;
 using CrestApps.OrchardCore.Accounts.Recipes;
 using CrestApps.OrchardCore.Accounts.Services;
+using CrestApps.OrchardCore.Accounts.Workflows;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Events;
@@ -29,6 +35,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Accounts;
 
@@ -98,6 +105,62 @@ public sealed class MembersStartup : StartupBase
         services.AddIndexProvider<AccountMemberIndexProvider>();
         services.AddDataMigration<AccountMembersMigrations>();
         services.AddPermissionProvider<AccountMembersPermissionProvider>();
+
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(AccountsConstants.InvitationsCollectionName));
+        services.AddDataMigration<AccountInvitationsMigrations>()
+            .AddIndexProvider<AccountInvitationIndexProvider>();
+        services.TryAddScoped<AccountInvitationStore>();
+        services.TryAddScoped<IAccountInvitationService, DefaultAccountInvitationService>();
+        services.AddNavigationProvider<AccountMembersAccountMenu>();
+        services.AddPersonalDataContributor<AccountInvitationsPersonalDataContributor>();
+    }
+}
+
+/// <summary>
+/// E-mails account invitations.
+/// </summary>
+[Feature(AccountsConstants.MembersFeature)]
+[RequireFeatures(OrchardCoreFeatureIds.Email)]
+public sealed class InvitationEmailStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAccountInvitationObserver<AccountInvitationEmailObserver>();
+    }
+}
+
+/// <summary>
+/// Adds the account invitation workflow events and the Invite to Account task.
+/// </summary>
+[Feature(AccountsConstants.MembersFeature)]
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
+public sealed class InvitationWorkflowsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAccountInvitationObserver<AccountInvitationWorkflowObserver>();
+        services.AddActivity<AccountInvitationSentEvent, AccountInvitationSentEventDisplayDriver>();
+        services.AddActivity<AccountInvitationAcceptedEvent, AccountInvitationAcceptedEventDisplayDriver>();
+        services.AddActivity<InviteToAccountTask, InviteToAccountTaskDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Describes the account invitation workflow activities to CrestApps Recipes.
+/// </summary>
+[Feature(AccountsConstants.MembersFeature)]
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class InvitationWorkflowsSchemaStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<AccountInvitationSentEventSchema>()
+            .AddWorkflowActivitySchema<AccountInvitationAcceptedEventSchema>()
+            .AddWorkflowActivitySchema<InviteToAccountTaskSchema>();
     }
 }
 

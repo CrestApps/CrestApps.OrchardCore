@@ -1,0 +1,71 @@
+@model CrestApps.OrchardCore.Accounts.ViewModels.AccountMembersViewModel
+@using CrestApps.OrchardCore.Accounts.Models
+
+@{
+    ViewData["Title"] = T["Account members"];
+}
+
+<div class="container my-4">
+    <h1 class="h3 mb-1">@T["Account members"]</h1>
+    <p class="text-muted">@Model.AccountName</p>
+
+    <div class="list-group mb-4">
+        @foreach (var member in Model.Members)
+        {
+            <div class="list-group-item d-flex justify-content-between">
+                <span>@member.UserName <span class="text-muted small ms-1">@member.Email</span></span>
+                @if (member.Role == AccountMemberRole.Admin)
+                {
+                    <span class="badge bg-primary text-white align-self-center">@T["Admin"]</span>
+                }
+            </div>
+        }
+    </div>
+
+    @if (Model.IsAdmin)
+    {
+        @if (Model.Invitations.Count > 0)
+        {
+            <h2 class="h5">@T["Waiting invitations"]</h2>
+            <div class="list-group mb-4">
+                @foreach (var invitation in Model.Invitations)
+                {
+                    <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <span>@invitation.Email <span class="text-muted small ms-1">@(invitation.Role == AccountMemberRole.Admin ? T["Admin"] : T["Member"])</span></span>
+                        <form method="post" action="~/account/members/invitations/@invitation.ItemId/revoke">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take back"]</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6">@T["Invite a person"]</h2>
+                <form method="post" action="~/account/members/invite" class="row g-2">
+                    @Html.AntiForgeryToken()
+                    <div class="col-md-5">
+                        <label class="form-label" for="invite-email">@T["E-mail"]</label>
+                        <input class="form-control" type="email" id="invite-email" name="email" required />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label" for="invite-role">@T["Role"]</label>
+                        <select class="form-select" id="invite-role" name="role">
+                            <option value="@AccountMemberRole.Member">@T["Member"]</option>
+                            <option value="@AccountMemberRole.Admin">@T["Admin"]</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="invite-message">@T["Message"]</label>
+                        <input class="form-control" id="invite-message" name="message" maxlength="500" />
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">@T["Send the invitation"]</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+</div>

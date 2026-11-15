@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Accounts.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<InviteToAccountTask>
+
+<header><h4><i class="fa-solid fa-envelope" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Invite to Account"])</h4></header>

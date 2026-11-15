@@ -1,0 +1,33 @@
+@model CrestApps.OrchardCore.Accounts.ViewModels.AccountInvitationViewModel
+
+@{
+    ViewData["Title"] = T["Invitation"];
+}
+
+<div class="container my-4" style="max-width: 40rem">
+    <h1 class="h3 mb-3">@T["Invitation"]</h1>
+    @if (!Model.IsValid)
+    {
+        <p class="text-muted">@T["This invitation is not valid any more. It was accepted, taken back, or the link is wrong. Ask the account for a new one."]</p>
+    }
+    else
+    {
+        <p>@T["You are invited to join {0}.", Model.AccountName ?? string.Empty]</p>
+        @if (!string.IsNullOrWhiteSpace(Model.Invitation.Message))
+        {
+            <blockquote class="border-start ps-3 text-muted">@Model.Invitation.Message</blockquote>
+        }
+        <p class="small text-muted">@T["The invitation was sent to {0}. Sign in, or create an account, with that address to accept it.", Model.Invitation.Email]</p>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <form method="post" action="~/account/invitations/@Uri.EscapeDataString(Model.Token)">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">@T["Accept the invitation"]</button>
+            </form>
+        }
+        else
+        {
+            <a class="btn btn-primary" href="~/Login?returnUrl=@Uri.EscapeDataString(Context.Request.Path)">@T["Sign in to accept"]</a>
+        }
+    }
+</div>
