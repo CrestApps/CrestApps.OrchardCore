@@ -216,6 +216,21 @@ namespace CrestApps.OrchardCore.Invoicing.Core.Services
                 context.Result.Fail(new ValidationResult(InvoiceIssueMessages.Describe(issue, plan, S), [nameof(RecurringPlan.Lines)]));
             }
 
+            foreach (var charge in plan.UsageCharges ?? [])
+            {
+                if (string.IsNullOrEmpty(charge?.MeterId))
+                {
+                    context.Result.Fail(new ValidationResult(S["Choose the meter of each usage charge."], [nameof(RecurringPlan.UsageCharges)]));
+
+                    continue;
+                }
+
+                foreach (var tierError in UsagePricing.Validate(charge.Tiers, S).Distinct())
+                {
+                    context.Result.Fail(new ValidationResult(tierError, [nameof(RecurringPlan.UsageCharges)]));
+                }
+            }
+
             return Task.CompletedTask;
         }
     }

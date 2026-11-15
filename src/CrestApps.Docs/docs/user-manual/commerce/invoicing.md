@@ -158,6 +158,16 @@ With **Invoicing Billing** enabled:
 
 A charge or hours on an invoice are billed: they aren't offered again, and billed time can't be changed in Time Tracker. Taking the line off the draft, deleting the draft or voiding the invoice makes them unbilled again. A recurring plan can bill the customer's charges on each run: tick **Also bill the customer's unbilled charges**.
 
+## Bill usage
+
+To bill customers for what they use, such as API calls, seats or storage:
+
+1. Under **Commerce > Usage meters**, click **Add usage meter**. Give it a **Name** (printed on invoices), a **Code** (such as `api-calls`), a **Unit** (such as calls) and choose how **A period's usage is** worked out: added up, the most at once, or the latest reading. Click **Save**.
+2. Record usage. Your systems usually send it through the commerce API; you can also click **Usage** on the meter, choose the customer, enter the quantity and when, and click **Record**. Give an **Event id** to make sure a retry is never counted twice.
+3. On the customer's recurring plan, in the **Usage** card, choose the meter and enter the price tiers: for each, the quantity it goes **Up to** and the **Price of each**, leaving the last tier's limit empty. Choose **Graduated** to price each band at its own price (the first 1,000 at one price, the next at another), or **Volume** to price all of it at the price of the tier it reaches. Click **Update** for another empty tier row or usage charge.
+
+Each run bills the usage of the period that just ended, from the previous run up to the day before, so the first run bills none. A plan that bills only usage makes no invoice for a period with no usage.
+
 ## Late fees
 
 With **Invoicing Collections** enabled, **Commerce > Late fees** holds the policies that charge customers who pay late. Each late fee is a separate **debit note**, numbered like an invoice and linked to the overdue invoice; the invoice itself never changes.

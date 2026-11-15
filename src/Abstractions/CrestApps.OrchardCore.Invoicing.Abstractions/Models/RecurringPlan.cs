@@ -72,6 +72,12 @@ public sealed class RecurringPlan : InvoicingDocument
     public int? PriceIncreaseEveryRuns { get; set; }
 
     /// <summary>
+    /// Gets or sets the usage each run bills (with Invoicing Billing): a meter's usage in the period that just ended
+    /// (from the previous run up to the day before this one), priced by tiers.
+    /// </summary>
+    public IList<RecurringUsageCharge> UsageCharges { get; set; } = [];
+
+    /// <summary>
     /// Gets the runs so far, newest last: what each made and how it went.
     /// </summary>
     public IList<RecurringPlanRun> Runs { get; set; } = [];

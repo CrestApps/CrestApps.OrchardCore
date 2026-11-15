@@ -32,7 +32,7 @@ To have the store push events to another system instead of being polled, use [Co
 | `CrestApps.OrchardCore.Shipping.Api` | Shipping API | Shipping, Checkout API | `checkout/{id}/pickup-locations`, `shipping-rates`, `shipping`; `me/orders/{orderId}/shipments`; staff fulfillment ([Shipping](shipping.md#api)) |
 | `CrestApps.OrchardCore.Inventory.Api` | Inventory API | Inventory | `products/{id}/availability`; staff `inventory` ([Inventory](inventory.md#api)) |
 | `CrestApps.OrchardCore.PointOfSale` | Point of Sale | Orders, Inventory, Checkout API | `pos/...` ([Point of Sale](point-of-sale.md#api)) |
-| `CrestApps.OrchardCore.Invoicing.Api` | Invoicing API | Invoicing | staff `invoices` (list, get, by number, draft, issue, send, void, payments, PDF); `me/invoices` ([Invoicing](invoicing.md#api)) |
+| `CrestApps.OrchardCore.Invoicing.Api` | Invoicing API | Invoicing | staff `invoices` (list, get, by number, draft, issue, send, void, payments, PDF); `me/invoices`; `usage` with Invoicing Billing ([Invoicing](invoicing.md#api)) |
 
 A typical headless store turns on the first seven.
 

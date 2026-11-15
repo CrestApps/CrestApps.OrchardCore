@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Recurrence;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Services;
@@ -294,6 +295,30 @@ public sealed partial class DefaultRecurringPlanService : IRecurringPlanService
             });
         }
 
+        // The usage of the period that just ended, priced by each charge's tiers.
+        if (plan.UsageCharges?.Count > 0)
+        {
+            var usageError = await AddUsageAsync(plan, invoice, occurrence, cancellationToken);
+
+            if (usageError is not null)
+            {
+                await FailAsync(plan, record, usageError, result);
+
+                return;
+            }
+
+            // A plan that bills only usage makes no invoice for a period without any.
+            if (!invoice.Lines.Any(line => line.Kind is not (DocumentLineKind.Text or DocumentLineKind.Section)))
+            {
+                record.Outcome = RecurringRunOutcome.Skipped;
+                record.Message = S["There was no usage to bill."].Value;
+                plan.RunCount++;
+                plan.Runs.Add(record);
+
+                return;
+            }
+        }
+
         // The customer's charges kept to bill later, up to the run's day, when the plan bills them too.
         if (plan.BillUnbilledCharges && _serviceProvider.GetService<IBillingService>() is { } billing)
         {
@@ -365,6 +390,64 @@ public sealed partial class DefaultRecurringPlanService : IRecurringPlanService
         plan.Runs.Add(record);
         result.Invoices.Add(invoice);
         _pending.Add(observer => observer.GeneratedAsync(plan, invoice, record));
+    }
+
+    // Adds a line per usage band of each usage charge, for the period from the previous occurrence up to the day before
+    // this one (none on the first run, which has no period behind it). Returns what went wrong, or nothing.
+    private async Task<string> AddUsageAsync(RecurringPlan plan, Invoice invoice, DateOnly occurrence, CancellationToken cancellationToken)
+    {
+        var usage = _serviceProvider.GetService<IUsageService>();
+        var meters = _serviceProvider.GetService<IUsageMeterManager>();
+
+        if (usage is null || meters is null)
+        {
+            return S["The plan bills usage, but Invoicing Billing is not on."].Value;
+        }
+
+        if (Previous(plan, occurrence) is not { } periodStart)
+        {
+            return null;
+        }
+
+        var periodEnd = occurrence.AddDays(-1);
+        var localClock = _serviceProvider.GetRequiredService<ILocalClock>();
+        var fromUtc = DateTime.SpecifyKind(await localClock.ToUtcLenientAsync(periodStart.ToDateTime(TimeOnly.MinValue)), DateTimeKind.Utc);
+        var toUtc = DateTime.SpecifyKind(await localClock.ToUtcLenientAsync(occurrence.ToDateTime(TimeOnly.MinValue)), DateTimeKind.Utc);
+        var culture = CultureInfo.CurrentCulture;
+
+        foreach (var charge in plan.UsageCharges)
+        {
+            var meter = await meters.FindByIdAsync(charge.MeterId, cancellationToken);
+
+            if (meter is null)
+            {
+                return S["A usage charge's meter could not be found. Choose another on the plan."].Value;
+            }
+
+            var quantity = await usage.GetTotalAsync(meter.ItemId, invoice.BillTo.Party, fromUtc, toUtc, cancellationToken);
+            var bands = UsagePricing.Price(charge.TierMode, charge.Tiers, quantity);
+            var name = RenderPeriod(string.IsNullOrWhiteSpace(charge.Name) ? meter.Name : charge.Name, periodStart, periodEnd);
+
+            foreach (var band in bands)
+            {
+                invoice.Lines.Add(new DocumentLine
+                {
+                    Id = IdGenerator.GenerateId(),
+                    Kind = DocumentLineKind.Usage,
+                    Name = UsagePricing.Describe(name, band, bands.Count, culture),
+                    Quantity = band.Quantity,
+                    Unit = meter.Unit,
+                    UnitPrice = band.UnitPrice,
+                    TaxCategoryCode = charge.TaxCategoryCode,
+                    ServiceStart = periodStart,
+                    ServiceEnd = periodEnd,
+                    SourceType = InvoicingConstants.UsageMeterReferenceType,
+                    SourceId = meter.ItemId,
+                });
+            }
+        }
+
+        return null;
     }
 
     private Task FailAsync(RecurringPlan plan, RecurringPlanRun record, string message, RecurringPlanResult result)
@@ -496,6 +579,32 @@ public sealed partial class DefaultRecurringPlanService : IRecurringPlanService
         }
 
         return null;
+    }
+
+    // The occurrence of the plan's schedule before a day, or nothing for its first.
+    private static DateOnly? Previous(RecurringPlan plan, DateOnly occurrence)
+    {
+        if (!RecurrenceRule.TryParse(plan.Rule, out var rule, out _))
+        {
+            return null;
+        }
+
+        DateOnly? previous = null;
+        var index = 0;
+
+        foreach (var item in RecurrenceExpander.GetOccurrences(rule, LocalDate.FromDateOnly(plan.StartDate).AtMidnight(), DateTimeZone.Utc))
+        {
+            var date = item.Date.ToDateOnly();
+
+            if (date >= occurrence || ++index > RecurrenceExpander.MaxPeriods)
+            {
+                break;
+            }
+
+            previous = date;
+        }
+
+        return previous;
     }
 
     private static int CountOccurrencesThrough(RecurringPlan plan, DateOnly occurrence)

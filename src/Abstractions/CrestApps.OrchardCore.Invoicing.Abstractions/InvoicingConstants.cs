@@ -36,6 +36,11 @@ public static class InvoicingConstants
     public const string LateFeeReferenceType = "LateFee";
 
     /// <summary>
+    /// The source type of an invoice line that bills a usage meter's usage; its source id is the meter's id.
+    /// </summary>
+    public const string UsageMeterReferenceType = "UsageMeter";
+
+    /// <summary>
     /// The source type of an invoice made for an order whose balance was put on the ledger.
     /// </summary>
     public const string OrderReferenceType = "Order";

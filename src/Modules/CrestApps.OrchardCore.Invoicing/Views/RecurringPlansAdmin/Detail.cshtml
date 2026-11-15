@@ -99,6 +99,41 @@
             </ul>
         </div>
 
+        @if (plan.UsageCharges?.Count > 0)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Usage billed each run"]</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var charge in plan.UsageCharges)
+                    {
+                        var meter = Model.Meters.TryGetValue(charge.MeterId ?? string.Empty, out var found) ? found : null;
+                        var unit = meter?.Unit;
+                        decimal? from = 0m;
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span>@(string.IsNullOrEmpty(charge.Name) ? meter?.Name ?? T["A meter that was deleted"].Value : charge.Name)</span>
+                                <span class="text-muted small">@(charge.TierMode == UsageTierMode.Volume ? T["Volume tiers"] : T["Graduated tiers"])</span>
+                            </div>
+                            <ul class="list-unstyled small text-muted mb-0">
+                                @foreach (var tier in charge.Tiers)
+                                {
+                                    <li>
+                                        @(tier.UpTo is { } upTo
+                                            ? T["{0} to {1} {2}: {3} each", from?.ToString("#,0.##"), upTo.ToString("#,0.##"), unit, MoneyFormatter.Format(tier.UnitPrice, plan.Currency)]
+                                            : T["Over {0} {1}: {2} each", from?.ToString("#,0.##"), unit, MoneyFormatter.Format(tier.UnitPrice, plan.Currency)])
+                                    </li>
+                                    from = tier.UpTo;
+                                }
+                            </ul>
+                        </li>
+                    }
+                </ul>
+                <div class="card-body pt-0">
+                    <span class="hint">@T["Each run bills the usage of the period that just ended, from the previous run up to the day before."]</span>
+                </div>
+            </div>
+        }
+
         <div class="card">
             <div class="card-header">@T["Runs"]</div>
             @if (plan.Runs.Count == 0)

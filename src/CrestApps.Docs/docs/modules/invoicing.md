@@ -112,6 +112,14 @@ With **Invoicing Billing**, work and costs are billed through billable sources (
 
 A draft invoice's page has an **Unbilled work** card: the customer's unbilled charges in the invoice's currency to **Add the charges chosen**, and with Time Tracker, **Find time** for a person, days and rate, then **Add the time chosen**. A recurring plan with **Also bill the customer's unbilled charges** (`RecurringPlan.BillUnbilledCharges`) adds the charges up to each run's day.
 
+### Usage meters and tiers
+
+Invoicing Billing also bills usage. A `UsageMeter` (Invoicing.Abstractions, `UsageMeterIndex`) has a name, a `Code` usage is recorded with (lowercase, unique, such as `api-calls`), a `Unit` printed on invoices and an `Aggregation`: **Sum** (calls made), **Maximum** (the most seats at once) or **Last** (storage at the end of the period). `IUsageService` (`DefaultUsageService`) records a `UsageRecord` (meter, party, quantity, when, event id) once per meter and event id, under a distributed lock, so a retry is never counted twice; a meter that is off, an unknown meter, no customer or a negative quantity is refused. `GetTotalAsync` adds up a customer's records in a period from `UsageRecordIndex` alone, as the meter says.
+
+A recurring plan's `UsageCharges` (`RecurringUsageCharge`: meter, line name, tax category, `TierMode` and `Tiers`) bill a meter's usage **in arrears**: each run bills the period from the previous run up to the day before this one (midnight to midnight in the site's time zone), so the first run bills none. `UsagePricing.Price` prices the total by tiers (each an `UpTo` quantity and a `UnitPrice`, the last without a limit): **graduated** puts each band on its own `Usage` line at its tier's price (**API calls (1,000 – 5,000)**), and **volume** puts all of it on one line at the price of the tier it reaches. The lines carry the meter's unit, the period as their service dates and the source `UsageMeter`/meter id; the line name can carry the period like any plan line. A plan with only usage charges makes no invoice for a period without usage (the run is recorded as skipped). The plan editor validates the tiers (rising limits, only the last open, prices not negative).
+
+**Commerce > Usage meters** lists, adds and edits meters (**Create invoices and change drafts**). A meter's **Usage** page lists its latest 50 records in the site's time and records usage by hand (customer, quantity, when, an optional event id). With **Invoicing API**, `POST usage` records usage from another system. The **Usage meters** deployment step and the `UsageMeters` recipe step move the meters (not their usage).
+
 ## Late fees and debit notes
 
 With **Invoicing Collections** enabled, `LateFeePolicy` (Invoicing.Abstractions, a catalog record with `LateFeePolicyIndex`) says how late fees are charged: a fixed `Amount` or a `Percent` of what is still due, after `GraceDays`, once or again every `RepeatEveryDays` up to `MaxFees`, within `CapAmount` per invoice, while at least `MinimumBalance` is due; `Taxable` (otherwise the fee line is `OutOfScope`) and `SendDebitNote`. `LateFeePolicyHandler` refuses a policy with no name, no amount or percent, or a cap or count below one. **Commerce > Late fees** lists and edits them (`CatalogAdminController`, both list layouts); they need **Manage invoicing settings**.
@@ -178,6 +186,7 @@ With **Invoicing API**, invoices are on the commerce JSON API (`api/commerce/v1`
 | `POST invoices/{id}/void` | Void and write off invoices | Voids an open invoice with nothing paid, with a `reason`. |
 | `POST invoices/{id}/payments` | Record invoice payments | Records a payment taken elsewhere (`amount`, `method`, `reference`, `note`) on the ledger; the invoice returned shows it. |
 | `GET invoices/{id}/pdf` | View invoices | The PDF archived at issue, or printed now. |
+| `POST usage` (with Invoicing Billing) | Create invoices and change drafts | Records usage: `meter` (its code), `customer` (a party), `quantity`, `occurredAt` and `eventId`. Sending an event id again returns the first record with `alreadyRecorded: true`. A refused record answers `400`. |
 | `GET me/invoices`, `GET me/invoices/{id}` | View own invoices | The signed-in customer's issued invoices and those of the accounts they pay for (`IInvoiceVisibilityService`); another's, or a draft, is not found; staff's note and the source are left out. |
 
 A refused command answers `409` with the code `invalid-state` and the reasons; a draft that doesn't validate answers `400` with the fields.

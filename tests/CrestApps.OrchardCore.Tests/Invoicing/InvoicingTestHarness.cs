@@ -174,7 +174,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
 
         store.RegisterIndexes([new TransactionIndexProvider()], TransactionsConstants.CollectionName);
-        store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider(), new RecurringPlanIndexProvider(), new LateFeePolicyIndexProvider(), new BillableItemIndexProvider()], InvoicingConstants.CollectionName);
+        store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider(), new RecurringPlanIndexProvider(), new LateFeePolicyIndexProvider(), new BillableItemIndexProvider(), new UsageMeterIndexProvider(), new UsageRecordIndexProvider()], InvoicingConstants.CollectionName);
 
         var cancellationToken = TestContext.Current.CancellationToken;
 
@@ -194,6 +194,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             await new RecurringPlansMigrations { SchemaBuilder = schema }.CreateAsync();
             await new LateFeePolicyMigrations { SchemaBuilder = schema }.CreateAsync();
             await new BillableItemMigrations { SchemaBuilder = schema }.CreateAsync();
+            await new UsageMigrations { SchemaBuilder = schema }.CreateAsync();
             await transaction.CommitAsync(cancellationToken);
         }
 

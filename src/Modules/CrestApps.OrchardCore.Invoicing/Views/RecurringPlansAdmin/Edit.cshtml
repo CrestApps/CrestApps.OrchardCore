@@ -159,6 +159,69 @@
 
     <partial name="_DocumentLinesEditor" model="Model" view-data='new ViewDataDictionary(ViewData) { ["LinesHint"] = T["The lines of each invoice. Write {{ period.start }}, {{ period.end }}, {{ period.month }} or {{ period.year }} in a name or description to print the period a run bills, such as Hosting {{ period.month }} {{ period.year }}. Click Update to work out the totals and get another empty row."].Value }' />
 
+    @if (Model.Meters is not null)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Usage"]</div>
+            <div class="card-body">
+                <p class="hint">@T["Each run bills a meter's usage in the period that just ended, from the previous run up to the day before this one, so the first run bills none. Tiers price it: each band at its own price (graduated), or all of it at the price of the tier it reaches (volume). Leave the last tier's limit empty."]</p>
+                @for (var i = 0; i < Model.UsageCharges.Count; i++)
+                {
+                    var charge = Model.UsageCharges[i];
+                    <fieldset class="border rounded p-3 mb-3">
+                        <legend class="fs-6 w-auto px-2 mb-0">@(string.IsNullOrEmpty(charge.MeterId) ? T["Add a usage charge"] : T["Usage charge {0}", i + 1])</legend>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <label class="form-label" for="usage-meter-@i">@T["Meter"]</label>
+                                <select id="usage-meter-@i" name="UsageCharges[@i].MeterId" class="form-select">
+                                    <option value="">@T["None"]</option>
+                                    @foreach (var meter in Model.Meters)
+                                    {
+                                        <option value="@meter.Value" selected="@(meter.Value == charge.MeterId)">@meter.Text</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="usage-name-@i">@T["Line name"]</label>
+                                <input id="usage-name-@i" name="UsageCharges[@i].Name" value="@charge.Name" class="form-control" maxlength="255" placeholder="@T["The meter's name"]" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" for="usage-mode-@i">@T["Tiers"]</label>
+                                <select id="usage-mode-@i" name="UsageCharges[@i].TierMode" class="form-select">
+                                    <option value="@UsageTierMode.Graduated" selected="@(charge.TierMode == UsageTierMode.Graduated)">@T["Graduated"]</option>
+                                    <option value="@UsageTierMode.Volume" selected="@(charge.TierMode == UsageTierMode.Volume)">@T["Volume"]</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" for="usage-tax-@i">@T["Tax category"]</label>
+                                <input id="usage-tax-@i" name="UsageCharges[@i].TaxCategoryCode" value="@charge.TaxCategoryCode" class="form-control" />
+                            </div>
+                        </div>
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">@T["Up to (quantity)"]</th>
+                                    <th scope="col">@T["Price of each"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var t = 0; t < charge.Tiers.Count; t++)
+                                {
+                                    var tier = charge.Tiers[t];
+                                    <tr>
+                                        <td><input type="number" step="any" min="0" name="UsageCharges[@i].Tiers[@t].UpTo" value="@tier.UpTo?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" placeholder="@T["No limit"]" aria-label="@T["Tier {0} up to", t + 1]" /></td>
+                                        <td><input type="number" step="any" min="0" name="UsageCharges[@i].Tiers[@t].UnitPrice" value="@tier.UnitPrice?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" aria-label="@T["Tier {0} price of each", t + 1]" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </fieldset>
+                }
+                <span class="hint">@T["Click Update for another empty usage charge or tier row. Usage is recorded under Commerce > Usage meters or through the API."]</span>
+            </div>
+        </div>
+    }
+
     <div class="card mb-3">
         <div class="card-header">@T["Invoice"]</div>
         <div class="card-body">

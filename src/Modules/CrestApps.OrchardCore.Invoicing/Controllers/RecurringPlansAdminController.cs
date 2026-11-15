@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -266,11 +267,25 @@ public sealed class RecurringPlansAdminController : Controller
             return NotFound();
         }
 
+        var meters = new Dictionary<string, UsageMeter>();
+
+        if (plan.UsageCharges?.Count > 0 && HttpContext.RequestServices.GetService<IUsageMeterManager>() is { } meterManager)
+        {
+            foreach (var meterId in plan.UsageCharges.Select(charge => charge.MeterId).Where(id => !string.IsNullOrEmpty(id)).Distinct())
+            {
+                if (await meterManager.FindByIdAsync(meterId) is { } meter)
+                {
+                    meters[meterId] = meter;
+                }
+            }
+        }
+
         return View(new RecurringPlanDetailViewModel
         {
             Plan = plan,
             Upcoming = plan.Status is RecurringPlanStatus.Draft or RecurringPlanStatus.Active ? _service.GetUpcoming(plan, 6) : [],
             CanManage = await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ManageRecurringInvoices),
+            Meters = meters,
         });
     }
 
@@ -469,7 +484,38 @@ public sealed class RecurringPlansAdminController : Controller
 
         model.Lines.Add(new InvoiceLineEditViewModel { Quantity = 1m });
 
+        foreach (var charge in plan.UsageCharges ?? [])
+        {
+            model.UsageCharges.Add(new RecurringUsageChargeEditViewModel
+            {
+                MeterId = charge.MeterId,
+                Name = charge.Name,
+                TierMode = charge.TierMode,
+                TaxCategoryCode = charge.TaxCategoryCode,
+                Tiers = [.. charge.Tiers.Select(tier => new UsageTierEditViewModel { UpTo = tier.UpTo, UnitPrice = tier.UnitPrice })],
+            });
+        }
+
         return model;
+    }
+
+    // An empty usage charge to add, and empty tier rows on each, so a tier or charge can be added without script.
+    private static void PadUsageCharges(RecurringPlanEditViewModel model)
+    {
+        model.UsageCharges.RemoveAll(charge => string.IsNullOrEmpty(charge.MeterId));
+        model.UsageCharges.Add(new RecurringUsageChargeEditViewModel());
+
+        foreach (var charge in model.UsageCharges)
+        {
+            charge.Tiers.RemoveAll(tier => tier.UnitPrice is null && tier.UpTo is null);
+
+            var rows = Math.Max(3, charge.Tiers.Count + 1);
+
+            while (charge.Tiers.Count < rows)
+            {
+                charge.Tiers.Add(new UsageTierEditViewModel());
+            }
+        }
     }
 
     private static void Apply(RecurringPlanEditViewModel model, RecurringPlan plan)
@@ -498,6 +544,23 @@ public sealed class RecurringPlansAdminController : Controller
 
         InvoiceDraftEditor.ApplyLines(model.Lines, plan, keepText: false);
 
+        // The usage charges are kept as they were when Invoicing Billing is off and the editor did not show them.
+        if (model.Meters is not null || model.UsageCharges.Count > 0)
+        {
+            plan.UsageCharges = [.. model.UsageCharges
+                .Where(charge => !string.IsNullOrEmpty(charge.MeterId))
+                .Select(charge => new RecurringUsageCharge
+                {
+                    MeterId = charge.MeterId,
+                    Name = Clean(charge.Name),
+                    TierMode = charge.TierMode,
+                    TaxCategoryCode = Clean(charge.TaxCategoryCode),
+                    Tiers = [.. (charge.Tiers ?? [])
+                        .Where(tier => tier.UnitPrice is not null)
+                        .Select(tier => new UsagePriceTier { UpTo = tier.UpTo, UnitPrice = tier.UnitPrice.Value })],
+                })];
+        }
+
         // A change to the schedule of a running plan moves its next run along the new rule.
         if (plan.Status == RecurringPlanStatus.Active && plan.NextRunDate is { } next)
         {
@@ -518,6 +581,12 @@ public sealed class RecurringPlansAdminController : Controller
         ];
         model.PartySearchEndpoint = Url.RouteUrl(InvoicePartySearchEndpoints.RouteName);
         model.Totals ??= plan.Totals;
+
+        if (HttpContext.RequestServices.GetService<IUsageMeterManager>() is { } meters)
+        {
+            model.Meters = [.. (await meters.GetAllAsync()).OrderBy(meter => meter.Name).Select(meter => new SelectListItem(meter.Enabled ? meter.Name : S["{0} (off)", meter.Name].Value, meter.ItemId))];
+            PadUsageCharges(model);
+        }
 
         if (PartyRef.TryParse(model.BillTo, out var party))
         {

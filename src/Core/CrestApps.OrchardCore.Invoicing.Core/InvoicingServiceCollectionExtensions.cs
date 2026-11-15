@@ -82,8 +82,8 @@ public static class InvoicingServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers billing: the billable charges, their store and manager, the charges source, the billing service and
-    /// the handler that keeps billed work in step with its invoices. Other sources (such as time) register an
+    /// Registers billing: the billable charges, their store and manager, the charges source, the billing service, the
+    /// handler that keeps billed work in step with its invoices, and the usage meters and the usage service. Other sources (such as time) register an
     /// <see cref="IBillableSource"/>.
     /// </summary>
     /// <param name="services">The services.</param>
@@ -96,6 +96,10 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddScoped<IBillingService, DefaultBillingService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Invoice>, BillingInvoiceHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, BillingInvoiceHandler>());
+        services.TryAddScoped<IUsageMeterStore, UsageMeterStore>();
+        services.TryAddScoped<IUsageMeterManager, UsageMeterManager>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<UsageMeter>, UsageMeterHandler>());
+        services.TryAddScoped<IUsageService, DefaultUsageService>();
 
         return services;
     }

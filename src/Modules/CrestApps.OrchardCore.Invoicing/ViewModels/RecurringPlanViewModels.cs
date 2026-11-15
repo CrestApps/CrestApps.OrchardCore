@@ -30,6 +30,39 @@ public class RecurringPlanEditViewModel : InvoiceEditViewModel
     public int? PriceIncreaseEveryRuns { get; set; }
 
     public bool BillUnbilledCharges { get; set; }
+
+    public List<RecurringUsageChargeEditViewModel> UsageCharges { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the meters a usage charge can bill, or <see langword="null"/> when Invoicing Billing is off.
+    /// </summary>
+    public List<SelectListItem> Meters { get; set; }
+}
+
+/// <summary>
+/// A usage charge in the plan's editor, with a few tier rows (empty ones are left out).
+/// </summary>
+public class RecurringUsageChargeEditViewModel
+{
+    public string MeterId { get; set; }
+
+    public string Name { get; set; }
+
+    public UsageTierMode TierMode { get; set; }
+
+    public string TaxCategoryCode { get; set; }
+
+    public List<UsageTierEditViewModel> Tiers { get; set; } = [];
+}
+
+/// <summary>
+/// A price tier row of a usage charge.
+/// </summary>
+public class UsageTierEditViewModel
+{
+    public decimal? UpTo { get; set; }
+
+    public decimal? UnitPrice { get; set; }
 }
 
 public class RecurringPlansAdminIndexOptions
@@ -64,4 +97,9 @@ public class RecurringPlanDetailViewModel
     public IReadOnlyList<DateOnly> Upcoming { get; set; } = [];
 
     public bool CanManage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the names and units of the meters the plan's usage charges bill, by id.
+    /// </summary>
+    public IReadOnlyDictionary<string, UsageMeter> Meters { get; set; } = new Dictionary<string, UsageMeter>();
 }

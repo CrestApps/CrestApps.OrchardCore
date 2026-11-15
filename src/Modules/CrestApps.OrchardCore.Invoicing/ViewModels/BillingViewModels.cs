@@ -64,3 +64,45 @@ public class InvoiceUnbilledWorkViewModel
     public BillableQuery TimeQuery
         => new() { UserId = TimeUser, From = TimeFrom, Through = TimeThrough, HourlyRate = TimeRate, Currency = Invoice?.Currency };
 }
+
+/// <summary>
+/// The editor of a usage meter.
+/// </summary>
+public class UsageMeterViewModel
+{
+    public string Name { get; set; }
+
+    public string Code { get; set; }
+
+    public string Unit { get; set; }
+
+    public UsageAggregation Aggregation { get; set; }
+
+    public bool Enabled { get; set; } = true;
+}
+
+/// <summary>
+/// A meter's usage page: its latest records and the form that records usage by hand.
+/// </summary>
+public class UsageMeterUsageViewModel
+{
+    public UsageMeter Meter { get; set; }
+
+    public DateTime OccurredLocal { get; set; }
+
+    public string PartySearchEndpoint { get; set; }
+
+    public List<UsageRecordRowViewModel> Records { get; } = [];
+}
+
+/// <summary>
+/// A usage record on its meter's page, in the site's time.
+/// </summary>
+public class UsageRecordRowViewModel
+{
+    public UsageRecord Record { get; set; }
+
+    public string PartyName { get; set; }
+
+    public DateTime OccurredLocal { get; set; }
+}
