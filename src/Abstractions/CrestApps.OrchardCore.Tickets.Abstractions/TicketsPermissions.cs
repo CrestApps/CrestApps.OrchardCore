@@ -141,7 +141,9 @@ public static class TicketsPermissions
         [TicketOperation.Delete] = _delete,
     };
 
-    private static readonly ConcurrentDictionary<(TicketOperation, string), Permission> _deskPermissions = new();
+    // Keyed by the desk's name too: the cache is shared by every tenant of the process, and tenants set up from the same
+    // recipe have desks with the same id but maybe another name, as a desk renamed later has.
+    private static readonly ConcurrentDictionary<(TicketOperation, string, string), Permission> _deskPermissions = new();
 
     /// <summary>
     /// Gets the operations that have a permission per desk.
@@ -158,6 +160,8 @@ public static class TicketsPermissions
     {
         ArgumentNullException.ThrowIfNull(desk);
 
-        return _deskPermissions.GetOrAdd((operation, desk.ItemId), key => _templates[key.Item1].CreateDynamicPermission(desk.ItemId, desk.Name ?? desk.ItemId));
+        var name = desk.Name ?? desk.ItemId;
+
+        return _deskPermissions.GetOrAdd((operation, desk.ItemId, name), key => _templates[key.Item1].CreateDynamicPermission(key.Item2, key.Item3));
     }
 }

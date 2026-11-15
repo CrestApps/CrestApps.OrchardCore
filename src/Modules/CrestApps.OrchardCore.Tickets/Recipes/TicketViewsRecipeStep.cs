@@ -22,4 +22,8 @@ internal sealed class TicketViewsRecipeStep : CatalogRecipeStep<TicketView>
         : base(TicketsConstants.RecipeSteps.Views, EntriesName, manager)
     {
     }
+
+    /// <inheritdoc/>
+    protected override bool CanImport(System.Text.Json.Nodes.JsonObject token, global::OrchardCore.Recipes.Models.RecipeExecutionContext context)
+        => TicketRecipeIds.CanImport(context.Name, token, context);
 }

@@ -34,4 +34,8 @@ internal sealed class TicketDesksRecipeStep : CatalogRecipeStep<TicketDesk>
             ? null
             : (await _desks.GetAllAsync()).FirstOrDefault(desk => string.Equals(desk.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <inheritdoc/>
+    protected override bool CanImport(System.Text.Json.Nodes.JsonObject token, global::OrchardCore.Recipes.Models.RecipeExecutionContext context)
+        => TicketRecipeIds.CanImport(context.Name, token, context);
 }

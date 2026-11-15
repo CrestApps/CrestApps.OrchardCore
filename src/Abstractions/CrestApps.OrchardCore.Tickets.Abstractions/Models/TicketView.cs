@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.Tickets.Models;
 public sealed class TicketView : CatalogItem, ITicketSettingsRecord
 {
     /// <summary>
+    /// The member of a view's recipe JSON that names its owner by user name, since a user id differs from site to site.
+    /// </summary>
+    public const string OwnerUserNameProperty = "OwnerUserName";
+
+    /// <summary>
     /// Gets or sets the view's name.
     /// </summary>
     public string Name { get; set; }

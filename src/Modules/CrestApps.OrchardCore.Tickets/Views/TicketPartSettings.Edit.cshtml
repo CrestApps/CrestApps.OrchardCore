@@ -1,0 +1,50 @@
+@model TicketPartSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultDeskId" class="ocat-label">@T["Desk"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultDeskId" asp-items="Model.Desks" class="form-select">
+            <option value="">@T["Chosen when the ticket is created"]</option>
+        </select>
+        <span class="hint">@T["The desk a new ticket of this type goes to when none is chosen, such as one created by a workflow or an e-mail."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Team"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.DefaultTeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.DefaultTeamId) ? Array.Empty<string>() : new[] { Model.DefaultTeamId } })
+        <span class="hint">@T["New tickets of this type go to this team before the desk's default team, and are assigned to its members as the desk says."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultPriorityId" class="ocat-label">@T["Priority"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultPriorityId" asp-items="Model.Priorities" class="form-select">
+            <option value="">@T["The default priority"]</option>
+        </select>
+        <span class="hint">@T["The priority a new ticket of this type starts with when none is chosen."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ServiceLevelPolicyId" class="ocat-label">@T["Service-level policy"]</label>
+    <div class="ocat-end">
+        <select asp-for="ServiceLevelPolicyId" asp-items="Model.Policies" class="form-select">
+            <option value="">@T["The desk's policy"]</option>
+        </select>
+        <span class="hint">@T["Used for tickets of this type before the desk's policy."]</span>
+    </div>
+</div>
+
+@if (Model.Skills is not null)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="RequiredSkillIds" class="ocat-label">@T["Required skills"]</label>
+        <div class="ocat-end">
+            <select asp-for="RequiredSkillIds" asp-items="Model.Skills" class="form-select" multiple size="4"></select>
+            <span class="hint">@T["Only team members who hold every one of these skills are assigned tickets of this type."]</span>
+        </div>
+    </div>
+}

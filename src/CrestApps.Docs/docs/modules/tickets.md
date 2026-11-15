@@ -22,6 +22,8 @@ user_manual: user-manual/administration/tickets
 
 A ticket type is any content type with `TicketPart` (stereotype `Ticket`). The feature creates a `Ticket` type whose title is the **Subject**; add fields to it, or create more types, to ask for different things. Ticket types are not versioned or drafted: a save updates the ticket in place.
 
+The Ticket part's settings on a ticket type (`TicketPartSettings`, edited on the type's Ticket part under **Content Definition**) say what a new ticket of the type starts with: the desk when none is chosen, the team (before the desk's default team), the priority, the service-level policy (used before the desk's) and, with Skills on, the skills an assignee must hold.
+
 `TicketPart` keeps the number, desk, status and its category, priority, requester (a [party](./parties) with a contact snapshot for a guest), account, team, assignee, channel, participants, links (`RecordRef` and a relation), the ticket it was merged into or follows up, and the times and counters reports need: first response, assigned, solved, closed, last customer and agent activity, replies, reopens, reassignments and escalation level. `TicketIndex` serves the list, the views, the reports and the API.
 
 Every change goes through `ITicketService` under a lock per ticket: create, update, reply or note, assign by the desk's strategy, merge, link, edit fields, delete and a list within a scope. Each change made to a ticket is written to its timeline as an event with the field changes, so the ticket's history is never worked out again from its current state.
@@ -46,7 +48,7 @@ A desk keeps its own tickets: every ticket permission exists once over all desks
 
 The other permissions (`EditTickets`, `ReplyToTickets`, `AddTicketNotes`, `AssignTickets`, `MergeTickets`, `DeleteTickets`) apply to the tickets the user may view. `ManageTicketSettings` covers statuses, priorities, desks, shared views and the e-mails; `ViewTicketReports` opens the ticket reports. `TicketScopeFilter` is the one rule the list, the API, the data sets, the reports and the account tab apply, so a user never sees a ticket out of their scope anywhere.
 
-A desk also has its business hours schedule, service-level policy, default team, ticket types, reopen window, auto-close delay, how new tickets are assigned and whether requesters are e-mailed and assignees told.
+A desk also has its business hours schedule (used by the **Time elapsed** workflow event counted in business hours; service-level targets use their policy's schedule), service-level policy, default team, ticket types, reopen window, auto-close delay, how new tickets are assigned and whether requesters are e-mailed and assignees told.
 
 ## Assignment and life cycle
 
@@ -141,9 +143,9 @@ With AI on, these tools can be picked on AI profiles (category **Tickets**). Eac
 | `TicketStatuses` | Statuses |
 | `TicketPriorities` | Priorities |
 | `TicketDesks` | Desks, matched by `ItemId` and then by name |
-| `TicketViews` | Shared saved views |
+| `TicketViews` | Saved views; a personal view carries its owner's user name (`OwnerUserName`), resolved to the user of the target site, and a view whose owner isn't a user there is refused with that name |
 
-Each has a deployment step and schemas for CrestApps Recipes. Tickets themselves are content items and travel with Orchard Core's content step; their entries with the `TimelineEntries` step. The backlog snapshots are history the site records and have no step.
+Each has a deployment step and schemas for CrestApps Recipes. A record whose `ItemId` isn't a valid id (26 letters and digits) is refused with its name and id rather than imported under a new id, which would cut the links other records make to it. A status's or priority's color must be a hex color or a color name, in the editor and in a recipe. Tickets themselves are content items and travel with Orchard Core's content step; their entries with the `TimelineEntries` step. The backlog snapshots are history the site records and have no step.
 
 The **Help desk starter** recipe sets up weekday business hours, a `Tickets` service-level policy, the Support desk and an IT desk, and two example workflows that start turned off: one escalates a ticket whose target is breached and says why in a note, the other adds a note when a requester reopens a solved ticket.
 

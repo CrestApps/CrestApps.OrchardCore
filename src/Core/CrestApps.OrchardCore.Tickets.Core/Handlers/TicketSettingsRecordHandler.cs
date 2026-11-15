@@ -7,9 +7,11 @@ using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Tickets.Core.Handlers;
 
@@ -24,6 +26,9 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
     private readonly ICatalog<T> _store;
     private readonly IClock _clock;
     private readonly IServiceProvider _services;
+
+    // The owner names of views being imported that match no user here, until the view is validated.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<TicketView, string> _unknownOwners = new();
 
     internal readonly IStringLocalizer S;
 
@@ -42,12 +47,11 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
     }
 
     /// <inheritdoc/>
-    public override Task InitializingAsync(InitializingContext<T> context, CancellationToken cancellationToken = default)
+    public override async Task InitializingAsync(InitializingContext<T> context, CancellationToken cancellationToken = default)
     {
         // A recipe creates the record from its JSON; the editor hands none.
         CatalogDeploymentSerializer.Populate(context.Model, context.Data);
-
-        return Task.CompletedTask;
+        await ResolveOwnerAsync(context.Model, context.Data);
     }
 
     /// <inheritdoc/>
@@ -64,13 +68,38 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
     }
 
     /// <inheritdoc/>
-    public override Task UpdatingAsync(UpdatingContext<T> context, CancellationToken cancellationToken = default)
+    public override async Task UpdatingAsync(UpdatingContext<T> context, CancellationToken cancellationToken = default)
     {
         CatalogDeploymentSerializer.Populate(context.Model, context.Data);
+        await ResolveOwnerAsync(context.Model, context.Data);
         context.Model.Name = context.Model.Name?.Trim();
         context.Model.ModifiedUtc = _clock.UtcNow;
+    }
 
-        return Task.CompletedTask;
+    // A personal view travels with its owner's user name (a user id differs from site to site), which is turned into the
+    // user of this site here; a name with no user here is kept aside so validation refuses the view with that name.
+    private async Task ResolveOwnerAsync(T model, System.Text.Json.Nodes.JsonNode data)
+    {
+        if (model is not TicketView view
+            || data is not System.Text.Json.Nodes.JsonObject json
+            || json[TicketView.OwnerUserNameProperty] is not System.Text.Json.Nodes.JsonValue value
+            || !value.TryGetValue<string>(out var userName)
+            || string.IsNullOrWhiteSpace(userName))
+        {
+            return;
+        }
+
+        var user = _services.GetService<UserManager<IUser>>() is { } users ? await users.FindByNameAsync(userName.Trim()) : null;
+
+        if (user is not null && _services.GetService<UserManager<IUser>>() is { } manager)
+        {
+            view.OwnerId = await manager.GetUserIdAsync(user);
+            _unknownOwners.Remove(view);
+        }
+        else
+        {
+            _unknownOwners.AddOrUpdate(view, userName.Trim());
+        }
     }
 
     /// <inheritdoc/>
@@ -116,9 +145,36 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
             }
         }
 
-        // Saved views are per owner, so two people may each have one called "My open tickets".
-        if (context.Model is TicketView)
+        // A badge color is written into a style attribute, so only a hex color or a color name is kept, from the editor
+        // and from a recipe alike.
+        var color = context.Model switch
         {
+            TicketStatus status => status.Color,
+            TicketPriority priority => priority.Color,
+            _ => null,
+        };
+
+        if (!string.IsNullOrEmpty(color) && !TicketColors.IsValid(color))
+        {
+            context.Result.Fail(new ValidationResult(S["The color {0} isn't a hex color (such as #1f6feb) or a color name (such as teal).", color], [nameof(TicketStatus.Color)]));
+        }
+
+        // Saved views are per owner, so two people may each have one called "My open tickets".
+        if (context.Model is TicketView view)
+        {
+            // A user id differs from site to site, so a view imported with an owner who isn't a user here is refused
+            // rather than kept as a view nobody can see.
+            if (_unknownOwners.TryGetValue(view, out var unknownName))
+            {
+                context.Result.Fail(new ValidationResult(S["The view {0} belongs to the user {1}, who isn't a user of this site. Add the user first, or remove its owner to bring it in as a shared view.", name, unknownName], [nameof(TicketView.OwnerId)]));
+            }
+            else if (!string.IsNullOrEmpty(view.OwnerId)
+                && _services.GetService<UserManager<IUser>>() is { } users
+                && await users.FindByIdAsync(view.OwnerId) is null)
+            {
+                context.Result.Fail(new ValidationResult(S["The view {0} belongs to the user {1}, who isn't a user of this site. Add the user first, or remove its owner to bring it in as a shared view.", name, view.OwnerId], [nameof(TicketView.OwnerId)]));
+            }
+
             return;
         }
 
