@@ -937,7 +937,9 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 
 **Checked in the browser.** User audiences (rules, members), a learning path saved in the editor and its learner page, required learning saved and run (enrollments with due dates, preview, exemption with evidence download, learner and exempt views, admin pages refused to learners), credit types, credits on a course editor and its page, recording external learning with evidence, review and accept, My education credits, credit types in the certification path editor.
 
-**Not checked in the browser.** Team Learning with a real manager and reports (checked only for an admin without a staff record; the hierarchy call is the Staff building block), the workflow editors of the new activities, the deployment steps, reminders and escalation on a live clock (unit-tested with a moved clock), the Record external learning step in a live pipeline (the row logic is unit-tested), and the time-off ledger copy on a live site with time-off data.
+Team Learning was checked with a manager whose role holds View team learning and a report linked on the report's staff record: the manager sees the report's required path, state and due date.
+
+**Not checked in the browser.** The workflow editors of the new activities, the deployment steps, reminders and escalation on a live clock (unit-tested with a moved clock), the Record external learning step in a live pipeline (the row logic is unit-tested), and the time-off ledger copy on a live site with time-off data.
 
 **Fixed while verifying.**
 
