@@ -68,7 +68,7 @@ Every requester e-mail goes through an outbox: it is stored, tried at once, and 
 
 ## From a messaging conversation
 
-With the [messaging workspace](./omnichannel-messaging) on, each conversation row has **Open a ticket**. It opens **New ticket** with the customer as requester (their contact, or their address as a name), a subject and the latest 30 messages, oldest first, with who wrote each, as the first message, for an agent who may read the conversation (`TicketConversationSource`). The new ticket links back to the conversation (`MessagingConversation:{id}`, Related).
+With the [messaging workspace](../omnichannel/messaging-workspace) on, each conversation row has **Open a ticket**. It opens **New ticket** with the customer as requester (their contact, or their address as a name), a subject and the latest 30 messages, oldest first, with who wrote each, as the first message, for an agent who may read the conversation (`TicketConversationSource`). The new ticket links back to the conversation (`MessagingConversation:{id}`, Related).
 
 ## Portal
 
