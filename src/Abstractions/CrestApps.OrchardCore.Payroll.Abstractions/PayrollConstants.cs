@@ -174,5 +174,10 @@ public static class PayrollConstants
         /// My Pay: a person's own statements, tax elections and where their pay goes.
         /// </summary>
         public const string SelfService = "CrestApps.OrchardCore.Payroll.SelfService";
+
+        /// <summary>
+        /// United States Payroll: the Form W-4 election and withholding method, and the federal tax rules as recipes.
+        /// </summary>
+        public const string UnitedStates = "CrestApps.OrchardCore.Payroll.UnitedStates";
     }
 }

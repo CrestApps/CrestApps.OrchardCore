@@ -286,6 +286,12 @@ public sealed class PayAccumulator
 
     /// <summary>Gets or sets the taxable wages of a tax in the year of the pay date (for a wage base).</summary>
     public decimal YearTaxableWages { get; set; }
+
+    /// <summary>
+    /// Gets or sets the taxable wages of a tax in the pay period being calculated (earlier statements of the same
+    /// period), so a second pay in a period is withheld on the period's total.
+    /// </summary>
+    public decimal PeriodTaxableWages { get; set; }
 }
 
 /// <summary>
@@ -371,6 +377,17 @@ public sealed class PayrollTaxRequest
 
     /// <summary>Gets or sets how supplemental wages are withheld.</summary>
     public PayrollSupplementalMethod SupplementalMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets the wages of each tax category paid this calendar year before this pay (regular and supplemental),
+    /// for a tax that starts above a threshold.
+    /// </summary>
+    public IDictionary<string, decimal> YearWages { get; set; } = new Dictionary<string, decimal>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets or sets the supplemental wages of each tax category paid this calendar year before this pay.
+    /// </summary>
+    public IDictionary<string, decimal> YearSupplementalWages { get; set; } = new Dictionary<string, decimal>(StringComparer.Ordinal);
 
     /// <summary>Gets or sets the accumulators, for wage bases and year-to-date limits.</summary>
     public PayAccumulators Accumulators { get; set; } = new();

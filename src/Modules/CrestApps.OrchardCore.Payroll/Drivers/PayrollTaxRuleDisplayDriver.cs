@@ -23,6 +23,7 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
     private readonly PayrollTaxCategoryOptions _categories;
     private readonly TaxCalculationMethodOptions _methods;
     private readonly INamedCatalog<TaxTable> _tables;
+    private readonly IEnumerable<IPayrollWithholdingMethod> _withholdingMethods;
     private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
@@ -31,12 +32,14 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
         IOptions<PayrollTaxCategoryOptions> categories,
         IOptions<TaxCalculationMethodOptions> methods,
         INamedCatalog<TaxTable> tables,
+        IEnumerable<IPayrollWithholdingMethod> withholdingMethods,
         IStringLocalizerFactory localizerFactory,
         IStringLocalizer<PayrollTaxRuleDisplayDriver> stringLocalizer)
     {
         _categories = categories.Value;
         _methods = methods.Value;
         _tables = tables;
+        _withholdingMethods = withholdingMethods;
         _localizerFactory = localizerFactory;
         S = stringLocalizer;
     }
@@ -82,6 +85,21 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
             model.UsesElections = rule.UsesElections;
             model.AllowanceAmount = Text(rule.AllowanceAmount);
             model.SupplementalRate = Text(rule.SupplementalRate);
+            model.SupplementalExcessRate = Text(rule.SupplementalExcessRate);
+            model.SupplementalExcessThreshold = Text(rule.SupplementalExcessThreshold);
+            model.WageThreshold = Text(rule.WageThreshold);
+
+            // A method's tables and amounts post under "{method}:{key}"; only the chosen method's are kept.
+            foreach (var (key, tableId) in rule.Tables ?? [])
+            {
+                model.WithholdingTables[$"{rule.Method}:{key}"] = tableId;
+            }
+
+            foreach (var (key, amount) in rule.Parameters ?? [])
+            {
+                model.WithholdingParameters[$"{rule.Method}:{key}"] = Text(amount);
+            }
+
             model.EffectiveFrom = context.IsNew && rule.EffectiveFrom == default ? null : rule.EffectiveFrom;
             model.EffectiveTo = rule.EffectiveTo;
             model.Enabled = rule.Enabled;
@@ -108,6 +126,31 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
         rule.UsesElections = model.UsesElections;
         rule.AllowanceAmount = Number(model.AllowanceAmount, nameof(model.AllowanceAmount), context);
         rule.SupplementalRate = Number(model.SupplementalRate, nameof(model.SupplementalRate), context);
+        rule.SupplementalExcessRate = Number(model.SupplementalExcessRate, nameof(model.SupplementalExcessRate), context);
+        rule.SupplementalExcessThreshold = Number(model.SupplementalExcessThreshold, nameof(model.SupplementalExcessThreshold), context);
+        rule.WageThreshold = Number(model.WageThreshold, nameof(model.WageThreshold), context);
+        rule.Tables = new Dictionary<string, string>(StringComparer.Ordinal);
+        rule.Parameters = new Dictionary<string, decimal>(StringComparer.Ordinal);
+
+        if (_withholdingMethods.FirstOrDefault(method => string.Equals(method.Name, rule.Method, StringComparison.OrdinalIgnoreCase)) is { } withholding)
+        {
+            foreach (var table in withholding.Tables)
+            {
+                if (model.WithholdingTables?.GetValueOrDefault($"{withholding.Name}:{table.Key}") is { Length: > 0 } tableId)
+                {
+                    rule.Tables[table.Key] = tableId;
+                }
+            }
+
+            foreach (var parameter in withholding.Parameters)
+            {
+                if (Number(model.WithholdingParameters?.GetValueOrDefault($"{withholding.Name}:{parameter.Key}"), nameof(model.WithholdingParameters), context) is { } amount)
+                {
+                    rule.Parameters[parameter.Key] = amount;
+                }
+            }
+        }
+
         rule.EffectiveTo = model.EffectiveTo;
         rule.Enabled = model.Enabled;
 
@@ -135,6 +178,20 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
         model.Methods = [.. _methods.Methods.Values
             .Where(method => method.Name is not ("PerUnit" or "PerWeight" or "PerVolume"))
             .Select(method => new SelectListItem(method.DisplayName?.Value ?? method.Name, method.Name, string.Equals(method.Name, model.Method, StringComparison.OrdinalIgnoreCase)))];
+
+        foreach (var withholding in _withholdingMethods)
+        {
+            var displayName = _localizerFactory.Localize(withholding.DisplayName).Value;
+
+            model.Methods.Add(new SelectListItem(displayName, withholding.Name, string.Equals(withholding.Name, model.Method, StringComparison.OrdinalIgnoreCase)));
+            model.WithholdingMethods.Add(new PayrollWithholdingMethodViewModel
+            {
+                Name = withholding.Name,
+                DisplayName = displayName,
+                Tables = [.. withholding.Tables.Select(table => (table.Key, _localizerFactory.Localize(table.Label).Value))],
+                Parameters = [.. withholding.Parameters.Select(parameter => (parameter.Key, _localizerFactory.Localize(parameter.Label).Value))],
+            });
+        }
         model.Tables = [.. (await _tables.GetAllAsync())
             .OrderBy(table => table.Name, StringComparer.CurrentCultureIgnoreCase)
             .Select(table => new SelectListItem(table.Name, table.ItemId, table.ItemId == model.TaxTableId))];

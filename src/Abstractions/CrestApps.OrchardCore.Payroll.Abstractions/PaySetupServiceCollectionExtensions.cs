@@ -59,6 +59,22 @@ public static class PaySetupServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds a withholding method that payroll tax rules can name, such as a country's withholding form.
+    /// </summary>
+    /// <typeparam name="TMethod">The method.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddPayrollWithholdingMethod<TMethod>(this IServiceCollection services)
+        where TMethod : class, IPayrollWithholdingMethod
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayrollWithholdingMethod, TMethod>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds a source of pay inputs, read by pay runs and by the Pay Inputs data set.
     /// </summary>
     /// <typeparam name="TSource">The source.</typeparam>

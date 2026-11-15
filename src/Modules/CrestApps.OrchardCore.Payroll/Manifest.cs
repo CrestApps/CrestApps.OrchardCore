@@ -49,6 +49,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = PayrollConstants.Features.UnitedStates,
+    Name = "United States Payroll",
+    Description = "Form W-4 as the federal tax election and its withholding method (IRS percentage method for automated payroll), with the federal income tax, Social Security, Medicare, Additional Medicare and federal unemployment rules as dated recipes.",
+    Category = "Payroll",
+    Dependencies =
+    [
+        PayrollConstants.Features.TaxTables,
+    ]
+)]
+
+[assembly: Feature(
     Id = PayrollConstants.Features.SelfService,
     Name = "My Pay",
     Description = "A person's own pay in the admin: their pay statements and stubs, their tax elections and where their pay goes, linked from Staff > My Profile.",

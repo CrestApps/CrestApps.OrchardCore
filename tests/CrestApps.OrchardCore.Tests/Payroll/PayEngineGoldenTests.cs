@@ -208,7 +208,7 @@ public sealed class PayEngineGoldenTests
 
         ruleManager.Setup(manager => manager.ListAsync(Moq.It.IsAny<CancellationToken>())).ReturnsAsync(rules);
 
-        var provider = new TaxTablesPayrollTaxProvider(ruleManager.Object, new DefaultTaxCalculationMethodProvider(methods), tables, new PassThroughStringLocalizer<TaxTablesPayrollTaxProvider>());
+        var provider = new TaxTablesPayrollTaxProvider(ruleManager.Object, new DefaultTaxCalculationMethodProvider(methods), tables, [], new PassThroughStringLocalizer<TaxTablesPayrollTaxProvider>());
         var services = new ServiceCollection().BuildServiceProvider();
 
         return new PayCalculator(

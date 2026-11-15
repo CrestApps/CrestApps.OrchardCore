@@ -1,0 +1,532 @@
+{
+  "name": "PayrollUnitedStatesFederal2026",
+  "displayName": "United States Payroll: federal tax rules for 2026",
+  "description": "Adds the federal payroll taxes for pay dates in 2026: income tax withheld by the IRS percentage method for automated payroll systems (Publication 15-T, Form W-4 from 2020 or later and 2019 or earlier, 22% flat rate on supplemental pay and 37% on a year's supplemental pay over $1,000,000), Social Security (6.2% each on $184,500), Medicare (1.45% each), Additional Medicare (0.9% withheld above $200,000 of a year's wages) and federal unemployment (0.6% on $7,000, after the full credit for state unemployment tax). They apply to employers registered in US. Check the amounts against the IRS's current publications before paying people with them.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "taxes",
+    "united states",
+    "w-4"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Payroll.TaxTables",
+        "CrestApps.OrchardCore.Payroll.UnitedStates"
+      ]
+    },
+    {
+      "name": "TaxTable",
+      "TaxTables": [
+        {
+          "ItemId": "43q527jezzh3fd75y6tw71gafk",
+          "Name": "US federal withholding 2026: married filing jointly",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 19300,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 19300,
+              "Maximum": 44100,
+              "Rate": 0.1,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 44100,
+              "Maximum": 120100,
+              "Rate": 0.12,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 120100,
+              "Maximum": 230700,
+              "Rate": 0.22,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 230700,
+              "Maximum": 422850,
+              "Rate": 0.24,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 422850,
+              "Maximum": 531750,
+              "Rate": 0.32,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 531750,
+              "Maximum": 788000,
+              "Rate": 0.35,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 788000,
+              "Maximum": null,
+              "Rate": 0.37,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "42bgdxhsra5sp2827dqjafjzbf",
+          "Name": "US federal withholding 2026: married filing jointly, Step 2 checked",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 16100,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 16100,
+              "Maximum": 28500,
+              "Rate": 0.1,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 28500,
+              "Maximum": 66500,
+              "Rate": 0.12,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 66500,
+              "Maximum": 121800,
+              "Rate": 0.22,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 121800,
+              "Maximum": 217875,
+              "Rate": 0.24,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 217875,
+              "Maximum": 272325,
+              "Rate": 0.32,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 272325,
+              "Maximum": 400450,
+              "Rate": 0.35,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 400450,
+              "Maximum": null,
+              "Rate": 0.37,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4r48cndwzekkxgg1acz9f98f5s",
+          "Name": "US federal withholding 2026: single or married filing separately",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 7500,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 7500,
+              "Maximum": 19900,
+              "Rate": 0.1,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 19900,
+              "Maximum": 57900,
+              "Rate": 0.12,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 57900,
+              "Maximum": 113200,
+              "Rate": 0.22,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 113200,
+              "Maximum": 209275,
+              "Rate": 0.24,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 209275,
+              "Maximum": 263725,
+              "Rate": 0.32,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 263725,
+              "Maximum": 648100,
+              "Rate": 0.35,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 648100,
+              "Maximum": null,
+              "Rate": 0.37,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4s5g5v688hpefwxw05942dxdxk",
+          "Name": "US federal withholding 2026: single or married filing separately, Step 2 checked",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 8050,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 8050,
+              "Maximum": 14250,
+              "Rate": 0.1,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 14250,
+              "Maximum": 33250,
+              "Rate": 0.12,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 33250,
+              "Maximum": 60900,
+              "Rate": 0.22,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 60900,
+              "Maximum": 108938,
+              "Rate": 0.24,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 108938,
+              "Maximum": 136163,
+              "Rate": 0.32,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 136163,
+              "Maximum": 328350,
+              "Rate": 0.35,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 328350,
+              "Maximum": null,
+              "Rate": 0.37,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4t8zqsjpe86j3bmqa18705kbvg",
+          "Name": "US federal withholding 2026: head of household",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 15550,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 15550,
+              "Maximum": 33250,
+              "Rate": 0.1,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 33250,
+              "Maximum": 83000,
+              "Rate": 0.12,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 83000,
+              "Maximum": 121250,
+              "Rate": 0.22,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 121250,
+              "Maximum": 217300,
+              "Rate": 0.24,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 217300,
+              "Maximum": 271750,
+              "Rate": 0.32,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 271750,
+              "Maximum": 656150,
+              "Rate": 0.35,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 656150,
+              "Maximum": null,
+              "Rate": 0.37,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        },
+        {
+          "ItemId": "4mfwqyj82vcm5pnaa7h3s30zt2",
+          "Name": "US federal withholding 2026: head of household, Step 2 checked",
+          "EffectiveFromUtc": "2026-01-01T00:00:00Z",
+          "EffectiveToUtc": "2026-12-31T00:00:00Z",
+          "Rows": [
+            {
+              "Minimum": 0,
+              "Maximum": 12075,
+              "Rate": 0,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 12075,
+              "Maximum": 20925,
+              "Rate": 0.1,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 20925,
+              "Maximum": 45800,
+              "Rate": 0.12,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 45800,
+              "Maximum": 64925,
+              "Rate": 0.22,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 64925,
+              "Maximum": 112950,
+              "Rate": 0.24,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 112950,
+              "Maximum": 140175,
+              "Rate": 0.32,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 140175,
+              "Maximum": 332375,
+              "Rate": 0.35,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            },
+            {
+              "Minimum": 332375,
+              "Maximum": null,
+              "Rate": 0.37,
+              "FixedAmount": 0,
+              "BaseAmount": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PayrollTaxRules",
+      "Rules": [
+        {
+          "ItemId": "4hht3q4bvwtmv9mtb2r7qgfm5p",
+          "TaxCode": "US-FIT",
+          "Name": "Federal income tax",
+          "Jurisdiction": "US",
+          "Category": "IncomeTax",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Method": "UnitedStatesFormW4",
+          "UsesElections": true,
+          "AllowanceAmount": 4300,
+          "SupplementalRate": 22,
+          "SupplementalExcessRate": 37,
+          "SupplementalExcessThreshold": 1000000,
+          "Tables": {
+            "MarriedFilingJointly": "43q527jezzh3fd75y6tw71gafk",
+            "MarriedFilingJointly.Step2": "42bgdxhsra5sp2827dqjafjzbf",
+            "Single": "4r48cndwzekkxgg1acz9f98f5s",
+            "Single.Step2": "4s5g5v688hpefwxw05942dxdxk",
+            "HeadOfHousehold": "4t8zqsjpe86j3bmqa18705kbvg",
+            "HeadOfHousehold.Step2": "4mfwqyj82vcm5pnaa7h3s30zt2"
+          },
+          "Parameters": {
+            "AdjustmentMarriedFilingJointly": 12900,
+            "Adjustment": 8600
+          }
+        },
+        {
+          "ItemId": "4akpdf7avb4ww467kveh2f90yh",
+          "TaxCode": "US-SS-EE",
+          "Name": "Social Security",
+          "Jurisdiction": "US",
+          "Category": "SocialInsurance",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Method": "Percentage",
+          "Rate": 6.2,
+          "WageBase": 184500
+        },
+        {
+          "ItemId": "42jryhg7phnm2ps4b4dfq8ks4m",
+          "TaxCode": "US-SS-ER",
+          "Name": "Social Security (employer)",
+          "Jurisdiction": "US",
+          "Category": "SocialInsurance",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Method": "Percentage",
+          "Rate": 6.2,
+          "WageBase": 184500
+        },
+        {
+          "ItemId": "4hw8ckbbdqb7tgk6n3bn86dt1g",
+          "TaxCode": "US-MED-EE",
+          "Name": "Medicare",
+          "Jurisdiction": "US",
+          "Category": "SocialInsurance",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Method": "Percentage",
+          "Rate": 1.45
+        },
+        {
+          "ItemId": "434cwkcq79f2cjdnc09vnbfwm8",
+          "TaxCode": "US-MED-ER",
+          "Name": "Medicare (employer)",
+          "Jurisdiction": "US",
+          "Category": "SocialInsurance",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Method": "Percentage",
+          "Rate": 1.45
+        },
+        {
+          "ItemId": "4vc5mf71hmb0rp0rnkazt1wfsk",
+          "TaxCode": "US-MED-ADD",
+          "Name": "Additional Medicare",
+          "Jurisdiction": "US",
+          "Category": "SocialInsurance",
+          "Payer": "Employee",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Method": "Percentage",
+          "Rate": 0.9,
+          "WageThreshold": 200000
+        },
+        {
+          "ItemId": "4vpcckekqs02bqrfc2fptst6hv",
+          "TaxCode": "US-FUTA",
+          "Name": "Federal unemployment (FUTA)",
+          "Jurisdiction": "US",
+          "Category": "Unemployment",
+          "Payer": "Employer",
+          "EffectiveFrom": "2026-01-01",
+          "EffectiveTo": "2026-12-31",
+          "Enabled": true,
+          "Method": "Percentage",
+          "Rate": 0.6,
+          "WageBase": 7000
+        }
+      ]
+    }
+  ]
+}

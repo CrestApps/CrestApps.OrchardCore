@@ -605,10 +605,22 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
                 .Where(election => election is not null)],
         };
 
+        // What was paid earlier in the year, from the pay codes' totals, for taxes that start above a threshold.
+        var codePrefix = PayAccumulators.CodeKey(string.Empty);
+        var year = context.Accumulators.Totals
+            .Where(pair => pair.Key.StartsWith(codePrefix, StringComparison.Ordinal))
+            .Select(pair => (Code: context.Code(pair.Key[codePrefix.Length..]), pair.Value.Year))
+            .Where(pair => pair.Code is not null && pair.Year != 0)
+            .ToList();
+        var yearRegular = year.Where(pair => !pair.Code.GetPayrollSettings().Supplemental).Select(pair => new PayCodeAmount(pair.Code, pair.Year)).ToList();
+        var yearSupplemental = year.Where(pair => pair.Code.GetPayrollSettings().Supplemental && pair.Code.Class != PayCodeClass.Deduction).Select(pair => new PayCodeAmount(pair.Code, pair.Year)).ToList();
+
         foreach (var category in categories)
         {
             request.Wages[category] = PayCodeTaxMatrix.WagesFor(category, regular);
             request.SupplementalWages[category] = PayCodeTaxMatrix.WagesFor(category, supplemental);
+            request.YearSupplementalWages[category] = PayCodeTaxMatrix.WagesFor(category, yearSupplemental);
+            request.YearWages[category] = PayCodeTaxMatrix.WagesFor(category, yearRegular) + request.YearSupplementalWages[category];
         }
 
         return request;

@@ -139,6 +139,7 @@ public sealed class PayAccumulatorService : IPayAccumulatorService
             if (row.PeriodStartDay == periodStartDay && row.PeriodEndDay == periodEndDay)
             {
                 totals.Period += amount;
+                totals.PeriodTaxableWages += row.TaxableWagesMinor * unit;
             }
         }
 

@@ -471,6 +471,19 @@ public class PayrollTaxRuleViewModel
 
     public string SupplementalRate { get; set; }
 
+    public string SupplementalExcessRate { get; set; }
+
+    public string SupplementalExcessThreshold { get; set; }
+
+    public string WageThreshold { get; set; }
+
+    public Dictionary<string, string> WithholdingTables { get; set; } = [];
+
+    public Dictionary<string, string> WithholdingParameters { get; set; } = [];
+
+    [BindNever]
+    public IList<PayrollWithholdingMethodViewModel> WithholdingMethods { get; set; } = [];
+
     public DateOnly? EffectiveFrom { get; set; }
 
     public DateOnly? EffectiveTo { get; set; }
@@ -485,6 +498,20 @@ public class PayrollTaxRuleViewModel
 
     [BindNever]
     public IList<SelectListItem> Tables { get; set; } = [];
+}
+
+/// <summary>
+/// The tables and amounts of a withholding method, in the tax rule editor.
+/// </summary>
+public class PayrollWithholdingMethodViewModel
+{
+    public string Name { get; set; }
+
+    public string DisplayName { get; set; }
+
+    public IList<(string Key, string Label)> Tables { get; set; } = [];
+
+    public IList<(string Key, string Label)> Parameters { get; set; } = [];
 }
 
 /// <summary>

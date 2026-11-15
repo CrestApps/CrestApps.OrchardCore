@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
@@ -219,9 +220,17 @@ public sealed class PayrollTaxRuleHandler : CatalogEntryHandlerBase<PayrollTaxRu
             context.Result.Fail(new ValidationResult(S["Choose the tax category whose wages are taxed."], [nameof(PayrollTaxRule.Category)]));
         }
 
-        var method = _services.GetService<ITaxCalculationMethodProvider>()?.GetMethod(rule.Method);
+        var withholding = _services.GetServices<IPayrollWithholdingMethod>().FirstOrDefault(candidate => string.Equals(candidate.Name, rule.Method, StringComparison.OrdinalIgnoreCase));
+        var method = withholding is null ? _services.GetService<ITaxCalculationMethodProvider>()?.GetMethod(rule.Method) : null;
 
-        if (method is null)
+        if (withholding is not null)
+        {
+            foreach (var table in withholding.Tables.Where(table => string.IsNullOrEmpty(rule.Tables?.GetValueOrDefault(table.Key))))
+            {
+                context.Result.Fail(new ValidationResult(S["The method needs the tax table {0}.", table.Label.Value], [nameof(PayrollTaxRule.Tables)]));
+            }
+        }
+        else if (method is null)
         {
             context.Result.Fail(new ValidationResult(S["Choose a calculation method."], [nameof(PayrollTaxRule.Method)]));
         }
@@ -243,12 +252,12 @@ public sealed class PayrollTaxRuleHandler : CatalogEntryHandlerBase<PayrollTaxRu
             }
         }
 
-        if (rule.Rate is < 0 or > 100 || rule.SupplementalRate is < 0 or > 100)
+        if (rule.Rate is < 0 or > 100 || rule.SupplementalRate is < 0 or > 100 || rule.SupplementalExcessRate is < 0 or > 100)
         {
             context.Result.Fail(new ValidationResult(S["A rate is a percent from 0 to 100."], [nameof(PayrollTaxRule.Rate)]));
         }
 
-        if (rule.FixedAmount is < 0 || rule.WageBase is < 0 || rule.AllowanceAmount is < 0)
+        if (rule.FixedAmount is < 0 || rule.WageBase is < 0 || rule.AllowanceAmount is < 0 || rule.WageThreshold is < 0 || rule.SupplementalExcessThreshold is < 0)
         {
             context.Result.Fail(new ValidationResult(S["An amount is zero or more."], [nameof(PayrollTaxRule.WageBase)]));
         }
@@ -292,6 +301,7 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
     private readonly IPayrollTaxRuleManager _rules;
     private readonly ITaxCalculationMethodProvider _methods;
     private readonly INamedCatalog<TaxTable> _tables;
+    private readonly IEnumerable<IPayrollWithholdingMethod> _withholdingMethods;
 
     internal readonly IStringLocalizer S;
 
@@ -301,12 +311,14 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
     /// <param name="rules">The rules.</param>
     /// <param name="methods">The calculation methods.</param>
     /// <param name="tables">The tax tables.</param>
+    /// <param name="withholdingMethods">The withholding methods country packs add.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public TaxTablesPayrollTaxProvider(IPayrollTaxRuleManager rules, ITaxCalculationMethodProvider methods, INamedCatalog<TaxTable> tables, IStringLocalizer<TaxTablesPayrollTaxProvider> stringLocalizer)
+    public TaxTablesPayrollTaxProvider(IPayrollTaxRuleManager rules, ITaxCalculationMethodProvider methods, INamedCatalog<TaxTable> tables, IEnumerable<IPayrollWithholdingMethod> withholdingMethods, IStringLocalizer<TaxTablesPayrollTaxProvider> stringLocalizer)
     {
         _rules = rules;
         _methods = methods;
         _tables = tables;
+        _withholdingMethods = withholdingMethods;
         S = stringLocalizer;
     }
 
@@ -341,20 +353,28 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
 
         foreach (var rule in rules)
         {
-            if (_methods.GetMethod(rule.Method) is { } method && method.Inputs.HasFlag(TaxCalculationMethodInputs.TaxTable))
+            var withholding = WithholdingMethod(rule);
+            List<string> tableIds = withholding is not null
+                ? [.. withholding.Tables.Select(table => rule.Tables?.GetValueOrDefault(table.Key))]
+                : _methods.GetMethod(rule.Method) is { } method && method.Inputs.HasFlag(TaxCalculationMethodInputs.TaxTable) ? [rule.TaxTableId] : [];
+            var inEffect = true;
+            var day = request.PayDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+            foreach (var tableId in tableIds)
             {
-                var table = string.IsNullOrEmpty(rule.TaxTableId) ? null : await _tables.FindByIdAsync(rule.TaxTableId, cancellationToken);
-                var day = request.PayDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+                var table = string.IsNullOrEmpty(tableId) ? null : await _tables.FindByIdAsync(tableId, cancellationToken);
 
-                if (table is null || (table.EffectiveFromUtc is { } from && from.Date > day) || (table.EffectiveToUtc is { } to && to.Date < day))
-                {
-                    result.Warnings.Add(S["{0} was not worked out: its tax table is missing or not in effect on the pay date.", rule.Name]);
-
-                    continue;
-                }
+                inEffect &= table is not null && (table.EffectiveFromUtc is not { } from || from.Date <= day) && (table.EffectiveToUtc is not { } to || to.Date >= day);
             }
 
-            var line = await CalculateAsync(rule, request, cancellationToken);
+            if (!inEffect)
+            {
+                result.Warnings.Add(S["{0} was not worked out: its tax table is missing or not in effect on the pay date.", rule.Name]);
+
+                continue;
+            }
+
+            var line = await CalculateAsync(rule, withholding, request, cancellationToken);
 
             if (line is not null)
             {
@@ -365,24 +385,51 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
         return result;
     }
 
-    private async Task<PayrollTaxLine> CalculateAsync(PayrollTaxRule rule, PayrollTaxRequest request, CancellationToken cancellationToken)
+    private IPayrollWithholdingMethod WithholdingMethod(PayrollTaxRule rule)
+        => _withholdingMethods.FirstOrDefault(method => string.Equals(method.Name, rule.Method, StringComparison.OrdinalIgnoreCase));
+
+    private async Task<PayrollTaxLine> CalculateAsync(PayrollTaxRule rule, IPayrollWithholdingMethod withholding, PayrollTaxRequest request, CancellationToken cancellationToken)
     {
         var election = rule.UsesElections
             ? request.Elections.FirstOrDefault(candidate => string.Equals(candidate.Jurisdiction, rule.Jurisdiction, StringComparison.OrdinalIgnoreCase))
             : null;
+        var regular = request.Wages.TryGetValue(rule.Category, out var wages) ? wages : 0;
+        var supplemental = request.SupplementalWages.TryGetValue(rule.Category, out var supplementalWages) ? supplementalWages : 0;
+
+        // The part of the year's supplemental wages above a threshold is withheld at its own rate, whatever the
+        // method and the election (such as a mandatory rate on supplemental wages over a million).
+        var excess = 0m;
+
+        if (rule.SupplementalExcessRate is not null && rule.SupplementalExcessThreshold is { } excessThreshold && supplemental > 0)
+        {
+            var before = request.YearSupplementalWages.TryGetValue(rule.Category, out var yearSupplemental) ? yearSupplemental : 0;
+
+            excess = Math.Min(supplemental, Math.Max(0, before + supplemental - excessThreshold) - Math.Max(0, before - excessThreshold));
+            supplemental -= excess;
+        }
+
+        var excessTax = excess * (rule.SupplementalExcessRate ?? 0) / 100m;
 
         if (election?.Values.GetValueOrDefault("Exempt") == "true")
         {
-            return null;
+            return excess > 0 ? Line(rule, excess, excessTax) : null;
         }
 
-        var regular = request.Wages.TryGetValue(rule.Category, out var wages) ? wages : 0;
-        var supplemental = request.SupplementalWages.TryGetValue(rule.Category, out var supplementalWages) ? supplementalWages : 0;
         var flat = request.SupplementalMethod == PayrollSupplementalMethod.Flat && rule.SupplementalRate is not null;
 
         if (!flat)
         {
             regular += supplemental;
+            supplemental = 0;
+        }
+
+        // A threshold taxes only the part of the year's wages over it.
+        if (rule.WageThreshold is { } threshold)
+        {
+            var before = request.YearWages.TryGetValue(rule.Category, out var yearWages) ? yearWages : 0;
+            var total = regular + supplemental;
+
+            regular = Math.Max(0, before + total - threshold) - Math.Max(0, before - threshold);
             supplemental = 0;
         }
 
@@ -395,18 +442,18 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
             supplemental = Math.Min(supplemental, room - regular);
         }
 
+        // A second pay in a period (a bonus paid on its own, a correction) is withheld on the period's total less
+        // what the earlier pays of the period were withheld on, as an income tax table expects a whole period.
+        var prior = rule.Annualize || withholding is not null
+            ? Math.Max(0, request.Accumulators.For(PayAccumulators.TaxKey(rule.TaxCode)).PeriodTaxableWages)
+            : 0;
         var tax = 0m;
 
         if (regular > 0)
         {
-            var periods = Math.Max(1, request.PeriodsPerYear);
-            var allowances = election is not null && decimal.TryParse(election.Values.GetValueOrDefault("Allowances"), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var count)
-                ? count * (rule.AllowanceAmount ?? 0)
-                : 0;
-
-            tax = rule.Annualize
-                ? await ComputeAsync(rule, Math.Max(0, (regular * periods) - allowances), cancellationToken) / periods
-                : await ComputeAsync(rule, Math.Max(0, regular - (allowances / periods)), cancellationToken);
+            tax = prior > 0
+                ? Math.Max(0, await RegularAsync(rule, withholding, request, election, prior + regular, cancellationToken) - await RegularAsync(rule, withholding, request, election, prior, cancellationToken))
+                : await RegularAsync(rule, withholding, request, election, regular, cancellationToken);
         }
 
         if (supplemental > 0)
@@ -414,26 +461,83 @@ public sealed class TaxTablesPayrollTaxProvider : IPayrollTaxProvider
             tax += supplemental * rule.SupplementalRate.Value / 100m;
         }
 
-        if (election is not null && decimal.TryParse(election.Values.GetValueOrDefault("ExtraWithholding"), System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var extra) && regular + supplemental > 0)
+        // Extra withholding is once a period.
+        if (election is not null && prior == 0 && decimal.TryParse(election.Values.GetValueOrDefault("ExtraWithholding"), System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var extra) && regular + supplemental > 0)
         {
             tax += extra;
         }
 
-        if (tax <= 0 && regular + supplemental <= 0)
+        tax += excessTax;
+
+        var taxable = regular + supplemental + excess;
+
+        if ((tax <= 0 && taxable <= 0) || (rule.WageThreshold is not null && tax <= 0))
         {
             return null;
         }
 
-        return new PayrollTaxLine
+        return Line(rule, taxable, tax);
+    }
+
+    private static PayrollTaxLine Line(PayrollTaxRule rule, decimal taxableWages, decimal tax)
+        => new()
         {
             TaxCode = rule.TaxCode,
             Name = rule.Name,
             Jurisdiction = rule.Jurisdiction,
             Category = rule.Category,
             Payer = rule.Payer,
-            TaxableWages = regular + supplemental,
+            TaxableWages = taxableWages,
             Amount = Math.Max(0, tax),
         };
+
+    // The tax of a period's regular wages: by the withholding method, or by Taxation's method (annualized, less
+    // allowances).
+    private async Task<decimal> RegularAsync(PayrollTaxRule rule, IPayrollWithholdingMethod withholding, PayrollTaxRequest request, TaxElection election, decimal regular, CancellationToken cancellationToken)
+    {
+        if (regular <= 0)
+        {
+            return 0;
+        }
+
+        var periods = Math.Max(1, request.PeriodsPerYear);
+
+        if (withholding is not null)
+        {
+            return Math.Max(0, await withholding.CalculateAsync(new PayrollWithholdingContext
+            {
+                Rule = rule,
+                Request = request,
+                Election = election,
+                Wages = regular,
+                PeriodsPerYear = periods,
+                ComputeTableAsync = (key, amount, token) => ComputeTableAsync(rule, key, amount, token),
+            }, cancellationToken));
+        }
+
+        var allowances = election is not null && decimal.TryParse(election.Values.GetValueOrDefault("Allowances"), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var count)
+            ? count * (rule.AllowanceAmount ?? 0)
+            : 0;
+
+        return rule.Annualize
+            ? await ComputeAsync(rule, Math.Max(0, (regular * periods) - allowances), cancellationToken) / periods
+            : await ComputeAsync(rule, Math.Max(0, regular - (allowances / periods)), cancellationToken);
+    }
+
+    // Works out one of a withholding method's tables as progressive brackets.
+    private async Task<decimal> ComputeTableAsync(PayrollTaxRule rule, string key, decimal amount, CancellationToken cancellationToken)
+    {
+        var tableId = rule.Tables?.GetValueOrDefault(key);
+        var table = string.IsNullOrEmpty(tableId) ? null : await _tables.FindByIdAsync(tableId, cancellationToken);
+
+        if (table is null)
+        {
+            throw new InvalidOperationException(S["The payroll tax {0} names no tax table for {1}.", rule.TaxCode, key]);
+        }
+
+        var method = _methods.GetMethod(TaxCalculationMethodNames.Progressive) ?? throw new InvalidOperationException(S["Taxation's progressive calculation method is not there."]);
+
+        return method.Compute(new TaxComputationRequest { TaxableBase = Math.Max(0, amount), Table = table }).TaxAmount;
     }
 
     private async Task<decimal> ComputeAsync(PayrollTaxRule rule, decimal wages, CancellationToken cancellationToken)
@@ -482,7 +586,8 @@ public sealed class PayrollTaxRuleTableUsage : ITaxTableUsage
         ArgumentNullException.ThrowIfNull(table);
 
         return [.. (await _rules.ListAsync(cancellationToken))
-            .Where(rule => string.Equals(rule.TaxTableId, table.ItemId, StringComparison.OrdinalIgnoreCase))
+            .Where(rule => string.Equals(rule.TaxTableId, table.ItemId, StringComparison.OrdinalIgnoreCase)
+                || (rule.Tables?.Values.Any(id => string.Equals(id, table.ItemId, StringComparison.OrdinalIgnoreCase)) ?? false))
             .Select(rule => S["the payroll tax rule {0}", rule.TaxCode].Value)];
     }
 }

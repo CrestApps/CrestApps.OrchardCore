@@ -88,12 +88,33 @@
                 <span class="hint">@T["The most wages taxed in a calendar year; empty for no limit."]</span>
             </div>
         </div>
+        <div class="ocat-wrapper" asp-validation-class-for="WageThreshold">
+            <label asp-for="WageThreshold" class="ocat-label">@T["Wage threshold"]</label>
+            <div class="ocat-end">
+                <input asp-for="WageThreshold" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="WageThreshold" class="text-danger"></span>
+                <span class="hint">@T["Only the part of a calendar year's wages above it is taxed, such as an additional rate on high earners; empty to tax every wage."]</span>
+            </div>
+        </div>
         <div class="ocat-wrapper" asp-validation-class-for="SupplementalRate">
             <label asp-for="SupplementalRate" class="ocat-label">@T["Supplemental rate (%)"]</label>
             <div class="ocat-end">
                 <input asp-for="SupplementalRate" class="form-control" inputmode="decimal" style="max-width: 8rem" />
                 <span asp-validation-for="SupplementalRate" class="text-danger"></span>
                 <span class="hint">@T["Withheld from bonuses and commissions when a run uses the flat method; empty to withhold them with regular wages."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="SupplementalExcessRate">
+            <label asp-for="SupplementalExcessRate" class="ocat-label">@T["Supplemental rate over a year's amount (%)"]</label>
+            <div class="ocat-end">
+                <div class="input-group" style="max-width: 24rem">
+                    <input asp-for="SupplementalExcessRate" class="form-control" inputmode="decimal" />
+                    <span class="input-group-text">@T["over"]</span>
+                    <input asp-for="SupplementalExcessThreshold" class="form-control" inputmode="decimal" />
+                </div>
+                <span asp-validation-for="SupplementalExcessRate" class="text-danger"></span>
+                <span asp-validation-for="SupplementalExcessThreshold" class="text-danger"></span>
+                <span class="hint">@T["The rate withheld from the supplemental wages a person is paid in a calendar year above the amount, whatever the method and the election; empty for none."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
@@ -120,6 +141,47 @@
         </div>
     </div>
 </div>
+
+@foreach (var withholding in Model.WithholdingMethods)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["When the method is {0}", withholding.DisplayName]</div>
+        <div class="card-body">
+            @foreach (var table in withholding.Tables)
+            {
+                var key = $"{withholding.Name}:{table.Key}";
+                var id = Html.IdFor(m => m.WithholdingTables) + "_" + System.Text.RegularExpressions.Regex.Replace(key, "[^A-Za-z0-9]", "_");
+                var selected = Model.WithholdingTables.GetValueOrDefault(key);
+                var name = Html.NameFor(m => m.WithholdingTables) + "[" + key + "]";
+                <div class="ocat-wrapper">
+                    <label for="@id" class="ocat-label">@table.Label</label>
+                    <div class="ocat-end">
+                        <select id="@id" name="@name" class="form-select" style="max-width: 24rem">
+                            <option value="">@T["None"]</option>
+                            @foreach (var option in Model.Tables)
+                            {
+                                <option value="@option.Value" selected="@(option.Value == selected)">@option.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            }
+            @foreach (var parameter in withholding.Parameters)
+            {
+                var key = $"{withholding.Name}:{parameter.Key}";
+                var id = Html.IdFor(m => m.WithholdingParameters) + "_" + System.Text.RegularExpressions.Regex.Replace(key, "[^A-Za-z0-9]", "_");
+                var name = Html.NameFor(m => m.WithholdingParameters) + "[" + key + "]";
+                <div class="ocat-wrapper">
+                    <label for="@id" class="ocat-label">@parameter.Label</label>
+                    <div class="ocat-end">
+                        <input id="@id" name="@name" value="@Model.WithholdingParameters.GetValueOrDefault(key)" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                    </div>
+                </div>
+            }
+            <span class="hint">@T["Used only when the method above is {0}; its tables are worked out as progressive brackets on a year's amount.", withholding.DisplayName]</span>
+        </div>
+    </div>
+}
 
 <div class="card mb-3">
     <div class="card-header">@T["When"]</div>

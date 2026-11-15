@@ -30,7 +30,7 @@ Implement `IPayInputSource` (`SourceKind`, `GetInputsAsync(PayInputQuery)`, `Mar
 
 ## The engine and taxes
 
-Add a calculation step with `IPayCalculationStep` (orders in `PayCalculationOrder`) and a tax provider with `IPayrollTaxProvider`. The built-in provider (Payroll Tax Tables) works over Taxation's tables.
+Add a calculation step with `IPayCalculationStep` (orders in `PayCalculationOrder`) and a tax provider with `IPayrollTaxProvider`. The built-in provider (Payroll Tax Tables) works over Taxation's tables. A country pack adds its withholding form as an `IPayrollWithholdingMethod` (`services.AddPayrollWithholdingMethod<T>()`; a rule names it as its method and fills `Tables` and `Parameters`) and its election with `AddElectionFieldSet`, and ships its rules as dated recipes whose tables and rules carry valid 26-character UniqueIds (the import replaces any other id and the links break). United States Payroll is the example: `UnitedStatesFormW4WithholdingMethod` and the 2026 federal recipe.
 
 ## Pay runs and statements
 
