@@ -73,7 +73,7 @@ internal sealed class CourseSettingsGuardHandler : ContentPartHandler<CoursePart
         public static StoredSettings From(CoursePart part)
             => new(JsonSerializer.Serialize(part.Staff ?? []), part.EnrollmentMode);
 
-        public IList<CourseStaffMember> CopyStaff()
+        public List<CourseStaffMember> CopyStaff()
             => JsonSerializer.Deserialize<List<CourseStaffMember>>(StaffJson) ?? [];
     }
 }

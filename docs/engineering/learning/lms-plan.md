@@ -824,3 +824,41 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 | Learner erasure works only through a linked customer | Why: only the Customers privacy action runs the personal data service, a customer added by hand has no user id, and Learning finds records by user id. The contributor now adds the user id of the account with the request's e-mail address. | `bd44512cb` |
 | Learners get 403 on the notification center | Decision, documented: learners read notices through the Notifications delivery methods (e-mail); the center is an admin page and learners do not get the admin. | `8c75c52cd` |
 | Breadcrumb under the navbar on My learning and My transcript | Not changed: The Blog Theme floats its navbar over the page (`#mainNav` is absolutely positioned) and expects every page to fill its `Header` zone with a masthead, as its own templates do. Learner pages, like the other CrestApps storefront pages, render in the theme's content zone; on the Storefront theme they sit below the navbar. | none |
+
+### Phase 2: Assessments (branch `ma/learning-phase-2`, stacked on `ma/learning-phase-1`)
+
+**Built.** The `Learning.Assessments.Abstractions`, `Learning.Assessments.Core` and `Learning.Assessments` projects: question banks (Orchard's List part) and nine question types (single and multiple choice, true/false, short text, numeric, matching, ordering, fill in the blanks, essay) with one `IQuestionScorer` each, registered with `AddQuestionType`; the Quiz course item with fixed questions and random draws by bank and tag, time limit, window, attempts and delay, pass mark, grading method, navigation, review policy, access code and honor statement; `IAssessmentAttemptService`: attempts that copy each question (sanitized) so they never depend on a question version, server-kept deadlines with a leased work queue and a catch-up, answers one question at a time, scoring, grading of essays, regrade, void, overrides of time, attempts and window, all under one lock per attempt with observers after the commit; the exam player (`quiz-player` script), the grading pages and the quiz overrides page; the Gradebook feature (grade scales, course gradebook); the quiz access code in the shared Learning secret store with the wrong-try lockout; workflows (5 events, Void and Regrade tasks, schemas); the `Learning assessments` data source (4 data sets, no keys); the **Quiz results and item analysis** report; the *Quiz graded* notification; Audit Trail events; webhooks; the personal-data contributor; telemetry on the Learning meter; ContentTransfer question import and export; the `LearningGradeScales` and `LearningAttempts` recipe and deployment steps with schemas; README, technical page, Quizzes and Grading user pages, feature reference, changelog, building blocks and the skill.
+
+**Differences from the plan, and why.**
+
+- A void or a lower regrade after completion flags the enrollment for review (Learning, `Enrollment.Review`, list filter, notification, clear with a note) instead of changing the completion, as review round 3 asked; Phase 3 revokes from there.
+- Enrollment keys and quiz access codes share one store (`LearningSecretStore`, kinds) and one limiter, instead of a key store per module.
+- `LearnerUserLookup` and `LearningNotificationMessage` moved from the Learning module to `Learning.Core`, because Assessments needs them and module code may not use another module's types.
+- ContentTransfer import covers the shared question fields and the choice, true/false, short text, numeric and essay parts; matching, ordering and fill-in-the-blanks questions keep their structure in the editor and the recipe steps (QTI import stays in phase 8).
+- A sequential quiz shows and accepts only the next unanswered question (review round 3, finding 6).
+
+**Review round 3 (Phase 2 so far).** All six findings fixed test first and ticked with their commits in review-round-3.md: 1 shared secret store and lockout (`3a4949b99`); 2 sanitizing at draw, answers encoded on the grading page (`762adcc30`); 3 grading needs Manage own courses for staff, never one's own attempt, Grader role loses the site-wide permission (`cee1a1008`); 4 review flag after completion (`d101bc96f`); 5 read paths for questions and the data source without keys (`762adcc30`, `4be56f3fc`); 6 sequential navigation (`150c6e407`). Earlier on this branch after the rebase: attempt writes under the per-attempt lock (`0dacd1927`) and the deadline task fix (`293503ca4`).
+
+**Fixed while verifying.** The deadline task failed every minute on SQLite with "database is locked": the work queue claims and settles through sessions of its own while the task's session held the submit's uncommitted write; the attempt gate now commits inside the lock, and after a restart the stuck attempt was submitted at its deadline. The assessments test harness did not list the queue's index provider (a site gets it from DI), so queued deadlines were invisible in tests.
+
+**Suites run.**
+
+- `CrestApps.OrchardCore.Tests`, namespaces `Learning` and `Learning.Assessments`: 195 of 195.
+- `CrestApps.OrchardCore.Learning.IntegrationTests`: 16 of 16, now with Assessments on the test site: grading page encodes answers; question keys stay out of the display route, the content API, a bank's feed and search results; no attempt page shows the key before submitting; an attempt reads after its question is rewritten and removed.
+- The whole `CrestApps.OrchardCore.Tests` assembly (guards included): 15,900 of 15,901, one skipped, none failed.
+- JavaScript lint and asset suites: 27 of 27.
+- Honest notes: several Phase 2 integrations (recipe and deployment steps, workflows, audit, notifications, webhooks, personal data, telemetry, item analysis, ContentTransfer) were written with their tests in the same slice, so their first run passed; the review round 3 fixes each failed first (findings 1 and 4 only as compile failures).
+
+**Browser and HTTP verification** (test site on `http://localhost:5137`, rebuilt from this branch; migration steps 3 and 4 applied on the existing data after resetting my dev site's interim step 3):
+
+- A new Key course: the editor says a key is set, the content API JSON carries no hash; learner1 got "The enrollment key is not right" five times, then "Too many wrong keys" even with the right key.
+- The quiz's access code: the quiz content API carries no hash; the player asks for the code; learner2, after five wrong codes, sees "Too many wrong codes".
+- Grading scope: instructor1 opens the grading list of their course; grader1 is refused until they are named a Grader on the course and their role holds Manage own courses (the roles recipe re-run on the site); learner2 is refused.
+- Instructor enrollment form offers only the instructor's own course.
+- Review flag: learner2's Workplace enrollment marked completed, their graded attempt voided; the enrollment shows **Needs review** (score 80 → 0, the remaining attempt), appears under the Needs review filter, and is cleared with a note that stays on the card (screenshot in the browser pane).
+- The stuck attempt from before was auto-submitted at its deadline after the restart.
+
+**Not done or not verified.**
+
+- In the browser: the exam player with a sequential quiz, the gradebook pages, the workflow activity editors and the ContentTransfer import screen were not walked; they are covered by unit and integration tests only.
+- The docs site was not built.

@@ -63,7 +63,7 @@ public abstract class AttemptTaskActivity<TActivity> : TaskActivity<TActivity>
 
     /// <inheritdoc />
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
-        => Outcomes(S["Done"], S["NotFound"], S["Failed"]);
+        => [new Outcome(S["Done"]), new Outcome(S["NotFound"]), new Outcome(S["Failed"])];
 
     /// <inheritdoc />
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
