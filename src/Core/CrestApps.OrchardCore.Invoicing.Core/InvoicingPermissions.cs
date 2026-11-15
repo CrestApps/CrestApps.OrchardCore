@@ -57,6 +57,14 @@ public static class InvoicingPermissions
         LocalizationSource.Create("Manage estimates", typeof(InvoicingPermissions)));
 
     /// <summary>
+    /// Create, change, start, pause and cancel recurring plans, which make and issue invoices on their schedule.
+    /// </summary>
+    public static readonly Permission ManageRecurringInvoices = new(
+        "ManageRecurringInvoices",
+        LocalizationSource.Create("Manage recurring invoices", typeof(InvoicingPermissions)),
+        isSecurityCritical: true);
+
+    /// <summary>
     /// Change the invoicing settings.
     /// </summary>
     public static readonly Permission ManageInvoicingSettings = new(
@@ -69,7 +77,7 @@ public static class InvoicingPermissions
     public static readonly Permission ViewInvoices = new(
         "ViewInvoices",
         LocalizationSource.Create("View invoices", typeof(InvoicingPermissions)),
-        [ManageInvoices, IssueInvoices, VoidInvoices, ManageCreditNotes, RecordInvoicePayments, ManageEstimates]);
+        [ManageInvoices, IssueInvoices, VoidInvoices, ManageCreditNotes, RecordInvoicePayments, ManageEstimates, ManageRecurringInvoices]);
 
     /// <summary>
     /// See the invoices billed to the signed-in user and to the parties they have billing access to.
@@ -90,6 +98,7 @@ public static class InvoicingPermissions
         ManageCreditNotes,
         RecordInvoicePayments,
         ManageEstimates,
+        ManageRecurringInvoices,
         ManageInvoicingSettings,
         ViewOwnInvoices,
     ];

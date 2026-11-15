@@ -369,6 +369,11 @@ public static class CommerceReportDataSets
         /// The estimates data set: one row per estimate.
         /// </summary>
         public const string Estimates = "Estimates";
+
+        /// <summary>
+        /// The recurring plans data set: one row per recurring plan.
+        /// </summary>
+        public const string RecurringPlans = "RecurringPlans";
     }
 
     /// <summary>

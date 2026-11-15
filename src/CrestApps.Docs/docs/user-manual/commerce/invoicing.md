@@ -128,6 +128,21 @@ With **Invoicing Estimates** enabled, **Commerce > Estimates** lists the quotes 
 
 To change a sent estimate, click **Revise**: you get a copy to change, sent as **EST-1001-2**, and the old one is canceled. An estimate nobody answered expires the day after **Valid until**. How long estimates are valid by default is set under **Settings > Commerce > Invoicing**.
 
+## Recurring invoices
+
+With **Invoicing Recurring** enabled, **Commerce > Recurring invoices** lists the plans that bill a customer on a schedule, such as monthly hosting or a yearly support contract.
+
+1. Click **New recurring plan** and give it a name.
+2. Under **Schedule**, choose how often it repeats (every so many weeks, months or years, counted from **Starts**), and, if it should stop, **Ends** or **Number of invoices**. A **Custom schedule** takes a recurrence rule, such as `FREQ=MONTHLY;BYMONTHDAY=-1` for the last day of each month.
+3. Choose what **Each run** does: make a draft for you to check, issue the invoice, issue and e-mail it, or issue it and charge the customer's saved payment method.
+4. Choose who it bills and add the lines. Write `{{ period.month }} {{ period.year }}` in a line, such as `Hosting {{ period.month }} {{ period.year }}`, to print the month each invoice bills; `{{ period.start }}` and `{{ period.end }}` print the first and last day.
+5. Optionally, set a **Price rise**, such as 5% every 12 runs.
+6. Click **Save**, then **Start the plan** on its page.
+
+The plan's page shows its next runs and every run it made, with a link to each invoice. Runs happen on their own; **Run what is due now** makes the invoices due today at once. A run that can't issue its invoice (for example, with no one to bill) keeps the draft and shows as **Failed** with the reason, and the plan carries on with its next run. A plan that starts in the past catches up the runs it missed, a year at most at a time.
+
+**Pause** stops the runs; **Resume from today** carries on, without invoicing what was missed while paused. **Cancel the plan** stops it for good; the invoices it made stay as they are. A change to a running plan applies to the runs after it.
+
 ## See how invoicing is doing
 
 With **Reports** enabled, **Reports > Commerce** has six invoicing reports. Each shows amounts per currency.

@@ -153,7 +153,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
 
         store.RegisterIndexes([new TransactionIndexProvider()], TransactionsConstants.CollectionName);
-        store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider()], InvoicingConstants.CollectionName);
+        store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider(), new RecurringPlanIndexProvider()], InvoicingConstants.CollectionName);
 
         var cancellationToken = TestContext.Current.CancellationToken;
 
@@ -170,6 +170,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             await new TransactionMigrations { SchemaBuilder = schema }.CreateAsync();
             await new InvoicingMigrations { SchemaBuilder = schema }.CreateAsync();
             await new EstimatesMigrations { SchemaBuilder = schema }.CreateAsync();
+            await new RecurringPlansMigrations { SchemaBuilder = schema }.CreateAsync();
             await transaction.CommitAsync(cancellationToken);
         }
 
@@ -259,6 +260,8 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
         services.AddInvoicingCore();
         services.AddInvoicingEstimates();
+        services.AddInvoicingRecurring();
+        services.AddScoped<IRecurringPlanObserver>(_ => new RecordingPlanObserver(harness.Observed));
         services.AddScoped<IEstimateObserver>(_ => new RecordingEstimateObserver(harness.Observed));
 
         harness = new InvoicingTestHarness(path, store, services.BuildServiceProvider());
@@ -460,6 +463,32 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             var sequence = _next++;
 
             return Task.FromResult(new SeriesNumber(sequence, $"EST-{sequence}"));
+        }
+    }
+
+    private sealed class RecordingPlanObserver : IRecurringPlanObserver
+    {
+        private readonly List<string> _observed;
+
+        public RecordingPlanObserver(List<string> observed)
+        {
+            _observed = observed;
+        }
+
+        public Task GeneratedAsync(RecurringPlan plan, Invoice invoice, RecurringPlanRun run, CancellationToken cancellationToken = default)
+            => Add($"RecurringGenerated:{plan.Name}:{run.Occurrence:yyyy-MM-dd}");
+
+        public Task RunFailedAsync(RecurringPlan plan, RecurringPlanRun run, CancellationToken cancellationToken = default)
+            => Add($"RecurringFailed:{plan.Name}:{run.Occurrence:yyyy-MM-dd}");
+
+        private Task Add(string entry)
+        {
+            lock (_observed)
+            {
+                _observed.Add(entry);
+            }
+
+            return Task.CompletedTask;
         }
     }
 

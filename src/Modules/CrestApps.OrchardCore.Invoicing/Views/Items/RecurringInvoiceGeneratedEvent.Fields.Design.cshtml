@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Invoicing.Recurring
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RecurringInvoiceGeneratedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-repeat" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Recurring Invoice Generated"])
+    </h4>
+</header>

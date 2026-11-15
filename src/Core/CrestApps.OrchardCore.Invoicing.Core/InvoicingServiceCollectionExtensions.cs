@@ -80,6 +80,20 @@ public static class InvoicingServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers recurring plans: their store, manager and handler, and the service that makes their invoices.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddInvoicingRecurring(this IServiceCollection services)
+    {
+        services.TryAddScoped<IRecurringPlanStore, RecurringPlanStore>();
+        services.TryAddScoped<IRecurringPlanManager, RecurringPlanManager>();
+        services.TryAddScoped<IRecurringPlanService, DefaultRecurringPlanService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<RecurringPlan>, RecurringPlanHandler>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers a tax provider for invoices, estimates and credit notes.
     /// </summary>
     /// <typeparam name="TProvider">The provider type.</typeparam>

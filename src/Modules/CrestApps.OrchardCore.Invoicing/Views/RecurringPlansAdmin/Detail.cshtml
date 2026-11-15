@@ -1,0 +1,222 @@
+@model RecurringPlanDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@inject CrestApps.OrchardCore.Payments.IMoneyFormatter MoneyFormatter
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var plan = Model.Plan;
+    var open = plan.Status is RecurringPlanStatus.Draft or RecurringPlanStatus.Active or RecurringPlanStatus.Paused;
+}
+
+<zone Name="Title">
+    <breadcrumb name="RecurringInvoicesDetail" title="@(new Microsoft.AspNetCore.Html.HtmlString(System.Net.WebUtility.HtmlEncode(plan.Name)))">
+        <breadcrumb-item id="RecurringInvoicesIndex" action="Index" controller="RecurringPlansAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Recurring invoices"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@plan.Name</span>
+                <partial name="_RecurringPlanStatusBadge" model="plan" />
+            </div>
+            <div class="card-body">
+                @* The plan's days are days in the site's time zone, kept as dates: they are shown as they are. *@
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">@T["Schedule"]</dt>
+                    <dd class="col-sm-8"><partial name="_RecurringPlanSchedule" model="plan" /></dd>
+
+                    <dt class="col-sm-4">@T["Starts"]</dt>
+                    <dd class="col-sm-8">@plan.StartDate.ToString("d")</dd>
+
+                    @if (plan.EndDate is { } end)
+                    {
+                        <dt class="col-sm-4">@T["Ends"]</dt>
+                        <dd class="col-sm-8">@end.ToString("d")</dd>
+                    }
+
+                    @if (plan.MaxRuns is { } max)
+                    {
+                        <dt class="col-sm-4">@T["Number of invoices"]</dt>
+                        <dd class="col-sm-8">@T["{0} of {1} made", plan.RunCount, max]</dd>
+                    }
+                    else
+                    {
+                        <dt class="col-sm-4">@T["Invoices made"]</dt>
+                        <dd class="col-sm-8">@plan.RunCount</dd>
+                    }
+
+                    <dt class="col-sm-4">@T["Each run"]</dt>
+                    <dd class="col-sm-8">
+                        @switch (plan.Mode)
+                        {
+                            case RecurringPlanMode.Draft:
+                                @T["Makes a draft invoice"]
+                                break;
+                            case RecurringPlanMode.IssueAndSend:
+                                @T["Issues and e-mails the invoice"]
+                                break;
+                            case RecurringPlanMode.IssueAndCharge:
+                                @T["Issues the invoice and charges the saved payment method"]
+                                break;
+                            default:
+                                @T["Issues the invoice"]
+                                break;
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">@T["Bills"]</dt>
+                    <dd class="col-sm-8">@(plan.BillTo?.Contact?.Name ?? plan.BillTo?.Party.ToString() ?? T["No one yet"].Value)</dd>
+
+                    <dt class="col-sm-4">@T["Total of each invoice"]</dt>
+                    <dd class="col-sm-8">@MoneyFormatter.Format(plan.Totals?.Total ?? 0m, plan.Currency)</dd>
+
+                    @if (plan.PriceIncreasePercent is { } rise && plan.PriceIncreaseEveryRuns is { } every)
+                    {
+                        <dt class="col-sm-4">@T["Price rise"]</dt>
+                        <dd class="col-sm-8">@T["{0}% every {1} runs", rise.ToString("0.##"), every]</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">@T["Lines of each invoice"]</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var line in plan.Lines)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>@line.Name <span class="text-muted small">× @line.Quantity.ToString("0.####")</span></span>
+                        <span>@MoneyFormatter.Format(line.UnitPrice, plan.Currency)</span>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div class="card">
+            <div class="card-header">@T["Runs"]</div>
+            @if (plan.Runs.Count == 0)
+            {
+                <div class="card-body text-muted">@T["No run yet."]</div>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var run in plan.Runs.OrderByDescending(run => run.Occurrence).ThenByDescending(run => run.RunUtc))
+                    {
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>
+                                    <strong>@run.Occurrence.ToString("d")</strong>
+                                    @if (!string.IsNullOrEmpty(run.InvoiceId))
+                                    {
+                                        <a class="ms-2" asp-controller="InvoicesAdmin" asp-action="Detail" asp-route-itemId="@run.InvoiceId">@(string.IsNullOrEmpty(run.InvoiceNumber) ? T["Draft invoice"].Value : run.InvoiceNumber)</a>
+                                    }
+                                </span>
+                                @switch (run.Outcome)
+                                {
+                                    case RecurringRunOutcome.Failed:
+                                        <span class="badge text-bg-danger">@T["Failed"]</span>
+                                        break;
+                                    case RecurringRunOutcome.Skipped:
+                                        <span class="badge text-bg-secondary">@T["Skipped"]</span>
+                                        break;
+                                    case RecurringRunOutcome.Drafted:
+                                        <span class="badge text-bg-secondary">@T["Draft made"]</span>
+                                        break;
+                                    case RecurringRunOutcome.Sent:
+                                        <span class="badge text-bg-success">@T["Issued and sent"]</span>
+                                        break;
+                                    default:
+                                        <span class="badge text-bg-success">@T["Issued"]</span>
+                                        break;
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(run.Message))
+                            {
+                                <div class="small">@run.Message</div>
+                            }
+                            <div class="small text-muted">@((await LocalAsync(run.RunUtc)).ToString("g"))</div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        @if (Model.Upcoming.Count > 0)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@(plan.Status == RecurringPlanStatus.Draft ? T["First runs once started"] : T["Next runs"])</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var day in Model.Upcoming)
+                    {
+                        <li class="list-group-item">@day.ToString("D")</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (Model.CanManage && open)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Actions"]</div>
+                <div class="card-body d-grid gap-2">
+                    <a class="btn btn-primary" asp-action="Edit" asp-route-itemId="@plan.ItemId">@T["Edit"]</a>
+
+                    @if (plan.Status == RecurringPlanStatus.Draft)
+                    {
+                        <form asp-action="Activate" asp-route-itemId="@plan.ItemId" method="post" class="d-grid">
+                            <button type="submit" class="btn btn-success">@T["Start the plan"]</button>
+                        </form>
+                    }
+
+                    @if (plan.Status == RecurringPlanStatus.Active)
+                    {
+                        <form asp-action="RunNow" asp-route-itemId="@plan.ItemId" method="post" class="d-grid">
+                            <button type="submit" class="btn btn-success">@T["Run what is due now"]</button>
+                        </form>
+                        <form asp-action="Pause" asp-route-itemId="@plan.ItemId" method="post" class="d-grid">
+                            <button type="submit" class="btn btn-outline-secondary">@T["Pause"]</button>
+                        </form>
+                    }
+
+                    @if (plan.Status == RecurringPlanStatus.Paused)
+                    {
+                        <form asp-action="Resume" asp-route-itemId="@plan.ItemId" method="post" class="d-grid">
+                            <button type="submit" class="btn btn-success">@T["Resume from today"]</button>
+                        </form>
+                    }
+
+                    @if (plan.Status == RecurringPlanStatus.Draft)
+                    {
+                        <form asp-action="Delete" asp-route-itemId="@plan.ItemId" method="post" class="d-grid">
+                            <button type="submit" class="btn btn-outline-danger" data-url-af="RemoveUrl">@T["Delete"]</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-action="Cancel" asp-route-itemId="@plan.ItemId" method="post" class="d-grid">
+                            <button type="submit" class="btn btn-outline-danger" data-url-af="UnsafeUrl" data-message="@T["The plan stops for good and makes no more invoices. The invoices it made stay as they are."]">@T["Cancel the plan"]</button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(plan.InternalNote))
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Internal note"]</div>
+                <div class="card-body">@plan.InternalNote</div>
+            </div>
+        }
+    </div>
+</div>

@@ -11,6 +11,7 @@ user_manual:
 | --- | --- | --- |
 | **Invoicing** | `CrestApps.OrchardCore.Invoicing` | Invoices and credit notes, their stores and indexes, the invoice commands, the permissions and the invoicing settings. Depends on Transactions, Payment Terms and Business Documents. |
 | **Invoicing Estimates** | `CrestApps.OrchardCore.Invoicing.Estimates` | Estimates (quotes): drafted, sent with a number, accepted or declined by the customer online, revised, expired, and turned into a draft invoice or a deposit invoice. Depends on Invoicing. |
+| **Invoicing Recurring** | `CrestApps.OrchardCore.Invoicing.Recurring` | Recurring plans that make an invoice on a schedule (a draft, issued, issued and sent, or issued and charged), with the period written into their lines, catch-up within a limit, pause and resume, price rises, and an end by date or number of runs. Depends on Invoicing. |
 
 Invoicing owns the documents: an invoice is drafted with lines, issued with a number, and posted to [Transactions](transactions) as what the customer owes. Everything about the money (payments, refunds, adjustments, reminders, pay links) stays in the ledger; the invoice mirrors what the ledger says. Prices, discounts and tax are worked out by one calculator (EN 16931 arithmetic) shared with credit notes, estimates and recurring plans.
 
@@ -94,6 +95,19 @@ With **Invoicing Estimates** enabled, `Estimate` (Invoicing.Abstractions) is a c
 - **Expire**: `EstimateExpiryBackgroundTask` (hourly) expires the sent estimates whose expiry date has passed in the site's time zone.
 
 `IEstimateObserver` hears sent, accepted, declined, expired and converted. The admin pages are **Commerce > Estimates** (an `AdminList`, the draft editor with the invoice's line rows, and the estimate's page with the document, its history, the actions and the customer's link). The customer's page is `estimates/view/{token}` (`EstimateShareLinkService`, signed), where they read it, download its PDF, and accept or decline it while it is valid. `EstimateSender` e-mails it (the `estimate-sent` kind, with the PDF and the link); without e-mail, **Mark sent** numbers it so its link can be shared. The PDF and pages render through `IInvoiceDocumentBuilder` (business document kind `Estimate`, with **Valid until**, the deposit asked and the acceptance). Workflows get **Estimate Sent**, **Accepted**, **Declined** and **Expired**; webhooks get `estimate.sent`, `estimate.accepted`, `estimate.declined`, `estimate.expired` and `estimate.converted`; recipes and deployment plans the `Estimates` step; the Invoicing data source the **Estimates** data set. Permission: **Manage estimates** (create, send, revise, cancel, record an answer, invoice; making the invoice also needs **Create invoices and change drafts**).
+
+## Recurring plans
+
+With **Invoicing Recurring** enabled, `RecurringPlan` (Invoicing.Abstractions) is a catalog record with the invoice's header and lines and a schedule: a recurrence rule (RFC 5545, expanded by the [Calendars](calendars) recurrence engine), a start date, an optional end date and number of runs, what each run does (`Mode`: `Draft`, `Issue`, `IssueAndSend` or `IssueAndCharge`), and an optional price rise (a percent every so many runs). `RecurringPlanIndex` keeps its status and next run; `RecurringPlanHandler` refuses a plan with no name, a rule that does not parse, an end before its start, or lines out of range.
+
+`IRecurringPlanService` (`DefaultRecurringPlanService`, each command under the plan's lock):
+
+- **Activate** starts a draft plan on its first occurrence; **Pause** stops an active one; **Resume** carries on from today, skipping what was missed while paused; **Cancel** stops it for good.
+- **Run** makes the invoice of each occurrence due by the site's date, up to 12 per plan at a time, so a plan started in the past catches up a year at most per sweep. Each invoice has `SourceType` `RecurringPlan` and `SourceId` `{planId}:{yyyy-MM-dd}`: an occurrence that already has one is recorded as skipped, never invoiced twice. The invoice copies the plan's bill-to, lines and terms, bills the period from the occurrence to the day before the next one (`ServiceStart`, `ServiceEnd`, and on each line), and writes the period into the line names and descriptions and the notes: `{{ period.start }}`, `{{ period.end }}`, `{{ period.month }}`, `{{ period.year }}`, or `{{ period.start | date: "MMMM yyyy" }}` with a .NET date format.
+- The draft is saved first; issuing and sending run in a unit of work of their own, so a run that can't issue keeps its draft and is recorded as **Failed** with the reason, and the plan moves to its next occurrence. `IssueAndCharge` marks the invoice `AutoCharge` for the saved-method charge.
+- The plan completes after its last run (end date or number of runs). `GetUpcoming` lists the next occurrences.
+
+`RecurringInvoiceBackgroundTask` runs the due plans every 30 minutes on the site's date. `IRecurringPlanObserver` hears an invoice generated and a run failed. The admin pages are **Commerce > Recurring invoices**: an `AdminList` with a status filter, the editor (the schedule, the bill-to and the invoice's line rows), and the plan's page with its next runs, the runs it made with links to their invoices, and **Start**, **Run what is due now**, **Pause**, **Resume**, **Cancel** and **Delete** (a draft only). A change to a running plan applies to the runs after it. Workflows get **Recurring Invoice Generated** and **Recurring Run Failed**; webhooks get `recurring-plan.invoice-generated` and `recurring-plan.run-failed`; recipes and deployment plans the `RecurringPlans` step; the Invoicing data source the **Recurring plans** data set. Permission: **Manage recurring invoices** (security critical, since its plans issue and charge on their own).
 
 ## Workflows and webhooks
 
@@ -183,6 +197,8 @@ The calculator asks the `IDocumentTaxProvider`s in order for the lines' taxes; w
 | **Issue credit notes** | Issue credit notes (security critical). |
 | **Record invoice payments** | Record payments received outside the site (security critical). |
 | **Manage invoicing settings** | Change the settings. |
+| **Manage estimates** | Create, send, revise and cancel estimates, record the customer's answer, and invoice them (with Invoicing Estimates). |
+| **Manage recurring invoices** | Create, start, pause, resume, cancel and run recurring plans (security critical; with Invoicing Recurring). |
 | **View own invoices** | See the invoices billed to them and to the parties they have billing access to. |
 
 Administrators and store managers get every permission; authenticated users get **View own invoices**. None of the changing permissions implies another.

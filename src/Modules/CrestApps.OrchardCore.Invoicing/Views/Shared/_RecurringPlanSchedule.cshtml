@@ -1,0 +1,41 @@
+@model RecurringPlan
+@using CrestApps.OrchardCore.Invoicing.Recurring
+
+@{
+    var (frequency, interval, customRule) = RecurringSchedule.Read(Model.Rule);
+}
+
+@if (!string.IsNullOrEmpty(customRule))
+{
+    <span>@T["Custom schedule"] <code class="small">@customRule</code></span>
+}
+else if (interval > 1)
+{
+    @switch (frequency)
+    {
+        case "Weekly":
+            <span>@T["Every {0} weeks", interval]</span>
+            break;
+        case "Yearly":
+            <span>@T["Every {0} years", interval]</span>
+            break;
+        default:
+            <span>@T["Every {0} months", interval]</span>
+            break;
+    }
+}
+else
+{
+    @switch (frequency)
+    {
+        case "Weekly":
+            <span>@T["Every week"]</span>
+            break;
+        case "Yearly":
+            <span>@T["Every year"]</span>
+            break;
+        default:
+            <span>@T["Every month"]</span>
+            break;
+    }
+}

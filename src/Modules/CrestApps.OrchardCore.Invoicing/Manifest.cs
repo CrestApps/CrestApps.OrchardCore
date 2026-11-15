@@ -40,3 +40,14 @@ using OrchardCore.Modules.Manifest;
         InvoicingConstants.Features.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = InvoicingConstants.Features.Recurring,
+    Name = "Invoicing Recurring",
+    Description = "Recurring plans that make an invoice on a schedule, as a draft, issued, issued and sent, or issued and charged, with the period written into their lines.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        InvoicingConstants.Features.Area,
+    ]
+)]

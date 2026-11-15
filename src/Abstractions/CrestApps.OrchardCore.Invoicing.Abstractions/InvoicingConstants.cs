@@ -26,6 +26,11 @@ public static class InvoicingConstants
     public const string EstimateReferenceType = "Estimate";
 
     /// <summary>
+    /// The source type of an invoice a recurring plan made.
+    /// </summary>
+    public const string RecurringPlanReferenceType = "RecurringPlan";
+
+    /// <summary>
     /// The number series of estimates.
     /// </summary>
     public const string EstimateNumberSeries = "Invoicing.Estimate";
@@ -240,6 +245,16 @@ public static class InvoicingConstants
         /// An estimate was turned into an invoice.
         /// </summary>
         public const string EstimateConverted = "estimate.converted";
+
+        /// <summary>
+        /// A recurring plan made an invoice.
+        /// </summary>
+        public const string RecurringInvoiceGenerated = "recurring-plan.invoice-generated";
+
+        /// <summary>
+        /// A run of a recurring plan failed.
+        /// </summary>
+        public const string RecurringRunFailed = "recurring-plan.run-failed";
     }
 
     /// <summary>
