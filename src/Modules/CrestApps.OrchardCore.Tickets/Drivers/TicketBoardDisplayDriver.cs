@@ -12,7 +12,6 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Tickets.Drivers;
 
@@ -137,29 +136,23 @@ internal sealed class TicketBoardDisplayDriver : DisplayDriver<TicketBoard>
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         var user = User;
-        var canShare = user is not null && await _boards.CanShareAsync(user);
         var statusIds = (await _statuses.GetAllAsync()).Select(status => status.ItemId).ToHashSet(StringComparer.Ordinal);
 
         board.Name = model.Name?.Trim();
         board.Description = model.Description;
         board.Order = model.Order;
 
-        if (model.Sharing != TicketBoardSharing.Personal && !canShare)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Sharing), S["You may keep boards for yourself only."]);
-        }
+        // Whether the user may share the board is checked by the controller on the board as saved (it must be one they
+        // may manage). A team share without a team (the page requires one) keeps the board personal: never wider.
+        var sharing = model.Sharing == TicketBoardSharing.Team && string.IsNullOrWhiteSpace(model.SharedWithTeamId)
+            ? TicketBoardSharing.Personal
+            : model.Sharing;
 
-        switch (model.Sharing)
+        switch (sharing)
         {
             case TicketBoardSharing.Team:
                 board.OwnerId = null;
-                board.SharedWithTeamId = string.IsNullOrWhiteSpace(model.SharedWithTeamId) ? null : model.SharedWithTeamId;
-
-                if (board.SharedWithTeamId is null)
-                {
-                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.SharedWithTeamId), S["Choose the team to share the board with."]);
-                }
-
+                board.SharedWithTeamId = model.SharedWithTeamId;
                 break;
             case TicketBoardSharing.Everybody:
                 board.OwnerId = null;

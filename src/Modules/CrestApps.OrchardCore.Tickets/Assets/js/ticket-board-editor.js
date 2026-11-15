@@ -196,9 +196,17 @@
         const team = form.querySelector('[data-board-team]');
 
         if (sharing && team) {
+            // A team share needs its team.
             const showTeam = () => {
                 const chosen = /** @type {HTMLInputElement} */ (sharing.querySelector('input[type="radio"]:checked'));
-                team.classList.toggle('d-none', !chosen || chosen.value !== 'Team');
+                const byTeam = Boolean(chosen) && chosen.value === 'Team';
+                const picker = /** @type {HTMLSelectElement} */ (team.querySelector('select'));
+
+                team.classList.toggle('d-none', !byTeam);
+
+                if (picker) {
+                    picker.required = byTeam;
+                }
             };
 
             sharing.addEventListener('change', showTeam);

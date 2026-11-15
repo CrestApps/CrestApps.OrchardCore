@@ -143,8 +143,9 @@ public sealed class TicketBoardsController : Controller
 
         var board = await _manager.NewAsync();
         var editor = await _displayManager.UpdateEditorAsync(board, _updateModelAccessor.ModelUpdater, isNew: true);
+        var rulesPassed = await CatalogEntryValidation.ValidateAsync(_manager, board, _updateModelAccessor.ModelUpdater, ValidationPrefix, HttpContext.RequestAborted);
 
-        if (await IsValidAsync(board))
+        if (rulesPassed && await MayKeepAsync(board) && ModelState.IsValid)
         {
             await _manager.CreateAsync(board);
             await _notifier.SuccessAsync(H["The board {0} has been created.", board.Name]);
@@ -196,8 +197,9 @@ public sealed class TicketBoardsController : Controller
 
         var name = board.Name;
         var editor = await _displayManager.UpdateEditorAsync(board, _updateModelAccessor.ModelUpdater, isNew: false);
+        var rulesPassed = await CatalogEntryValidation.ValidateAsync(_manager, board, _updateModelAccessor.ModelUpdater, ValidationPrefix, HttpContext.RequestAborted);
 
-        if (await IsValidAsync(board))
+        if (rulesPassed && await MayKeepAsync(board) && ModelState.IsValid)
         {
             await _manager.UpdateAsync(board);
             await _notifier.SuccessAsync(H["The board {0} has been saved.", board.Name]);
@@ -395,12 +397,18 @@ public sealed class TicketBoardsController : Controller
     private async Task<string> LocalAsync(DateTime utc)
         => (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)))).ToString("g", CultureInfo.CurrentCulture);
 
-    private async Task<bool> IsValidAsync(TicketBoard board)
+    // The board as saved must be one the user may manage: sharing it with everybody or a team takes the Manage shared
+    // ticket boards permission.
+    private async Task<bool> MayKeepAsync(TicketBoard board)
     {
-        var updater = _updateModelAccessor.ModelUpdater;
+        if (await _boards.CanManageAsync(User, board))
+        {
+            return true;
+        }
 
-        return await CatalogEntryValidation.ValidateAsync(_manager, board, updater, ValidationPrefix, HttpContext.RequestAborted)
-            && updater.ModelState.IsValid;
+        ModelState.AddModelError($"{ValidationPrefix}.{nameof(TicketBoardViewModel.Sharing)}", S["You may keep boards for yourself only; sharing a board takes the Manage shared ticket boards permission."]);
+
+        return false;
     }
 
     // A board the user may not open is answered as missing; one they may open but not arrange is forbidden.

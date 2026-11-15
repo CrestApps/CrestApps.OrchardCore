@@ -125,7 +125,10 @@
 			if (sharing && team) {
 				const showTeam = () => {
 					const chosen = sharing.querySelector("input[type=\"radio\"]:checked");
-					team.classList.toggle("d-none", !chosen || chosen.value !== "Team");
+					const byTeam = Boolean(chosen) && chosen.value === "Team";
+					const picker = team.querySelector("select");
+					team.classList.toggle("d-none", !byTeam);
+					if (picker) picker.required = byTeam;
 				};
 				sharing.addEventListener("change", showTeam);
 				showTeam();
