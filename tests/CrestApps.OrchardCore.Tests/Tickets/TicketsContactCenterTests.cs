@@ -128,6 +128,19 @@ public sealed class TicketsContactCenterTests
         kit.Tickets.Verify(service => service.UpdateAsync("t1", It.Is<TicketUpdate>(update => update.AssigneeId == "u-agent"), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()), assigns ? Times.Once() : Times.Never());
     }
 
+    [Fact]
+    public void TheRouter_DoesNotInjectWhatLeadsBackToTheTicketService()
+    {
+        // The ticket service constructs its observers. The queue and withdrawal services publish through the event outbox,
+        // which constructs every event handler, and the offer handler uses the ticket service: injecting any of the three
+        // into the router is a construction cycle the site reports on the first ticket page.
+        var injected = typeof(TicketQueueRouter).GetConstructors().Single().GetParameters().Select(parameter => parameter.ParameterType).ToArray();
+
+        Assert.DoesNotContain(typeof(ITicketService), injected);
+        Assert.DoesNotContain(typeof(IActivityQueueService), injected);
+        Assert.DoesNotContain(typeof(IQueuedWorkWithdrawalService), injected);
+    }
+
     [Theory]
     [InlineData(1, InteractionPriority.Low)]
     [InlineData(2, InteractionPriority.Normal)]
@@ -174,13 +187,12 @@ public sealed class TicketsContactCenterTests
             var clock = new Mock<IClock>();
             clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 11, 15, 12, 0, 0, DateTimeKind.Utc));
             var services = new ServiceCollection()
-                .AddSingleton(Activities.Object)
                 .AddSingleton(Queue.Object)
                 .AddSingleton(Tickets.Object)
                 .AddSingleton(Withdrawal.Object)
                 .BuildServiceProvider();
 
-            Router = new TicketQueueRouter(services, desks.Object, clock.Object, NullLogger<TicketQueueRouter>.Instance);
+            Router = new TicketQueueRouter(services, Activities.Object, desks.Object, clock.Object, NullLogger<TicketQueueRouter>.Instance);
         }
 
         public Mock<IOmnichannelActivityManager> Activities { get; } = new();

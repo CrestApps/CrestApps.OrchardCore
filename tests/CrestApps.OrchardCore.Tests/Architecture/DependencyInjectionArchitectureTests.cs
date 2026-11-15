@@ -100,6 +100,9 @@ public sealed class DependencyInjectionArchitectureTests
             "ContactCenterActivityOwnershipAuthorizationHandler",
             "An authorization handler that injected the authorization service would close a service-to-handler construction cycle, since the service constructs every handler; it resolves the service only when it checks the user's own-activity permission, and the interaction and agent managers only when the work state names nobody and the call has to say who handled it."),
         new DependencyInjectionException(
+            "TicketQueueRouter",
+            "A ticket observer: the ticket service constructs every observer, so injecting the ticket service would close a service-to-observer construction cycle, and so would the queue and withdrawal services (they publish events through the outbox, which constructs every event handler, and the ticket offer handler uses the ticket service). It resolves those three when it uses them; the activity manager is injected."),
+        new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
         new DependencyInjectionException(

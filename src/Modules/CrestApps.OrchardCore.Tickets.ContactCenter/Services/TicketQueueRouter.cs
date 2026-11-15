@@ -26,13 +26,23 @@ namespace CrestApps.OrchardCore.Tickets.ContactCenter.Services;
 public sealed class TicketQueueRouter : ITicketObserver
 {
     private readonly IServiceProvider _services;
+    private readonly IOmnichannelActivityManager _activities;
     private readonly ICatalog<TicketDesk> _desks;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
-    public TicketQueueRouter(IServiceProvider services, ICatalog<TicketDesk> desks, IClock clock, ILogger<TicketQueueRouter> logger)
+    // The ticket service constructs its observers, this one among them, so the ticket service and anything that leads
+    // back to it are resolved when used, not injected: the queue and withdrawal services publish Contact Center events,
+    // the event outbox constructs every event handler, and TicketOfferAcceptedHandler uses the ticket service.
+    public TicketQueueRouter(
+        IServiceProvider services,
+        IOmnichannelActivityManager activities,
+        ICatalog<TicketDesk> desks,
+        IClock clock,
+        ILogger<TicketQueueRouter> logger)
     {
         _services = services;
+        _activities = activities;
         _desks = desks;
         _clock = clock;
         _logger = logger;
@@ -50,9 +60,8 @@ public sealed class TicketQueueRouter : ITicketObserver
             return;
         }
 
-        var activities = _services.GetRequiredService<IOmnichannelActivityManager>();
         var now = _clock.UtcNow;
-        var activity = await activities.NewAsync(cancellationToken: cancellationToken);
+        var activity = await _activities.NewAsync(cancellationToken: cancellationToken);
 
         activity.Kind = ActivityKind.Task;
         activity.Source = ActivitySources.Api;
@@ -63,7 +72,7 @@ public sealed class TicketQueueRouter : ITicketObserver
         activity.Instructions = $"{part.Number} {ticket.DisplayText}".Trim();
         activity.Put(new TicketActivityLink { TicketId = ticket.ContentItemId });
 
-        await activities.CreateAsync(activity, cancellationToken: cancellationToken);
+        await _activities.CreateAsync(activity, cancellationToken: cancellationToken);
         await _services.GetRequiredService<IActivityQueueService>().EnqueueAsync(activity.ItemId, queueId, PriorityOf(part.PriorityRank), cancellationToken);
 
         // The ticket names the activity, which shows on its timeline and lets the router find it again.
