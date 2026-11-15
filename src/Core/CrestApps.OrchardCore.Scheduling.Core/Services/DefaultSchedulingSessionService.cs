@@ -385,6 +385,10 @@ public sealed class DefaultSchedulingSessionService : ISchedulingSessionService
         => _registrations.ListAsync(sessionId, cancellationToken);
 
     /// <inheritdoc />
+    public Task<IReadOnlyList<Appointment>> ListRegistrationsForUserAsync(string userId, CancellationToken cancellationToken = default)
+        => _registrations.ListForUserAsync(userId, cancellationToken);
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<WaitlistEntry>> ListWaitlistAsync(string sessionId, CancellationToken cancellationToken = default)
         => _registrations.ListWaitlistAsync(sessionId, cancellationToken);
 

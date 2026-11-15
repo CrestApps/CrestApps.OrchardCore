@@ -60,6 +60,11 @@ public interface ISchedulingSessionService
     Task<IReadOnlyList<Appointment>> ListRegistrationsAsync(string sessionId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists a person's registrations in every dated session, cancelled ones included.
+    /// </summary>
+    Task<IReadOnlyList<Appointment>> ListRegistrationsForUserAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the waitlist of a session, first come first.
     /// </summary>
     Task<IReadOnlyList<WaitlistEntry>> ListWaitlistAsync(string sessionId, CancellationToken cancellationToken = default);

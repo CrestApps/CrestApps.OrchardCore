@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Classes</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Classes Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of Learning classes: the class course item, whose dates are dated sessions in Scheduling, and a
+      learner's registration in one of them, which links to the enrollment.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Classes Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Scheduling.Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

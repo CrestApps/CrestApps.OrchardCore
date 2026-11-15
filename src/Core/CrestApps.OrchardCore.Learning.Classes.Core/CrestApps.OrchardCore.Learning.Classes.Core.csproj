@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Classes.Core</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Classes Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services of Learning classes: the class course item kind, registration of an enrolled learner in a dated
+      session through Scheduling, attendance that completes the class item, and places given up when the enrollment ends.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Classes Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Learning.Classes" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Classes.Abstractions\CrestApps.OrchardCore.Learning.Classes.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
+  </ItemGroup>
+
+</Project>

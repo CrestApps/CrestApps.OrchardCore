@@ -58,6 +58,12 @@ public sealed class SessionRegistrationStore
         => (await _session.Query<Appointment, SessionRegistrationIndex>(index => index.SessionId == sessionId, collection: SchedulingConstants.CollectionName)
             .ListAsync(cancellationToken)).OrderBy(appointment => appointment.CreatedUtc).ToArray();
 
+    public async Task<IReadOnlyList<Appointment>> ListForUserAsync(string userId, CancellationToken cancellationToken = default)
+        => string.IsNullOrEmpty(userId)
+            ? []
+            : (await _session.Query<Appointment, SessionRegistrationIndex>(index => index.UserId == userId, collection: SchedulingConstants.CollectionName)
+                .ListAsync(cancellationToken)).OrderBy(appointment => appointment.CreatedUtc).ToArray();
+
     public Task<int> CountTakenAsync(string sessionId, CancellationToken cancellationToken = default)
         => _session.QueryIndex<SessionRegistrationIndex>(
             index => index.SessionId == sessionId && index.Status.IsIn(new[] { AppointmentStatus.Held, AppointmentStatus.Requested, AppointmentStatus.Confirmed, AppointmentStatus.Completed, AppointmentStatus.NoShow }),
