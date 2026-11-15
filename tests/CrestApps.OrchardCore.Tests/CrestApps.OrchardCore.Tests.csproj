@@ -200,6 +200,7 @@
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Attachments\CrestApps.OrchardCore.Attachments.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.KnowledgeBase\CrestApps.OrchardCore.KnowledgeBase.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Tickets\CrestApps.OrchardCore.Tickets.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" />
     <ProjectReference Include="..\..\src\Modules\CrestApps.OrchardCore.Teams\CrestApps.OrchardCore.Teams.csproj" />

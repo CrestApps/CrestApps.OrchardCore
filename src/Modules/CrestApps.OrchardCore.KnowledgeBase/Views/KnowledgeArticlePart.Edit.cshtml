@@ -1,0 +1,23 @@
+@model KnowledgeArticlePartViewModel
+
+<div class="mb-3">
+    <label asp-for="Audience" class="form-label">@T["Who can read it"]</label>
+    <select asp-for="Audience" class="form-select">
+        <option value="@KnowledgeArticleAudience.Public">@T["Everyone"]</option>
+        <option value="@KnowledgeArticleAudience.SignedIn">@T["People who are signed in"]</option>
+        <option value="@KnowledgeArticleAudience.Staff">@T["Staff only"]</option>
+    </select>
+    <span class="hint">@T["Staff only articles need the View staff-only knowledge articles permission."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Category" class="form-label">@T["Category"]</label>
+    <input asp-for="Category" class="form-control" maxlength="100" />
+    <span class="hint">@T["Articles with the same category are listed together in the help center."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Summary" class="form-label">@T["Summary"]</label>
+    <textarea asp-for="Summary" class="form-control" rows="2" maxlength="1000"></textarea>
+    <span class="hint">@T["One or two sentences shown in lists, searches and suggestions. Search looks at the title and this summary."]</span>
+</div>

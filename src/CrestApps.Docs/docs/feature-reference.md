@@ -223,6 +223,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Timeline` | Timeline | [Timeline](./modules/timeline) |
 | `CrestApps.OrchardCore.Tickets` | Tickets | [Tickets](./modules/tickets) |
 | `CrestApps.OrchardCore.Tickets.Api` | Tickets API | [Tickets](./modules/tickets#api) |
+| `CrestApps.OrchardCore.Tickets.Portal` | Tickets Portal | [Tickets](./modules/tickets#portal) |
+| `CrestApps.OrchardCore.Tickets.WebForm` | Ticket Web Form | [Tickets](./modules/tickets#web-form) |
+| `CrestApps.OrchardCore.KnowledgeBase` | Knowledge Base | [Knowledge Base](./modules/knowledge-base) |
 | `CrestApps.OrchardCore.Attachments` | Attachments | [Attachments](./modules/attachments) |
 | `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | [Workforce](./modules/workforce#shift-planning) |

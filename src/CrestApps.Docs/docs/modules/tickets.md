@@ -11,6 +11,8 @@ user_manual: user-manual/administration/tickets
 | --- | --- | --- |
 | Tickets | `CrestApps.OrchardCore.Tickets` | Timeline, Service Levels, Teams, Resources, Users, Contents, Title |
 | Tickets API | `CrestApps.OrchardCore.Tickets.Api` | Tickets |
+| Tickets Portal | `CrestApps.OrchardCore.Tickets.Portal` | Tickets, My Account |
+| Ticket Web Form | `CrestApps.OrchardCore.Tickets.WebForm` | Tickets |
 
 | Project | Holds |
 | --- | --- |

@@ -1,0 +1,17 @@
+@model KnowledgeArticleFeedbackViewModel
+
+<aside class="border-top mt-4 pt-3 knowledge-article-feedback">
+    @if (Context.Request.Query["feedback"] == "thanks")
+    {
+        <p class="mb-0">@T["Thank you for telling us."]</p>
+    }
+    else
+    {
+        <form method="post" asp-route="KnowledgeBaseFeedback" asp-route-id="@Model.ContentItemId" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path)" class="d-flex flex-wrap align-items-center gap-2">
+            <span>@T["Was this helpful?"]</span>
+            <button type="submit" name="helpful" value="true" class="btn btn-sm btn-outline-success">@T["Yes"]</button>
+            <button type="submit" name="helpful" value="false" class="btn btn-sm btn-outline-secondary">@T["No"]</button>
+        </form>
+    }
+    <p class="small mt-2 mb-0"><a href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName)">@T["Back to the help center"]</a></p>
+</aside>
