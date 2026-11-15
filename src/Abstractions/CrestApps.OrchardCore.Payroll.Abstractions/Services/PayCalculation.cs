@@ -54,6 +54,9 @@ public sealed class PayCalculationContext
     /// <summary>Gets or sets the pay codes, by id.</summary>
     public IReadOnlyDictionary<string, PayCode> Codes { get; set; } = new Dictionary<string, PayCode>();
 
+    /// <summary>Gets or sets the person's garnishment orders (with the Garnishments feature).</summary>
+    public IList<GarnishmentOrder> Garnishments { get; set; } = [];
+
     /// <summary>Gets or sets what was paid and taken before, from final statements.</summary>
     public PayAccumulators Accumulators { get; set; } = new();
 

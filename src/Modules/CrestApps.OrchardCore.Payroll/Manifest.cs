@@ -60,6 +60,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = PayrollConstants.Features.Garnishments,
+    Name = "Garnishments",
+    Description = "Garnishment orders (support, tax levies, bankruptcy, student loans, creditors) withheld from pay within the limits the law sets on disposable earnings, in order of priority, and sent to their payees by check or deposit.",
+    Category = "Payroll",
+    Dependencies =
+    [
+        PayrollConstants.Features.Payroll,
+    ]
+)]
+
+[assembly: Feature(
     Id = PayrollConstants.Features.SelfService,
     Name = "My Pay",
     Description = "A person's own pay in the admin: their pay statements and stubs, their tax elections and where their pay goes, linked from Staff > My Profile.",

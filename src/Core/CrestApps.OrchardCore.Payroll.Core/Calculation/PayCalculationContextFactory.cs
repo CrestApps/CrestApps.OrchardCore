@@ -130,6 +130,9 @@ public sealed class PayCalculationContextFactory
             IncludePayItems = request.Regular,
             IncludeSalary = request.Regular,
             Codes = (await _codes.GetAllAsync(cancellationToken)).ToDictionary(code => code.ItemId, StringComparer.Ordinal),
+            Garnishments = _services.GetService<IGarnishmentOrderManager>() is { } garnishments
+                ? [.. (await garnishments.ListByProfileAsync(profile.ItemId, cancellationToken)).Where(order => order.AppliesOn(request.PayDate))]
+                : [],
             Accumulators = await _accumulators.GetAsync(profile.StaffMemberId, profile.EmployerId, request.PayDate, request.PeriodStart, request.PeriodEnd, cancellationToken),
             SupplementalMethod = request.SupplementalMethod,
             MinimumNet = settings?.MinimumNetPay ?? 0,

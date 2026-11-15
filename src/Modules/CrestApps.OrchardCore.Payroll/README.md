@@ -47,6 +47,8 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - Integration: `IPayRunObserver`; workflow events and tasks; the Payroll data sets and six reports with two dashboard
   widgets; webhook events; the pay date calendar source; audit events; notices of returned deposits and changed bank
   accounts; personal data; the opt-in `PayrollPayHistory` step; the scheduled-run workflow recipe.
+- Garnishments (`CrestApps.OrchardCore.Payroll.Garnishments`): orders withheld within the law's limits and sent to
+  their payees by check or deposit.
 - United States Payroll (`CrestApps.OrchardCore.Payroll.UnitedStates`): the Form W-4 election and withholding method; the
   federal tax rules for 2026 as a recipe.
 - My Pay (`CrestApps.OrchardCore.Payroll.SelfService`): `MyPayController` (own statements, stubs, elections and net

@@ -158,6 +158,9 @@ public static class PayCodeKinds
     /// <summary>A contribution to a plan, by the person or the employer.</summary>
     public const string Contribution = "Contribution";
 
+    /// <summary>Pay withheld for a garnishment order.</summary>
+    public const string Garnishment = "Garnishment";
+
     /// <summary>
     /// The kinds Workforce's pay codes had, in their stored order, to read records written before.
     /// </summary>

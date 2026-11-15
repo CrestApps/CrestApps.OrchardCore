@@ -196,6 +196,11 @@ public sealed class PayStatementLine
     public string PayItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets the garnishment order the line withholds for, or <see langword="null"/>.
+    /// </summary>
+    public string GarnishmentOrderId { get; set; }
+
+    /// <summary>
     /// Gets or sets where the cost goes.
     /// </summary>
     public PayInputAllocation Allocation { get; set; }

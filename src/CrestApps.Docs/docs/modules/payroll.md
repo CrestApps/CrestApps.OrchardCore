@@ -5,6 +5,7 @@ description: "Payroll for Orchard Core. Pay Setup owns pay schedules (periods, t
 user_manual:
   - user-manual/finance/pay-setup
   - user-manual/finance/payroll-employers
+  - user-manual/finance/payroll-garnishments
 ---
 
 The **Payroll** module (`CrestApps.OrchardCore.Payroll`) runs payroll. Its first feature, **Pay Setup**, owns the two records both payroll and time keeping need: pay schedules and pay codes. Workforce's time clock depends on Pay Setup, and Payroll never references Workforce.
@@ -299,6 +300,16 @@ Rules are under **Payroll > Setup > Tax rules** (`ManagePayrollSettings` for eve
   ]
 }
 ```
+
+## Garnishments
+
+**Garnishments** (`CrestApps.OrchardCore.Payroll.Garnishments`, on Payroll) keeps `GarnishmentOrder` records (`IGarnishmentOrderManager`, in the Payroll collection, `GarnishmentOrderIndex` by employer, profile, staff member and status): the pay profile (its employer and staff member follow it on every save), the kind (`Support`, `FederalTaxLevy`, `StateTaxLevy`, `Bankruptcy`, `StudentLoan`, `Creditor`, `Other`), case number, agency, a deduction pay code, an amount and/or a percent of disposable earnings each pay, a limit percent, the pay left each week (`ProtectedWeeklyAmount`), the exempt amount of a levy, the total owed and what was withheld, a priority, the received, first and last pay dates, the status (`Active`, `Suspended`, `Completed`, `Released`), and the payee (name, mailing address, paid by `Check`, `BankAccount` with a Banking account owned by the payee, or `Outside`). `GarnishmentDefaults` gives each kind its United States federal limit and priority, which an order may change: support 50% (to 65%), a student loan 15%, a creditor 25% and 30 times the federal minimum wage a week (217.50) left; support first, then tax levies, bankruptcy, student loans and creditors. The feature seeds the `GARN` pay code (kind `Garnishment`, cut last by the net check).
+
+The calculation step (`GarnishmentsPayCalculationStep`, order 750, after the deductions that are a percent of disposable earnings) takes each order in effect on the pay date, lowest priority number first, then by the day received: disposable earnings are gross pay less the employee's taxes; support orders share their own percent; a tax levy takes what is left above its exempt amount; a bankruptcy order takes its amount; every other order shares the creditor limit (the smaller of its percent and what is left above the pay a week, less what the orders before it took); an order stops at its total owed. A line (`PayStatementLine.GarnishmentOrderId`) is added per order, with a warning when a limit held one back.
+
+`GarnishmentStatementObserver` (an `IPayStatementObserver`) moves `Withheld` when a statement is issued (an order that reached its total completes) and sends the withholding to the payee from the employer's funding account, by a check (Checks) or an ACH disbursement (Disbursements), as a payment of the statement (source kind `PayStatement`, scoped by the employer, idempotency key `payroll-garnishment:{statement}:{order}`), recording each in `Remittances` with its reference or problem. A void gives the withholding back, reopens a completed order and stops a payment that has not gone out.
+
+Pages: **Payroll > Garnishments** (`ManageGarnishments`, per employer) lists the orders of the employers a user manages, with an editor of three cards (the order, how much, the payee) plus the payee's address and what was sent; nobody manages their own order unless the setting allows changing one's own pay; an order that withheld anything is released, never deleted. The `PayrollGarnishments` recipe step (`Orders`, matched by id) and the **Garnishment orders** deployment step (fails closed without a user, for `ExportPayrollData`; case numbers and payee accounts only with **Include sensitive data**; never what was withheld or sent) carry them, and the **Garnishments** data set (for `ExportPayrollData`) has one row per order.
 
 ## United States
 

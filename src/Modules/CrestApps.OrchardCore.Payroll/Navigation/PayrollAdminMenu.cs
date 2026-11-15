@@ -116,6 +116,50 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
         => user?.Identity?.IsAuthenticated == true && !(await _scope.GetScopeAsync(user, permission)).IsEmpty;
 }
 
+/// <summary>
+/// Adds Payroll &gt; Garnishments for a user who manages the garnishments of some employer.
+/// </summary>
+public sealed class GarnishmentsAdminMenu : AdminNavigationProvider
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IPayrollScopeService _scope;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GarnishmentsAdminMenu"/> class.
+    /// </summary>
+    /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="scope">The payroll scope.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public GarnishmentsAdminMenu(IHttpContextAccessor httpContextAccessor, IPayrollScopeService scope, IStringLocalizer<GarnishmentsAdminMenu> stringLocalizer)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _scope = scope;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    protected override async ValueTask BuildAsync(NavigationBuilder builder)
+    {
+        // Shown to a user who manages the garnishments of some employer.
+        if (_httpContextAccessor.HttpContext?.User is not { } user || (await _scope.GetScopeAsync(user, PayrollPermissions.ManageGarnishments)).IsEmpty)
+        {
+            return;
+        }
+
+        builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll => payroll
+            .Id("payroll")
+            .Add(S["Garnishments"], S["Garnishments"].PrefixPosition("30"), item => item
+                .Id("payrollGarnishments")
+                .Action("Index", "Garnishments", PayrollConstants.Features.Payroll)
+                .LocalNav()));
+    }
+}
+
+/// <summary>
+/// Adds Payroll &gt; Setup &gt; Tax rules.
+/// </summary>
 public sealed class PayrollTaxTablesAdminMenu : AdminNavigationProvider
 {
     internal readonly IStringLocalizer S;

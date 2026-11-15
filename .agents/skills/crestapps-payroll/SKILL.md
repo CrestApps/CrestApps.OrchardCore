@@ -36,6 +36,10 @@ Add a calculation step with `IPayCalculationStep` (orders in `PayCalculationOrde
 
 `IPayRunService`: `OpenAsync`, `CalculateAsync`, `SubmitAsync` (to Approvals), `ProcessAsync`, `VoidStatementAsync`, `ReissuePaymentAsync`, `ListStatementsAsync`. Statements never change once final; a void is a reversing statement. Hear steps with `IPayRunObserver` (Opened, Calculated, Submitted, Approved, Rejected, Paid, PartiallyPaid, Failed, Canceled) and statements with `IPayStatementObserver` (Issued, Voided). Approvals, Disbursements and the pay input sources commit the session: re-read a record by id after calling them before saving it.
 
+## Garnishments
+
+`IGarnishmentOrderManager` keeps garnishment orders (a pay profile, the kind, an amount or percent of disposable earnings, limits, a total owed, the payee). `GarnishmentsPayCalculationStep` applies the limits; `GarnishmentStatementObserver` moves what was withheld and pays the payee through Checks or Disbursements. Never withhold a garnishment as a pay item.
+
 ## Paying net pay
 
 Implement `IPayStatementPaymentMethod` (`Method`, `PayAsync`, `VoidAsync`) for a `NetPayMethod`; Direct Deposit pays through Disbursements and Paychecks through Checks, with the statement as the check's voucher (`ICheckVoucherSource`). Disbursements and checks of pay use the source kind `PayStatement` with the employer as access scope.

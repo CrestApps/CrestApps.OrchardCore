@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Payroll.Deployments
+
+@model ShapeViewModel<GarnishmentsDeploymentStep>
+
+<h5>@T["Garnishment orders"]</h5>
+
+@if (Model.Value.IncludeSensitiveData)
+{
+    <span class="badge text-bg-warning">@T["With case numbers"]</span>
+}
+else
+{
+    <span class="badge text-bg-success">@T["Without case numbers"]</span>
+}

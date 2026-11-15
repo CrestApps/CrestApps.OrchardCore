@@ -86,6 +86,11 @@ public static class PayrollConstants
     public const string TaxRulesRecipeStepName = "PayrollTaxRules";
 
     /// <summary>
+    /// The name of the recipe and deployment step of garnishment orders.
+    /// </summary>
+    public const string GarnishmentsRecipeStepName = "PayrollGarnishments";
+
+    /// <summary>
     /// The name of the pipeline step that saves rows as the inputs of a pay run.
     /// </summary>
     public const string SavePayInputsStepName = "SavePayInputs";
@@ -179,5 +184,10 @@ public static class PayrollConstants
         /// United States Payroll: the Form W-4 election and withholding method, and the federal tax rules as recipes.
         /// </summary>
         public const string UnitedStates = "CrestApps.OrchardCore.Payroll.UnitedStates";
+
+        /// <summary>
+        /// Garnishments: orders withheld from pay within the law's limits and sent to their payees.
+        /// </summary>
+        public const string Garnishments = "CrestApps.OrchardCore.Payroll.Garnishments";
     }
 }

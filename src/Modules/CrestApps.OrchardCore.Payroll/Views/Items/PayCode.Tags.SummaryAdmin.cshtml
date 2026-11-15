@@ -30,6 +30,7 @@
         PayCodeKinds.Reimbursement => T["Reimbursement"].Value,
         PayCodeKinds.Loan => T["Loan or advance repayment"].Value,
         PayCodeKinds.Contribution => T["Plan contribution"].Value,
+        PayCodeKinds.Garnishment => T["Garnishment"].Value,
         _ => code.Kind,
     };
 }
