@@ -146,7 +146,7 @@ public sealed class PayAdjustmentsTests
     [Theory]
     [InlineData(100, 104.80)]
     [InlineData(300, 0)]
-    public async Task TipCredit_MakesAWeekUpToTheMinimumWage_CountingAtMostTheMaximumCreditAnHour(decimal tips, decimal expected)
+    public async Task TipCredit_MakesAWeekUpToTheMinimumWage_CountingAtMostTheMaximumCreditAnHour(double tips, double expected)
     {
         // 40 hours at a 2.13 cash wage is 85.20; the week needs 40 x 7.25 = 290. Tips of 100 count fully (40 x 5.12 =
         // 204.80 at most): 290 - 85.20 - 100 = 104.80. Tips of 300 count 204.80: nothing short.
@@ -155,10 +155,10 @@ public sealed class PayAdjustmentsTests
         context.Profile.Tipped = true;
         context.MinimumHourlyWage = 7.25m;
         context.MaximumTipCredit = 5.12m;
-        context.Inputs = [Input("reg", hours: 40, date: new DateOnly(2026, 11, 3)), Input("ctips", amount: tips, date: new DateOnly(2026, 11, 4))];
+        context.Inputs = [Input("reg", hours: 40, date: new DateOnly(2026, 11, 3)), Input("ctips", amount: CrestApps.OrchardCore.DecimalConversion.FromDouble(tips), date: new DateOnly(2026, 11, 4))];
         await Step<TipCreditPayCalculationStep>().ExecuteAsync(context, TestContext.Current.CancellationToken);
 
-        Assert.Equal(expected, context.Lines.Where(line => line.PayCodeId == "tipmu").Sum(line => line.Amount));
+        Assert.Equal(CrestApps.OrchardCore.DecimalConversion.FromDouble(expected), context.Lines.Where(line => line.PayCodeId == "tipmu").Sum(line => line.Amount));
     }
 
     [Fact]
