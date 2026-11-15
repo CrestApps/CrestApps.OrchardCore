@@ -20,6 +20,10 @@ internal sealed class IssuedCertificateSettingsDisplayDriver : DisplayDriver<Cer
         _session = session;
     }
 
+    // Every driver of a model gets the model's name as its prefix; this card has its own.
+    protected override void BuildPrefix(Certification model, string htmlFieldPrefix)
+        => Prefix = string.IsNullOrEmpty(htmlFieldPrefix) ? "IssuedCertificates" : $"{htmlFieldPrefix}.IssuedCertificates";
+
     public override IDisplayResult Edit(Certification certification, BuildEditorContext context)
     {
         return Initialize<IssuedCertificateSettingsViewModel>("IssuedCertificateSettings_Edit", async model =>

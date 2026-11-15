@@ -153,6 +153,11 @@ public sealed class CertificationRecordsController : Controller
             return NotFound();
         }
 
+        if (!string.IsNullOrEmpty(record.VerificationCode))
+        {
+            return await IssuedRecordRefusal();
+        }
+
         var model = new CertificationRecordEditViewModel
         {
             Id = record.ItemId,

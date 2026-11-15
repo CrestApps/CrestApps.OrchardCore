@@ -28,10 +28,10 @@
     {
         var (badge, text) = Model.State switch
         {
-            CertificateVerificationState.Valid => ("text-bg-success", T["Valid"]),
-            CertificateVerificationState.Expired => ("text-bg-secondary", T["Expired"]),
-            CertificateVerificationState.Revoked => ("text-bg-danger", T["Revoked"]),
-            _ => ("text-bg-warning", T["Not valid yet"]),
+            CertificateVerificationState.Valid => ("bg-success text-white", T["Valid"]),
+            CertificateVerificationState.Expired => ("bg-secondary text-white", T["Expired"]),
+            CertificateVerificationState.Revoked => ("bg-danger text-white", T["Revoked"]),
+            _ => ("bg-warning text-dark", T["Not valid yet"]),
         };
 
         <div class="card">
@@ -67,7 +67,7 @@
                 </dl>
                 @if (Model.Renewed)
                 {
-                    <p class="text-body-secondary mt-3 mb-0">@T["This certificate has been renewed with a newer one."]</p>
+                    <p class="text-muted mt-3 mb-0">@T["This certificate has been renewed with a newer one."]</p>
                 }
                 @if (Model.State != CertificateVerificationState.Revoked)
                 {
