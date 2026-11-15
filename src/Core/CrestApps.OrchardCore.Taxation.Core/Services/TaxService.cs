@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.OrchardCore.Taxation.Core.Telemetry;
@@ -449,6 +450,11 @@ public sealed class TaxService : ITaxService
             return 0m;
         }
 
+        if (level == TaxRoundingLevel.Rate)
+        {
+            return RoundPerRate(lines, currency);
+        }
+
         if (level == TaxRoundingLevel.Line)
         {
             decimal total = 0m;
@@ -495,6 +501,29 @@ public sealed class TaxService : ITaxService
         }
 
         return grandTotal;
+    }
+
+    // Each tax and rate is rounded once on what its lines add up to, and spread back over them largest remainder first,
+    // as an invoice's breakdown is (ITaxBreakdownCalculator).
+    private decimal RoundPerRate(IList<TaxLine> lines, string currency)
+    {
+        decimal total = 0m;
+
+        foreach (var group in lines.GroupBy(line => (line.TaxCode ?? string.Empty, line.TaxName ?? string.Empty, line.Rate, line.IsCompound)))
+        {
+            var members = group.ToArray();
+            var rounded = _roundingStrategy.Round(members.Sum(line => line.TaxAmount), currency);
+            var shares = MoneyAllocation.Allocate(rounded, [.. members.Select(line => line.TaxAmount)], currency);
+
+            for (var i = 0; i < members.Length; i++)
+            {
+                members[i].TaxAmount = shares[i];
+            }
+
+            total += rounded;
+        }
+
+        return total;
     }
 
     private readonly struct ItemTaxState

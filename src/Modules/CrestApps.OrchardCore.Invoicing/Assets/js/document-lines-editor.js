@@ -198,7 +198,12 @@
           ? 0
           : lineAmount({ quantity: read(row, 'quantity'), unitPrice: read(row, 'unitPrice'), discountPercent: read(row, 'discountPercent') }, decimals);
         var rate = rowRate(row);
-        var tax = estimateTax(amount, rate, pricesIncludeTax, decimals);
+        var saved = row.getAttribute('data-line-saved-tax');
+
+        // Until something changes, a line shows the tax the server gave it; after, an estimate at its rate.
+        var tax = !dirty && saved !== null && saved !== ''
+          ? Number(saved)
+          : estimateTax(amount, rate, pricesIncludeTax, decimals);
         var amountCell = row.querySelector('[data-line-amount]');
         var taxCell = row.querySelector('[data-line-tax]');
 
@@ -244,6 +249,7 @@
 
     function changed() {
       dirty = true;
+      rows().forEach(function (row) { row.removeAttribute('data-line-saved-tax'); });
       update();
     }
 

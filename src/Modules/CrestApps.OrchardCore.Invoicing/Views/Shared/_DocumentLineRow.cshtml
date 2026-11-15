@@ -11,7 +11,7 @@
     string Invariant(decimal? value) => value?.ToString(CultureInfo.InvariantCulture);
 }
 
-<tr data-line-row data-line-rate="@Invariant(line.TaxRate)">
+<tr data-line-row data-line-rate="@Invariant(line.TaxRate)" data-line-saved-tax="@Invariant(line.TaxAmount)">
     <td class="document-line-move text-nowrap">
         <input type="hidden" name="Lines[@i].Id" value="@line.Id" />
         <span class="document-line-position" data-line-position>@Model.Position</span>

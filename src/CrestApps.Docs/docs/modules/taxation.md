@@ -391,6 +391,16 @@ Rounding is explicit and controlled by `TaxationOptions` (or `TaxCalculationCont
 | `Tax` | Amounts are aggregated per tax type, then rounded. |
 | `Jurisdiction` | Amounts are aggregated per jurisdiction, then rounded. |
 | `Transaction` | The whole transaction is rounded once. |
+| `Rate` (the default) | Amounts are aggregated per tax and rate (its code, name, rate and compound flag), rounded once, and spread back over the lines largest remainder first: the EN 16931 rule invoices follow, so a cart and an invoice with the same lines come to the same tax. |
+
+## Document tax breakdown
+
+`ITaxBreakdownCalculator` (Taxation.Abstractions, `DefaultTaxBreakdownCalculator` in Taxation.Core) works out a document's tax from the taxes the rules found for its items, for Invoicing's invoices, estimates, credit notes and recurring plans. Its `TaxBreakdownRequest` holds the items (lines and charges, `TaxBreakdownItem`: the amount after the document's discounts and before them, the item's own treatment and reason, its `TaxBreakdownRate`s in percent, and whether it is a charge), the document's treatment and reason (the bill-to's), whether prices include tax, and the cash rounding step. The `TaxBreakdownResult` has:
+
+- one row per (treatment, code, name, rate, compound): tax worked out on the summed net, a compound tax on the net plus the other taxes, and a row with no tax, with its reason, for each treatment of the items that are not taxed (zero rated, exempt, reverse charged, out of scope, or taxable with no tax), so every item has a category as EN 16931 asks;
+- each item's net before and after the document's discounts and its share of the tax, spread back largest remainder first (`MoneyAllocation`, next to `CurrencyScale`);
+- with prices that include tax, each group of items that share their taxes split once into net and tax (an item with no tax to take out keeps its whole price as net);
+- the tax total, the cash rounding as an explicit amount, and the total.
 
 `TaxationOptions` also configures `DecimalPlaces`, `MidpointRounding`, and per-currency decimal overrides. By default `DecimalPlaces` is empty and tax is rounded to each currency's precision from `CurrencyScale` (ISO 4217): no decimals for JPY, three for KWD, two for USD, the same precision the payment uses. Set `DecimalPlaces` only to force one precision for every currency; a per-currency override still wins.
 

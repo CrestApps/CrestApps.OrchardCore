@@ -113,7 +113,7 @@ internal static class InvoiceDraftEditor
             Sku = line.Sku,
             Total = line.HasAmount ? line.Total : null,
             TaxAmount = line.HasAmount ? line.TaxAmount : null,
-            TaxRate = line.HasAmount && line.Net > 0m ? Math.Round(line.TaxAmount / line.Net * 100m, 3) : null,
+            TaxRate = line.HasAmount ? GetRate(line) : null,
         })];
 
     /// <summary>
@@ -221,6 +221,23 @@ internal static class InvoiceDraftEditor
             string.IsNullOrWhiteSpace(row.Name) &&
             string.IsNullOrWhiteSpace(row.Description) &&
             row.UnitPrice is null or 0m;
+
+    // The rate the line's own taxes add up to (a compound tax on the net plus the others), or null for a line not worked
+    // out yet, so the editor estimates its tax only once the server has given it its taxes.
+    private static decimal? GetRate(DocumentLine line)
+    {
+        var taxes = (line.Taxes ?? []).Where(tax => tax is not null && tax.Treatment == CrestApps.OrchardCore.Taxation.Models.TaxTreatment.Taxable).ToList();
+
+        if (taxes.Count == 0)
+        {
+            return line.Net != 0m || line.Total != 0m ? 0m : null;
+        }
+
+        var simple = taxes.Where(tax => !tax.IsCompound).Sum(tax => tax.Rate);
+        var factor = (1m + simple / 100m) * taxes.Where(tax => tax.IsCompound).Aggregate(1m, (product, tax) => product * (1m + tax.Rate / 100m));
+
+        return Math.Round((factor - 1m) * 100m, 3);
+    }
 
     private static string Clean(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

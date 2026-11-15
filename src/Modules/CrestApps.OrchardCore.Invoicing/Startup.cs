@@ -58,6 +58,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // The Taxation module, which Invoicing depends on, sets the taxes of a document's lines from its rules.
+        services.AddDocumentTaxProvider<TaxationDocumentTaxProvider>();
         services.AddScoped<DocumentLinesEditorContext>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, InvoicingResourceManagementOptionsConfiguration>();
 
@@ -304,12 +306,3 @@ public sealed class WorkOrdersStartup : StartupBase
         => services.AddScoped<IWorkOrderBilling, InvoicingWorkOrderBilling>();
 }
 
-[RequireFeatures(TaxationConstants.Feature.Taxation)]
-public sealed class TaxationStartup : StartupBase
-{
-    /// <inheritdoc/>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDocumentTaxProvider<TaxationDocumentTaxProvider>();
-    }
-}

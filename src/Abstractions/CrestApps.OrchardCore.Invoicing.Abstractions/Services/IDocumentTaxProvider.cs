@@ -1,9 +1,10 @@
 namespace CrestApps.OrchardCore.Invoicing.Services;
 
 /// <summary>
-/// Sets the taxes of a document's lines and charges from tax rules, such as the Taxation module's, before the calculator
-/// computes the amounts. Providers run in <see cref="Order"/>; the first that handles the document wins. Without one, the
-/// taxes typed on the lines are used.
+/// Sets the taxes of a document's lines and charges from tax rules before the calculator computes the amounts: the
+/// Taxation module's, which Invoicing depends on, or a provider ahead of it. Providers run in <see cref="Order"/>; the
+/// first that handles the document wins. When none applies (no rule for a line, a document without a currency), a line
+/// keeps the taxes it carries, as a credit note's lines do (<see cref="DocumentCalculationContext.KeepTypedTaxes"/>).
 /// </summary>
 public interface IDocumentTaxProvider
 {

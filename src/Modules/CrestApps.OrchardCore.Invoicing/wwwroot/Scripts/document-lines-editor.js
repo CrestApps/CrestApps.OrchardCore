@@ -133,7 +133,8 @@
 						discountPercent: read(row, "discountPercent")
 					}, decimals);
 					var rate = rowRate(row);
-					var tax = estimateTax(amount, rate, pricesIncludeTax, decimals);
+					var saved = row.getAttribute("data-line-saved-tax");
+					var tax = !dirty && saved !== null && saved !== "" ? Number(saved) : estimateTax(amount, rate, pricesIncludeTax, decimals);
 					var amountCell = row.querySelector("[data-line-amount]");
 					var taxCell = row.querySelector("[data-line-tax]");
 					if (amountCell) amountCell.textContent = kind && !hasAmount(kind.value) ? "" : money(amount);
@@ -167,6 +168,9 @@
 			}
 			function changed() {
 				dirty = true;
+				rows().forEach(function(row) {
+					row.removeAttribute("data-line-saved-tax");
+				});
 				update();
 			}
 			function addRow() {

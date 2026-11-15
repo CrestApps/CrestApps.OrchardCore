@@ -62,6 +62,7 @@
     <ProjectReference Include="..\CrestApps.OrchardCore.Transactions\CrestApps.OrchardCore.Transactions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.BusinessDocuments\CrestApps.OrchardCore.BusinessDocuments.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Resources\CrestApps.OrchardCore.Resources.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Taxation\CrestApps.OrchardCore.Taxation.csproj" />
   </ItemGroup>
 
 </Project>

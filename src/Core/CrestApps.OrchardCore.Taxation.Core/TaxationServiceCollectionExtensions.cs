@@ -41,6 +41,7 @@ public static class TaxationServiceCollectionExtensions
         services.TryAddScoped<ITaxableItemResolver, DefaultTaxableItemResolver>();
         services.TryAddScoped<ITaxSnapshotFactory, DefaultTaxSnapshotFactory>();
         services.TryAddScoped<ITaxRefundCalculator, DefaultTaxRefundCalculator>();
+        services.TryAddSingleton<ITaxBreakdownCalculator, DefaultTaxBreakdownCalculator>();
 
         services.AddTaxCalculationMethod<PercentageTaxCalculationMethod>();
         services.AddTaxCalculationMethod<FixedAmountTaxCalculationMethod>();

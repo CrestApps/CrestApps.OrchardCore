@@ -58,20 +58,20 @@ public sealed class TaxationDocumentTaxProviderTests
     }
 
     [Fact]
-    public void WithoutTaxation_InvoicingRegistersNoTaxProvider()
+    public void Invoicing_DependsOnTaxation_AndAlwaysRegistersItsTaxProvider()
     {
-        // Arrange
+        // Arrange: everything about tax is the Taxation module's.
         var services = new ServiceCollection();
+        var feature = typeof(CrestApps.OrchardCore.Invoicing.Startup).Assembly
+            .GetCustomAttributes(typeof(global::OrchardCore.Modules.Manifest.FeatureAttribute), inherit: false)
+            .Cast<global::OrchardCore.Modules.Manifest.FeatureAttribute>()
+            .Single(attribute => attribute.GetType() == typeof(global::OrchardCore.Modules.Manifest.FeatureAttribute) && attribute.Id == CrestApps.OrchardCore.Invoicing.InvoicingConstants.Features.Area);
 
         // Act
         new CrestApps.OrchardCore.Invoicing.Startup().ConfigureServices(services);
 
         // Assert
-        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IDocumentTaxProvider));
-        Assert.DoesNotContain(services, descriptor => descriptor.ImplementationType == typeof(TaxationDocumentTaxProvider));
-
-        var withTaxation = new ServiceCollection();
-        new TaxationStartup().ConfigureServices(withTaxation);
-        Assert.Contains(withTaxation, descriptor => descriptor.ImplementationType == typeof(TaxationDocumentTaxProvider));
+        Assert.Contains(CrestApps.OrchardCore.Taxation.TaxationConstants.Feature.Taxation, feature.Dependencies);
+        Assert.Contains(services, descriptor => descriptor.ImplementationType == typeof(TaxationDocumentTaxProvider));
     }
 }

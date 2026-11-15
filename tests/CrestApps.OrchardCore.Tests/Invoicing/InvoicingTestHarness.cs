@@ -342,6 +342,8 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             });
         services.AddSingleton(email.Object);
 
+        // The Taxation module's breakdown, which Invoicing depends on for everything tax.
+        services.AddSingleton<CrestApps.OrchardCore.Taxation.Services.ITaxBreakdownCalculator, CrestApps.OrchardCore.Taxation.Core.Services.DefaultTaxBreakdownCalculator>();
         services.AddInvoicingCore();
         services.AddInvoicingEstimates();
         services.AddInvoicingRecurring();

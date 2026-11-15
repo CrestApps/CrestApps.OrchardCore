@@ -99,16 +99,19 @@ public sealed class InvoiceDraftEditorTests
     }
 
     [Fact]
-    public void BuildLines_ShowsEachLinesTax_AndItsEffectiveRate()
+    public void BuildLines_ShowsEachLinesTax_AndItsRates()
     {
-        // Arrange: a $100 line taxed $20, as the calculator left it.
-        var line = new DocumentLine { Id = "line-1", Name = "Consulting", Quantity = 1m, UnitPrice = 100m, Net = 100m, TaxAmount = 20m, Total = 120m };
+        // Arrange: a $0.33 line whose share of the document's 20% tax came to $0.07, and a line the rules gave no tax.
+        var taxed = new DocumentLine { Id = "line-1", Name = "Extra design", Quantity = 1m, UnitPrice = 0.33m, Net = 0.33m, TaxAmount = 0.07m, Total = 0.40m };
+        taxed.Taxes.Add(new DocumentLineTax { Code = "S", Name = "VAT", Rate = 20m, Treatment = CrestApps.OrchardCore.Taxation.Models.TaxTreatment.Taxable });
+        var untaxed = new DocumentLine { Id = "line-2", Name = "Postage", Quantity = 1m, UnitPrice = 5m, Net = 5m, Total = 5m };
 
         // Act
-        var row = Assert.Single(InvoiceDraftEditor.BuildLines([line]));
+        var rows = InvoiceDraftEditor.BuildLines([taxed, untaxed]);
 
-        // Assert
-        Assert.Equal((20m, 20m), (row.TaxAmount, row.TaxRate));
+        // Assert: the rate is the line's own, never its share of the tax over its net (21.2%).
+        Assert.Equal((0.07m, 20m), (rows[0].TaxAmount, rows[0].TaxRate));
+        Assert.Equal((0m, 0m), (rows[1].TaxAmount, rows[1].TaxRate));
     }
 
     [Fact]
