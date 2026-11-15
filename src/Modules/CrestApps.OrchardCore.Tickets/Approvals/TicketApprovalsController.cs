@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
@@ -25,11 +26,13 @@ public sealed class TicketApprovalsController : Controller
     private readonly ITicketAccessService _access;
     private readonly ITimelineService _timeline;
     private readonly INotifier _notifier;
+    private readonly IAuthorizationService _authorizationService;
 
     internal readonly IHtmlLocalizer H;
 
-    public TicketApprovalsController(ITicketService tickets, ITicketAccessService access, ITimelineService timeline, INotifier notifier, IHtmlLocalizer<TicketApprovalsController> htmlLocalizer)
+    public TicketApprovalsController(ITicketService tickets, ITicketAccessService access, ITimelineService timeline, INotifier notifier, IAuthorizationService authorizationService, IHtmlLocalizer<TicketApprovalsController> htmlLocalizer)
     {
+        _authorizationService = authorizationService;
         _tickets = tickets;
         _access = access;
         _timeline = timeline;
@@ -81,6 +84,31 @@ public sealed class TicketApprovalsController : Controller
             RequesterName = part.RequesterContact?.Name ?? part.RequesterContact?.Email,
             FirstMessage = newest.Entries.Count > 0 ? newest.Entries[0].Body : null,
         });
+    }
+
+    /// <summary>
+    /// Calls off the ticket's pending approval, for someone allowed to.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="reason">Why.</param>
+    /// <returns>Back to the ticket.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/approval/cancel", "TicketApprovalsCancel")]
+    public async Task<IActionResult> Cancel(string id, string reason)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TicketsPermissions.CancelTicketApprovals))
+        {
+            return Forbid();
+        }
+
+        var result = await _tickets.CancelApprovalAsync(id, reason, TicketActor.User(User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity?.Name), HttpContext.RequestAborted);
+
+        if (!result.Succeeded)
+        {
+            await _notifier.ErrorAsync(H["{0}", string.Join(" ", result.Errors)]);
+        }
+
+        return RedirectToAction("Display", "Tickets", new { area = TicketsConstants.Features.Tickets, id });
     }
 
     /// <summary>

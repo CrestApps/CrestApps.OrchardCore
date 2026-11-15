@@ -96,6 +96,11 @@ public enum TicketApprovalState
     /// A step refused.
     /// </summary>
     Rejected,
+
+    /// <summary>
+    /// Called off by someone allowed to, such as when an approver left; the ticket went back to work.
+    /// </summary>
+    Canceled,
 }
 
 /// <summary>

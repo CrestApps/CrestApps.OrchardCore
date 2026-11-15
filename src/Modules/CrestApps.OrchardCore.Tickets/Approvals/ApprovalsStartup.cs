@@ -8,6 +8,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Tickets.Approvals;
 
@@ -22,6 +23,7 @@ public sealed class ApprovalsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketApprovalStarter>());
+        services.AddPermissionProvider<TicketApprovalsPermissionProvider>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, TicketApprovalSettingsDisplayDriver>();
         services.AddContentPart<TicketPart>()
             .UseDisplayDriver<TicketApprovalDisplayDriver>();

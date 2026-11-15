@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 
@@ -18,9 +19,12 @@ public sealed class TicketApprovalStarter : ITicketObserver
     private readonly IServiceProvider _services;
     private readonly IEnumerable<ITicketRequesterManagerSource> _managers;
 
+    internal readonly IStringLocalizer S;
+
     // The ticket service is resolved when used: it runs the observers, so taking it here would be a cycle.
-    public TicketApprovalStarter(IContentDefinitionManager contentDefinitionManager, IServiceProvider services, IEnumerable<ITicketRequesterManagerSource> managers)
+    public TicketApprovalStarter(IContentDefinitionManager contentDefinitionManager, IServiceProvider services, IEnumerable<ITicketRequesterManagerSource> managers, IStringLocalizer<TicketApprovalStarter> stringLocalizer)
     {
+        S = stringLocalizer;
         _contentDefinitionManager = contentDefinitionManager;
         _services = services;
         _managers = managers;
@@ -57,12 +61,24 @@ public sealed class TicketApprovalStarter : ITicketObserver
                 Name = definition.Name,
                 ApproverIds = [.. (definition.ApproverIds ?? []).Concat(definition.RequesterManager && manager is not null ? [manager] : [])],
             })
-            .Where(step => step.ApproverIds.Count > 0)
             .ToList();
 
-        if (steps.Count > 0)
+        var tickets = _services.GetRequiredService<ITicketService>();
+
+        if (steps.Any(step => step.ApproverIds.Count > 0))
         {
-            await _services.GetRequiredService<ITicketService>().StartApprovalAsync(ticket.ContentItemId, steps, settings.WaitingStatusId, TicketActor.Site, cancellationToken);
+            // Steps without an approver go along, to be skipped and named on the timeline.
+            await tickets.StartApprovalAsync(ticket.ContentItemId, steps, settings.WaitingStatusId, TicketActor.Site, cancellationToken);
+
+            return;
         }
+
+        // No step has anyone to decide it: the ticket isn't held, and the agents are told why.
+        await tickets.ReplyAsync(ticket.ContentItemId, new TicketReply
+        {
+            IsInternal = true,
+            Body = S["This ticket type asks for approval, but none of its steps has an approver (such as a requester without a manager), so the ticket wasn't held."],
+            Actor = TicketActor.Site,
+        }, cancellationToken);
     }
 }

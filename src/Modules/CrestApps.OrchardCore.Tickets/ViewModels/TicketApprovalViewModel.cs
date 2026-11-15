@@ -24,6 +24,11 @@ public class TicketApprovalViewModel
     public bool CanDecide { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the user may cancel the pending approval.
+    /// </summary>
+    public bool CanCancel { get; set; }
+
+    /// <summary>
     /// Gets or sets the ticket, on the approval page.
     /// </summary>
     public ContentItem Ticket { get; set; }

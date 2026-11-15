@@ -111,7 +111,7 @@ To triage every new ticket, add the **Triage Ticket With AI** task to a workflow
 
 Turn on **Ticket Approvals** under **Configuration > Features**. Then, under **Content Definition**, edit the ticket type's **Ticket** part and fill in **Approval**: up to three steps, each with a name (such as *Manager* or *Finance*) and its approvers, or **The requester's manager**. Choose a **Status while waiting**, such as a *Waiting for approval* status you add under **Tickets > Statuses**.
 
-A new ticket of that type then waits. Each approver of the current step is told in their notifications and opens the request's approval page; agents see the steps on the ticket. One approver per step decides: **Approve** moves to the next step, and after the last the ticket goes back to work. **Refuse** needs a comment, which the requester reads; the ticket is then solved.
+A new ticket of that type then waits. Each approver of the current step is told in their notifications and opens the request's approval page; agents see the steps on the ticket. One approver per step decides: **Approve** moves to the next step, and after the last the ticket goes back to work. **Refuse** needs a comment, which the requester reads; the ticket is then solved. While a ticket waits, its status can't be changed any other way. If an approver can't decide (they left, say), an administrator opens the ticket and uses **Cancel the approval** with a reason; the ticket goes back to work.
 
 ## Put a request form on a page
 

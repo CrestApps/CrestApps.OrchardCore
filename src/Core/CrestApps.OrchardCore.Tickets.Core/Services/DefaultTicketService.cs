@@ -432,8 +432,15 @@ public sealed class DefaultTicketService : ITicketService
             var agentReply = !reply.IsInternal && !reply.FromRequester && !automated;
             var statuses = await _statuses.GetAllAsync(cancellationToken);
             var statusId = reply.SetStatusId;
+            var awaitingApproval = part.Approval?.State == TicketApprovalState.Pending;
 
-            if (statusId is null && !reply.IsInternal)
+            // A ticket that waits for approval keeps its status: only the approval moves it.
+            if (awaitingApproval && !string.IsNullOrEmpty(statusId) && statusId != part.StatusId)
+            {
+                return Refuse(S["The ticket waits for approval, so its status can't change until it is decided or canceled."], ticket);
+            }
+
+            if (statusId is null && !reply.IsInternal && !awaitingApproval)
             {
                 if (reply.FromRequester && part.StatusCategory is TicketStatusCategory.Solved or TicketStatusCategory.Pending)
                 {
@@ -822,9 +829,21 @@ public sealed class DefaultTicketService : ITicketService
         return ([.. page], total);
     }
 
-    private async Task<List<string>> ApplyAsync(ContentItem ticket, TicketPart part, TicketUpdate update, List<TimelineFieldChange> changes, CancellationToken cancellationToken)
+    private Task<List<string>> ApplyAsync(ContentItem ticket, TicketPart part, TicketUpdate update, List<TimelineFieldChange> changes, CancellationToken cancellationToken)
+        => ApplyAsync(ticket, part, update, changes, byApproval: false, cancellationToken);
+
+    // A ticket that waits for approval changes status only through the approval (byApproval), whoever asks: the panel,
+    // a bulk action, the API or a workflow.
+    private async Task<List<string>> ApplyAsync(ContentItem ticket, TicketPart part, TicketUpdate update, List<TimelineFieldChange> changes, bool byApproval, CancellationToken cancellationToken)
     {
         var errors = new List<string>();
+
+        if (!byApproval && part.Approval?.State == TicketApprovalState.Pending && !string.IsNullOrEmpty(update.StatusId) && update.StatusId != part.StatusId)
+        {
+            errors.Add(S["The ticket waits for approval, so its status can't change until it is decided or canceled."]);
+
+            return errors;
+        }
         var now = _clock.UtcNow;
         var subject = SubjectOf(ticket.ContentItemId);
 
@@ -1193,6 +1212,8 @@ public sealed class DefaultTicketService : ITicketService
                 return Refuse(S["The ticket is already waiting for approval."], ticket);
             }
 
+            // A step left with no approver (a requester without a manager, say) is skipped, and the timeline says so.
+            var skipped = steps.Where(step => step is not null && step.ApproverIds?.Any(id => !string.IsNullOrWhiteSpace(id)) != true).Select(step => step.Name).ToList();
             var kept = steps
                 .Where(step => step?.ApproverIds?.Any(id => !string.IsNullOrWhiteSpace(id)) == true)
                 .Select(step => new TicketApprovalStep
@@ -1218,7 +1239,7 @@ public sealed class DefaultTicketService : ITicketService
 
             if (waiting is not null && waiting.ItemId != part.StatusId)
             {
-                var errors = await ApplyAsync(ticket, part, new TicketUpdate { StatusId = waiting.ItemId }, changes, cancellationToken);
+                var errors = await ApplyAsync(ticket, part, new TicketUpdate { StatusId = waiting.ItemId }, changes, byApproval: true, cancellationToken);
 
                 if (errors.Count > 0)
                 {
@@ -1229,7 +1250,14 @@ public sealed class DefaultTicketService : ITicketService
             await SaveAsync(ticket, part, cancellationToken);
 
             var first = kept[0];
-            await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, S["Waiting for approval: {0}.", first.Name ?? S["step {0}", 1].Value], changes, cancellationToken);
+            var waitingFor = S["Waiting for approval: {0}.", first.Name ?? S["step {0}", 1].Value].Value;
+
+            if (skipped.Count > 0)
+            {
+                waitingFor += " " + S["Skipped for want of an approver: {0}.", string.Join(", ", skipped.Select(name => name ?? "?"))].Value;
+            }
+
+            await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, waitingFor, changes, cancellationToken);
 
             if (changes.Count > 0)
             {
@@ -1315,7 +1343,7 @@ public sealed class DefaultTicketService : ITicketService
 
             if (!string.IsNullOrEmpty(targetStatusId) && targetStatusId != part.StatusId)
             {
-                var errors = await ApplyAsync(ticket, part, new TicketUpdate { StatusId = targetStatusId }, changes, cancellationToken);
+                var errors = await ApplyAsync(ticket, part, new TicketUpdate { StatusId = targetStatusId }, changes, byApproval: true, cancellationToken);
 
                 if (errors.Count > 0)
                 {
@@ -1358,6 +1386,55 @@ public sealed class DefaultTicketService : ITicketService
             return new TicketResult { Ticket = ticket };
         }, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public Task<TicketResult> CancelApprovalAsync(string ticketId, string reason, TicketActor actor, CancellationToken cancellationToken = default)
+        => WithLockAsync(ticketId, actor, async ticket =>
+        {
+            var part = ticket.GetOrCreate<TicketPart>();
+
+            if (part.Approval?.State != TicketApprovalState.Pending)
+            {
+                return Refuse(S["The ticket isn't waiting for approval."], ticket);
+            }
+
+            reason = NullIfEmpty(reason?.Trim());
+
+            if (reason is null)
+            {
+                return Refuse(S["Say why the approval is canceled."], ticket);
+            }
+
+            var statuses = await _statuses.GetAllAsync(cancellationToken);
+            var held = statuses.FirstOrDefault(status => status.ItemId == part.Approval.HeldStatusId);
+            var targetStatusId = held is not null && TicketLifecycle.Transitions.CanMove(part.StatusCategory, held.Category)
+                ? held.ItemId
+                : TicketLifecycle.FirstOf(statuses, TicketStatusCategory.Open)?.ItemId;
+
+            part.Approval.State = TicketApprovalState.Canceled;
+
+            var changes = new List<TimelineFieldChange>();
+
+            if (!string.IsNullOrEmpty(targetStatusId) && targetStatusId != part.StatusId)
+            {
+                var errors = await ApplyAsync(ticket, part, new TicketUpdate { StatusId = targetStatusId }, changes, byApproval: true, cancellationToken);
+
+                if (errors.Count > 0)
+                {
+                    return new TicketResult { Ticket = ticket, Errors = errors };
+                }
+            }
+
+            await SaveAsync(ticket, part, cancellationToken);
+            await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, S["Approval canceled: {0}", reason], changes, cancellationToken);
+
+            if (changes.Count > 0)
+            {
+                Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+            }
+
+            return new TicketResult { Ticket = ticket };
+        }, cancellationToken);
 
     // With Account E-mail Domains on, a ticket without an account is filed under the account whose domain the
     // requester's e-mail is on.

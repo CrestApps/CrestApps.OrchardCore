@@ -108,18 +108,77 @@ public sealed class TicketApprovalTests
         var managers = new Mock<ITicketRequesterManagerSource>();
         managers.Setup(source => source.FindManagerUserIdAsync("dana", It.IsAny<CancellationToken>())).ReturnsAsync("mia");
         var services = new ServiceCollection().AddSingleton(tickets.Object).BuildServiceProvider();
-        var starter = new TicketApprovalStarter(definitions, services, [managers.Object]);
-        var withoutSteps = new TicketApprovalStarter(Definitions(new TicketApprovalSettings()), services, [managers.Object]);
+        var starter = new TicketApprovalStarter(definitions, services, [managers.Object], Doubles.RecipeRoundTrip.Localizer<TicketApprovalStarter>());
+        var withoutSteps = new TicketApprovalStarter(Definitions(new TicketApprovalSettings()), services, [managers.Object], Doubles.RecipeRoundTrip.Localizer<TicketApprovalStarter>());
 
         // Act
         await starter.CreatedAsync(Ticket("t1"), TestContext.Current.CancellationToken);
         await withoutSteps.CreatedAsync(Ticket("t2"), TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(["Manager", "IT"], started.Select(step => step.Name));
+        Assert.Equal(["Manager", "IT", "Empty"], started.Select(step => step.Name));
         Assert.Equal(["mia"], started[0].ApproverIds);
         Assert.Equal(["ivy"], started[1].ApproverIds);
+        Assert.Empty(started[2].ApproverIds);
         tickets.Verify(service => service.StartApprovalAsync("t2", It.IsAny<IReadOnlyList<TicketApprovalStep>>(), It.IsAny<string>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task WhileItWaits_NoPathMovesTheTicket_ButTheApprovalOrACancellation()
+    {
+        // Arrange
+        await using var kit = await TicketKit.CreateAsync();
+        var ticketId = (await kit.CreateAsync("New laptop", "Mine is broken.")).Ticket.ContentItemId;
+        await kit.RunAsync(services => Tickets(services).StartApprovalAsync(ticketId, [new TicketApprovalStep { Name = "Manager", ApproverIds = ["mia"] }], null, TicketActor.Site, TestContext.Current.CancellationToken));
+        var ct = TestContext.Current.CancellationToken;
+
+        // Act
+        var byPanel = await kit.RunAsync(services => Tickets(services).UpdateAsync(ticketId, new TicketUpdate { StatusId = TicketKit.Open.ItemId }, TicketActor.User("ana", "Ana"), ct));
+        var byWorkflow = await kit.RunAsync(services => Tickets(services).UpdateAsync(ticketId, new TicketUpdate { StatusId = TicketKit.Solved.ItemId }, new TicketActor { Name = "Workflow", FromWorkflow = true }, ct));
+        var byReplyAndStatus = await kit.RunAsync(services => Tickets(services).ReplyAsync(ticketId, new TicketReply { Body = "Done.", SetStatusId = TicketKit.Solved.ItemId, Actor = TicketActor.User("ana", "Ana") }, ct));
+        var byRequester = await kit.RunAsync(services => Tickets(services).ReplyAsync(ticketId, new TicketReply { Body = "Any news?", FromRequester = true }, ct));
+        var stillWaiting = (await kit.GetAsync(ticketId)).GetOrCreate<TicketPart>();
+        var noReason = await kit.RunAsync(services => Tickets(services).CancelApprovalAsync(ticketId, " ", TicketActor.User("root", "Root"), ct));
+        var canceled = await kit.RunAsync(services => Tickets(services).CancelApprovalAsync(ticketId, "Mia left the company.", TicketActor.User("root", "Root"), ct));
+        var afterCancel = (await kit.GetAsync(ticketId)).GetOrCreate<TicketPart>();
+        var movesAgain = await kit.RunAsync(services => Tickets(services).UpdateAsync(ticketId, new TicketUpdate { StatusId = TicketKit.Solved.ItemId }, TicketActor.User("ana", "Ana"), ct));
+
+        // Assert
+        Assert.False(byPanel.Succeeded);
+        Assert.False(byWorkflow.Succeeded);
+        Assert.False(byReplyAndStatus.Succeeded);
+        Assert.True(byRequester.Succeeded, string.Join(" ", byRequester.Errors));
+        Assert.Equal(TicketKit.Pending.ItemId, stillWaiting.StatusId);
+        Assert.Equal(TicketApprovalState.Pending, stillWaiting.Approval.State);
+        Assert.False(noReason.Succeeded);
+        Assert.True(canceled.Succeeded, string.Join(" ", canceled.Errors));
+        Assert.Equal(TicketApprovalState.Canceled, afterCancel.Approval.State);
+        Assert.Equal(TicketKit.Open.ItemId, afterCancel.StatusId);
+        Assert.True(movesAgain.Succeeded, string.Join(" ", movesAgain.Errors));
+        Assert.Contains(await kit.EntriesAsync(ticketId), entry => entry.Body?.Contains("Mia left the company.", StringComparison.Ordinal) == true);
+    }
+
+    [Fact]
+    public async Task AStepWithNoApprover_IsSkippedAndNamed_AndATypeWithNoneHoldsNothing()
+    {
+        // Arrange
+        await using var kit = await TicketKit.CreateAsync();
+        var ticketId = (await kit.CreateAsync("New laptop", "Mine is broken.")).Ticket.ContentItemId;
+        var tickets = new Mock<ITicketService>();
+        tickets.Setup(service => service.ReplyAsync("t1", It.IsAny<TicketReply>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TicketResult());
+        var services = new ServiceCollection().AddSingleton(tickets.Object).BuildServiceProvider();
+        var noneCanDecide = new TicketApprovalStarter(Definitions(new TicketApprovalSettings { Steps = [new TicketApprovalStepDefinition { Name = "Manager", RequesterManager = true }] }), services, [], Doubles.RecipeRoundTrip.Localizer<TicketApprovalStarter>());
+
+        // Act
+        var partly = await kit.RunAsync(services => Tickets(services).StartApprovalAsync(ticketId, [new TicketApprovalStep { Name = "Manager" }, new TicketApprovalStep { Name = "IT", ApproverIds = ["ivy"] }], null, TicketActor.Site, TestContext.Current.CancellationToken));
+        await noneCanDecide.CreatedAsync(Ticket("t1"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(partly.Succeeded, string.Join(" ", partly.Errors));
+        Assert.Equal("IT", (await kit.GetAsync(ticketId)).GetOrCreate<TicketPart>().Approval.Current.Name);
+        Assert.Contains(await kit.EntriesAsync(ticketId), entry => entry.Body?.Contains("Skipped for want of an approver: Manager.", StringComparison.Ordinal) == true);
+        tickets.Verify(service => service.StartApprovalAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<TicketApprovalStep>>(), It.IsAny<string>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()), Times.Never);
+        tickets.Verify(service => service.ReplyAsync("t1", It.Is<TicketReply>(reply => reply.IsInternal), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
@@ -15,26 +16,31 @@ namespace CrestApps.OrchardCore.Tickets.Approvals;
 internal sealed class TicketApprovalDisplayDriver : ContentPartDisplayDriver<TicketPart>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
 
-    public TicketApprovalDisplayDriver(IHttpContextAccessor httpContextAccessor)
+    public TicketApprovalDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
     {
         _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
     }
 
-    public override IDisplayResult Display(TicketPart part, BuildPartDisplayContext context)
+    public override async Task<IDisplayResult> DisplayAsync(TicketPart part, BuildPartDisplayContext context)
     {
         if (context.DisplayType != TicketsConstants.DisplayTypes.DetailAdmin || part.Approval is not { } approval)
         {
             return null;
         }
 
-        var userId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var user = _httpContextAccessor.HttpContext?.User;
+        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var canCancel = approval.State == TicketApprovalState.Pending && user is not null && await _authorizationService.AuthorizeAsync(user, TicketsPermissions.CancelTicketApprovals);
 
         return Initialize<TicketApprovalViewModel>("TicketPart_Approval", model =>
         {
             model.TicketId = part.ContentItem.ContentItemId;
             model.Approval = approval;
             model.CanDecide = !string.IsNullOrEmpty(userId) && approval.Current?.ApproverIds.Contains(userId, StringComparer.Ordinal) == true;
+            model.CanCancel = canCancel;
         }).Location(TicketsConstants.DisplayTypes.DetailAdmin, "Sidebar:0");
     }
 }

@@ -89,6 +89,15 @@ public static class TicketsPermissions
         isSecurityCritical: true);
 
     /// <summary>
+    /// Call off a ticket's pending approval, so it goes back to work without its approvers, such as when an approver
+    /// left. The cancellation is on the ticket's timeline.
+    /// </summary>
+    public static readonly Permission CancelTicketApprovals = new(
+        "CancelTicketApprovals",
+        LocalizationSource.Create("Cancel ticket approvals", typeof(TicketsPermissions)),
+        isSecurityCritical: true);
+
+    /// <summary>
     /// Open the ticket reports. Each report shows only the tickets the reader may view.
     /// </summary>
     public static readonly Permission ViewTicketReports = new(

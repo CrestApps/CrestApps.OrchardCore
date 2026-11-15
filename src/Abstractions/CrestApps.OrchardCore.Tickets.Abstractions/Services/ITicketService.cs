@@ -158,4 +158,15 @@ public interface ITicketService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The result.</returns>
     Task<TicketResult> DecideApprovalAsync(string ticketId, string approverId, string approverName, bool approve, string comment, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Calls off a ticket's pending approval: the ticket goes back to the status it had (or the first open one), and
+    /// the reason is on its timeline. Only the caller checks who may (<see cref="TicketsPermissions.CancelTicketApprovals"/>).
+    /// </summary>
+    /// <param name="ticketId">The ticket.</param>
+    /// <param name="reason">Why; required.</param>
+    /// <param name="actor">Who.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<TicketResult> CancelApprovalAsync(string ticketId, string reason, TicketActor actor, CancellationToken cancellationToken = default);
 }

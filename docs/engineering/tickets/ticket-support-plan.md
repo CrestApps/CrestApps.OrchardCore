@@ -248,6 +248,12 @@ Decided during the phase 2 review (2026-11-14):
 - **Automated replies don't count** as an agent's response: a reply a workflow adds (`TicketReply.Actor.FromWorkflow`) neither ends the first-response target nor counts toward first-contact resolution.
 - **Calendar time in the response reports.** The response and resolution report shows calendar time from creation, labeled so; business-time compliance is the service level report's job.
 
+Decided during the phase 4 review (2026-11-15):
+
+- **An approval can't be skipped.** While a ticket waits for approval, nothing changes its status but the approval: the panel, bulk actions, the API, workflows and replies with a status are refused, and a requester's reply doesn't reopen it. The only way around is **Cancel the approval** (permission `CancelTicketApprovals`, administrators by default), with a reason recorded on the timeline; the ticket then goes back to work.
+- **When there is no approver.** A step with no one to decide it (the requester's manager for a guest or a person without a manager) is skipped, and the timeline names it. When no step has an approver, the ticket isn't held and an internal note says why. An approver deleted or disabled after the ticket started waiting is handled by cancelling the approval (above); a fallback approver per type is left for later.
+- **Portal audience.** What the portal offers to create on and what it shows follow one rule: customer desks to anyone (and their account's administrators), internal desks only to their staff requester, never through an account.
+
 ## 11. Progress
 
 Keep this section current: a row per slice, with what was built, what differs from the plan and what is left.
