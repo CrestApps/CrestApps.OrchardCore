@@ -75,6 +75,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<TicketPresence>();
         services.AddDisplayDriver<TicketRow, TicketRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, TicketAutoCloseBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, TicketProblemIncidentsBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TicketBacklogBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TicketEmailOutboxBackgroundTask>();
 

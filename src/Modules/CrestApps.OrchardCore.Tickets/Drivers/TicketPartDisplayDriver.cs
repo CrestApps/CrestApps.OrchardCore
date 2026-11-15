@@ -33,6 +33,7 @@ internal sealed class TicketPartDisplayDriver : ContentPartDisplayDriver<TicketP
 {
     private const string Zone = "Sidebar";
     private const int PreviousTicketsShown = 5;
+    private const int MaxIncidentsShown = 100;
 
     private readonly ITicketService _tickets;
     private readonly ITicketAccessService _access;
@@ -200,6 +201,20 @@ internal sealed class TicketPartDisplayDriver : ContentPartDisplayDriver<TicketP
             .Select(index => new RecordRef(TicketsConstants.RecordKind, index.TicketId))
             .Distinct()
             .ToList();
+        // Only the incidents the user may see are named; the others are counted.
+        var visible = new List<RecordRef>();
+
+        foreach (var record in incidents.Take(MaxIncidentsShown))
+        {
+            if (await _tickets.GetAsync(record.Id) is { } incident && await _access.CanAsync(User, incident, TicketOperation.ViewAssigned, CancellationToken))
+            {
+                visible.Add(record);
+            }
+        }
+
+        model.HiddenIncidents = incidents.Count - visible.Count;
+        incidents = visible;
+
         var incidentSummaries = await _records.GetSummariesAsync(incidents, CancellationToken);
         model.Incidents = [.. incidents.Select(record => new TicketLinkView
         {

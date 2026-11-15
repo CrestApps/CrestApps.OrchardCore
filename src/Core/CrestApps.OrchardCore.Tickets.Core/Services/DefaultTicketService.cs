@@ -379,7 +379,7 @@ public sealed class DefaultTicketService : ITicketService
             }
 
             await SaveAsync(ticket, part, cancellationToken);
-            await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, null, changes, cancellationToken);
+            await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, NullIfEmpty(update.Reason?.Trim()), changes, cancellationToken);
             Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
 
             return new TicketResult { Ticket = ticket };

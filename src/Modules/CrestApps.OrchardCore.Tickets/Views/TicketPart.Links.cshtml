@@ -14,7 +14,7 @@
     };
 }
 
-@if (Model.Links.Count > 0 || Model.Incidents.Count > 0 || Model.CanEdit)
+@if (Model.Links.Count > 0 || Model.Incidents.Count > 0 || Model.HiddenIncidents > 0 || Model.CanEdit)
 {
     <div class="card mb-3">
         <div class="card-body">
@@ -47,9 +47,9 @@
                     }
                 </ul>
             }
-            @if (Model.Incidents.Count > 0)
+            @if (Model.Incidents.Count > 0 || Model.HiddenIncidents > 0)
             {
-                <h3 class="h6 small text-muted mt-2">@T["Incidents of this problem ({0})", Model.Incidents.Count]</h3>
+                <h3 class="h6 small text-muted mt-2">@T["Incidents of this problem ({0})", Model.Incidents.Count + Model.HiddenIncidents]</h3>
                 <ul class="list-unstyled small">
                     @foreach (var incident in Model.Incidents)
                     {
@@ -65,6 +65,10 @@
                         </li>
                     }
                 </ul>
+                @if (Model.HiddenIncidents > 0)
+                {
+                    <p class="small text-muted mb-1">@T["{0} more you can't see.", Model.HiddenIncidents]</p>
+                }
                 <p class="small text-muted mb-0">@T["Solving this ticket solves its open incidents."]</p>
             }
             @if (Model.CanEdit && Model.Kinds.Count > 0)

@@ -63,7 +63,7 @@ An open ticket page checks in every 15 seconds (`POST Admin/ticket/{id}/presence
 
 ## Problems and incidents
 
-A ticket linked to another with **Its problem** (`TicketLinkKinds.Problem`) is an incident of that problem. Ticket-to-ticket links are indexed both ways (`TicketLinkIndex`), so the problem's page lists its incidents, and solving the problem solves its open incidents with the same status, which e-mails their requesters as any solve does (`TicketProblemObserver`). An incident already solved, merged or only related stays as it is.
+A ticket linked to another with **Its problem** (`TicketLinkKinds.Problem`) is an incident of that problem. Ticket-to-ticket links are indexed both ways (`TicketLinkIndex`), so the problem's page lists its incidents, and solving the problem solves its open incidents with the same status, one by one through the ticket service (each under its own lock, with its events and the requester's "solved" e-mail), whatever desk they are on (`TicketProblemObserver`). The agent who solved the problem is recorded on each, with "Solved with its problem T-…" as the reason. The request solves the first 25; the **Solve incidents of solved problems** background task (every 5 minutes, up to 200 a run) does the rest. Linking needs the agent to see both tickets, and the problem's list names only the incidents the viewer can see (the others are counted). An incident already solved, merged or only related stays as it is.
 
 ## Work orders
 

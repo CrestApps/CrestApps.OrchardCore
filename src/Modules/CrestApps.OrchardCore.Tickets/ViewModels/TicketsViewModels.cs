@@ -516,6 +516,11 @@ public class TicketLinksViewModel
     public List<TicketLinkView> Incidents { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets how many of the problem's incidents the user can't see.
+    /// </summary>
+    public int HiddenIncidents { get; set; }
+
+    /// <summary>
     /// Gets or sets the record kinds a link can point at.
     /// </summary>
     public List<SelectListItem> Kinds { get; set; } = [];

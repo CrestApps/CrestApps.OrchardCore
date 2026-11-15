@@ -45,4 +45,9 @@ public sealed class TicketUpdate
     /// Gets or sets whether to raise the escalation level by one, read and changed inside the ticket's lock.
     /// </summary>
     public bool RaiseEscalation { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the change was made, written with it on the timeline, such as "Solved with its problem T-12".
+    /// </summary>
+    public string Reason { get; set; }
 }
