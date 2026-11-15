@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Assessments;
@@ -52,7 +53,8 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
                 configure?.Invoke(services);
             },
             AssessmentsIndexSchema.CreateAsync,
-            AssessmentsIndexProviders.All(),
+            // The deadline queue's index provider comes from DI on a site; the harness store needs it listed.
+            [.. AssessmentsIndexProviders.All(), new LeasedWorkItemIndexProvider<AttemptDeadlineWork>(AttemptDeadlineWork.CollectionName)],
             [AttemptDeadlineWork.CollectionName]);
 
         questions = new InMemoryQuestions(courses);
