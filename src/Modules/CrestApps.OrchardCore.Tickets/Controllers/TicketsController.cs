@@ -522,6 +522,45 @@ public sealed class TicketsController : Controller
     }
 
     /// <summary>
+    /// Checks a viewer in on a ticket and answers who else has it open (and is writing on it) and the ticket's
+    /// version, so the page warns of a colleague's work and of changes made since it was loaded.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="writing">Whether the viewer is writing a reply or a note.</param>
+    /// <param name="leaving">Whether the viewer is closing the page.</param>
+    /// <returns>The other viewers and the version.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/presence", "TicketsPresence")]
+    public async Task<IActionResult> Presence(string id, bool writing = false, bool leaving = false)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+
+        if (await _tickets.GetAsync(id) is not { } ticket || !await _access.CanAsync(User, ticket, TicketOperation.ViewAssigned, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        var presence = _serviceProvider.GetRequiredService<TicketPresence>();
+        var userId = UserId();
+
+        if (leaving)
+        {
+            await presence.LeaveAsync(id, userId, cancellationToken);
+
+            return Ok();
+        }
+
+        var others = await presence.CheckInAsync(id, userId, User.Identity?.Name ?? userId, writing, cancellationToken);
+
+        // The page compares the version with the one it loaded with, to say the ticket changed.
+        return Json(new
+        {
+            viewers = others.Select(viewer => new { name = viewer.Name, writing = viewer.Writing }),
+            version = TicketPresenceVersion.Of(ticket),
+        });
+    }
+
+    /// <summary>
     /// Adds a reply to the requester or an internal note, and optionally sets the status in the same step.
     /// </summary>
     /// <param name="id">The ticket.</param>

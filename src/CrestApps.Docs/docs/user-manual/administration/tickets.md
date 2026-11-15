@@ -43,6 +43,8 @@ Open a ticket from the list. Its thread is on the left, newest first; its values
 - Change the status, priority, desk, team or assignee in the ticket's values, or select **Assign to me**.
 - Use **Actions** to run an action your administrator set up, such as **Escalate to tier 2**.
 
+While you have a ticket open, a note above it says who else has it open and who is writing on it, so two people don't answer the same ticket. When someone changes the ticket while you have it open, the note says so; select **Reload** to see the change before you answer.
+
 A reply from the requester on a solved ticket reopens it within the desk's reopen window. A closed ticket is read only; a reply after it opens a follow-up ticket.
 
 ## Merge and link tickets

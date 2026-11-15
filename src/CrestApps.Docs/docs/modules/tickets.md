@@ -58,6 +58,8 @@ A new ticket with a team and no assignee goes to a member by the desk's **New ti
 
 A staff member who leaves, or whose user is unlinked from their staff record, hands back their open tickets: each is unassigned, with the change on its timeline.
 
+An open ticket page checks in every 15 seconds (`POST Admin/ticket/{id}/presence`, antiforgery, the ticket's view permission). `TicketPresence` keeps who has the ticket open, and whether they have text in the composer, in the distributed cache, so every node sees the same people; someone who stopped checking in for 45 seconds, or closed the page, is gone. The page shows the others ("Ana is writing on this ticket", "Also viewing: Ben") and, when the ticket's last change, reply count, status or assignee differ from the ones it was loaded with (`TicketPresenceVersion`), says the ticket changed and offers to reload. Nothing is pushed: a change shows on the next check-in.
+
 ## Problems and incidents
 
 A ticket linked to another with **Its problem** (`TicketLinkKinds.Problem`) is an incident of that problem. Ticket-to-ticket links are indexed both ways (`TicketLinkIndex`), so the problem's page lists its incidents, and solving the problem solves its open incidents with the same status, which e-mails their requesters as any solve does (`TicketProblemObserver`). An incident already solved, merged or only related stays as it is.
