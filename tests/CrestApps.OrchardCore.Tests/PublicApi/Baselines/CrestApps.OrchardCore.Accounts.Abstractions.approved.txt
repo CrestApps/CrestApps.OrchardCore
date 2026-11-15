@@ -58,6 +58,13 @@ namespace CrestApps.OrchardCore.Accounts
 }
 namespace CrestApps.OrchardCore.Accounts.Models
 {
+    public sealed class AccountEmailDomainsOptions
+    {
+        public static readonly System.Collections.Generic.IReadOnlyList<string> BuiltInPublicDomains;
+        public AccountEmailDomainsOptions() { }
+        public System.Collections.Generic.List<string> PublicDomains { get; set; }
+        public bool IsPublic(string domain) { }
+    }
     public sealed class AccountEmailDomainsPart : OrchardCore.ContentManagement.ContentPart
     {
         public AccountEmailDomainsPart() { }
@@ -139,6 +146,7 @@ namespace CrestApps.OrchardCore.Accounts.Services
     public interface IAccountEmailDomains
     {
         System.Threading.Tasks.Task<string> FindAccountIdAsync(string email, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> FindClaimsAsync(System.Collections.Generic.IEnumerable<string> domains, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAccountMemberService
     {

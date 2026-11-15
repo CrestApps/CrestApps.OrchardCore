@@ -13,4 +13,13 @@ public interface IAccountEmailDomains
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The account's content item id, or <see langword="null"/>.</returns>
     Task<string> FindAccountIdAsync(string email, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds which of some domains other accounts already list.
+    /// </summary>
+    /// <param name="domains">The domains, normalized.</param>
+    /// <param name="exceptAccountId">The account asking, left out.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>Each claimed domain and the account listing it.</returns>
+    Task<IReadOnlyDictionary<string, string>> FindClaimsAsync(IEnumerable<string> domains, string exceptAccountId, CancellationToken cancellationToken = default);
 }

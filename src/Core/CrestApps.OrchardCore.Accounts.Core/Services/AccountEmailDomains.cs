@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Accounts.Indexes;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Accounts.Services;
 
@@ -28,5 +29,19 @@ public sealed class AccountEmailDomains : IAccountEmailDomains
             .ToList();
 
         return accounts.Count == 1 ? accounts[0] : null;
+    }
+
+    public async Task<IReadOnlyDictionary<string, string>> FindClaimsAsync(IEnumerable<string> domains, string exceptAccountId, CancellationToken cancellationToken = default)
+    {
+        var wanted = domains?.Where(domain => !string.IsNullOrEmpty(domain)).Distinct(StringComparer.Ordinal).ToArray() ?? [];
+
+        if (wanted.Length == 0)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        return (await _session.QueryIndex<AccountEmailDomainIndex>(index => index.Domain.IsIn(wanted) && index.AccountContentItemId != exceptAccountId).ListAsync(cancellationToken))
+            .GroupBy(index => index.Domain, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().AccountContentItemId, StringComparer.Ordinal);
     }
 }

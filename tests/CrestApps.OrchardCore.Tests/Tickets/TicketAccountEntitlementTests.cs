@@ -68,6 +68,78 @@ public sealed class TicketAccountEntitlementTests
     }
 
     [Fact]
+    public async Task AnAccount_CantClaimAPublicMailDomain_OrOneAnotherAccountLists()
+    {
+        // Arrange
+        await using var harness = await CalendarTestHarness.CreateAsync(
+            services => services.AddScoped<IAccountEmailDomains, AccountEmailDomains>(),
+            async schema => await schema.CreateMapIndexTableAsync<AccountEmailDomainIndex>(table => table
+                .Column<string>("AccountContentItemId", column => column.WithLength(26))
+                .Column<string>("Domain", column => column.WithLength(253))),
+            [new AccountEmailDomainIndexProvider()]);
+        await harness.RunAsync(async services => await services.GetRequiredService<ISession>().SaveAsync(Account("other", "fabrikam.com")));
+        var options = Microsoft.Extensions.Options.Options.Create(new AccountEmailDomainsOptions { PublicDomains = ["mail.example"] });
+
+        // Act
+        var errors = await harness.RunAsync(async services =>
+        {
+            var handler = new CrestApps.OrchardCore.Accounts.Handlers.AccountEmailDomainsPartHandler(services.GetRequiredService<IAccountEmailDomains>(), options, Doubles.RecipeRoundTrip.Localizer<CrestApps.OrchardCore.Accounts.Handlers.AccountEmailDomainsPartHandler>());
+
+            async Task<List<string>> ValidateAsync(ContentItem account)
+            {
+                var context = new global::OrchardCore.ContentManagement.Handlers.ValidateContentContext(account);
+                await handler.ValidatingAsync(context, account.GetOrCreate<AccountEmailDomainsPart>());
+
+                return [.. context.ContentValidateResult.Errors.Select(error => error.ErrorMessage)];
+            }
+
+            return new
+            {
+                Public = await ValidateAsync(Account("acme", "contoso.com", "Gmail.com".ToLowerInvariant())),
+                Configured = await ValidateAsync(Account("acme", "mail.example")),
+                Claimed = await ValidateAsync(Account("acme", "fabrikam.com")),
+                OwnAgain = await ValidateAsync(Account("other", "fabrikam.com")),
+                Fine = await ValidateAsync(Account("acme", "contoso.com")),
+            };
+        }, commit: false);
+
+        // Assert
+        Assert.Single(errors.Public);
+        Assert.Contains("gmail.com", errors.Public[0], StringComparison.Ordinal);
+        Assert.Single(errors.Configured);
+        Assert.Single(errors.Claimed);
+        Assert.Contains("fabrikam.com", errors.Claimed[0], StringComparison.Ordinal);
+        Assert.Empty(errors.OwnAgain);
+        Assert.Empty(errors.Fine);
+    }
+
+    [Fact]
+    public async Task AGuestsUnconfirmedAddress_NeverFilesTheRequestUnderAnAccount()
+    {
+        // Arrange
+        var domains = new Mock<IAccountEmailDomains>();
+        domains.Setup(service => service.FindAccountIdAsync("dana@contoso.com", It.IsAny<CancellationToken>())).ReturnsAsync("acme");
+        await using var kit = await TicketKit.CreateAsync(configureServices: services => services.AddSingleton(domains.Object));
+
+        // Act
+        var created = await kit.RunAsync(services => services.GetRequiredService<ITicketService>().CreateAsync(new TicketCreateRequest
+        {
+            Subject = "Can't print",
+            Body = "It jams.",
+            DeskId = "support",
+            Channel = TicketsConstants.Channels.WebForm,
+            RequesterContact = new ContactInfo { Name = "Dana", Email = "dana@contoso.com" },
+            RequesterUnverified = true,
+        }, TestContext.Current.CancellationToken));
+
+        // Assert
+        var part = (await kit.GetAsync(created.Ticket.ContentItemId)).GetOrCreate<TicketPart>();
+        Assert.Null(part.AccountId);
+        Assert.True(part.RequesterUnverified);
+        domains.Verify(service => service.FindAccountIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task AGuestsRequest_IsFiledUnderTheirAccount_AndRunsOnTheAccountsServiceLevel()
     {
         // Arrange

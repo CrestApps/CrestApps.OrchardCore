@@ -46,6 +46,7 @@ namespace CrestApps.OrchardCore.Accounts.Services
     {
         public AccountEmailDomains(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<string> FindAccountIdAsync(string email, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> FindClaimsAsync(System.Collections.Generic.IEnumerable<string> domains, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AccountListSynchronizer
     {

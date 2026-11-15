@@ -51,7 +51,7 @@ namespace CrestApps.OrchardCore.Accounts
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.EmailDomains")]
     public sealed class EmailDomainsStartup : OrchardCore.Modules.StartupBase
     {
-        public EmailDomainsStartup() { }
+        public EmailDomainsStartup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Accounts.Locations")]

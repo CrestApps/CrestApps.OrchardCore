@@ -215,7 +215,7 @@ a field service module offers them as service addresses.
 
 ## Account e-mail domains
 
-The **Account E-mail Domains** feature keeps the domains an account's people write from. Its migration defines `AccountEmailDomainsPart` (`Domains`, lower case, without the `@`) and gives it to the `Account` type; the editor takes one domain per line. Published accounts' domains are indexed in `AccountEmailDomainIndex`, and `IAccountEmailDomains.FindAccountIdAsync(email)` answers the one account that lists the address's domain, or nothing when none or several do. [Tickets](./tickets) files a request without an account under the account of its requester's e-mail this way.
+The **Account E-mail Domains** feature keeps the domains an account's people write from. Its migration defines `AccountEmailDomainsPart` (`Domains`, lower case, without the `@`) and gives it to the `Account` type; the editor takes one domain per line. Published accounts' domains are indexed in `AccountEmailDomainIndex`, and `IAccountEmailDomains.FindAccountIdAsync(email)` answers the one account that lists the address's domain, or nothing when none or several do. [Tickets](./tickets) files a request without an account under the account of its requester's e-mail this way. An account can't list a public mail provider's domain (gmail.com, outlook.com and some forty others in `AccountEmailDomainsOptions.BuiltInPublicDomains`; a tenant adds its own under `CrestApps:Accounts:EmailDomains:PublicDomains` in its configuration) or one another account already lists (`IAccountEmailDomains.FindClaimsAsync`); `AccountEmailDomainsPartHandler` refuses both when the account is saved in the editor or imported.
 
 ## Removing an account
 

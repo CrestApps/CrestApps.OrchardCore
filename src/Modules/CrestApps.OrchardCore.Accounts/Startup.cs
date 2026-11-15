@@ -11,27 +11,29 @@ using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Timeline;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Events;
+using OrchardCore.Contents;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
 using OrchardCore.Security.Permissions;
-using CrestApps.OrchardCore.Parties.Models;
-using CrestApps.OrchardCore.Timeline;
-using OrchardCore.Contents;
 
 namespace CrestApps.OrchardCore.Accounts;
 
@@ -158,10 +160,19 @@ public sealed class TeamRecipesSchemaStartup : StartupBase
 [Feature(AccountsConstants.EmailDomainsFeature)]
 public sealed class EmailDomainsStartup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    public EmailDomainsStartup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddContentPart<AccountEmailDomainsPart>()
-            .UseDisplayDriver<AccountEmailDomainsPartDisplayDriver>();
+            .UseDisplayDriver<AccountEmailDomainsPartDisplayDriver>()
+            .AddHandler<Handlers.AccountEmailDomainsPartHandler>();
+        services.Configure<AccountEmailDomainsOptions>(_shellConfiguration.GetSection("CrestApps:Accounts:EmailDomains"));
         services.AddIndexProvider<AccountEmailDomainIndexProvider>();
         services.AddDataMigration<AccountEmailDomainsMigrations>();
         services.AddScoped<IAccountEmailDomains, AccountEmailDomains>();
