@@ -66,7 +66,20 @@ public sealed class KnowledgeArticleSearch
     /// <param name="take">How many to return.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The articles.</returns>
-    public async Task<IReadOnlyList<KnowledgeArticleIndex>> SuggestAsync(ClaimsPrincipal user, string text, int take, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<KnowledgeArticleIndex>> SuggestAsync(ClaimsPrincipal user, string text, int take, CancellationToken cancellationToken = default)
+        => SuggestAsync(user, text, take, reader: null, cancellationToken);
+
+    /// <summary>
+    /// The articles that match what someone is writing, among those the user may read and, when <paramref name="reader"/>
+    /// is given, that reader may read too: an agent answering a customer sees only what the customer can open.
+    /// </summary>
+    /// <param name="user">The user writing.</param>
+    /// <param name="text">What they wrote.</param>
+    /// <param name="take">How many at most.</param>
+    /// <param name="reader">The audiences the message's reader may read, or <see langword="null"/> for the user's own.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The articles, best first.</returns>
+    public async Task<IReadOnlyList<KnowledgeArticleIndex>> SuggestAsync(ClaimsPrincipal user, string text, int take, IReadOnlyCollection<KnowledgeArticleAudience> reader, CancellationToken cancellationToken = default)
     {
         var words = SuggestionWords(text);
 
@@ -75,7 +88,13 @@ public sealed class KnowledgeArticleSearch
             return [];
         }
 
-        var audiences = (await _access.GetAudiencesAsync(user)).ToArray();
+        var audiences = (await _access.GetAudiencesAsync(user)).Where(audience => reader is null || reader.Contains(audience)).ToArray();
+
+        if (audiences.Length == 0)
+        {
+            return [];
+        }
+
         var found = new Dictionary<long, (KnowledgeArticleIndex Article, int Hits)>();
 
         foreach (var word in words)

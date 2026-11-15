@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.KnowledgeBase;
 public static class KnowledgeBaseConstants
 {
     /// <summary>
+    /// The rate-limit group of readers' "was this helpful?" answers, held when Orchard Core's Rate Limits feature is on.
+    /// </summary>
+    public const string FeedbackRateLimitGroup = "knowledge-base-feedback";
+
+    /// <summary>
     /// The Knowledge Base feature.
     /// </summary>
     public const string Feature = "CrestApps.OrchardCore.KnowledgeBase";

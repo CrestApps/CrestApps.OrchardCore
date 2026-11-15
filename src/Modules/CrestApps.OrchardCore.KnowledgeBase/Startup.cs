@@ -10,6 +10,7 @@ using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
+using OrchardCore.RateLimits;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.KnowledgeBase;
@@ -30,4 +31,23 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAuthorizationHandler, KnowledgeArticleAuthorizationHandler>();
         services.AddPermissionProvider<KnowledgeBasePermissionProvider>();
     }
+}
+
+/// <summary>
+/// Holds each visitor address to a number of "was this helpful?" answers, when Orchard Core's Rate Limits feature is on,
+/// so a script can't push an article up the help center.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class RateLimitsStartup : StartupBase
+{
+    /// <summary>
+    /// Answers a visitor address may give in ten minutes.
+    /// </summary>
+    public const int FeedbackPerTenMinutes = 20;
+
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.Configure<RateLimitsOptions>(options => options.AddGroupRateLimit(
+            KnowledgeBaseConstants.FeedbackRateLimitGroup,
+            RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(KnowledgeBaseConstants.FeedbackRateLimitGroup, FeedbackPerTenMinutes, TimeSpan.FromMinutes(10))));
 }

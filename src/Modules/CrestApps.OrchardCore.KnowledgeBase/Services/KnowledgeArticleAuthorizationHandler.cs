@@ -25,7 +25,7 @@ internal sealed class KnowledgeArticleAuthorizationHandler : AuthorizationHandle
         if (context.Resource is not ContentItem item
             || !item.TryGet<KnowledgeArticlePart>(out var part)
             || part.Audience == KnowledgeArticleAudience.Public
-            || (requirement.Permission != CommonPermissions.ViewContent && requirement.Permission != CommonPermissions.PreviewContent))
+            || !IsReading(requirement.Permission?.Name))
         {
             return;
         }
@@ -37,4 +37,22 @@ internal sealed class KnowledgeArticleAuthorizationHandler : AuthorizationHandle
             context.Fail();
         }
     }
+
+    /// <summary>
+    /// Whether a permission reads content: viewing, previewing or listing it, whether one's own or anyone's, in general
+    /// or for a type (<c>ViewContent_HelpArticle</c>), compared by name so a type's own permission meets the audience too.
+    /// </summary>
+    /// <param name="name">The permission's name.</param>
+    /// <returns>Whether it reads content.</returns>
+    internal static bool IsReading(string name)
+        => !string.IsNullOrEmpty(name) && _reading.Contains(name.Split('_', 2)[0]);
+
+    private static readonly HashSet<string> _reading = new(StringComparer.Ordinal)
+    {
+        CommonPermissions.ViewContent.Name,
+        CommonPermissions.ViewOwnContent.Name,
+        CommonPermissions.PreviewContent.Name,
+        CommonPermissions.PreviewOwnContent.Name,
+        CommonPermissions.ListContent.Name,
+    };
 }

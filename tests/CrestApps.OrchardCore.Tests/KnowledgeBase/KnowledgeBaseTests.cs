@@ -64,6 +64,75 @@ public sealed class KnowledgeBaseTests
     }
 
     [Fact]
+    public async Task AnAgentAnsweringACustomer_IsOfferedOnlyArticlesTheCustomerCanOpen()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            await session.SaveAsync(Article("a1", "Reset your password", "Use the link on the sign-in page.", "Accounts", KnowledgeArticleAudience.Public));
+            await session.SaveAsync(Article("a2", "Password rules for members", "Members' passwords.", "Accounts", KnowledgeArticleAudience.SignedIn));
+            await session.SaveAsync(Article("a3", "Password reset override", "Staff procedure.", "Accounts", KnowledgeArticleAudience.Staff));
+        });
+
+        // Act
+        var found = await harness.RunAsync(async services =>
+        {
+            var search = services.GetRequiredService<KnowledgeArticleSearch>();
+            var staff = CalendarTestHarness.User("staff");
+            var ct = TestContext.Current.CancellationToken;
+
+            return new
+            {
+                Note = (await search.SuggestAsync(staff, "password", 5, ct)).Select(a => a.ContentItemId).Order().ToList(),
+                ToGuest = (await search.SuggestAsync(staff, "password", 5, [KnowledgeArticleAudience.Public], ct)).Select(a => a.ContentItemId).Order().ToList(),
+                ToMember = (await search.SuggestAsync(staff, "password", 5, [KnowledgeArticleAudience.Public, KnowledgeArticleAudience.SignedIn], ct)).Select(a => a.ContentItemId).Order().ToList(),
+            };
+        }, commit: false);
+
+        // Assert
+        Assert.Equal(["a1", "a2", "a3"], found.Note);
+        Assert.Equal(["a1"], found.ToGuest);
+        Assert.Equal(["a1", "a2"], found.ToMember);
+    }
+
+    [Theory]
+    [InlineData("ViewContent", true)]
+    [InlineData("ViewContent_KnowledgeArticle", true)]
+    [InlineData("ViewOwnContent_KnowledgeArticle", true)]
+    [InlineData("PreviewContent", true)]
+    [InlineData("PreviewOwnContent_KnowledgeArticle", true)]
+    [InlineData("ListContent", true)]
+    [InlineData("EditContent", false)]
+    [InlineData("PublishContent_KnowledgeArticle", false)]
+    public void TheAudience_AppliesToEveryPermissionThatReadsAnArticle(string permission, bool reading)
+        => Assert.Equal(reading, KnowledgeArticleAuthorizationHandler.IsReading(permission));
+
+    [Fact]
+    public async Task AStaffArticle_OnASecurableType_StaysStaffOnly()
+    {
+        // Arrange: the type's own view permission, which an anonymous visitor may hold through the type.
+        var services = new ServiceCollection()
+            .AddSingleton(Authorization())
+            .AddScoped<KnowledgeArticleAccess>()
+            .BuildServiceProvider();
+        var handler = new KnowledgeArticleAuthorizationHandler(services);
+        var staffOnly = Article("a3", "Staff procedure", null, null, KnowledgeArticleAudience.Staff);
+        var typed = new global::OrchardCore.Security.Permissions.Permission("ViewContent_KnowledgeArticle", global::OrchardCore.Localization.LocalizationSource.Create<KnowledgeBaseTests>("View knowledge articles"));
+
+        // Act
+        var anonymous = new AuthorizationHandlerContext([new PermissionRequirement(typed)], new ClaimsPrincipal(new ClaimsIdentity()), staffOnly);
+        var signedIn = new AuthorizationHandlerContext([new PermissionRequirement(new global::OrchardCore.Security.Permissions.Permission("ViewOwnContent_KnowledgeArticle", global::OrchardCore.Localization.LocalizationSource.Create<KnowledgeBaseTests>("View own")))], CalendarTestHarness.User("dana"), staffOnly);
+        await handler.HandleAsync(anonymous);
+        await handler.HandleAsync(signedIn);
+
+        // Assert
+        Assert.True(anonymous.HasFailed);
+        Assert.True(signedIn.HasFailed);
+    }
+
+    [Fact]
     public async Task ViewingAStaffOnlyArticle_FailsForAnyoneWithoutTheStaffPermission()
     {
         // Arrange

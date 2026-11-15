@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using OrchardCore.Autoroute.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.Contents;
+using OrchardCore.Locking.Distributed;
+using OrchardCore.RateLimits;
 
 namespace CrestApps.OrchardCore.KnowledgeBase.Controllers;
 
@@ -21,9 +23,13 @@ public sealed class HelpCenterController : Controller
     private readonly KnowledgeArticleSearch _search;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IDistributedLock _locks;
+    private readonly YesSql.ISession _session;
 
-    public HelpCenterController(KnowledgeArticleSearch search, IContentManager contentManager, IAuthorizationService authorizationService)
+    public HelpCenterController(KnowledgeArticleSearch search, IContentManager contentManager, IAuthorizationService authorizationService, IDistributedLock locks, YesSql.ISession session)
     {
+        _locks = locks;
+        _session = session;
         _search = search;
         _contentManager = contentManager;
         _authorizationService = authorizationService;
@@ -49,11 +55,19 @@ public sealed class HelpCenterController : Controller
     /// The articles that match what someone is writing, for other modules' forms: title, summary and link.
     /// </summary>
     /// <param name="q">What they wrote so far.</param>
+    /// <param name="reader">Who reads the message the link goes in: <c>public</c> (anyone) or <c>signedin</c> (a signed-in
+    /// person), so only articles they can open are offered; empty for the user's own.</param>
     /// <returns>Up to five articles.</returns>
     [HttpGet("help/api/suggest", Name = KnowledgeBaseConstants.SuggestRouteName)]
-    public async Task<IActionResult> Suggest(string q)
+    public async Task<IActionResult> Suggest(string q, string reader = null)
     {
-        var found = await _search.SuggestAsync(User, q, 5, HttpContext.RequestAborted);
+        IReadOnlyCollection<KnowledgeArticleAudience> readable = reader?.ToLowerInvariant() switch
+        {
+            "public" => [KnowledgeArticleAudience.Public],
+            "signedin" => [KnowledgeArticleAudience.Public, KnowledgeArticleAudience.SignedIn],
+            _ => null,
+        };
+        var found = await _search.SuggestAsync(User, q, 5, readable, HttpContext.RequestAborted);
 
         if (found.Count == 0)
         {
@@ -80,6 +94,7 @@ public sealed class HelpCenterController : Controller
     /// <param name="returnUrl">Where to go back to.</param>
     /// <returns>A redirect back to the article.</returns>
     [HttpPost("help/articles/{id}/feedback", Name = "KnowledgeBaseFeedback")]
+    [RateLimitGroup(KnowledgeBaseConstants.FeedbackRateLimitGroup)]
     public async Task<IActionResult> Feedback(string id, bool helpful, string returnUrl)
     {
         var back = Url.IsLocalUrl(returnUrl) ? returnUrl : Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName);
@@ -96,6 +111,17 @@ public sealed class HelpCenterController : Controller
 
         if (!Request.Cookies.ContainsKey(cookie))
         {
+            // Counted under a lock on the article and saved before it is let go, so answers at the same time all count.
+            var (locker, locked) = await _locks.TryAcquireLockAsync("KB_FEEDBACK_" + id, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15));
+
+            if (!locked)
+            {
+                return Redirect(back + (back.Contains('?') ? "&" : "?") + "feedback=thanks");
+            }
+
+            await using var held = locker;
+
+            article = await _contentManager.GetAsync(id, VersionOptions.Published);
             article.Alter<KnowledgeArticlePart>(part =>
             {
                 if (helpful)
@@ -109,6 +135,7 @@ public sealed class HelpCenterController : Controller
             });
 
             await _contentManager.UpdateAsync(article);
+            await _session.SaveChangesAsync(HttpContext.RequestAborted);
             Response.Cookies.Append(cookie, "1", new CookieOptions { MaxAge = TimeSpan.FromDays(365), HttpOnly = true, IsEssential = false, SameSite = SameSiteMode.Lax, Secure = Request.IsHttps });
         }
 
