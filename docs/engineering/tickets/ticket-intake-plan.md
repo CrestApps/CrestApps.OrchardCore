@@ -1,6 +1,6 @@
 # Ticket intake: categories and questions that follow the answers
 
-Status: draft for decision (2026-11-15). Nothing is built. Section 9 lists what Mike decides before work starts.
+Status: approved 2026-11-15 with the recommended option of every decision in section 9. Building on branch `ma/pensive-jackson-c56dcb` (on top of `ma/tickets-phase-2`); progress in section 11.
 
 Builds on the Tickets module ([`ticket-support-plan.md`](ticket-support-plan.md), branch `ma/tickets-phase-2`, phases 1 to 4 done) on Orchard Core 4 preview-19225 and .NET 11.
 
@@ -214,6 +214,24 @@ Each phase ends with the usual gates: Release build with warnings as errors, uni
 9. **Pull request.** Recommended: its own PR after the Tickets PR merges, since that one is already large. Alternative: add it to the Tickets PR.
 10. **Portal entry.** Recommended: types first (skipped when there is one), then the category. Alternative: categories across all customer types first, the type following from the category (each term would then also name its type).
 
-## 10. Not in this plan
+## 10. Phase 0 findings (2026-11-15)
+
+Read from Orchard Core's source (`ContentItemDisplayManager`, `ContentItemDisplayCoordinator`, `ContentFieldDisplayDriver`, the field editor views):
+
+- `UpdateEditorAsync` runs the item-level display drivers (`IContentDisplayDriver`) first, then each part's drivers, then every field's drivers, inside the coordinator, then the other `IContentDisplayHandler`s in registration order. A feature that depends on Contents registers its handler after the coordinator. So the hidden-field step is two pieces: an item-level display driver takes a snapshot of the fields that have rules (before any field driver writes), and a display handler after the coordinator works out what is hidden, puts the snapshot back for those fields and removes their validation errors. The snapshot is the new item's values on create and the stored values on edit, with no second load.
+- Field drivers always run their update, whatever the placement says (only a part hidden by placement skips its drivers). Their errors are keyed by the field's prefix, `{TypePartName}.{FieldName}` (with the editor's HTML prefix in front when there is one), such as `Ticket.Model.Text` for a required text field.
+- Every Orchard field editor is wrapped in `<div class="ocat-wrapper field-wrapper field-wrapper-{part}-{field}">`, so the script toggles those wrappers and no placement wrapper is needed. Inputs are named under the same prefix (`Ticket.Model.Text`).
+- **Bug found by reading, in the Tickets portal:** a required field customers don't fill in still runs its driver, which adds "A value is required" to the model state; `KeepOnlyCustomerValues` puts the value back but not the error, so the request is refused with an error the customer can't see. The hidden-field step fixes it: the customer editor declares its hidden fields through the same extension point (`IContentFieldVisibilityProvider`), so their errors are removed too.
+- Value readers: Orchard's indexing field handlers build index documents, not plain values, so ContentFields.Core gets a small reader per field type (registered with an `AddContentFieldValueReader` helper) over the field's stored JSON.
+- Work Orders keeps checklist copies on each work order. Instead of rewriting every work order, `ChecklistQuestion` gets the shared rule (`Rule`) and keeps `ShowWhen` (obsolete) for reading: templates are converted by a migration, and a work order's copy is read through the same conversion until it is next saved.
+
+## 11. Progress
+
+| Phase | State | Notes |
+| --- | --- | --- |
+| 0. Spike | Done | Section 10 |
+| 1. Conditions building block | Done, unit tested | `CrestApps.OrchardCore.Conditions` in the platform Abstractions: `Condition`, `ConditionRule`, `ConditionOperator`, `ConditionValue` (with `Withheld` for a hidden source), `ConditionEvaluator`, `ConditionalVisibility` (`GetHidden`, cycle members show, `FindCycle`, `Sources`); `ConditionRuleSchema` in Recipes.Core. The evaluator is static and pure, like `TransitionTable`, so it lives in Abstractions and needs no registration. Work Orders: `ChecklistQuestion.Rule` with `GetRule()` reading the older `ShowWhen`; `WorkOrderService.GetHiddenQuestions` (a question under a hidden one is hidden, which the old check missed); the template handler saves the older form as a rule; migration v6 converts templates after the activation commits (`ChecklistRuleUpgrade`); recipe schema documents `Rule` and keeps `ShowWhen` as deprecated. A rule naming a question that no longer exists is now ignored (the question shows) instead of hiding the question. Not browser checked yet (checked with the Work Orders pass in phase 2) |
+
+## 12. Not in this plan
 
 Approval steps per category (today they are per type; a category could later pick them), AI suggesting a category, rules on agent-only values such as status ("show Root cause when solved"), required-when rules beyond "required while shown", calculated fields, and a converter from types-per-problem to categories.

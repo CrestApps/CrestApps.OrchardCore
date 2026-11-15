@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Recipes.Core.Schemas;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Json.Schema;
 using static CrestApps.OrchardCore.WorkOrders.Recipes.WorkOrdersSchemaBuilder;
@@ -32,7 +33,7 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
     {
         var question = Object(
             "A question on the checklist.",
-            ("Id", Text("The question's id within the checklist, which ShowWhen refers to.")),
+            ("Id", Text("The question's id within the checklist, which the conditions of later questions read.")),
             ("Section", Text("The section the question is in.")),
             ("Text", Text("The question.")),
             ("Kind", Enum<ChecklistQuestionKind>("The kind of answer.")),
@@ -44,8 +45,11 @@ internal sealed class WorkOrdersRecipeStepSchema : IRecipeStep
             ("Choices", Strings("The choices of a Choice or MultiChoice question.")),
             ("MinPhotos", Integer("How many photos a Photo question needs.")),
             ("Meter", Text("The asset meter a MeterReading question records.")),
+            ("Rule", ConditionRuleSchema.Build(
+                "When the question shows; null for always.",
+                "The id of an earlier question of the checklist.")),
             ("ShowWhen", OptionalObject(
-                "Shows the question only after another was answered a certain way; null for always.",
+                "Deprecated: the older form of Rule (one question and the answer that shows it), still read and saved as a rule.",
                 ("QuestionId", Text("The id of the question it depends on.")),
                 ("EqualsValue", Text("The answer that shows it.")))));
 
