@@ -65,6 +65,7 @@ public sealed class Startup : StartupBase
         // Service levels are the shared ones: the feature depends on Service Levels, which keeps the policies and timers.
         services.AddServiceLevelPolicyUsage<WorkOrderTypeServiceLevelPolicyUsage>();
         services.AddTimelineAccessProvider<WorkOrderTimelineAccess>();
+        services.AddServiceLevelTimerAccessProvider<WorkOrderServiceLevelTimerAccess>();
         services.AddDisplayDriver<ServiceLevelPolicy, WorkOrderServiceLevelPolicyDisplayDriver>();
         services.AddPermissionProvider<WorkOrdersPermissionsProvider>();
         services

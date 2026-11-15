@@ -25,14 +25,13 @@ public sealed class TimelineReportDataSetTests
     public async Task OnlyEntriesTheReaderMaySee_AreRead()
     {
         // Arrange
-        var access = new Mock<ITimelineAccessService>();
-        access.Setup(service => service.CanViewAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<RecordRef>(), It.IsAny<TimelineVisibility>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((ClaimsPrincipal _, RecordRef subject, TimelineVisibility visibility, CancellationToken _) => subject.Id == "a" && visibility == TimelineVisibility.Public);
+        // The real access service, asking a provider that answers one record at a time (the default batched form).
+        ITimelineAccessService access = new global::CrestApps.OrchardCore.Timeline.Core.Services.DefaultTimelineAccessService([new OnlyPublicEntriesOfA()]);
 
         await using var harness = await CalendarTestHarness.CreateAsync(
             services =>
             {
-                services.AddSingleton(access.Object);
+                services.AddSingleton(access);
                 new DataSourcesStartup().ConfigureServices(services);
             },
             TimelineIndexSchema.CreateAsync,
@@ -76,4 +75,15 @@ public sealed class TimelineReportDataSetTests
             Body = "Text",
             CreatedUtc = CalendarTestHarness.Now,
         };
+
+    private sealed class OnlyPublicEntriesOfA : ITimelineAccessProvider
+    {
+        public string SubjectKind => "Ticket";
+
+        public Task<bool> CanViewAsync(ClaimsPrincipal user, RecordRef subject, TimelineVisibility visibility, CancellationToken cancellationToken = default)
+            => Task.FromResult(subject.Id == "a" && visibility == TimelineVisibility.Public);
+
+        public Task<bool> CanAddAsync(ClaimsPrincipal user, RecordRef subject, string kind, TimelineVisibility visibility, CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
+    }
 }

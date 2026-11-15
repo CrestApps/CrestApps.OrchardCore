@@ -84,6 +84,6 @@ public sealed class TicketTimelineAccessTests
         var access = new Mock<ITicketAccessService>();
         access.Setup(service => service.CanAsync(_agent, ticket, TicketOperation.ViewAssigned, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        return new TicketTimelineAccess(contentManager.Object, access.Object);
+        return new TicketTimelineAccess(contentManager.Object, access.Object, Mock.Of<global::YesSql.ISession>());
     }
 }

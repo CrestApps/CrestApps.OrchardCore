@@ -5,7 +5,10 @@ using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
+using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using OrchardCore.ContentManagement;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tickets.Core.Services;
 
@@ -17,18 +20,24 @@ namespace CrestApps.OrchardCore.Tickets.Core.Services;
 /// </summary>
 public sealed class TicketTimelineAccess : ITimelineAccessProvider
 {
+    // Ids per index query, below every database's parameter limit.
+    private const int BatchSize = 500;
+
     private readonly IContentManager _contentManager;
     private readonly ITicketAccessService _access;
+    private readonly ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketTimelineAccess"/> class.
     /// </summary>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="access">The ticket access service.</param>
-    public TicketTimelineAccess(IContentManager contentManager, ITicketAccessService access)
+    /// <param name="session">The session, for the ticket index.</param>
+    public TicketTimelineAccess(IContentManager contentManager, ITicketAccessService access, ISession session)
     {
         _contentManager = contentManager;
         _access = access;
+        _session = session;
     }
 
     /// <inheritdoc/>
@@ -61,6 +70,42 @@ public sealed class TicketTimelineAccess : ITimelineAccessProvider
         return visibility == TimelineVisibility.Public
             && !string.IsNullOrEmpty(userId)
             && part.Requester == new PartyRef(PartyKinds.User, userId);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The same rule as <see cref="CanViewAsync"/>, answered from the ticket index: the reader's ticket scope
+    /// (<see cref="TicketScopeFilter"/>) for every entry, and the requester's own tickets for public entries.
+    /// </remarks>
+    public async Task<IReadOnlySet<string>> GetVisibleAsync(ClaimsPrincipal user, IReadOnlyCollection<string> subjectIds, TimelineVisibility visibility, CancellationToken cancellationToken = default)
+    {
+        var visible = new HashSet<string>(StringComparer.Ordinal);
+        var ids = (subjectIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (user is null || ids.Length == 0)
+        {
+            return visible;
+        }
+
+        var scope = await _access.ApplyScopeAsync(user, new TicketQuery(), cancellationToken);
+        var predicate = scope is null ? null : TicketScopeFilter.ToPredicate(scope);
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var requester = visibility == TimelineVisibility.Public && !string.IsNullOrEmpty(userId) ? new PartyRef(PartyKinds.User, userId).ToString() : null;
+
+        foreach (var batch in ids.Chunk(BatchSize))
+        {
+            if (predicate is not null)
+            {
+                visible.UnionWith((await _session.QueryIndex(predicate).Where(index => index.ContentItemId.IsIn(batch)).ListAsync(cancellationToken)).Select(index => index.ContentItemId));
+            }
+
+            if (requester is not null)
+            {
+                visible.UnionWith((await _session.QueryIndex<TicketIndex>(index => index.ContentItemId.IsIn(batch) && index.Requester == requester).ListAsync(cancellationToken)).Select(index => index.ContentItemId));
+            }
+        }
+
+        return visible;
     }
 
     /// <inheritdoc/>

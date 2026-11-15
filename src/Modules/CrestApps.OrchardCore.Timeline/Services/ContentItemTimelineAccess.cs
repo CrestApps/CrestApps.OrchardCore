@@ -56,6 +56,33 @@ internal sealed class ContentItemTimelineAccess : ITimelineAccessProvider
     }
 
     /// <inheritdoc/>
+    /// <remarks>The items are loaded in one query; the checks then run on each.</remarks>
+    public async Task<IReadOnlySet<string>> GetVisibleAsync(ClaimsPrincipal user, IReadOnlyCollection<string> subjectIds, TimelineVisibility visibility, CancellationToken cancellationToken = default)
+    {
+        var visible = new HashSet<string>(StringComparer.Ordinal);
+        var ids = (subjectIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (user?.Identity?.IsAuthenticated != true || ids.Length == 0)
+        {
+            return visible;
+        }
+
+        foreach (var contentItem in await _contentManager.GetAsync(ids, VersionOptions.Latest))
+        {
+            var allowed = visibility == TimelineVisibility.Internal
+                ? await IsStaffAsync(user, contentItem)
+                : _options.PublicContentTypes.Contains(contentItem.ContentType) && await _authorizationService.AuthorizeAsync(user, CommonPermissions.ViewContent, contentItem);
+
+            if (allowed)
+            {
+                visible.Add(contentItem.ContentItemId);
+            }
+        }
+
+        return visible;
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> CanAddAsync(ClaimsPrincipal user, RecordRef subject, string kind, TimelineVisibility visibility, CancellationToken cancellationToken = default)
     {
         if (user?.Identity?.IsAuthenticated != true || await _contentManager.GetAsync(subject.Id, VersionOptions.Latest) is not { } contentItem)

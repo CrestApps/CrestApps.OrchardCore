@@ -42,6 +42,36 @@ public sealed class DefaultTimelineAccessService : ITimelineAccessService
             : provider.CanAddAsync(user, subject, kind, visibility, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlySet<RecordRef>> GetVisibleAsync(ClaimsPrincipal user, IReadOnlyCollection<RecordRef> subjects, TimelineVisibility visibility, CancellationToken cancellationToken = default)
+    {
+        var visible = new HashSet<RecordRef>();
+
+        if (user is null || subjects is null || subjects.Count == 0)
+        {
+            return visible;
+        }
+
+        foreach (var kind in subjects.Where(subject => !subject.IsEmpty).GroupBy(subject => subject.Kind, StringComparer.Ordinal))
+        {
+            var provider = _providers.FirstOrDefault(candidate => string.Equals(candidate.SubjectKind, kind.Key, StringComparison.Ordinal));
+
+            if (provider is null)
+            {
+                continue;
+            }
+
+            var ids = kind.Select(subject => subject.Id).Distinct(StringComparer.Ordinal).ToArray();
+
+            foreach (var id in await provider.GetVisibleAsync(user, ids, visibility, cancellationToken))
+            {
+                visible.Add(new RecordRef(kind.Key, id));
+            }
+        }
+
+        return visible;
+    }
+
     private ITimelineAccessProvider Find(RecordRef subject)
         => subject.IsEmpty
             ? null

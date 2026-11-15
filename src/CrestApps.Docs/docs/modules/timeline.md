@@ -57,7 +57,7 @@ Other paths:
 
 ## Access
 
-`ITimelineService` doesn't check who may read or write; a page that acts for a user asks `ITimelineAccessService`, which asks the `ITimelineAccessProvider` registered for the record's kind. A kind without a provider is refused, so a record's timeline is never shown by mistake.
+`ITimelineService` doesn't check who may read or write; a page that acts for a user asks `ITimelineAccessService`, which asks the `ITimelineAccessProvider` registered for the record's kind. A kind without a provider is refused, so a record's timeline is never shown by mistake. For many records at once, `ITimelineAccessService.GetVisibleAsync(user, subjects, visibility)` asks each kind's provider once through `ITimelineAccessProvider.GetVisibleAsync(user, subjectIds, visibility)`; by default that asks `CanViewAsync` for each record, so a provider over a large store overrides it with one query (Tickets reads its ticket index through the reader's scope; content items are loaded in one query).
 
 ```csharp
 public sealed class WorkOrderTimelineAccess : ITimelineAccessProvider
@@ -112,7 +112,7 @@ With Orchard Core **Notifications** enabled, a user mentioned as `@username` in 
 
 ## Data set and erasure
 
-With Data Pipelines Core on, the **Timeline** data source has a `TimelineEntries` data set (one row per entry: its record, kind, visibility, channel, text, author, attachments and changes count) for the Report Builder and data pipelines. Each record kind's access provider decides which rows a reader gets, so an entry of a record the reader can't see, or of a kind with no provider, is never shown.
+With Data Pipelines Core on, the **Timeline** data source has a `TimelineEntries` data set (one row per entry: its record, kind, visibility, channel, text, author, attachments and changes count) for the Report Builder and data pipelines. Each record kind's access provider decides which rows a reader gets, so an entry of a record the reader can't see, or of a kind with no provider, is never shown. Rows are checked 500 at a time through the batched access. The text of a redacted entry is empty, including in runs after an entry already exported was redacted, and a pipeline that runs as its publisher checks the publisher's access again on every run.
 
 For a request to erase a person's data, `ITimelineService.ScrubAsync(subject, scrub)` rewrites the body, the author's name and the recorded change values of every entry on a record through the function given, such as `PersonalDataAnonymizeContext.Scrub`. Nothing else of an entry changes. Tickets uses it for the tickets a person asked for.
 

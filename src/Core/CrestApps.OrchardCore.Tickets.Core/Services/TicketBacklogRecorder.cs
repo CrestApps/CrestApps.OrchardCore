@@ -3,6 +3,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Tickets.Models;
 using OrchardCore.Modules;
+using OrchardCore.Locking.Distributed;
 using YesSql;
 using YesSql.Services;
 
@@ -28,7 +29,11 @@ public sealed class TicketBacklogRecorder
         TicketStatusCategory.OnHold,
     ];
 
+    // The lock that keeps one recorder at a time on a tenant.
+    internal const string LockKey = "Tickets.BacklogRecorder";
+
     private readonly ISession _session;
+    private readonly IDistributedLock _lock;
     private readonly ICatalog<TicketDesk> _desks;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
@@ -36,8 +41,9 @@ public sealed class TicketBacklogRecorder
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketBacklogRecorder"/> class.
     /// </summary>
-    public TicketBacklogRecorder(ISession session, ICatalog<TicketDesk> desks, IClock clock, ILocalClock localClock)
+    public TicketBacklogRecorder(ISession session, ICatalog<TicketDesk> desks, IClock clock, ILocalClock localClock, IDistributedLock distributedLock)
     {
+        _lock = distributedLock;
         _session = session;
         _desks = desks;
         _clock = clock;
@@ -55,6 +61,18 @@ public sealed class TicketBacklogRecorder
         var day = (await _localClock.ConvertToLocalAsync(new DateTimeOffset(now, TimeSpan.Zero))).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var recorded = 0;
 
+        // One recorder at a time per tenant, and its rows committed before the next looks: a second run, or another node,
+        // finds the day recorded instead of recording it again. A run that comes late in the day (the earlier ones
+        // failed or the site was down) still records that day.
+        var (locker, locked) = await _lock.TryAcquireLockAsync(LockKey, TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(10));
+
+        if (!locked)
+        {
+            return 0;
+        }
+
+        await using var _ = locker;
+
         foreach (var desk in await _desks.GetAllAsync(cancellationToken))
         {
             var deskId = desk.ItemId;
@@ -69,6 +87,11 @@ public sealed class TicketBacklogRecorder
 
             await _session.SaveAsync(snapshot, false, null, cancellationToken);
             recorded++;
+        }
+
+        if (recorded > 0)
+        {
+            await _session.SaveChangesAsync(cancellationToken);
         }
 
         return recorded;

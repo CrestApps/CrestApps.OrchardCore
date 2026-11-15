@@ -107,22 +107,48 @@ internal sealed class TimelineEntriesReportDataSet : IndexedReportDataSet<Timeli
             yield break;
         }
 
-        // A record's entries share who may see them, by the record and the entry's visibility.
-        var known = new Dictionary<(RecordRef, TimelineVisibility), bool>();
+        // Who may see a record's entries is asked for a buffer of rows at a time, one question per record kind and
+        // visibility, so a year of entries on many records costs a query per buffer, not one per record.
+        var buffer = new List<TimelineEntry>(AccessBatchSize);
 
         await foreach (var entry in base.LoadAsync(query, cancellationToken))
         {
-            var key = (entry.Subject, entry.Visibility);
+            buffer.Add(entry);
 
-            if (!known.TryGetValue(key, out var visible))
+            if (buffer.Count == AccessBatchSize)
             {
-                known[key] = visible = await _access.CanViewAsync(user, entry.Subject, entry.Visibility, cancellationToken);
-            }
+                foreach (var visible in await VisibleAsync(user, buffer, cancellationToken))
+                {
+                    yield return visible;
+                }
 
-            if (visible)
-            {
-                yield return entry;
+                buffer.Clear();
             }
         }
+
+        foreach (var visible in await VisibleAsync(user, buffer, cancellationToken))
+        {
+            yield return visible;
+        }
     }
+
+    private async Task<List<TimelineEntry>> VisibleAsync(System.Security.Claims.ClaimsPrincipal user, List<TimelineEntry> entries, CancellationToken cancellationToken)
+    {
+        if (entries.Count == 0)
+        {
+            return [];
+        }
+
+        var allowed = new Dictionary<TimelineVisibility, IReadOnlySet<RecordRef>>();
+
+        foreach (var visibility in entries.Select(entry => entry.Visibility).Distinct())
+        {
+            allowed[visibility] = await _access.GetVisibleAsync(user, [.. entries.Where(entry => entry.Visibility == visibility).Select(entry => entry.Subject).Distinct()], visibility, cancellationToken);
+        }
+
+        return [.. entries.Where(entry => allowed[entry.Visibility].Contains(entry.Subject))];
+    }
+
+    // Rows checked at a time.
+    private const int AccessBatchSize = 500;
 }

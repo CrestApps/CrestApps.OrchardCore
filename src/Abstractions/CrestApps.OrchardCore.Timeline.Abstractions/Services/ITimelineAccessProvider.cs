@@ -27,6 +27,31 @@ public interface ITimelineAccessProvider
     Task<bool> CanViewAsync(ClaimsPrincipal user, RecordRef subject, TimelineVisibility visibility, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the records, among many of the provider's kind, whose entries of a visibility a user may read. A report or a
+    /// data pipeline asks for a batch of records at a time; override it to answer with one query instead of one per
+    /// record. By default each record is asked about with <see cref="CanViewAsync"/>.
+    /// </summary>
+    /// <param name="user">The user.</param>
+    /// <param name="subjectIds">The ids of the records (<see cref="RecordRef.Id"/>).</param>
+    /// <param name="visibility">The visibility.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The ids of the records the user may read.</returns>
+    async Task<IReadOnlySet<string>> GetVisibleAsync(ClaimsPrincipal user, IReadOnlyCollection<string> subjectIds, TimelineVisibility visibility, CancellationToken cancellationToken = default)
+    {
+        var visible = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var id in subjectIds ?? [])
+        {
+            if (!string.IsNullOrEmpty(id) && await CanViewAsync(user, new RecordRef(SubjectKind, id), visibility, cancellationToken))
+            {
+                visible.Add(id);
+            }
+        }
+
+        return visible;
+    }
+
+    /// <summary>
     /// Gets whether a user may add an entry of a kind and visibility to a record's timeline.
     /// </summary>
     /// <param name="user">The user.</param>

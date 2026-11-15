@@ -22,6 +22,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.DataSources;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 using ServiceLevelsDataSourcesStartup = CrestApps.OrchardCore.ServiceLevels.DataSourcesStartup;
@@ -138,6 +140,169 @@ public sealed class TicketReportDataSourceTests
         Assert.Equal(["s1", "s2", "s3", "s9"], manager.Select(row => (string)row["TimerId"]).Order());
     }
 
+    [Fact]
+    public async Task TwoNodesRecordingAtOnce_RecordADesksDayOnce()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        await SeedAsync(harness);
+
+        // Act
+        var results = await Task.WhenAll(
+            harness.RunAsync(services => services.GetRequiredService<TicketBacklogRecorder>().RecordAsync(TestContext.Current.CancellationToken)),
+            harness.RunAsync(services => services.GetRequiredService<TicketBacklogRecorder>().RecordAsync(TestContext.Current.CancellationToken)));
+        var rows = await harness.RunAsync(
+            services => services.GetRequiredService<ISession>().QueryIndex<TicketBacklogIndex>(index => index.Day == "2026-11-03").CountAsync(TestContext.Current.CancellationToken),
+            commit: false);
+
+        // Assert
+        Assert.Equal(2, results.Sum());
+        Assert.Equal(2, rows);
+    }
+
+    [Fact]
+    public async Task ARunLateInTheDay_StillRecordsThatDay()
+    {
+        // Arrange: 12:00 UTC on 2 November is 23:00 in Noumea, the last hour of that day there.
+        await using var harness = await CreateAsync(services => services.AddSingleton(LocalClock("Pacific/Noumea")));
+        await SeedAsync(harness);
+
+        // Act
+        var recorded = await harness.RunAsync(services => services.GetRequiredService<TicketBacklogRecorder>().RecordAsync(TestContext.Current.CancellationToken));
+        var days = await harness.RunAsync(
+            async services => (await services.GetRequiredService<ISession>().QueryIndex<TicketBacklogIndex>(index => index.Day == "2026-11-02").ListAsync(TestContext.Current.CancellationToken)).Select(index => index.DeskId).Order().ToList(),
+            commit: false);
+
+        // Assert: HR's day is recorded at 23:00; Support's, already recorded earlier that day, isn't recorded twice.
+        Assert.Equal(1, recorded);
+        Assert.Equal(["hr", "support"], days);
+    }
+
+    [Fact]
+    public async Task ARedactedEntrysText_IsEmptyInTheEntriesDataSet()
+    {
+        // Arrange
+        await using var harness = await CreateAsync();
+        await SeedAsync(harness);
+        await harness.RunAsync(async services =>
+        {
+            var redacted = Entry("e9", "t1", TicketsConstants.EntryKinds.Reply, CalendarTestHarness.Now.AddMinutes(-5));
+            redacted.Body = "My card number is 4111";
+            redacted.RedactedUtc = CalendarTestHarness.Now;
+            await services.GetRequiredService<ISession>().SaveAsync(redacted, false, TimelineConstants.CollectionName);
+        });
+
+        // Act
+        var entries = await ReadAsync(harness, TicketReportDataSets.TicketEntries, User("boss"));
+
+        // Assert
+        var row = Assert.Single(entries, row => (string)row["EntryId"] == "e9");
+        Assert.Null(row["Body"]);
+        Assert.Equal(true, row["Redacted"]);
+        Assert.DoesNotContain(entries, row => row["Body"] is string text && text.Contains("4111", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AReaderWhoLosesAccess_GetsNothingOnTheNextRun()
+    {
+        // Arrange: a pipeline runs as its publisher, whose scope is read again on every run.
+        var scopes = new Dictionary<string, TicketScopedQuery>(StringComparer.Ordinal)
+        {
+            ["pat"] = new TicketScopedQuery { AllDeskIds = ["support"], UserId = "pat" },
+        };
+        await using var harness = await CreateAsync(services =>
+        {
+            var access = new Mock<ITicketAccessService>();
+            access.Setup(service => service.ApplyScopeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<TicketQuery>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((ClaimsPrincipal user, TicketQuery query, CancellationToken _) => scopes.TryGetValue(user?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty, out var scope) ? scope : null);
+            services.AddSingleton(access.Object);
+        });
+        await SeedAsync(harness);
+        var before = await ReadAsync(harness, TicketReportDataSets.Tickets, User("pat"));
+
+        // Act
+        scopes.Remove("pat");
+        var after = await ReadAsync(harness, TicketReportDataSets.Tickets, User("pat"));
+
+        // Assert
+        Assert.NotEmpty(before);
+        Assert.Empty(after);
+    }
+
+    [Fact]
+    public async Task TimelineAccess_AnswersABatchFromTheIndex_ScopeForAgents_AndOwnTicketsForTheRequester()
+    {
+        // Arrange
+        await using var harness = await CreateAsync(services => services.AddScoped(provider => new TicketTimelineAccess(Mock.Of<IContentManager>(), provider.GetRequiredService<ITicketAccessService>(), provider.GetRequiredService<ISession>())));
+        await SeedAsync(harness);
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var own = await session.Query<ContentItem, TicketIndex>(index => index.ContentItemId == "t4").FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+            own.Alter<TicketPart>(part => part.Requester = new PartyRef(PartyKinds.User, "dana"));
+            await session.SaveAsync(own);
+        });
+
+        // Act
+        var visible = await harness.RunAsync(
+            async services =>
+            {
+                var access = services.GetRequiredService<TicketTimelineAccess>();
+                var ids = new[] { "t1", "t2", "t3", "t4", "t5" };
+
+                return new
+                {
+                    Ana = await access.GetVisibleAsync(User("ana"), ids, TimelineVisibility.Internal, TestContext.Current.CancellationToken),
+                    DanaPublic = await access.GetVisibleAsync(User("dana"), ids, TimelineVisibility.Public, TestContext.Current.CancellationToken),
+                    DanaInternal = await access.GetVisibleAsync(User("dana"), ids, TimelineVisibility.Internal, TestContext.Current.CancellationToken),
+                };
+            },
+            commit: false);
+
+        // Assert
+        Assert.Equal(["t1", "t2", "t5"], visible.Ana.Order());
+        Assert.Equal(["t4"], visible.DanaPublic);
+        Assert.Empty(visible.DanaInternal);
+    }
+
+    private sealed class TestLock : IDistributedLock
+    {
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+        public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+        {
+            await _semaphore.WaitAsync();
+
+            return new Locker(_semaphore);
+        }
+
+        public async Task<(ILocker locker, bool locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null)
+            => await _semaphore.WaitAsync(timeout) ? (new Locker(_semaphore), true) : (null, false);
+
+        public Task<bool> IsLockAcquiredAsync(string key)
+            => Task.FromResult(_semaphore.CurrentCount == 0);
+
+        private sealed class Locker : ILocker
+        {
+            private readonly SemaphoreSlim _semaphore;
+
+            public Locker(SemaphoreSlim semaphore)
+            {
+                _semaphore = semaphore;
+            }
+
+            public void Dispose()
+                => _semaphore.Release();
+
+            public ValueTask DisposeAsync()
+            {
+                _semaphore.Release();
+
+                return ValueTask.CompletedTask;
+            }
+        }
+    }
+
     internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
         => CalendarTestHarness.CreateAsync(
             services =>
@@ -148,6 +313,7 @@ public sealed class TicketReportDataSourceTests
                 services.AddSingleton(Catalog(new TicketDesk { ItemId = "support", Name = "Support" }, new TicketDesk { ItemId = "hr", Name = "HR" }));
                 services.AddSingleton(Catalog(new TicketStatus { ItemId = "open", Name = "Open", Category = TicketStatusCategory.Open }));
                 services.AddSingleton(Catalog(new TicketPriority { ItemId = "normal", Name = "Normal" }));
+                services.AddSingleton<IDistributedLock, TestLock>();
                 new TicketsDataSourcesStartup().ConfigureServices(services);
                 new ServiceLevelsDataSourcesStartup().ConfigureServices(services);
                 configure?.Invoke(services);
