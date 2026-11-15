@@ -24,5 +24,5 @@ public sealed class AccountAreaConstantsTests
     [InlineData(new[] { "CrestApps.OrchardCore.Users.Account" }, false)]
     [InlineData(new string[0], false)]
     public void ATenantThatRanCommerceBeforeTheMove_GetsMyAccountTurnedOn(string[] enabled, bool needs)
-        => Assert.Equal(needs, CrestApps.OrchardCore.Commerce.Migrations.CommerceAccountFeatureMigrations.NeedsAccount(enabled));
+        => Assert.Equal(needs, CrestApps.OrchardCore.Commerce.Services.CommerceAccountFeatureUpgrade.NeedsAccount(enabled));
 }
