@@ -21,6 +21,11 @@ public static class LearningCommerceConstants
     public const string SeatLedgerCollectionName = "LearningSeatLedger";
 
     /// <summary>
+    /// The YesSql collection of the work queue that fulfils paid purchases and takes refunded ones back.
+    /// </summary>
+    public const string FulfillmentWorkCollectionName = "LearningFulfillmentWork";
+
+    /// <summary>
     /// The enrollment grant source of a course bought for oneself; the source id is the order id and line id.
     /// </summary>
     public const string PurchaseSource = "Learning.Commerce";

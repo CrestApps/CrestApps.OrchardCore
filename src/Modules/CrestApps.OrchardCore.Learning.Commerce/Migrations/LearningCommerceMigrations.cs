@@ -43,6 +43,14 @@ internal sealed class LearningCommerceMigrations : DataMigration
                 .WithPart(nameof(LearningProductPart), part => part.WithPosition("31")));
         }
 
-        return 1;
+        return 2;
+    }
+
+    // The work queue that fulfils paid purchases after the checkout: a new table only.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await LearningCommerceIndexSchema.CreateFulfillmentQueueAsync(SchemaBuilder);
+
+        return 2;
     }
 }

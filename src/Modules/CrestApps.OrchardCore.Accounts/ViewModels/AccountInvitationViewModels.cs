@@ -13,6 +13,8 @@ public class AccountInvitationViewModel
     public bool IsValid { get; set; }
 
     public bool IsExpired { get; set; }
+
+    public bool NeedsEmailConfirmation { get; set; }
 }
 
 public class AccountMembersViewModel

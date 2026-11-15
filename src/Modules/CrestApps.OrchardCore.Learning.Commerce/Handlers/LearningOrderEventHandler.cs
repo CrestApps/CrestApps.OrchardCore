@@ -1,35 +1,36 @@
-using CrestApps.OrchardCore.Accounts.Services;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Learning.Commerce.Core.Services;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
 using CrestApps.OrchardCore.Learning.Commerce.Services;
-using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Programs.Models;
-using CrestApps.OrchardCore.Learning.Programs.Services;
-using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.WorkQueues;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Learning.Commerce.Handlers;
 
 /// <summary>
-/// Grants what a paid order line bought: enrollments of the buyer, a started learning path, or a licence pool for the
-/// buyer's account. Each line's grants are kept in a purchase record, so a full refund or a cancellation takes exactly
-/// those back.
+/// Records what a paid order line bought as a pending purchase, and asks for it back after a full refund or a
+/// cancellation. Both run inside the unit of work that paid or refunded the order and commit nothing themselves: the
+/// grants are made by <see cref="LearningPurchaseFulfillment"/> after that unit of work committed.
 /// </summary>
 internal sealed class LearningOrderEventHandler : OrderLineGrantHandlerBase<LearningProductPart>
 {
+    private readonly IContentManager _contentManager;
     private readonly LearningPurchaseStore _purchases;
-    private readonly IServiceProvider _services;
+    private readonly ILeasedWorkQueue<LearningFulfillmentWork> _queue;
     private readonly IClock _clock;
 
-    public LearningOrderEventHandler(IContentManager contentManager, LearningPurchaseStore purchases, IServiceProvider services, IClock clock)
+    public LearningOrderEventHandler(IContentManager contentManager, LearningPurchaseStore purchases, ILeasedWorkQueue<LearningFulfillmentWork> queue, IClock clock)
         : base(contentManager)
     {
+        _contentManager = contentManager;
         _purchases = purchases;
-        _services = services;
+        _queue = queue;
         _clock = clock;
     }
 
@@ -44,8 +45,17 @@ internal sealed class LearningOrderEventHandler : OrderLineGrantHandlerBase<Lear
         var order = context.Order;
         var line = context.Line;
         var item = context.ContentItem;
-        var sourceId = $"{order.ItemId}:{line.LineId}";
-        var purchase = new LearningPurchase { OrderId = order.ItemId, LineId = line.LineId, UserId = order.UserId, AccountId = order.AccountId, ProductId = item.ContentItemId, GrantedUtc = _clock.UtcNow };
+        var purchase = new LearningPurchase
+        {
+            ItemId = UniqueId.GenerateId(),
+            OrderId = order.ItemId,
+            LineId = line.LineId,
+            UserId = order.UserId,
+            AccountId = order.AccountId,
+            ProductId = item.ContentItemId,
+            State = LearningPurchaseState.Pending,
+            GrantedUtc = _clock.UtcNow,
+        };
         var grants = context.Part.Grants.Count > 0
             ? context.Part.Grants
             : [new LearningProductGrant { Kind = item.Has<LearningPathPart>() ? LearningProductGrantKind.LearningPath : LearningProductGrantKind.Course }];
@@ -53,72 +63,19 @@ internal sealed class LearningOrderEventHandler : OrderLineGrantHandlerBase<Lear
         foreach (var grant in grants)
         {
             var targetId = string.IsNullOrEmpty(grant.TargetId) ? item.ContentItemId : grant.TargetId;
-            var accessEnds = grant.AccessDays is > 0 ? _clock.UtcNow.AddDays(grant.AccessDays.Value) : (DateTime?)null;
 
-            switch (grant.Kind)
+            purchase.Grants.Add(new LearningPurchaseGrant
             {
-                case LearningProductGrantKind.Course when !string.IsNullOrEmpty(order.UserId):
-                    var enrolled = await _services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest
-                    {
-                        UserId = order.UserId,
-                        CourseId = targetId,
-                        Source = LearningCommerceConstants.PurchaseSource,
-                        SourceId = sourceId,
-                        AccessEndsUtc = accessEnds,
-                        Actor = "Order",
-                    }, cancellationToken);
-
-                    if (enrolled.Enrollment is not null)
-                    {
-                        purchase.EnrollmentIds.Add(enrolled.Enrollment.ItemId);
-                    }
-
-                    break;
-
-                case LearningProductGrantKind.LearningPath when !string.IsNullOrEmpty(order.UserId) && _services.GetService<ILearningPathService>() is { } paths:
-                    var started = await paths.StartAsync(new LearningPathStartRequest { PathId = targetId, UserId = order.UserId, Source = LearningCommerceConstants.PurchaseSource, SourceId = sourceId, Actor = "Order" }, cancellationToken);
-
-                    if (started.Progress is not null)
-                    {
-                        purchase.PathIds.Add(started.Progress.ItemId);
-                    }
-
-                    break;
-
-                case LearningProductGrantKind.Seats:
-                    var accountId = !string.IsNullOrEmpty(order.AccountId)
-                        ? order.AccountId
-                        : string.IsNullOrEmpty(order.UserId) ? null : (await _services.GetRequiredService<IAccountMemberService>().FindAccountAsync(order.UserId, cancellationToken))?.ContentItemId;
-
-                    if (accountId is null)
-                    {
-                        break;
-                    }
-
-                    var pool = await _services.GetRequiredService<ILicensePoolService>().CreateAsync(new LicensePool
-                    {
-                        AccountId = accountId,
-                        CourseId = targetId,
-                        Title = targetId == item.ContentItemId ? item.DisplayText : (await _services.GetRequiredService<IContentManager>().GetAsync(targetId, VersionOptions.Published))?.DisplayText ?? item.DisplayText,
-                        Seats = Math.Max(1, grant.Seats) * Math.Max(1, line.Quantity),
-                        AccessDays = grant.AccessDays,
-                        OrderId = order.ItemId,
-                        LineId = line.LineId,
-                    }, cancellationToken);
-
-                    purchase.PoolIds.Add(pool.ItemId);
-                    purchase.AccountId = accountId;
-
-                    break;
-            }
-        }
-
-        if (purchase.EnrollmentIds.Count == 0 && purchase.PathIds.Count == 0 && purchase.PoolIds.Count == 0)
-        {
-            return false;
+                Kind = grant.Kind,
+                TargetId = targetId,
+                Title = targetId == item.ContentItemId ? item.DisplayText : (await _contentManager.GetAsync(targetId, VersionOptions.Published))?.DisplayText ?? item.DisplayText,
+                AccessDays = grant.AccessDays,
+                Seats = grant.Kind == LearningProductGrantKind.Seats ? Math.Max(1, grant.Seats) * Math.Max(1, line.Quantity) : 0,
+            });
         }
 
         await _purchases.CreateAsync(purchase, cancellationToken);
+        await EnqueueAsync(new LearningFulfillmentWork { PurchaseId = purchase.ItemId }, cancellationToken);
 
         return true;
     }
@@ -127,23 +84,32 @@ internal sealed class LearningOrderEventHandler : OrderLineGrantHandlerBase<Lear
     {
         var purchase = await _purchases.FindAsync(order.ItemId, line.LineId, cancellationToken);
 
-        if (purchase is null || purchase.RevokedUtc is not null)
+        if (purchase is null || purchase.State == LearningPurchaseState.Revoked)
         {
             return;
         }
 
-        var why = reason == OrderRevokeReason.Refunded ? "The order was refunded." : "The order was canceled.";
-
-        await _services.GetRequiredService<IEnrollmentService>().RevokeGrantAsync(LearningCommerceConstants.PurchaseSource, $"{order.ItemId}:{line.LineId}", "Order", why, cancellationToken);
-
-        foreach (var poolId in purchase.PoolIds)
+        // The work carries the request, so it never overwrites what fulfilment is recording on the purchase.
+        await EnqueueAsync(new LearningFulfillmentWork
         {
-            await _services.GetRequiredService<ILicensePoolService>().RevokeAsync(poolId, why, cancellationToken);
-        }
+            PurchaseId = purchase.ItemId,
+            Revoke = true,
+            Reason = reason == OrderRevokeReason.Refunded ? "The order was refunded." : "The order was canceled.",
+        }, cancellationToken);
+    }
 
-        // Taking enrollments back commits the session: read the purchase again before changing it.
-        purchase = await _purchases.FindAsync(order.ItemId, line.LineId, cancellationToken);
-        purchase.RevokedUtc = _clock.UtcNow;
-        await _purchases.UpdateAsync(purchase, cancellationToken);
+    // The work joins the caller's unit of work, so it exists only when the payment or the refund committed; it is run
+    // right after the request, and the background task runs whatever is still due.
+    private async Task EnqueueAsync(LearningFulfillmentWork work, CancellationToken cancellationToken)
+    {
+        work.ItemId = UniqueId.GenerateId();
+        await _queue.EnqueueAsync(work, cancellationToken);
+
+        if (ShellScope.Current is not null)
+        {
+            var workId = work.ItemId;
+
+            ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<LearningPurchaseFulfillment>().RunAsync(workId));
+        }
     }
 }

@@ -1,6 +1,8 @@
 using CrestApps.Core.Data.YesSql.Indexes;
+using CrestApps.OrchardCore.Learning.Commerce.Core.Services;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
 using CrestApps.OrchardCore.YesSql.Core.Ledgers;
+using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using YesSql.Indexes;
 using YesSql.Sql;
 
@@ -90,7 +92,7 @@ public sealed class LicenseSeatIndexProvider : IndexProvider<LicenseSeat>
 /// </summary>
 public static class LearningCommerceIndexProviders
 {
-    public static IIndexProvider[] All() => [new LearningPurchaseIndexProvider(), new LicensePoolIndexProvider(), new LicenseSeatIndexProvider(), new QuantityLedgerEntryIndexProvider(LearningCommerceConstants.SeatLedgerCollectionName)];
+    public static IIndexProvider[] All() => [new LearningPurchaseIndexProvider(), new LicensePoolIndexProvider(), new LicenseSeatIndexProvider(), new QuantityLedgerEntryIndexProvider(LearningCommerceConstants.SeatLedgerCollectionName), new LeasedWorkItemIndexProvider<LearningFulfillmentWork>(LearningCommerceConstants.FulfillmentWorkCollectionName)];
 }
 
 /// <summary>
@@ -153,5 +155,16 @@ public static class LearningCommerceIndexSchema
         }, collection: collection);
 
         await QuantityLedgerIndexSchema.CreateAsync(schemaBuilder, LearningCommerceConstants.SeatLedgerCollectionName);
+        await CreateFulfillmentQueueAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the table of the work queue that fulfils paid purchases and takes refunded ones back.
+    /// </summary>
+    public static Task CreateFulfillmentQueueAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        return LeasedWorkItemIndexSchema.CreateAsync(schemaBuilder, LearningCommerceConstants.FulfillmentWorkCollectionName);
     }
 }

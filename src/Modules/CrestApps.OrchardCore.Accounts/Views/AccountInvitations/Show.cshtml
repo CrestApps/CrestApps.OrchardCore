@@ -23,6 +23,15 @@
             <blockquote class="border-start ps-3 text-muted">@Model.Invitation.Message</blockquote>
         }
         <p class="small text-muted">@T["The invitation was sent to {0}. Sign in, or create an account, with that address to accept it.", Model.Invitation.Email]</p>
+        @if (Model.NeedsEmailConfirmation)
+        {
+            <div class="alert alert-info">
+                <p class="mb-2">@T["Confirm your e-mail address before you accept: open the link in the confirmation e-mail we sent you."]</p>
+                <form method="post" asp-area="OrchardCore.Users" asp-controller="EmailConfirmation" asp-action="SendVerificationEmail" asp-route-returnUrl="@Context.Request.Path">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">@T["Send the confirmation e-mail again"]</button>
+                </form>
+            </div>
+        }
         @if (User.Identity?.IsAuthenticated == true)
         {
             <form method="post" action="~/account/invitations/@Uri.EscapeDataString(Model.Token)">

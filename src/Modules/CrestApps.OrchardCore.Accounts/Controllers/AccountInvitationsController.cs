@@ -3,12 +3,14 @@ using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.Accounts.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Accounts.Controllers;
 
@@ -23,6 +25,7 @@ public sealed class AccountInvitationsController : Controller
     private readonly IContentManager _contentManager;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly UserManager<IUser> _userManager;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -33,6 +36,7 @@ public sealed class AccountInvitationsController : Controller
         IContentManager contentManager,
         INotifier notifier,
         IClock clock,
+        UserManager<IUser> userManager,
         IHtmlLocalizer<AccountInvitationsController> htmlLocalizer,
         IStringLocalizer<AccountInvitationsController> stringLocalizer)
     {
@@ -41,6 +45,7 @@ public sealed class AccountInvitationsController : Controller
         _contentManager = contentManager;
         _notifier = notifier;
         _clock = clock;
+        _userManager = userManager;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -57,8 +62,12 @@ public sealed class AccountInvitationsController : Controller
         var invitation = await _invitations.FindByTokenAsync(token, HttpContext.RequestAborted);
         var account = invitation is null ? null : await _contentManager.GetAsync(invitation.AccountId, VersionOptions.Published);
 
+        // Accepting needs a confirmed address, so a signed-in person without one is offered the confirmation e-mail.
+        var user = User.Identity?.IsAuthenticated == true ? await _userManager.GetUserAsync(User) : null;
+
         return View(new AccountInvitationViewModel
         {
+            NeedsEmailConfirmation = user is not null && !await _userManager.IsEmailConfirmedAsync(user),
             Token = token,
             Invitation = invitation,
             AccountName = account?.DisplayText,

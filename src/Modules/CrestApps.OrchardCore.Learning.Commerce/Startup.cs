@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
@@ -38,6 +39,7 @@ public sealed class Startup : StartupBase
         {
             options.Collections.Add(LearningCommerceConstants.CollectionName);
             options.Collections.Add(LearningCommerceConstants.SeatLedgerCollectionName);
+            options.Collections.Add(LearningCommerceConstants.FulfillmentWorkCollectionName);
         });
         services.AddDataMigration<LearningCommerceMigrations>()
             .AddIndexProvider<LearningPurchaseIndexProvider>()
@@ -49,6 +51,9 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<LearningProductPartDisplayDriver>();
         services.AddScoped<ICartLineHandler, LearningCartLineHandler>();
         services.AddScoped<IOrderEventHandler, LearningOrderEventHandler>();
+        services.AddScoped<LearningPurchaseFulfillment>();
+        services.AddScoped<LearningPurchaseProcessor>();
+        services.AddSingleton<IBackgroundTask, LearningFulfillmentBackgroundTask>();
         services.AddNavigationProvider<LearningSeatsAccountMenu>();
         services.AddPersonalDataContributor<LearningCommercePersonalDataContributor>();
     }

@@ -21,8 +21,9 @@ using OrchardCore.Users;
 namespace CrestApps.OrchardCore.Tests.Learning.Commerce;
 
 /// <summary>
-/// A paid order enrolls the buyer in the course they bought and gives their account a pool of seats; paying twice
-/// grants nothing more, a partial refund keeps it all, and a full refund takes the enrollment and the pool back.
+/// A paid order, once fulfilled after the checkout, enrolls the buyer in the course they bought and gives their account
+/// a pool of seats; paying twice grants nothing more, a partial refund keeps it all, and a full refund takes the
+/// enrollment and the pool back.
 /// </summary>
 public sealed class LearningOrderEventHandlerTests
 {
@@ -64,10 +65,13 @@ public sealed class LearningOrderEventHandlerTests
                 services.AddSingleton(Mock.Of<IAccountInvitationService>());
                 services.AddLearningCommerceCore();
                 services.AddScoped<LearningOrderEventHandler>();
+                services.AddScoped<LearningPurchaseFulfillment>();
+                services.AddScoped<LearningPurchaseProcessor>();
+                services.AddLocalization();
             },
             schemaBuilder => LearningCommerceIndexSchema.CreateAsync(schemaBuilder),
             LearningCommerceIndexProviders.All(),
-            [LearningCommerceConstants.CollectionName, LearningCommerceConstants.SeatLedgerCollectionName]);
+            [LearningCommerceConstants.CollectionName, LearningCommerceConstants.SeatLedgerCollectionName, LearningCommerceConstants.FulfillmentWorkCollectionName]);
 
         await using var h = harness;
 
@@ -91,6 +95,7 @@ public sealed class LearningOrderEventHandlerTests
         // Act
         await h.RunAsync(services => services.GetRequiredService<LearningOrderEventHandler>().PaidAsync(new OrderPaidContext(order), TestContext.Current.CancellationToken));
         await h.RunAsync(services => services.GetRequiredService<LearningOrderEventHandler>().PaidAsync(new OrderPaidContext(order), TestContext.Current.CancellationToken));
+        await FulfillAsync(h);
 
         var enrollment = Assert.Single(await h.RunAsync(services => services.GetRequiredService<IEnrollmentStore>().ListByCourseForUserAsync("boss", "c1")));
         var pool = Assert.Single(await h.RunAsync(services => services.GetRequiredService<ILicensePoolService>().ListForAccountAsync("acme")));
@@ -98,10 +103,12 @@ public sealed class LearningOrderEventHandlerTests
 
         order.Refunds.Add(new OrderRefund { RefundId = "r1", Amount = 40m });
         await h.RunAsync(services => services.GetRequiredService<LearningOrderEventHandler>().RefundedAsync(new OrderRefundedContext(order, order.Refunds[0]), TestContext.Current.CancellationToken));
+        await FulfillAsync(h);
         var afterPartial = Assert.Single(await h.RunAsync(services => services.GetRequiredService<IEnrollmentStore>().ListByCourseForUserAsync("boss", "c1")));
 
         order.Refunds.Add(new OrderRefund { RefundId = "r2", Amount = 60m });
         await h.RunAsync(services => services.GetRequiredService<LearningOrderEventHandler>().RefundedAsync(new OrderRefundedContext(order, order.Refunds[1]), TestContext.Current.CancellationToken));
+        await FulfillAsync(h);
         var afterFull = Assert.Single(await h.RunAsync(services => services.GetRequiredService<IEnrollmentStore>().ListByCourseForUserAsync("boss", "c1")));
         var poolAfterFull = await h.RunAsync(services => services.GetRequiredService<ILicensePoolService>().FindAsync(pool.ItemId));
         var purchasesAfterFull = await h.RunAsync(services => services.GetRequiredService<LearningPurchaseStore>().ListByOrderAsync("o1"));
@@ -118,6 +125,10 @@ public sealed class LearningOrderEventHandlerTests
         Assert.Equal(LicensePoolState.Revoked, poolAfterFull.State);
         Assert.All(purchasesAfterFull, purchase => Assert.NotNull(purchase.RevokedUtc));
     }
+
+    // The grants are made after the checkout committed, by the fulfilment pass.
+    private static async Task FulfillAsync(Calendars.CalendarTestHarness h)
+        => await h.RunAsync(services => services.GetRequiredService<LearningPurchaseFulfillment>().RunDueAsync(TestContext.Current.CancellationToken), commit: false);
 
     private static UserManager<IUser> Users()
     {

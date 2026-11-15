@@ -513,25 +513,8 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
         return new EnrollmentResult { Enrollment = open, Changed = true };
     }
 
-    private async Task<bool> MeetsPrerequisitesAsync(string userId, CoursePart part, CancellationToken cancellationToken)
-    {
-        foreach (var prerequisite in part?.Prerequisites ?? [])
-        {
-            if (prerequisite is null || string.IsNullOrEmpty(prerequisite.Kind) || string.IsNullOrEmpty(prerequisite.Id))
-            {
-                continue;
-            }
-
-            var evaluator = _prerequisiteEvaluators.FirstOrDefault(candidate => string.Equals(candidate.Kind, prerequisite.Kind, StringComparison.OrdinalIgnoreCase));
-
-            if (evaluator is null || !await evaluator.IsMetAsync(userId, prerequisite, cancellationToken))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
+    private Task<bool> MeetsPrerequisitesAsync(string userId, CoursePart part, CancellationToken cancellationToken)
+        => CoursePrerequisites.MeetsAsync(_prerequisiteEvaluators, userId, part, cancellationToken);
 
     private async Task<Enrollment> FindPreviousAsync(EnrollmentRequest request, CancellationToken cancellationToken)
     {

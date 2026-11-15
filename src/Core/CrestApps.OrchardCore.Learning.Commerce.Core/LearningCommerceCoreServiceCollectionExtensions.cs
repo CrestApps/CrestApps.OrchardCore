@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Learning.Commerce.Core.Services;
 using CrestApps.OrchardCore.Learning.Commerce.Services;
 using CrestApps.OrchardCore.YesSql.Core.Ledgers;
+using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -20,6 +21,11 @@ public static class LearningCommerceCoreServiceCollectionExtensions
         services.TryAddScoped<LicenseSeatStore>();
         services.AddQuantityLedger<SeatLedger>(options => options.CollectionName = LearningCommerceConstants.SeatLedgerCollectionName);
         services.TryAddScoped<ILicensePoolService, DefaultLicensePoolService>();
+        services.AddLeasedWorkQueue<LearningFulfillmentWork>(options =>
+        {
+            options.CollectionName = LearningCommerceConstants.FulfillmentWorkCollectionName;
+            options.RemoveCompletedItems = true;
+        });
         services.AddAccountInvitationObserver<LicenseSeatInvitationObserver>();
 
         return services;

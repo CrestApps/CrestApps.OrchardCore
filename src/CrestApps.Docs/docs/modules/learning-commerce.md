@@ -29,19 +29,29 @@ With no grant, buying a course enrolls the buyer in it and buying a learning pat
 
 ## Cart rules
 
-`LearningCartLineHandler` (an `ICartLineHandler`) refuses a learning product to a guest, because learning is for a signed-in person, and refuses a product with a seat grant to anyone who is not an admin of a business account (`AccountMemberRole.Admin` on the account's `AccountMembersPart`). The cart shows the reason on the line, and checkout stops until the line is removed.
+`LearningCartLineHandler` (an `ICartLineHandler`) refuses a learning product to a guest, because learning is for a signed-in person, and refuses a product with a seat grant to anyone who is not an admin of a business account (`AccountMemberRole.Admin` on the account's `AccountMembersPart`). It also refuses a course that is no longer published, and a course for the buyer whose prerequisites the buyer has not met (checked with the same `ICoursePrerequisiteEvaluator`s as an enrollment, through `CoursePrerequisites.MeetsAsync`). The cart shows the reason on the line, and checkout stops until the line is removed.
+
+A course or a learning path is for the buyer alone, so its line is capped at a quantity of one. A product with a seat grant can be bought in any quantity.
 
 ## Grants and refunds
 
 `LearningOrderEventHandler` derives from `OrderLineGrantHandlerBase<LearningProductPart>`, so it reads the product version that was bought, grants each line once however many times the order is paid, and takes back each line when the order is canceled or refunded in full. A partial refund keeps everything.
 
+The order event runs inside the checkout's single unit of work, so it commits nothing. On payment it records each line as a `LearningPurchase` in the state `Pending`, with a copy of what the line buys, and queues a `LearningFulfillmentWork` item on a leased work queue (collection `LearningFulfillmentWork`) in the same unit of work. When the checkout rolls back, neither exists. The grants are made afterwards by `LearningPurchaseFulfillment`: right after the request for the work it queued, and every two minutes by the **Learning purchase fulfilment** background task for whatever is still due. Each purchase is changed under a lock of its own and read fresh, and each grant is recorded as soon as it is made, so a retry never grants twice.
+
+- A paid course enrolls the buyer even when a prerequisite is not met yet (`IgnorePrerequisites`): the cart checked it, and the buyer paid.
+- A busy enrollment, or any failure that throws, is retried with a back-off.
+- A grant that can never be made (the course was unpublished after it was put in the cart, the buyer left their business account, learning paths are not enabled) moves the purchase to `Failed` with the reason in `LearningPurchase.Error`, is logged, and is added to the order as a note, where staff see it. It is not retried.
+
+A full refund or a cancellation queues the same kind of work with the request to take the grants back.
+
 | Grant | On payment | On a full refund or a cancellation |
 | --- | --- | --- |
-| Course | `IEnrollmentService.EnrollAsync` with source `Learning.Commerce` and source id `{orderId}:{lineId}`, and `AccessEndsUtc` when the grant has access days. | `RevokeGrantAsync("Learning.Commerce", "{orderId}:{lineId}")` ends the enrollment with the reason. |
+| Course | `IEnrollmentService.EnrollAsync` with source `Learning.Commerce` and source id `{orderId}:{lineId}`, and `AccessEndsUtc` when the grant has access days. | `RevokeGrantAsync("Learning.Commerce", "{orderId}:{lineId}")` takes the grant off an open or expired enrollment, and ends it when it was its last grant. A completed enrollment is closed, so it keeps its grant and its certificate. |
 | Learning path | `ILearningPathService.StartAsync` with the same source. | Not taken back yet: the path progress stays, and its course enrollments stay with it. |
 | Seats | `ILicensePoolService.CreateAsync` for the order's account or, without one, the buyer's account. Creating a pool is idempotent per order line. | `ILicensePoolService.RevokeAsync` takes every seat back and ends every enrollment made from the pool. |
 
-Each line's grants are kept in a `LearningPurchase` record (collection `LearningCommerce`) with the enrollments, path progress and pools it made, and its `RevokedUtc` once it was taken back.
+Each line's grants are kept in a `LearningPurchase` record (collection `LearningCommerce`) with its state (`Pending`, `Fulfilled`, `Failed` or `Revoked`), the enrollments, path progress and pools it made, and its `RevokedUtc` once it was taken back. An enrollment that is busy when the refund is processed keeps the grant for a moment: the work is retried, and the purchase becomes `Revoked` only when no open or expired enrollment carries the grant any more.
 
 ## Licence pools and seats
 
@@ -74,7 +84,7 @@ With [Advanced SEO](./advanced-seo) on, the Learning module describes a course a
 | Notifications | **Course seat given** tells a person their account gave them a seat. |
 | Workflows | Events **Course Seats Purchased**, **Course Seat Given** and **Licence Pool Running Low**, and the **Give Course Seat** task. |
 | Data | The **Learning commerce** data source with the **Licence pools** and **Seat holders** data sets, behind **View learning reports**. |
-| Personal data | Exports a person's seats and deletes them when the person is erased; the account keeps its pools. |
+| Personal data | Exports a person's seats and purchases. Erasing the person takes their seats back (each released on the seat ledger, its enrollment or invitation ended) and clears the person from the seats and the purchases, which stay so the ledger and a later refund still find them; the account keeps its pools. |
 
 ## Not in this version
 

@@ -26,6 +26,35 @@ public sealed class LearningPurchaseStore : DocumentCatalog<LearningPurchase, Le
 
     public Task<LearningPurchase> FindAsync(string orderId, string lineId, CancellationToken cancellationToken = default)
         => Session.Query<LearningPurchase, LearningPurchaseIndex>(index => index.OrderId == orderId && index.LineId == lineId, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<LearningPurchase>> ListByUsersAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default)
+    {
+        var users = userIds.Where(userId => !string.IsNullOrEmpty(userId)).ToArray();
+
+        if (users.Length == 0)
+        {
+            return [];
+        }
+
+        return (await Session.Query<LearningPurchase, LearningPurchaseIndex>(index => index.UserId.IsIn(users), collection: CollectionName).ListAsync(cancellationToken)).ToArray();
+    }
+
+    /// <summary>
+    /// Reads a purchase from the database, not from the session's earlier reads, which a commit detaches.
+    /// </summary>
+    public async Task<LearningPurchase> FindFreshByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var found = await FindByIdAsync(id, cancellationToken);
+
+        if (found is null)
+        {
+            return null;
+        }
+
+        Session.Detach(found, CollectionName);
+
+        return await FindByIdAsync(id, cancellationToken);
+    }
 }
 
 public sealed class LicensePoolStore : DocumentCatalog<LicensePool, LicensePoolIndex>
