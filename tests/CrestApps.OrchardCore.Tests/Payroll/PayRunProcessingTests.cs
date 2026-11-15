@@ -438,7 +438,9 @@ public sealed class PayRunProcessingTests
         var staffOwned = await banking.CreateAsync("123456789", new CrestApps.OrchardCore.Parties.Models.PartyRef("Staff", "lee"), "Lee pay account");
         var employerOwned = await banking.CreateAsync("555000111", new CrestApps.OrchardCore.Parties.Models.PartyRef(PayrollConstants.EmployerPartyKind, "contoso"), "Old style");
         var driver = new CrestApps.OrchardCore.Payroll.Drivers.EmployerFundingDisplayDriver(banking.Manager, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CrestApps.OrchardCore.Payroll.Drivers.EmployerFundingDisplayDriver>());
+        var handler = new CrestApps.OrchardCore.Payroll.Handlers.EmployerFundingHandler(banking.Manager, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CrestApps.OrchardCore.Payroll.Handlers.EmployerFundingHandler>());
 
+        // The editor takes the choice; the employer's handler decides, on every save, the editor's and a recipe's alike.
         async Task<(int Errors, string Funding)> ChooseAsync(string accountId)
         {
             var employer = new Employer { ItemId = "contoso", Name = "Contoso" };
@@ -446,12 +448,17 @@ public sealed class PayRunProcessingTests
 
             await driver.UpdateAsync(employer, new global::OrchardCore.DisplayManagement.Handlers.UpdateEditorContext(null, string.Empty, false, string.Empty, null, null, updater));
 
-            return (updater.ModelState.ErrorCount, employer.FundingBankAccountId);
+            var validation = new CrestApps.Core.Models.ValidatingContext<Employer>(employer);
+
+            await handler.ValidatingAsync(validation, TestContext.Current.CancellationToken);
+
+            return (updater.ModelState.ErrorCount + validation.Result.Errors.Count, employer.FundingBankAccountId);
         }
 
         Assert.Equal((0, business.ItemId), await ChooseAsync(business.ItemId));
         Assert.Equal(1, (await ChooseAsync(staffOwned.ItemId)).Errors);
         Assert.Equal(1, (await ChooseAsync(employerOwned.ItemId)).Errors);
+        Assert.Equal(1, (await ChooseAsync("no-such-account")).Errors);
         Assert.Equal((0, (string)null), await ChooseAsync(string.Empty));
     }
 

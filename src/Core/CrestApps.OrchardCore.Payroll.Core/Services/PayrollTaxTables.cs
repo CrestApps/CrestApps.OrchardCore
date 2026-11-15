@@ -262,6 +262,11 @@ public sealed class PayrollTaxRuleHandler : CatalogEntryHandlerBase<PayrollTaxRu
             context.Result.Fail(new ValidationResult(S["An amount is zero or more."], [nameof(PayrollTaxRule.WageBase)]));
         }
 
+        if (rule.EffectiveFrom == default)
+        {
+            context.Result.Fail(new ValidationResult(S["Give the first day the rule applies."], [nameof(PayrollTaxRule.EffectiveFrom)]));
+        }
+
         if (rule.EffectiveTo is { } to && to < rule.EffectiveFrom)
         {
             context.Result.Fail(new ValidationResult(S["The last day is before the first day."], [nameof(PayrollTaxRule.EffectiveTo)]));
@@ -613,7 +618,6 @@ public static class PayrollTaxTablesServiceCollectionExtensions
         services.TryAddScoped<PayrollTaxRuleStore>();
         services.TryAddScoped<IPayrollTaxRuleManager, PayrollTaxRuleManager>();
         services.TryAddScoped<ICatalogManager<PayrollTaxRule>>(serviceProvider => serviceProvider.GetRequiredService<IPayrollTaxRuleManager>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayrollTaxRule>, PayrollTaxRuleHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayrollTaxProvider, TaxTablesPayrollTaxProvider>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITaxTableUsage, PayrollTaxRuleTableUsage>());
 

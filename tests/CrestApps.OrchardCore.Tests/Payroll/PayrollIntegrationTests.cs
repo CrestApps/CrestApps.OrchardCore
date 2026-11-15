@@ -105,7 +105,10 @@ public sealed class PayrollIntegrationTests
         var (entries, viewerRows, viewerMay) = await harness.RunAsync(async services =>
         {
             var reader = new PayrollReportReader(services.GetRequiredService<IPayrollScopeService>(), services.GetRequiredService<PayStatementStore>(), services.GetRequiredService<PayRunStore>(), services.GetRequiredService<EmployerStore>(), new HttpContextAccessor());
-            var dataSet = new JournalEntriesDataSet(reader, services.GetRequiredService<IPayCodeManager>(), siteService.Object, services, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<JournalEntriesDataSet>());
+            // Staff registers the team services even with Teams off, when the teams' tables don't exist: without the
+            // Teams feature's marker the data set never reads teams.
+            var teams = new Mock<CrestApps.OrchardCore.Teams.Services.ITeamManager>(MockBehavior.Strict);
+            var dataSet = new JournalEntriesDataSet(reader, services.GetRequiredService<IPayCodeManager>(), siteService.Object, new WithService(services, typeof(CrestApps.OrchardCore.Teams.Services.ITeamManager), teams.Object), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<JournalEntriesDataSet>());
             var source = new PayrollDataSource([dataSet]);
 
             async Task<List<Dictionary<string, object>>> ReadAsync(ClaimsPrincipal user)
@@ -467,6 +470,13 @@ public sealed class PayrollIntegrationTests
         await harness.RunAsync(async services => Assert.True((await services.GetRequiredService<IPayRunService>().ProcessAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), CalendarTestHarness.User("processor", PayrollPermissions.ProcessPayRuns.Name))).Succeeded));
 
         return (harness, setup, context);
+    }
+
+    // The scope's services, with one service replaced.
+    private sealed class WithService(IServiceProvider services, Type serviceType, object instance) : IServiceProvider
+    {
+        public object GetService(Type type)
+            => type == serviceType ? instance : services.GetService(type);
     }
 
     private static List<Dictionary<string, object>> Rows(DataRowSet table)

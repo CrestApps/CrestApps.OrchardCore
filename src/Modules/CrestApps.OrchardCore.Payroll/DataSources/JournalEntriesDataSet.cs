@@ -91,7 +91,7 @@ public sealed class JournalEntriesDataSet : RecordDataSet<JournalEntryRow>, IPay
     {
         var codes = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        if (_services.GetService<ITeamManager>() is not { } teams)
+        if (_services.GetService<PayrollTeamsFeature>() is null || _services.GetService<ITeamManager>() is not { } teams)
         {
             return codes;
         }

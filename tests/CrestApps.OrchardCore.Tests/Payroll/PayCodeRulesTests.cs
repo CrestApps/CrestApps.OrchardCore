@@ -304,6 +304,7 @@ public sealed class PayCodeRulesTests
             {
                 services.AddDataProtection();
                 services.AddPayrollCore();
+                services.AddPayrollHandlers();
                 services.AddScoped<PayCodeBaseUsage>();
             },
             PayrollIndexSchema.CreateAsync,

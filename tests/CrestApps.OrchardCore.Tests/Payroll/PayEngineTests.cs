@@ -369,6 +369,7 @@ public sealed class PayEngineTests
                 services.AddTaxTablesCore();
                 services.AddPayrollCore();
                 services.AddPayrollTaxTablesCore();
+                services.AddPayrollHandlers();
                 services.AddScoped<PayrollTaxRuleTableUsage>();
                 services.AddSingleton<INamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>>(new CrestApps.OrchardCore.Tests.Taxation.Fakes.InMemoryNamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>());
                 services.AddScoped<PayrollNames>();

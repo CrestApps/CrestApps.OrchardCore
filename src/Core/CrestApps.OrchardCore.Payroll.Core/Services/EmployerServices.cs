@@ -189,6 +189,11 @@ public sealed class EmployerHandler : CatalogEntryHandlerBase<Employer>
             {
                 context.Result.Fail(new ValidationResult(S["A registration's rate is a percent from 0 to 100."], [nameof(Employer.Registrations)]));
             }
+
+            if (registration.Rates.Any(rate => rate.EffectiveFrom == default))
+            {
+                context.Result.Fail(new ValidationResult(S["A registration's rate needs the day it starts."], [nameof(Employer.Registrations)]));
+            }
         }
     }
 }

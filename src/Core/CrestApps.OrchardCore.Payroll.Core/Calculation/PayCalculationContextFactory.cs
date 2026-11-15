@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -221,7 +222,7 @@ public sealed class PayCalculationContextFactory
     // The jurisdictions of the work site team.
     private async Task<List<string>> WorkAsync(EmployeePayProfile profile, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(profile.WorkSiteTeamId) || _services.GetService<ITeamManager>() is not { } teams
+        if (string.IsNullOrEmpty(profile.WorkSiteTeamId) || _services.GetService<PayrollTeamsFeature>() is null || _services.GetService<ITeamManager>() is not { } teams
             || await teams.FindByIdAsync(profile.WorkSiteTeamId, cancellationToken) is not { } site
             || !site.TryGet<PayrollTeamSettings>(out var settings) || settings is null)
         {

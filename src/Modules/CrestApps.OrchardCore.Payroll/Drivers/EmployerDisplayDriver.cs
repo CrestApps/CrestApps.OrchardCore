@@ -156,13 +156,14 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
                 continue;
             }
 
-            if (decimal.TryParse(row.Rate.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var rate) && row.RateFrom is { } from)
+            if (decimal.TryParse(row.Rate.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var rate))
             {
-                registration.Rates.Add(new DatedRate { EffectiveFrom = from, Rate = rate });
+                // A rate without its first day is the handler's to refuse, as for a recipe.
+                registration.Rates.Add(new DatedRate { EffectiveFrom = row.RateFrom ?? default, Rate = rate });
             }
             else
             {
-                context?.Updater.ModelState.AddModelError(Prefix, nameof(EmployerViewModel.Registrations), S["A registration's rate needs a number with a dot for decimals, such as 2.7, and the day it starts."]);
+                context?.Updater.ModelState.AddModelError(Prefix, nameof(EmployerViewModel.Registrations), S["A registration's rate needs a number with a dot for decimals, such as 2.7."]);
             }
         }
 

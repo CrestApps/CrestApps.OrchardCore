@@ -356,7 +356,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
         var manage = await _scope.GetScopeAsync(user, PayrollPermissions.ManagePayProfiles);
         var employers = (await _employers.ListAsync()).Where(employer => manage.Allows(employer.ItemId) || employer.ItemId == profile.EmployerId).ToList();
         var schedules = await _schedules.GetAllAsync();
-        var teams = _services.GetService<ITeamManager>() is { } teamManager ? (await teamManager.ListTreeAsync()).Select(item => item.Team).ToList() : [];
+        var teams = _services.GetService<PayrollTeamsFeature>() is not null && _services.GetService<ITeamManager>() is { } teamManager ? (await teamManager.ListTreeAsync()).Select(item => item.Team).ToList() : [];
         IReadOnlyDictionary<string, string> staffNames = string.IsNullOrEmpty(profile.StaffMemberId) ? new Dictionary<string, string>() : await _staff.GetNamesAsync([profile.StaffMemberId]);
         var blockers = isNew ? [] : await _profiles.GetBlockersAsync(profile);
         var same = isNew ? [] : await _profiles.FindSameTaxIdAsync(profile);

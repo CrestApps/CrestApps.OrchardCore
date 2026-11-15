@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Checks.Core.Handlers;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Checks.Controllers;
 using CrestApps.OrchardCore.Checks.Core;
 using CrestApps.OrchardCore.Checks.Core.Services;
@@ -44,6 +47,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CheckRecordIndexProvider>();
 
         services.AddChecksCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<CheckLayout>, CheckLayoutHandler>());
         services.AddHttpContextAccessor();
         services.AddTenantFileStore<ICheckFileStore>(
             ChecksConstants.FileStoreFolder,

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Payroll.Controllers;
 using CrestApps.OrchardCore.Payroll.Core.Services;
@@ -29,6 +31,7 @@ public sealed class TaxTablesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddPayrollTaxTablesCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayrollTaxRule>, PayrollTaxRuleHandler>());
         services.AddDataMigration<PayrollTaxTablesMigrations>()
             .AddIndexProvider<PayrollTaxRuleIndexProvider>();
         services.AddDisplayDriver<PayrollTaxRule, PayrollTaxRuleDisplayDriver>();

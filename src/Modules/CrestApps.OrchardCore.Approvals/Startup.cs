@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Approvals.Core.Handlers;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Approvals.Core;
 using CrestApps.OrchardCore.Approvals.Core.Services;
 using CrestApps.OrchardCore.Approvals.Deployments;
@@ -39,6 +42,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ApprovalRequestIndexProvider>();
 
         services.AddApprovalsCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ApprovalPolicy>, ApprovalPolicyHandler>());
         services.AddHttpContextAccessor();
         services.AddDisplayDriver<ApprovalPolicy, ApprovalPolicyDisplayDriver>();
         services.AddDisplayDriver<ApprovalRequest, ApprovalRequestDisplayDriver>();

@@ -343,6 +343,7 @@ public sealed class UnitedStatesPayrollTests
                 services.AddTaxTablesCore();
                 services.AddPayrollCore();
                 services.AddPayrollTaxTablesCore();
+                services.AddPayrollHandlers();
                 services.AddScoped<PayrollTaxRuleTableUsage>();
                 services.AddSingleton<INamedCatalog<TaxTable>>(new InMemoryNamedCatalog<TaxTable>());
                 services.AddElectionFieldSet(UnitedStatesElectionFields.Create());

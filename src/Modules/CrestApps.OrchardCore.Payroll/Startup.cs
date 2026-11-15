@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Payroll.Handlers;
+using CrestApps.OrchardCore.Payroll.Core.Handlers;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Payroll.AuditTrail;
@@ -51,6 +54,7 @@ public sealed class PaySetupStartup : StartupBase
             .AddIndexProvider<PayCodeIndexProvider>();
 
         services.AddPaySetupCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PaySchedule>, PayScheduleHandler>());
         services.AddDisplayDriver<PaySchedule, PayScheduleDisplayDriver>();
         services.AddDisplayDriver<PayCode, PayCodeDisplayDriver>();
         services.AddPermissionProvider<PaySetupPermissionProvider>();
@@ -146,6 +150,8 @@ public sealed class PayrollStartup : StartupBase
     {
         services.AddPayrollCore();
         services.AddPayrollFilingsCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxDeposit>, TaxDepositHandler>());
         services.AddDataMigration<PayrollMigrations>()
             .AddIndexProvider<PayrollFilingIndexProvider>()
             .AddIndexProvider<PayrollFilingRecordIndexProvider>()
@@ -195,6 +201,7 @@ public sealed class PayrollTeamsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<Team, PayrollTeamDisplayDriver>();
+        services.AddSingleton<PayrollTeamsFeature>();
     }
 }
 
@@ -227,6 +234,7 @@ public sealed class PayrollBankingStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<Employer, EmployerFundingDisplayDriver>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerFundingHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayProfileBlockerProvider, BankAccountPayBlockers>());
     }
 }

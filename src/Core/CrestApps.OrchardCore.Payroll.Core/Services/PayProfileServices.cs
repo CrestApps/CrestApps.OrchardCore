@@ -728,7 +728,7 @@ public sealed class DefaultPayProfileService : IPayProfileService
             }
         }
 
-        if (!string.IsNullOrEmpty(profile.WorkSiteTeamId) && _services.GetService<ITeamManager>() is { } teams && await teams.FindByIdAsync(profile.WorkSiteTeamId, cancellationToken) is { } site
+        if (!string.IsNullOrEmpty(profile.WorkSiteTeamId) && _services.GetService<PayrollTeamsFeature>() is not null && _services.GetService<ITeamManager>() is { } teams && await teams.FindByIdAsync(profile.WorkSiteTeamId, cancellationToken) is { } site
             && site.TryGet<PayrollTeamSettings>(out var settings))
         {
             foreach (var jurisdiction in settings.Jurisdictions.Where(jurisdiction => !jurisdictions.Contains(jurisdiction, StringComparer.OrdinalIgnoreCase)))

@@ -95,6 +95,11 @@ public sealed class PayScheduleHandler : CatalogEntryHandlerBase<PaySchedule>
             context.Result.Fail(new ValidationResult(S["A run is approved from 0 to 30 days before the pay date."], [nameof(PaySchedule.ApprovalLeadDays)]));
         }
 
+        if (item.AnchorDate == default && item.Frequency is PayFrequency.Weekly or PayFrequency.Biweekly or PayFrequency.FourWeekly)
+        {
+            context.Result.Fail(new ValidationResult(S["Give a day a period starts on."], [nameof(PaySchedule.AnchorDate)]));
+        }
+
         return Task.CompletedTask;
     }
 }

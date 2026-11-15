@@ -154,14 +154,8 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
         rule.EffectiveTo = model.EffectiveTo;
         rule.Enabled = model.Enabled;
 
-        if (model.EffectiveFrom is { } from)
-        {
-            rule.EffectiveFrom = from;
-        }
-        else
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.EffectiveFrom), S["Give the first day the rule applies."]);
-        }
+        // An empty first day is the handler's to refuse, as for a recipe.
+        rule.EffectiveFrom = model.EffectiveFrom ?? default;
 
         return Edit(rule, context);
     }

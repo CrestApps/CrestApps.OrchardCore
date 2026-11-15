@@ -429,8 +429,10 @@ public sealed class PayRunTests
                 services.AddDataProtection();
                 services.AddTaxTablesCore();
                 services.AddApprovalsCore();
+                services.AddApprovalsHandlers();
                 services.AddPayrollCore();
                 services.AddPayrollTaxTablesCore();
+                services.AddPayrollHandlers();
                 services.AddSingleton<INamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>>(new InMemoryNamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>());
                 services.AddSingleton<INamedCatalog<ApprovalPolicy>>(new InMemoryNamedCatalog<ApprovalPolicy>());
                 services.AddSingleton<IApprovalRequestStore>(new InMemoryApprovalRequestStore());

@@ -454,6 +454,7 @@ public sealed class PayProfileTests
             {
                 services.AddDataProtection();
                 services.AddPayrollCore();
+                services.AddPayrollHandlers();
                 services.AddScoped<PayrollNames>();
                 services.AddSingleton<global::OrchardCore.Modules.ILocalClock>(new FixedOffsetLocalClock(() => DateTime.UtcNow, TimeSpan.FromHours(-5)));
             },

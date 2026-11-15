@@ -366,7 +366,7 @@ public sealed class GarnishmentsTests
             services.GetRequiredService<IPayProfileService>(),
             services.GetRequiredService<IPayrollScopeService>(),
             services.GetRequiredService<PayrollNames>(),
-            Mock.Of<IUpdateModelAccessor>(),
+            Mock.Of<IUpdateModelAccessor>(accessor => accessor.ModelUpdater == new CrestApps.OrchardCore.Tests.Taxation.Fakes.FakeUpdateModel(new object())),
             displayManager.Object,
             Mock.Of<INotifier>(),
             services.GetRequiredService<ILocalClock>(),

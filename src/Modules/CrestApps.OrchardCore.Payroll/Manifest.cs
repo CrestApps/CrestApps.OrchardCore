@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Approvals;
 using CrestApps.OrchardCore.Banking;
@@ -34,6 +35,7 @@ using OrchardCore.Modules.Manifest;
         StaffConstants.Features.Staff,
         StaffConstants.Features.Compensation,
         ApprovalsConstants.Features.Approvals,
+        AddressConstants.Feature.ModuleId,
     ]
 )]
 

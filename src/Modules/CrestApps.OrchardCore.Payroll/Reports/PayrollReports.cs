@@ -328,10 +328,11 @@ public sealed class LaborDistributionReport : PayrollReportBase, IReport
 {
     private readonly CrestApps.OrchardCore.Teams.Services.ITeamManager _teams;
 
-    public LaborDistributionReport(PayrollReportReader reader, ILocalClock localClock, CrestApps.OrchardCore.Teams.Services.ITeamManager teams, IStringLocalizer<LaborDistributionReport> stringLocalizer)
+    public LaborDistributionReport(PayrollReportReader reader, ILocalClock localClock, CrestApps.OrchardCore.Teams.Services.ITeamManager teams, IEnumerable<CrestApps.OrchardCore.Payroll.Core.Services.PayrollTeamsFeature> teamsFeature, IStringLocalizer<LaborDistributionReport> stringLocalizer)
         : base(reader, localClock, stringLocalizer)
     {
-        _teams = teams;
+        // Without Teams on, the teams' tables don't exist: lines show their team ids.
+        _teams = teamsFeature.Any() ? teams : null;
     }
 
     public static string Name => "payroll-labor-distribution";
@@ -366,7 +367,7 @@ public sealed class LaborDistributionReport : PayrollReportBase, IReport
 
         foreach (var teamId in teamIds)
         {
-            names[teamId] = (await _teams.FindByIdAsync(teamId, cancellationToken))?.Name ?? teamId;
+            names[teamId] = (_teams is null ? null : (await _teams.FindByIdAsync(teamId, cancellationToken))?.Name) ?? teamId;
         }
 
         string NameOf(string id)

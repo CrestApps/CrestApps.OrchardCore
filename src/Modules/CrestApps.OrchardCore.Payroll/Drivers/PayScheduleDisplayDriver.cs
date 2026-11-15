@@ -102,13 +102,14 @@ internal sealed class PayScheduleDisplayDriver : DisplayDriver<PaySchedule>
         schedule.ExtraPayPeriod = Enum.TryParse<ExtraPayPeriodRule>(model.ExtraPayPeriod, out var extra) ? extra : ExtraPayPeriodRule.Standard;
         schedule.Enabled = model.Enabled;
 
+        // A weekly kind of schedule without a day a period starts on is the handler's to refuse, as for a recipe.
         if (model.AnchorDate is { } anchor)
         {
             schedule.AnchorDate = anchor;
         }
         else if (schedule.Frequency is PayFrequency.Weekly or PayFrequency.Biweekly or PayFrequency.FourWeekly)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AnchorDate), S["Give a day a period starts on."]);
+            schedule.AnchorDate = default;
         }
 
         return Edit(schedule, context);

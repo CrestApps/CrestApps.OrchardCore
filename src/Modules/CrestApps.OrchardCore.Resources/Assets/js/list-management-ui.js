@@ -377,7 +377,7 @@ window.listManagementUI = (function () {
             item.addEventListener('click', () => {
                 const checkedCheckboxes = getCheckedItemCheckboxes(root, options);
 
-                if (checkedCheckboxes.length <= 1) {
+                if (checkedCheckboxes.length < options.minimumSelection) {
                     return;
                 }
 

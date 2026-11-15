@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Deployments;
@@ -28,6 +30,7 @@ public sealed class GarnishmentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddGarnishmentsCore();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<GarnishmentOrder>, GarnishmentOrderHandler>());
         services.AddPayCodeKind(CrestApps.OrchardCore.Payroll.Models.PayCodeKinds.Garnishment, global::OrchardCore.Localization.LocalizationSource.Create<GarnishmentsStartup>("Garnishment"));
         services.AddDataMigration<GarnishmentsMigrations>()
             .AddIndexProvider<GarnishmentOrderIndexProvider>();

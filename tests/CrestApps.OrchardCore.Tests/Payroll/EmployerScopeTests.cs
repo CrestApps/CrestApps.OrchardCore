@@ -204,6 +204,7 @@ public sealed class EmployerScopeTests
             services =>
             {
                 services.AddPayrollCore();
+                services.AddPayrollHandlers();
                 configure?.Invoke(services);
             },
             PayrollIndexSchema.CreateAsync,

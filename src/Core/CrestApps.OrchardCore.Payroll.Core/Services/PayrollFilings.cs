@@ -830,7 +830,6 @@ public static class PayrollFilingsServiceCollectionExtensions
         services.TryAddScoped<IPayrollFilingManager, PayrollFilingManager>();
         services.TryAddScoped<ICatalogManager<TaxDeposit>>(serviceProvider => serviceProvider.GetRequiredService<ITaxDepositManager>());
         services.TryAddScoped<ICatalogManager<PayrollFiling>>(serviceProvider => serviceProvider.GetRequiredService<IPayrollFilingManager>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxDeposit>, TaxDepositHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayrollFiling>, PayrollFilingHandler>());
         services.TryAddScoped<ITaxLiabilityService, TaxLiabilityService>();
         services.TryAddScoped<IPayrollFilingService, PayrollFilingService>();

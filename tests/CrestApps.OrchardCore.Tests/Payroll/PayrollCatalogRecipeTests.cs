@@ -19,6 +19,20 @@ namespace CrestApps.OrchardCore.Tests.Payroll;
 public sealed class PayrollCatalogRecipeTests
 {
     [Fact]
+    public void PayrollFeature_DependsOnAddresses_WhoseEditorTheEmployerEditorNeeds()
+    {
+        // The employer editor (EmployerDisplayDriver) and processing (printed addresses) need the Addresses services; a
+        // site that turned Payroll on without Addresses failed on the employers page.
+        var feature = typeof(CrestApps.OrchardCore.Payroll.Drivers.EmployerDisplayDriver).Assembly
+            .GetCustomAttributes(typeof(global::OrchardCore.Modules.Manifest.FeatureAttribute), inherit: false)
+            .Cast<global::OrchardCore.Modules.Manifest.FeatureAttribute>()
+            .Single(attribute => attribute is not global::OrchardCore.Modules.Manifest.ModuleAttribute && attribute.Id == PayrollConstants.Features.Payroll);
+
+        Assert.Contains(CrestApps.OrchardCore.Addresses.AddressConstants.Feature.ModuleId, feature.Dependencies);
+        Assert.Contains(typeof(CrestApps.OrchardCore.Payroll.Drivers.EmployerDisplayDriver).GetConstructors().SelectMany(constructor => constructor.GetParameters()), parameter => parameter.ParameterType == typeof(CrestApps.OrchardCore.Addresses.Core.Editing.IAddressEditorService));
+    }
+
+    [Fact]
     public async Task PayCodes_AreCreatedWithTheirValuesAndSettings_AndUpdatedByCode()
     {
         await using var harness = await CreateHarnessAsync();
@@ -99,6 +113,7 @@ public sealed class PayrollCatalogRecipeTests
             {
                 services.AddDataProtection();
                 services.AddPayrollCore();
+                services.AddPayrollHandlers();
             },
             PayrollIndexSchema.CreateAsync,
             PayrollIndexSchema.Providers());

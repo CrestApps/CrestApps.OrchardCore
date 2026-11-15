@@ -98,6 +98,38 @@ public class ValidationOwnershipArchitectureTests
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Drivers/VoiceMediaItemDisplayDriver.cs",
             "nameof(VoiceMediaItemViewModel.Audio)",
             "The uploaded audio file is streamed to the telephony provider by the editor; a recipe carries the resulting media reference, never a file."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Approvals/Drivers/ApprovalPolicyDisplayDriver.cs",
+            "nameof(model.DueAfterHours)",
+            "The hours are typed as text so a culture never changes them; a recipe carries the number, whose range the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "nameof(model.SecondSignatureAbove)",
+            "The amount is typed as text with a dot so a decimal comma never changes it; a recipe carries the number."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "The font file is larger than 2 MB.",
+            "The uploaded signature picture or MICR font exists only in the editor; a recipe carries the stored file, never an upload."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "Upload a TrueType (.ttf) font file.",
+            "The uploaded signature picture or MICR font exists only in the editor; a recipe carries the stored file, never an upload."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Checks/Drivers/CheckLayoutDisplayDriver.cs",
+            "Enter the measure in points",
+            "Measures are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Payroll/Drivers/EmployerDisplayDriver.cs",
+            "nameof(EmployerViewModel.Registrations)",
+            "A registration's rate is typed as text with a dot so a decimal comma never changes it; a recipe carries the number, whose range and first day the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Payroll/Drivers/GarnishmentOrderDisplayDriver.cs",
+            "Type a number of zero or more, with a dot for decimals.",
+            "Amounts and percents are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose ranges the handler checks."),
+        (
+            "src/Modules/CrestApps.OrchardCore.Payroll/Drivers/PayrollTaxRuleDisplayDriver.cs",
+            "Type a number of zero or more, with a dot for decimals.",
+            "Rates, amounts and wage bases are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose ranges the handler checks."),
     ];
 
     private static readonly Regex _typeNameRegex = new(

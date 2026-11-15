@@ -46,19 +46,8 @@ internal sealed class EmployerFundingDisplayDriver : DisplayDriver<Employer>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrEmpty(model.FundingBankAccountId))
-        {
-            employer.FundingBankAccountId = null;
-        }
-        else if (await _accounts.FindByIdAsync(model.FundingBankAccountId) is { } account && account.Owner.IsEmpty
-            && (account.Status is not (BankAccountStatus.Closed or BankAccountStatus.Failed) || account.ItemId == employer.FundingBankAccountId))
-        {
-            employer.FundingBankAccountId = account.ItemId;
-        }
-        else
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.FundingBankAccountId), S["Choose one of the business's own bank accounts that is open."]);
-        }
+        // Which accounts may fund pay is EmployerFundingHandler's rule, as for a recipe.
+        employer.FundingBankAccountId = string.IsNullOrEmpty(model.FundingBankAccountId) ? null : model.FundingBankAccountId;
 
         return await EditAsync(employer, context);
     }

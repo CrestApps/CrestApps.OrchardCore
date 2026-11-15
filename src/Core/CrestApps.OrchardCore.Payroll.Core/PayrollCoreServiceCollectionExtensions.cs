@@ -33,7 +33,6 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddScoped<EmployerStore>();
         services.TryAddScoped<IEmployerManager, EmployerManager>();
         services.TryAddScoped<ICatalogManager<Employer>>(serviceProvider => serviceProvider.GetRequiredService<IEmployerManager>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerHandler>());
         services.TryAddScoped<IPayrollScopeService, PayrollScopeService>();
         services.AddSensitiveValueProtector();
         services.TryAddScoped<PayProfileStore>();

@@ -112,13 +112,14 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
         {
             policy.DueAfterHours = null;
         }
-        else if (int.TryParse(model.DueAfterHours.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var hours) && hours > 0)
+        else if (int.TryParse(model.DueAfterHours.Trim(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var hours))
         {
+            // Fewer than one hour is the handler's to refuse, as for a recipe.
             policy.DueAfterHours = hours;
         }
         else
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DueAfterHours), S["Enter a number of hours, or leave it empty."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DueAfterHours), S["Enter a whole number of hours, or leave it empty."]);
         }
 
         // A policy no one can satisfy is saved, with a warning: the people may come later.

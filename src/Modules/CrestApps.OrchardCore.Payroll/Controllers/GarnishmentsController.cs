@@ -248,6 +248,18 @@ public sealed class GarnishmentsController : Controller
 
         order.Status = GarnishmentStatus.Released;
         order.EndDate ??= DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+
+        // The order's rules run as on any save, so a release can't leave it in a state a recipe would refuse.
+        if (!await CatalogEntryValidation.ValidateAsync(_manager, order, _updateModelAccessor.ModelUpdater, string.Empty))
+        {
+            foreach (var error in ModelState.Values.SelectMany(value => value.Errors))
+            {
+                await _notifier.ErrorAsync(H["{0}", error.ErrorMessage]);
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
         await _manager.UpdateAsync(order);
         await _notifier.SuccessAsync(H["The garnishment has been released: nothing more is withheld."]);
 

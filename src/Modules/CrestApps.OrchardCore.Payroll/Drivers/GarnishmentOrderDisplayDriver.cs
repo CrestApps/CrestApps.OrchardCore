@@ -155,14 +155,8 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
         order.PayeeBankAccountId = order.PaymentMethod == GarnishmentPaymentMethod.BankAccount && !string.IsNullOrEmpty(model.PayeeBankAccountId) ? model.PayeeBankAccountId : null;
         order.Notes = model.Notes;
 
-        if (model.StartDate is { } start)
-        {
-            order.StartDate = start;
-        }
-        else
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.StartDate), S["Give the first pay date the order applies to."]);
-        }
+        // An empty start date is the handler's to refuse, as for a recipe.
+        order.StartDate = model.StartDate ?? default;
 
         // A new kind brings its own limits where the form left them empty.
         if (typeChanged)
@@ -187,11 +181,6 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
             {
                 order.PayeeAddress = result.Address;
             }
-        }
-
-        if (order.PaymentMethod == GarnishmentPaymentMethod.Check && order.PayeeAddress is null)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethod), S["Enter the payee's mailing address to pay by check."]);
         }
 
         await _addressEditor.PopulateAsync(address.Address, AddressOptions(address.Address.Country));

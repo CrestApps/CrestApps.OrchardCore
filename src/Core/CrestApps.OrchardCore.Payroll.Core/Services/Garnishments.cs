@@ -305,6 +305,11 @@ public sealed class GarnishmentOrderHandler : CatalogEntryHandlerBase<Garnishmen
             context.Result.Fail(new ValidationResult(S["Give the first pay date the order applies to."], [nameof(GarnishmentOrder.StartDate)]));
         }
 
+        if (order.PaymentMethod == GarnishmentPaymentMethod.Check && order.PayeeAddress is null)
+        {
+            context.Result.Fail(new ValidationResult(S["Enter the payee's mailing address to pay by check."], [nameof(GarnishmentOrder.PaymentMethod)]));
+        }
+
         if (order.EndDate is { } end && end < order.StartDate)
         {
             context.Result.Fail(new ValidationResult(S["The last day is before the first day."], [nameof(GarnishmentOrder.EndDate)]));
@@ -750,7 +755,6 @@ public static class GarnishmentsServiceCollectionExtensions
         services.TryAddScoped<GarnishmentPayCodeSeeder>();
         services.TryAddScoped<IGarnishmentOrderManager, GarnishmentOrderManager>();
         services.TryAddScoped<ICatalogManager<GarnishmentOrder>>(serviceProvider => serviceProvider.GetRequiredService<IGarnishmentOrderManager>());
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<GarnishmentOrder>, GarnishmentOrderHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, GarnishmentsPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayStatementObserver, GarnishmentStatementObserver>());
 

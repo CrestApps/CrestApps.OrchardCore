@@ -233,7 +233,7 @@
 			};
 			getElements(root, options.bulkActionSelector).forEach((item) => {
 				item.addEventListener("click", () => {
-					if (getCheckedItemCheckboxes(root, options).length <= 1) return;
+					if (getCheckedItemCheckboxes(root, options).length < options.minimumSelection) return;
 					const actionData = Object.assign({}, item.dataset);
 					confirmDialog({
 						...actionData,

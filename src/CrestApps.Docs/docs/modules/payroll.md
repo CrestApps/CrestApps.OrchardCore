@@ -108,7 +108,7 @@ The `PayrollEmployers` recipe step (`Employers`, matched by id then name) and th
 
 ## Permissions per employer
 
-`PayrollPermissions` holds the Payroll feature's permissions. Every one in `PayrollPermissions.PerEmployer` also exists per employer through `PayrollPermissionTemplates.For(permission, employerId)` (named `{Permission}_{employerId}`, implied by the global permission; a per-employer "view" is also implied by the same employer's "do" permissions). `PayrollPermissionProvider` lists each employer's copies, so the role editor shows a **Payroll: {employer}** group per employer.
+`PayrollPermissions` holds the Payroll feature's permissions. Every one in `PayrollPermissions.PerEmployer` also exists per employer through `PayrollPermissionTemplates.For(permission, employerId)` (named `{Permission}_{employerId}`, implied by the global permission; a per-employer "view" is also implied by the same employer's "do" permissions). `PayrollPermissionProvider` lists each employer's copies, so the role editor shows a group per employer, such as **Payroll: Contoso**.
 
 `IPayrollScopeService.GetScopeAsync(user, permission)` returns a `PayrollScope`: every employer with the global permission, otherwise the employers of the per-employer permissions the user holds. `AuthorizeAsync(user, permission, employerId)` checks one employer. Pages, data sets, reports and exports all use it. `IPayrollEmployeeDirectory` maps employers to the staff members they pay (pay profiles answer it; until then it knows none, so data limited to some employers is empty, never too wide).
 
