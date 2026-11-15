@@ -90,6 +90,11 @@ public static class TicketsConstants
         /// The saved views.
         /// </summary>
         public const string Views = "TicketViews";
+
+        /// <summary>
+        /// The boards.
+        /// </summary>
+        public const string Boards = "TicketBoards";
     }
 
     /// <summary>

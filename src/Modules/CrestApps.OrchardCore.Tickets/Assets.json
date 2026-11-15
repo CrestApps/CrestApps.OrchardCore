@@ -1,0 +1,20 @@
+[
+  {
+    "action": "vite",
+    "name": "ticket-board.js",
+    "source": "Assets/js/ticket-board.js",
+    "dest": "wwwroot/scripts/ticket-board.js"
+  },
+  {
+    "action": "vite",
+    "name": "ticket-board-editor.js",
+    "source": "Assets/js/ticket-board-editor.js",
+    "dest": "wwwroot/scripts/ticket-board-editor.js"
+  },
+  {
+    "action": "vite",
+    "name": "ticket-board.css",
+    "source": "Assets/css/ticket-board.css",
+    "dest": "wwwroot/styles/ticket-board.css"
+  }
+]

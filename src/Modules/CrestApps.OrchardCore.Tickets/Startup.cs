@@ -24,6 +24,7 @@ using CrestApps.OrchardCore.Tickets.ViewModels;
 using CrestApps.OrchardCore.Timeline;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -38,6 +39,7 @@ using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 
@@ -99,6 +101,8 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<TicketPriority, TicketPriorityDisplayDriver>();
         services.AddDisplayDriver<TicketDesk, TicketDeskDisplayDriver>();
         services.AddDisplayDriver<TicketView, TicketViewDisplayDriver>();
+        services.AddDisplayDriver<TicketBoard, TicketBoardDisplayDriver>();
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, TicketsResourceConfiguration>();
 
         services.AddPermissionProvider<TicketsPermissionsProvider>();
         services.AddScoped<IAuthorizationHandler, TicketContentAuthorizationHandler>();
@@ -148,6 +152,7 @@ public sealed class RecipesStartup : StartupBase
         services.AddRecipeExecutionStep<TicketPrioritiesRecipeStep>();
         services.AddRecipeExecutionStep<TicketDesksRecipeStep>();
         services.AddRecipeExecutionStep<TicketViewsRecipeStep>();
+        services.AddRecipeExecutionStep<TicketBoardsRecipeStep>();
     }
 }
 
@@ -164,6 +169,7 @@ public sealed class DeploymentStartup : StartupBase
         services.AddDeployment<TicketPrioritiesDeploymentSource, TicketPrioritiesDeploymentStep, TicketPrioritiesDeploymentStepDisplayDriver>();
         services.AddDeployment<TicketDesksDeploymentSource, TicketDesksDeploymentStep, TicketDesksDeploymentStepDisplayDriver>();
         services.AddDeployment<TicketViewsDeploymentSource, TicketViewsDeploymentStep, TicketViewsDeploymentStepDisplayDriver>();
+        services.AddDeployment<TicketBoardsDeploymentSource, TicketBoardsDeploymentStep, TicketBoardsDeploymentStepDisplayDriver>();
     }
 }
 
@@ -180,9 +186,11 @@ public sealed class RecipesSchemaStartup : StartupBase
         services.AddScoped<IRecipeStep, TicketPrioritiesRecipeStepSchema>();
         services.AddScoped<IRecipeStep, TicketDesksRecipeStepSchema>();
         services.AddScoped<IRecipeStep, TicketViewsRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, TicketBoardsRecipeStepSchema>();
         services.AddDeploymentStepSchema<TicketStatusesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<TicketPrioritiesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<TicketDesksDeploymentStepSchema>();
         services.AddDeploymentStepSchema<TicketViewsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<TicketBoardsDeploymentStepSchema>();
     }
 }

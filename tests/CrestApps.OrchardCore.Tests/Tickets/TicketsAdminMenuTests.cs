@@ -42,7 +42,7 @@ public sealed class TicketsAdminMenuTests
         Assert.Equal("serviceDesk", tickets.Id);
         Assert.Equal("Service Desk", tickets.Text.Value);
         string[] setup = ["ticketDesks", "ticketStatuses", "ticketPriorities", "ticketViews", "ticketEmails"];
-        Assert.Equal(canViewTickets ? ["ticketList", .. setup] : setup, tickets.Items.OrderBy(item => item.Position).Select(item => item.Id));
+        Assert.Equal(canViewTickets ? ["ticketList", "ticketBoards", .. setup] : setup, tickets.Items.OrderBy(item => item.Position).Select(item => item.Id));
     }
 
     [Fact]

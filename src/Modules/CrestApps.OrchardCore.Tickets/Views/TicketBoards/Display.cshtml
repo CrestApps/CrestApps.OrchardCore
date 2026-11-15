@@ -1,0 +1,112 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.Tickets.Services
+
+@model TicketBoardPageViewModel
+
+@{
+    var texts = new Dictionary<string, string>
+    {
+        ["loading"] = T["Loading the board…"].Value,
+        ["loadFailed"] = T["The board couldn't be loaded. It tries again in a moment."].Value,
+        ["moveFailed"] = T["The ticket couldn't be moved."].Value,
+        ["moved"] = T["{0} is now {1}."].Value,
+        ["empty"] = T["No tickets"].Value,
+        ["shownOf"] = T["{0} of {1} shown"].Value,
+        ["overLimit"] = T["More than the limit of {0}"].Value,
+        ["unassigned"] = T["Unassigned"].Value,
+        ["overdue"] = T["Past its target"].Value,
+        ["due"] = T["Due {0}"].Value,
+        ["updated"] = T["Updated {0}"].Value,
+        ["moveTo"] = T["Move {0}"].Value,
+        ["chooseTitle"] = T["Which status for {0}?"].Value,
+        ["moveTitle"] = T["Move {0} to"].Value,
+        ["cannotMove"] = T["You may not move this ticket."].Value,
+        ["cannotDrop"] = T["This ticket can't move to that column."].Value,
+        ["requester"] = T["Requester"].Value,
+        ["assignee"] = T["Assignee"].Value,
+        ["priority"] = T["Priority"].Value,
+        ["status"] = T["Status"].Value,
+        ["desk"] = T["Desk"].Value,
+        ["team"] = T["Team"].Value,
+        ["hiddenStatuses"] = T["Some statuses are in no column, so their tickets don't show here."].Value,
+        ["current"] = T["(now)"].Value,
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="TicketBoardsDisplay" title="@T["{0}", Model.Board.Name]">
+        <breadcrumb-item id="TicketBoardsIndex" action="Index" controller="TicketBoards" area="CrestApps.OrchardCore.Tickets">@T["Ticket boards"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<style asp-name="@TicketsResourceConfiguration.BoardStyle"></style>
+<script asp-name="@TicketsResourceConfiguration.BoardScript" at="Foot"></script>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 gy-2 align-items-center">
+            <div class="col-12 col-md">
+                <div class="input-group">
+                    <input type="search" class="form-control" id="ticket-board-search" placeholder="@T["Search by number or subject"]" aria-label="@T["Search the board"]" autocomplete="off" data-board-search />
+                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                </div>
+            </div>
+            <div class="col-auto">
+                <label class="visually-hidden" for="ticket-board-assignee">@T["Assigned to"]</label>
+                <select class="form-select" id="ticket-board-assignee" data-board-assignee>
+                    <option value="">@T["Anybody's tickets"]</option>
+                    <option value="@TicketAssignees.Me">@T["My tickets"]</option>
+                    <option value="@TicketAssignees.Unassigned">@T["Unassigned tickets"]</option>
+                </select>
+            </div>
+            @if (Model.Boards.Count > 1)
+            {
+                <div class="col-auto">
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Other boards"]</button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            @foreach (var other in Model.Boards)
+                            {
+                                <li><a class="dropdown-item @(other.ItemId == Model.Board.ItemId ? "active" : null)" asp-action="Display" asp-route-id="@other.ItemId" aria-current="@(other.ItemId == Model.Board.ItemId ? "page" : null)">@other.Name</a></li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+            @if (Model.CanManage)
+            {
+                <div class="col-auto">
+                    <a class="btn btn-secondary" asp-action="Edit" asp-route-id="@Model.Board.ItemId"><i class="fa-solid fa-table-columns me-1" aria-hidden="true"></i>@T["Edit board"]</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div id="ticket-board"
+     data-data-url="@Url.Action("Data", new { id = Model.Board.ItemId })"
+     data-move-url="@Url.Action("Move", new { id = Model.Board.ItemId })"
+     data-texts="@JsonSerializer.Serialize(texts)">
+    @Html.AntiForgeryToken()
+    <div class="alert alert-warning d-none" role="alert" data-board-message></div>
+    <p class="hint d-none" data-board-hidden-statuses></p>
+    <div class="ticket-board" data-board-columns aria-busy="true">
+        <p class="text-muted">@T["Loading the board…"]</p>
+    </div>
+    <p class="visually-hidden" aria-live="polite" data-board-live></p>
+
+    <div class="modal fade" id="ticket-board-choose" tabindex="-1" aria-labelledby="ticket-board-choose-title" aria-hidden="true" data-board-dialog>
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="ticket-board-choose-title" data-board-dialog-title></h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Cancel"]"></button>
+                </div>
+                <div class="modal-body" data-board-dialog-body></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

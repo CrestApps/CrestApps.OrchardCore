@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Teams.Models;
@@ -10,10 +11,14 @@ using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.Modules;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Tests.Tickets;
 
@@ -333,6 +338,47 @@ public sealed class TicketBoardRulesTests
         Assert.Equal(["anas", "it", "everyone"], forAna.Select(board => board.ItemId));
         Assert.Empty(forNobody);
         Assert.Null(bensBoard);
+    }
+
+    [Fact]
+    public async Task ABoardFromARecipe_KeepsItsColumns_AndItsOwnerTravelsByUserName()
+    {
+        // Arrange
+        var ana = Mock.Of<IUser>();
+        var users = new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null);
+        users.Setup(manager => manager.FindByNameAsync("ana")).ReturnsAsync(ana);
+        users.Setup(manager => manager.FindByIdAsync("ana-here")).ReturnsAsync(ana);
+        users.Setup(manager => manager.GetUserIdAsync(ana)).ReturnsAsync("ana-here");
+        var services = new ServiceCollection().AddSingleton(users.Object).BuildServiceProvider();
+        var recordHandler = new TicketSettingsRecordHandler<TicketBoard>(Mock.Of<ICatalog<TicketBoard>>(), Mock.Of<IClock>(), services, RecipeRoundTrip.Localizer<TicketSettingsRecordHandler<TicketBoard>>());
+        var board = new TicketBoard { ItemId = "b1" };
+        var json = JsonNode.Parse("""
+            {
+              "Name": "Ana's board",
+              "OwnerUserName": "ana",
+              "Query": { "DeskIds": ["it"] },
+              "Columns": [
+                { "Name": "To do", "StatusIds": ["new"] },
+                { "Id": "waiting", "Name": "Pending", "StatusIds": ["requester", "third-party"], "DefaultStatusId": "requester", "Limit": 5 }
+              ]
+            }
+            """);
+
+        // Act
+        await recordHandler.InitializingAsync(new InitializingContext<TicketBoard>(board, json), TestContext.Current.CancellationToken);
+        var result = new ValidatingContext<TicketBoard>(board);
+        await recordHandler.ValidatingAsync(result, TestContext.Current.CancellationToken);
+        await Handler().ValidatingAsync(result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Result.Succeeded, string.Join(" ", result.Result.Errors.Select(error => error.ErrorMessage)));
+        Assert.Equal("ana-here", board.OwnerId);
+        Assert.Equal(["it"], board.Query.DeskIds);
+        Assert.Equal(["To do", "Pending"], board.Columns.Select(column => column.Name));
+        Assert.False(string.IsNullOrEmpty(board.Columns[0].Id));
+        Assert.Equal("waiting", board.Columns[1].Id);
+        Assert.Equal("requester", board.Columns[1].DefaultStatusId);
+        Assert.Equal(5, board.Columns[1].Limit);
     }
 
     internal static TicketBoard Board()

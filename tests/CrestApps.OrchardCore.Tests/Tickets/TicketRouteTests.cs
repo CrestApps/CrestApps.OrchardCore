@@ -26,5 +26,9 @@ public sealed class TicketRouteTests
         // Assert
         Assert.Contains("tickets/desks", templates);
         Assert.DoesNotContain(templates, template => template.StartsWith("tickets/{", StringComparison.Ordinal));
+
+        // The boards list has literal pages (create, edit, delete); a board itself is under tickets/board/{id}.
+        Assert.Contains("tickets/boards/create", templates);
+        Assert.DoesNotContain(templates, template => template.StartsWith("tickets/boards/{", StringComparison.Ordinal));
     }
 }
