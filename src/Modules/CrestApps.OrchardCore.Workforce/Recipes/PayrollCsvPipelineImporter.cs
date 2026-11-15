@@ -64,6 +64,23 @@ internal sealed class PayrollCsvPipelineImporter
     }
 
     /// <summary>
+    /// Tries again, at a start of the site, to turn columns saved for the old export into the draft pipeline: quietly
+    /// nothing until Data Pipelines is on, then once.
+    /// </summary>
+    /// <returns>A task.</returns>
+    public async Task RetrySavedColumnsAsync()
+    {
+        if (_services.GetService<IShellFeaturesManager>() is not { } features
+            || !(await features.GetEnabledFeaturesAsync()).Any(feature => feature.Id == DataPipelinesFeatureId)
+            || await _session.Query<PayrollCsvSettings>(collection: WorkforceConstants.CollectionName).FirstOrDefaultAsync() is null)
+        {
+            return;
+        }
+
+        await ImportSavedColumnsAsync();
+    }
+
+    /// <summary>
     /// Turns the columns a site saved for the old export into the draft pipeline, once, then forgets them.
     /// </summary>
     /// <returns>A task.</returns>

@@ -287,6 +287,12 @@ public sealed class PayRunInput : CatalogItem, IModifiedUtcAwareModel
     /// <summary>Gets or sets where it came from, such as the run's page or a pipeline run.</summary>
     public string Origin { get; set; }
 
+    /// <summary>
+    /// Gets or sets what identifies an input saved from a pipeline row or a workflow, so saving the same row again
+    /// updates it instead of adding it twice; <see langword="null"/> for an input entered on the page.
+    /// </summary>
+    public string ImportKey { get; set; }
+
     /// <summary>Gets or sets when it was added.</summary>
     public DateTime CreatedUtc { get; set; }
 

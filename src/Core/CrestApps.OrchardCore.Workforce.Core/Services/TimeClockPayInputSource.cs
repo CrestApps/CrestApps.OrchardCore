@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.DependencyInjection;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Workforce.Core.Services;
 
@@ -47,7 +48,7 @@ internal sealed class TimeClockPayInputSource : IPayInputSource
 
         var timesheets = new List<Timesheet>();
 
-        await foreach (var timesheet in ReadLockedAsync(query.PayScheduleId, cancellationToken))
+        await foreach (var timesheet in ReadLockedAsync(query, cancellationToken))
         {
             if ((query.PeriodStart.HasValue && timesheet.PeriodStart < query.PeriodStart.Value) ||
                 (query.PeriodEnd.HasValue && timesheet.PeriodStart > query.PeriodEnd.Value) ||
@@ -155,9 +156,17 @@ internal sealed class TimeClockPayInputSource : IPayInputSource
         await SetPredictabilityPayAsync(released, PredictabilityPayStatus.Exported, PredictabilityPayStatus.Approved, cancellationToken);
     }
 
-    // Locked timesheets are read a page at a time, so a site with years of them is never loaded at once.
-    private async IAsyncEnumerable<Timesheet> ReadLockedAsync(string payScheduleId, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    // Locked timesheets are read a page at a time, so a site with years of them is never loaded at once; the schedule,
+    // the periods and the people asked for are filtered by the index, not in memory.
+    private async IAsyncEnumerable<Timesheet> ReadLockedAsync(PayInputQuery query, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        var payScheduleId = query.PayScheduleId;
+        var from = query.PeriodStart is { } start ? WorkforceDates.ToKey(start) : (int?)null;
+        var to = query.PeriodEnd is { } end ? WorkforceDates.ToKey(end) : (int?)null;
+
+        // A long list of people would pass the database's parameter limit: it is filtered in memory instead.
+        var staff = query.StaffMemberIds is { Count: > 0 and <= 500 } ids ? ids.ToArray() : null;
+
         for (var skip = 0; ; skip += PageSize)
         {
             var search = _session.Query<Timesheet, TimesheetIndex>(index => index.Status == TimesheetStatus.Locked, collection: WorkforceConstants.CollectionName);
@@ -165,6 +174,21 @@ internal sealed class TimeClockPayInputSource : IPayInputSource
             if (!string.IsNullOrEmpty(payScheduleId))
             {
                 search = search.Where(index => index.PayPeriodCalendarId == payScheduleId);
+            }
+
+            if (from is { } first)
+            {
+                search = search.Where(index => index.PeriodStart >= first);
+            }
+
+            if (to is { } last)
+            {
+                search = search.Where(index => index.PeriodStart <= last);
+            }
+
+            if (staff is not null)
+            {
+                search = search.Where(index => index.WorkerId.IsIn(staff));
             }
 
             var page = (await search.OrderBy(index => index.PeriodStart).ThenBy(index => index.ItemId).Skip(skip).Take(PageSize).ListAsync(cancellationToken)).ToList();

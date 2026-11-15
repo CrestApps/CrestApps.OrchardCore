@@ -58,6 +58,7 @@ public sealed class TimeClockStartup : StartupBase
         services.AddDisplayDriver<StaffMember, WorkerTimeClockRowDisplayDriver>();
         services.AddDisplayDriver<PayCode, WorkforcePayCodeDisplayDriver>();
         services.AddScoped<PayrollCsvPipelineImporter>();
+        services.AddScoped<IModularTenantEvents, PayrollCsvColumnsRetry>();
         services.AddSingleton<IBackgroundTask, TimesheetRefreshBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TimeClockTrackerBackfillBackgroundTask>();
         services.AddPermissionProvider<TimeClockPermissionsProvider>();

@@ -185,6 +185,55 @@ public sealed class PayRunTests
     }
 
     [Fact]
+    public async Task SavePayInputs_RefusesARowOfOnesOwnPay_AndARowSavedAgainUpdatesItsInput()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var setup = await SetUpAsync(harness);
+        var lee = CalendarTestHarness.User("lee", PayrollPermissions.PreparePayRuns.Name);
+        var preparer = CalendarTestHarness.User("preparer", PayrollPermissions.PreparePayRuns.Name);
+
+        // Lee prepares pay runs and is employee 1001 of the run.
+        await harness.RunAsync(async services =>
+        {
+            var staff = services.GetRequiredService<CrestApps.OrchardCore.Staff.Services.IStaffMemberManager>();
+            var member = await staff.FindByIdAsync(setup.StaffMemberId);
+
+            member.UserId = lee.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+            await staff.UpdateAsync(member);
+        });
+
+        PayRunInputRow Row(string amount, string key = null)
+            => new() { PayRun = setup.RunNumber, EmployeeNumber = "1001", PayCode = "BONUS", Amount = amount, Key = key };
+
+        var (own, first, again, keyed, rekeyed) = await harness.RunAsync(async services =>
+        {
+            var importer = services.GetRequiredService<PayRunInputImporter>();
+
+            return (
+                await importer.SaveAsync(Row("5000"), lee, "Pipeline bonuses"),
+                await importer.SaveAsync(Row("500"), preparer, "Pipeline bonuses"),
+                await importer.SaveAsync(Row("500"), preparer, "Pipeline bonuses"),
+                await importer.SaveAsync(Row("200", "Pipeline p1:row-7"), preparer, "Pipeline bonuses"),
+                await importer.SaveAsync(Row("250", "Pipeline p1:row-7"), preparer, "Pipeline bonuses"));
+        });
+
+        var amounts = (await harness.RunAsync(services => services.GetRequiredService<IPayRunInputManager>().ListByRunAsync(setup.RunId), commit: false))
+            .Where(input => input.Amount is not null)
+            .Select(input => input.Amount.Value)
+            .Order()
+            .ToArray();
+
+        Assert.Contains("their own pay", own, StringComparison.Ordinal);
+        Assert.Null(first);
+        Assert.Null(again);
+        Assert.Null(keyed);
+        Assert.Null(rekeyed);
+
+        // The same row twice is one input; the keyed row was updated from 200 to 250.
+        Assert.Equal([250m, 500m], amounts);
+    }
+
+    [Fact]
     public async Task Run_WithBlockers_CantBeSubmitted_AndACancelledRunTakesNoMoreWork()
     {
         await using var harness = await CreateHarnessAsync();

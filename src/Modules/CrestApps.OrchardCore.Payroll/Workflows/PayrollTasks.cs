@@ -219,6 +219,9 @@ public sealed class AddPayInputTask : PayrollTaskActivity<AddPayInputTask>
             Hours = await EvaluateAsync(Hours, workflowContext),
             Amount = await EvaluateAsync(Amount, workflowContext),
             Note = await EvaluateAsync(Note, workflowContext),
+
+            // The same workflow saving the same row again (a retry) updates it; another workflow's row is its own.
+            Key = "Workflow " + workflowContext.WorkflowId,
         }, User, S["Workflow"]);
 
         if (error is not null)

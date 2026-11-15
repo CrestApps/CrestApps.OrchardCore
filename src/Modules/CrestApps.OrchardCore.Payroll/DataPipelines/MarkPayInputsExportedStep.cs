@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Payroll.DataSources;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -95,7 +96,17 @@ public sealed class MarkPayInputsExportedStep : DataPipelineStepType<MarkPayInpu
         }
 
         var consumerId = PayrollConstants.PipelineConsumerPrefix + context.Run.RunId;
-        var consumed = sources.ToArray();
+        var consumed = (await AllowedAsync(context.Services, context.Run.User, sources, context.CancellationToken)).ToArray();
+
+        if (consumed.Length < sources.Count)
+        {
+            context.LogWarning($"{sources.Count - consumed.Length} records are not ones the Pay inputs data set gives the user who published the pipeline, so they are not marked exported.");
+        }
+
+        if (consumed.Length == 0)
+        {
+            return;
+        }
 
         context.LogInformation($"{consumed.Length} records will be marked exported when the run succeeds.");
 
@@ -104,6 +115,38 @@ public sealed class MarkPayInputsExportedStep : DataPipelineStepType<MarkPayInpu
             ConsumerId = consumerId,
             Sources = consumed,
         }, cancellationToken));
+    }
+
+    /// <summary>
+    /// Keeps the records the Pay inputs data set gives a user: their employers' people, exported or not.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="user">The user who published the pipeline.</param>
+    /// <param name="sources">The records the rows came from.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The records the user may mark exported.</returns>
+    internal static async Task<IEnumerable<PayInputReference>> AllowedAsync(IServiceProvider services, System.Security.Claims.ClaimsPrincipal user, IReadOnlyCollection<PayInputReference> sources, CancellationToken cancellationToken)
+    {
+        var dataSet = ActivatorUtilities.CreateInstance<PayInputsDataSet>(services);
+        var scope = await dataSet.GetScopeAsync(user, cancellationToken);
+
+        if (scope.All)
+        {
+            return sources;
+        }
+
+        var staff = await dataSet.StaffInScopeAsync(scope, cancellationToken);
+
+        if (staff.Count == 0)
+        {
+            return [];
+        }
+
+        var readable = (await services.GetRequiredService<IPayInputService>().GetInputsAsync(new PayInputQuery { StaffMemberIds = staff, IncludeConsumed = true }, cancellationToken))
+            .Select(input => new PayInputReference(input.SourceKind, input.SourceId))
+            .ToHashSet();
+
+        return sources.Where(readable.Contains);
     }
 
     private static async Task<bool> MayExportAsync(DataPipelineStepContext context)

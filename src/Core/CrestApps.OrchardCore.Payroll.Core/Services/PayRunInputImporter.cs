@@ -36,6 +36,12 @@ public sealed class PayRunInputRow
 
     /// <summary>Gets or sets a note.</summary>
     public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets what identifies the row where it comes from (a key column, or a workflow and activity), so saving it
+    /// again updates the input it made; empty to identify the row by its values.
+    /// </summary>
+    public string Key { get; set; }
 }
 
 /// <summary>
@@ -54,6 +60,8 @@ public sealed class PayRunInputImporter
     private readonly IPayProfileManager _profiles;
     private readonly IEmployerManager _employers;
     private readonly IStaffDirectory _staff;
+    private readonly IPayProfileService _profileService;
+    private readonly Dictionary<string, List<PayRunInput>> _inputsByRun = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PayRun> _runsByNumber = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, string>> _staffByEmployer = new(StringComparer.Ordinal);
     private readonly Dictionary<string, HashSet<string>> _changed = new(StringComparer.Ordinal);
@@ -74,6 +82,7 @@ public sealed class PayRunInputImporter
     /// <param name="employers">The employers.</param>
     /// <param name="staff">The staff directory.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="profileService">The pay profile service, for the rule that nobody enters their own pay.</param>
     public PayRunInputImporter(
         IPayRunManager runs,
         IPayRunInputManager inputs,
@@ -83,8 +92,10 @@ public sealed class PayRunInputImporter
         IPayProfileManager profiles,
         IEmployerManager employers,
         IStaffDirectory staff,
-        IStringLocalizer<PayRunInputImporter> stringLocalizer)
+        IStringLocalizer<PayRunInputImporter> stringLocalizer,
+        IPayProfileService profileService)
     {
+        _profileService = profileService;
         _runs = runs;
         _inputs = inputs;
         _service = service;
@@ -140,6 +151,12 @@ public sealed class PayRunInputImporter
             return S["No one with employee number {0} is paid by the employer of run {1}.", employeeNumber ?? string.Empty, number];
         }
 
+        // Nobody enters their own pay, unless the setting allows changing one's own pay.
+        if (!await _profileService.MayChangePayOfAsync(user, staffMemberId, cancellationToken))
+        {
+            return S["The user may not enter their own pay (employee number {0}).", employeeNumber];
+        }
+
         _codesByCode ??= (await _codes.GetAllAsync(cancellationToken)).ToDictionary(code => code.Code, StringComparer.OrdinalIgnoreCase);
 
         var payCode = row.PayCode?.Trim();
@@ -168,8 +185,13 @@ public sealed class PayRunInputImporter
             date = parsed;
         }
 
-        var input = await _inputs.NewAsync(cancellationToken: cancellationToken);
+        // A row saved again (the pipeline or the workflow ran twice) updates the input it made, never adds a second one.
+        var importKey = ImportKey(origin, row, number, employeeNumber, payCode);
+        var inputs = await RunInputsAsync(run.ItemId, cancellationToken);
+        var existing = inputs.FirstOrDefault(candidate => candidate.ImportKey == importKey && candidate.StaffMemberId == staffMemberId);
+        var input = existing ?? await _inputs.NewAsync(cancellationToken: cancellationToken);
 
+        input.ImportKey = importKey;
         input.RunId = run.ItemId;
         input.StaffMemberId = staffMemberId;
         input.PayCodeId = code.ItemId;
@@ -187,7 +209,15 @@ public sealed class PayRunInputImporter
             return string.Join(" ", validation.Errors.Select(error => error.ErrorMessage));
         }
 
-        await _inputs.CreateAsync(input, cancellationToken);
+        if (existing is null)
+        {
+            await _inputs.CreateAsync(input, cancellationToken);
+            inputs.Add(input);
+        }
+        else
+        {
+            await _inputs.UpdateAsync(input, cancellationToken: cancellationToken);
+        }
 
         if (!_changed.TryGetValue(run.ItemId, out var changed))
         {
@@ -217,6 +247,31 @@ public sealed class PayRunInputImporter
         }
 
         _changed.Clear();
+    }
+
+    // What identifies a row: its key where it comes from, or else its values.
+    private static string ImportKey(string origin, PayRunInputRow row, string run, string employeeNumber, string payCode)
+    {
+        var values = string.Join('|', run, employeeNumber, payCode, row.Hours?.Trim(), row.Amount?.Trim(), row.Rate?.Trim(), row.Date?.Trim(), row.Note?.Trim());
+        var key = row.Key?.Trim();
+
+        // A key that names the row (it has a part after the pipeline or the workflow) identifies it alone; a bare
+        // origin is completed by the row's values.
+        var identity = !string.IsNullOrEmpty(key) && key.Contains(':', StringComparison.Ordinal) ? "key:" + key : "values:" + key + "|" + values;
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes((origin ?? string.Empty) + "\n" + identity));
+
+        return Convert.ToHexString(hash, 0, 16);
+    }
+
+    private async Task<List<PayRunInput>> RunInputsAsync(string runId, CancellationToken cancellationToken)
+    {
+        if (!_inputsByRun.TryGetValue(runId, out var inputs))
+        {
+            inputs = [.. await _inputs.ListByRunAsync(runId, cancellationToken)];
+            _inputsByRun[runId] = inputs;
+        }
+
+        return inputs;
     }
 
     private async Task<PayRun> RunAsync(string number, ClaimsPrincipal user, CancellationToken cancellationToken)

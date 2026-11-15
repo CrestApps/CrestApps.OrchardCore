@@ -204,9 +204,7 @@ public sealed class PayInputsDataSet : RecordDataSet<PayInputRow>, IPayrollDataS
 
         if (!scope.All)
         {
-            staff = _services.GetService(typeof(IPayrollEmployeeDirectory)) is IPayrollEmployeeDirectory directory
-                ? await directory.GetStaffMemberIdsAsync([.. scope.EmployerIds], cancellationToken)
-                : [];
+            staff = await StaffInScopeAsync(scope, cancellationToken);
 
             if (staff.Count == 0)
             {
@@ -239,6 +237,34 @@ public sealed class PayInputsDataSet : RecordDataSet<PayInputRow>, IPayrollDataS
                 input.PayCodeId is null ? null : codes.GetValueOrDefault(input.PayCodeId),
                 input.PayScheduleId is null ? null : allSchedules.GetValueOrDefault(input.PayScheduleId));
         }
+    }
+
+    /// <summary>
+    /// Gets the people a reader of some employers reads the inputs of: those paid by those employers and by no other.
+    /// An input doesn't say which employer it is for, so a person paid by an employer outside the reader's is left out
+    /// rather than shown with the other employer's hours.
+    /// </summary>
+    /// <param name="scope">The reader's employers, not every one.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The staff members.</returns>
+    internal async Task<IReadOnlyCollection<string>> StaffInScopeAsync(PayrollScope scope, CancellationToken cancellationToken)
+    {
+        if (_services.GetService(typeof(IPayrollEmployeeDirectory)) is not IPayrollEmployeeDirectory directory || scope.IsEmpty)
+        {
+            return [];
+        }
+
+        var inScope = await directory.GetStaffMemberIdsAsync([.. scope.EmployerIds], cancellationToken);
+
+        if (inScope.Count == 0 || _services.GetService(typeof(IEmployerManager)) is not IEmployerManager employers)
+        {
+            return [];
+        }
+
+        var outside = (await employers.GetAllAsync(cancellationToken)).Select(employer => employer.ItemId).Where(id => !scope.Allows(id)).ToArray();
+        var elsewhere = outside.Length == 0 ? new HashSet<string>(StringComparer.Ordinal) : await directory.GetStaffMemberIdsAsync(outside, cancellationToken);
+
+        return [.. inScope.Where(id => !elsewhere.Contains(id))];
     }
 
     private static bool IncludesExported(IDictionary<string, object> parameters)

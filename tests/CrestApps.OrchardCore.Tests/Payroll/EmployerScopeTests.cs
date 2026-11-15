@@ -210,6 +210,36 @@ public sealed class EmployerScopeTests
             PayrollIndexSchema.CreateAsync,
             PayrollIndexSchema.Providers());
 
+    [Fact]
+    public async Task PayInputs_LeaveOutAPersonAlsoPaidByAnotherEmployer_AndOnlyTheirRecordsAreMarkedExported()
+    {
+        await using var harness = await CreateHarnessAsync(services =>
+        {
+            services.AddScoped<IPayInputService>(_ => new FixedInputs());
+            services.AddScoped<IPayrollEmployeeDirectory>(_ => new TwoEmployerDirectory());
+        });
+        var (contoso, fabrikam) = await AddEmployersAsync(harness);
+
+        // Ana is paid by Contoso; Ben by Contoso and Fabrikam. An input doesn't say which employer it is for.
+        TwoEmployerDirectory.Contoso = contoso.ItemId;
+        TwoEmployerDirectory.Fabrikam = fabrikam.ItemId;
+
+        var clerk = CalendarTestHarness.User("clerk", PayrollPermissionTemplates.For(PayrollPermissions.ExportPayrollData, contoso.ItemId).Name);
+        var admin = CalendarTestHarness.User("admin", PayrollPermissions.ExportPayrollData.Name);
+
+        Assert.Equal(["ana"], await ReadAsync(harness, clerk));
+        Assert.Equal(["ana", "ben"], await ReadAsync(harness, admin));
+
+        // A pipeline fed Ben's record too marks only what the data set gives its publisher.
+        PayInputReference[] sources = [new("Timesheet", "ana"), new("Timesheet", "ben")];
+        var (clerkMarks, adminMarks) = await harness.RunAsync(async services => (
+            (await CrestApps.OrchardCore.Payroll.DataPipelines.MarkPayInputsExportedStep.AllowedAsync(services, clerk, sources, TestContext.Current.CancellationToken)).ToArray(),
+            (await CrestApps.OrchardCore.Payroll.DataPipelines.MarkPayInputsExportedStep.AllowedAsync(services, admin, sources, TestContext.Current.CancellationToken)).ToArray()), commit: false);
+
+        Assert.Equal([new PayInputReference("Timesheet", "ana")], clerkMarks);
+        Assert.Equal(sources, adminMarks);
+    }
+
     private static async Task<(Employer Contoso, Employer Fabrikam)> AddEmployersAsync(CalendarTestHarness harness)
     {
         async Task<Employer> AddAsync(string name)
@@ -306,6 +336,30 @@ public sealed class EmployerScopeTests
 
         public Task ReleaseAsync(PayInputConsumption consumption, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+    }
+
+    private sealed class TwoEmployerDirectory : IPayrollEmployeeDirectory
+    {
+        public static string Contoso { get; set; }
+
+        public static string Fabrikam { get; set; }
+
+        public Task<IReadOnlySet<string>> GetStaffMemberIdsAsync(IReadOnlyCollection<string> employerIds, CancellationToken cancellationToken = default)
+        {
+            var staff = new HashSet<string>(StringComparer.Ordinal);
+
+            if (employerIds.Contains(Contoso))
+            {
+                staff.UnionWith(["ana", "ben"]);
+            }
+
+            if (employerIds.Contains(Fabrikam))
+            {
+                staff.Add("ben");
+            }
+
+            return Task.FromResult<IReadOnlySet<string>>(staff);
+        }
     }
 
     private sealed class FixedDirectory : IPayrollEmployeeDirectory

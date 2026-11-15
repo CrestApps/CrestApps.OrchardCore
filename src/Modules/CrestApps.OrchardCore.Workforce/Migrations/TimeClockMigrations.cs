@@ -27,7 +27,8 @@ internal sealed class TimeClockMigrations : DataMigration
     private static readonly Dictionary<string, string[]> _exportGrants = new(StringComparer.Ordinal)
     {
         ["ExportPayroll"] = [PayrollPermissions.ExportPayrollData.Name, WorkforcePermissions.LockTimesheets.Name],
-        ["ViewPayRates"] = [PayrollPermissions.ExportPayrollData.Name],
+        // Seeing pay rates is a staff record's pay card now, never the security-critical export of all payroll data.
+        ["ViewPayRates"] = [CrestApps.OrchardCore.Staff.StaffPermissions.ManageStaffPay.Name],
     };
 
     private readonly TimeClockStageSeeder _stageSeeder;

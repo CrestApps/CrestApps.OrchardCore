@@ -354,6 +354,56 @@ public sealed class PayrollReviewFixesTests
     }
 
     [Fact]
+    public async Task Process_RefusesARunWhosePersonHadAnotherStatementFinalizedAfterItWasCalculated()
+    {
+        var context = new DisbursementsTestContext();
+        var origin = await context.Checks.BusinessAccountAsync();
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => PayRunProcessingTests.AddPayments(services, context, deposits: false, checks: true));
+        var setup = await PayRunTests.SetUpAsync(harness, employerSetup: employer => employer.FundingBankAccountId = origin.ItemId);
+
+        await PayRunProcessingTests.ApproveAsync(harness, setup);
+
+        // An off-cycle pay of the same person was finalized after the run was calculated.
+        await harness.RunAsync(async services =>
+        {
+            var draft = Assert.Single(await services.GetRequiredService<IPayRunService>().ListStatementsAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId)));
+
+            await services.GetRequiredService<PayStatementStore>().CreateAsync(new PayStatement
+            {
+                ItemId = "offcycle1",
+                RunId = "another-run",
+                StaffMemberId = draft.StaffMemberId,
+                EmployerId = draft.EmployerId,
+                PayDate = draft.PayDate,
+                PeriodStart = draft.PeriodStart,
+                PeriodEnd = draft.PeriodEnd,
+                Status = PayStatementStatus.Paid,
+                CreatedUtc = draft.CreatedUtc.AddMinutes(1),
+                ProcessedUtc = draft.CreatedUtc.AddMinutes(1),
+            });
+        });
+
+        var clerk = CalendarTestHarness.User("clerk", PayrollPermissions.ProcessPayRuns.Name);
+        var result = await harness.RunAsync(async services => await services.GetRequiredService<IPayRunService>().ProcessAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), clerk));
+        var run = await harness.RunAsync(async services => await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), commit: false);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, error => error.Contains("Calculate the run again", StringComparison.Ordinal));
+        Assert.Equal(PayRunStatus.Approved, run.Status);
+        Assert.Empty(context.Checks.Store.Entries);
+    }
+
+    [Fact]
+    public void TimeClockUpgrade_GivesWhoSawPayRatesThePayCardPermission_NeverTheExportOfAllPayrollData()
+    {
+        var grants = (IReadOnlyDictionary<string, string[]>)typeof(CrestApps.OrchardCore.Workforce.Migrations.TimeClockMigrations)
+            .GetField("_exportGrants", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .GetValue(null);
+
+        Assert.Equal([CrestApps.OrchardCore.Staff.StaffPermissions.ManageStaffPay.Name], grants["ViewPayRates"]);
+    }
+
+    [Fact]
     public async Task GarnishmentsDataSet_ShowsTheCaseOnlyToWhoManagesTheEmployersOrders()
     {
         await using var harness = await PayRunTests.CreateHarnessAsync(services => services.AddGarnishmentsCore());

@@ -42,6 +42,9 @@ public sealed class SavePayInputsStep : DataPipelineStepType<SavePayInputsStep>,
     /// <summary>The field with a note.</summary>
     public const string NoteField = "Note";
 
+    /// <summary>The field with what identifies a row in its file, so saving it again updates its input.</summary>
+    public const string KeyField = "Key";
+
     /// <summary>The field the Rejected output adds with the reason.</summary>
     public const string ErrorField = "Error";
 
@@ -106,6 +109,7 @@ public sealed class SavePayInputsStep : DataPipelineStepType<SavePayInputsStep>,
         var importer = context.Services.GetRequiredService<PayRunInputImporter>();
         var rejected = context.GetOutput(RejectedPort);
         var origin = "Pipeline " + context.Run.PipelineName;
+        var keyOrigin = "Pipeline " + context.Run.PipelineId;
         var parameter = context.Run.Parameters?.TryGetValue(PayRunField, out var value) == true ? Convert.ToString(value, CultureInfo.InvariantCulture) : null;
         var saved = 0;
         var refused = 0;
@@ -130,6 +134,9 @@ public sealed class SavePayInputsStep : DataPipelineStepType<SavePayInputsStep>,
                     Rate = Text(row, RateField),
                     Date = Text(row, DateField),
                     Note = Text(row, NoteField),
+
+                    // Without a Key column a row is identified by its values, within this pipeline.
+                    Key = Text(row, KeyField) is { Length: > 0 } key ? keyOrigin + ":" + key : keyOrigin,
                 }, context.Run.User, origin, context.CancellationToken);
 
                 if (error is null)
