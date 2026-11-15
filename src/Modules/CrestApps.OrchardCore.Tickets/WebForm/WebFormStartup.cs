@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
+using CrestApps.OrchardCore.Tickets.Migrations;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tickets.WebForm;

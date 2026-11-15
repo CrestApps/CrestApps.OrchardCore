@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Tickets.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<TicketRatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-star" aria-hidden="true"></i>
+    @T["Ticket Rated"]
+</h4>
+<p>@T["Starts when a ticket is rated by its requester."]</p>

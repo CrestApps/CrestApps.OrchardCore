@@ -1,8 +1,9 @@
+using CrestApps.OrchardCore.Tickets.WebForm;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 
-namespace CrestApps.OrchardCore.Tickets.WebForm;
+namespace CrestApps.OrchardCore.Tickets.Migrations;
 
 /// <summary>
 /// Adds the Ticket Form part and the Ticket Form widget type.
