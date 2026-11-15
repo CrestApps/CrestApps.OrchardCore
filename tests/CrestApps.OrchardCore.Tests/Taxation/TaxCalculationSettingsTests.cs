@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.OrchardCore.Taxation.Core.Services;
 using CrestApps.OrchardCore.Taxation.Migrations;
 using CrestApps.OrchardCore.Taxation.Models;
@@ -48,6 +49,24 @@ public sealed class TaxCalculationSettingsTests
         // Assert
         Assert.Equal(TaxRoundingLevel.Line, site.As<TaxCalculationSettings>().RoundingLevel);
         siteService.Verify(service => service.UpdateSiteSettingsAsync(site), Times.Once);
+    }
+
+    [Fact]
+    public async Task TheUpgrade_KeepsTheLevelTheHostConfigured()
+    {
+        // Arrange
+        var site = new SiteSettings();
+        var siteService = SiteService(site);
+        var services = new ServiceCollection()
+            .AddSingleton(siteService.Object)
+            .Configure<TaxationOptions>(options => options.RoundingLevel = TaxRoundingLevel.Transaction)
+            .BuildServiceProvider();
+
+        // Act
+        await TaxCalculationSettingsMigrations.KeepLineRoundingAsync(services);
+
+        // Assert
+        Assert.Equal(TaxRoundingLevel.Transaction, site.As<TaxCalculationSettings>().RoundingLevel);
     }
 
     [Fact]

@@ -1,6 +1,8 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.OrchardCore.Taxation.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
@@ -53,9 +55,13 @@ internal sealed class TaxCalculationSettingsMigrations : DataMigration
             return;
         }
 
+        // The site rounded at the TaxationOptions level before this setting existed (Line unless the host configured
+        // another), so that level is the one it keeps.
+        var level = services.GetService<IOptions<TaxationOptions>>()?.Value?.RoundingLevel ?? TaxRoundingLevel.Line;
+
         site.Put(new TaxCalculationSettings
         {
-            RoundingLevel = TaxRoundingLevel.Line,
+            RoundingLevel = level,
         });
 
         await siteService.UpdateSiteSettingsAsync(site);
