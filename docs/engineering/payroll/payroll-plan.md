@@ -908,6 +908,86 @@ Tests (written before the fix):
 
 Results: Workforce 222, Payroll 163, Validation 122 and Architecture 319 pass; the Release `-warnaserror` build has 0 warnings.
 
+### Review fixes for Payroll (2026-11-15)
+
+The planning session's detailed review of P2 to C8 listed 14 must-fix and 31 should-fix findings, each checked against HEAD. All 45 are fixed, test-first, in commits 9248890cd to 1997de3ad, plus 60e0192b4 for what the fresh-site pass found, (the P1 move). P2 was already committed, so nothing was folded into it: commits are never rewritten. Where a fix differs from what the review proposed, the reason is given.
+
+**Concurrency and observers** (9248890cd, 52a9457db, 69d746530)
+- M1, M12: Calculate, Cancel, Process, Void, Reissue and an employee review take the run's lock (`Payroll:PayRun:{id}`), read the run and its statements again inside it, check the status again, and commit inside the lock (`IPayrollCommitter`, as Disbursements does). `PayRunStore` and `PayStatementStore` check concurrency. A check carries an idempotency key (`payroll:{statement}:{index}:{attempt}`); `CheckService.IssueAsync` returns the check already issued for the same source and key. `PayAndSaveAsync` refuses a statement that is not final or is a reversal, and skips a payment that has a reference. Test: two processes of a stale copy pay once, two voids reverse once, a calculate after a process is refused.
+- M5: a statement records `IssuedObserved`. After any process (Pay what is left included), the observers run for every final or paid statement that has not had them, then the flag is set on a fresh read. The garnishment observer was already idempotent per statement, and the pay statement notice now skips a statement it already told. Test: the first process has no funding account, its observers are lost, and Pay what is left pays net pay and sends the garnishment.
+- M4, S18: a deposit the bank returned, that failed or that was cancelled counts as stopped, so it can be reissued (test with R03). Reissue can choose a check, and a deposit to an account no longer verified is paid by check when Paychecks is on.
+- S21: a review updates only the review, under the run's lock, on a fresh read.
+
+**Accounts and garnishments** (69d746530)
+- M2: every deposit row of a net pay split must go to an account owned by the profile's staff member or their user (`PayAccountOwnership`). `PayProfileAccountHandler` refuses others on every save (editor, My Pay, recipe). `BankAccountPayBlockers` and `DirectDepositPaymentMethod` check again at calculation and at payment. A garnishment payee's account can't be a staff member's or a user's.
+- M3: a payment to a garnishment payee has its own source kind, `PayrollGarnishment` (id `{order}:{statement}`, scoped by employer like a statement). Its voucher (`GarnishmentCheckVoucherSource`) shows the case number, the court or agency, the pay date, the period and the amount. **Differs from the review**: it also names the person withheld from, because a disbursement unit can't apply a payment without it (the memo already carried it). Earnings, taxes, year-to-date amounts and other orders are never printed.
+- S11: issuing takes the order's lock (`Payroll:Garnishment:{order}`), reads the order again and caps the remittance at what is still owed; an excess is flagged on the remittance to refund to the employee.
+- S12: a void gives the withholding back only after the payment is stopped, or when nothing went out. Otherwise the withholding stays on the order and the remittance is flagged.
+- S13: **Send again** on the order page (`ManageGarnishments` per employer, never one's own order) retries a failed remittance with a new key (`:{attempt}`).
+- S14: a federal tax levy needs its exempt amount.
+- S15: new answers **Supports another spouse or child** and **Arrears over 12 weeks old**. The support limit is 60, or 50 with another spouse or child, plus 5 for old arrears. A percent or limit above it is refused; a lower one is kept. A new support order with neither box checked now defaults to 60 instead of the old flat 50; stored orders keep their limit.
+- S16: the Garnishments data set shows the case number and court only with `ManageGarnishments` for the row's employer.
+
+**Engine and taxes** (056d62e44)
+- M6: hours priced at the rate on file now record the day of each input (`PayStatementLine.RatedHours`). Retro pay compares each day's hours with the rate on file now for that day. Hours that came with their own rate are left out. Salary is priced again day by day with the same proration (`EarningsPayCalculationStep.SalaryFor`). Tests: 20 to 22 on 12 October owes nothing, a later raise to 24 back to 1 October owes 240, and a mid-period salary change owes nothing. Lines calculated before this change carry no `RatedHours` and are not retro'd by hours; payroll has not run live, so there are none.
+- M7: a tax line records the wages withheld on at the flat supplemental rate (`FlatWages`, index column `FlatWagesMinor`, migration step 8). A later pay of the period counts only the other wages as prior. Step 4(c) applies only to wages the tables withhold on. Test with the review's numbers: 2,000 of regular pay after a 5,000 flat bonus withholds 156.15, and 166.15 with 10 of extra withholding.
+- S6: deductions taken before tax lower regular wages first; the rest lowers supplemental wages.
+- S7: contributions and reimbursements run before the taxes (order 400), so a taxable one is taxed. An employer match is never counted as a deduction. The match of deductions taken after tax runs at 900 (`AfterTaxMatchesPayCalculationStep`). One golden statement changed only its line order.
+- S9: Process is refused, before anything changes, when a person of the run had another statement finalized after the draft was calculated.
+- S10: a bonus earned over part of a period counts that period's share of hours (by day when the line kept them, otherwise by its share of days) and warns with the periods.
+
+**Pay inputs** (ff81c48fb)
+- M8: Save pay inputs and the Add Pay Input task refuse a row of the user's own pay unless the setting allows changing one's own pay.
+- S1: the time clock upgrade gives holders of the old `ViewPayRates` permission `ManageStaffPay`, nothing else. Staff has no view-only pay permission, so this is the closest match, as the review asked. `RolePermissionMigrations.GrantAsync` already logs each role and permission granted.
+- S2: an input says nothing about its employer, so the Pay inputs data set fails closed: a person also paid by an employer outside the reader's scope is left out. The review's exception ("unless the input carries an employer") can't apply yet.
+- S3: Mark exported marks only the records the Pay inputs data set gives the publisher; the rest are counted in a warning.
+- S4: saved export columns are retried at each start (`PayrollCsvColumnsRetry`) once Data Pipelines is on, quietly until then.
+- S5: the time clock source filters by schedule, period and people in the index query. A list of more than 500 people is filtered in memory to stay under database parameter limits.
+- S8: an input saved from a row records an import key: the pipeline (or workflow) and a **Key** column, or else the row's values. Saving the same row again updates its input. Identical rows in one file are therefore one input; the manual says so.
+
+**Tax ids, profiles and history** (1997de3ad)
+- M9: the same-tax-id warning names people only at employers whose profiles the user manages, and says "another pay profile" for the rest.
+- M10: the hash key is protected with Data Protection (`ProtectedTaxIdHashKey`), made once under a distributed lock in a session of its own. A key an earlier version kept in clear is protected in place with the same value, so stored hashes still match. Tests: the legacy key's hashes match after protection, and a new key is never stored as its raw bytes.
+- M11: the profile recipe step copies `Tipped` and `BackupWithholding`. A round-trip test sets every field of `EmployeePayProfile` to a value other than a new profile's (checked by reflection), exports, deletes, imports and compares field by field.
+- S26: a pay history statement with a tax line without `TaxableWages` is refused. An existing test imported exactly that, and now gives the wages.
+
+**Filings** (1997de3ad)
+- M13: the W-2 wage records data set reads one filing an employer and year: the filed one, or the draft (a first one, or an amendment with the `Draft` parameter). Tests for the data set and the file.
+- S17: backup withholding is its own liability group (`NonPayrollWithholding`, by its tax category, not by a US code) and is filed on the new **Form 945** (box 2, deposits, balance or overpayment). It is never on Form 941. Deposits take the new group.
+- S19: the EFW2 file is refused, naming the staff members, when a row has no full social security number.
+- S23: the filings deployment writes each filing's people only with **Include people's wage statements**, for `ViewTaxIds` of the employer; the editor refuses the box without `ViewTaxIds`.
+- S25: RA position 500 is `L`. The retirement plan indicator follows box 12 codes D to H and S. **Differs from the review**: other box 12 codes (W, DD, AA, BB, C and the rest) and boxes 8 and 11 are not written. Their RW positions would have to be checked against the current SSA specification, so a file with any of them is refused with the people and codes named (the review allowed this).
+
+**Reports, webhooks, approvals, My Pay** (1997de3ad)
+- M14: all six payroll reports have `ExportPermission = ExportPayrollData`, and an export reads only the employers in both the `ViewPayRuns` and `ExportPayrollData` scopes. The run and statement data sets need `ViewPayrollReports` (implied by `ExportPayrollData`, per employer), not `ViewPayRuns`, so the sample clerk and approver roles can't take them away in a pipeline.
+- S20: the run webhooks carry ids, dates, status and the number of statements, never amounts. The run events' workflow input has no amounts. Calculate and Process write Gross, Net and CashNeeded only with **Write the run's amounts to the output**, and only when the workflow's user may view the employer's payroll reports (never for a timer).
+- S22: a run's approval request leaves out, as subjects who can't decide, who calculated it, who entered its inputs (`PayRunInput.EnteredById`) and who added or changed a pay item it pays since its period started (`EmployeePayItem.ChangedById`), even when a timer calculated it.
+- S24: authorization tests for `PayItemsController` (another employer's clerk and the person themself are refused), Mark exported, the wage records and tax liabilities data sets, and the EFW2 file.
+- S27: My Pay's **Your coming pay** and **Your pay details** render through `<admin-list>` with row display drivers.
+- S28: a subscription runs as its owner (`ReportContext.User`, new and optional in Reports) and is not sent once the owner may no longer view the report. `PayrollReportReader.GetReportScopeAsync` reads nothing without a user, never every employer.
+- S29: added to the For Mike list.
+
+**Found by the fresh-site pass, fixed in 60e0192b4**
+- A second click whose own session had read the run (or statement) before the lock still saw that copy after the lock, so it failed on the concurrency check with a 500 instead of a refusal. Nothing was paid twice, thanks to the concurrency check. Now process, void, reissue, calculate and cancel also check the status as stored, read by a session of their own. Test: `ASecondClick_WhoseSessionReadTheRunBeforeTheFirstPaidIt_IsRefusedWithoutAnError`.
+- A pay profile recipe with an election written by hand left its entry time at the minimum date, and the profile editor failed converting it to local time. The recipe step now stamps the time (and "Recipe"), and the editor shows no time when there is none. The existing import test checks it.
+
+**Final validation, rerun on the finished code (2026-11-15)**
+- Full test project (Release): **16,223 tests, 0 failed, 1 skipped** (the Asterisk browser-audio end-to-end test, which needs real telephony). The Architecture and Validation guards run in it and pass.
+- `dotnet build CrestApps.OrchardCore.slnx -c Release -warnaserror`: 0 warnings, 0 errors.
+- Vitest: 92 files, 1,483 tests pass; ESLint clean.
+- `npm run check:manuals`: 169 User Manual and 191 Technical Manual pages pass. `docusaurus build` (with `SKIP_HTML_MINIFICATION`) succeeds.
+- Docs updated: the Payroll module page (data sets and reports permissions, webhooks, workflow amounts, garnishment payments, Form 945, the EFW2 refusals, the filings deployment) and the user manuals for garnishments, pay runs, filings and employees.
+
+**Browser pass on a fresh site** (`App_Data_PayrollE2E3`, https://localhost:5781, admin / Password1!, Blank recipe, then Payroll, Tax Tables, United States, Direct Deposit, Paychecks, My Pay, Garnishments, Approvals, Bank File (ACH) and Notifications; the United States 2026 recipe; employers, accounts, staff and profiles from a seed recipe). Lee Park at Contoso, 20.00 an hour, 500.00 by deposit and the rest by check; a support order CS-1001 of 100.00 paid by check.
+- **Support limit**: a 70% limit was refused with the 60% message; an empty limit saved.
+- **Separation of duties**: the clerk calculated and submitted; admin, who had typed the run's input, was told "The request is about you, so you can't decide it"; a separate approver approved.
+- **Process twice**: two simultaneous **Process and pay** posts. Before 60e0192b4, one paid and the other got a 500 (no double payment). After it, both returned normally and run 2 was paid once: one paycheck (1004), one garnishment check (1005), one deposit, 100.00 withheld on the order.
+- **Garnishment check**: printed. The paycheck's voucher has the statement; the garnishment check's voucher shows only the case number, the court, the person, the pay date, the period and the amount.
+- **Returned deposit**: the batch was released (the ACH entry for Lee), an R03 return file uploaded, and the deposit showed Returned. **Reissue** made a new deposit; reissuing that one **by check** cancelled it and issued check 1003 for 500.00.
+- **Void twice**: two simultaneous voids made one reversal; the statement shows Voided by statement 2; the three checks were voided once; the garnishment check was stopped and its 100.00 given back to the order.
+- **My Pay** as `lee`: **Your pay details** and the statements render through the admin list, net 1,269.45 with no account number. A form edited to route net pay to the clerk's account was refused: "Net pay goes only to the person's own bank accounts". Pay runs and employees pages are refused (403).
+- **Clerk of one employer**: the runs list and the create page offer only Contoso; **Process** is refused (403).
+
 ### For Mike
 
 What only you can settle before the first live pay:
@@ -923,7 +1003,13 @@ What only you can settle before the first live pay:
    - IRS e-filing (FIRE or IRIS) of Forms 1099-NEC is not built;
    - a conversation with the Payroll AI Tools needs an AI provider connection;
    - the Point of Sale shift **Tips** card and an order commission were checked only by unit tests, since Point of Sale is off on the test sites.
-8. **Follow-ups seen, not in this plan**:
+8. **Numbers and rules to confirm** (from the review of P2 to C8):
+   - the Form 1099-NEC threshold of 2,000 for payments from 2026 (600 before), from the One Big Beautiful Bill Act, and its indexing from 2027;
+   - the 4,300 allowance (`AllowanceAmount`) used for Forms W-4 from 2019 or earlier;
+   - the rounding of the Step 2 tables' brackets in the 2026 recipe, such as 108,938 and 136,163;
+   - FUTA credit-reduction states are not modelled: an employer in one owes more Form 940 tax than Payroll shows;
+   - the garnishment limits: support 50, 55, 60 or 65% (federal), 25% and 217.50 a week for creditors, 15% for student loans. States can set lower limits or a higher protected amount, which are entered on the order.
+9. **Follow-ups seen, not in this plan**:
    - Disbursements says only "Choose how the money is sent" when a deposit is made with no ACH provider feature on; a clearer setup hint would help.
    - The Staff module's pages also call the team manager without checking that Teams is on; worth the same guard.
    - A batch's arrival date comes from the Disbursements toolbar's **Arrives** field, which defaults to today; the pay date may be the better default for payroll deposits.
