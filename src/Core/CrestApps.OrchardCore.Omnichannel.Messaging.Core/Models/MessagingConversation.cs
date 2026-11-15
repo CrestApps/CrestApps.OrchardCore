@@ -96,6 +96,12 @@ public sealed class MessagingConversation : CatalogItem, IModifiedUtcAwareModel
     public string AISessionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the campaign whose automated conversation the thread grew out of, set when a campaign activity is
+    /// handed off to a person, so the workspace can list a campaign's conversations.
+    /// </summary>
+    public string CampaignId { get; set; }
+
+    /// <summary>
     /// Gets or sets a short AI-written summary of the automated conversation, captured at handoff so the agent
     /// taking over sees why the customer was transferred and what the AI learned without reading the whole thread.
     /// A single summary is kept: if the same customer is re-engaged and handed off again later, the newer summary

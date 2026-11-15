@@ -44,6 +44,7 @@ public sealed class MessagingConversationIndexProvider : IndexProvider<Messaging
                 UnreadCount = conversation.UnreadCount,
                 AssignedUtc = conversation.AssignedUtc,
                 FirstResponseDueUtc = conversation.FirstResponseDueUtc,
+                CampaignId = conversation.CampaignId,
             });
     }
 }

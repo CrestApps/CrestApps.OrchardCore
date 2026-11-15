@@ -317,7 +317,7 @@ public sealed class SqlProductSearchService : IProductSearchService
     // Databases disagree on the CLR type an aggregate comes back as (SQLite returns a double or a long for
     // MIN over a decimal column), so the bounds are read loosely and converted here.
     private static decimal? ToDecimal(object value)
-        => value is null or DBNull ? null : Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+        => value is null or DBNull ? null : DecimalConversion.FromObject(value);
 
     private sealed class RangeRow
     {

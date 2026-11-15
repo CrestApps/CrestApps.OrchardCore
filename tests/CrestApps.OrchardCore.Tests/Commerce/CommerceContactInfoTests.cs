@@ -159,7 +159,7 @@ public sealed class CommerceContactInfoTests
         var json = JsonSerializer.Serialize(contact);
         var read = JsonSerializer.Deserialize<ContactInfo>(json);
 
-        Assert.Equal("+17024993350", JsonDocument.Parse(json).RootElement.GetProperty("Phone").GetString());
+        Assert.Equal("+17024993350", JsonElement.Parse(json).GetProperty("Phone").GetString());
         Assert.Equal(contact, read);
     }
 }

@@ -125,27 +125,6 @@ public class AIAlertRuleViewModel
 }
 
 /// <summary>
-/// The editor of the AI cost settings.
-/// </summary>
-public class AICostSettingsViewModel
-{
-    /// <summary>
-    /// Gets or sets the currency.
-    /// </summary>
-    public string Currency { get; set; }
-
-    /// <summary>
-    /// Gets or sets the carrier's price of a call minute.
-    /// </summary>
-    public decimal TelephonyPerMinute { get; set; }
-
-    /// <summary>
-    /// Gets or sets the carrier's price of a text message.
-    /// </summary>
-    public decimal SmsPerMessage { get; set; }
-}
-
-/// <summary>
 /// The editor of the contact memory instructions.
 /// </summary>
 public class AIContactMemorySettingsViewModel

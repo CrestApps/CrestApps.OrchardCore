@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
@@ -32,6 +33,7 @@ public sealed class RegistersAdminController : Controller
 
     private readonly IRegisterStore _registers;
     private readonly IRegisterShiftStore _shifts;
+    private readonly IPosDepartmentStore _departments;
     private readonly PosShiftService _shiftService;
     private readonly IInventoryLocationService _locations;
     private readonly IRoleService _roleService;
@@ -45,6 +47,7 @@ public sealed class RegistersAdminController : Controller
     public RegistersAdminController(
         IRegisterStore registers,
         IRegisterShiftStore shifts,
+        IPosDepartmentStore departments,
         PosShiftService shiftService,
         IInventoryLocationService locations,
         IRoleService roleService,
@@ -56,6 +59,7 @@ public sealed class RegistersAdminController : Controller
     {
         _registers = registers;
         _shifts = shifts;
+        _departments = departments;
         _shiftService = shiftService;
         _locations = locations;
         _roleService = roleService;
@@ -118,7 +122,7 @@ public sealed class RegistersAdminController : Controller
 
         Apply(model, register);
         await _registers.CreateAsync(register);
-        await _notifier.SuccessAsync(H["The register was added. Staff who may sell at registers can open a shift at it from the till app."]);
+        await _notifier.SuccessAsync(H["The register was added. Staff who may sell at registers can open a shift at it from the web register or a till app."]);
 
         return RedirectToAction(nameof(Index));
     }
@@ -142,6 +146,12 @@ public sealed class RegistersAdminController : Controller
             Currency = register.Currency,
             IsEnabled = register.IsEnabled,
             Roles = [.. register.Roles ?? []],
+            Keys = [.. (register.Keys ?? []).Select(key => new RegisterKeyViewModel
+            {
+                DepartmentId = key.DepartmentId,
+                Label = key.Label,
+                PresetAmount = key.PresetAmount?.ToString(CultureInfo.InvariantCulture),
+            })],
             AddressLine1 = register.Address?.AddressLine1,
             AddressLine2 = register.Address?.AddressLine2,
             City = register.Address?.City,
@@ -285,7 +295,36 @@ public sealed class RegistersAdminController : Controller
         {
             ModelState.AddModelError(nameof(model.Currency), S["Enter a three-letter currency code, such as USD, or leave it blank."]);
         }
+
+        var departments = (await _departments.GetAllAsync(HttpContext.RequestAborted)).ToDictionary(department => department.ItemId, StringComparer.Ordinal);
+
+        foreach (var key in model.Keys ?? [])
+        {
+            if (string.IsNullOrEmpty(key?.DepartmentId))
+            {
+                continue;
+            }
+
+            if (!departments.TryGetValue(key.DepartmentId, out var department))
+            {
+                ModelState.AddModelError(nameof(model.Keys), S["A key names a department that no longer exists. Choose another or remove the key."]);
+
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(key.PresetAmount) &&
+                (ParseAmount(key.PresetAmount) is not { } preset || PosDepartments.CheckAmount(department, preset, null, S) is not null))
+            {
+                ModelState.AddModelError(nameof(model.Keys), S["The preset amount of the {0} key isn't one {0} can ring up.", department.Name]);
+            }
+        }
     }
+
+    // Amounts are typed in the invariant culture, as the number field sends them, so "2,50" is never read as 250.
+    private static decimal? ParseAmount(string value)
+        => decimal.TryParse(value?.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var amount) && amount > 0m
+            ? Math.Round(amount, 2, MidpointRounding.AwayFromZero)
+            : null;
 
     private void Apply(RegisterEditViewModel model, Register register)
     {
@@ -294,6 +333,14 @@ public sealed class RegistersAdminController : Controller
         register.Currency = string.IsNullOrWhiteSpace(model.Currency) ? null : model.Currency.Trim().ToUpperInvariant();
         register.IsEnabled = model.IsEnabled;
         register.Roles = [.. (model.Roles ?? []).Where(role => !string.IsNullOrWhiteSpace(role)).Distinct(StringComparer.OrdinalIgnoreCase)];
+        register.Keys = [.. (model.Keys ?? [])
+            .Where(key => !string.IsNullOrEmpty(key?.DepartmentId))
+            .Select(key => new RegisterKey
+            {
+                DepartmentId = key.DepartmentId,
+                Label = string.IsNullOrWhiteSpace(key.Label) ? null : key.Label.Trim(),
+                PresetAmount = ParseAmount(key.PresetAmount),
+            })];
         register.Address = new Address
         {
             Name = model.Name.Trim(),
@@ -311,6 +358,7 @@ public sealed class RegistersAdminController : Controller
     {
         model.ItemId = itemId;
         model.Locations = [.. (await _locations.GetLocationsAsync()).Select(location => new SelectListItem(location.Name, location.LocationId, location.LocationId == model.LocationId))];
+        model.Departments = await _departments.ListOrderedAsync(HttpContext.RequestAborted);
         model.AvailableRoles = [.. (await _roleService.GetRoleNamesAsync()).Where(role => !string.Equals(role, "Anonymous", StringComparison.OrdinalIgnoreCase) && !string.Equals(role, "Authenticated", StringComparison.OrdinalIgnoreCase))];
 
         return model;

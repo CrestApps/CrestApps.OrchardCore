@@ -96,4 +96,9 @@ public sealed class MessagingConversationIndex : CatalogItemIndex
     /// reading every open conversation and filtering them in memory.
     /// </summary>
     public DateTime? FirstResponseDueUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign the thread was handed off from, so the inbox can be narrowed to one campaign.
+    /// </summary>
+    public string CampaignId { get; set; }
 }

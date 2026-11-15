@@ -136,7 +136,7 @@ public sealed class AzureAIProductSearchService : IProductIndexSearchService
         {
             if (result.Document.TryGetValue(field, out var value) && value is not null)
             {
-                return Convert.ToDecimal(value, System.Globalization.CultureInfo.InvariantCulture);
+                return DecimalConversion.FromObject(value);
             }
         }
 
