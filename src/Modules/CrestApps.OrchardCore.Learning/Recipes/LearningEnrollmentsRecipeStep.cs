@@ -119,7 +119,10 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
             }
             else
             {
-                await _enrollmentStore.SaveAsync(incoming);
+                // The session tracks the instance it loaded; saving the deserialized copy would store a second document.
+                CopyOnto(incoming, existing);
+                await _enrollmentStore.SaveAsync(existing);
+                incoming = existing;
             }
 
             if (row["Progress"] is JsonObject progressNode)
@@ -138,8 +141,20 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
                 }
                 else
                 {
-                    await _progressStore.SaveAsync(progress);
+                    CopyOnto(progress, current);
+                    await _progressStore.SaveAsync(current);
                 }
+            }
+        }
+    }
+
+    private static void CopyOnto<T>(T source, T target)
+    {
+        foreach (var property in typeof(T).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+        {
+            if (property.CanRead && property.CanWrite && property.GetIndexParameters().Length == 0)
+            {
+                property.SetValue(target, property.GetValue(source));
             }
         }
     }
