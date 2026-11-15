@@ -70,11 +70,16 @@ internal sealed class TimeClockMigrations : DataMigration
     // Pay periods and pay codes moved to Pay Setup with their ids; whoever managed them there keeps managing them.
     public async Task<int> UpdateFrom2Async()
     {
-        var (schedules, codes) = await TimeClockPaySetupMove.MoveAsync(SchemaBuilder, _store, _session);
+        var moved = await TimeClockPaySetupMove.MoveAsync(SchemaBuilder, _store, _session, logger: _logger);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Moved {Schedules} pay periods and {Codes} pay codes to Pay Setup.", schedules, codes);
+            _logger.LogInformation(
+                "Moved {Schedules} pay periods and {Codes} pay codes to Pay Setup ({Renamed} under a suffixed code); {Left} old documents couldn't be read and were left in place.",
+                moved.Schedules,
+                moved.Codes,
+                moved.Renamed,
+                moved.LeftInPlace);
         }
 
         if (!_shellSettings.IsInitializing())

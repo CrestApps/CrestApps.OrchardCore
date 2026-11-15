@@ -135,8 +135,8 @@ public sealed class TimeClockPaySetupTests
         var afterSecond = await ReadAsync(harness);
         var (legacyDocuments, legacyTables) = await ReadLegacyStateAsync(harness.Store);
 
-        Assert.Equal((1, 3), first);
-        Assert.Equal((0, 0), second);
+        Assert.Equal((1, 3, 0, 0), (first.Schedules, first.Codes, first.LeftInPlace, first.Renamed));
+        Assert.Equal((0, 0, 0, 0), (second.Schedules, second.Codes, second.LeftInPlace, second.Renamed));
         Assert.Equal(0, legacyDocuments);
         Assert.Equal(0, legacyTables);
 
@@ -187,8 +187,111 @@ public sealed class TimeClockPaySetupTests
         var moved = await MoveAsync(harness.Store, dropLegacyTables: true);
         var after = await ReadAsync(harness);
 
-        Assert.Equal((0, 0), moved);
+        Assert.Equal((0, 0), (moved.Schedules, moved.Codes));
         Assert.Equal("Kept", Assert.Single(after.Schedules).Name);
+    }
+
+    [Fact]
+    public async Task Move_LeavesALegacyRecordItCouldNotRead_InPlace_AndReportsIt()
+    {
+        await using var harness = await WorkforceTests.CreateAsync(services => services.AddPaySetupCore(), schema: CreateLegacyIndexTablesAsync);
+        var good = new LegacyPayCode { ItemId = UniqueId.GenerateId(), Code = "TRAIN", Name = "Training", Kind = 0 };
+
+        await InsertLegacyDocumentsAsync(harness.Store, (TimeClockPaySetupMove.LegacyPayCodeTypeName, good));
+
+        // One without an id, one that isn't JSON at all, and a pay period without an id.
+        await InsertRawLegacyDocumentAsync(harness.Store, 200_001, TimeClockPaySetupMove.LegacyPayCodeTypeName, "{\"Code\":\"BAD\",\"Name\":\"No id\"}");
+        await InsertRawLegacyDocumentAsync(harness.Store, 200_002, TimeClockPaySetupMove.LegacyPayCodeTypeName, "not json");
+        await InsertRawLegacyDocumentAsync(harness.Store, 200_003, TimeClockPaySetupMove.LegacyPayPeriodTypeName, "{\"Name\":\"No id\"}");
+
+        var logger = new ListLogger();
+        var moved = await MoveAsync(harness.Store, dropLegacyTables: true, logger);
+        var after = await ReadAsync(harness);
+        var (legacyDocuments, _) = await ReadLegacyStateAsync(harness.Store);
+
+        // The good code moved and its old copy is gone; the three unreadable ones stay where they were.
+        Assert.Equal((0, 1, 3), (moved.Schedules, moved.Codes, moved.LeftInPlace));
+        Assert.Equal(good.ItemId, Assert.Single(after.Codes, code => code.Code == "TRAIN").ItemId);
+        Assert.Equal(3, legacyDocuments);
+        Assert.Equal(3, logger.Warnings.Count);
+        Assert.Contains(logger.Warnings, warning => warning.Contains("200001", StringComparison.Ordinal) && warning.Contains(TimeClockPaySetupMove.LegacyPayCodeTypeName, StringComparison.Ordinal));
+        Assert.Contains(logger.Warnings, warning => warning.Contains("200003", StringComparison.Ordinal) && warning.Contains(TimeClockPaySetupMove.LegacyPayPeriodTypeName, StringComparison.Ordinal));
+
+        // A warning names the document, never what it holds.
+        Assert.DoesNotContain(logger.Warnings, warning => warning.Contains("No id", StringComparison.Ordinal) || warning.Contains("not json", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Move_KeepsAPayrollCodeSomeoneChanged_AndMovesTheOldOneInUnderASuffixedCode()
+    {
+        await using var harness = await WorkforceTests.CreateAsync(services => services.AddPaySetupCore(), schema: CreateLegacyIndexTablesAsync);
+
+        await harness.RunAsync(services => services.GetRequiredService<PayCodeSeeder>().SeedAsync());
+
+        // Someone renamed the seeded REG before the move.
+        var edited = await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IPayCodeManager>();
+            var reg = (await manager.GetAllAsync()).Single(code => code.Code == "REG");
+
+            reg.Name = "Regular (union)";
+            await manager.UpdateAsync(reg);
+
+            return reg;
+        });
+
+        var regular = new LegacyPayCode { ItemId = UniqueId.GenerateId(), Code = "REG", Name = "Regular hours", Kind = 0, Multiplier = 1 };
+        var overtime = new LegacyPayCode { ItemId = UniqueId.GenerateId(), Code = "OT", Name = "Overtime", Kind = 1, Multiplier = 1.5m };
+
+        await InsertLegacyDocumentsAsync(harness.Store, (TimeClockPaySetupMove.LegacyPayCodeTypeName, regular), (TimeClockPaySetupMove.LegacyPayCodeTypeName, overtime));
+
+        var logger = new ListLogger();
+        var moved = await MoveAsync(harness.Store, dropLegacyTables: true, logger);
+        var codes = (await ReadAsync(harness)).Codes;
+
+        // The changed REG stays as it is; the old one moves in beside it with its own id and a suffixed code.
+        var kept = Assert.Single(codes, code => code.ItemId == edited.ItemId);
+
+        Assert.Equal(("REG", "Regular (union)"), (kept.Code, kept.Name));
+        Assert.Equal("REG-OLD", Assert.Single(codes, code => code.ItemId == regular.ItemId).Code);
+
+        // The seeded OT nobody touched gives way to the old one, as before.
+        Assert.Equal(overtime.ItemId, Assert.Single(codes, code => code.Code == "OT").ItemId);
+        Assert.Equal((2, 1), (moved.Codes, moved.Renamed));
+        Assert.Contains(logger.Warnings, warning => warning.Contains("REG-OLD", StringComparison.Ordinal) && warning.Contains(regular.ItemId, StringComparison.Ordinal));
+    }
+
+    private static async Task InsertRawLegacyDocumentAsync(IStore store, long id, string type, string content)
+    {
+        await using var connection = store.Configuration.ConnectionFactory.CreateConnection();
+        await connection.OpenAsync(TestContext.Current.CancellationToken);
+        await using var command = connection.CreateCommand();
+
+        command.CommandText = "INSERT INTO Workforce_Document (Id, Type, Content, Version) VALUES (@id, @type, @content, 0)";
+        AddParameter(command, "@id", id);
+        AddParameter(command, "@type", type);
+        AddParameter(command, "@content", content);
+        await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+    }
+
+    private sealed class ListLogger : Microsoft.Extensions.Logging.ILogger
+    {
+        public List<string> Warnings { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel)
+            => true;
+
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        {
+            if (logLevel == Microsoft.Extensions.Logging.LogLevel.Warning)
+            {
+                Warnings.Add(formatter(state, exception));
+            }
+        }
     }
 
     private static Task<(IReadOnlyList<PaySchedule> Schedules, IReadOnlyList<PayCode> Codes)> ReadAsync(CalendarTestHarness harness)
@@ -230,12 +333,12 @@ public sealed class TimeClockPaySetupTests
         }
     }
 
-    private static async Task<(int Schedules, int Codes)> MoveAsync(IStore store, bool dropLegacyTables)
+    private static async Task<TimeClockPaySetupMove.MoveResult> MoveAsync(IStore store, bool dropLegacyTables, Microsoft.Extensions.Logging.ILogger logger = null)
     {
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction, throwOnError: true);
-        var moved = await TimeClockPaySetupMove.MoveAsync(schemaBuilder, store, session, dropLegacyTables);
+        var moved = await TimeClockPaySetupMove.MoveAsync(schemaBuilder, store, session, dropLegacyTables, logger);
 
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
 

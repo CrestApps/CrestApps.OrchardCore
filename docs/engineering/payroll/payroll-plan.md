@@ -894,6 +894,20 @@ Run on 2026-11-15 after C8, on the branch with every slice committed.
   - The shared list script ran a bulk action only for two or more checked rows even where `data-minimum-selection="1"` showed it for one, so batching a single deposit or printing a single check did nothing.
   - Regression tests: the Payroll manifest depends on Addresses; the journal data set never touches teams without the marker.
 
+### Review fixes to the P1 pay setup move (2026-11-15)
+
+The planning session's review of P1 asked for two fixes to `TimeClockPaySetupMove`. P2 was long committed and commits aren't rewritten, so they are a commit of their own.
+
+1. **Only moved documents are deleted.** The move used to delete every legacy pay period and pay code document, including one it skipped because it couldn't be read or had no id. Now it deletes, by document id, only the documents saved in the Payroll collection or whose record was already there with the same id. A document it can't read (not JSON, wrong shape or no id) stays in the Workforce collection and is logged as a warning with its document id and type, never its content. `MoveAsync` returns a `MoveResult` (schedules, codes, left in place, renamed), and the migration logs the counts.
+2. **Only an untouched seed code gives way.** A Payroll code with the same code is replaced only when it is still exactly a Pay Setup seed: the seed's code, name, kind, multiplier and class, with no `ModifiedUtc`. A code someone made or changed stays, and the legacy code moves in beside it with its own id as `{code}-OLD` (numbered if taken), with a warning.
+
+Tests (written before the fix):
+- `Move_LeavesALegacyRecordItCouldNotRead_InPlace_AndReportsIt`: a code without an id, a document that isn't JSON and a pay period without an id stay and are reported by id and type, without content; the readable code still moves.
+- `Move_KeepsAPayrollCodeSomeoneChanged_AndMovesTheOldOneInUnderASuffixedCode`: an edited REG is kept and the old REG becomes REG-OLD, while the untouched seeded OT still gives way.
+- The existing move tests read the new result.
+
+Results: Workforce 222, Payroll 163, Validation 122 and Architecture 319 pass; the Release `-warnaserror` build has 0 warnings.
+
 ### For Mike
 
 What only you can settle before the first live pay:
