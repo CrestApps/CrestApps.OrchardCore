@@ -91,6 +91,7 @@ An account's page has a **Tickets** tab: its latest tickets you may see, how man
 Turn on **Tickets Portal** under **Configuration > Features**. Then:
 
 1. Under **Content Definition**, edit the ticket type's **Ticket** part and tick **Customers can submit it**. Add a **Description for customers** so they can tell types apart.
+   Customers see the subject and only the fields you mark **Customers fill this in** (in each field's settings); every other field stays your agents' own.
 2. Make sure a desk **Serves** customers (**Tickets > Desks**). Customers can only open requests on those desks. With Staff on, members of staff also see the desks that serve people inside the organization, so employees can ask IT or HR from the same page.
 
 Signed-in people now find **Requests** under **My account**: their requests, **New request**, and each request's conversation with a reply box. They see your public replies, never your internal notes. Someone without a login follows **View your request** in their e-mails to read and answer their request. An account's administrators also see the account's requests.

@@ -65,6 +65,52 @@ public sealed class TicketPortalControllerTests
     }
 
     [Fact]
+    public async Task ACustomer_SetsOnlyTheFieldsCustomersFillIn()
+    {
+        // Arrange
+        var kit = new Kit("u-ben", TicketDeskAudience.Customers);
+        ContentItem created = null;
+        kit.Tickets.Setup(service => service.CreateAsync(It.IsAny<TicketCreateRequest>(), It.IsAny<CancellationToken>()))
+            .Callback((TicketCreateRequest request, CancellationToken _) => created = request.Ticket)
+            .ReturnsAsync(new TicketResult { Ticket = kit.Ticket });
+
+        // Act
+        await kit.Controller.CreatePost(new TicketPortalCreateViewModel { ContentType = "Request", DeskId = "desk", Body = "It won't charge." }, files: null);
+
+        // Assert
+        var content = (System.Text.Json.Nodes.JsonObject)created.Content;
+        Assert.Equal("Laptop won't charge", content["TitlePart"]?["Title"]?.GetValue<string>());
+        Assert.Equal("X1", content["Request"]?["Model"]?["Text"]?.GetValue<string>());
+        Assert.Null(content["Request"]?["RootCause"]);
+    }
+
+    [Fact]
+    public void TheCustomersEditor_ShowsTheSubjectAndTheFieldsCustomersFillIn()
+    {
+        var type = new ContentTypeDefinition("Request", "Request",
+        [
+            new ContentTypePartDefinition("Request", new ContentPartDefinition("Request",
+            [
+                new ContentPartFieldDefinition(new ContentFieldDefinition("TextField"), "Model", new System.Text.Json.Nodes.JsonObject
+                {
+                    [nameof(TicketFieldCustomerSettings)] = System.Text.Json.JsonSerializer.SerializeToNode(new TicketFieldCustomerSettings { CustomerEditable = true }),
+                }),
+                new ContentPartFieldDefinition(new ContentFieldDefinition("TextField"), "RootCause", []),
+            ], []), []),
+            new ContentTypePartDefinition("TagsPart", new ContentPartDefinition("TagsPart", [], []), []),
+        ], []);
+
+        var (shown, all) = TicketCustomerEditor.Shapes(type);
+
+        Assert.Contains("Request-Model", shown);
+        Assert.Contains("TitlePart", shown);
+        Assert.DoesNotContain("Request-RootCause", shown);
+        Assert.Contains("Request-RootCause", all);
+        Assert.Contains("TagsPart", all);
+        Assert.DoesNotContain("TagsPart", shown);
+    }
+
+    [Fact]
     public async Task ARefusedReply_ComesBackOnThePage_WithItsText()
     {
         // Arrange
@@ -186,17 +232,42 @@ public sealed class TicketPortalControllerTests
                 .BuildServiceProvider();
             Access = new TicketPortalAccess(Mock.Of<global::YesSql.ISession>(), [members.Object], new SignedTokenService(new EphemeralDataProtectionProvider(), clock.Object), desks.Object, services);
 
-            var requestType = new ContentTypeDefinition("Request", "Request", [new ContentTypePartDefinition(TicketsConstants.PartName, new ContentPartDefinition(TicketsConstants.PartName, [], []), new System.Text.Json.Nodes.JsonObject
-            {
-                [nameof(TicketPartSettings)] = System.Text.Json.JsonSerializer.SerializeToNode(new TicketPartSettings { CustomerSubmittable = true }),
-            })], []);
+            // The type's own part has a field customers fill in (Model) and one only agents set (RootCause).
+            var requestPart = new ContentPartDefinition("Request",
+            [
+                new ContentPartFieldDefinition(new ContentFieldDefinition("TextField"), "Model", new System.Text.Json.Nodes.JsonObject
+                {
+                    [nameof(TicketFieldCustomerSettings)] = System.Text.Json.JsonSerializer.SerializeToNode(new TicketFieldCustomerSettings { CustomerEditable = true }),
+                }),
+                new ContentPartFieldDefinition(new ContentFieldDefinition("TextField"), "RootCause", []),
+            ], []);
+            var requestType = new ContentTypeDefinition("Request", "Request",
+            [
+                new ContentTypePartDefinition(TicketsConstants.PartName, new ContentPartDefinition(TicketsConstants.PartName, [], []), new System.Text.Json.Nodes.JsonObject
+                {
+                    [nameof(TicketPartSettings)] = System.Text.Json.JsonSerializer.SerializeToNode(new TicketPartSettings { CustomerSubmittable = true }),
+                }),
+                new ContentTypePartDefinition("Request", requestPart, []),
+                new ContentTypePartDefinition("TitlePart", new ContentPartDefinition("TitlePart", [], []), []),
+            ], []);
             var definitions = new Mock<IContentDefinitionManager>();
             definitions.Setup(value => value.ListTypeDefinitionsAsync()).ReturnsAsync([requestType]);
             definitions.Setup(value => value.GetTypeDefinitionAsync("Request")).ReturnsAsync(requestType);
             var contentManager = new Mock<IContentManager>();
             contentManager.Setup(value => value.NewAsync("Request")).ReturnsAsync(() => new ContentItem { ContentType = "Request" });
             var display = new Mock<IContentItemDisplayManager>();
+            // The customer's form as the drivers would read it, with a value posted for the internal field too.
             display.Setup(value => value.UpdateEditorAsync(It.IsAny<ContentItem>(), It.IsAny<IUpdateModel>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Callback((ContentItem item, IUpdateModel _, bool _, string _, string _) =>
+                {
+                    var content = (System.Text.Json.Nodes.JsonObject)item.Content;
+                    content["TitlePart"] = new System.Text.Json.Nodes.JsonObject { ["Title"] = "Laptop won't charge" };
+                    content["Request"] = new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["Model"] = new System.Text.Json.Nodes.JsonObject { ["Text"] = "X1" },
+                        ["RootCause"] = new System.Text.Json.Nodes.JsonObject { ["Text"] = "Customer error" },
+                    };
+                })
                 .ReturnsAsync(Mock.Of<IShape>());
             var localClock = new Mock<ILocalClock>();
             localClock.Setup(value => value.ConvertToLocalAsync(It.IsAny<DateTimeOffset>())).ReturnsAsync((DateTimeOffset value) => value);

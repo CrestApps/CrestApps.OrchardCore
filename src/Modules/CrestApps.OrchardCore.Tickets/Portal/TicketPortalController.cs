@@ -188,6 +188,8 @@ public sealed class TicketPortalController : Controller
 
         if (!string.IsNullOrEmpty(model.ContentType))
         {
+            // Only the subject and the fields customers fill in.
+            TicketCustomerEditor.Begin(HttpContext);
             model.Editor = await _contentItemDisplayManager.BuildEditorAsync(await _contentManager.NewAsync(model.ContentType), _updateModelAccessor.ModelUpdater, isNew: true);
         }
 
@@ -226,7 +228,11 @@ public sealed class TicketPortalController : Controller
         }
 
         var ticket = await _contentManager.NewAsync(model.ContentType);
+        TicketCustomerEditor.Begin(HttpContext);
         model.Editor = await _contentItemDisplayManager.UpdateEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        // Whatever was posted for a part or field customers don't fill in is dropped.
+        TicketCustomerEditor.KeepOnlyCustomerValues(ticket, await _contentManager.NewAsync(model.ContentType), await _contentDefinitionManager.GetTypeDefinitionAsync(model.ContentType));
 
         if (!ModelState.IsValid)
         {
