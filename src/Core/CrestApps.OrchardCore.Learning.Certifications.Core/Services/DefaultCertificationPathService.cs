@@ -213,6 +213,11 @@ public sealed class DefaultCertificationPathService : ICertificationPathService
             await _session.SaveChangesAsync(cancellationToken);
         }
 
+        if (result.IssuedRecordId is not null && result.Progress is not null)
+        {
+            await NotifyAsync(observer => observer.CertifiedAsync(result.Progress, path, cancellationToken), result.Progress);
+        }
+
         return result;
     }
 
@@ -256,6 +261,11 @@ public sealed class DefaultCertificationPathService : ICertificationPathService
             result.Progress = progress;
             await EvaluateCoreAsync(path, progress, today, result, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
+        }
+
+        if (result.IssuedRecordId is not null && result.Progress is not null)
+        {
+            await NotifyAsync(observer => observer.CertifiedAsync(result.Progress, path, cancellationToken), result.Progress);
         }
 
         return result;
@@ -368,6 +378,7 @@ public sealed class DefaultCertificationPathService : ICertificationPathService
                 foreach (var evidence in cycle.Evidence)
                 {
                     var rests = evidence.SourceId == enrollment.ItemId
+                        || evidence.SourceRefs.Contains(enrollment.ItemId)
                         || (evidence.Kind == CertificationsConstants.RequirementKinds.AssessmentPassed && attemptEnrollments is not null && await attemptEnrollments(evidence.SourceId) == enrollment.ItemId);
 
                     if (rests)

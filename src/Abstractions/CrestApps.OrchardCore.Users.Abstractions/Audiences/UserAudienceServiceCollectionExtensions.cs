@@ -9,6 +9,20 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class UserAudienceServiceCollectionExtensions
 {
     /// <summary>
+    /// Registers something that uses audiences, so an audience it uses cannot be deleted.
+    /// </summary>
+    /// <typeparam name="TUsage">The usage.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddUserAudienceUsage<TUsage>(this IServiceCollection services)
+        where TUsage : class, IUserAudienceUsage
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IUserAudienceUsage, TUsage>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers a kind of audience rule.
     /// </summary>
     /// <typeparam name="TSource">The rule source.</typeparam>

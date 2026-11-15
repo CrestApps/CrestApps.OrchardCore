@@ -71,7 +71,9 @@ public sealed class RequiredLearningPagesTests
         Assert.NotNull(state.DueUtc);
         Assert.Contains("My required learning", page);
         Assert.Contains("Due", page);
-        Assert.NotEqual(HttpStatusCode.OK, refused.StatusCode);
+        // Refused, not challenged: a signed-in person is sent to the access denied page.
+        Assert.Equal(HttpStatusCode.Redirect, refused.StatusCode);
+        Assert.DoesNotContain("Login", refused.Headers.Location.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

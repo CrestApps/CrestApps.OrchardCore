@@ -78,6 +78,9 @@ public class ExternalLearningReviewViewModel
 
     [BindNever]
     public string TypeName { get; set; }
+
+    [BindNever]
+    public bool IsOwnLearning { get; set; }
 }
 
 public class MyCreditsViewModel

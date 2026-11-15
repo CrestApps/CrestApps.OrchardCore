@@ -43,6 +43,23 @@ public sealed class ExternalLearningSubmissionStore : DocumentCatalog<ExternalLe
     }
 
     /// <summary>
+    /// Finds external learning by id, reading it again from the store.
+    /// </summary>
+    public async Task<ExternalLearningSubmission> FindFreshByIdAsync(string submissionId, CancellationToken cancellationToken = default)
+    {
+        var submission = await FindByIdAsync(submissionId, cancellationToken);
+
+        if (submission is null)
+        {
+            return null;
+        }
+
+        Session.Detach(submission, CollectionName);
+
+        return await FindByIdAsync(submissionId, cancellationToken);
+    }
+
+    /// <summary>
     /// Lists the external learning of a person, newest first.
     /// </summary>
     public async Task<IReadOnlyList<ExternalLearningSubmission>> ListByUserAsync(string userId, CancellationToken cancellationToken = default)

@@ -113,7 +113,7 @@ public sealed class CertificationModuleTests
         await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SaveTypeAsync(cpd));
         submission.CreditTypeId = cpd.ItemId;
         await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SubmitExternalAsync(submission));
-        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer", null));
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer-id", "reviewer", null));
 
         // Act
         var export = await h.RunAsync(async services =>

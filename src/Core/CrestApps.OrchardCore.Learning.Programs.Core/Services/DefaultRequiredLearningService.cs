@@ -227,12 +227,41 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
             var removed = 0;
             IReadOnlyList<string> members = [];
 
+            if (requirement.Enabled && !string.IsNullOrEmpty(requirement.AudienceName)
+                && (_services.GetService<IUserAudienceService>() is not { } audienceService
+                    || !(await audienceService.ListAsync(cancellationToken)).Any(audience => string.Equals(audience.Name, requirement.AudienceName, StringComparison.OrdinalIgnoreCase))))
+            {
+                // The audience was deleted, renamed or its feature turned off: releasing everyone now would require
+                // them again, with new due dates and a second notice, when it comes back. The run fails instead.
+                _logger.LogWarning("A required learning rule names an audience that cannot be found; the run changed nothing.");
+
+                return new RequiredLearningRunResult(0, 0, 0, 0);
+            }
+
             if (requirement.Enabled)
             {
                 members = await PreviewAsync(requirement, cancellationToken);
 
                 var memberSet = members.ToHashSet(StringComparer.Ordinal);
-                var existing = (await _assignments.ListByRequirementAsync(requirement.ItemId, cancellationToken)).ToDictionary(assignment => assignment.UserId, StringComparer.Ordinal);
+                var all = await _assignments.ListByRequirementAsync(requirement.ItemId, cancellationToken);
+                var existing = new Dictionary<string, RequiredLearningAssignment>(StringComparer.Ordinal);
+
+                // Two runs that overlapped may have made two assignments for one person: the earliest is kept and the
+                // others are closed, so a person is never reminded twice.
+                foreach (var group in all.GroupBy(assignment => assignment.UserId, StringComparer.Ordinal))
+                {
+                    var ordered = group.OrderBy(assignment => assignment.RequiredUtc).ThenBy(assignment => assignment.ItemId, StringComparer.Ordinal).ToArray();
+
+                    existing[group.Key] = ordered[0];
+
+                    foreach (var duplicate in ordered.Skip(1).Where(assignment => assignment.State != RequiredLearningState.NotRequired))
+                    {
+                        duplicate.State = RequiredLearningState.NotRequired;
+                        duplicate.RemovedUtc = now;
+                        duplicate.ModifiedUtc = now;
+                        await _assignments.UpdateAsync(duplicate, cancellationToken);
+                    }
+                }
 
                 foreach (var userId in members)
                 {
@@ -259,6 +288,10 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
                         assignment.DueUtc = await DueAsync(requirement, userId, now, cancellationToken);
                         assignment.RemindersSent = [];
                         assignment.EscalatedUtc = null;
+                        assignment.RequiredNotifiedUtc = null;
+                        assignment.OverdueNotifiedUtc = null;
+                        assignment.StartedUtc = null;
+                        assignment.StartError = null;
                         assignment.ModifiedUtc = now;
                         await _assignments.UpdateAsync(assignment, cancellationToken);
                         added.Add(assignment);
@@ -281,13 +314,13 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
             await _session.SaveChangesAsync(cancellationToken);
 
             // Starting a person on the target enrolls them, which commits the session: everything above is saved first.
-            foreach (var assignment in added)
+            // Every open assignment whose target shows nothing is started, not only the ones added now, so a run that
+            // was cut short, or a start that was refused, is finished by the next run.
+            if (requirement.Enabled)
             {
-                await target.StartAsync(requirement.TargetId, assignment.UserId, assignment.DueUtc, assignment.ItemId, actor, cancellationToken);
-
-                foreach (var observer in _services.GetServices<IRequiredLearningObserver>())
+                foreach (var id in (await _assignments.ListByRequirementAsync(requirement.ItemId, cancellationToken)).Where(assignment => assignment.IsOpen).Select(assignment => assignment.ItemId).ToArray())
                 {
-                    await observer.RequiredAsync(assignment, requirement, cancellationToken);
+                    await StartIfNeededAsync(requirement, target, id, actor, cancellationToken);
                 }
             }
 
@@ -338,6 +371,23 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
     /// <inheritdoc/>
     public async Task<int> SendRemindersAsync(CancellationToken cancellationToken = default)
     {
+        var (reminderLocker, reminderLocked) = await _distributedLock.TryAcquireLockAsync("LearningRequirement:Reminders", TimeSpan.FromSeconds(5), TimeSpan.FromHours(1));
+
+        if (!reminderLocked)
+        {
+            _logger.LogInformation("Another reminder pass of required learning is running; this one is skipped.");
+
+            return 0;
+        }
+
+        await using (reminderLocker)
+        {
+            return await SendRemindersCoreAsync(cancellationToken);
+        }
+    }
+
+    private async Task<int> SendRemindersCoreAsync(CancellationToken cancellationToken)
+    {
         var now = _clock.UtcNow;
         var sent = 0;
         var requirements = new Dictionary<string, LearningRequirement>(StringComparer.Ordinal);
@@ -346,6 +396,7 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
         for (var pass = 0; pass < MaxReminderPasses; pass++)
         {
             var page = await _assignments.ListOpenWithDueAsync(pass * PageSize, PageSize, cancellationToken);
+            var pageNotices = new List<Func<Task>>();
 
             foreach (var assignment in page)
             {
@@ -362,16 +413,39 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
 
                 var changed = false;
 
+                var notices = new List<Func<Task>>();
+
                 if (due < now)
                 {
-                    if (assignment.State != RequiredLearningState.Overdue)
+                    // The target may have been met since the last run, such as a certificate issued this afternoon: it
+                    // is asked before anyone is declared overdue.
+                    var target = FindTarget(requirement.TargetKind);
+                    var status = target is null ? null : await target.GetStatusAsync(requirement.TargetId, assignment.UserId, cancellationToken);
+
+                    if (status?.CompletedUtc is not null)
                     {
+                        await RefreshAsync(requirement, target, assignment, cancellationToken);
+
+                        continue;
+                    }
+
+                    if (assignment.State != RequiredLearningState.Overdue || assignment.OverdueNotifiedUtc is null)
+                    {
+                        var tell = assignment.OverdueNotifiedUtc is null;
+
                         assignment.State = RequiredLearningState.Overdue;
+                        assignment.OverdueNotifiedUtc ??= now;
                         changed = true;
 
-                        foreach (var observer in observers)
+                        if (tell)
                         {
-                            await observer.OverdueAsync(assignment, requirement, cancellationToken);
+                            notices.Add(async () =>
+                            {
+                                foreach (var observer in observers)
+                                {
+                                    await observer.OverdueAsync(assignment, requirement, cancellationToken);
+                                }
+                            });
                         }
                     }
 
@@ -385,11 +459,13 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
                         if (managers.Count > 0)
                         {
                             sent++;
-
-                            foreach (var observer in observers)
+                            notices.Add(async () =>
                             {
-                                await observer.EscalatedAsync(assignment, requirement, managers, cancellationToken);
-                            }
+                                foreach (var observer in observers)
+                                {
+                                    await observer.EscalatedAsync(assignment, requirement, managers, cancellationToken);
+                                }
+                            });
                         }
                     }
                 }
@@ -404,10 +480,15 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
                         changed = true;
                         sent++;
 
-                        foreach (var observer in observers)
+                        var daysLeft = Math.Max(0, (int)Math.Ceiling((due - now).TotalDays));
+
+                        notices.Add(async () =>
                         {
-                            await observer.DueSoonAsync(assignment, requirement, dueReminders[0], cancellationToken);
-                        }
+                            foreach (var observer in observers)
+                            {
+                                await observer.DueSoonAsync(assignment, requirement, daysLeft, cancellationToken);
+                            }
+                        });
                     }
                 }
 
@@ -415,10 +496,18 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
                 {
                     assignment.ModifiedUtc = now;
                     await _assignments.UpdateAsync(assignment, cancellationToken);
+                    pageNotices.AddRange(notices);
                 }
             }
 
+            // The marks of the page are saved before anyone is told, so a pass that stops half way never tells anyone
+            // twice. One save per page: saving inside the loop would make the session forget the rest of the page.
             await _session.SaveChangesAsync(cancellationToken);
+
+            foreach (var notice in pageNotices)
+            {
+                await notice();
+            }
 
             if (page.Count < PageSize)
             {
@@ -477,12 +566,14 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
 
         if (requirement is not null && target is not null)
         {
-            await target.StartAsync(requirement.TargetId, assignment.UserId, assignment.DueUtc, assignment.ItemId, actor, cancellationToken);
+            var started = await target.StartAsync(requirement.TargetId, assignment.UserId, assignment.DueUtc, assignment.ItemId, actor, cancellationToken);
 
             // Starting the target may commit the session: read the state again before changing it.
             assignment = await _assignments.FindByIdAsync(assignmentId, cancellationToken);
             assignment.Exemption = null;
             assignment.State = RequiredLearningState.Required;
+            assignment.StartError = started.Succeeded ? null : started.Error ?? "Refused";
+            assignment.StartedUtc = started.Succeeded ? assignment.StartedUtc ?? _clock.UtcNow : assignment.StartedUtc;
             await RefreshAsync(requirement, target, assignment, cancellationToken, force: true);
         }
         else
@@ -546,10 +637,17 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
         }
 
         var completedNow = state == RequiredLearningState.Completed && assignment.State != RequiredLearningState.Completed;
+        var overdueNow = state == RequiredLearningState.Overdue && assignment.OverdueNotifiedUtc is null;
 
         assignment.State = state;
         assignment.CompletedUtc = state == RequiredLearningState.Completed ? status.CompletedUtc : null;
         assignment.ModifiedUtc = _clock.UtcNow;
+
+        if (overdueNow)
+        {
+            assignment.OverdueNotifiedUtc = _clock.UtcNow;
+        }
+
         await _assignments.UpdateAsync(assignment, cancellationToken);
 
         if (completedNow)
@@ -560,7 +658,80 @@ public sealed class DefaultRequiredLearningService : IRequiredLearningService
             }
         }
 
+        // Whoever sees it first, the refresh or the reminder pass, tells the person once.
+        if (overdueNow)
+        {
+            foreach (var observer in _services.GetServices<IRequiredLearningObserver>())
+            {
+                await observer.OverdueAsync(assignment, requirement, cancellationToken);
+            }
+        }
+
         return true;
+    }
+
+    // Starts one open assignment when its target shows nothing yet, records what the start did, and tells the person
+    // the learning is required once, after it worked. A completion from before counts: nothing is started and nobody is
+    // told; the refresh marks the assignment completed.
+    private async Task StartIfNeededAsync(LearningRequirement requirement, IRequiredLearningTarget target, string assignmentId, string actor, CancellationToken cancellationToken)
+    {
+        var assignment = await _assignments.FindByIdAsync(assignmentId, cancellationToken);
+
+        if (assignment is null || !assignment.IsOpen)
+        {
+            return;
+        }
+
+        var status = await target.GetStatusAsync(requirement.TargetId, assignment.UserId, cancellationToken);
+
+        if (status.CompletedUtc is not null)
+        {
+            return;
+        }
+
+        if (!status.Assigned)
+        {
+            var started = await target.StartAsync(requirement.TargetId, assignment.UserId, assignment.DueUtc, assignment.ItemId, actor, cancellationToken);
+
+            // Starting the target may commit the session: read the assignment again before changing it.
+            assignment = await _assignments.FindByIdAsync(assignmentId, cancellationToken);
+
+            if (!started.Succeeded)
+            {
+                assignment.StartError = started.Error ?? "Refused";
+                assignment.ModifiedUtc = _clock.UtcNow;
+                await _assignments.UpdateAsync(assignment, cancellationToken);
+                await _session.SaveChangesAsync(cancellationToken);
+                _logger.LogWarning("Required learning could not start the target of an assignment: {Error}", assignment.StartError);
+
+                return;
+            }
+        }
+
+        if (assignment.StartedUtc is not null && assignment.StartError is null && assignment.RequiredNotifiedUtc is not null)
+        {
+            return;
+        }
+
+        assignment.StartedUtc ??= _clock.UtcNow;
+        assignment.StartError = null;
+
+        var notify = assignment.RequiredNotifiedUtc is null;
+
+        assignment.RequiredNotifiedUtc ??= _clock.UtcNow;
+        assignment.ModifiedUtc = _clock.UtcNow;
+        await _assignments.UpdateAsync(assignment, cancellationToken);
+
+        // Marked before anyone is told, so a stop here never tells the person twice.
+        await _session.SaveChangesAsync(cancellationToken);
+
+        if (notify)
+        {
+            foreach (var observer in _services.GetServices<IRequiredLearningObserver>())
+            {
+                await observer.RequiredAsync(assignment, requirement, cancellationToken);
+            }
+        }
     }
 
     private async Task<DateTime?> DueAsync(LearningRequirement requirement, string userId, DateTime requiredUtc, CancellationToken cancellationToken)

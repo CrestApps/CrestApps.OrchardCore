@@ -40,6 +40,25 @@ internal sealed class ProgramsEnrollmentObserver : IEnrollmentObserver
 /// <summary>
 /// Completes required learning about a learning path when the path is completed.
 /// </summary>
+/// <summary>
+/// Refreshes the required learning of a certification path as soon as a certificate is issued, so nobody who certified
+/// after the day's run is declared overdue.
+/// </summary>
+internal sealed class RequiredLearningCertificationObserver : CrestApps.OrchardCore.Learning.Certifications.Services.ICertificationPathObserver
+{
+    private readonly IServiceProvider _services;
+
+    public RequiredLearningCertificationObserver(IServiceProvider services)
+    {
+        _services = services;
+    }
+
+    public Task CertifiedAsync(CrestApps.OrchardCore.Learning.Certifications.Models.CertificationPathProgress progress, CrestApps.OrchardCore.Learning.Certifications.Models.CertificationPath path, CancellationToken cancellationToken = default)
+        => _services.GetService<IRequiredLearningService>() is { } required
+            ? required.RefreshTargetAsync(ProgramsConstants.TargetKinds.CertificationPath, progress.PathId, progress.UserId, cancellationToken)
+            : Task.CompletedTask;
+}
+
 internal sealed class RequiredLearningPathObserver : ILearningPathObserver
 {
     private readonly IServiceProvider _services;

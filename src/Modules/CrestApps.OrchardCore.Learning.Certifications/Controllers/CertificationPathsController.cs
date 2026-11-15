@@ -187,6 +187,26 @@ public sealed class CertificationPathsController : Controller
         return Redirect(Url.Action("Detail", "Enrollments", new { area = "CrestApps.OrchardCore.Learning", id = enrollmentId }));
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("learning/certification-paths/reverse-credits-from-review/{enrollmentId}", "LearningCertificationReverseCreditsFromReview")]
+    public async Task<IActionResult> ReverseCreditsFromReview(string enrollmentId, [FromServices] IEducationCreditService credits, [FromServices] IEnrollmentStore enrollments)
+    {
+        var enrollment = await enrollments.FindByIdAsync(enrollmentId, HttpContext.RequestAborted);
+
+        // Managing this enrollment allows taking back only its own credits, while its review is open.
+        if (enrollment is null || !enrollment.NeedsReview || !await _authorizationService.AuthorizeAsync(User, LearningPermissions.ManageEnrollments, enrollment))
+        {
+            return Forbid();
+        }
+
+        var count = await credits.ReverseAsync(enrollment.UserId, enrollment.ItemId, User.Identity?.Name, S["Taken back after the review of enrollment {0}.", enrollment.Number ?? enrollment.ItemId], HttpContext.RequestAborted);
+
+        await _notifier.SuccessAsync(count > 0 ? H["The credits of this enrollment are taken back. Clear the review when you have recorded your decision."] : H["These credits were already taken back."]);
+
+        return Redirect(Url.Action("Detail", "Enrollments", new { area = "CrestApps.OrchardCore.Learning", id = enrollmentId }));
+    }
+
     private async Task NotifyAsync(CertificationPathResult result, LocalizedHtmlString success)
     {
         if (result.Succeeded)

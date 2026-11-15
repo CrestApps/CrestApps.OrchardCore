@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Programs.Core;
+using CrestApps.OrchardCore.Learning.Programs.Core.Services;
 using CrestApps.OrchardCore.Learning.Programs.Models;
 using CrestApps.OrchardCore.Learning.Programs.Services;
 using CrestApps.OrchardCore.Learning.Programs.ViewModels;
@@ -63,7 +64,7 @@ internal sealed class LearningPathPartDisplayDriver : ContentPartDisplayDriver<L
                 completed.UnionWith((await _enrollments.ListByUserAsync(userId))
                     .Where(enrollment => enrollment.Status == EnrollmentStatus.Completed)
                     .Select(enrollment => enrollment.CourseId));
-                model.CanStart = part.AllowSelfStart && model.Progress is null && part.ContentItem.Published;
+                model.CanStart = part.AllowSelfStart && model.Progress is null && part.ContentItem.Published && await LearningPathAccess.AllCoursesOpenAsync(_contentManager, part);
             }
 
             var titles = (await _contentManager.GetAsync(LearningPathRules.CourseIds(part), VersionOptions.Published))

@@ -38,6 +38,7 @@ public static class LearningProgramsCoreServiceCollectionExtensions
         services.AddRequiredLearningTarget<CourseRequiredLearningTarget>();
         services.AddRequiredLearningTarget<LearningPathRequiredLearningTarget>();
         services.AddLearningPathObserver<RequiredLearningPathObserver>();
+        services.AddUserAudienceUsage<RequiredLearningAudienceUsage>();
 
         return services;
     }
@@ -48,6 +49,7 @@ public static class LearningProgramsCoreServiceCollectionExtensions
     public static IServiceCollection AddRequiredLearningCertificationTarget(this IServiceCollection services)
     {
         services.AddRequiredLearningTarget<CertificationPathRequiredLearningTarget>();
+        services.AddCertificationPathObserver<RequiredLearningCertificationObserver>();
 
         return services;
     }

@@ -131,19 +131,19 @@ public sealed class EducationCreditTests
         // Act
         var errors = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SubmitExternalAsync(submission));
         var waiting = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().GetBalancesAsync("cid", CertificationHarness.Today));
-        var accepted = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer", "Looks good"));
+        var accepted = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer-id", "reviewer", "Looks good"));
         var stored = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().FindExternalAsync(submission.ItemId));
-        var acceptedAgain = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer", null));
+        var acceptedAgain = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer-id", "reviewer", null));
         var entries = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ListEntriesAsync("cid"));
 
         // Assert
         Assert.Equal(2, refused.Count);
         Assert.Empty(errors);
         Assert.Empty(waiting);
-        Assert.Equal(ExternalLearningState.Accepted, accepted.State);
+        Assert.Equal(ExternalLearningState.Accepted, accepted.Submission.State);
         Assert.Equal(ExternalLearningState.Accepted, stored.State);
         Assert.Equal("Looks good", stored.ReviewNote);
-        Assert.Null(acceptedAgain);
+        Assert.Equal(ExternalLearningReviewOutcome.AlreadyReviewed, acceptedAgain.Outcome);
         var entry = Assert.Single(entries);
         Assert.Equal(1.5m, entry.Amount);
         Assert.Equal(CertificationHarness.Today.AddDays(-2), entry.EffectiveDate);
@@ -163,25 +163,157 @@ public sealed class EducationCreditTests
         var day = new DateTime(2026, 10, 20);
 
         // Act
-        var (unknownUser, unknownType, badAmount, recorded) = await h.RunAsync(async services =>
+        var S = new PassThroughLocalizer();
+        var (unknownUser, unknownType, badAmount, own, recorded, again) = await h.RunAsync(async services =>
         {
             var credits = services.GetRequiredService<IEducationCreditService>();
 
             return (
-                await RecordExternalLearningStep.RecordRowAsync(credits, known, cpd, "zoe", "Course", null, 1m, day, "pipeline", TestContext.Current.CancellationToken),
-                await RecordExternalLearningStep.RecordRowAsync(credits, known, null, "dee", "Course", null, 1m, day, "pipeline", TestContext.Current.CancellationToken),
-                await RecordExternalLearningStep.RecordRowAsync(credits, known, cpd, "dee", "Course", null, 0m, day, "pipeline", TestContext.Current.CancellationToken),
-                await RecordExternalLearningStep.RecordRowAsync(credits, known, cpd, "dee", "First aid", "Red Cross", 4m, day, "pipeline", TestContext.Current.CancellationToken));
+                await RecordExternalLearningStep.RecordRowAsync(credits, S, known, cpd, "zoe", "Course", null, 1m, day, "runner", "pipeline", TestContext.Current.CancellationToken),
+                await RecordExternalLearningStep.RecordRowAsync(credits, S, known, null, "dee", "Course", null, 1m, day, "runner", "pipeline", TestContext.Current.CancellationToken),
+                await RecordExternalLearningStep.RecordRowAsync(credits, S, known, cpd, "dee", "Course", null, 0m, day, "runner", "pipeline", TestContext.Current.CancellationToken),
+                await RecordExternalLearningStep.RecordRowAsync(credits, S, known, cpd, "dee", "First aid", "Red Cross", 4m, day, "dee", "pipeline", TestContext.Current.CancellationToken),
+                await RecordExternalLearningStep.RecordRowAsync(credits, S, known, cpd, "dee", "First aid", "Red Cross", 4m, day, "runner", "pipeline", TestContext.Current.CancellationToken),
+                await RecordExternalLearningStep.RecordRowAsync(credits, S, known, cpd, "dee", "First aid", "Red Cross", 4m, day, "runner", "pipeline", TestContext.Current.CancellationToken));
         });
         var entries = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ListEntriesAsync("dee"));
         var external = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ListExternalForUserAsync("dee"));
 
         // Assert
-        Assert.NotNull(unknownUser);
-        Assert.NotNull(unknownType);
-        Assert.NotNull(badAmount);
-        Assert.Null(recorded);
+        Assert.NotNull(unknownUser.Error);
+        Assert.NotNull(unknownType.Error);
+        Assert.NotNull(badAmount.Error);
+        Assert.NotNull(own.Error);
+        Assert.True(recorded.Recorded);
+        Assert.Null(recorded.Error);
+
+        // Review round 5, finding 5: running the pipeline again posts nothing twice.
+        Assert.False(again.Recorded);
+        Assert.Null(again.Error);
         Assert.Equal(4m, Assert.Single(entries).Amount);
         Assert.Equal(ExternalLearningState.Accepted, Assert.Single(external).State);
+    }
+
+    [Fact]
+    public async Task NobodyReviewsTheirOwnExternalLearning_AndARejectionNeverFollowsPostedCredits()
+    {
+        // Arrange: review round 5, findings 2 and 6.
+        var h = await CertificationHarness.CreateAsync();
+        var ceu = new EducationCreditType { Name = "CEU" };
+
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SaveTypeAsync(ceu));
+
+        var submission = new ExternalLearningSubmission { UserId = "rev", Title = "Forty hours", CompletedOn = CertificationHarness.Today, CreditTypeId = ceu.ItemId, Amount = 40 };
+
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SubmitExternalAsync(submission));
+
+        // Act
+        var ownAccept = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "rev", "rev", null));
+        var ownReject = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().RejectExternalAsync(submission.ItemId, "rev", "rev", null));
+        var balanceAfterOwn = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().GetBalancesAsync("rev", CertificationHarness.Today));
+        var accepted = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "other", "other", null));
+        var rejectAfter = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().RejectExternalAsync(submission.ItemId, "third", "third", null));
+        var tooMany = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SubmitExternalAsync(new ExternalLearningSubmission { UserId = "rev", Title = "Too many", CompletedOn = CertificationHarness.Today, CreditTypeId = ceu.ItemId, Amount = 100000 }));
+
+        // Assert
+        Assert.Equal(ExternalLearningReviewOutcome.OwnLearning, ownAccept.Outcome);
+        Assert.Equal(ExternalLearningReviewOutcome.OwnLearning, ownReject.Outcome);
+        Assert.Empty(balanceAfterOwn);
+        Assert.True(accepted.Succeeded);
+        Assert.Equal(ExternalLearningReviewOutcome.AlreadyReviewed, rejectAfter.Outcome);
+        Assert.Single(tooMany);
+    }
+
+    [Fact]
+    public async Task OneSourceId_AwardsEachPersonOnce_AndADeletedTypeReceivesNothing()
+    {
+        // Arrange: review round 5, finding 4 and the low item on deleted types.
+        var h = await CertificationHarness.CreateAsync();
+        var cpd = new EducationCreditType { Name = "CPD hours" };
+
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SaveTypeAsync(cpd));
+
+        EducationCreditAwardRequest Request(string userId, string typeId) => new()
+        {
+            UserId = userId,
+            CreditTypeId = typeId,
+            Amount = 1,
+            EarnedOn = CertificationHarness.Today,
+            Source = CertificationsConstants.CreditSources.Manual,
+            SourceId = "webinar-1",
+        };
+
+        // Act
+        var ana = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AwardAsync(Request("ana", cpd.ItemId)));
+        var ben = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AwardAsync(Request("ben", cpd.ItemId)));
+        var anaAgain = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AwardAsync(Request("ana", cpd.ItemId)));
+        var deleted = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AwardAsync(Request("ana", "no-such-type")));
+
+        // Assert
+        Assert.True(ana.Created);
+        Assert.True(ben.Created);
+        Assert.False(anaAgain.Created);
+        Assert.Null(deleted);
+    }
+
+    [Fact]
+    public async Task ExpiredCredits_NoLongerCertify_TheEvidenceNamesItsEnrollments_AndAReversalTakesThemBack()
+    {
+        // Arrange: review round 5, finding 13.
+        var h = await CertificationHarness.CreateAsync();
+        var pdu = new EducationCreditType { Name = "PDU" };
+
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SaveTypeAsync(pdu));
+
+        var requirement = new CertificationRequirement { Id = "r1", Kind = CertificationsConstants.RequirementKinds.CreditsEarned, TargetId = pdu.ItemId, MinimumGrade = 4 };
+
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AwardAsync(new EducationCreditAwardRequest
+        {
+            UserId = "eve",
+            CreditTypeId = pdu.ItemId,
+            Amount = 10,
+            EarnedOn = CertificationHarness.Today.AddYears(-3),
+            ExpiresOn = CertificationHarness.Today.AddYears(-1),
+            Source = CertificationsConstants.CreditSources.Manual,
+            SourceId = "old-conference",
+        }));
+
+        Task<CertificationEvidence> EvidenceAsync() => h.RunAsync(services => services.GetServices<ICertificationRequirement>().OfType<CreditsEarnedRequirement>().Single()
+            .FindEvidenceAsync(new CertificationRequirementContext { UserId = "eve", Requirement = requirement }));
+
+        // Act
+        var onlyExpired = await EvidenceAsync();
+
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AwardAsync(new EducationCreditAwardRequest
+        {
+            UserId = "eve",
+            CreditTypeId = pdu.ItemId,
+            Amount = 5,
+            EarnedOn = CertificationHarness.Today,
+            Source = CertificationsConstants.CreditSources.Course,
+            SourceId = "enrollment-1",
+        }));
+        var withCourse = await EvidenceAsync();
+        var reversed = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ReverseAsync("eve", "enrollment-1", "admin", "Exam voided"));
+        var reversedAgain = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ReverseAsync("eve", "enrollment-1", "admin", "Exam voided"));
+        var afterReversal = await EvidenceAsync();
+
+        // Assert
+        Assert.Null(onlyExpired);
+        Assert.NotNull(withCourse);
+        Assert.Equal(5, withCourse.Grade);
+        Assert.Equal(["enrollment-1"], withCourse.SourceRefs);
+        Assert.Equal(1, reversed);
+        Assert.Equal(0, reversedAgain);
+        Assert.Null(afterReversal);
+    }
+
+    private sealed class PassThroughLocalizer : Microsoft.Extensions.Localization.IStringLocalizer
+    {
+        public Microsoft.Extensions.Localization.LocalizedString this[string name] => new(name, name);
+
+        public Microsoft.Extensions.Localization.LocalizedString this[string name, params object[] arguments] => new(name, string.Format(System.Globalization.CultureInfo.InvariantCulture, name, arguments));
+
+        public IEnumerable<Microsoft.Extensions.Localization.LocalizedString> GetAllStrings(bool includeParentCultures) => [];
     }
 }

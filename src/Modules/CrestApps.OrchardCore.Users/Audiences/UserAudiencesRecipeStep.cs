@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
@@ -11,7 +12,7 @@ namespace CrestApps.OrchardCore.Users.Audiences;
 /// </summary>
 internal sealed class UserAudiencesRecipeStep : NamedRecipeStepHandler
 {
-    internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
     private readonly IUserAudienceService _audiences;
 
@@ -50,6 +51,8 @@ internal sealed class UserAudiencesRecipeStep : NamedRecipeStepHandler
             {
                 continue;
             }
+
+            definition.Rules ??= [];
 
             foreach (var error in await _audiences.SaveDefinitionAsync(definition))
             {

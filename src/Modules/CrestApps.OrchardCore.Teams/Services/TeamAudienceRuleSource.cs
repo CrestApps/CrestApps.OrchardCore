@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Users;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Teams.Services;
 
@@ -12,13 +13,15 @@ internal sealed class TeamAudienceRuleSource : IUserAudienceRuleSource
 
     private readonly ITeamManager _teams;
     private readonly ITeamMembershipService _memberships;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
-    public TeamAudienceRuleSource(ITeamManager teams, ITeamMembershipService memberships, IStringLocalizer<TeamAudienceRuleSource> stringLocalizer)
+    public TeamAudienceRuleSource(ITeamManager teams, ITeamMembershipService memberships, ILocalClock localClock, IStringLocalizer<TeamAudienceRuleSource> stringLocalizer)
     {
         _teams = teams;
         _memberships = memberships;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -36,10 +39,12 @@ internal sealed class TeamAudienceRuleSource : IUserAudienceRuleSource
     public async Task<IReadOnlyCollection<string>> ResolveUserIdsAsync(UserAudienceRule rule, CancellationToken cancellationToken = default)
     {
         var ids = new HashSet<string>(StringComparer.Ordinal);
+        var today = await TodayAsync();
 
         foreach (var teamId in rule.Values)
         {
-            foreach (var member in await _memberships.GetMembersAsync(teamId, includeSubTeams: true, cancellationToken: cancellationToken))
+            // Only memberships that hold today: someone who left the team last month is not in its audience.
+            foreach (var member in await _memberships.GetMembersAsync(teamId, includeSubTeams: true, on: today, cancellationToken: cancellationToken))
             {
                 if (!string.IsNullOrEmpty(member.UserId))
                 {
@@ -53,9 +58,11 @@ internal sealed class TeamAudienceRuleSource : IUserAudienceRuleSource
 
     public async Task<bool> IsMatchAsync(UserAudienceRule rule, string userId, CancellationToken cancellationToken = default)
     {
+        var today = await TodayAsync();
+
         foreach (var teamId in rule.Values)
         {
-            if (await _memberships.IsMemberAsync(teamId, userId, cancellationToken: cancellationToken))
+            if (await _memberships.IsMemberAsync(teamId, userId, on: today, cancellationToken: cancellationToken))
             {
                 return true;
             }
@@ -63,4 +70,7 @@ internal sealed class TeamAudienceRuleSource : IUserAudienceRuleSource
 
         return false;
     }
+
+    private async Task<DateOnly> TodayAsync()
+        => DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
 }

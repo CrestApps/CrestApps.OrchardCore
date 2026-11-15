@@ -86,6 +86,19 @@ public sealed class CertificationTargetStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRequiredLearningCertificationTarget();
+    }
+}
+
+/// <summary>
+/// Awards the education credits of a completed learning path.
+/// </summary>
+[Feature(ProgramsConstants.Features.Paths)]
+[RequireFeatures(CertificationsConstants.Features.Certifications)]
+public sealed class PathCreditsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
         services.AddLearningPathObserver<LearningPathCreditsObserver>();
     }
 }

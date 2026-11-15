@@ -19,5 +19,5 @@
 <div class="mb-3">
     <label asp-for="SourceId" class="form-label">@T["Source id"]</label>
     <input asp-for="SourceId" class="form-control code" />
-    <span class="hint">@T["What the credits are for, such as {{ Workflow.Input.ContentItemId }}. The same source id awards once."]</span>
+    <span class="hint">@T["What the credits are for, such as {{ Workflow.Input.ContentItemId }}. The same source id awards each person once; the task ends with Already awarded when it posted nothing new."]</span>
 </div>

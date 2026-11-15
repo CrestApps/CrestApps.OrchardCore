@@ -115,7 +115,7 @@ public interface IRequiredLearningTarget
     /// <summary>
     /// Starts a person on the target, with its due date; starting someone already on it changes nothing.
     /// </summary>
-    Task StartAsync(string targetId, string userId, DateTime? dueUtc, string sourceId, string actor, CancellationToken cancellationToken = default);
+    Task<RequiredLearningStartResult> StartAsync(string targetId, string userId, DateTime? dueUtc, string sourceId, string actor, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets how far a person is on the target.
@@ -135,4 +135,19 @@ public sealed record RequiredLearningTargetOption(string Id, string DisplayText)
 /// </summary>
 /// <param name="Started">Whether they started it.</param>
 /// <param name="CompletedUtc">When they completed it; <see langword="null"/> when they did not.</param>
-public sealed record RequiredLearningTargetStatus(bool Started, DateTime? CompletedUtc);
+/// <param name="Assigned">Whether the person has the target at all: an open or completed enrollment, or progress on the
+/// path. A run starts anyone required whose target shows nothing.</param>
+public sealed record RequiredLearningTargetStatus(bool Started, DateTime? CompletedUtc, bool Assigned = true);
+
+/// <summary>
+/// What starting a person on a target did.
+/// </summary>
+/// <param name="Succeeded">Whether the person now has the target.</param>
+/// <param name="Error">Why it was refused, such as a missing prerequisite or a course that does not exist.</param>
+public sealed record RequiredLearningStartResult(bool Succeeded, string Error = null)
+{
+    /// <summary>
+    /// The result of a start that worked.
+    /// </summary>
+    public static RequiredLearningStartResult Success { get; } = new(true);
+}

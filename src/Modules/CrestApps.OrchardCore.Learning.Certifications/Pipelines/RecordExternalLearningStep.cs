@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Certifications.Core;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
@@ -79,7 +80,8 @@ public sealed class RecordExternalLearningStep : DataPipelineStepType<RecordExte
         var userSearch = services.GetRequiredService<IUserSearchService>();
         var types = await credits.ListTypesAsync(context.CancellationToken);
         var rejected = context.GetOutput(Rejected);
-        var (recorded, failed) = (0L, 0L);
+        var reviewerId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        var (recorded, skipped, failed) = (0L, 0L, 0L);
 
         await foreach (var batch in context.GetInput().ReadBatchesAsync(context.CancellationToken))
         {
@@ -106,8 +108,9 @@ public sealed class RecordExternalLearningStep : DataPipelineStepType<RecordExte
 
                 var typeText = typeIndex < 0 ? settings.CreditTypeId : DataValues.ToText(row[typeIndex])?.Trim();
                 var type = types.FirstOrDefault(candidate => candidate.ItemId == typeText) ?? types.FirstOrDefault(candidate => string.Equals(candidate.Name, typeText, StringComparison.OrdinalIgnoreCase));
-                var error = await RecordRowAsync(
+                var (wasRecorded, error) = await RecordRowAsync(
                     credits,
+                    S,
                     known,
                     type,
                     DataValues.ToText(row[userIndex])?.Trim(),
@@ -115,12 +118,20 @@ public sealed class RecordExternalLearningStep : DataPipelineStepType<RecordExte
                     providerIndex < 0 ? null : DataValues.ToText(row[providerIndex])?.Trim(),
                     DataValues.Coerce(row[amountIndex], DataFieldType.Decimal),
                     DataValues.Coerce(row[dateIndex], DataFieldType.Date),
+                    reviewerId,
                     user.Identity?.Name,
                     context.CancellationToken);
 
                 if (error is null)
                 {
-                    recorded++;
+                    if (wasRecorded)
+                    {
+                        recorded++;
+                    }
+                    else
+                    {
+                        skipped++;
+                    }
                 }
                 else
                 {
@@ -140,29 +151,47 @@ public sealed class RecordExternalLearningStep : DataPipelineStepType<RecordExte
             context.LogWarning(S["{0} rows could not be recorded.", failed]);
         }
 
-        context.AddDelivery(S["Recorded {0} external learning rows; rejected {1}.", recorded, failed]);
+        context.AddDelivery(S["Recorded {0} external learning rows; skipped {1} already recorded; rejected {2}.", recorded, skipped, failed]);
     }
 
-    internal static async Task<string> RecordRowAsync(IEducationCreditService credits, HashSet<string> knownUsers, EducationCreditType type, string userId, string title, string provider, object amount, object completedOn, string actor, CancellationToken cancellationToken)
+    /// <summary>
+    /// Records one row as accepted external learning, once: a row recorded before (the same person, credit type, title
+    /// and completion date) is skipped, so running the pipeline again posts nothing twice.
+    /// </summary>
+    /// <returns>Whether a row was recorded, and the reason it was refused, or <see langword="null"/>.</returns>
+    internal static async Task<(bool Recorded, string Error)> RecordRowAsync(IEducationCreditService credits, IStringLocalizer S, HashSet<string> knownUsers, EducationCreditType type, string userId, string title, string provider, object amount, object completedOn, string reviewerUserId, string actor, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(userId) || !knownUsers.Contains(userId))
         {
-            return "No user has this id.";
+            return (false, S["No user has this id."]);
+        }
+
+        if (string.Equals(userId, reviewerUserId, StringComparison.Ordinal))
+        {
+            return (false, S["The person the pipeline runs for can't record their own external learning."]);
         }
 
         if (type is null)
         {
-            return "The credit type does not exist.";
+            return (false, S["The credit type does not exist."]);
         }
 
         if (amount is not decimal value || value <= 0)
         {
-            return "The credits must be a number above zero.";
+            return (false, S["The credits must be a number above zero."]);
         }
 
         if (completedOn is not DateTime day)
         {
-            return "The completion date is missing.";
+            return (false, S["The completion date is missing."]);
+        }
+
+        var completed = DateOnly.FromDateTime(day);
+        var rowKey = string.Join('|', userId, type.ItemId, title?.Trim().ToUpperInvariant() ?? string.Empty, completed.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+        if ((await credits.ListExternalForUserAsync(userId, cancellationToken)).Any(existing => existing.RowKey == rowKey))
+        {
+            return (false, null);
         }
 
         var submission = new ExternalLearningSubmission
@@ -170,20 +199,21 @@ public sealed class RecordExternalLearningStep : DataPipelineStepType<RecordExte
             UserId = userId,
             Title = title,
             Provider = provider,
-            CompletedOn = DateOnly.FromDateTime(day),
+            CompletedOn = completed,
             CreditTypeId = type.ItemId,
             Amount = value,
+            RowKey = rowKey,
         };
         var errors = await credits.SubmitExternalAsync(submission, cancellationToken);
 
         if (errors.Count > 0)
         {
-            return string.Join(" ", errors);
+            return (false, string.Join(" ", errors));
         }
 
-        await credits.AcceptExternalAsync(submission.ItemId, actor, "Recorded by a data pipeline", cancellationToken);
+        var result = await credits.AcceptExternalAsync(submission.ItemId, reviewerUserId, actor, S["Recorded by a data pipeline"], cancellationToken);
 
-        return null;
+        return result.Succeeded ? (true, null) : (false, S["The external learning was saved but could not be accepted; review it by hand."]);
     }
 
     private List<string> Validate(RecordExternalLearningStepSettings settings, IReadOnlyList<DataField> fields)

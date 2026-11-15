@@ -63,6 +63,26 @@ public sealed class RequiredLearningAssignment : CatalogItem
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when the person was started on the target, such as enrolled in the course.
+    /// </summary>
+    public DateTime? StartedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the last start was refused; <see langword="null"/> once it worked. Each run tries again.
+    /// </summary>
+    public string StartError { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the person was told the learning is required; they are told once, after the start worked.
+    /// </summary>
+    public DateTime? RequiredNotifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the person was told the learning is overdue; they are told once.
+    /// </summary>
+    public DateTime? OverdueNotifiedUtc { get; set; }
+
+    /// <summary>
     /// Gets whether the person still has to do something.
     /// </summary>
     public bool IsOpen => State is RequiredLearningState.Required or RequiredLearningState.InProgress or RequiredLearningState.Overdue;

@@ -53,7 +53,11 @@ public sealed class CreditsEarnedRequirement : ICertificationRequirement
         var from = context.SinceUtc is { } since
             ? DateOnly.FromDateTime((await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(since, DateTimeKind.Utc)))).DateTime)
             : DateOnly.MinValue;
-        var earned = await _ledger.SumAsync(context.UserId, requirement.TargetId, from, today, cancellationToken);
+        // Only credits that still count today: an entry that expired no longer certifies anyone, as the balance shows.
+        var counted = (await _ledger.ListAsync(context.UserId, requirement.TargetId, cancellationToken))
+            .Where(entry => entry.EffectiveDate >= from && entry.EffectiveDate <= today && (entry.ExpiresOn is null || entry.ExpiresOn >= today))
+            .ToArray();
+        var earned = counted.Sum(entry => entry.Amount);
 
         if (earned < needed)
         {
@@ -69,6 +73,7 @@ public sealed class CreditsEarnedRequirement : ICertificationRequirement
             Title = await GetTitleAsync(requirement, cancellationToken),
             CompletedUtc = _clock.UtcNow,
             Grade = earned,
+            SourceRefs = counted.Where(entry => entry.Amount > 0 && !string.IsNullOrEmpty(entry.SourceRef)).Select(entry => entry.SourceRef).Distinct(StringComparer.Ordinal).ToList(),
         };
     }
 

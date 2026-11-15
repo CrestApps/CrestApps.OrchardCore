@@ -50,8 +50,9 @@ public sealed class CourseRequiredLearningTarget : IRequiredLearningTarget
         return item is not null && item.Has<CoursePart>() ? item.DisplayText ?? targetId : null;
     }
 
-    public Task StartAsync(string targetId, string userId, DateTime? dueUtc, string sourceId, string actor, CancellationToken cancellationToken = default)
-        => _services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest
+    public async Task<RequiredLearningStartResult> StartAsync(string targetId, string userId, DateTime? dueUtc, string sourceId, string actor, CancellationToken cancellationToken = default)
+    {
+        var result = await _services.GetRequiredService<IEnrollmentService>().EnrollAsync(new EnrollmentRequest
         {
             UserId = userId,
             CourseId = targetId,
@@ -61,6 +62,9 @@ public sealed class CourseRequiredLearningTarget : IRequiredLearningTarget
             Actor = actor,
         }, cancellationToken);
 
+        return result.Succeeded ? RequiredLearningStartResult.Success : new RequiredLearningStartResult(false, result.ErrorCode);
+    }
+
     public async Task<RequiredLearningTargetStatus> GetStatusAsync(string targetId, string userId, CancellationToken cancellationToken = default)
     {
         var enrollments = await _enrollments.ListByCourseForUserAsync(userId, targetId, cancellationToken);
@@ -68,7 +72,8 @@ public sealed class CourseRequiredLearningTarget : IRequiredLearningTarget
 
         return new RequiredLearningTargetStatus(
             enrollments.Any(enrollment => enrollment.StartedUtc is not null || enrollment.Status == EnrollmentStatus.Completed),
-            completed);
+            completed,
+            enrollments.Any(enrollment => enrollment.Status is EnrollmentStatus.Pending or EnrollmentStatus.Active or EnrollmentStatus.Suspended or EnrollmentStatus.Completed));
     }
 }
 
@@ -112,8 +117,9 @@ public sealed class LearningPathRequiredLearningTarget : IRequiredLearningTarget
         return item is not null && item.Has<LearningPathPart>() ? item.DisplayText ?? targetId : null;
     }
 
-    public Task StartAsync(string targetId, string userId, DateTime? dueUtc, string sourceId, string actor, CancellationToken cancellationToken = default)
-        => _services.GetRequiredService<ILearningPathService>().StartAsync(new LearningPathStartRequest
+    public async Task<RequiredLearningStartResult> StartAsync(string targetId, string userId, DateTime? dueUtc, string sourceId, string actor, CancellationToken cancellationToken = default)
+    {
+        var result = await _services.GetRequiredService<ILearningPathService>().StartAsync(new LearningPathStartRequest
         {
             PathId = targetId,
             UserId = userId,
@@ -123,13 +129,17 @@ public sealed class LearningPathRequiredLearningTarget : IRequiredLearningTarget
             Actor = actor,
         }, cancellationToken);
 
+        return result.Progress is not null ? RequiredLearningStartResult.Success : new RequiredLearningStartResult(false, result.Error);
+    }
+
     public async Task<RequiredLearningTargetStatus> GetStatusAsync(string targetId, string userId, CancellationToken cancellationToken = default)
     {
         var progress = await _services.GetRequiredService<ILearningPathService>().FindProgressAsync(targetId, userId, cancellationToken);
 
         return new RequiredLearningTargetStatus(
             progress is not null && (progress.CompletedCourseIds.Count > 0 || progress.State == LearningPathState.Completed),
-            progress?.State == LearningPathState.Completed ? progress.CompletedUtc : null);
+            progress?.State == LearningPathState.Completed ? progress.CompletedUtc : null,
+            progress is not null);
     }
 }
 
@@ -171,8 +181,12 @@ public sealed class CertificationPathRequiredLearningTarget : IRequiredLearningT
         return path is null ? null : await NameAsync(path, cancellationToken);
     }
 
-    public Task StartAsync(string targetId, string userId, DateTime? dueUtc, string sourceId, string actor, CancellationToken cancellationToken = default)
-        => Paths.StartAsync(targetId, userId, actor, cancellationToken);
+    public async Task<RequiredLearningStartResult> StartAsync(string targetId, string userId, DateTime? dueUtc, string sourceId, string actor, CancellationToken cancellationToken = default)
+    {
+        var result = await Paths.StartAsync(targetId, userId, actor, cancellationToken);
+
+        return result.Succeeded ? RequiredLearningStartResult.Success : new RequiredLearningStartResult(false, string.Join(" ", result.Errors));
+    }
 
     public async Task<RequiredLearningTargetStatus> GetStatusAsync(string targetId, string userId, CancellationToken cancellationToken = default)
     {
@@ -181,7 +195,7 @@ public sealed class CertificationPathRequiredLearningTarget : IRequiredLearningT
 
         var issued = progress?.Cycles.Where(cycle => cycle.CompletedUtc is not null).Max(cycle => cycle.CompletedUtc);
 
-        return new RequiredLearningTargetStatus(progress is not null, certified ? issued ?? progress.ModifiedUtc ?? progress.CreatedUtc : null);
+        return new RequiredLearningTargetStatus(progress is not null, certified ? issued ?? progress.ModifiedUtc ?? progress.CreatedUtc : null, progress is not null && progress.State != CertificationPathState.Revoked);
     }
 
     private ICertificationPathService Paths => _services.GetRequiredService<ICertificationPathService>();

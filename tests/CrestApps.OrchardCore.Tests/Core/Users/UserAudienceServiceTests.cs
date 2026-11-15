@@ -75,7 +75,27 @@ public sealed class UserAudienceServiceTests
         Assert.DoesNotContain(await service.ListAsync(ct), audience => audience.IsDefined);
     }
 
-    private static DefaultUserAudienceService Service()
+    [Fact]
+    public async Task AnAudience_IsResolvedOncePerScope_HoweverManyPagesAreRead()
+    {
+        // Arrange: review round 5, finding 12.
+        var team = new FixedSource("Team", "ana", "ben", "cid");
+        var service = Service(team);
+        var ct = TestContext.Current.CancellationToken;
+
+        Assert.Empty(await service.SaveDefinitionAsync(new UserAudienceDefinition { Name = "team", Rules = [new() { Source = "Team", Values = ["field"] }] }, ct));
+
+        // Act
+        var first = await service.GetMembersAsync("team", 0, 2, ct);
+        var second = await service.GetMembersAsync("team", 2, 2, ct);
+
+        // Assert
+        Assert.Equal(["ana", "ben"], first.UserIds);
+        Assert.Equal(["cid"], second.UserIds);
+        Assert.Equal(1, team.Resolved);
+    }
+
+    private static DefaultUserAudienceService Service(FixedSource team = null)
     {
         var userManager = new Mock<UserManager<IUser>>(new Mock<IUserStore<IUser>>().Object, null, null, null, null, null, null, null, null);
         var staff = new Mock<IUserAudienceProvider>();
@@ -85,8 +105,9 @@ public sealed class UserAudienceServiceTests
         return new DefaultUserAudienceService(
             new InMemoryDocumentManager<UserAudiencesDocument>(),
             [staff.Object],
-            [new FixedSource("Team", "ana", "ben"), new FixedSource("Hired", "ana", "cid")],
+            [team ?? new FixedSource("Team", "ana", "ben"), new FixedSource("Hired", "ana", "cid")],
             userManager.Object,
+            Mock.Of<global::YesSql.ISession>(),
             new Mock<IStringLocalizer<DefaultUserAudienceService>>().Object);
     }
 
@@ -107,7 +128,13 @@ public sealed class UserAudienceServiceTests
         public Task<IReadOnlyList<UserAudienceRuleOption>> GetOptionsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<UserAudienceRuleOption>>([]);
 
+        public int Resolved { get; private set; }
+
         public Task<IReadOnlyCollection<string>> ResolveUserIdsAsync(UserAudienceRule rule, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyCollection<string>>(_userIds);
+        {
+            Resolved++;
+
+            return Task.FromResult<IReadOnlyCollection<string>>(_userIds);
+        }
     }
 }

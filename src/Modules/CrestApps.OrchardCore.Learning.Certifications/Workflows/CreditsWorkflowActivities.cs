@@ -124,7 +124,7 @@ public sealed class AwardEducationCreditsTask : TaskActivity<AwardEducationCredi
     }
 
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
-        => [new Outcome(S["Done"]), new Outcome(S["Failed"])];
+        => [new Outcome(S["Done"]), new Outcome(S["AlreadyAwarded"]), new Outcome(S["Failed"])];
 
     public override async Task<ActivityExecutionResult> ExecuteAsync(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
@@ -155,7 +155,7 @@ public sealed class AwardEducationCreditsTask : TaskActivity<AwardEducationCredi
 
         workflowContext.LastResult = result?.Entry?.ItemId;
 
-        return Outcome(result is null ? "Failed" : "Done");
+        return Outcome(result is null ? "Failed" : result.Created ? "Done" : "AlreadyAwarded");
     }
 
     private async Task<string> EvaluateAsync(string expression, WorkflowExecutionContext workflowContext)

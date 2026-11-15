@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.Learning.Certifications;
 public static class CertificationsConstants
 {
     /// <summary>
+    /// The most credits one award or one piece of external learning may carry.
+    /// </summary>
+    public const decimal MaxCreditsPerAward = 1000m;
+
+    /// <summary>
     /// The YesSql collection of paths and progress.
     /// </summary>
     public const string CollectionName = "LearningCertifications";
@@ -93,6 +98,11 @@ public static class CertificationsConstants
         /// Credits a person awarded by hand or a workflow.
         /// </summary>
         public const string Manual = "Learning.Manual";
+
+        /// <summary>
+        /// A reversing post that takes back credits, such as those of an enrollment found wrong on review.
+        /// </summary>
+        public const string Reversal = "Learning.Reversal";
     }
 
     public static class Features

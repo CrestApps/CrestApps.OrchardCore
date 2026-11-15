@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Documents;
 using OrchardCore.Users;
+using OrchardCore.Users.Indexes;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Users.Core.Audiences;
 
@@ -17,6 +19,12 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
     private readonly IEnumerable<IUserAudienceProvider> _providers;
     private readonly IEnumerable<IUserAudienceRuleSource> _sources;
     private readonly UserManager<IUser> _userManager;
+    private readonly ISession _session;
+
+    // The service lives as long as the request or the run: an audience is resolved once in it, however many pages are
+    // read, and one person is checked once per audience.
+    private readonly Dictionary<string, IReadOnlyCollection<string>> _resolved = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<(string Name, string UserId), bool> _membership = [];
 
     internal readonly IStringLocalizer S;
 
@@ -28,8 +36,10 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
         IEnumerable<IUserAudienceProvider> providers,
         IEnumerable<IUserAudienceRuleSource> sources,
         UserManager<IUser> userManager,
+        ISession session,
         IStringLocalizer<DefaultUserAudienceService> stringLocalizer)
     {
+        _session = session;
         _documents = documents;
         _providers = providers;
         _sources = sources;
@@ -122,7 +132,15 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
     /// <inheritdoc/>
     public async Task<(int Count, IReadOnlyList<string> UserIds)> GetMembersAsync(string name, int skip, int take, CancellationToken cancellationToken = default)
     {
-        var members = (await ResolveAsync(name, cancellationToken)).Order(StringComparer.Ordinal).ToArray();
+        var key = name?.Trim() ?? string.Empty;
+
+        if (!_resolved.TryGetValue(key, out var resolved))
+        {
+            resolved = (await ResolveAsync(name, cancellationToken)).Order(StringComparer.Ordinal).ToArray();
+            _resolved[key] = resolved;
+        }
+
+        var members = (string[])resolved;
 
         return (members.Length, members.Skip(Math.Max(0, skip)).Take(Math.Max(0, take)).ToArray());
     }
@@ -135,6 +153,22 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
             return false;
         }
 
+        var cacheKey = (name?.Trim() ?? string.Empty, userId);
+
+        if (_membership.TryGetValue(cacheKey, out var known))
+        {
+            return known;
+        }
+
+        var member = await IsMemberCoreAsync(name, userId, cancellationToken);
+
+        _membership[cacheKey] = member;
+
+        return member;
+    }
+
+    private async Task<bool> IsMemberCoreAsync(string name, string userId, CancellationToken cancellationToken)
+    {
         var provider = FindProvider(name);
 
         if (provider is not null)
@@ -190,7 +224,16 @@ public sealed class DefaultUserAudienceService : IUserAudienceService
             var roles = await provider.GetRoleNamesAsync(cancellationToken);
             var ids = new HashSet<string>(StringComparer.Ordinal);
 
-            // An audience that is not limited right now names every user; members are only listed for limited ones.
+            // An audience that is not limited right now names every enabled user, as IsMemberAsync answers: the same
+            // meaning for a layer rule and for required learning. The ids come from the user index alone.
+            if (roles is null)
+            {
+                foreach (var row in await _session.QueryIndex<UserIndex>(index => index.IsEnabled).Take(MaxMembers).ListAsync(cancellationToken))
+                {
+                    ids.Add(row.UserId);
+                }
+            }
+
             foreach (var role in roles ?? [])
             {
                 foreach (var user in await _userManager.GetUsersInRoleAsync(role))

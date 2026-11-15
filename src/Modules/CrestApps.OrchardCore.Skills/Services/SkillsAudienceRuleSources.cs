@@ -59,6 +59,24 @@ internal sealed class SkillHolderAudienceRuleSource : IUserAudienceRuleSource
 
         return await SkillsAudienceRules.ToUserIdsAsync(subjects, _links, cancellationToken);
     }
+
+    public async Task<bool> IsMatchAsync(UserAudienceRule rule, string userId, CancellationToken cancellationToken = default)
+    {
+        var today = await SkillsAudienceRules.TodayAsync(_localClock);
+
+        foreach (var subject in await SkillsAudienceRules.SubjectsOfUserAsync(userId, _links, cancellationToken))
+        {
+            foreach (var skillId in rule.Values)
+            {
+                if (await _assignments.HoldsAsync(subject, skillId, 0, today, cancellationToken))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }
 
 /// <summary>
@@ -73,6 +91,7 @@ internal sealed class CertificationHolderAudienceRuleSource : IUserAudienceRuleS
     private readonly ICertificationManager _certifications;
     private readonly ICertificationRecordService _records;
     private readonly IEnumerable<ISkillSubjectLinkProvider> _links;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -80,11 +99,13 @@ internal sealed class CertificationHolderAudienceRuleSource : IUserAudienceRuleS
         ICertificationManager certifications,
         ICertificationRecordService records,
         IEnumerable<ISkillSubjectLinkProvider> links,
+        ILocalClock localClock,
         IStringLocalizer<CertificationHolderAudienceRuleSource> stringLocalizer)
     {
         _certifications = certifications;
         _records = records;
         _links = links;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -121,10 +142,44 @@ internal sealed class CertificationHolderAudienceRuleSource : IUserAudienceRuleS
 
         return await SkillsAudienceRules.ToUserIdsAsync(subjects, _links, cancellationToken);
     }
+
+    public async Task<bool> IsMatchAsync(UserAudienceRule rule, string userId, CancellationToken cancellationToken = default)
+    {
+        var today = await SkillsAudienceRules.TodayAsync(_localClock);
+
+        foreach (var subject in await SkillsAudienceRules.SubjectsOfUserAsync(userId, _links, cancellationToken))
+        {
+            foreach (var certificationId in rule.Values)
+            {
+                if (await _records.IsValidOnAsync(subject, certificationId, today, cancellationToken))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }
 
 internal static class SkillsAudienceRules
 {
+    /// <summary>
+    /// Lists a user with the records linked to them, such as their staff record.
+    /// </summary>
+    public static async Task<IReadOnlyList<SkillSubject>> SubjectsOfUserAsync(string userId, IEnumerable<ISkillSubjectLinkProvider> links, CancellationToken cancellationToken)
+    {
+        var user = SkillSubject.User(userId);
+        var subjects = new List<SkillSubject> { user };
+
+        foreach (var link in links)
+        {
+            subjects.AddRange((await link.GetLinkedSubjectsAsync(user, cancellationToken)).Where(subject => !subject.IsEmpty));
+        }
+
+        return subjects.Distinct().ToArray();
+    }
+
     public static async Task<DateOnly> TodayAsync(ILocalClock localClock)
         => DateOnly.FromDateTime((await localClock.GetLocalNowAsync()).DateTime);
 

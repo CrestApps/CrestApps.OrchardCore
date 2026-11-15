@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -211,6 +212,22 @@ public sealed class UserAudiencesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, UserPermissions.ManageUserAudiences))
         {
             return Forbid();
+        }
+
+        // An audience something uses stays: deleting it would make, for example, a required learning rule release
+        // everyone and require them again with new due dates when it comes back.
+        var uses = new List<string>();
+
+        foreach (var usage in HttpContext.RequestServices.GetServices<IUserAudienceUsage>())
+        {
+            uses.AddRange(await usage.ListUsesAsync(name, HttpContext.RequestAborted));
+        }
+
+        if (uses.Count > 0)
+        {
+            await _notifier.ErrorAsync(H["The audience is used by {0}. Change those first.", string.Join(", ", uses)]);
+
+            return RedirectToAction(nameof(Index));
         }
 
         if (!await _audiences.DeleteDefinitionAsync(name, HttpContext.RequestAborted))

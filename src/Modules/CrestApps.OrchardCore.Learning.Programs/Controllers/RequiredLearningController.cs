@@ -229,16 +229,36 @@ public sealed class RequiredLearningController : Controller
     /// </summary>
     [HttpPost]
     [Admin("learning/required/delete/{id}", "RequiredLearningDelete")]
-    public async Task<IActionResult> Delete(string id)
+    public async Task<IActionResult> Delete(string id, [FromServices] IProtectedFileStore<RequiredLearningEvidence> files)
     {
         if (!await _authorizationService.AuthorizeAsync(User, LearningProgramsPermissions.ManageRequiredLearning))
         {
             return Forbid();
         }
 
+        // The evidence of the rule's exemptions goes with the rule.
+        var evidence = new List<string>();
+
+        for (var skip = 0; ; skip += 500)
+        {
+            var (_, page) = await _requiredLearning.PageAsync(id, RequiredLearningState.Exempt, skip, 500, HttpContext.RequestAborted);
+
+            evidence.AddRange(page.Select(assignment => assignment.Exemption?.EvidenceFileId).Where(fileId => !string.IsNullOrEmpty(fileId)));
+
+            if (page.Count < 500)
+            {
+                break;
+            }
+        }
+
         if (!await _requiredLearning.DeleteAsync(id, HttpContext.RequestAborted))
         {
             return NotFound();
+        }
+
+        foreach (var fileId in evidence)
+        {
+            await files.DeleteAsync(fileId, HttpContext.RequestAborted);
         }
 
         await _notifier.SuccessAsync(H["The rule has been deleted. The enrollments it made stay."]);
@@ -411,6 +431,7 @@ public sealed class RequiredLearningController : Controller
         }
 
         var exemption = new RequiredLearningExemption { Reason = model.Reason, GrantedBy = User.Identity?.Name };
+        var previousEvidence = assignment.Exemption?.EvidenceFileId;
 
         if (evidence is { Length: > 0 })
         {
@@ -423,10 +444,22 @@ public sealed class RequiredLearningController : Controller
 
         if (await _requiredLearning.ExemptAsync(id, exemption, HttpContext.RequestAborted) is null)
         {
+            // The exemption was refused: the file uploaded for it belongs to nothing.
+            if (exemption.EvidenceFileId is { } orphan)
+            {
+                await files.DeleteAsync(orphan, HttpContext.RequestAborted);
+            }
+
             await _notifier.ErrorAsync(H["A completed or no longer required person can't be exempted."]);
         }
         else
         {
+            // A new file replaces the evidence of the exemption it replaces.
+            if (exemption.EvidenceFileId is not null && previousEvidence is not null && previousEvidence != exemption.EvidenceFileId)
+            {
+                await files.DeleteAsync(previousEvidence, HttpContext.RequestAborted);
+            }
+
             await _notifier.SuccessAsync(H["The person is exempt."]);
         }
 
@@ -438,18 +471,25 @@ public sealed class RequiredLearningController : Controller
     /// </summary>
     [HttpPost]
     [Admin("learning/required/unexempt/{id}", "RequiredLearningRemoveExemption")]
-    public async Task<IActionResult> RemoveExemption(string id)
+    public async Task<IActionResult> RemoveExemption(string id, [FromServices] IProtectedFileStore<RequiredLearningEvidence> files)
     {
         if (!await _authorizationService.AuthorizeAsync(User, LearningProgramsPermissions.ExemptFromRequiredLearning))
         {
             return Forbid();
         }
 
+        var evidence = (await _requiredLearning.FindAssignmentAsync(id, HttpContext.RequestAborted))?.Exemption?.EvidenceFileId;
         var assignment = await _requiredLearning.RemoveExemptionAsync(id, User.Identity?.Name, HttpContext.RequestAborted);
 
         if (assignment is null)
         {
             return NotFound();
+        }
+
+        // The evidence of an exemption taken back is not kept.
+        if (evidence is not null)
+        {
+            await files.DeleteAsync(evidence, HttpContext.RequestAborted);
         }
 
         await _notifier.SuccessAsync(H["The exemption has been taken back."]);
@@ -461,7 +501,7 @@ public sealed class RequiredLearningController : Controller
     /// Opens the evidence of an exemption.
     /// </summary>
     [Admin("learning/required/evidence/{id}", "RequiredLearningEvidence")]
-    public async Task<IActionResult> Evidence(string id, [FromServices] IProtectedFileStore<RequiredLearningEvidence> files, [FromServices] IEnumerable<IProtectedFileAccessPolicy<RequiredLearningEvidence>> policies)
+    public async Task<IActionResult> Evidence(string id, [FromServices] IProtectedFileLinks<RequiredLearningEvidence> links)
     {
         var assignment = await _requiredLearning.FindAssignmentAsync(id, HttpContext.RequestAborted);
 
@@ -470,25 +510,16 @@ public sealed class RequiredLearningController : Controller
             return NotFound();
         }
 
-        var access = new ProtectedFileAccess { FileId = fileId, ResourceId = assignment.ItemId, User = User };
+        // Opened through the area's links, so the store's own rule is the only path: every policy must allow it, and
+        // an area with no policy serves nothing.
+        var opened = await links.OpenAsync(links.CreateToken(fileId, assignment.ItemId, TimeSpan.FromMinutes(1)), User, HttpContext.RequestAborted);
 
-        foreach (var policy in policies)
+        if (opened is not { } found)
         {
-            if (!await policy.CanReadAsync(access, HttpContext.RequestAborted))
-            {
-                return Forbid();
-            }
+            return Forbid();
         }
 
-        var file = await files.FindAsync(fileId, HttpContext.RequestAborted);
-        var content = file is null ? null : await files.OpenAsync(fileId, HttpContext.RequestAborted);
-
-        if (content is null)
-        {
-            return NotFound();
-        }
-
-        return File(content, "application/octet-stream", file.FileName);
+        return File(found.Content, "application/octet-stream", found.File.FileName);
     }
 
     private async Task<RequiredLearningExemptViewModel> ExemptModelAsync(RequiredLearningAssignment assignment, RequiredLearningExemptViewModel model)

@@ -72,6 +72,11 @@ public sealed class ExternalLearningSubmission : CatalogItem
     /// Gets or sets the note of the review.
     /// </summary>
     public string ReviewNote { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key of the row an import recorded it from, so importing the same row again records nothing.
+    /// </summary>
+    public string RowKey { get; set; }
 }
 
 /// <summary>

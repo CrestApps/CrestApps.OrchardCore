@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Learning.Programs.Models;
 using CrestApps.OrchardCore.Learning.Programs.Services;
 using Microsoft.Extensions.Localization;
@@ -13,7 +14,7 @@ namespace CrestApps.OrchardCore.Learning.Programs.Recipes;
 /// </summary>
 internal sealed class LearningRequirementsRecipeStep : NamedRecipeStepHandler
 {
-    internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    internal static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
     private readonly IRequiredLearningService _requiredLearning;
 
@@ -54,6 +55,9 @@ internal sealed class LearningRequirementsRecipeStep : NamedRecipeStepHandler
             {
                 continue;
             }
+
+            incoming.UserIds ??= [];
+            incoming.ReminderDays ??= [];
 
             var match = existing.FirstOrDefault(rule => !string.IsNullOrEmpty(incoming.ItemId) && rule.ItemId == incoming.ItemId)
                 ?? existing.FirstOrDefault(rule => string.Equals(rule.Name, incoming.Name, StringComparison.OrdinalIgnoreCase));

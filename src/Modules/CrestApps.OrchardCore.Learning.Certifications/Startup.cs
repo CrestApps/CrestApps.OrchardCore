@@ -72,6 +72,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<CertificationPathProgress, CertificationPathProgressRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, CertificationUpkeepBackgroundTask>();
         services.AddScoped<IEnrollmentReviewActionProvider, CertificationReviewActionProvider>();
+        services.AddScoped<IEnrollmentReviewActionProvider, CreditsReviewActionProvider>();
         services.AddCertificationPathObserver<CertificationTelemetryObserver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICertificationRecordObserver, CertificationTelemetryObserver>());
         services.AddPersonalDataContributor<CertificationsPersonalDataContributor>();

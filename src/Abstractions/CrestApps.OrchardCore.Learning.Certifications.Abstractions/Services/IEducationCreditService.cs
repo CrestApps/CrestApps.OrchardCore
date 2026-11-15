@@ -46,6 +46,23 @@ public interface IEducationCreditService
     Task<decimal> SumAsync(string userId, string typeId, DateOnly from, DateOnly to, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Takes back the credits a record earned a person, such as an enrollment found wrong on review: each credit entry
+    /// it posted gets one reversing entry on the same days, once.
+    /// </summary>
+    /// <param name="userId">The person.</param>
+    /// <param name="sourceRef">The record whose credits are taken back.</param>
+    /// <param name="actor">Who took them back.</param>
+    /// <param name="reason">Why.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>How many entries were reversed.</returns>
+    Task<int> ReverseAsync(string userId, string sourceRef, string actor, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists the credits of a person a record earned and that were not taken back yet.
+    /// </summary>
+    Task<IReadOnlyList<QuantityLedgerEntry>> ListReversibleAsync(string userId, string sourceRef, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the credit entries of a person.
     /// </summary>
     Task<IReadOnlyList<QuantityLedgerEntry>> ListEntriesAsync(string userId, CancellationToken cancellationToken = default);
@@ -57,14 +74,24 @@ public interface IEducationCreditService
     Task<IReadOnlyList<string>> SubmitExternalAsync(ExternalLearningSubmission submission, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Accepts external learning and posts its credits.
+    /// Accepts external learning and posts its credits, once. Nobody reviews their own learning.
     /// </summary>
-    Task<ExternalLearningSubmission> AcceptExternalAsync(string submissionId, string actor, string note, CancellationToken cancellationToken = default);
+    /// <param name="submissionId">The external learning.</param>
+    /// <param name="reviewerUserId">The user id of the reviewer; refused when it is the person who did the learning.</param>
+    /// <param name="actor">The name kept as the reviewer.</param>
+    /// <param name="note">A note kept with the review.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<ExternalLearningReviewResult> AcceptExternalAsync(string submissionId, string reviewerUserId, string actor, string note, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Rejects external learning.
+    /// Rejects external learning. It is refused once credits were posted for it, and nobody reviews their own learning.
     /// </summary>
-    Task<ExternalLearningSubmission> RejectExternalAsync(string submissionId, string actor, string note, CancellationToken cancellationToken = default);
+    /// <param name="submissionId">The external learning.</param>
+    /// <param name="reviewerUserId">The user id of the reviewer; refused when it is the person who did the learning.</param>
+    /// <param name="actor">The name kept as the reviewer.</param>
+    /// <param name="note">A note kept with the review.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<ExternalLearningReviewResult> RejectExternalAsync(string submissionId, string reviewerUserId, string actor, string note, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds external learning.

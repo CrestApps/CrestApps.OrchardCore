@@ -34,7 +34,11 @@
         }
     </dl>
 
-    @if (Model.Submission.State == ExternalLearningState.Submitted)
+    @if (Model.Submission.State == ExternalLearningState.Submitted && Model.IsOwnLearning)
+    {
+        <p class="alert alert-info">@T["This is your own external learning: another reviewer accepts or rejects it."]</p>
+    }
+    else if (Model.Submission.State == ExternalLearningState.Submitted)
     {
         <div class="ocat-limited-wrapper">
             <label asp-for="Note" class="ocat-label">@T["Note"]</label>

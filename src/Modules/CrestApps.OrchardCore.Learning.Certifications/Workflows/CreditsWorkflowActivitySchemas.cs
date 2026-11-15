@@ -43,9 +43,9 @@ internal sealed class AwardEducationCreditsTaskSchema : WorkflowActivitySchemaDe
 
     protected override string DisplayText => "Award Education Credits";
 
-    protected override string Description => "Awards education credits to a person, once per source id";
+    protected override string Description => "Awards education credits to a person, once per source id and person";
 
-    protected override IEnumerable<string> Outcomes => ["Done", "Failed"];
+    protected override IEnumerable<string> Outcomes => ["Done", "AlreadyAwarded", "Failed"];
 
     protected override IEnumerable<string> RequiredProperties => ["CreditType", "UserId", "Amount", "SourceId"];
 
@@ -54,6 +54,6 @@ internal sealed class AwardEducationCreditsTaskSchema : WorkflowActivitySchemaDe
         yield return ("CreditType", WorkflowActivitySchemaBuilders.String("The credit type, by name or identifier. A plain string that supports Liquid."));
         yield return ("UserId", WorkflowActivitySchemaBuilders.String("The user id of the person. A plain string that supports Liquid."));
         yield return ("Amount", WorkflowActivitySchemaBuilders.String("The number of credits, such as 1.5. A plain string that supports Liquid."));
-        yield return ("SourceId", WorkflowActivitySchemaBuilders.String("What the credits are for; the same source id awards once. A plain string that supports Liquid."));
+        yield return ("SourceId", WorkflowActivitySchemaBuilders.String("What the credits are for; the same source id awards each person once. A plain string that supports Liquid."));
     }
 }

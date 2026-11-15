@@ -114,4 +114,9 @@ public interface ICertificationPathObserver
     /// A person's certificate lapsed.
     /// </summary>
     Task LapsedAsync(CertificationPathProgress progress, CertificationPath path, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// A person was certified: a certificate was issued or renewed for them.
+    /// </summary>
+    Task CertifiedAsync(CertificationPathProgress progress, CertificationPath path, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

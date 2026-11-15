@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Certifications.Core;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
@@ -84,6 +85,7 @@ public sealed class ExternalLearningController : Controller
             Submission = submission,
             UserName = (await users.GetUserNamesAsync([submission.UserId])).TryGetValue(submission.UserId, out var name) ? name : submission.UserId,
             TypeName = (await _credits.FindTypeAsync(submission.CreditTypeId, HttpContext.RequestAborted))?.Name,
+            IsOwnLearning = string.Equals(submission.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal),
         });
     }
 
@@ -97,17 +99,30 @@ public sealed class ExternalLearningController : Controller
             return Forbid();
         }
 
-        var reviewed = decision == "accept"
-            ? await _credits.AcceptExternalAsync(id, User.Identity?.Name, model.Note, HttpContext.RequestAborted)
-            : await _credits.RejectExternalAsync(id, User.Identity?.Name, model.Note, HttpContext.RequestAborted);
+        var reviewerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var result = decision == "accept"
+            ? await _credits.AcceptExternalAsync(id, reviewerId, User.Identity?.Name, model.Note, HttpContext.RequestAborted)
+            : await _credits.RejectExternalAsync(id, reviewerId, User.Identity?.Name, model.Note, HttpContext.RequestAborted);
 
-        if (reviewed is null)
+        switch (result.Outcome)
         {
-            await _notifier.ErrorAsync(H["This external learning was already reviewed."]);
-        }
-        else
-        {
-            await _notifier.SuccessAsync(reviewed.State == ExternalLearningState.Accepted ? H["Accepted: the credits are posted."] : H["Rejected."]);
+            case ExternalLearningReviewOutcome.Reviewed:
+                await _notifier.SuccessAsync(result.Submission.State == ExternalLearningState.Accepted ? H["Accepted: the credits are posted."] : H["Rejected."]);
+                break;
+            case ExternalLearningReviewOutcome.OwnLearning:
+                await _notifier.ErrorAsync(H["You can't review your own external learning. Ask another reviewer."]);
+                break;
+            case ExternalLearningReviewOutcome.CreditsPosted:
+                await _notifier.ErrorAsync(H["Credits were already posted for this external learning, so it can't be rejected."]);
+                break;
+            case ExternalLearningReviewOutcome.Busy:
+                await _notifier.ErrorAsync(H["Someone else is reviewing this external learning. Try again in a moment."]);
+                break;
+            case ExternalLearningReviewOutcome.NotFound:
+                return NotFound();
+            default:
+                await _notifier.ErrorAsync(H["This external learning was already reviewed."]);
+                break;
         }
 
         return RedirectToAction(nameof(Index));
@@ -117,7 +132,7 @@ public sealed class ExternalLearningController : Controller
     /// Opens the evidence of external learning, to reviewers and to the person who recorded it.
     /// </summary>
     [Route("learning/external-learning/{id}/evidence")]
-    public async Task<IActionResult> Evidence(string id, [FromServices] IProtectedFileStore<ExternalLearningEvidence> files, [FromServices] IEnumerable<IProtectedFileAccessPolicy<ExternalLearningEvidence>> policies)
+    public async Task<IActionResult> Evidence(string id, [FromServices] IProtectedFileLinks<ExternalLearningEvidence> links)
     {
         var submission = await _credits.FindExternalAsync(id, HttpContext.RequestAborted);
 
@@ -126,19 +141,15 @@ public sealed class ExternalLearningController : Controller
             return NotFound();
         }
 
-        var access = new ProtectedFileAccess { FileId = fileId, ResourceId = submission.ItemId, User = User };
+        // Opened through the area's links, so the store's own rule is the only path: every policy must allow it, and
+        // an area with no policy serves nothing.
+        var opened = await links.OpenAsync(links.CreateToken(fileId, submission.ItemId, TimeSpan.FromMinutes(1)), User, HttpContext.RequestAborted);
 
-        foreach (var policy in policies)
+        if (opened is not { } found)
         {
-            if (!await policy.CanReadAsync(access, HttpContext.RequestAborted))
-            {
-                return User.Identity?.IsAuthenticated == true ? Forbid() : Challenge();
-            }
+            return User.Identity?.IsAuthenticated == true ? Forbid() : Challenge();
         }
 
-        var file = await files.FindAsync(fileId, HttpContext.RequestAborted);
-        var content = file is null ? null : await files.OpenAsync(fileId, HttpContext.RequestAborted);
-
-        return content is null ? NotFound() : File(content, "application/octet-stream", file.FileName);
+        return File(found.Content, "application/octet-stream", found.File.FileName);
     }
 }

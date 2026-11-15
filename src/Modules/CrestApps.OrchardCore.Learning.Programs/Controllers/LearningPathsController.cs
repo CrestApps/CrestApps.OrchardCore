@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Programs.Core.Services;
 using CrestApps.OrchardCore.Learning.Programs.Models;
 using CrestApps.OrchardCore.Learning.Programs.Services;
 using CrestApps.OrchardCore.Learning.Programs.ViewModels;
@@ -56,7 +57,10 @@ public sealed class LearningPathsController : Controller
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, path))
+        // Listing who is on a path and starting people enrolls them in its courses: it needs the right to manage the
+        // enrollments of each of them, not only to edit the path.
+        if (!await _authorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, path)
+            || !await LearningPathAccess.CanManageEnrollmentsAsync(_authorizationService, User, path.TryGet<LearningPathPart>(out var pathPart) ? pathPart : new LearningPathPart()))
         {
             return Forbid();
         }
@@ -97,7 +101,10 @@ public sealed class LearningPathsController : Controller
             return NotFound();
         }
 
-        if (!await _authorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, path))
+        // Listing who is on a path and starting people enrolls them in its courses: it needs the right to manage the
+        // enrollments of each of them, not only to edit the path.
+        if (!await _authorizationService.AuthorizeAsync(User, CommonPermissions.EditContent, path)
+            || !await LearningPathAccess.CanManageEnrollmentsAsync(_authorizationService, User, path.TryGet<LearningPathPart>(out var pathPart) ? pathPart : new LearningPathPart()))
         {
             return Forbid();
         }
@@ -145,6 +152,14 @@ public sealed class LearningPathsController : Controller
         if (path is null || !path.TryGet<LearningPathPart>(out var part) || !part.AllowSelfStart || !await _authorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, path))
         {
             return NotFound();
+        }
+
+        // Starting a path on one's own must not enter a course that needs a key or an approval.
+        if (!await LearningPathAccess.AllCoursesOpenAsync(_contentManager, part))
+        {
+            await _notifier.ErrorAsync(H["This path holds a course you can't enroll in yourself. Ask a learning administrator to start you on it."]);
+
+            return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : Redirect("~/learning/required");
         }
 
         var result = await _paths.StartAsync(new LearningPathStartRequest { PathId = id, UserId = userId, Actor = User.Identity?.Name, Source = ProgramsConstants.PathSource }, HttpContext.RequestAborted);

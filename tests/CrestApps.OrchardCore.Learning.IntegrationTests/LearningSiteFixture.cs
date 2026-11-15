@@ -315,7 +315,7 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         }
     }
 
-    private static JsonObject Role(string name, params string[] permissions)
+    internal static JsonObject Role(string name, params string[] permissions)
         => new()
         {
             ["Name"] = name,
@@ -324,7 +324,7 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
             ["Permissions"] = new JsonArray(permissions.Select(permission => (JsonNode)permission).ToArray()),
         };
 
-    private static async Task<string> CreateUserAsync(IServiceProvider services, string userName, params string[] roles)
+    internal static async Task<string> CreateUserAsync(IServiceProvider services, string userName, params string[] roles)
     {
         var errors = new List<string>();
         var user = await services.GetRequiredService<IUserService>().CreateUserAsync(new User

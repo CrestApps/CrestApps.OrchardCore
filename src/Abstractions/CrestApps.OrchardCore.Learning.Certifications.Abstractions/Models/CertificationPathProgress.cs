@@ -155,4 +155,10 @@ public sealed class CertificationEvidence
     /// Gets or sets the grade or percent.
     /// </summary>
     public decimal? Grade { get; set; }
+
+    /// <summary>
+    /// Gets or sets the records the evidence also rests on, such as the enrollments and external learning whose credits
+    /// counted toward a credits requirement, so a review of one of them finds the certificate.
+    /// </summary>
+    public List<string> SourceRefs { get; set; } = [];
 }
