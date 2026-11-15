@@ -10,8 +10,9 @@ internal sealed class SchedulingMigrations : DataMigration
     {
         await SchedulingIndexSchema.CreateAsync(SchemaBuilder);
         await CreateReportIndexesAsync();
+        await SchedulingSessionIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 2;
+        return 3;
     }
 
     // The indexes reports read appointments and waitlist entries through, newest first by their main date, a page at a time.
@@ -20,6 +21,14 @@ internal sealed class SchedulingMigrations : DataMigration
         await CreateReportIndexesAsync();
 
         return 2;
+    }
+
+    // Dated sessions, their registrations and their waitlists: new tables only.
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchedulingSessionIndexSchema.CreateAsync(SchemaBuilder);
+
+        return 3;
     }
 
     private async Task CreateReportIndexesAsync()

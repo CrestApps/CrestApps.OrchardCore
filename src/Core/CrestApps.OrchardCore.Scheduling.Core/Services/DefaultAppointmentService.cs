@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
+using Calendar = CrestApps.OrchardCore.Calendars.Models.Calendar;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
@@ -11,7 +12,6 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
-using Calendar = CrestApps.OrchardCore.Calendars.Models.Calendar;
 
 namespace CrestApps.OrchardCore.Scheduling.Core.Services;
 
@@ -189,6 +189,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
                 Notes = request.Notes,
                 ManageToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant(),
                 Source = request.Source,
+                SourceId = request.SourceId,
                 CreatedUtc = now,
                 ModifiedUtc = now,
             };
@@ -431,7 +432,8 @@ public sealed class DefaultAppointmentService : IAppointmentService
     {
         var expired = await _appointmentStore.ListExpiredHoldsAsync(_clock.UtcNow);
 
-        foreach (var appointment in expired)
+        // Offers of a dated session are passed on by the session service, not just ended here.
+        foreach (var appointment in expired.Where(appointment => string.IsNullOrEmpty(appointment.SessionId)))
         {
             var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
@@ -444,7 +446,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
             Enqueue(AppointmentChangeKind.HoldExpired, appointment, type, SchedulingConstants.EventSource);
         }
 
-        return expired.Count;
+        return expired.Count(appointment => string.IsNullOrEmpty(appointment.SessionId));
     }
 
     private async Task<string> PlaceEventAsync(AppointmentType type, Appointment appointment, string actor)

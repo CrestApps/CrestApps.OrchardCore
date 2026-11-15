@@ -51,4 +51,34 @@ public sealed class WaitlistEntry : CatalogItem
     /// Gets or sets when the customer was told a time freed up.
     /// </summary>
     public DateTime? NotifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user waiting, when they are signed in.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dated session the person waits for; empty for a wait on any free time of the type.
+    /// </summary>
+    public string SessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the appointment held for the person when a place was offered to them.
+    /// </summary>
+    public string AppointmentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the offer runs out and passes to the next person.
+    /// </summary>
+    public DateTime? OfferExpiresUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the wait is for, such as a learner's enrollment.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the id within <see cref="Source"/>.
+    /// </summary>
+    public string SourceId { get; set; }
 }
