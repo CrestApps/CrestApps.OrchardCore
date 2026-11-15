@@ -66,6 +66,17 @@ With a desk that e-mails requesters, the requester gets the `ticket-received`, `
 
 Every requester e-mail goes through an outbox: it is stored, tried at once, and when it fails tried again after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours, then given up. While a reply's e-mail hasn't reached the requester, the reply on the ticket shows a "not delivered" notice with the reason (the timeline's `Notice` entry property), and the notice goes away once it is sent. A ticket created with `TicketCreateRequest.IsImport` (a bulk import of past tickets) tells no observer, so no requester is e-mailed, no workflow starts and no webhook is sent; tickets brought in by a recipe's `Content` step are saved as content items and tell no observer either. With Notifications on, the assignee is told through Orchard Core notifications when a ticket is given to them (never about one they took). With Omnichannel Messaging on, reply templates of the `Tickets` scope are offered in the composer, filled in for the ticket, and can also set a status, priority or team.
 
+## Portal
+
+The **Tickets Portal** feature (`CrestApps.OrchardCore.Tickets.Portal`) adds a **Requests** page to the site's [My account](./users#my-account) area:
+
+- `account/requests` lists the signed-in person's requests, newest first, with the status as customers see it. An administrator of an [account](./accounts) (an account member with the Admin role) also gets a tab with the account's requests.
+- `account/requests/new` offers the ticket types whose Ticket part settings say **Customers can submit it**, with their description for customers, on the desks that serve customers; then the type's own form (its title is the subject, plus its fields), the description and files. The ticket opens with the `Portal` channel and the person as its requester.
+- `account/requests/{number}` shows the public replies, oldest first, with download links for their files that work for an hour, and a reply box. Internal notes and the record of changes never show. A reply from the requester reopens a solved request as a reply on an agent's page would.
+- A requester without a login opens `requests/{id}?token=…`, the signed link in their e-mails (90 days), to read and answer that one request.
+
+Every requester e-mail then ends with **View your request**, linking to the request in My account, or to the signed link for a guest (`TicketEmailModel.Link` for templates, `ITicketRequesterLinks` for code). Links use the site's **Base URL** when it is set. Desk permissions play no part in the portal: a person sees what they asked for, and an account administrator what their account asked for.
+
 ## Workflows
 
 With Workflows on, these events start workflows. Each can be narrowed to desks; the ticket's values are in `Workflow.Input` (`TicketId`, `Number`, `Subject`, `DeskId`, `StatusId`, `StatusCategory`, `PriorityId`, `TeamId`, `AssigneeId`, `Requester`, `ContentType`) with what the event adds (`ChangedFields`, `Previous`, `Body`, `Metric`, `MergedIntoId`, `ActionName`). `ChangedFields` and the changed-field filter use stable keys (`TicketChangeKeys`: `Subject`, `Desk`, `Status`, `Priority`, `Team`, `Assignee`, `EscalationLevel`, `Link`), not the shown labels, which are translated; each change also carries the ids it moved from and to (`FromValue`, `ToValue`). A workflow starts after the change is committed and the ticket's lock is released, so it reads the saved ticket.

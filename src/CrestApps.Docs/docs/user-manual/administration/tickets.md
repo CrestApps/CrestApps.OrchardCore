@@ -72,6 +72,15 @@ The permissions to view and work tickets exist for each desk, so HR tickets can 
 
 An account's page has a **Tickets** tab: its latest tickets you may see, how many are open, and **New ticket** for the account.
 
+## Let customers open requests on the site
+
+Turn on **Tickets Portal** under **Configuration > Features**. Then:
+
+1. Under **Content Definition**, edit the ticket type's **Ticket** part and tick **Customers can submit it**. Add a **Description for customers** so they can tell types apart.
+2. Make sure a desk **Serves** customers (**Tickets > Desks**). Customers can only open requests on those desks.
+
+Signed-in people now find **Requests** under **My account**: their requests, **New request**, and each request's conversation with a reply box. They see your public replies, never your internal notes. Someone without a login follows **View your request** in their e-mails to read and answer their request. An account's administrators also see the account's requests.
+
 ## Reports
 
 Under **Reports**, with **View ticket reports**:

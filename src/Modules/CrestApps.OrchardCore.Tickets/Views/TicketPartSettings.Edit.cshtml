@@ -48,3 +48,21 @@
         </div>
     </div>
 }
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="CustomerSubmittable" class="form-check-input" type="checkbox" />
+            <label asp-for="CustomerSubmittable" class="form-check-label">@T["Customers can submit it"]</label>
+            <span class="hint dashed">@T["With Tickets Portal on, customers see this type under New request in My account, on the desks that serve customers."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="PortalDescription" class="ocat-label">@T["Description for customers"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="PortalDescription" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["What customers read about this type when they choose what to ask for."]</span>
+    </div>
+</div>

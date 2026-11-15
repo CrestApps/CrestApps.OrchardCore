@@ -46,6 +46,8 @@ internal sealed class TicketPartSettingsDisplayDriver : ContentTypePartDefinitio
             model.DefaultPriorityId = settings.DefaultPriorityId;
             model.ServiceLevelPolicyId = settings.ServiceLevelPolicyId;
             model.RequiredSkillIds = [.. settings.RequiredSkills.Select(skill => skill.SkillId)];
+            model.CustomerSubmittable = settings.CustomerSubmittable;
+            model.PortalDescription = settings.PortalDescription;
             model.Desks = [.. (await _desks.GetAllAsync()).OrderBy(desk => desk.Name, StringComparer.CurrentCultureIgnoreCase).Select(desk => new SelectListItem(desk.Name, desk.ItemId, desk.ItemId == settings.DefaultDeskId))];
             model.Priorities = [.. (await _priorities.GetAllAsync()).OrderBy(priority => priority.Rank).Select(priority => new SelectListItem(priority.Name, priority.ItemId, priority.ItemId == settings.DefaultPriorityId))];
             model.Policies = [.. (await _policies.ListByScopeAsync(TicketsConstants.ServiceLevelScope)).Select(policy => new SelectListItem(policy.Name, policy.ItemId, policy.ItemId == settings.ServiceLevelPolicyId))];
@@ -77,8 +79,8 @@ internal sealed class TicketPartSettingsDisplayDriver : ContentTypePartDefinitio
             DefaultPriorityId = Blank(model.DefaultPriorityId),
             ServiceLevelPolicyId = Blank(model.ServiceLevelPolicyId),
             RequiredSkills = [.. skillIds.Select(id => new SkillRequirement { SkillId = id, MinProficiency = proficiency.GetValueOrDefault(id, 1) })],
-            CustomerSubmittable = current.CustomerSubmittable,
-            PortalDescription = current.PortalDescription,
+            CustomerSubmittable = model.CustomerSubmittable,
+            PortalDescription = Blank(model.PortalDescription),
         });
 
         return Edit(contentTypePartDefinition, context);

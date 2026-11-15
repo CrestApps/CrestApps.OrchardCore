@@ -79,6 +79,23 @@ public sealed class TicketEmailTests
     }
 
     [Fact]
+    public async Task WithThePortal_EachEmailLinksToTheRequest()
+    {
+        // Arrange
+        var links = new Mock<ITicketRequesterLinks>();
+        links.Setup(value => value.GetLinkAsync(It.IsAny<ContentItem>(), It.IsAny<CancellationToken>())).ReturnsAsync("https://help.example.com/requests/t1?token=a&b");
+        var observer = Observer(notify: true, links: links.Object);
+
+        // Act
+        await observer.CreatedAsync(Ticket(), TestContext.Current.CancellationToken);
+
+        // Assert
+        var sent = Assert.Single(_sent);
+        Assert.Contains("<a href=\"https://help.example.com/requests/t1?token=a&amp;b\">View your request</a>", sent.Content.Html);
+        Assert.Equal("https://help.example.com/requests/t1?token=a&b", ((TicketEmailModel)sent.Email.Models["Ticket"]).Link);
+    }
+
+    [Fact]
     public async Task ADeskThatDoesntEmailRequesters_SendsNothing()
     {
         // Arrange
@@ -144,7 +161,7 @@ public sealed class TicketEmailTests
         Assert.Equal("Templates[0].Body", error.Key);
     }
 
-    private TicketEmailObserver Observer(bool notify, IAttachmentService attachments = null, string baseUrl = null)
+    private TicketEmailObserver Observer(bool notify, IAttachmentService attachments = null, string baseUrl = null, ITicketRequesterLinks links = null)
     {
         var desks = new Mock<ICatalog<TicketDesk>>();
         desks.Setup(catalog => catalog.FindByIdAsync("support", It.IsAny<CancellationToken>())).ReturnsAsync(new TicketDesk { ItemId = "support", NotifyRequester = notify });
@@ -174,6 +191,11 @@ public sealed class TicketEmailTests
         if (attachments is not null)
         {
             services.AddSingleton(attachments);
+        }
+
+        if (links is not null)
+        {
+            services.AddSingleton(links);
         }
 
         return new TicketEmailObserver(desks.Object, Mock.Of<IPartyDirectory>(), services.BuildServiceProvider(), RecipeRoundTrip.Localizer<TicketEmailObserver>());

@@ -32,6 +32,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = TicketsConstants.Features.Portal,
+    Name = "Tickets Portal",
+    Description = "Lets requesters open and follow their requests on the site: a Requests page in My account with the ticket types customers may submit, their requests and their organization's for account administrators, and the conversation with replies and files. A requester without a login follows the link in their e-mails.",
+    Category = "Service Desk",
+    Dependencies =
+    [
+        TicketsConstants.Features.Tickets,
+        CrestApps.OrchardCore.Users.UsersConstants.Feature.Account,
+    ]
+)]
+
+[assembly: Feature(
     Id = TicketsConstants.Features.Api,
     Name = "Tickets API",
     Description = "Lets other systems list, read, open, change, reply to and add notes to tickets over a JSON API, api/tickets/v1, with the caller's ticket permissions. Enable OpenAPI to document it.",

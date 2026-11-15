@@ -64,6 +64,8 @@
     <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Teams\CrestApps.OrchardCore.Teams.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Timeline\CrestApps.OrchardCore.Timeline.csproj" />
+    <!-- Carries the My Account feature the Tickets Portal feature depends on. -->
+    <ProjectReference Include="..\CrestApps.OrchardCore.Users\CrestApps.OrchardCore.Users.csproj" />
   </ItemGroup>
 
 </Project>

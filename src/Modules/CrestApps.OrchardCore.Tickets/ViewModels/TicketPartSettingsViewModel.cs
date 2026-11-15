@@ -18,6 +18,10 @@ public class TicketPartSettingsViewModel
 
     public List<string> RequiredSkillIds { get; set; } = [];
 
+    public bool CustomerSubmittable { get; set; }
+
+    public string PortalDescription { get; set; }
+
     [BindNever]
     public List<SelectListItem> Desks { get; set; } = [];
 

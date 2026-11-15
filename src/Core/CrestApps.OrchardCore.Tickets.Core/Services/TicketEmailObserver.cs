@@ -52,10 +52,11 @@ public sealed class TicketEmailObserver : ITicketObserver
             return;
         }
 
-        var model = TicketEmailModel.From(ticket, null);
+        var model = TicketEmailModel.From(ticket, null, await LinkAsync(ticket, cancellationToken));
         var subject = S["We received your request: {0}", model.Subject].Value;
         var html = $"<p>{Encode(S["We received your request and gave it the number {0}. We'll get back to you soon.", model.Number])}</p>"
-            + $"<p><strong>{Encode(model.Subject)}</strong></p>";
+            + $"<p><strong>{Encode(model.Subject)}</strong></p>"
+            + ViewLink(model.Link);
 
         await SendAsync(TicketsConstants.EmailKinds.Received, to, model, null, subject, html, null, ticket.ContentItemId, cancellationToken);
     }
@@ -70,12 +71,13 @@ public sealed class TicketEmailObserver : ITicketObserver
             return;
         }
 
-        var model = TicketEmailModel.From(ticket, null);
+        var model = TicketEmailModel.From(ticket, null, await LinkAsync(ticket, cancellationToken));
         var files = await FilesAsync(entry, cancellationToken);
         var reply = new TicketEmailReply { Body = entry.Body, Html = Paragraphs(entry.Body) + files, AuthorName = entry.AuthorName };
         var subject = $"[{model.Number}] {model.Subject}";
         var html = reply.Html
-            + $"<hr><p>{Encode(S["Request {0}: {1}", model.Number, model.Subject])}</p>";
+            + $"<hr><p>{Encode(S["Request {0}: {1}", model.Number, model.Subject])}</p>"
+            + ViewLink(model.Link);
 
         await SendAsync(TicketsConstants.EmailKinds.Reply, to, model, reply, subject, html, entry.ItemId, ticket.ContentItemId, cancellationToken);
     }
@@ -89,11 +91,12 @@ public sealed class TicketEmailObserver : ITicketObserver
             return;
         }
 
-        var model = TicketEmailModel.From(ticket, current);
+        var model = TicketEmailModel.From(ticket, current, await LinkAsync(ticket, cancellationToken));
         var subject = S["Solved: {0}", model.Subject].Value;
         var html = $"<p>{Encode(S["Your request {0} is solved.", model.Number])}</p>"
             + $"<p><strong>{Encode(model.Subject)}</strong></p>"
-            + $"<p>{Encode(S["If it isn't, contact us and give the number {0}.", model.Number])}</p>";
+            + $"<p>{Encode(S["If it isn't, contact us and give the number {0}.", model.Number])}</p>"
+            + ViewLink(model.Link);
 
         await SendAsync(TicketsConstants.EmailKinds.Solved, to, model, null, subject, html, null, ticket.ContentItemId, cancellationToken);
     }
@@ -132,7 +135,15 @@ public sealed class TicketEmailObserver : ITicketObserver
             ReplyBody = reply?.Body,
             ReplyHtml = reply?.Html,
             ReplyAuthorName = reply?.AuthorName,
+            TicketLink = model.Link,
         }, cancellationToken);
+
+    // The link to the request on the site (with the Tickets Portal feature), or none.
+    private async Task<string> LinkAsync(ContentItem ticket, CancellationToken cancellationToken)
+        => _services.GetService<ITicketRequesterLinks>() is { } links ? await links.GetLinkAsync(ticket, cancellationToken) : null;
+
+    private string ViewLink(string link)
+        => string.IsNullOrEmpty(link) ? string.Empty : $"<p><a href=\"{Encode(link)}\">{Encode(S["View your request"])}</a></p>";
 
     // Files of a public reply reach the requester as download links that work for 30 days, from the site's own address.
     private async Task<string> FilesAsync(TimelineEntry entry, CancellationToken cancellationToken)
@@ -206,12 +217,19 @@ public sealed class TicketEmailModel
     public string RequesterName { get; init; }
 
     /// <summary>
+    /// Gets the link to the request on the site (their account page, or a signed link for a guest), when the Tickets
+    /// Portal feature is on and the site has an address.
+    /// </summary>
+    public string Link { get; init; }
+
+    /// <summary>
     /// Builds the model of a ticket.
     /// </summary>
     /// <param name="ticket">The ticket.</param>
     /// <param name="status">Its status, if known.</param>
     /// <returns>The model.</returns>
-    public static TicketEmailModel From(ContentItem ticket, TicketStatus status)
+    /// <param name="link">The link to the request on the site, if any.</param>
+    public static TicketEmailModel From(ContentItem ticket, TicketStatus status, string link = null)
     {
         ArgumentNullException.ThrowIfNull(ticket);
 
@@ -223,6 +241,7 @@ public sealed class TicketEmailModel
             Subject = ticket.DisplayText,
             Status = status is null ? null : string.IsNullOrWhiteSpace(status.CustomerLabel) ? status.Name : status.CustomerLabel,
             RequesterName = part?.RequesterContact?.Name,
+            Link = link,
         };
     }
 }

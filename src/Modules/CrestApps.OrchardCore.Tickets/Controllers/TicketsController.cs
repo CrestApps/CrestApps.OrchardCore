@@ -1027,65 +1027,18 @@ public sealed class TicketsController : Controller
     // was refused (the notifier says why).
     private async Task<(List<string> Attached, bool Refused)> StoreFilesAsync(List<IFormFile> files, string entryId, CancellationToken cancellationToken)
     {
-        var uploads = files?.Where(file => file is { Length: > 0 }).ToList() ?? [];
+        var (attached, errors) = await _serviceProvider.GetRequiredService<TicketUploads>().StoreAsync(files, entryId, CurrentParty(), cancellationToken);
 
-        if (uploads.Count == 0)
+        foreach (var error in errors)
         {
-            return ([], false);
+            await _notifier.ErrorAsync(H["{0}", error]);
         }
 
-        if (_serviceProvider.GetService<IAttachmentService>() is not { } attachments)
-        {
-            await _notifier.ErrorAsync(H["Files can't be attached here."]);
-
-            return ([], true);
-        }
-
-        var owner = new RecordRef(TimelineConstants.AttachmentOwnerKind, entryId);
-        var read = new List<AttachmentUpload>(uploads.Count);
-
-        foreach (var file in uploads)
-        {
-            using var buffer = new MemoryStream();
-            await file.CopyToAsync(buffer, cancellationToken);
-
-            read.Add(new AttachmentUpload
-            {
-                Owner = owner,
-                FileName = file.FileName,
-                DeclaredContentType = file.ContentType,
-                Content = buffer.ToArray(),
-                UploadedBy = CurrentParty(),
-            });
-        }
-
-        var stored = await attachments.AddAsync(read, cancellationToken);
-
-        if (!stored.Succeeded)
-        {
-            foreach (var error in stored.Errors)
-            {
-                await _notifier.ErrorAsync(H["{0}", error]);
-            }
-
-            return ([], true);
-        }
-
-        return ([.. stored.Attachments.Select(attachment => attachment.ItemId)], false);
+        return (attached, errors.Count > 0);
     }
 
-    private async Task DeleteFilesAsync(List<string> attachmentIds)
-    {
-        if (attachmentIds.Count == 0 || _serviceProvider.GetService<IAttachmentService>() is not { } attachments)
-        {
-            return;
-        }
-
-        foreach (var attachmentId in attachmentIds)
-        {
-            await attachments.DeleteAsync(attachmentId, CancellationToken.None);
-        }
-    }
+    private Task DeleteFilesAsync(List<string> attachmentIds)
+        => _serviceProvider.GetRequiredService<TicketUploads>().DeleteAsync(attachmentIds);
 
     private async Task NotifyAsync(TicketResult result, LocalizedHtmlString success)
     {

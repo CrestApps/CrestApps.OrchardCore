@@ -155,7 +155,7 @@ public sealed class TicketEmailOutbox
     {
         var models = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            ["Ticket"] = new TicketEmailModel { Number = item.TicketNumber, Subject = item.TicketSubject, Status = item.TicketStatus, RequesterName = item.RequesterName },
+            ["Ticket"] = new TicketEmailModel { Number = item.TicketNumber, Subject = item.TicketSubject, Status = item.TicketStatus, RequesterName = item.RequesterName, Link = item.TicketLink },
         };
 
         if (item.ReplyBody is not null || item.ReplyHtml is not null)

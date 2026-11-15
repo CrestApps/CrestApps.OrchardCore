@@ -35,6 +35,8 @@ public sealed class TicketEmailOutboxItem
 
     public string RequesterName { get; set; }
 
+    public string TicketLink { get; set; }
+
     public string ReplyBody { get; set; }
 
     public string ReplyHtml { get; set; }

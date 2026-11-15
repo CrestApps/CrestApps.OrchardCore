@@ -158,7 +158,9 @@ public sealed class TicketsControllerTests
             htmlLocalizer.Setup(value => value[It.IsAny<string>()]).Returns((string name) => new LocalizedHtmlString(name, name));
             htmlLocalizer.Setup(value => value[It.IsAny<string>(), It.IsAny<object[]>()]).Returns((string name, object[] _) => new LocalizedHtmlString(name, name));
 
-            var services = new ServiceCollection().BuildServiceProvider();
+            var services = new ServiceCollection()
+                .AddSingleton(new global::CrestApps.OrchardCore.Tickets.Services.TicketUploads([], Doubles.RecipeRoundTrip.Localizer<global::CrestApps.OrchardCore.Tickets.Services.TicketUploads>()))
+                .BuildServiceProvider();
             var httpContext = new DefaultHttpContext { User = CalendarTestHarness.User("ben"), RequestServices = services };
 
             Controller = new TicketsController(

@@ -1,0 +1,62 @@
+@using CrestApps.OrchardCore.Tickets.Portal
+@model TicketPortalDisplayViewModel
+
+@{
+    var routeValues = string.IsNullOrEmpty(Model.GuestToken)
+        ? new Dictionary<string, string> { ["number"] = Model.Number }
+        : new Dictionary<string, string> { ["id"] = Model.TicketId, ["token"] = Model.GuestToken };
+}
+
+<div class="d-flex flex-wrap gap-3 align-items-center mb-3 small text-body-secondary">
+    @if (!string.IsNullOrEmpty(Model.Status))
+    {
+        <span class="badge text-bg-primary">@Model.Status</span>
+    }
+    <span>@T["Opened {0}", Model.Created]</span>
+</div>
+
+<div class="d-flex flex-column gap-3 mb-4">
+    @foreach (var entry in Model.Entries)
+    {
+        <div class="card@(entry.IsRequester ? null : " border-primary-subtle")">
+            <div class="card-header d-flex justify-content-between small">
+                <span class="fw-semibold">@(entry.IsRequester ? T["You"] : (object)(entry.AuthorName ?? T["Support"].Value))</span>
+                <span class="text-body-secondary">@entry.When</span>
+            </div>
+            <div class="card-body">
+                <div style="white-space: pre-wrap;">@entry.Body</div>
+                @if (entry.Files.Count > 0)
+                {
+                    <ul class="list-unstyled mt-2 mb-0 small">
+                        @foreach (var file in entry.Files)
+                        {
+                            <li><i class="fa-solid fa-paperclip me-1" aria-hidden="true"></i><a href="@file.Url">@file.FileName</a></li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@if (Model.CanReply)
+{
+    <form method="post" asp-route="@(string.IsNullOrEmpty(Model.GuestToken) ? "TicketPortalReply" : "TicketPortalGuestReply")" asp-all-route-data="@routeValues" enctype="multipart/form-data" class="no-multisubmit">
+        <div class="mb-3">
+            <label for="reply-body" class="form-label">@T["Reply"]</label>
+            <textarea id="reply-body" name="body" class="form-control" rows="4" required></textarea>
+        </div>
+        @if (Model.CanAttach)
+        {
+            <div class="mb-3">
+                <label for="reply-files" class="form-label">@T["Files"]</label>
+                <input id="reply-files" type="file" name="files" class="form-control" multiple />
+            </div>
+        }
+        <button type="submit" class="btn btn-primary">@T["Send"]</button>
+    </form>
+}
+else
+{
+    <p class="text-body-secondary">@T["This request was merged into another one; we'll answer you there."]</p>
+}

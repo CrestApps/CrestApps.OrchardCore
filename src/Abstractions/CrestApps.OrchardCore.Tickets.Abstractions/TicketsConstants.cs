@@ -210,5 +210,10 @@ public static class TicketsConstants
         /// The tickets JSON API, <c>api/tickets/v1</c>.
         /// </summary>
         public const string Api = "CrestApps.OrchardCore.Tickets.Api";
+
+        /// <summary>
+        /// The requesters' pages in the site's "my account" area, and the signed link a guest follows from an e-mail.
+        /// </summary>
+        public const string Portal = "CrestApps.OrchardCore.Tickets.Portal";
     }
 }
