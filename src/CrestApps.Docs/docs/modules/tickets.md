@@ -79,6 +79,12 @@ The **Tickets Portal** feature (`CrestApps.OrchardCore.Tickets.Portal`) adds a *
 
 Every requester e-mail then ends with **View your request**, linking to the request in My account, or to the signed link for a guest (`TicketEmailModel.Link` for templates, `ITicketRequesterLinks` for code). Links use the site's **Base URL** when it is set. Desk permissions play no part in the portal: a person sees what they asked for, and an account administrator what their account asked for.
 
+## Web form
+
+The **Ticket Web Form** feature (`CrestApps.OrchardCore.Tickets.WebForm`) adds a **Ticket Form** widget (`TicketFormWidget`, with `TicketFormPart`): choose the ticket type and the desk, and optionally what the visitor reads once it's sent. Place it like any widget (layers, flow). It asks for a subject and the request, and for a name and an e-mail when the visitor isn't signed in; a signed-in visitor is the requester. The form posts to `tickets/forms/{widgetId}` and the ticket opens with the `WebForm` channel; the visitor goes back to the page, which says it was received with its number, or what went wrong.
+
+Robots are kept out three ways: a hidden trap field (a filled one is answered as if it worked and opens nothing), at most 5 requests per visitor address in 10 minutes (`TicketFormGuard`), and, with Orchard Core's **ReCaptcha** on and its keys set, a challenge checked on the server (`ITicketFormChallenge`).
+
 ## Workflows
 
 With Workflows on, these events start workflows. Each can be narrowed to desks; the ticket's values are in `Workflow.Input` (`TicketId`, `Number`, `Subject`, `DeskId`, `StatusId`, `StatusCategory`, `PriorityId`, `TeamId`, `AssigneeId`, `Requester`, `ContentType`) with what the event adds (`ChangedFields`, `Previous`, `Body`, `Metric`, `MergedIntoId`, `ActionName`). `ChangedFields` and the changed-field filter use stable keys (`TicketChangeKeys`: `Subject`, `Desk`, `Status`, `Priority`, `Team`, `Assignee`, `EscalationLevel`, `Link`), not the shown labels, which are translated; each change also carries the ids it moved from and to (`FromValue`, `ToValue`). A workflow starts after the change is committed and the ticket's lock is released, so it reads the saved ticket.

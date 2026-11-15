@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Tickets.WebForm
+@model TicketFormPartViewModel
+
+<div class="mb-3" asp-validation-class-for="TicketType">
+    <label asp-for="TicketType" class="form-label">@T["Ticket type"]</label>
+    <select asp-for="TicketType" asp-items="Model.Types" class="form-select">
+        <option value="">@T["Choose one"]</option>
+    </select>
+    <span asp-validation-for="TicketType" class="text-danger"></span>
+</div>
+
+<div class="mb-3" asp-validation-class-for="DeskId">
+    <label asp-for="DeskId" class="form-label">@T["Desk"]</label>
+    <select asp-for="DeskId" asp-items="Model.Desks" class="form-select">
+        <option value="">@T["Choose one"]</option>
+    </select>
+    <span asp-validation-for="DeskId" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="SuccessMessage" class="form-label">@T["After sending"]</label>
+    <textarea asp-for="SuccessMessage" class="form-control" rows="2"></textarea>
+    <span class="hint">@T["What the visitor reads once their request is sent. Leave it empty for a thank-you with the request's number."]</span>
+</div>

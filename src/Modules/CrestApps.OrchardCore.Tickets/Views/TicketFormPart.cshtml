@@ -1,0 +1,58 @@
+@using CrestApps.OrchardCore.Tickets.WebForm
+@model TicketFormViewModel
+
+<section id="ticket-form-@Model.WidgetId" class="ticket-form my-4">
+    @if (!Model.Ready)
+    {
+        <p class="text-body-secondary">@T["This form isn't set up yet."]</p>
+    }
+    else if (!string.IsNullOrEmpty(Model.SentNumber))
+    {
+        <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(Model.Error))
+        {
+            <div class="alert alert-warning" role="alert">@Model.Error</div>
+        }
+
+        <form method="post" asp-route="TicketFormSubmit" asp-route-widgetId="@Model.WidgetId" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path)" class="no-multisubmit">
+            @if (!Model.SignedIn)
+            {
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="ticket-form-name-@Model.WidgetId" class="form-label">@T["Your name"]</label>
+                        <input id="ticket-form-name-@Model.WidgetId" name="name" class="form-control" maxlength="200" autocomplete="name" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="ticket-form-email-@Model.WidgetId" class="form-label">@T["Your e-mail"]</label>
+                        <input id="ticket-form-email-@Model.WidgetId" name="email" type="email" class="form-control" maxlength="254" autocomplete="email" required />
+                    </div>
+                </div>
+            }
+
+            <div class="mb-3">
+                <label for="ticket-form-subject-@Model.WidgetId" class="form-label">@T["Subject"]</label>
+                <input id="ticket-form-subject-@Model.WidgetId" name="subject" class="form-control" maxlength="200" required />
+            </div>
+
+            <div class="mb-3">
+                <label for="ticket-form-body-@Model.WidgetId" class="form-label">@T["How can we help?"]</label>
+                <textarea id="ticket-form-body-@Model.WidgetId" name="body" class="form-control" rows="5" required></textarea>
+            </div>
+
+            @* A trap for robots: hidden from people and screen readers. *@
+            <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+                <label>@T["Leave this empty"] <input type="text" name="@TicketFormGuard.TrapFieldName" tabindex="-1" autocomplete="off" /></label>
+            </div>
+
+            @if (Model.ShowChallenge)
+            {
+                <div class="mb-3"><shape type="ReCaptcha" /></div>
+            }
+
+            <button type="submit" class="btn btn-primary">@T["Send"]</button>
+        </form>
+    }
+</section>

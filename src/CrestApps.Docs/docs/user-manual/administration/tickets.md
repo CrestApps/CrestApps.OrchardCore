@@ -83,6 +83,10 @@ Signed-in people now find **Requests** under **My account**: their requests, **N
 
 To learn how you did, set **Ask requesters to rate a solved ticket after (hours)** on a desk. The requester of a solved ticket then gets one e-mail with a link to rate it from 1 to 5, and can also rate it on the request's page. Ratings show on the ticket's timeline and in the **Tickets** data set for reports.
 
+## Put a request form on a page
+
+Turn on **Ticket Web Form**, then add a **Ticket Form** widget where visitors should find it (a layer, or a page's flow). Choose the ticket type and the desk its tickets go to, and, if you like, what visitors read after sending. Visitors give a subject and their request, and their name and e-mail when they aren't signed in. Turn on **ReCaptcha** and set its keys under **Settings > Security** to add a challenge.
+
 ## Reports
 
 Under **Reports**, with **View ticket reports**:

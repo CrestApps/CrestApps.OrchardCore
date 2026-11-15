@@ -44,6 +44,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = TicketsConstants.Features.WebForm,
+    Name = "Ticket Web Form",
+    Description = "A Ticket Form widget that opens a ticket of a chosen type on a chosen desk from any page, for visitors with or without a login, with a hidden trap field, a limit per visitor and, with ReCaptcha on, a challenge.",
+    Category = "Service Desk",
+    Dependencies =
+    [
+        TicketsConstants.Features.Tickets,
+    ]
+)]
+
+[assembly: Feature(
     Id = TicketsConstants.Features.Api,
     Name = "Tickets API",
     Description = "Lets other systems list, read, open, change, reply to and add notes to tickets over a JSON API, api/tickets/v1, with the caller's ticket permissions. Enable OpenAPI to document it.",

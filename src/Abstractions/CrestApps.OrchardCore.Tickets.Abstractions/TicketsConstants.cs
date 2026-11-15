@@ -111,6 +111,11 @@ public static class TicketsConstants
         /// Sent through the API.
         /// </summary>
         public const string Api = "Api";
+
+        /// <summary>
+        /// Sent from a web form widget on the site.
+        /// </summary>
+        public const string WebForm = "WebForm";
     }
 
     /// <summary>
@@ -225,5 +230,10 @@ public static class TicketsConstants
         /// The requesters' pages in the site's "my account" area, and the signed link a guest follows from an e-mail.
         /// </summary>
         public const string Portal = "CrestApps.OrchardCore.Tickets.Portal";
+
+        /// <summary>
+        /// The Ticket Form widget, which opens a ticket from any page.
+        /// </summary>
+        public const string WebForm = "CrestApps.OrchardCore.Tickets.WebForm";
     }
 }
