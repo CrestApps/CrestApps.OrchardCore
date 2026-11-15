@@ -42,6 +42,12 @@ public sealed class GradingScope
             return null;
         }
 
+        // Being named on a course is not enough: course staff grade only with a Learning permission too, as for records.
+        if (!await _authorizationService.AuthorizeAsync(user, LearningPermissions.ManageOwnCourses))
+        {
+            return [];
+        }
+
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
         return string.IsNullOrEmpty(userId) ? [] : await _courseStructure.GetStaffCourseIdsAsync(userId, _gradingRoles);
@@ -55,6 +61,12 @@ public sealed class GradingScope
     /// <returns><see langword="true"/> when allowed.</returns>
     public async Task<bool> CanGradeAsync(ClaimsPrincipal user, AssessmentAttempt attempt)
     {
+        // Nobody grades, regrades or voids their own attempt.
+        if (string.Equals(attempt.UserId, user?.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal))
+        {
+            return false;
+        }
+
         var courses = await GetCourseIdsAsync(user);
 
         return courses is null || (attempt.CourseId is not null && courses.Contains(attempt.CourseId));

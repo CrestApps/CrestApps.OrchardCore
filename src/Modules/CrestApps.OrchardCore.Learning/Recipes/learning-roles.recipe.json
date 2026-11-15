@@ -129,7 +129,6 @@
           "Permissions": [
             "AccessAdminPanel",
             "AccessLearning",
-            "GradeAssessments",
             "ManageOwnCourses"
           ]
         },

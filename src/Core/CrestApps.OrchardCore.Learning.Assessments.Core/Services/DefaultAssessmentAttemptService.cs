@@ -322,7 +322,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
     /// <inheritdoc />
     public Task<AttemptResult> GradeAsync(string attemptId, IDictionary<int, ManualScore> scores, string feedback, string actor, CancellationToken cancellationToken = default)
-        => WriteAsync(attemptId, (attempt, notifications) => GradeCoreAsync(attempt, scores, feedback, actor, notifications, cancellationToken), cancellationToken);
+        => WriteAsync(attemptId, (attempt, notifications) => IsOwn(attempt, actor) ? OwnAttemptAsync(attempt) : GradeCoreAsync(attempt, scores, feedback, actor, notifications, cancellationToken), cancellationToken);
 
     private async Task<AttemptResult> GradeCoreAsync(AssessmentAttempt attempt, IDictionary<int, ManualScore> scores, string feedback, string actor, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
@@ -375,7 +375,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
             return Task.FromResult(AttemptResult.Fail(AttemptErrors.ReasonRequired));
         }
 
-        return WriteAsync(attemptId, (attempt, notifications) => RegradeCoreAsync(attempt, actor, reason, notifications, cancellationToken), cancellationToken);
+        return WriteAsync(attemptId, (attempt, notifications) => IsOwn(attempt, actor) ? OwnAttemptAsync(attempt) : RegradeCoreAsync(attempt, actor, reason, notifications, cancellationToken), cancellationToken);
     }
 
     private async Task<AttemptResult> RegradeCoreAsync(AssessmentAttempt attempt, string actor, string reason, IList<Func<Task>> notifications, CancellationToken cancellationToken)
@@ -414,6 +414,11 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         return WriteAsync(attemptId, async (attempt, notifications) =>
         {
+            if (IsOwn(attempt, actor))
+            {
+                return await OwnAttemptAsync(attempt);
+            }
+
             if (attempt.Status == AttemptStatus.Voided)
             {
                 return new AttemptResult { Attempt = attempt };
@@ -604,6 +609,13 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         return items;
     }
+
+    // Nobody grades, regrades or voids their own attempt, whatever calls the service.
+    private static bool IsOwn(AssessmentAttempt attempt, string actor)
+        => !string.IsNullOrEmpty(actor) && string.Equals(attempt.UserId, actor, StringComparison.Ordinal);
+
+    private static Task<AttemptResult> OwnAttemptAsync(AssessmentAttempt attempt)
+        => Task.FromResult(new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.OwnAttempt });
 
     private string Sanitize(string html)
         => string.IsNullOrWhiteSpace(html) ? null : _htmlSanitizer.Sanitize(html);

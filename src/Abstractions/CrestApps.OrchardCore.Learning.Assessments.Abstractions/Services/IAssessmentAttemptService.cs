@@ -176,6 +176,9 @@ public static class AttemptErrors
     /// <summary>Someone else was changing the attempt at that moment; try again.</summary>
     public const string Busy = "Busy";
 
+    /// <summary>Nobody grades, regrades or voids their own attempt.</summary>
+    public const string OwnAttempt = "OwnAttempt";
+
     /// <summary>The learner may not open the quiz.</summary>
     public const string NoAccess = "NoAccess";
 
