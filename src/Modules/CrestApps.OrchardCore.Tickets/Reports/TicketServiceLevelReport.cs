@@ -58,7 +58,7 @@ internal sealed class TicketServiceLevelReport : IReport
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (await _data.GetScopeAsync(cancellationToken) is not { } scope)
+        if (await _data.GetScopeAsync(context, cancellationToken) is not { } scope)
         {
             return TicketReportSections.NothingToShow(S);
         }

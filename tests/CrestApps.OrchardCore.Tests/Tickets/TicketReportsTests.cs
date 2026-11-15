@@ -53,11 +53,28 @@ public sealed class TicketReportsTests
         var levels = await RunAsync<TicketServiceLevelReport>(harness);
 
         // Assert
-        Assert.Equal(ReportFormat.Duration(90 * 60), Metrics(times)["Median first response"]);
+        Assert.Equal(ReportFormat.Duration(90 * 60), Metrics(times)["Median first response (calendar time)"]);
         var levelMetrics = Metrics(levels);
         Assert.Equal(ReportFormat.Number(1), levelMetrics["Targets ended"]);
         Assert.Equal(ReportFormat.Number(1), levelMetrics["Breached"]);
         Assert.Equal(ReportFormat.Percent(0), levelMetrics["Met"]);
+    }
+
+    [Fact]
+    public async Task AReportRunWithoutARequest_AsAScheduledEmailRunsIt_ShowsTheSubscribersTickets()
+    {
+        // Arrange
+        var reader = new ReaderHolder();
+        await using var harness = await CreateAsync(reader);
+        await TicketReportDataSourceTests.SeedAsync(harness);
+
+        // Act
+        await using var scope = harness.CreateScope();
+        var report = ActivatorUtilities.CreateInstance<TicketVolumeReport>(scope.ServiceProvider);
+        var document = await report.RunAsync(new ReportContext(new ReportFilter()) { User = TicketReportDataSourceTests.User("ana") }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ReportFormat.Number(3), Metrics(document)["Created"]);
     }
 
     [Fact]
@@ -81,7 +98,7 @@ public sealed class TicketReportsTests
         => TicketReportDataSourceTests.CreateAsync(services =>
         {
             var accessor = new Mock<IHttpContextAccessor>();
-            accessor.SetupGet(value => value.HttpContext).Returns(() => new DefaultHttpContext { User = reader.User });
+            accessor.SetupGet(value => value.HttpContext).Returns(() => reader.User is null ? null : new DefaultHttpContext { User = reader.User });
             services.AddSingleton(accessor.Object);
             services.AddSingleton(new Mock<IContentDefinitionManager>().Object);
             new ReportsStartup().ConfigureServices(services);

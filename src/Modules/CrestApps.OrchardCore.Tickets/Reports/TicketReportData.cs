@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Parties.Services;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Teams.Services;
@@ -36,6 +37,7 @@ internal sealed record TicketFacts(
     DateTime? SolvedUtc,
     DateTime? NextDueUtc,
     int ReplyCount,
+    int AgentReplyCount,
     int ReopenCount,
     int EscalationLevel)
 {
@@ -46,9 +48,10 @@ internal sealed record TicketFacts(
     public double? ResolutionMinutes => SolvedUtc is { } at && at >= CreatedUtc ? (at - CreatedUtc).TotalMinutes : null;
 
     /// <summary>
-    /// Gets whether the ticket was solved after a single reply and never reopened.
+    /// Gets whether the ticket was solved with exactly one public reply from an agent (automated replies and the
+    /// requester's own don't count) and never reopened.
     /// </summary>
-    public bool SolvedOnFirstContact => SolvedUtc is not null && ReopenCount == 0 && ReplyCount <= 2;
+    public bool SolvedOnFirstContact => SolvedUtc is not null && ReopenCount == 0 && AgentReplyCount == 1;
 }
 
 /// <summary>
@@ -57,6 +60,9 @@ internal sealed record TicketFacts(
 /// </summary>
 internal sealed class TicketReportData
 {
+    // How many index rows are read at a time.
+    private const int BatchSize = 1000;
+
     private readonly ISession _session;
     private readonly TicketReportAccess _access;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -83,16 +89,18 @@ internal sealed class TicketReportData
     public DateTime UtcNow => _clock.UtcNow;
 
     /// <summary>
-    /// Gets the reader's ticket scope, or <see langword="null"/> when they may see no ticket.
+    /// Gets the reader's ticket scope, or <see langword="null"/> when they may see no ticket. The reader is the one the
+    /// report runs for (the subscriber of a scheduled e-mail too), or the request's user.
     /// </summary>
-    public Task<TicketScopedQuery> GetScopeAsync(CancellationToken cancellationToken)
-        => _access.GetScopeAsync(_httpContextAccessor.HttpContext?.User, cancellationToken);
+    public Task<TicketScopedQuery> GetScopeAsync(ReportContext context, CancellationToken cancellationToken)
+        => _access.GetScopeAsync(context?.User ?? _httpContextAccessor.HttpContext?.User, cancellationToken);
 
     public Task<TicketReportNames> GetNamesAsync(CancellationToken cancellationToken)
         => _access.GetNamesAsync(cancellationToken);
 
     /// <summary>
-    /// Reads the tickets in the scope that match a condition, a page at a time, ordered by a date.
+    /// Reads the tickets in the scope that match a condition, from the ticket index only (no ticket is loaded), a batch at
+    /// a time. Merged tickets are left out.
     /// </summary>
     public async Task<List<TicketFacts>> ReadAsync(
         TicketScopedQuery scope,
@@ -102,31 +110,43 @@ internal sealed class TicketReportData
     {
         var predicate = TicketScopeFilter.ToPredicate(scope);
         var facts = new List<TicketFacts>();
+        var lastId = 0L;
 
-        await foreach (var item in ReportIndexPages.ReadAsync<ContentItem, TicketIndex>(_session, rows => rows.Where(predicate).Where(condition), order, null, cancellationToken))
+        while (true)
         {
-            if (item.TryGet<TicketPart>(out var part) && string.IsNullOrEmpty(part.MergedIntoId))
-            {
-                facts.Add(new TicketFacts(
-                    item.ContentItemId,
-                    item.ContentType,
-                    part.DeskId,
-                    part.TeamId,
-                    part.AssigneeId,
-                    part.PriorityId,
-                    part.StatusCategory,
-                    part.Channel,
-                    item.CreatedUtc ?? DateTime.MinValue,
-                    part.FirstResponseUtc,
-                    part.SolvedUtc,
-                    part.NextDueUtc,
-                    part.ReplyCount,
-                    part.ReopenCount,
-                    part.EscalationLevel));
-            }
-        }
+            var afterId = lastId;
+            var rows = (await _session.QueryIndex<TicketIndex>(predicate)
+                .Where(condition)
+                .Where(index => index.MergedIntoId == null && index.Id > afterId)
+                .OrderBy(index => index.Id)
+                .Take(BatchSize)
+                .ListAsync(cancellationToken)).ToList();
 
-        return facts;
+            facts.AddRange(rows.Select(row => new TicketFacts(
+                row.ContentItemId,
+                row.ContentType,
+                row.DeskId,
+                row.TeamId,
+                row.AssigneeId,
+                row.PriorityId,
+                row.StatusCategory,
+                row.Channel,
+                row.CreatedUtc,
+                row.FirstResponseUtc,
+                row.SolvedUtc,
+                row.NextDueUtc,
+                row.ReplyCount,
+                row.AgentReplyCount,
+                row.ReopenCount,
+                row.EscalationLevel)));
+
+            if (rows.Count < BatchSize)
+            {
+                return facts;
+            }
+
+            lastId = rows[^1].Id;
+        }
     }
 
     /// <summary>

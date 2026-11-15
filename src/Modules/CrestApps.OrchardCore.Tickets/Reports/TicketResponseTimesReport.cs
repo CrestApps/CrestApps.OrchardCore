@@ -38,7 +38,7 @@ internal sealed class TicketResponseTimesReport : IReport
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (await _data.GetScopeAsync(cancellationToken) is not { } scope)
+        if (await _data.GetScopeAsync(context, cancellationToken) is not { } scope)
         {
             return TicketReportSections.NothingToShow(S);
         }
@@ -56,9 +56,9 @@ internal sealed class TicketResponseTimesReport : IReport
             [
                 new ReportMetric(S["Created"].Value, ReportFormat.Number(tickets.Count)),
                 new ReportMetric(S["Responded"].Value, TicketReportData.Rate(responded, tickets.Count), S["Share of the tickets that got a first response from an agent."].Value),
-                new ReportMetric(S["Median first response"].Value, TicketReportData.Minutes(TicketReportData.Median(tickets.Select(ticket => ticket.FirstResponseMinutes)))),
-                new ReportMetric(S["Median time to solve"].Value, TicketReportData.Minutes(TicketReportData.Median(solved.Select(ticket => ticket.ResolutionMinutes)))),
-                new ReportMetric(S["Solved on first contact"].Value, TicketReportData.Rate(solved.Count(ticket => ticket.SolvedOnFirstContact), solved.Count), S["Share of the solved tickets solved after a single reply and never reopened."].Value),
+                new ReportMetric(S["Median first response (calendar time)"].Value, TicketReportData.Minutes(TicketReportData.Median(tickets.Select(ticket => ticket.FirstResponseMinutes)))),
+                new ReportMetric(S["Median time to solve (calendar time)"].Value, TicketReportData.Minutes(TicketReportData.Median(solved.Select(ticket => ticket.ResolutionMinutes)))),
+                new ReportMetric(S["Solved on first contact"].Value, TicketReportData.Rate(solved.Count(ticket => ticket.SolvedOnFirstContact), solved.Count), S["Share of the solved tickets solved with exactly one public reply from an agent (not counting automated replies) and never reopened."].Value),
             ]));
 
         var byPriority = tickets

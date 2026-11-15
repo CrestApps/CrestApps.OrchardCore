@@ -39,7 +39,7 @@ internal sealed class TicketPerformanceReport : IReport
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (await _data.GetScopeAsync(cancellationToken) is not { } scope)
+        if (await _data.GetScopeAsync(context, cancellationToken) is not { } scope)
         {
             return TicketReportSections.NothingToShow(S);
         }
@@ -61,7 +61,7 @@ internal sealed class TicketPerformanceReport : IReport
                 new ReportMetric(S["Solved"].Value, ReportFormat.Number(solved.Count)),
                 new ReportMetric(S["Reopened"].Value, TicketReportData.Rate(solved.Count(ticket => ticket.ReopenCount > 0), solved.Count), S["Share of the solved tickets that were reopened at least once."].Value),
                 new ReportMetric(S["Escalated"].Value, TicketReportData.Rate(solved.Count(ticket => ticket.EscalationLevel > 0), solved.Count), S["Share of the solved tickets that were escalated."].Value),
-                new ReportMetric(S["Solved on first contact"].Value, TicketReportData.Rate(solved.Count(ticket => ticket.SolvedOnFirstContact), solved.Count)),
+                new ReportMetric(S["Solved on first contact"].Value, TicketReportData.Rate(solved.Count(ticket => ticket.SolvedOnFirstContact), solved.Count), S["Solved with exactly one public reply from an agent (not counting automated replies) and never reopened."].Value),
             ]));
 
         document.Add(Table(
@@ -109,7 +109,7 @@ internal sealed class TicketPerformanceReport : IReport
             [
                 new ReportColumn(label),
                 new ReportColumn(S["Solved"].Value, ReportColumnAlign.End),
-                new ReportColumn(S["Median time to solve"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Median time to solve (calendar time)"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Median first response"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Reopened"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Escalated"].Value, ReportColumnAlign.End),

@@ -207,8 +207,11 @@ public sealed class ReportSubscriptionService
 
         // The email shows the report as it looks on screen; an attachment gets the document made for an export, which
         // can be shaped differently, such as a row per record.
-        var document = await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Display, title, cancellationToken);
-        var exportDocument = format is null ? null : await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Export, title, cancellationToken);
+        // The report runs as the person who saved the subscription, so a report that shows each person only what they
+        // may see e-mails what that person sees.
+        var owner = await _owners.ResolveByUserNameAsync(subscription.ModifiedBy ?? subscription.CreatedBy);
+        var document = await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Display, title, owner, cancellationToken);
+        var exportDocument = format is null ? null : await RunAsync(descriptor, fromUtc, toUtc, ReportRunMode.Export, title, owner, cancellationToken);
 
         var fromLocal = TimeZoneInfo.ConvertTimeFromUtc(fromUtc, timeZone);
         var toLocal = TimeZoneInfo.ConvertTimeFromUtc(toUtc, timeZone).AddDays(-1);
@@ -254,13 +257,13 @@ public sealed class ReportSubscriptionService
         }
     }
 
-    private async Task<ReportDocument> RunAsync(ReportDescriptor descriptor, DateTime fromUtc, DateTime toUtc, ReportRunMode mode, string title, CancellationToken cancellationToken)
+    private async Task<ReportDocument> RunAsync(ReportDescriptor descriptor, DateTime fromUtc, DateTime toUtc, ReportRunMode mode, string title, System.Security.Claims.ClaimsPrincipal owner, CancellationToken cancellationToken)
     {
         var filter = new ReportFilter { ReportName = descriptor.Name };
 
         filter.SetDateRange(new ReportDateRange { FromUtc = fromUtc, ToUtc = toUtc });
 
-        var document = await ReportTelemetry.RunCodedReportAsync(_reports.GetReport(descriptor.Name), descriptor, new ReportContext(filter, mode), cancellationToken);
+        var document = await ReportTelemetry.RunCodedReportAsync(_reports.GetReport(descriptor.Name), descriptor, new ReportContext(filter, mode) { User = owner }, cancellationToken);
 
         document.Title = title;
         await _displayValues.ResolveAsync(document);
