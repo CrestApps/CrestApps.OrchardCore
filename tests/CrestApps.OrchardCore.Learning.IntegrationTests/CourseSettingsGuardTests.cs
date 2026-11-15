@@ -58,7 +58,7 @@ public sealed class CourseSettingsGuardTests
         });
 
         // Assert
-        var stored = await _fixture.InTenantAsync(async services => (await services.GetRequiredService<IContentManager>().GetAsync(_fixture.CourseId, VersionOptions.Published)).As<CoursePart>());
+        var stored = await _fixture.InTenantAsync(async services => (await services.GetRequiredService<IContentManager>().GetAsync(_fixture.CourseId, VersionOptions.Published)).Get<CoursePart>(nameof(CoursePart)));
         Assert.Equal(EnrollmentMode.Open, stored.EnrollmentMode);
         Assert.DoesNotContain(stored.Staff, member => member.UserId == _fixture.SpareLearnerId);
         Assert.Contains(stored.Staff, member => member.UserId == _fixture.InstructorId);
@@ -84,7 +84,7 @@ public sealed class CourseSettingsGuardTests
         });
 
         // Assert
-        var stored = await _fixture.InTenantAsync(async services => (await services.GetRequiredService<IContentManager>().GetAsync(_fixture.OtherCourseId, VersionOptions.Published)).As<CoursePart>());
+        var stored = await _fixture.InTenantAsync(async services => (await services.GetRequiredService<IContentManager>().GetAsync(_fixture.OtherCourseId, VersionOptions.Published)).Get<CoursePart>(nameof(CoursePart)));
         Assert.Equal(EnrollmentMode.Approval, stored.EnrollmentMode);
         Assert.Contains(stored.Staff, member => member.UserId == _fixture.SpareLearnerId);
     }

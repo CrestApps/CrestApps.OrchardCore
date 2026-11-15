@@ -2,12 +2,12 @@ using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.Users;
 
-namespace CrestApps.OrchardCore.Learning.Services;
+namespace CrestApps.OrchardCore.Learning.Core.Services;
 
 /// <summary>
-/// Maps user ids to user names and back, so learner records move between sites by user name.
+/// Maps user ids to user names and back, so learner records (enrollments, attempts) move between sites by user name.
 /// </summary>
-internal class LearnerUserLookup
+public class LearnerUserLookup
 {
     private readonly IUserSearchService _userSearchService;
     private readonly UserManager<IUser> _userManager;

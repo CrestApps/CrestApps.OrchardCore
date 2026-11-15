@@ -1,3 +1,10 @@
+using OrchardCore.Recipes;
+using OrchardCore.Deployment;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Assessments.Recipes;
+using CrestApps.OrchardCore.Learning.Assessments.Deployments;
 using OrchardCore.DataSources;
 using CrestApps.OrchardCore.Learning.Assessments.Reports;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
@@ -80,5 +87,51 @@ public sealed class AssessmentsDataSourcesStartup : StartupBase
         services.AddScoped<IAssessmentsReportDataSet, LearningAttemptAnswersReportDataSet>();
         services.AddScoped<IAssessmentsReportDataSet, LearningAttemptScoreChangesReportDataSet>();
         services.AddScoped<IAssessmentsReportDataSet, LearningQuizOverridesReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Imports grade scales and quiz attempts with recipe steps.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.RecipesCore)]
+public sealed class AssessmentsRecipesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddScoped<LearnerUserLookup>();
+        services.AddRecipeExecutionStep<LearningGradeScalesRecipeStep>();
+        services.AddRecipeExecutionStep<LearningAttemptsRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Exports grade scales and quiz attempts with deployment steps.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Deployment)]
+public sealed class AssessmentsDeploymentStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddScoped<LearnerUserLookup>();
+        services.AddDeployment<LearningGradeScalesDeploymentSource, LearningGradeScalesDeploymentStep, LearningGradeScalesDeploymentStepDisplayDriver>();
+        services.AddDeployment<LearningAttemptsDeploymentSource, LearningAttemptsDeploymentStep, LearningAttemptsDeploymentStepDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Describes the Learning assessments recipe and deployment steps to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area)]
+public sealed class AssessmentsRecipesSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, LearningGradeScalesRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, LearningAttemptsRecipeStepSchema>();
+        services.AddDeploymentStepSchema<LearningGradeScalesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<LearningAttemptsDeploymentStepSchema>();
     }
 }

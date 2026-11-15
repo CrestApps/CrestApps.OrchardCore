@@ -58,7 +58,7 @@ internal sealed class LearningNotificationObserver : IEnrollmentObserver
     {
         var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
         var title = course?.DisplayText ?? enrollment.Completion?.CourseTitle ?? S["your course"].Value;
-        var instructors = (course?.As<CoursePart>()?.Staff ?? [])
+        var instructors = (course?.Get<CoursePart>(nameof(CoursePart))?.Staff ?? [])
             .Where(member => member.Role == LearningConstants.CourseStaffRoles.Instructor && !string.IsNullOrEmpty(member.UserId))
             .Select(member => member.UserId)
             .Distinct(StringComparer.Ordinal)

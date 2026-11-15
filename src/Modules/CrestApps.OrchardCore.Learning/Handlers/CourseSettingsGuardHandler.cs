@@ -45,7 +45,7 @@ internal sealed class CourseSettingsGuardHandler : ContentPartHandler<CoursePart
 
     /// <inheritdoc />
     public override Task ImportingAsync(ImportContentContext context, CoursePart part)
-        => GuardAsync(context.ContentItem, part, context.OriginalContentItem?.As<CoursePart>());
+        => GuardAsync(context.ContentItem, part, context.OriginalContentItem?.Get<CoursePart>(nameof(CoursePart)));
 
     private async Task GuardAsync(ContentItem contentItem, CoursePart part, CoursePart original)
     {
