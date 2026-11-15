@@ -988,6 +988,40 @@ The planning session's detailed review of P2 to C8 listed 14 must-fix and 31 sho
 - **My Pay** as `lee`: **Your pay details** and the statements render through the admin list, net 1,269.45 with no account number. A form edited to route net pay to the clerk's account was refused: "Net pay goes only to the person's own bank accounts". Pay runs and employees pages are refused (403).
 - **Clerk of one employer**: the runs list and the create page offer only Contoso; **Process** is refused (403).
 
+### Merge with main (2026-11-15)
+
+`origin/main` was six commits ahead (30f45a0c3). It is merged into the branch with a merge commit, aea893f57 "Merge main into the payroll branch". Nothing was rebased. The tip credit test's .NET 11 fix followed in 2f8792591.
+
+- **Conflicts** (three, both sides kept):
+  - `PosApiModels.ApiShift`: main's required `Tax` and `Departments` come first, then the branch's optional `CardTips` and `CashTips`, with their parameter docs.
+  - `PosApiEndpoints` builds it in that order.
+  - `docs/modules/point-of-sale.md`: the close row keeps the declared tips, and the sales row keeps department lines. Both sections are kept: **Tips and payroll**, then **Web register**.
+  - Git merged the other overlapping files on its own (PosShiftService, PosStores, PosModels, PosViewModels, RegistersAdminController, the Shift view, the Teams.Abstractions csproj, the changelog and the feature reference). The Shift view has the Tips card and the Departments card side by side.
+- **.NET 11, Orchard Core preview-19225, CrestApps.Core preview.375**:
+  - `global.json` and `Directory.Packages.props` are main's; the branch didn't change either.
+  - The local SDK pin no longer applies: the 11.0.100 SDK is installed and builds as `global.json` says, so nothing in it is edited.
+  - Changes the upgrade needed on the branch:
+    - The `Microsoft.Extensions.DependencyInjection.Abstractions` and `Microsoft.Extensions.Options` package references are removed from the Approvals, Banking, Checks, Disbursements and Payroll abstractions, since .NET 11 supplies them (NU1510 under `-warnaserror`). Main did the same in #1327.
+    - CA1860 in `PayStatementNotificationObserver` (`Count > 0` instead of `Any()`).
+    - (2f8792591) `TipCredit_MakesAWeekUpToTheMinimumWage…` read its amounts from double literals, which .NET 11 converts to decimals exactly (104.80 became 104.7999…). It now goes through `DecimalConversion.FromDouble`, as main's tests do.
+  - No Orchard Core API or view compilation change touched the payroll code.
+
+**Revalidation on the merge**
+- Full test project (Release, net11.0):
+  - First run on aea893f57: 16,249 tests, 1 failed (the tip credit theory above), 1 skipped (Asterisk browser audio).
+  - Run on 2f8792591: 16,249 tests, 1 failed, 1 skipped. The failure was `LayeringRatchetTests.EveryModuleAssembly_IsBuiltForTheScan`, because I had deleted the `src/**/bin/Release` outputs to free disk space. After rebuilding them, the Architecture and Validation guards pass: 442 of 442.
+  - A run in between failed by the hundreds with "disk is full" and isn't counted.
+- `dotnet build CrestApps.OrchardCore.slnx -c Release -warnaserror`: 0 warnings, 0 errors.
+- Vitest: 92 files, 1,488 tests pass; ESLint clean.
+- `npm run check:manuals`: 169 User Manual and 191 Technical Manual pages pass. `docusaurus build` (with `SKIP_HTML_MINIFICATION`) succeeds.
+- **Smoke on a fresh site**: data folder `App_Data_PayrollE2E4`, run from the Release net11.0 build, Blank recipe. Turned on: Payroll, Tax Tables, United States, Paychecks, My Pay, Garnishments, Approvals, Point of Sale and its Web Register. The United States 2026 recipe was run, and employers, accounts, staff and profiles came from the seed recipe.
+  - The Payroll pages load: pay runs, employees, garnishments, filings, liabilities, employers, pay codes and settings.
+  - Pay run 1 was calculated and submitted by admin, approved by a separate approver, and processed by admin: Paid, gross 1,600.00, net 1,369.45. With Direct Deposit off, the deposit fell back to a check (checks 1001 and 1002).
+  - My Pay as `lee` opens with **Your pay details** and the statement.
+  - A register was added, and a shift opened and closed through the web register. The shift page shows **Tips** next to **Departments**; declaring 12.50 card and 20.00 cash tips saved.
+- **Disk**: the C: drive was full (0 bytes free), so builds failed. The worktree's obsolete `bin` and `obj` `net10.0` folders (11.5 GB, build outputs only, nothing under `App_Data`) were deleted to make room. Only Release was built afterwards. Free space ran out again during one test run (other work on the machine), so the `src/**/bin/Release` copies, which the test exe doesn't load, were deleted for that run and rebuilt afterwards.
+- **Follow-up seen**: the web register's **Close shift** asks only for the counted cash. Tips are declared afterwards on the shift page, or with the API's close (`cardTips`, `cashTips`). Asking for them at the web register's close would match the till apps.
+
 ### For Mike
 
 What only you can settle before the first live pay:
