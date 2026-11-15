@@ -59,6 +59,12 @@ public sealed class InvoicingSettings
     public bool IssueOnSend { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the total from which an invoice needs approval before it is issued, in its own currency: 0 for
+    /// every invoice, <see langword="null"/> for none.
+    /// </summary>
+    public decimal? ApprovalThreshold { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the PDF of a document is stored when it is issued.
     /// </summary>
     public bool ArchivePdfOnIssue { get; set; } = true;

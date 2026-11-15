@@ -56,6 +56,26 @@ public static class DocumentEventKinds
     public const string Note = "note";
 
     /// <summary>
+    /// The invoice was submitted for approval.
+    /// </summary>
+    public const string Submitted = "submitted";
+
+    /// <summary>
+    /// The invoice was approved, and so issued.
+    /// </summary>
+    public const string Approved = "approved";
+
+    /// <summary>
+    /// The invoice was rejected and went back to a draft.
+    /// </summary>
+    public const string Rejected = "rejected";
+
+    /// <summary>
+    /// A revision of the invoice was drafted.
+    /// </summary>
+    public const string Revised = "revised";
+
+    /// <summary>
     /// The customer accepted an estimate.
     /// </summary>
     public const string Accepted = "accepted";

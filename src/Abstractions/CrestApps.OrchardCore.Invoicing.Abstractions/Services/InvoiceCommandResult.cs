@@ -24,6 +24,11 @@ public sealed class InvoiceCommandResult
     public bool AlreadyDone { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the invoice was not issued because it needs approval first.
+    /// </summary>
+    public bool NeedsApproval { get; set; }
+
+    /// <summary>
     /// Gets the reasons the command was refused, ready to show to the person who asked.
     /// </summary>
     public IList<string> Errors { get; } = [];

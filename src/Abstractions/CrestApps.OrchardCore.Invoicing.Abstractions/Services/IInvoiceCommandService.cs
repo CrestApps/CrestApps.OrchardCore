@@ -46,4 +46,27 @@ public interface IInvoiceCommandService
     /// <param name="reason">Why it is reinstated; required.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<InvoiceCommandResult> ReinstateAsync(string invoiceId, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Submits a draft that needs approval (its total is at or above the approval amount) for approval: it waits, locked,
+    /// until it is approved or rejected.
+    /// </summary>
+    Task<InvoiceCommandResult> SubmitForApprovalAsync(string invoiceId, string submittedBy, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Approves an invoice waiting for approval and issues it. Whoever submitted it can't approve it.
+    /// </summary>
+    Task<InvoiceCommandResult> ApproveAsync(string invoiceId, string approvedBy, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rejects an invoice waiting for approval, with a reason: it goes back to a draft.
+    /// </summary>
+    Task<InvoiceCommandResult> RejectAsync(string invoiceId, string rejectedBy, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Drafts a revision of an open invoice nothing was paid or credited on. The invoice is unchanged until the revision
+    /// is issued, which voids it and records the revision as its replacement in the same step. The result's invoice is
+    /// the revision.
+    /// </summary>
+    Task<InvoiceCommandResult> ReviseAsync(string invoiceId, CancellationToken cancellationToken = default);
 }

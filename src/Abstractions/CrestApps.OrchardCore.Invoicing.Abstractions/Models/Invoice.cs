@@ -122,6 +122,31 @@ public sealed class Invoice : InvoicingDocument
     /// when the line is taken off or the invoice is voided.
     /// </summary>
     public IList<InvoiceBilledItem> BilledItems { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets who submitted the invoice for approval, and who approved or rejected it, when it needed approval.
+    /// </summary>
+    public InvoiceApproval Approval { get; set; }
+}
+
+/// <summary>
+/// The approval of an invoice at or above the approval amount: who asked, and who approved or rejected it.
+/// </summary>
+public sealed class InvoiceApproval
+{
+    public string SubmittedBy { get; set; }
+
+    public DateTime? SubmittedUtc { get; set; }
+
+    public string ApprovedBy { get; set; }
+
+    public DateTime? ApprovedUtc { get; set; }
+
+    public string RejectedBy { get; set; }
+
+    public DateTime? RejectedUtc { get; set; }
+
+    public string RejectionReason { get; set; }
 }
 
 /// <summary>

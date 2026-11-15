@@ -61,6 +61,7 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
             model.PricesIncludeTax = settings.PricesIncludeTax;
             model.AllowPartialPayment = settings.AllowPartialPayment;
             model.IssueOnSend = settings.IssueOnSend;
+            model.ApprovalThreshold = settings.ApprovalThreshold;
             model.AllowFutureIssueDate = settings.AllowFutureIssueDate;
             model.ChronologicalIssueDates = settings.ChronologicalIssueDates;
             model.CashRoundingIncrement = settings.CashRoundingIncrement;
@@ -91,6 +92,11 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.DefaultCurrency), S["The currency must be a three-letter code, such as USD."]);
         }
 
+        if (model.ApprovalThreshold is < 0m)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ApprovalThreshold), S["The approval amount can't be negative: enter 0 to approve every invoice, or leave it empty."]);
+        }
+
         if (model.CashRoundingIncrement is <= 0m)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.CashRoundingIncrement), S["The cash rounding increment must be more than zero, such as 0.05, or left empty."]);
@@ -114,6 +120,7 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
         settings.PricesIncludeTax = model.PricesIncludeTax;
         settings.AllowPartialPayment = model.AllowPartialPayment;
         settings.IssueOnSend = model.IssueOnSend;
+        settings.ApprovalThreshold = model.ApprovalThreshold;
         settings.AllowFutureIssueDate = model.AllowFutureIssueDate;
         settings.ChronologicalIssueDates = model.ChronologicalIssueDates;
         settings.CashRoundingIncrement = model.CashRoundingIncrement;

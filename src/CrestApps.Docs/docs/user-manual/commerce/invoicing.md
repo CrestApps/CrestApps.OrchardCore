@@ -151,6 +151,14 @@ When a customer checks out on account terms (or pays later) and the whole order 
 
 A subscription paid with **Pay Later** is invoiced again at each renewal: when a period ends and the next one's balance is recorded, an invoice for that period is issued automatically for the same balance, so paying the invoice pays the renewal. The first period is on the order's invoice.
 
+## Approve large invoices
+
+To have large invoices approved before they go out, set **Approve invoices from** under **Settings > Commerce > Invoicing** (for example 1000; 0 means every invoice). Such an invoice is not issued when you click **Issue**: click **Submit for approval** on its page instead. Someone with the **Approve invoices** permission, other than you, then opens it and clicks **Approve and issue**, or enters a reason and clicks **Reject**, which makes it a draft again with the reason shown.
+
+## Revise an invoice
+
+To change an invoice you issued that nothing was paid on, click **Draft a revision** on its page. A copy opens in the editor: change it and click **Save and issue**. The new invoice gets its own number, and the old one is voided in the same step with *Replaced by* and a link; each shows the other. If something was paid or credited on it, correct it with a credit note instead.
+
 ## Bill expenses and time
 
 With **Invoicing Billing** enabled:

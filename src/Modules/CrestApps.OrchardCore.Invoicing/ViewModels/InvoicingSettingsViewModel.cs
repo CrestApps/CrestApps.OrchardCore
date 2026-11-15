@@ -29,6 +29,8 @@ public class InvoicingSettingsViewModel
 
     public decimal? CashRoundingIncrement { get; set; }
 
+    public decimal? ApprovalThreshold { get; set; }
+
     public int ShareLinkDays { get; set; }
 
     public int EstimateValidDays { get; set; }

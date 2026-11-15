@@ -26,6 +26,7 @@ internal sealed class InvoicingSettingsSchema : SiteSettingsSchemaBase
                 ("DefaultTaxTreatment", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Default(0).Description("The tax treatment of a new invoice's bill-to: 0 taxable, 1 exempt, 2 zero-rated, 3 reverse charge, 4 out of scope.")),
                 ("AllowPartialPayment", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(false).Description("Whether customers may pay part of an invoice from its pay link.")),
                 ("IssueOnSend", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether sending a draft issues it first.")),
+                ("ApprovalThreshold", new JsonSchemaBuilder().Type(SchemaValueType.Number, SchemaValueType.Null).Description("The total from which an invoice needs approval before it is issued, in its own currency: 0 for every invoice, null for none.")),
                 ("AllowFutureIssueDate", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(false).Description("Whether an invoice may be issued with a date after today.")),
                 ("ChronologicalIssueDates", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(false).Description("Whether an invoice can't be dated before the last invoice issued.")),
                 ("ArchivePdfOnIssue", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether the PDF of an invoice is stored when it is issued.")),

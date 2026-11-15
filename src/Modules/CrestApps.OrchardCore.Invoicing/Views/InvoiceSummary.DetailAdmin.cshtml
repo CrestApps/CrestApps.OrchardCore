@@ -16,7 +16,7 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span>@(string.IsNullOrEmpty(invoice.Number) ? T["Draft invoice"] : (invoice.Kind == InvoiceKind.DebitNote ? T["Debit note {0}", invoice.Number] : invoice.Kind == InvoiceKind.Prepayment ? T["Deposit invoice {0}", invoice.Number] : T["Invoice {0}", invoice.Number]))</span>
+        <span>@(string.IsNullOrEmpty(invoice.Number) ? (invoice.Status == InvoiceStatus.PendingApproval ? T["Invoice awaiting approval"] : T["Draft invoice"]) : (invoice.Kind == InvoiceKind.DebitNote ? T["Debit note {0}", invoice.Number] : invoice.Kind == InvoiceKind.Prepayment ? T["Deposit invoice {0}", invoice.Number] : T["Invoice {0}", invoice.Number]))</span>
         <span><partial name="_InvoiceStatusBadge" model="invoice" /></span>
     </div>
     <div class="card-body">
@@ -65,7 +65,7 @@
             <dt class="col-sm-4">@T["Total"]</dt>
             <dd class="col-sm-8">@Money(invoice.Totals?.Total ?? 0m)</dd>
 
-            @if (invoice.Status is not InvoiceStatus.Draft)
+            @if (invoice.Status is not (InvoiceStatus.Draft or InvoiceStatus.PendingApproval))
             {
                 <dt class="col-sm-4">@T["Paid"]</dt>
                 <dd class="col-sm-8">@Money(invoice.AmountPaid)</dd>
@@ -93,6 +93,24 @@
                         <span class="d-block text-muted small">@invoice.VoidReason</span>
                     }
                 </dd>
+            }
+
+            @if (Model.RevisionOf is { } revisionOf)
+            {
+                <dt class="col-sm-4">@T["Revises"]</dt>
+                <dd class="col-sm-8"><a asp-action="Detail" asp-controller="InvoicesAdmin" asp-route-itemId="@revisionOf.ItemId">@revisionOf.Number</a></dd>
+            }
+
+            @if (Model.ReplacedBy is { } replacedBy)
+            {
+                <dt class="col-sm-4">@T["Replaced by"]</dt>
+                <dd class="col-sm-8"><a asp-action="Detail" asp-controller="InvoicesAdmin" asp-route-itemId="@replacedBy.ItemId">@(replacedBy.Number ?? T["a draft"].Value)</a></dd>
+            }
+
+            @if (invoice.Approval?.ApprovedBy is { Length: > 0 } approver)
+            {
+                <dt class="col-sm-4">@T["Approved by"]</dt>
+                <dd class="col-sm-8">@approver</dd>
             }
 
             @if (Model.LedgerMissing)

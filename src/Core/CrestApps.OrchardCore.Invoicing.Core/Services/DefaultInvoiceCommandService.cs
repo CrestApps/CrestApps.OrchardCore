@@ -117,18 +117,247 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
 
     /// <inheritdoc/>
     public Task<InvoiceCommandResult> IssueAsync(string invoiceId, CancellationToken cancellationToken = default)
+        => RunAsync(invoiceId, (invoice, result) => IssueCoreAsync(invoice, result, approvedBy: null, cancellationToken), cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<InvoiceCommandResult> ApproveAsync(string invoiceId, string approvedBy, CancellationToken cancellationToken = default)
+        => RunAsync(invoiceId, (invoice, result) =>
+        {
+            if (string.IsNullOrWhiteSpace(approvedBy))
+            {
+                result.Fail(S["Say who approves the invoice."]);
+
+                return Task.FromResult<Func<IInvoiceObserver, Task>>(null);
+            }
+
+            return IssueCoreAsync(invoice, result, approvedBy.Trim(), cancellationToken);
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<InvoiceCommandResult> SubmitForApprovalAsync(string invoiceId, string submittedBy, CancellationToken cancellationToken = default)
         => RunAsync(invoiceId, async (invoice, result) =>
         {
+            if (invoice.Status == InvoiceStatus.PendingApproval)
+            {
+                result.AlreadyDone = true;
+
+                return null;
+            }
+
             if (invoice.Status != InvoiceStatus.Draft)
+            {
+                result.Fail(S["Only a draft can be submitted for approval."]);
+
+                return null;
+            }
+
+            var settings = await GetSettingsAsync();
+
+            await FillFromProfileAsync(invoice, settings, cancellationToken);
+            await InvoiceCalculation.ApplyAsync(_calculator, invoice, settings, invoice.IssueDate, cancellationToken);
+
+            foreach (var error in InvoiceIssueRules.ValidateForIssue(invoice).Concat(InvoiceIssueRules.ValidateTotals(invoice)))
+            {
+                result.Fail(InvoiceIssueMessages.Describe(error, invoice, S));
+            }
+
+            if (!result.Succeeded)
+            {
+                return null;
+            }
+
+            if (!InvoiceApprovalRules.Requires(invoice, settings))
+            {
+                result.Fail(S["This invoice doesn't need approval: issue it."]);
+
+                return null;
+            }
+
+            invoice.Status = InvoiceStatus.PendingApproval;
+            invoice.Approval = new InvoiceApproval
+            {
+                SubmittedBy = string.IsNullOrWhiteSpace(submittedBy) ? null : submittedBy.Trim(),
+                SubmittedUtc = _clock.UtcNow,
+            };
+
+            AddHistory(invoice, DocumentEventKinds.Submitted, S["Submitted for approval."].Value, invoice.Totals.Total);
+
+            return null;
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<InvoiceCommandResult> RejectAsync(string invoiceId, string rejectedBy, string reason, CancellationToken cancellationToken = default)
+        => RunAsync(invoiceId, (invoice, result) =>
+        {
+            var trimmed = reason?.Trim();
+
+            if (invoice.Status != InvoiceStatus.PendingApproval)
+            {
+                result.Fail(S["Only an invoice waiting for approval can be rejected."]);
+            }
+            else if (string.IsNullOrEmpty(trimmed))
+            {
+                result.Fail(S["Say why the invoice is rejected."]);
+            }
+            else
+            {
+                invoice.Status = InvoiceStatus.Draft;
+                invoice.Approval ??= new InvoiceApproval();
+                invoice.Approval.RejectedBy = string.IsNullOrWhiteSpace(rejectedBy) ? null : rejectedBy.Trim();
+                invoice.Approval.RejectedUtc = _clock.UtcNow;
+                invoice.Approval.RejectionReason = trimmed;
+
+                AddHistory(invoice, DocumentEventKinds.Rejected, S["Rejected: {0}", trimmed].Value, null);
+            }
+
+            return Task.FromResult<Func<IInvoiceObserver, Task>>(null);
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<InvoiceCommandResult> ReviseAsync(string invoiceId, CancellationToken cancellationToken = default)
+    {
+        Invoice revision = null;
+
+        var result = await RunAsync(invoiceId, async (invoice, result) =>
+        {
+            if (invoice.Status != InvoiceStatus.Open || invoice.Kind != InvoiceKind.Standard || !string.IsNullOrEmpty(invoice.ReplacedById))
+            {
+                result.Fail(S["Only an open invoice that wasn't replaced already can be revised."]);
+
+                return null;
+            }
+
+            // An invoice that took over a debt it did not post (an order's, a renewal's) is corrected with a credit note:
+            // voiding it would cancel what the customer owes for the order.
+            if (invoice.SourceType is InvoicingConstants.OrderReferenceType or InvoicingConstants.RenewalReferenceType)
+            {
+                result.Fail(S["This invoice took over the debt of an order or a renewal, so it is corrected with a credit note rather than revised."]);
+
+                return null;
+            }
+
+            // Work billed by the invoice is let go when it is voided, and the revision's lines would not hold it.
+            if (invoice.BilledItems.Count > 0)
+            {
+                result.Fail(S["This invoice bills charges or time kept to bill later, so it is corrected with a credit note rather than revised."]);
+
+                return null;
+            }
+
+            if (!await CanBeReplacedAsync(invoice, result, cancellationToken))
+            {
+                return null;
+            }
+
+            var manager = _serviceProvider.GetRequiredService<IInvoiceManager>();
+
+            revision = await manager.NewAsync(cancellationToken: cancellationToken);
+            revision.RevisionOfId = invoice.ItemId;
+            revision.BillTo = invoice.BillTo;
+            revision.Currency = invoice.Currency;
+            revision.Culture = invoice.Culture;
+            revision.PricesIncludeTax = invoice.PricesIncludeTax;
+            revision.PaymentTermId = invoice.PaymentTermId;
+            revision.PurchaseOrderNumber = invoice.PurchaseOrderNumber;
+            revision.Reference = invoice.Reference;
+            revision.SourceType = invoice.SourceType;
+            revision.SourceId = invoice.SourceId;
+            revision.ServiceStart = invoice.ServiceStart;
+            revision.ServiceEnd = invoice.ServiceEnd;
+            revision.Notes = invoice.Notes;
+            revision.Terms = invoice.Terms;
+            revision.Footer = invoice.Footer;
+            revision.TemplateId = invoice.TemplateId;
+            revision.AllowPartialPayment = invoice.AllowPartialPayment;
+            revision.AutoCharge = invoice.AutoCharge;
+            revision.LateFeesExempt = invoice.LateFeesExempt;
+            revision.Charges = [.. invoice.Charges];
+            revision.Lines = [.. invoice.Lines.Select(line => new DocumentLine
+            {
+                Id = IdGenerator.GenerateId(),
+                Kind = line.Kind,
+                ProductId = line.ProductId,
+                Sku = line.Sku,
+                Name = line.Name,
+                Description = line.Description,
+                Quantity = line.Quantity,
+                Unit = line.Unit,
+                UnitPrice = line.UnitPrice,
+                DiscountPercent = line.DiscountPercent,
+                DiscountAmount = line.DiscountAmount,
+                TaxCategoryCode = line.TaxCategoryCode,
+                Taxes = [.. line.Taxes ?? []],
+                TaxTreatment = line.TaxTreatment,
+                TaxTreatmentReason = line.TaxTreatmentReason,
+                ServiceStart = line.ServiceStart,
+                ServiceEnd = line.ServiceEnd,
+                SourceType = line.SourceType,
+                SourceId = line.SourceId,
+            })];
+
+            await InvoiceCalculation.ApplyAsync(_calculator, revision, await GetSettingsAsync(), issueDate: null, cancellationToken);
+            await manager.CreateAsync(revision, cancellationToken);
+
+            AddHistory(invoice, DocumentEventKinds.Revised, S["A revision was drafted. Issuing it voids this invoice."].Value, null);
+
+            return null;
+        }, cancellationToken);
+
+        if (result.Succeeded && revision is not null)
+        {
+            result.Invoice = revision;
+        }
+
+        return result;
+    }
+
+    // An invoice is replaced only while open, with nothing paid on its debt and no credit note citing it.
+    private async Task<bool> CanBeReplacedAsync(Invoice invoice, InvoiceCommandResult result, CancellationToken cancellationToken)
+    {
+        if (invoice.AmountPaid > 0m ||
+            !string.IsNullOrEmpty(invoice.TransactionId) && await _transactions.FindByIdAsync(invoice.TransactionId, cancellationToken) is { AmountPaid: > 0m })
+        {
+            result.Fail(S["Something was paid on invoice {0}, so it can't be replaced. Correct it with a credit note.", invoice.Number]);
+
+            return false;
+        }
+
+        if (await _creditNotes.HasIssuedForInvoiceAsync(invoice.ItemId, cancellationToken))
+        {
+            result.Fail(S["A credit note was issued for invoice {0}, so it can't be replaced.", invoice.Number]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    // Issues a draft, or with an approver, an invoice waiting for approval. A revision voids the invoice it replaces.
+    private async Task<Func<IInvoiceObserver, Task>> IssueCoreAsync(Invoice invoice, InvoiceCommandResult result, string approvedBy, CancellationToken cancellationToken)
+    {
+            var expected = approvedBy is null ? InvoiceStatus.Draft : InvoiceStatus.PendingApproval;
+
+            if (invoice.Status != expected)
             {
                 if (invoice.IssuedUtc.HasValue)
                 {
                     result.AlreadyDone = true;
                 }
+                else if (invoice.Status == InvoiceStatus.PendingApproval)
+                {
+                    result.Fail(S["This invoice is waiting for approval. It is issued when it is approved."]);
+                }
                 else
                 {
-                    result.Fail(S["Only a draft can be issued."]);
+                    result.Fail(approvedBy is null ? S["Only a draft can be issued."] : S["Only an invoice waiting for approval can be approved."]);
                 }
+
+                return null;
+            }
+
+            if (approvedBy is not null && string.Equals(invoice.Approval?.SubmittedBy, approvedBy, StringComparison.OrdinalIgnoreCase))
+            {
+                result.Fail(S["Whoever submitted an invoice for approval can't approve it: someone else must."]);
 
                 return null;
             }
@@ -186,6 +415,35 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
                 return null;
             }
 
+            // An invoice at or above the approval amount is issued only by its approver.
+            if (approvedBy is null && InvoiceApprovalRules.Requires(invoice, settings))
+            {
+                result.NeedsApproval = true;
+                result.Fail(S["This invoice needs approval before it is issued: submit it for approval."]);
+
+                return null;
+            }
+
+            // A revision replaces the invoice it revises, which must still be replaceable.
+            Invoice replaced = null;
+
+            if (!string.IsNullOrEmpty(invoice.RevisionOfId))
+            {
+                replaced = await _store.FindByIdAsync(invoice.RevisionOfId, cancellationToken);
+
+                if (replaced is null || replaced.Status != InvoiceStatus.Open || !string.IsNullOrEmpty(replaced.ReplacedById))
+                {
+                    result.Fail(S["The invoice this revises is no longer open, or was replaced already. Delete this revision, or remove what it revises."]);
+
+                    return null;
+                }
+
+                if (!await CanBeReplacedAsync(replaced, result, cancellationToken))
+                {
+                    return null;
+                }
+            }
+
             await SetDueDateAsync(invoice, settings, issueDate, cancellationToken);
 
             invoice.Issuer ??= await GetIssuerAsync();
@@ -238,12 +496,56 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
                 invoice.Settlement = InvoiceSettlement.Paid;
             }
 
+            if (approvedBy is not null)
+            {
+                invoice.Approval ??= new InvoiceApproval();
+                invoice.Approval.ApprovedBy = approvedBy;
+                invoice.Approval.ApprovedUtc = now;
+
+                AddHistory(invoice, DocumentEventKinds.Approved, S["Approved by {0}.", approvedBy].Value, null);
+            }
+
+            if (replaced is not null)
+            {
+                // The replaced invoice's debt is canceled under the ledger's lock: a payment made a moment ago refuses it.
+                if (!string.IsNullOrEmpty(replaced.TransactionId))
+                {
+                    var canceled = await _transactionCommands.CancelUnpaidAsync(replaced.TransactionId, S["Invoice {0} was replaced by {1}.", replaced.Number, invoice.Number].Value, cancellationToken);
+
+                    if (!canceled.Succeeded)
+                    {
+                        foreach (var error in canceled.Errors)
+                        {
+                            result.Fail(error);
+                        }
+
+                        return null;
+                    }
+                }
+
+                replaced.Status = InvoiceStatus.Void;
+                replaced.VoidedUtc = now;
+                replaced.VoidReason = S["Replaced by {0}.", invoice.Number].Value;
+                replaced.ReplacedById = invoice.ItemId;
+                replaced.AmountDue = 0m;
+                replaced.ModifiedUtc = now;
+
+                AddHistory(replaced, DocumentEventKinds.Voided, replaced.VoidReason, null);
+                await _store.UpdateAsync(replaced, cancellationToken);
+            }
+
             invoice.ContentHash = InvoiceContentHash.Compute(invoice);
 
-            AddHistory(invoice, DocumentEventKinds.Issued, S["Issued as {0}.", invoice.Number].Value, invoice.Totals.Total);
+            AddHistory(invoice, DocumentEventKinds.Issued, replaced is null ? S["Issued as {0}.", invoice.Number].Value : S["Issued as {0}, replacing {1}.", invoice.Number, replaced.Number].Value, invoice.Totals.Total);
 
-            return observer => observer.IssuedAsync(invoice, cancellationToken);
-        }, cancellationToken);
+            return replaced is null
+                ? observer => observer.IssuedAsync(invoice, cancellationToken)
+                : async observer =>
+                {
+                    await observer.IssuedAsync(invoice, cancellationToken);
+                    await observer.VoidedAsync(replaced, cancellationToken);
+                };
+    }
 
     /// <inheritdoc/>
     public Task<InvoiceCommandResult> VoidAsync(string invoiceId, string reason, CancellationToken cancellationToken = default)

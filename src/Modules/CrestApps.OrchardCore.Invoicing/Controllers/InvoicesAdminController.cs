@@ -437,6 +437,75 @@ public sealed class InvoicesAdminController : Controller
     }
 
     /// <summary>
+    /// Submits a draft at or above the approval amount for approval.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Submit(string itemId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ManageInvoices) &&
+            !await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.IssueInvoices))
+        {
+            return Forbid();
+        }
+
+        return await CompleteAsync(await _commands.SubmitForApprovalAsync(itemId, User.Identity?.Name), itemId, H["The invoice was submitted for approval."]);
+    }
+
+    /// <summary>
+    /// Approves an invoice waiting for approval, which issues it.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Approve(string itemId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ApproveInvoices))
+        {
+            return Forbid();
+        }
+
+        var result = await _commands.ApproveAsync(itemId, User.Identity?.Name);
+
+        return await CompleteAsync(result, itemId, result.Invoice is { } issued ? H["Invoice {0} was approved and issued.", issued.Number] : null);
+    }
+
+    /// <summary>
+    /// Rejects an invoice waiting for approval: it goes back to a draft.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Reject(string itemId, string reason)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ApproveInvoices))
+        {
+            return Forbid();
+        }
+
+        return await CompleteAsync(await _commands.RejectAsync(itemId, User.Identity?.Name, reason), itemId, H["The invoice was rejected and is a draft again."]);
+    }
+
+    /// <summary>
+    /// Drafts a revision of an open invoice and opens it in the editor.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Revise(string itemId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ManageInvoices) ||
+            !await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.IssueInvoices))
+        {
+            return Forbid();
+        }
+
+        var result = await _commands.ReviseAsync(itemId);
+
+        if (!result.Succeeded || result.Invoice is null)
+        {
+            return await CompleteAsync(result, itemId, null);
+        }
+
+        await _notifier.SuccessAsync(H["A revision was drafted. Change it and issue it: issuing it voids the invoice it revises."]);
+
+        return RedirectToAction(nameof(Edit), new { itemId = result.Invoice.ItemId });
+    }
+
+    /// <summary>
     /// Voids an open invoice that nothing was paid on; its number is kept.
     /// </summary>
     [HttpPost]

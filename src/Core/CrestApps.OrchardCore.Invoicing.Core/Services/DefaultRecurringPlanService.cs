@@ -358,7 +358,24 @@ public sealed partial class DefaultRecurringPlanService : IRecurringPlanService
             // plan's run record with it.
             await using var scope = _serviceProvider.CreateAsyncScope();
 
-            var issued = await scope.ServiceProvider.GetRequiredService<IInvoiceCommandService>().IssueAsync(invoice.ItemId, cancellationToken);
+            var commands = scope.ServiceProvider.GetRequiredService<IInvoiceCommandService>();
+            var issued = await commands.IssueAsync(invoice.ItemId, cancellationToken);
+
+            // An invoice at or above the approval amount waits for its approver instead.
+            if (issued.NeedsApproval)
+            {
+                await using var submitScope = _serviceProvider.CreateAsyncScope();
+                var submitted = await submitScope.ServiceProvider.GetRequiredService<IInvoiceCommandService>().SubmitForApprovalAsync(invoice.ItemId, S["Recurring plan {0}", plan.Name].Value, cancellationToken);
+
+                record.Message = submitted.Succeeded
+                    ? S["The invoice needs approval, so it was submitted for approval."].Value
+                    : S["The invoice needs approval but could not be submitted: {0}", string.Join(" ", submitted.Errors)].Value;
+                plan.RunCount++;
+                plan.Runs.Add(record);
+                result.Invoices.Add(invoice);
+
+                return;
+            }
 
             if (!issued.Succeeded)
             {

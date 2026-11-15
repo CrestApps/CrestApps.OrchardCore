@@ -26,4 +26,16 @@ public class InvoiceDetailViewModel
     public bool CanOpenTransaction { get; set; }
 
     public bool LedgerMissing { get; set; }
+
+    public bool NeedsApproval { get; set; }
+
+    public bool CanSubmit { get; set; }
+
+    public bool CanApprove { get; set; }
+
+    public bool CanRevise { get; set; }
+
+    public Invoice RevisionOf { get; set; }
+
+    public Invoice ReplacedBy { get; set; }
 }

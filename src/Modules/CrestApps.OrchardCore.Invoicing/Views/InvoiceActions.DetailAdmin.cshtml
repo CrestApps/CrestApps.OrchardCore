@@ -6,12 +6,61 @@
 }
 
 @* Each action is offered only when the invoice's state and the viewer's permissions allow it; the action checks both again. *@
-@if (Model.CanEdit || Model.CanIssue || Model.CanDelete)
+@if (Model.CanApprove)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Waiting for approval"]</div>
+        <div class="card-body">
+            <p class="text-muted">
+                @T["Submitted by {0}. Approving issues it; rejecting makes it a draft again.", invoice.Approval?.SubmittedBy ?? T["someone"].Value]
+            </p>
+            <form asp-action="Approve" asp-controller="InvoicesAdmin" method="post" class="mb-3">
+                <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                <button type="submit" class="btn btn-primary"
+                        data-url-af="RemoveUrl" data-title="@T["Approve invoice"]" data-message="@T["Approve and issue the invoice? It gets its number and what it totals is owed."]" data-ok-text="@T["Approve"]" data-cancel-text="@T["Cancel"]">
+                    @T["Approve and issue"]
+                </button>
+            </form>
+            <form asp-action="Reject" asp-controller="InvoicesAdmin" method="post">
+                <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                <div class="mb-2">
+                    <label class="form-label" for="reject-reason">@T["Reason"]</label>
+                    <input id="reject-reason" name="reason" class="form-control" required maxlength="500" />
+                </div>
+                <button type="submit" class="btn btn-outline-danger">@T["Reject"]</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.CanRevise)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Revise"]</div>
+        <div class="card-body">
+            <p class="text-muted">@T["Drafts a copy of {0} to change. Issuing the revision voids {0} and links the two.", number]</p>
+            <form asp-action="Revise" asp-controller="InvoicesAdmin" method="post">
+                <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                <button type="submit" class="btn btn-secondary">@T["Draft a revision"]</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.CanEdit || Model.CanIssue || Model.CanDelete || Model.CanSubmit)
 {
     <div class="card mb-3">
         <div class="card-header">@T["Draft"]</div>
         <div class="card-body">
             <p class="text-muted">@T["A draft has no number and owes nothing until it is issued. Issuing it gives it its number and posts what is owed to the ledger; after that it can't be changed."]</p>
+            @if (Model.NeedsApproval)
+            {
+                <p class="text-muted">@T["Its total needs approval: submit it, and it is issued when someone else approves it."]</p>
+            }
+            @if (invoice.Approval?.RejectionReason is { Length: > 0 } rejection)
+            {
+                <div class="alert alert-warning">@T["Rejected by {0}: {1}", invoice.Approval.RejectedBy ?? T["an approver"].Value, rejection]</div>
+            }
             <div class="d-flex flex-wrap gap-2">
                 @if (Model.CanEdit)
                 {
@@ -25,6 +74,13 @@
                                 data-url-af="RemoveUrl" data-title="@T["Issue invoice"]" data-message="@T["Issue the invoice? It gets its number, what it totals is owed, and it can't be changed after."]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
                             @T["Issue"]
                         </button>
+                    </form>
+                }
+                @if (Model.CanSubmit)
+                {
+                    <form asp-action="Submit" asp-controller="InvoicesAdmin" method="post">
+                        <input type="hidden" name="itemId" value="@invoice.ItemId" />
+                        <button type="submit" class="btn btn-primary">@T["Submit for approval"]</button>
                     </form>
                 }
                 @if (Model.CanDelete)

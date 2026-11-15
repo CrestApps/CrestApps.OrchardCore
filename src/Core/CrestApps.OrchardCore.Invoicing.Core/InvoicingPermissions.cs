@@ -65,6 +65,14 @@ public static class InvoicingPermissions
         isSecurityCritical: true);
 
     /// <summary>
+    /// Approve or reject invoices waiting for approval. Approving issues them.
+    /// </summary>
+    public static readonly Permission ApproveInvoices = new(
+        "ApproveInvoices",
+        LocalizationSource.Create("Approve invoices", typeof(InvoicingPermissions)),
+        isSecurityCritical: true);
+
+    /// <summary>
     /// Change the invoicing settings.
     /// </summary>
     public static readonly Permission ManageInvoicingSettings = new(
@@ -77,7 +85,7 @@ public static class InvoicingPermissions
     public static readonly Permission ViewInvoices = new(
         "ViewInvoices",
         LocalizationSource.Create("View invoices", typeof(InvoicingPermissions)),
-        [ManageInvoices, IssueInvoices, VoidInvoices, ManageCreditNotes, RecordInvoicePayments, ManageEstimates, ManageRecurringInvoices]);
+        [ManageInvoices, IssueInvoices, VoidInvoices, ManageCreditNotes, RecordInvoicePayments, ManageEstimates, ManageRecurringInvoices, ApproveInvoices]);
 
     /// <summary>
     /// See the invoices billed to the signed-in user and to the parties they have billing access to.
@@ -99,6 +107,7 @@ public static class InvoicingPermissions
         RecordInvoicePayments,
         ManageEstimates,
         ManageRecurringInvoices,
+        ApproveInvoices,
         ManageInvoicingSettings,
         ViewOwnInvoices,
     ];

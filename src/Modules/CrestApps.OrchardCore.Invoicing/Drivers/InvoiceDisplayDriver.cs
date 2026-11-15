@@ -12,6 +12,7 @@ using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Invoicing.Drivers;
 
@@ -91,6 +92,9 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
         var canManage = await _authorizationService.AuthorizeAsync(user, InvoicingPermissions.ManageInvoices);
         var canIssue = await _authorizationService.AuthorizeAsync(user, InvoicingPermissions.IssueInvoices);
         var canVoid = await _authorizationService.AuthorizeAsync(user, InvoicingPermissions.VoidInvoices);
+        var canApprove = await _authorizationService.AuthorizeAsync(user, InvoicingPermissions.ApproveInvoices);
+        var needsApproval = invoice.Status == InvoiceStatus.Draft &&
+            InvoiceApprovalRules.Requires(invoice, await _serviceProvider.GetRequiredService<ISiteService>().GetSettingsAsync<InvoicingSettings>());
 
         var model = new InvoiceDetailViewModel
         {
@@ -98,13 +102,23 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
             BillToName = await GetBillToNameAsync(invoice),
             CanEdit = canManage && InvoiceLifecycle.CanEdit(invoice),
             CanDelete = canManage && InvoiceLifecycle.CanDelete(invoice),
-            CanIssue = canIssue && invoice.Status == InvoiceStatus.Draft,
+            CanIssue = canIssue && invoice.Status == InvoiceStatus.Draft && !needsApproval,
+            NeedsApproval = needsApproval,
+            CanSubmit = needsApproval && (canManage || canIssue),
+            CanApprove = canApprove && invoice.Status == InvoiceStatus.PendingApproval,
+            CanRevise = canManage && canIssue && invoice.Status == InvoiceStatus.Open && invoice.Kind == InvoiceKind.Standard &&
+                string.IsNullOrEmpty(invoice.ReplacedById) && invoice.AmountPaid <= 0m && invoice.BilledItems.Count == 0 &&
+                invoice.SourceType is not (InvoicingConstants.OrderReferenceType or InvoicingConstants.RenewalReferenceType),
             CanVoid = canVoid && InvoiceLifecycle.CanVoid(invoice),
             CanWriteOff = canVoid && InvoiceLifecycle.CanWriteOff(invoice),
             CanReinstate = canVoid && invoice.Status == InvoiceStatus.Uncollectible,
             CanOpenTransaction = !string.IsNullOrEmpty(invoice.TransactionId) &&
                 await _authorizationService.AuthorizeAsync(user, TransactionsPermissions.ManageTransactions),
         };
+
+        var manager = _serviceProvider.GetRequiredService<IInvoiceManager>();
+        model.RevisionOf = string.IsNullOrEmpty(invoice.RevisionOfId) ? null : await manager.FindByIdAsync(invoice.RevisionOfId);
+        model.ReplacedBy = string.IsNullOrEmpty(invoice.ReplacedById) ? null : await manager.FindByIdAsync(invoice.ReplacedById);
 
         if (_serviceProvider.GetService<InvoiceLedgerAvailability>() is { } availability && await availability.IsMissingAsync(invoice))
         {
@@ -114,6 +128,7 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
             model.CanVoid = false;
             model.CanWriteOff = false;
             model.CanReinstate = false;
+            model.CanRevise = false;
         }
 
         // Credit notes, once the invoice is issued: those already made, and a way to make one while something is creditable.
@@ -129,7 +144,7 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
         var shareUrl = invoice.IssuedUtc.HasValue && invoice.Status != InvoiceStatus.Void && _serviceProvider.GetService<IInvoiceShareLinkService>() is { } shareLinks
             ? await shareLinks.CreateUrlAsync(invoice)
             : null;
-        var canSend = invoice.Status != InvoiceStatus.Void && canManage && (invoice.Status != InvoiceStatus.Draft || canIssue);
+        var canSend = invoice.Status is not (InvoiceStatus.Void or InvoiceStatus.PendingApproval) && canManage && (invoice.Status != InvoiceStatus.Draft || canIssue);
 
         return Combine(
             Initialize<InvoiceDeliveryViewModel>("InvoiceDelivery_DetailAdmin", card =>
@@ -164,6 +179,12 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
             card.CanDelete = model.CanDelete;
             card.CanOpenTransaction = model.CanOpenTransaction;
             card.LedgerMissing = model.LedgerMissing;
+            card.NeedsApproval = model.NeedsApproval;
+            card.CanSubmit = model.CanSubmit;
+            card.CanApprove = model.CanApprove;
+            card.CanRevise = model.CanRevise;
+            card.RevisionOf = model.RevisionOf;
+            card.ReplacedBy = model.ReplacedBy;
         });
 
     // The name typed on the invoice, else the bill-to party's.
