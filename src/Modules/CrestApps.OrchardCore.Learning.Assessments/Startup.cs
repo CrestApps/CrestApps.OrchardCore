@@ -1,3 +1,11 @@
+using OrchardCore.Notifications;
+using OrchardCore.Localization;
+using OrchardCore.AuditTrail.Services.Models;
+using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Learning.Assessments.Webhooks;
+using CrestApps.OrchardCore.Learning.Assessments.Notifications;
+using CrestApps.OrchardCore.Learning.Assessments.AuditTrail;
 using OrchardCore.Workflows.Helpers;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using CrestApps.OrchardCore.Learning.Assessments.Workflows;
@@ -176,5 +184,48 @@ public sealed class AssessmentsWorkflowsRecipeSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<AttemptScoreChangedEventSchema>()
             .AddWorkflowActivitySchema<VoidAttemptTaskSchema>()
             .AddWorkflowActivitySchema<RegradeAttemptTaskSchema>();
+    }
+}
+
+/// <summary>
+/// Tells learners when a quiz attempt is graded.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class AssessmentsNotificationsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNotificationType(AssessmentsConstants.NotificationTypes.Graded, LocalizationSource.Create<AssessmentsNotificationsStartup>("Quiz graded"), type => type.Description = LocalizationSource.Create<AssessmentsNotificationsStartup>("When a person has graded a quiz attempt of yours."));
+        services.AddAttemptObserver<AssessmentsNotificationObserver>();
+    }
+}
+
+/// <summary>
+/// Records quiz grading in the Audit Trail.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.AuditTrail)]
+public sealed class AssessmentsAuditTrailStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransient<IConfigureOptions<AuditTrailOptions>, AssessmentsAuditTrailEvents>();
+        services.AddAttemptObserver<AssessmentsAuditTrailObserver>();
+    }
+}
+
+/// <summary>
+/// Publishes quiz attempt webhook events.
+/// </summary>
+[RequireFeatures(WebhooksConstants.Feature.Webhooks)]
+public sealed class AssessmentsWebhooksStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddWebhookEvent(AssessmentsWebhookObserver.AttemptSubmitted, "Quiz attempt submitted", "Learning");
+        services.AddWebhookEvent(AssessmentsWebhookObserver.AttemptGraded, "Quiz attempt graded", "Learning");
+        services.AddAttemptObserver<AssessmentsWebhookObserver>();
     }
 }

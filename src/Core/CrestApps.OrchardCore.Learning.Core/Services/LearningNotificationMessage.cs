@@ -1,6 +1,6 @@
 using OrchardCore.Notifications;
 
-namespace CrestApps.OrchardCore.Learning.Notifications;
+namespace CrestApps.OrchardCore.Learning.Core.Services;
 
 /// <summary>
 /// A plain-text Learning notice to a learner, with its notification type, the enrollment as its reference and a link.

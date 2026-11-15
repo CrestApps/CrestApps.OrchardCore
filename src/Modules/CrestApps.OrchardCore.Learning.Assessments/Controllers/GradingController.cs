@@ -37,6 +37,7 @@ public sealed class GradingController : Controller
     private readonly ILocalClock _localClock;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly IEnumerable<IAttemptObserver> _observers;
 
     internal readonly IHtmlLocalizer H;
 
@@ -54,8 +55,10 @@ public sealed class GradingController : Controller
         ILocalClock localClock,
         IClock clock,
         INotifier notifier,
+        IEnumerable<IAttemptObserver> observers,
         IHtmlLocalizer<GradingController> htmlLocalizer)
     {
+        _observers = observers;
         _attemptStore = attemptStore;
         _overrideStore = overrideStore;
         _attemptService = attemptService;
@@ -317,7 +320,7 @@ public sealed class GradingController : Controller
             return View(nameof(Overrides), await BuildOverridesAsync(model, quiz));
         }
 
-        await _overrideStore.CreateAsync(new AssessmentOverride
+        var entry = new AssessmentOverride
         {
             UserId = await userManager.GetUserIdAsync(user),
             QuizId = quiz.ContentItemId,
@@ -328,7 +331,14 @@ public sealed class GradingController : Controller
             Reason = model.Reason.Trim(),
             Actor = User.FindFirstValue(ClaimTypes.NameIdentifier),
             CreatedUtc = _clock.UtcNow,
-        });
+        };
+
+        await _overrideStore.CreateAsync(entry);
+
+        foreach (var observer in _observers)
+        {
+            await observer.OverrideGrantedAsync(entry);
+        }
 
         await _notifier.SuccessAsync(H["The override is saved. It applies to the next attempt of the learner."]);
 

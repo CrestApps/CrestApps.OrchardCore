@@ -52,4 +52,13 @@ public interface IAttemptObserver
     /// <returns>A task.</returns>
     Task ScoreChangedAsync(AssessmentAttempt attempt, AttemptScoreChange change, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// A person gave a learner an override of a quiz: extra time, extra attempts or another window.
+    /// </summary>
+    /// <param name="entry">The override.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task OverrideGrantedAsync(AssessmentOverride entry, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
