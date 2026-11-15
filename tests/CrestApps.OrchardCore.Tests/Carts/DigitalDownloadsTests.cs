@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Downloads.Indexes;
 using CrestApps.OrchardCore.Downloads.Migrations;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Services;
+using CrestApps.OrchardCore.FileStorage;
+using CrestApps.OrchardCore.FileStorage.ProtectedFiles;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -319,10 +321,10 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         return result;
     }
 
-    private DigitalFileStore FileStore(params IFileEventHandler[] handlers)
+    private ProtectedFileStore<DigitalDownloadFiles> FileStore(params IFileEventHandler[] handlers)
         => new(new FileSystemStore(_folder, NullLogger<FileSystemStore>.Instance), new FileCreationService(handlers));
 
-    private static ContentItem Product(StoredDigitalFile file, int limit, int days = 30)
+    private static ContentItem Product(ProtectedFile file, int limit, int days = 30)
     {
         var product = new ContentItem { ContentItemId = "ebook", ContentItemVersionId = "ebook-v1", ContentType = "Product" };
 

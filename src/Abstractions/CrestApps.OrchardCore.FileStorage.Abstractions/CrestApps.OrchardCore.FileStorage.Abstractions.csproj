@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.FileStorage</RootNamespace>
+    <Title>CrestApps OrchardCore File Storage Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Contracts of protected files: private files kept outside the media library under a tenant's App_Data, in areas a
+      module names, served only through signed, time-limited links that the area's access policies approve.
+    </Description>
+    <PackageTags>$(PackageTags) FileStorage ProtectedFiles Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

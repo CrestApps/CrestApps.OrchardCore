@@ -1,42 +1,13 @@
 using Microsoft.AspNetCore.StaticFiles;
 using OrchardCore.FileStorage;
 
-namespace CrestApps.OrchardCore.Downloads.Services;
+namespace CrestApps.OrchardCore.FileStorage.ProtectedFiles;
 
 /// <summary>
-/// The private store digital files are kept in: a folder under the tenant's App_Data, served by no URL. Each file is
-/// kept at <c>{fileId}/{fileName}</c>, so its name travels with it.
+/// Keeps the files of an area in a folder of their own: one folder per file id holding the file under its name.
 /// </summary>
-public interface IDigitalFileStore
-{
-    /// <summary>
-    /// Runs a new file through the tenant's file creation pipeline (such as an antivirus scanner), saves it when no
-    /// handler refuses it, and returns what was kept.
-    /// </summary>
-    /// <param name="fileName">The name the file was uploaded with.</param>
-    /// <param name="content">The file's content.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <exception cref="FileStoreException">Thrown when a file event handler refuses the file; nothing is kept.</exception>
-    Task<StoredDigitalFile> SaveAsync(string fileName, Stream content, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Finds a file by its id, or returns <see langword="null"/>.
-    /// </summary>
-    /// <param name="fileId">The file's id.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<StoredDigitalFile> FindAsync(string fileId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Opens a file to read, or returns <see langword="null"/> when it is gone.
-    /// </summary>
-    /// <param name="fileId">The file's id.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<Stream> OpenAsync(string fileId, CancellationToken cancellationToken = default);
-}
-
-public sealed record StoredDigitalFile(string FileId, string FileName, long Size);
-
-internal sealed class DigitalFileStore : IDigitalFileStore
+/// <typeparam name="TArea">The marker type of the area.</typeparam>
+public sealed class ProtectedFileStore<TArea> : IProtectedFileStore<TArea>
 {
     private static readonly char[] _invalidFileNameChars = [.. "\"<>|:*?", .. Enumerable.Range(0, 32).Select(code => (char)code)];
     private static readonly FileExtensionContentTypeProvider _contentTypes = new();
@@ -44,15 +15,19 @@ internal sealed class DigitalFileStore : IDigitalFileStore
     private readonly IFileStore _fileStore;
     private readonly FileCreationService _fileCreationService;
 
-    public DigitalFileStore(
-        IFileStore fileStore,
-        FileCreationService fileCreationService)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProtectedFileStore{TArea}"/> class.
+    /// </summary>
+    /// <param name="fileStore">The folder of the area.</param>
+    /// <param name="fileCreationService">The file creation pipeline.</param>
+    public ProtectedFileStore(IFileStore fileStore, FileCreationService fileCreationService)
     {
         _fileStore = fileStore;
         _fileCreationService = fileCreationService;
     }
 
-    public async Task<StoredDigitalFile> SaveAsync(string fileName, Stream content, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<ProtectedFile> SaveAsync(string fileName, Stream content, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(content);
 
@@ -87,10 +62,11 @@ internal sealed class DigitalFileStore : IDigitalFileStore
             await _fileCreationService.CreatedAsync(info, cancellationToken);
         }
 
-        return new StoredDigitalFile(fileId, name, info?.Length ?? 0);
+        return new ProtectedFile(fileId, name, info?.Length ?? 0);
     }
 
-    public async Task<StoredDigitalFile> FindAsync(string fileId, CancellationToken cancellationToken = default)
+    /// <inheritdoc/>
+    public async Task<ProtectedFile> FindAsync(string fileId, CancellationToken cancellationToken = default)
     {
         if (!IsValidId(fileId) || await _fileStore.GetDirectoryInfoAsync(fileId) is null)
         {
@@ -101,13 +77,14 @@ internal sealed class DigitalFileStore : IDigitalFileStore
         {
             if (!entry.IsDirectory)
             {
-                return new StoredDigitalFile(fileId, entry.Name, entry.Length);
+                return new ProtectedFile(fileId, entry.Name, entry.Length);
             }
         }
 
         return null;
     }
 
+    /// <inheritdoc/>
     public async Task<Stream> OpenAsync(string fileId, CancellationToken cancellationToken = default)
     {
         var file = await FindAsync(fileId, cancellationToken);
@@ -115,11 +92,31 @@ internal sealed class DigitalFileStore : IDigitalFileStore
         return file is null ? null : await _fileStore.GetFileStreamAsync(_fileStore.Combine(fileId, file.FileName));
     }
 
-    // Only ids this store made reach the file system, so a crafted id can't climb out of the folder.
-    internal static bool IsValidId(string fileId)
+    /// <inheritdoc/>
+    public async Task<bool> DeleteAsync(string fileId, CancellationToken cancellationToken = default)
+    {
+        if (!IsValidId(fileId) || await _fileStore.GetDirectoryInfoAsync(fileId) is null)
+        {
+            return false;
+        }
+
+        return await _fileStore.TryDeleteDirectoryAsync(fileId);
+    }
+
+    /// <summary>
+    /// Gets whether an id is one this store makes, so a crafted id can't climb out of the folder.
+    /// </summary>
+    /// <param name="fileId">The id.</param>
+    /// <returns><see langword="true"/> when it is.</returns>
+    public static bool IsValidId(string fileId)
         => !string.IsNullOrEmpty(fileId) && fileId.Length <= 64 && fileId.All(char.IsAsciiLetterOrDigit);
 
-    internal static string Sanitize(string fileName)
+    /// <summary>
+    /// Makes a file name safe on every file system.
+    /// </summary>
+    /// <param name="fileName">The name.</param>
+    /// <returns>The safe name.</returns>
+    public static string Sanitize(string fileName)
     {
         // A name can come from any system, so both separators end a folder and the characters Windows refuses are
         // replaced on every server: the same upload gets the same name wherever the site runs.
@@ -140,6 +137,6 @@ internal sealed class DigitalFileStore : IDigitalFileStore
             name = name[..(200 - extension.Length)] + extension;
         }
 
-        return string.IsNullOrEmpty(name) ? "file" : name;
+        return name.Length == 0 ? "file" : name;
     }
 }
