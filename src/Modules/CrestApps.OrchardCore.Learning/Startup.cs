@@ -91,7 +91,8 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<User, UserLearningDisplayDriver>();
 
         services.AddContentPart<CoursePart>()
-            .UseDisplayDriver<CoursePartDisplayDriver>();
+            .UseDisplayDriver<CoursePartDisplayDriver>()
+            .AddHandler<CourseSettingsGuardHandler>();
         services.AddContentPart<CourseOutlinePart>()
             .UseDisplayDriver<CourseOutlinePartDisplayDriver>();
         services.AddContentPart<CourseItemPart>()
