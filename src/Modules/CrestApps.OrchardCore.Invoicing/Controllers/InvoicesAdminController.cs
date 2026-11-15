@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -659,6 +660,20 @@ public sealed class InvoicesAdminController : Controller
         model.PartySearchEndpoint = Url.RouteUrl(InvoicePartySearchEndpoints.RouteName);
         model.CanIssue = await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.IssueInvoices);
         model.Totals ??= invoice.Totals;
+        model.CanSchedule = HttpContext.RequestServices.GetService<CrestApps.OrchardCore.Subscriptions.Services.IInstallmentPlanService>() is not null &&
+            invoice.Kind == InvoiceKind.Standard;
+
+        if (model.CanSchedule)
+        {
+            model.Schedule.RemoveAll(row => !row.DueDate.HasValue && !row.Amount.HasValue && !row.Percent.HasValue);
+
+            var rows = Math.Max(2, model.Schedule.Count + 1);
+
+            while (model.Schedule.Count < rows)
+            {
+                model.Schedule.Add(new InvoiceScheduleRowViewModel());
+            }
+        }
 
         if (PartyRef.TryParse(model.BillTo, out var party))
         {

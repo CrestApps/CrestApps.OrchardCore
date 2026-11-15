@@ -62,6 +62,42 @@
 
     <partial name="_DocumentLinesEditor" model="Model" />
 
+    @if (Model.CanSchedule)
+    {
+        <input type="hidden" name="CanSchedule" value="true" />
+        <div class="card mb-3">
+            <div class="card-header">@T["Payment schedule"]</div>
+            <div class="card-body">
+                <p class="hint">@T["Optional. Split what the invoice totals into parts that fall due on their own dates: give each part a date and either an amount or a percent (all parts the same way; amounts add up to the total, percents to 100). When the invoice is issued, each part becomes a payment of its own, with its own reminders, and is charged to the customer's saved card when the invoice is charged automatically. Click Update for another row."]</p>
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Due"]</th>
+                            <th scope="col">@T["Amount"]</th>
+                            <th scope="col">@T["Or percent"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Schedule.Count; i++)
+                        {
+                            var row = Model.Schedule[i];
+                            <tr>
+                                <td><input type="date" name="Schedule[@i].DueDate" value="@row.DueDate?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" aria-label="@T["Part {0} due", i + 1]" /></td>
+                                <td><input type="number" step="any" min="0" name="Schedule[@i].Amount" value="@row.Amount?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" aria-label="@T["Part {0} amount", i + 1]" /></td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" step="any" min="0" max="100" name="Schedule[@i].Percent" value="@row.Percent?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control" aria-label="@T["Part {0} percent", i + 1]" />
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
     <div class="card mb-3">
         <div class="card-header">@T["Payment"]</div>
         <div class="card-body">

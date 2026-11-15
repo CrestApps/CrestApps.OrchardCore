@@ -136,6 +136,13 @@ public sealed class InvoiceDocumentBuilder : IInvoiceDocumentBuilder
 
         AddTotals(business, document, invoice, Money);
 
+        if (invoice?.Schedule is { Count: > 0 } schedule)
+        {
+            var parts = schedule.Select((part, index) => S["{0}. {1:d}: {2}", index + 1, part.DueDate.ToDateTime(TimeOnly.MinValue), Money(part.IssuedAmount > 0m ? part.IssuedAmount : part.Amount ?? Math.Round((document.Totals?.Total ?? 0m) * (part.Percent ?? 0m) / 100m, 2, MidpointRounding.AwayFromZero))].Value);
+
+            business.Sections.Add(new BusinessDocumentSection(S["Payment schedule"], string.Join(Environment.NewLine, parts)));
+        }
+
         if (estimate is not null && (estimate.DepositAmount is > 0m || estimate.DepositPercent is > 0m))
         {
             business.Sections.Add(new BusinessDocumentSection(S["Deposit"], estimate.DepositAmount is > 0m

@@ -42,6 +42,12 @@ public sealed class InvoiceAutoCharge : IInvoiceObserver, ITransactionEventHandl
     /// <inheritdoc/>
     public async Task IssuedAsync(Invoice invoice, CancellationToken cancellationToken = default)
     {
+        // A payment schedule is charged payment by payment by its installment plan.
+        if (invoice?.Schedule is { Count: > 0 })
+        {
+            return;
+        }
+
         if (invoice is not { AutoCharge: true } ||
             string.IsNullOrEmpty(invoice.TransactionId) ||
             _serviceProvider.GetService<ISavedPaymentMethodChargeService>() is not { } charges)

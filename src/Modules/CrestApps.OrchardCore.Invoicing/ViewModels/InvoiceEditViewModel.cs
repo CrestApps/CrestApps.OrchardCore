@@ -42,6 +42,16 @@ public class InvoiceEditViewModel
 
     public bool LateFeesExempt { get; set; }
 
+    /// <summary>
+    /// Gets or sets the rows of the payment schedule, with a few empty ones to add more.
+    /// </summary>
+    public List<InvoiceScheduleRowViewModel> Schedule { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether a payment schedule can be set (Installment Plans is on).
+    /// </summary>
+    public bool CanSchedule { get; set; }
+
     public string Notes { get; set; }
 
     public string Terms { get; set; }
@@ -72,4 +82,16 @@ public class InvoiceEditViewModel
 
     [BindNever]
     public bool CanIssue { get; set; }
+}
+
+/// <summary>
+/// A row of the invoice editor's payment schedule.
+/// </summary>
+public class InvoiceScheduleRowViewModel
+{
+    public DateOnly? DueDate { get; set; }
+
+    public decimal? Amount { get; set; }
+
+    public decimal? Percent { get; set; }
 }

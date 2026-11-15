@@ -220,9 +220,9 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
 
         var result = await RunAsync(invoiceId, async (invoice, result) =>
         {
-            if (invoice.Status != InvoiceStatus.Open || invoice.Kind != InvoiceKind.Standard || !string.IsNullOrEmpty(invoice.ReplacedById))
+            if (invoice.Status != InvoiceStatus.Open || invoice.Kind != InvoiceKind.Standard || !string.IsNullOrEmpty(invoice.ReplacedById) || !string.IsNullOrEmpty(invoice.InstallmentPlanId))
             {
-                result.Fail(S["Only an open invoice that wasn't replaced already can be revised."]);
+                result.Fail(S["Only an open invoice that wasn't replaced already, and is not split into a payment schedule, can be revised."]);
 
                 return null;
             }
@@ -271,6 +271,7 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
             revision.AllowPartialPayment = invoice.AllowPartialPayment;
             revision.AutoCharge = invoice.AutoCharge;
             revision.LateFeesExempt = invoice.LateFeesExempt;
+            revision.Schedule = [.. invoice.Schedule.Select(part => new InvoiceInstallment { DueDate = part.DueDate, Amount = part.Amount, Percent = part.Percent })];
             revision.Charges = [.. invoice.Charges];
             revision.Lines = [.. invoice.Lines.Select(line => new DocumentLine
             {
@@ -424,6 +425,34 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
                 return null;
             }
 
+            // A payment schedule must add up and fall due from the issue date on; it is split on the ledger once issued.
+            if (invoice.Schedule is { Count: > 0 })
+            {
+                if (_serviceProvider.GetService<CrestApps.OrchardCore.Subscriptions.Services.IInstallmentPlanService>() is null)
+                {
+                    result.Fail(S["A payment schedule needs the Installment Plans feature. Enable it, or take the schedule off."]);
+
+                    return null;
+                }
+
+                if (!string.IsNullOrEmpty(invoice.TransactionId))
+                {
+                    result.Fail(S["An invoice that takes over a debt already on the ledger can't have a payment schedule."]);
+
+                    return null;
+                }
+
+                foreach (var error in InvoiceSchedule.Resolve(invoice, issueDate, S).Errors)
+                {
+                    result.Fail(error);
+                }
+
+                if (!result.Succeeded)
+                {
+                    return null;
+                }
+            }
+
             // A revision replaces the invoice it revises, which must still be replaceable.
             Invoice replaced = null;
 
@@ -445,6 +474,12 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
             }
 
             await SetDueDateAsync(invoice, settings, issueDate, cancellationToken);
+
+            // A scheduled invoice is due in full when its last part is.
+            if (invoice.Schedule is { Count: > 0 } schedule)
+            {
+                invoice.DueDate = schedule[^1].DueDate;
+            }
 
             invoice.Issuer ??= await GetIssuerAsync();
             invoice.Notes ??= settings.DefaultNotes;
@@ -574,6 +609,35 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
                 return null;
             }
 
+            if (!string.IsNullOrEmpty(invoice.InstallmentPlanId))
+            {
+                if (invoice.AmountPaid > 0m)
+                {
+                    result.Fail(S["A payment was made on this invoice's schedule, so it can't be voided."]);
+
+                    return null;
+                }
+
+                var plans = _serviceProvider.GetService<CrestApps.OrchardCore.Subscriptions.Services.IInstallmentPlanService>();
+                var canceledPlan = plans is null ? null : await plans.CancelAsync(invoice.InstallmentPlanId, S["Invoice {0} was voided: {1}", invoice.Number, trimmedReason].Value, cancellationToken);
+
+                if (canceledPlan is not { Succeeded: true })
+                {
+                    result.Fail(S["The invoice's payment schedule could not be canceled: {0}", string.Join(" ", canceledPlan?.Errors.Select(error => error.Value) ?? [])]);
+
+                    return null;
+                }
+
+                invoice.Status = InvoiceStatus.Void;
+                invoice.VoidedUtc = _clock.UtcNow;
+                invoice.VoidReason = trimmedReason;
+                invoice.AmountDue = 0m;
+
+                AddHistory(invoice, DocumentEventKinds.Voided, S["Voided: {0}", trimmedReason].Value, null);
+
+                return observer => observer.VoidedAsync(invoice, cancellationToken);
+            }
+
             // A credit note is a tax document that cites this invoice, so the invoice stays and is corrected by it.
             if (await _creditNotes.HasIssuedForInvoiceAsync(invoice.ItemId, cancellationToken))
             {
@@ -615,6 +679,13 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
             if (invoice.Status == InvoiceStatus.Uncollectible)
             {
                 result.AlreadyDone = true;
+
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(invoice.InstallmentPlanId))
+            {
+                result.Fail(S["This invoice is split into a payment schedule: write off or cancel its payments on the ledger instead."]);
 
                 return null;
             }

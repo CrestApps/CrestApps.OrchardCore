@@ -19,6 +19,15 @@ public static class InvoiceTransactionLink
             !string.IsNullOrEmpty(transaction.ReferenceId);
 
     /// <summary>
+    /// Gets a value indicating whether the transaction is a payment of an invoice's schedule.
+    /// </summary>
+    /// <param name="transaction">The transaction.</param>
+    public static bool IsScheduledPayment(Transaction transaction)
+        => transaction is not null &&
+            string.Equals(transaction.ParentReferenceType, InvoicingConstants.InvoiceReferenceType, StringComparison.Ordinal) &&
+            !string.IsNullOrEmpty(transaction.ParentReferenceId);
+
+    /// <summary>
     /// Gets the invoice the transaction belongs to, or <see langword="null"/> when none does.
     /// </summary>
     /// <param name="invoices">The invoice store.</param>
@@ -33,8 +42,17 @@ public static class InvoiceTransactionLink
             return null;
         }
 
-        return IsPostedByInvoice(transaction)
-            ? await invoices.FindByIdAsync(transaction.ReferenceId, cancellationToken)
-            : await invoices.FindByTransactionIdAsync(transaction.ItemId, cancellationToken);
+        if (IsPostedByInvoice(transaction))
+        {
+            return await invoices.FindByIdAsync(transaction.ReferenceId, cancellationToken);
+        }
+
+        // A payment of an invoice's schedule names the invoice as the record it pays for.
+        if (IsScheduledPayment(transaction))
+        {
+            return await invoices.FindByIdAsync(transaction.ParentReferenceId, cancellationToken);
+        }
+
+        return await invoices.FindByTransactionIdAsync(transaction.ItemId, cancellationToken);
     }
 }

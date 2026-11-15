@@ -61,6 +61,7 @@ public static class InvoicingServiceCollectionExtensions
 
         // An invoice marked to be charged automatically is charged to the payer's saved card, or sent when it can't be.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, InvoiceAutoCharge>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, InvoiceScheduleStarter>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionEventHandler, InvoiceAutoCharge>());
 
         return services;

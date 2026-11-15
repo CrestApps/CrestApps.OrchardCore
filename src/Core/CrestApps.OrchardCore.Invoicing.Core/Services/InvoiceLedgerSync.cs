@@ -65,7 +65,9 @@ public sealed class InvoiceLedgerSync
         // The invoice that posted it, or the one that took over a debt already on the ledger (an order on account).
         var invoiceId = InvoiceTransactionLink.IsPostedByInvoice(transaction)
             ? transaction.ReferenceId
-            : (await _invoices.FindByTransactionIdAsync(transaction.ItemId, cancellationToken))?.ItemId;
+            : InvoiceTransactionLink.IsScheduledPayment(transaction)
+                ? transaction.ParentReferenceId
+                : (await _invoices.FindByTransactionIdAsync(transaction.ItemId, cancellationToken))?.ItemId;
 
         if (string.IsNullOrEmpty(invoiceId))
         {
@@ -101,6 +103,44 @@ public sealed class InvoiceLedgerSync
         return transaction is null ? invoice : await SyncAsync(invoice.ItemId, transaction, cancellationToken) ?? invoice;
     }
 
+    // The payments of an invoice's schedule as one transaction: their totals, what was paid, adjusted and refunded, and
+    // their timelines. Canceled only once every payment is.
+    private async Task<Transaction> GetScheduleTransactionAsync(Invoice invoice, CancellationToken cancellationToken)
+    {
+        var payments = new List<Transaction>();
+
+        foreach (var part in invoice.Schedule.Where(part => !string.IsNullOrEmpty(part.TransactionId)))
+        {
+            if (await _transactions.FindByIdAsync(part.TransactionId, cancellationToken) is { } payment)
+            {
+                payments.Add(payment);
+            }
+        }
+
+        if (payments.Count == 0)
+        {
+            return null;
+        }
+
+        var combined = new Transaction
+        {
+            ItemId = invoice.TransactionId,
+            Currency = invoice.Currency,
+            TotalAmount = payments.Where(payment => payment.Status != TransactionStatus.Canceled).Sum(payment => payment.TotalAmount),
+            AmountPaid = payments.Sum(payment => payment.AmountPaid),
+            AmountAdjusted = payments.Sum(payment => payment.AmountAdjusted),
+            AmountRefunded = payments.Sum(payment => payment.AmountRefunded),
+            Status = payments.All(payment => payment.Status == TransactionStatus.Canceled) ? TransactionStatus.Canceled : TransactionStatus.Outstanding,
+        };
+
+        foreach (var entry in payments.SelectMany(payment => payment.Events).OrderBy(entry => entry.CreatedUtc))
+        {
+            combined.Events.Add(entry);
+        }
+
+        return combined;
+    }
+
     private async Task<Invoice> SyncAsync(string invoiceId, Transaction transaction, CancellationToken cancellationToken)
     {
         // An invoice command of this request holds the invoice: it mirrors what it causes itself, and waiting here for the
@@ -122,8 +162,22 @@ public sealed class InvoiceLedgerSync
 
         var invoice = await _invoices.FindByIdAsync(invoiceId, cancellationToken);
 
-        if (invoice is null || invoice.Status == InvoiceStatus.Draft ||
-            !string.Equals(invoice.TransactionId, transaction.ItemId, StringComparison.Ordinal))
+        if (invoice is null || invoice.Status == InvoiceStatus.Draft)
+        {
+            return invoice;
+        }
+
+        if (!string.IsNullOrEmpty(invoice.InstallmentPlanId))
+        {
+            // A scheduled invoice owes what its payments owe.
+            transaction = await GetScheduleTransactionAsync(invoice, cancellationToken);
+
+            if (transaction is null)
+            {
+                return invoice;
+            }
+        }
+        else if (!string.Equals(invoice.TransactionId, transaction.ItemId, StringComparison.Ordinal))
         {
             return invoice;
         }

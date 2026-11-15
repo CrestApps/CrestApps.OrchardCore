@@ -49,6 +49,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan _transientRetryDelay = TimeSpan.FromHours(1);
 
+    private readonly ISavedPaymentMethodStore _savedPaymentMethodStore;
     private readonly IInstallmentPlanStore _planStore;
     private readonly ITransactionManager _transactionManager;
     private readonly ICheckoutEngine _checkoutEngine;
@@ -92,8 +93,10 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         ISession session,
         IClock clock,
         ILogger<DefaultInstallmentPlanService> logger,
-        IStringLocalizer<DefaultInstallmentPlanService> stringLocalizer)
+        IStringLocalizer<DefaultInstallmentPlanService> stringLocalizer,
+        ISavedPaymentMethodStore savedPaymentMethodStore = null)
     {
+        _savedPaymentMethodStore = savedPaymentMethodStore;
         _planStore = planStore;
         _transactionManager = transactionManager;
         _checkoutEngine = checkoutEngine;
@@ -211,6 +214,157 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         };
 
         return await CreatePlanAsync(planRequest, transaction, checkoutSession, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstallmentPlanResult> CreateScheduleAsync(CreateInstallmentScheduleRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var result = new InstallmentPlanResult();
+        var transaction = string.IsNullOrEmpty(request.TransactionId)
+            ? null
+            : await _transactionManager.FindByIdAsync(request.TransactionId, cancellationToken);
+
+        // A schedule set by staff may split a guest's debt too: its payments are invoiced, and only a card schedule
+        // needs a signed-up owner with a kept card.
+        if (transaction is null ||
+            transaction.Status != TransactionStatus.Outstanding ||
+            transaction.AmountPaid > 0m ||
+            transaction.TotalAmount <= 0m ||
+            transaction.Recurrence is not null ||
+            transaction.AutoCollection is not null ||
+            string.IsNullOrEmpty(transaction.OwnerId) ||
+            string.Equals(transaction.ReferenceType, SubscriptionConstants.InstallmentPlans.ReferenceType, StringComparison.Ordinal))
+        {
+            return result.Fail(nameof(request.TransactionId), S["This balance can't be split into a payment schedule: it must be outstanding with nothing paid on it."]);
+        }
+
+        if ((await _planStore.GetBySourceTransactionAsync(transaction.ItemId, cancellationToken)).Any(plan => plan.Status is not InstallmentPlanStatus.Canceled))
+        {
+            return result.Fail(nameof(request.TransactionId), S["This balance is already being paid in installments."]);
+        }
+
+        var currency = transaction.Currency;
+        var now = _clock.UtcNow;
+        var payments = (request.Payments ?? []).Where(entry => entry is not null).ToList();
+
+        if (payments.Count == 0 || payments.Count > MaxInstallments)
+        {
+            return result.Fail(nameof(request.Payments), S["Give the schedule between 1 and {0} payments.", MaxInstallments]);
+        }
+
+        if (payments.Any(entry => entry.Amount <= 0m))
+        {
+            result.Fail(nameof(request.Payments), S["Every payment must be more than zero."]);
+        }
+
+        for (var i = 0; i < payments.Count; i++)
+        {
+            var due = DateTime.SpecifyKind(payments[i].DueUtc, DateTimeKind.Utc);
+
+            if (due.Date < now.Date || i > 0 && due <= DateTime.SpecifyKind(payments[i - 1].DueUtc, DateTimeKind.Utc))
+            {
+                result.Fail(nameof(request.Payments), S["The payments must fall due from today on, each after the one before."]);
+
+                break;
+            }
+        }
+
+        var total = CurrencyScale.Round(payments.Sum(entry => entry.Amount), currency);
+
+        if (total != CurrencyScale.Round(transaction.OutstandingAmount, currency))
+        {
+            result.Fail(nameof(request.Payments), S["The payments add up to {0}, but {1} is owed. Make them add up to what is owed.", CurrencyFormat.WithCode(total, currency), CurrencyFormat.WithCode(transaction.OutstandingAmount, currency)]);
+        }
+
+        SavedPaymentMethod card = null;
+
+        if (request.CollectionMethod == InstallmentCollectionMethod.AutoCharge)
+        {
+            card = transaction.OwnerKind == CustomerOwnerKind.Authenticated && _savedPaymentMethodStore is { } cards
+                ? (await cards.GetDefaultAsync(transaction.OwnerId, cancellationToken))?.PaymentMethod
+                : null;
+
+            if (card is null || card.IsExpired(now))
+            {
+                result.Fail(nameof(request.CollectionMethod), S["The customer kept no card that can be charged, so the payments can only be invoiced."]);
+            }
+        }
+
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        var title = string.IsNullOrWhiteSpace(request.Title)
+            ? (string.IsNullOrWhiteSpace(transaction.Title) ? S["Payment schedule"].Value : transaction.Title)
+            : request.Title.Trim();
+        var plan = new InstallmentPlan
+        {
+            ItemId = IdGenerator.GenerateId(),
+            Title = title,
+            ReferenceType = string.IsNullOrEmpty(transaction.ReferenceType) || string.IsNullOrEmpty(transaction.ReferenceId) ? null : transaction.ReferenceType,
+            ReferenceId = string.IsNullOrEmpty(transaction.ReferenceType) || string.IsNullOrEmpty(transaction.ReferenceId) ? null : transaction.ReferenceId,
+            SourceTransactionId = transaction.ItemId,
+            OwnerId = transaction.OwnerId,
+            CustomerName = transaction.OwnerKind == CustomerOwnerKind.Guest ? transaction.GuestContactName : transaction.PayerContact?.Name,
+            CustomerEmail = transaction.OwnerKind == CustomerOwnerKind.Guest ? transaction.GuestContactEmail : transaction.PayerContact?.Email,
+            Currency = currency,
+            TotalAmount = total,
+            InstallmentCount = payments.Count,
+            Frequency = InstallmentFrequency.Monthly,
+            FirstDueUtc = DateTime.SpecifyKind(payments[0].DueUtc, DateTimeKind.Utc),
+            CollectionMethod = request.CollectionMethod,
+            PaymentMethod = card,
+            Status = InstallmentPlanStatus.Active,
+            Notes = request.Notes,
+            CreatedById = CurrentUserId(),
+            CreatedByName = CurrentUserName(),
+            CreatedUtc = now,
+            UpdatedUtc = now,
+            ActivatedUtc = now,
+            Properties = CopyProperties(transaction.Properties),
+        };
+
+        var autoCollection = card is null
+            ? null
+            : new TransactionAutoCollection { ProviderKey = card.ProviderKey, PaymentMethodDescription = card.Describe() };
+
+        for (var i = 0; i < payments.Count; i++)
+        {
+            var payment = new InstallmentPlanPayment
+            {
+                Number = i + 1,
+                DueUtc = DateTime.SpecifyKind(payments[i].DueUtc, DateTimeKind.Utc),
+                Amount = CurrencyScale.Round(payments[i].Amount, currency),
+                Status = InstallmentPaymentStatus.Scheduled,
+            };
+            var paymentTransaction = await CreateTransactionAsync(
+                plan,
+                payment,
+                S["{0} — payment {1} of {2}", title, payment.Number, payments.Count].Value,
+
+                // An invoiced payment is owed from now, due on its date, so the customer can pay it early and is
+                // reminded before it falls due; a charged one waits for its date.
+                autoCollection is null ? TransactionStatus.Outstanding : TransactionStatus.Pending,
+                autoCollection,
+                now,
+                copyFrom: transaction);
+
+            payment.TransactionId = paymentTransaction.ItemId;
+            plan.Payments.Add(payment);
+        }
+
+        AddEvent(plan, InstallmentPlanEventType.Created, card is null
+            ? S["A schedule of {0} payments was set for '{1}'; each is invoiced to the customer on its due date.", payments.Count, transaction.Title].Value
+            : S["A schedule of {0} payments was set for '{1}'; {2} is charged on each due date.", payments.Count, transaction.Title, card.Describe()].Value, actor: plan.CreatedByName);
+
+        await ReplaceSourceTransactionAsync(plan, cancellationToken);
+        await _planStore.CreateAsync(plan, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        return InstallmentPlanResult.Success(plan);
     }
 
     // Creates a plan waiting for its first payment. A plan made from a transaction takes that payment through the
@@ -866,7 +1020,9 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         {
             CreatedUtc = now,
             Type = TransactionEventType.Canceled,
-            Message = S["Replaced by the installment plan '{0}', which the customer chose at checkout.", plan.Title].Value,
+            Message = string.IsNullOrEmpty(plan.DownPaymentSessionId)
+                ? S["Replaced by the payment schedule '{0}'.", plan.Title].Value
+                : S["Replaced by the installment plan '{0}', which the customer chose at checkout.", plan.Title].Value,
             ActorId = CurrentUserId(),
             ActorName = CurrentUserName(),
         });
@@ -1391,14 +1547,29 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         string title,
         TransactionStatus status,
         TransactionAutoCollection autoCollection,
-        DateTime now)
+        DateTime now,
+        Transaction copyFrom = null)
     {
         var transaction = await _transactionManager.NewAsync();
 
         transaction.Title = title;
         transaction.Source = SubscriptionConstants.InstallmentPlans.TransactionSource;
         transaction.OwnerId = plan.OwnerId;
-        transaction.OwnerKind = CustomerOwnerKind.Authenticated;
+        transaction.OwnerKind = copyFrom?.OwnerKind ?? CustomerOwnerKind.Authenticated;
+
+        if (copyFrom is not null)
+        {
+            transaction.GuestContactName = copyFrom.GuestContactName;
+            transaction.GuestContactEmail = copyFrom.GuestContactEmail;
+            transaction.PayerContact = copyFrom.PayerContact;
+            transaction.ExchangeRate = copyFrom.ExchangeRate;
+            transaction.BaseCurrency = copyFrom.BaseCurrency;
+
+            if (copyFrom.GetPayer() is { IsEmpty: false } payer)
+            {
+                transaction.SetPayer(payer);
+            }
+        }
         transaction.ReferenceType = SubscriptionConstants.InstallmentPlans.ReferenceType;
         transaction.ReferenceId = plan.ItemId;
 

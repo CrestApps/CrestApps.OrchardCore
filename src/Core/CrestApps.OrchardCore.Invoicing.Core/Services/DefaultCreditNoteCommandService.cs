@@ -455,8 +455,10 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
             : CreditNoteDisposition.Refund;
     }
 
+    // An invoice split into a payment schedule owes through its payments, not one debt a credit note could lower.
     private static bool CanCredit(Invoice invoice)
-        => !string.IsNullOrEmpty(invoice.Number) && invoice.Status is InvoiceStatus.Open or InvoiceStatus.Uncollectible;
+        => !string.IsNullOrEmpty(invoice.Number) && invoice.Status is InvoiceStatus.Open or InvoiceStatus.Uncollectible &&
+            string.IsNullOrEmpty(invoice.InstallmentPlanId);
 
     private string Describe(CreditNoteError error, Invoice invoice, CreditNote creditNote)
     {

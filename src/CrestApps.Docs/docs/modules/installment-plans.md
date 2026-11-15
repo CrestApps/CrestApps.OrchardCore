@@ -433,6 +433,7 @@ public sealed class PhoneSalesService
 | --- | --- |
 | `CreateAsync` | Creates a draft plan with its first-payment transaction and checkout session. |
 | `CreateFromTransactionAsync` | Turns an outstanding transaction into a plan in the customer's own checkout. See [Installments at checkout](#installments-at-checkout). |
+| `CreateScheduleAsync` | Splits an outstanding transaction (with nothing paid, a guest's too) into a schedule set by staff: dated payments of their own amounts adding up to what it owes, started at once with no down payment. Each payment copies the transaction's owner, guest contact and payer and names its record; invoiced payments are outstanding from now, charged ones (`InstallmentCollectionMethod.AutoCharge`, the owner's default saved card) pending until their date. The transaction is canceled as replaced. Invoicing uses it for an invoice's payment schedule. |
 | `ActivateAsync` | Starts the schedule once the down payment is paid. It is idempotent, and `ProcessAsync` calls it for you. |
 | `ChargeAsync(planId, paymentNumber)` | Charges one payment now, as **Charge now** does. |
 | `ProcessAsync` | Brings a plan up to date. It is safe to call at any time. |

@@ -127,6 +127,50 @@ public sealed class Invoice : InvoicingDocument
     /// Gets or sets who submitted the invoice for approval, and who approved or rejected it, when it needed approval.
     /// </summary>
     public InvoiceApproval Approval { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payment schedule set by staff: when each part falls due and how much, by amount or by percent of
+    /// the total. Once issued, the invoice's debt is split into these payments on the ledger by an installment plan.
+    /// </summary>
+    public IList<InvoiceInstallment> Schedule { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the installment plan that collects the schedule, once the invoice is issued.
+    /// </summary>
+    public string InstallmentPlanId { get; set; }
+}
+
+/// <summary>
+/// One part of an invoice's payment schedule.
+/// </summary>
+public sealed class InvoiceInstallment
+{
+    public DateOnly DueDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount, when the part is set by amount.
+    /// </summary>
+    public decimal? Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the percent of the total, when the part is set by percent.
+    /// </summary>
+    public decimal? Percent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payment's number in the installment plan, once issued.
+    /// </summary>
+    public int Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ledger transaction of the payment, once issued.
+    /// </summary>
+    public string TransactionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the payment comes to, worked out at issue.
+    /// </summary>
+    public decimal IssuedAmount { get; set; }
 }
 
 /// <summary>

@@ -33,6 +33,7 @@ internal static class InvoiceDraftEditor
         model.AllowPartialPayment = invoice.AllowPartialPayment;
         model.AutoCharge = invoice.AutoCharge;
         model.LateFeesExempt = invoice.LateFeesExempt;
+        model.Schedule = [.. (invoice.Schedule ?? []).Select(part => new InvoiceScheduleRowViewModel { DueDate = part.DueDate, Amount = part.Amount, Percent = part.Percent })];
         model.Notes = invoice.Notes;
         model.Terms = invoice.Terms;
         model.Footer = invoice.Footer;
@@ -123,6 +124,16 @@ internal static class InvoiceDraftEditor
         invoice.AllowPartialPayment = model.AllowPartialPayment;
         invoice.AutoCharge = model.AutoCharge;
         invoice.LateFeesExempt = model.LateFeesExempt;
+
+        // Rows without a date and an amount or percent are the empty ones left to add more.
+        if (model.CanSchedule || model.Schedule.Count > 0)
+        {
+            invoice.Schedule = [.. (model.Schedule ?? [])
+                .Where(row => row.DueDate.HasValue && (row.Amount.HasValue || row.Percent.HasValue))
+                .OrderBy(row => row.DueDate)
+                .Select(row => new InvoiceInstallment { DueDate = row.DueDate.Value, Amount = row.Amount, Percent = row.Percent })];
+        }
+
         invoice.Notes = Clean(model.Notes);
         invoice.Terms = Clean(model.Terms);
         invoice.Footer = Clean(model.Footer);

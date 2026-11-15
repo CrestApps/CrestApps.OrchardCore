@@ -128,6 +128,10 @@ To be paid part of a job before you start:
 
 An estimate that asked for a deposit works the same way: the deposit invoice made from it is deducted automatically when you invoice the whole estimate. Customers can also pay an invoice in installments when the store offers installments for invoices; see [Installment plans](installment-plans.md).
 
+## Split an invoice into payments
+
+With **Installment Plans** enabled, an invoice can be paid in parts that fall due on their own dates. In the invoice editor, under **Payment schedule**, give each part a **Due** date and either an **Amount** or a **percent** (all parts the same way; amounts must add up to the total, percents to 100), and click **Update** for another row. When you issue the invoice, each part becomes a payment of its own: the customer can pay it from its pay link, is reminded about it, and, if you ticked **Charge the customer's saved card**, it is charged on its date. The invoice's page lists the parts and their status, the PDF prints them, and the invoice is partly paid as each part is paid. To stop the schedule, void the invoice while nothing is paid.
+
 ## Charge an invoice to the customer's saved card
 
 Tick **Charge the customer's saved card** in the invoice editor, or choose **Issues the invoice and charges the customer's saved payment method** on a recurring plan. When the invoice is issued, it is charged to the customer's default saved card: at once when it is due, or on the morning of its due date. A declined card is tried again on the retry schedule set under **Settings > Commerce > Transactions**. When the customer has no saved card (customers billed by name and e-mail only never do), or every try is declined, the invoice is e-mailed to them to pay instead. The invoice's transaction shows the scheduled charge; see [Transactions](transactions.md#a-balance-charged-to-a-saved-card).

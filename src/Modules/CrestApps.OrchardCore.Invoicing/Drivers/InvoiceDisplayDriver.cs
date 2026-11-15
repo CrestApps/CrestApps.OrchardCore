@@ -110,7 +110,7 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
                 string.IsNullOrEmpty(invoice.ReplacedById) && invoice.AmountPaid <= 0m && invoice.BilledItems.Count == 0 &&
                 invoice.SourceType is not (InvoicingConstants.OrderReferenceType or InvoicingConstants.RenewalReferenceType),
             CanVoid = canVoid && InvoiceLifecycle.CanVoid(invoice),
-            CanWriteOff = canVoid && InvoiceLifecycle.CanWriteOff(invoice),
+            CanWriteOff = canVoid && InvoiceLifecycle.CanWriteOff(invoice) && string.IsNullOrEmpty(invoice.InstallmentPlanId),
             CanReinstate = canVoid && invoice.Status == InvoiceStatus.Uncollectible,
             CanOpenTransaction = !string.IsNullOrEmpty(invoice.TransactionId) &&
                 await _authorizationService.AuthorizeAsync(user, TransactionsPermissions.ManageTransactions),
@@ -137,6 +137,7 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
             : [];
         var canCredit = !model.LedgerMissing &&
             invoice.Status is InvoiceStatus.Open or InvoiceStatus.Uncollectible &&
+            string.IsNullOrEmpty(invoice.InstallmentPlanId) &&
             CreditNoteRules.GetCreditable(invoice, creditNotes).Total > 0m &&
             await _authorizationService.AuthorizeAsync(user, InvoicingPermissions.ManageCreditNotes);
 
@@ -155,6 +156,15 @@ public sealed class InvoiceDisplayDriver : DisplayDriver<Invoice>
             }).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Actions:0"),
             Card("InvoiceSummary_DetailAdmin", model).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:1"),
             Card("InvoiceLines_DetailAdmin", model).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:5"),
+            Initialize<InvoiceScheduleViewModel>("InvoiceSchedule_DetailAdmin", async card =>
+            {
+                card.Invoice = invoice;
+
+                foreach (var part in invoice.Schedule ?? [])
+                {
+                    card.Payments.Add((part, string.IsNullOrEmpty(part.TransactionId) ? null : await _serviceProvider.GetRequiredService<CrestApps.OrchardCore.Transactions.Services.ITransactionManager>().FindByIdAsync(part.TransactionId)));
+                }
+            }).Location(InvoicingConstants.DisplayTypes.DetailAdmin, "Content:6").RenderWhen(() => Task.FromResult(invoice.Schedule is { Count: > 0 })),
             Initialize<InvoiceCreditNotesViewModel>("InvoiceCreditNotes_DetailAdmin", card =>
             {
                 card.Invoice = invoice;

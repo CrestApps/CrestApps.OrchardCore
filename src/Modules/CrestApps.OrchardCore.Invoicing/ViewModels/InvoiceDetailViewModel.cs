@@ -39,3 +39,13 @@ public class InvoiceDetailViewModel
 
     public Invoice ReplacedBy { get; set; }
 }
+
+/// <summary>
+/// The payment schedule card of an invoice's page: each part with the payment that collects it, once issued.
+/// </summary>
+public class InvoiceScheduleViewModel
+{
+    public Invoice Invoice { get; set; }
+
+    public List<(InvoiceInstallment Part, CrestApps.OrchardCore.Transactions.Models.Transaction Payment)> Payments { get; } = [];
+}

@@ -885,6 +885,65 @@ public sealed class DefaultInstallmentPlanServiceTests
     }
 
     [Fact]
+    public async Task CreateScheduleAsync_SplitsAGuestsBalanceIntoDatedPayments_AndReplacesIt()
+    {
+        // Arrange: a $300 balance a guest owes for an account, split $100 in ten days and $200 in forty.
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var balance = new Transaction
+        {
+            ItemId = "tx-invoice",
+            Title = "Invoice INV-1001",
+            OwnerId = "invoice-1",
+            OwnerKind = CustomerOwnerKind.Guest,
+            GuestContactName = "Acme Ltd.",
+            GuestContactEmail = "ap@acme.example",
+            ReferenceType = "Invoice",
+            ReferenceId = "invoice-1",
+            Currency = "USD",
+            Amount = 300m,
+            TotalAmount = 300m,
+            Status = TransactionStatus.Outstanding,
+            CreatedUtc = _now,
+            UpdatedUtc = _now,
+        };
+        balance.SetPayer(new CrestApps.OrchardCore.Parties.Models.PartyRef("Account", "acme"));
+        await context.Transactions.CreateAsync(balance, TestContext.Current.CancellationToken);
+
+        // Act
+        var wrongTotal = await service.CreateScheduleAsync(new CreateInstallmentScheduleRequest
+        {
+            TransactionId = balance.ItemId,
+            Payments = [new() { DueUtc = _now.AddDays(10), Amount = 100m }, new() { DueUtc = _now.AddDays(40), Amount = 150m }],
+        }, TestContext.Current.CancellationToken);
+        var outOfOrder = await service.CreateScheduleAsync(new CreateInstallmentScheduleRequest
+        {
+            TransactionId = balance.ItemId,
+            Payments = [new() { DueUtc = _now.AddDays(40), Amount = 100m }, new() { DueUtc = _now.AddDays(10), Amount = 200m }],
+        }, TestContext.Current.CancellationToken);
+        var created = await service.CreateScheduleAsync(new CreateInstallmentScheduleRequest
+        {
+            TransactionId = balance.ItemId,
+            Payments = [new() { DueUtc = _now.AddDays(10), Amount = 100m }, new() { DueUtc = _now.AddDays(40), Amount = 200m }],
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(wrongTotal.Succeeded);
+        Assert.False(outOfOrder.Succeeded);
+        Assert.True(created.Succeeded, string.Join(" ", created.Errors.Select(error => error.Value)));
+
+        var plan = created.Plan;
+        Assert.Equal((InstallmentPlanStatus.Active, InstallmentCollectionMethod.Invoice, "Invoice", "invoice-1"), (plan.Status, plan.CollectionMethod, plan.ReferenceType, plan.ReferenceId));
+        Assert.Equal([(1, 100m), (2, 200m)], plan.Payments.Select(payment => (payment.Number, payment.Amount)));
+
+        var second = await context.Transactions.FindByIdAsync(plan.Payments[1].TransactionId, TestContext.Current.CancellationToken);
+        Assert.Equal((TransactionStatus.Outstanding, CustomerOwnerKind.Guest, "ap@acme.example", "Invoice", "invoice-1"), (second.Status, second.OwnerKind, second.GuestContactEmail, second.ParentReferenceType, second.ParentReferenceId));
+        Assert.Equal("acme", second.GetPayer().Id);
+        Assert.Equal(_now.AddDays(40), second.DueUtc);
+        Assert.Equal(TransactionStatus.Canceled, (await context.Transactions.FindByIdAsync(balance.ItemId, TestContext.Current.CancellationToken)).Status);
+    }
+
+    [Fact]
     public async Task CreateFromTransactionAsync_AfterTheFirstPayment_KeepsTheCardReplacesTheBalanceAndChargesTheRestAutomatically()
     {
         // Arrange

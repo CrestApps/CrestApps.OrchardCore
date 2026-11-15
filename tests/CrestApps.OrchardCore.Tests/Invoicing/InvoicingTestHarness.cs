@@ -156,7 +156,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     /// number sequence kept in the store, whose series lock is <paramref name="numberLock"/> (the harness's lock when
     /// none is given); otherwise by <see cref="FakeNumberGenerator"/>.
     /// </summary>
-    public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null, bool realNumbers = false, IDistributedLock numberLock = null, bool writeAheadLog = false, string reportingCurrency = null)
+    public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null, bool realNumbers = false, IDistributedLock numberLock = null, bool writeAheadLog = false, string reportingCurrency = null, Action<IServiceCollection> configureServices = null)
     {
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-invoicing-{Guid.NewGuid():N}.db");
 
@@ -341,6 +341,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddScoped<IRecurringPlanObserver>(_ => new RecordingPlanObserver(harness.Observed));
         services.AddScoped<IEstimateObserver>(_ => new RecordingEstimateObserver(harness.Observed));
 
+        configureServices?.Invoke(services);
         harness = new InvoicingTestHarness(path, store, services.BuildServiceProvider());
 
         return harness;
