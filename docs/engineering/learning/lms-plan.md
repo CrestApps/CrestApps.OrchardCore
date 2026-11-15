@@ -933,6 +933,8 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 - Workforce keeps its private targeting (`LaborRuleSet`, `TimeOffPolicyAssignment`) as an accepted gap in the audit: its rules carry dates and precedence an audience does not.
 - The `CreditsEarned` requirement reuses the requirement's minimum for the number of credits, labelled "Minimum grade or credits" in the editor, rather than adding a field.
 
+**Checked in the browser.** User audiences (rules, members), a learning path saved in the editor and its learner page, required learning saved and run (enrollments with due dates, preview, exemption with evidence download, learner and exempt views, admin pages refused to learners), credit types, credits on a course editor and its page, recording external learning with evidence, review and accept, My education credits, credit types in the certification path editor.
+
 **Not checked in the browser.** Team Learning with a real manager and reports (checked only for an admin without a staff record; the hierarchy call is the Staff building block), the workflow editors of the new activities, the deployment steps, reminders and escalation on a live clock (unit-tested with a moved clock), the Record external learning step in a live pipeline (the row logic is unit-tested), and the time-off ledger copy on a live site with time-off data.
 
 **Fixed while verifying.**
@@ -941,3 +943,5 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 - Required learning due dates carried ticks that enrollments drop: due dates are now the last whole second of the day.
 - Admin lists of new row types need a `<Type>.SummaryAdmin` template; feature audiences showed an empty actions menu.
 - Feature id literals in the Programs module were replaced by constants (the feature-id ratchet).
+- The education credits editor on a course refused to save: its empty spare rows posted an empty amount into a number that cannot be empty. The amount of a row may now be empty, and empty rows are skipped.
+- Accepting external learning marked it accepted before posting its credits, so a request that stopped in between (the browser left the page) kept an accepted submission without credits. The credits are now posted first, once per submission, and the submission is marked after.

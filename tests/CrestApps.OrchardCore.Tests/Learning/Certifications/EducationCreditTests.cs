@@ -132,6 +132,7 @@ public sealed class EducationCreditTests
         var errors = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SubmitExternalAsync(submission));
         var waiting = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().GetBalancesAsync("cid", CertificationHarness.Today));
         var accepted = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer", "Looks good"));
+        var stored = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().FindExternalAsync(submission.ItemId));
         var acceptedAgain = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer", null));
         var entries = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ListEntriesAsync("cid"));
 
@@ -140,6 +141,8 @@ public sealed class EducationCreditTests
         Assert.Empty(errors);
         Assert.Empty(waiting);
         Assert.Equal(ExternalLearningState.Accepted, accepted.State);
+        Assert.Equal(ExternalLearningState.Accepted, stored.State);
+        Assert.Equal("Looks good", stored.ReviewNote);
         Assert.Null(acceptedAgain);
         var entry = Assert.Single(entries);
         Assert.Equal(1.5m, entry.Amount);

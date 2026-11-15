@@ -66,12 +66,14 @@ internal sealed class EducationCreditsPartDisplayDriver : ContentPartDisplayDriv
                 continue;
             }
 
-            if (row.Amount <= 0)
+            if (row.Amount is not > 0)
             {
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Awards), S["The credits awarded must be more than zero."]);
+
+                continue;
             }
 
-            awards.Add(new EducationCreditAward { CreditTypeId = row.CreditTypeId, Amount = row.Amount, ValidityMonths = row.ValidityMonths is > 0 ? row.ValidityMonths : null });
+            awards.Add(new EducationCreditAward { CreditTypeId = row.CreditTypeId, Amount = row.Amount.Value, ValidityMonths = row.ValidityMonths is > 0 ? row.ValidityMonths : null });
         }
 
         part.Awards = awards.GroupBy(award => award.CreditTypeId, StringComparer.Ordinal).Select(group => group.Last()).ToList();

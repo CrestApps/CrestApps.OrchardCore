@@ -18,7 +18,7 @@ public class EducationCreditAwardRow
 {
     public string CreditTypeId { get; set; }
 
-    public decimal Amount { get; set; }
+    public decimal? Amount { get; set; }
 
     public int? ValidityMonths { get; set; }
 }

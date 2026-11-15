@@ -222,13 +222,8 @@ public sealed class DefaultEducationCreditService : IEducationCreditService
             return null;
         }
 
-        submission.State = ExternalLearningState.Accepted;
-        submission.ReviewedBy = actor;
-        submission.ReviewedUtc = _clock.UtcNow;
-        submission.ReviewNote = note?.Trim();
-        await _submissions.UpdateAsync(submission, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
-
+        // The credits are posted first, once per submission: if the request stops before the submission is marked,
+        // it stays waiting and accepting it again completes it without posting the credits twice.
         await AwardAsync(new EducationCreditAwardRequest
         {
             UserId = submission.UserId,
@@ -240,6 +235,15 @@ public sealed class DefaultEducationCreditService : IEducationCreditService
             Actor = actor,
             Note = submission.Title,
         }, cancellationToken);
+
+        // Posting the credits commits the session: read the submission again before changing it.
+        submission = await _submissions.FindByIdAsync(submissionId, cancellationToken);
+        submission.State = ExternalLearningState.Accepted;
+        submission.ReviewedBy = actor;
+        submission.ReviewedUtc = _clock.UtcNow;
+        submission.ReviewNote = note?.Trim();
+        await _submissions.UpdateAsync(submission, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
 
         foreach (var observer in _services.GetServices<IEducationCreditObserver>())
         {
