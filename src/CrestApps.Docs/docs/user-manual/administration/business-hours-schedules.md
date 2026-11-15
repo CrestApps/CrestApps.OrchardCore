@@ -48,4 +48,4 @@ A **business hours schedule** says when you are open: the hours of each day of t
 
 - A **service level policy** counts its targets in the schedule you choose in **Counted on**. See [Service Levels](service-levels.md).
 - The **Check Business Hours** workflow task takes the **Open**, **Closed** or **Unknown** path, so a workflow can act differently out of hours. See [Workflows](../workflows.md).
-- Lists of schedules also show the Contact Center business hours calendars when that feature is on. See [Business Hours Calendars](../business-hours.md).
+- The Contact Center uses schedules on queues, entry points, dialer profiles and activity loads. See [Business Hours in the Contact Center](../business-hours.md).
