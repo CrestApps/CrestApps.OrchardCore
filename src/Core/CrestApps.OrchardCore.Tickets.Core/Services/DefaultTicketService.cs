@@ -752,12 +752,15 @@ public sealed class DefaultTicketService : ITicketService
 
         var total = await tickets.CountAsync(cancellationToken);
 
+        // Every sort ends on the index row's id, so rows with equal values keep one order and a page never repeats or skips
+        // a ticket. Due time sorts on a column that is never null (tickets with nothing due last), as SQL Server can't order
+        // by a test for null.
         tickets = filter.Sort switch
         {
-            TicketSort.Created => tickets.OrderByDescending(index => index.CreatedUtc),
-            TicketSort.Due => tickets.OrderBy(index => index.NextDueUtc == null).ThenBy(index => index.NextDueUtc),
-            TicketSort.Priority => tickets.OrderByDescending(index => index.PriorityRank).ThenByDescending(index => index.ModifiedUtc),
-            _ => tickets.OrderByDescending(index => index.ModifiedUtc),
+            TicketSort.Created => tickets.OrderByDescending(index => index.CreatedUtc).ThenByDescending(index => index.Id),
+            TicketSort.Due => tickets.OrderBy(index => index.DueSortUtc).ThenBy(index => index.Id),
+            TicketSort.Priority => tickets.OrderByDescending(index => index.PriorityRank).ThenByDescending(index => index.ModifiedUtc).ThenByDescending(index => index.Id),
+            _ => tickets.OrderByDescending(index => index.ModifiedUtc).ThenByDescending(index => index.Id),
         };
 
         var page = await tickets

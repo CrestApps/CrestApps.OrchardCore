@@ -105,6 +105,12 @@ public sealed class TicketIndex : MapIndex
     public DateTime? NextDueUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the next due time, or <see cref="TicketIndexProvider.NoDueUtc"/> when nothing is due, so the list
+    /// can sort by due time with tickets that have none last, on every database (SQL Server can't order by a test for null).
+    /// </summary>
+    public DateTime? DueSortUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets when it was last solved, in UTC.
     /// </summary>
     public DateTime? SolvedUtc { get; set; }

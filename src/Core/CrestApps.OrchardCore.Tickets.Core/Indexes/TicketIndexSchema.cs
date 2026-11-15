@@ -36,6 +36,7 @@ public static class TicketIndexSchema
             .Column<DateTime>("CreatedUtc")
             .Column<DateTime>("ModifiedUtc")
             .Column<DateTime>("NextDueUtc", column => column.Nullable())
+            .Column<DateTime>("DueSortUtc", column => column.Nullable())
             .Column<DateTime>("SolvedUtc", column => column.Nullable())
             .Column<DateTime>("ClosedUtc", column => column.Nullable())
             .Column<DateTime>("AssignedUtc", column => column.Nullable()));
@@ -55,7 +56,17 @@ public static class TicketIndexSchema
 
         await CreateAssignedIndexAsync(schemaBuilder);
         await CreateRequesterEmailIndexAsync(schemaBuilder);
+        await CreateDueSortIndexAsync(schemaBuilder);
     }
+
+    /// <summary>
+    /// Creates the index the list sorts by due time on.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static Task CreateDueSortIndexAsync(ISchemaBuilder schemaBuilder)
+        => schemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table
+            .CreateIndex("IDX_TicketIndex_DueSort", "DueSortUtc", "DocumentId"));
 
     /// <summary>
     /// Creates the index that finds a person's tickets by their e-mail.

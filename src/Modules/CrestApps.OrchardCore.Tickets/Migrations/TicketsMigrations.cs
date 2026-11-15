@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Tickets.Models;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Title.Models;
 using YesSql.Sql;
 
@@ -70,7 +71,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 4;
+        return 5;
     }
 
     /// <summary>
@@ -108,6 +109,22 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateRequesterEmailIndexAsync(SchemaBuilder);
 
         return 4;
+    }
+
+    /// <summary>
+    /// Adds the due time the list sorts on, filled in for the tickets already indexed.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table
+            .AddColumn<DateTime>("DueSortUtc", column => column.Nullable()));
+        await TicketIndexSchema.CreateDueSortIndexAsync(SchemaBuilder);
+
+        // The rows indexed before the column existed get their value once the migration's transaction is committed.
+        ShellScope.AddDeferredTask(scope => TicketIndexBackfill.FillDueSortAsync(scope.ServiceProvider));
+
+        return 5;
     }
 
     private async Task SeedAsync()

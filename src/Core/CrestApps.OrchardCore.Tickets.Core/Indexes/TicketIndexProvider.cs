@@ -17,6 +17,11 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
 
     public const int EmailLength = 254;
 
+    /// <summary>
+    /// The due time kept for a ticket with nothing due, so it sorts after every ticket that has one.
+    /// </summary>
+    public static readonly DateTime NoDueUtc = new(9999, 12, 31, 0, 0, 0, DateTimeKind.Utc);
+
     /// <inheritdoc/>
     public override void Describe(DescribeContext<ContentItem> context)
         => context.For<TicketIndex>()
@@ -46,6 +51,7 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
                     CreatedUtc = item.CreatedUtc ?? DateTime.MinValue,
                     ModifiedUtc = item.ModifiedUtc ?? item.CreatedUtc ?? DateTime.MinValue,
                     NextDueUtc = part.NextDueUtc,
+                    DueSortUtc = part.NextDueUtc ?? NoDueUtc,
                     SolvedUtc = part.SolvedUtc,
                     AssignedUtc = part.AssignedUtc,
                     ClosedUtc = part.ClosedUtc,
