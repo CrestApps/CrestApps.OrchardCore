@@ -38,9 +38,12 @@ public sealed class BookingsBackgroundTask : IBackgroundTask
         {
             try
             {
-                var failure = await charger.ChargeAsync(balance, cancellationToken);
-
-                run.AddItems(1, failure is null ? "charged" : "charge_failed");
+                // The saved card charge service charges the balances; one whose invoice carries no charge yet is handed
+                // to it, and one paid or canceled meanwhile is settled.
+                if (await charger.AdoptAsync(balance, cancellationToken))
+                {
+                    run.AddItems(1, "adopted");
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

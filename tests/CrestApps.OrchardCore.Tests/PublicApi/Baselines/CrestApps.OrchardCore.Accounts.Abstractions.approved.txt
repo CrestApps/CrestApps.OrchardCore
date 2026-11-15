@@ -134,5 +134,6 @@ namespace CrestApps.OrchardCore.Accounts.Services
         System.Threading.Tasks.Task<OrchardCore.ContentManagement.ContentItem> FindAccountAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> FindOtherAccountIdAsync(string userId, string exceptAccountId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetMemberUserIdsAsync(string accountId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Accounts.Models.AccountMember>> GetMembersAsync(string accountId, System.Threading.CancellationToken cancellationToken = default);
     }
 }

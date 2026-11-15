@@ -152,6 +152,11 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     public List<string> ChargedCards { get; } = [];
 
     /// <summary>
+    /// Gets the declined charges the saved card charge service reported (AutoChargeDeclinedAsync), with their next attempt.
+    /// </summary>
+    public List<(string TransactionId, string Reason, DateTime NextAttemptUtc)> DeclinedCharges { get; } = [];
+
+    /// <summary>
     /// Creates the harness. With <paramref name="realNumbers"/>, invoices are numbered by the site's generator over the
     /// number sequence kept in the store, whose series lock is <paramref name="numberLock"/> (the harness's lock when
     /// none is given); otherwise by <see cref="FakeNumberGenerator"/>.
@@ -272,30 +277,36 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         {
             // The provider is played by ChargeOutcomes: a charge that goes through is recorded as the checkout records it.
             var commands = new Mock<ITransactionCommandService>();
+
+            async Task<TransactionCommandResult> ChargeAsync(string transactionId, string cardId, CancellationToken token)
+            {
+                harness.ChargedCards.Add(cardId);
+                var status = harness.ChargeOutcomes.Count > 0 ? harness.ChargeOutcomes.Dequeue() : SavedPaymentMethodChargeStatus.Succeeded;
+
+                if (status == SavedPaymentMethodChargeStatus.Succeeded)
+                {
+                    var ledger = sp.GetRequiredService<ITransactionCommandService>();
+                    var owed = (await sp.GetRequiredService<ITransactionManager>().FindByIdAsync(transactionId, token)).OutstandingAmount;
+                    var paid = await ledger.RecordOfflinePaymentAsync(transactionId, owed, "card", "Charged to the saved card.", token);
+
+                    Assert.True(paid.Succeeded, string.Join(" ", paid.Errors));
+
+                    paid.ChargeStatus = status;
+
+                    return paid;
+                }
+
+                var refused = new TransactionCommandResult { ChargeStatus = status };
+
+                return refused.Fail(status == SavedPaymentMethodChargeStatus.Failed ? "The provider could not be reached." : "The card was declined.");
+            }
+
             commands
                 .Setup(service => service.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(async (string transactionId, string cardId, CancellationToken token) =>
-                {
-                    harness.ChargedCards.Add(cardId);
-                    var status = harness.ChargeOutcomes.Count > 0 ? harness.ChargeOutcomes.Dequeue() : SavedPaymentMethodChargeStatus.Succeeded;
-
-                    if (status == SavedPaymentMethodChargeStatus.Succeeded)
-                    {
-                        var ledger = sp.GetRequiredService<ITransactionCommandService>();
-                        var owed = (await sp.GetRequiredService<ITransactionManager>().FindByIdAsync(transactionId, token)).OutstandingAmount;
-                        var paid = await ledger.RecordOfflinePaymentAsync(transactionId, owed, "card", "Charged to the saved card.", token);
-
-                        Assert.True(paid.Succeeded, string.Join(" ", paid.Errors));
-
-                        paid.ChargeStatus = status;
-
-                        return paid;
-                    }
-
-                    var refused = new TransactionCommandResult { ChargeStatus = status };
-
-                    return refused.Fail(status == SavedPaymentMethodChargeStatus.Failed ? "The provider could not be reached." : "The card was declined.");
-                });
+                .Returns((string transactionId, string cardId, CancellationToken token) => ChargeAsync(transactionId, cardId, token));
+            commands
+                .Setup(service => service.ChargeKeptPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns((string transactionId, string sessionId, CancellationToken token) => ChargeAsync(transactionId, "kept:" + sessionId, token));
 
             return new DefaultSavedPaymentMethodChargeService(
                 sp.GetRequiredService<ITransactionManager>(),
@@ -625,6 +636,13 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
         public Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task AutoChargeDeclinedAsync(Transaction transaction, string reason, DateTime nextAttemptUtc, CancellationToken cancellationToken = default)
+        {
+            _harness.DeclinedCharges.Add((transaction.ItemId, reason, nextAttemptUtc));
+
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>

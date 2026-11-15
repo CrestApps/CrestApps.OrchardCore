@@ -112,6 +112,7 @@ public abstract class DeferredBalanceTenderProviderBase : ICheckoutTenderProvide
         transaction.CreatedUtc = now;
         transaction.UpdatedUtc = now;
         transaction.DueUtc = debit.DueUtc;
+        transaction.AutoCharge = debit.AutoCharge;
         transaction.Events.Add(new TransactionEvent
         {
             CreatedUtc = now,

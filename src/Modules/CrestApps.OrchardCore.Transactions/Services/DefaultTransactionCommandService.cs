@@ -841,7 +841,52 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
     }
 
     /// <inheritdoc/>
-    public async Task<TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, CancellationToken cancellationToken = default)
+    public Task<TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, CancellationToken cancellationToken = default)
+        => ChargeCardAsync(transactionId, async (transaction, paymentMethods, sessionStore) =>
+        {
+            var saved = string.IsNullOrEmpty(savedPaymentMethodId)
+                ? null
+                : await paymentMethods.FindByIdAsync(savedPaymentMethodId, cancellationToken);
+
+            // Only the owner's own card may pay their transaction: an identifier can name anyone's card.
+            if (saved?.PaymentMethod is null ||
+                string.IsNullOrEmpty(transaction.OwnerId) ||
+                !string.Equals(saved.OwnerId, transaction.OwnerId, StringComparison.Ordinal))
+            {
+                return (null, null, S["The saved card could not be found among the cards the transaction's owner kept."].Value);
+            }
+
+            return (saved.PaymentMethod, saved.ItemId, null);
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TransactionCommandResult> ChargeKeptPaymentMethodAsync(string transactionId, string sourceSessionId, CancellationToken cancellationToken = default)
+        => ChargeCardAsync(transactionId, async (transaction, paymentMethods, sessionStore) =>
+        {
+            var source = string.IsNullOrEmpty(sourceSessionId)
+                ? null
+                : await sessionStore.GetAsync(sourceSessionId, cancellationToken);
+
+            // Only a checkout of the transaction's own owner (a guest's for a guest's transaction) lends its card.
+            if (source is null || !string.Equals(source.OwnerId ?? string.Empty, transaction.OwnerId ?? string.Empty, StringComparison.Ordinal))
+            {
+                return (null, null, S["The checkout that kept the card could not be found for the transaction's owner."].Value);
+            }
+
+            var card = _serviceProvider.GetService<IPaymentAttemptStore>() is { } attempts
+                ? await CheckoutKeptPaymentMethods.ReadAsync(attempts, _serviceProvider.GetServices<ICheckoutSavedPaymentMethodProvider>(), sourceSessionId, _logger, cancellationToken)
+                : null;
+
+            return card is null
+                ? (null, null, S["No card was kept when the checkout was paid."].Value)
+                : (card, null, null);
+        }, cancellationToken);
+
+    // Charges a transaction to a card the resolver finds: one of the owner's saved cards, or the card a checkout kept.
+    private async Task<TransactionCommandResult> ChargeCardAsync(
+        string transactionId,
+        Func<Transaction, ISavedPaymentMethodStore, ICheckoutSessionStore, Task<(SavedPaymentMethod Card, string SavedId, string Error)>> resolveCard,
+        CancellationToken cancellationToken)
     {
         var result = new TransactionCommandResult();
         var checkoutEngine = _serviceProvider.GetService<ICheckoutEngine>();
@@ -883,19 +928,35 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             return result.Fail(S["This transaction has no outstanding balance to charge."]);
         }
 
-        var saved = string.IsNullOrEmpty(savedPaymentMethodId)
-            ? null
-            : await paymentMethods.FindByIdAsync(savedPaymentMethodId, cancellationToken);
-
-        // Only the owner's own card may pay their transaction: an identifier can name anyone's card.
-        if (saved?.PaymentMethod is null ||
-            string.IsNullOrEmpty(transaction.OwnerId) ||
-            !string.Equals(saved.OwnerId, transaction.OwnerId, StringComparison.Ordinal))
+        // Money an earlier charge took is applied before anything else: recording it can be interrupted after the
+        // provider took it, and charging again on the strength of the unrecorded balance would take it twice.
+        if (_serviceProvider.GetService<IPaymentAttemptStore>() is { } attemptStore &&
+            _serviceProvider.GetService<ITransactionSettlementService>() is { } settlement)
         {
-            return result.Fail(S["The saved card could not be found among the cards the transaction's owner kept."]);
+            var taken = (await attemptStore.GetByReferenceAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId, cancellationToken))
+                .Where(attempt => attempt.State == PaymentAttemptState.Succeeded)
+                .ToArray();
+
+            if (taken.Length > 0 && await settlement.ApplyAsync(transaction, taken, taken[^1].SessionId, cancellationToken))
+            {
+                transaction = await _transactionManager.FindByIdAsync(transactionId, cancellationToken) ?? transaction;
+                result.Transaction = transaction;
+
+                if (!TransactionStateMachine.CanRecordPayment(transaction) || transaction.OutstandingAmount <= 0m)
+                {
+                    return await ChargedAsync(result, transactionId, completed: true, chargedId: null, paymentMethods, cancellationToken);
+                }
+            }
         }
 
-        if (saved.PaymentMethod.IsExpired(_clock.UtcNow))
+        var (card, savedId, cardError) = await resolveCard(transaction, paymentMethods, sessionStore);
+
+        if (card is null)
+        {
+            return result.Fail(cardError ?? S["The saved card could not be found."].Value);
+        }
+
+        if (card.IsExpired(_clock.UtcNow))
         {
             return result.Fail(S["The saved card has expired, so it was not charged."]);
         }
@@ -933,8 +994,8 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
             session.SessionId,
             new BeginPaymentOptions
             {
-                ProviderKey = saved.PaymentMethod.ProviderKey,
-                ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(saved.PaymentMethod),
+                ProviderKey = card.ProviderKey,
+                ProviderData = CheckoutPaymentDataKeys.ForOffSessionCharge(card),
             },
             cancellationToken);
 
@@ -947,7 +1008,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
             if (completion.IsCompleted || completion.Status == CheckoutCompletionStatus.Pending)
             {
-                return await ChargedAsync(result, transactionId, completion.IsCompleted, saved.ItemId, paymentMethods, cancellationToken);
+                return await ChargedAsync(result, transactionId, completion.IsCompleted, savedId, paymentMethods, cancellationToken);
             }
 
             status = SavedPaymentMethodChargeStatus.Declined;
@@ -968,7 +1029,7 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
 
         var attemptId = await FindLastAttemptIdAsync(session.SessionId, cancellationToken);
 
-        return await RecordChargeFailureAsync(transactionId, saved.PaymentMethod.Describe(), status, reason, attemptId, cancellationToken);
+        return await RecordChargeFailureAsync(transactionId, card.Describe(), status, reason, attemptId, cancellationToken);
     }
 
     // A follow-up that does nothing: the command changed something that must be saved, but has nothing to raise.

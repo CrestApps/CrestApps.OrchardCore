@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core;
@@ -66,8 +67,19 @@ public sealed class DefaultSavedPaymentMethodChargeService : ISavedPaymentMethod
 
     /// <inheritdoc/>
     public Task<SavedPaymentMethodChargeResult> ScheduleAsync(string transactionId, string savedPaymentMethodId, DateTime chargeOnUtc, CancellationToken cancellationToken = default)
-        => WithTransactionAsync(transactionId, async (transaction, result) =>
+        => ScheduleAsync(new SavedPaymentMethodChargeRequest
         {
+            TransactionId = transactionId,
+            SavedPaymentMethodId = savedPaymentMethodId,
+            ChargeOnUtc = chargeOnUtc,
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<SavedPaymentMethodChargeResult> ScheduleAsync(SavedPaymentMethodChargeRequest request, CancellationToken cancellationToken = default)
+        => WithTransactionAsync(request?.TransactionId, async (transaction, result) =>
+        {
+            var savedPaymentMethodId = request.SavedPaymentMethodId;
+
             if (!TransactionStateMachine.CanRecordPayment(transaction) || transaction.OutstandingAmount <= 0m)
             {
                 result.Fail(S["This transaction has no outstanding balance to charge."]);
@@ -82,29 +94,54 @@ public sealed class DefaultSavedPaymentMethodChargeService : ISavedPaymentMethod
                 return false;
             }
 
-            var saved = string.IsNullOrEmpty(transaction.OwnerId)
-                ? null
-                : string.IsNullOrEmpty(savedPaymentMethodId)
-                    ? await paymentMethods.GetDefaultAsync(transaction.OwnerId, cancellationToken)
-                    : await paymentMethods.FindAsync(transaction.OwnerId, savedPaymentMethodId, cancellationToken);
+            SavedPaymentMethod card;
+            string savedId = null;
 
-            if (saved?.PaymentMethod is null || saved.PaymentMethod.IsExpired(_clock.UtcNow))
+            if (string.IsNullOrEmpty(savedPaymentMethodId) && !string.IsNullOrEmpty(request.SourceSessionId))
+            {
+                // The card a checkout kept: a guest's card, or the card a plan's or a booking's checkout kept for it.
+                var source = await _serviceProvider.GetRequiredService<ICheckoutSessionStore>().GetAsync(request.SourceSessionId, cancellationToken);
+
+                card = source is not null && string.Equals(source.OwnerId ?? string.Empty, transaction.OwnerId ?? string.Empty, StringComparison.Ordinal)
+                    ? await CheckoutKeptPaymentMethods.ReadAsync(
+                        _serviceProvider.GetRequiredService<IPaymentAttemptStore>(),
+                        _serviceProvider.GetServices<ICheckoutSavedPaymentMethodProvider>(),
+                        request.SourceSessionId,
+                        _logger,
+                        cancellationToken)
+                    : null;
+            }
+            else
+            {
+                var saved = string.IsNullOrEmpty(transaction.OwnerId)
+                    ? null
+                    : string.IsNullOrEmpty(savedPaymentMethodId)
+                        ? await paymentMethods.GetDefaultAsync(transaction.OwnerId, cancellationToken)
+                        : await paymentMethods.FindAsync(transaction.OwnerId, savedPaymentMethodId, cancellationToken);
+
+                card = saved?.PaymentMethod;
+                savedId = saved?.ItemId;
+            }
+
+            if (card is null || card.IsExpired(_clock.UtcNow))
             {
                 result.Fail(S["The owner kept no saved card that can be charged."]);
 
                 return false;
             }
 
-            var description = saved.PaymentMethod.Describe();
+            var description = card.Describe();
 
             transaction.AutoCharge = new TransactionAutoCharge
             {
-                SavedPaymentMethodId = saved.ItemId,
-                NextAttemptUtc = chargeOnUtc,
+                SavedPaymentMethodId = savedId,
+                SourceSessionId = savedId is null ? request.SourceSessionId : null,
+                RetryDays = request.RetryDays,
+                NextAttemptUtc = request.ChargeOnUtc,
             };
             transaction.AutoCollection = new TransactionAutoCollection
             {
-                ProviderKey = saved.PaymentMethod.ProviderKey,
+                ProviderKey = card.ProviderKey,
                 PaymentMethodDescription = description,
             };
 
@@ -117,6 +154,7 @@ public sealed class DefaultSavedPaymentMethodChargeService : ISavedPaymentMethod
     public async Task<SavedPaymentMethodChargeResult> ChargeAsync(string transactionId, CancellationToken cancellationToken = default)
     {
         string abandonedReason = null;
+        string declinedReason = null;
 
         var result = await WithTransactionAsync(transactionId, async (transaction, result) =>
         {
@@ -136,7 +174,9 @@ public sealed class DefaultSavedPaymentMethodChargeService : ISavedPaymentMethod
             }
 
             var now = _clock.UtcNow;
-            var charged = await _commands.ChargeSavedPaymentMethodAsync(transaction.ItemId, scheduled.SavedPaymentMethodId, cancellationToken);
+            var charged = string.IsNullOrEmpty(scheduled.SavedPaymentMethodId) && !string.IsNullOrEmpty(scheduled.SourceSessionId)
+                ? await _commands.ChargeKeptPaymentMethodAsync(transaction.ItemId, scheduled.SourceSessionId, cancellationToken)
+                : await _commands.ChargeSavedPaymentMethodAsync(transaction.ItemId, scheduled.SavedPaymentMethodId, cancellationToken);
 
             // The charge saved the transaction it changed, and a save detaches what the session read before, so the
             // transaction is read again: changing the copy read before would put back the balance the charge paid.
@@ -144,6 +184,9 @@ public sealed class DefaultSavedPaymentMethodChargeService : ISavedPaymentMethod
             result.Transaction = transaction;
 
             var charge = transaction.AutoCharge ?? scheduled;
+
+            // The provider's own reason, recorded on the failed charge, says more than the command's summary.
+            var failure = string.IsNullOrWhiteSpace(charged.Event?.Reason) ? string.Join(" ", charged.Errors) : charged.Event.Reason;
 
             transaction.AutoCharge = charge;
             charge.Attempts += charged.ChargeStatus == SavedPaymentMethodChargeStatus.Declined ? 1 : 0;
@@ -160,21 +203,25 @@ public sealed class DefaultSavedPaymentMethodChargeService : ISavedPaymentMethod
 
                 case SavedPaymentMethodChargeStatus.Failed:
                     // Nothing is known about the card: tried again soon, without using up one of its retries.
-                    charge.LastFailure = string.Join(" ", charged.Errors);
+                    charge.LastFailure = failure;
                     charge.NextAttemptUtc = now.Add(_transientRetryDelay);
                     result.NextAttemptUtc = charge.NextAttemptUtc;
 
                     return true;
 
                 case SavedPaymentMethodChargeStatus.Declined:
-                    charge.LastFailure = string.Join(" ", charged.Errors);
+                    charge.LastFailure = failure;
 
-                    var settings = await _siteService.GetSettingsAsync<TransactionReminderSettings>();
+                    // The debt's own retry schedule when its module set one, the reminder settings' otherwise.
+                    var delay = charge.RetryDays is not null
+                        ? charge.GetRetryDelay(charge.Attempts)
+                        : (await _siteService.GetSettingsAsync<TransactionReminderSettings>()).GetChargeRetryDelay(charge.Attempts);
 
-                    if (settings.GetChargeRetryDelay(charge.Attempts) is { } delay)
+                    if (delay is { } retryDelay)
                     {
-                        charge.NextAttemptUtc = now.Add(delay);
+                        charge.NextAttemptUtc = now.Add(retryDelay);
                         result.NextAttemptUtc = charge.NextAttemptUtc;
+                        declinedReason = charge.LastFailure;
 
                         return true;
                     }
@@ -183,7 +230,7 @@ public sealed class DefaultSavedPaymentMethodChargeService : ISavedPaymentMethod
 
                 default:
                     // Needs the cardholder, or was refused before the provider was asked (an expired or removed card).
-                    charge.LastFailure = string.Join(" ", charged.Errors);
+                    charge.LastFailure = failure;
                     break;
             }
 
@@ -195,6 +242,21 @@ public sealed class DefaultSavedPaymentMethodChargeService : ISavedPaymentMethod
 
             return true;
         }, cancellationToken);
+
+        if (declinedReason is not null && result.Succeeded && result.NextAttemptUtc is { } nextAttemptUtc && result.Transaction is { } declined)
+        {
+            foreach (var handler in _serviceProvider.GetServices<ITransactionEventHandler>())
+            {
+                try
+                {
+                    await handler.AutoChargeDeclinedAsync(declined, declinedReason, nextAttemptUtc, cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogError(ex, "The transaction event handler '{Handler}' failed when the charge of transaction '{TransactionId}' was declined.", handler.GetType().FullName, declined.ItemId);
+                }
+            }
+        }
 
         if (result.HandedOver && result.Transaction is { } handedOver)
         {

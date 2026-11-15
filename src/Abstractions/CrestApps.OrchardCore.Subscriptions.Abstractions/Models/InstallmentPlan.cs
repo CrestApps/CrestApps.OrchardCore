@@ -111,6 +111,13 @@ public sealed class InstallmentPlan : CatalogItem, ITimestampedModel
     public SavedPaymentMethod PaymentMethod { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the customer's saved card the payments are charged to, when the card is one the
+    /// customer kept (a schedule set by staff), or <see langword="null"/> when it is the card the first payment's checkout
+    /// kept (<see cref="DownPaymentSessionId"/>).
+    /// </summary>
+    public string SavedPaymentMethodId { get; set; }
+
+    /// <summary>
     /// Gets or sets the checkout session that takes the first payment: the down payment, or the first scheduled
     /// payment of a plan without one. The payment method kept by this checkout is the one the schedule charges.
     /// </summary>

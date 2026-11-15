@@ -147,7 +147,7 @@ Nothing is scheduled until the first payment (the down payment, or payment `1` o
 
 | Collection method | On the due date |
 | --- | --- |
-| Charge the saved card (`AutoCharge`) | The kept card is charged off-session through a new checkout session. The provider data is `CheckoutPaymentDataKeys.ForOffSessionCharge(plan.PaymentMethod)`. |
+| Charge the saved card (`AutoCharge`) | Each payment's transaction carries its charge (`Transaction.AutoCharge`): the card the first payment's checkout kept (`SourceSessionId`, or the customer's saved card for a schedule set by staff), on its due date, retried on `RetryDays`. The [saved card charge service](transactions#charging-on-a-schedule-with-retries) charges it off-session, retries it and hands it over; the plan follows the outcome. |
 | Invoice the customer (`Invoice`) | The transaction becomes `Outstanding`. It then appears in the customer's **My Transactions** and gets an invoice number, and the reminders send a pay link. |
 
 A payment can also be paid another way:
@@ -159,12 +159,18 @@ Either way it is picked up from its transaction, so it is never charged again.
 
 ### Declines and retries
 
+The plan does not charge cards itself: the saved card charge service (`ISavedPaymentMethodChargeService`) is the one
+charge-and-retry path, with the plan's due dates and `RetryDays` as its inputs. The plan reacts to its events
+(`InstallmentPlanAutoChargeHandler`: `AutoChargeDeclinedAsync`, `AutoChargeAbandonedAsync`) and to the payment being
+recorded (`InstallmentPlanTransactionPaymentHandler`). A payment of a plan started before this has its charge set on its
+transaction by `ProcessAsync` when it is due, with its declined attempts and next retry carried over.
+
 | What happened | Result |
 | --- | --- |
 | The gateway could not be reached, or refused to start | Nothing is known about the card. The charge is tried again an hour later and does not use up a retry. |
 | The card was declined, and retries are left | The payment is `Failed`, and so is its transaction (`TransactionStatus.Failed`, still collectable). The next try is scheduled from `RetryDays`, and the customer is told *We could not take your payment*. A retry that goes through settles the transaction. |
 | The card was declined on the last retry | The payment is handed to the customer: its transaction becomes `Outstanding` with no automatic collection. The customer is told *Your payment is overdue*, and the overdue reminders take over. It is not charged again unless an administrator clicks **Charge now**. |
-| An administrator's **Charge now** on or after the due date was declined | The payment and its transaction are `Failed`. No automatic retry is scheduled. |
+| An administrator's **Charge now** on or after the due date was declined | The charge counts as one of the payment's attempts: the payment and its transaction are `Failed` and the next retry follows `RetryDays` (no notice to the customer). A payment already handed to the customer is charged once, with no retry. |
 | An administrator's **Charge now** before the due date was declined | The payment stays `Scheduled`, and it is still charged (with its retries) from its due date. An early charge is a favor, not a deadline. |
 
 ### Statuses
@@ -286,15 +292,16 @@ The public begin-payment endpoint (`checkout/{sessionId}/payment/begin`) drops `
 
 A payment plan charges a card without the customer present, so the feature is built never to take money twice:
 
+- **One charge path.** The saved card charge service charges each payment under its own lock (`Transactions:AutoCharge:{transactionId}`), the same path invoices and booking balances use.
 - **One writer per plan.** Every change to a plan runs under the distributed lock `INSTALLMENT_PLAN_{planId}`.
-  - The background task and **Charge now** wait for the lock, for up to 10 seconds.
+  - The background task, **Charge now** and the charge events wait for the lock, for up to 10 seconds. **Charge now** makes the charge after releasing it.
   - The payment handler does not wait. If the plan is locked, the plan is collecting that very payment, and it reads the result itself when the charge returns.
   - On deployments with several nodes, enable a distributed lock provider such as Redis.
 - **Money taken is applied before charging again.** The checkout's payment attempts are committed before anything that records the payment elsewhere.
-  - Before each charge, every succeeded attempt for the transaction (`IPaymentAttemptStore.GetByReferenceAsync`) that is not yet on the transaction is applied through `ITransactionSettlementService`.
+  - Before each charge, the ledger's charge command applies every succeeded attempt for the transaction (`IPaymentAttemptStore.GetByReferenceAsync`) that is not yet on the transaction through `ITransactionSettlementService`.
   - So a charge the gateway accepted counts even when its recording was interrupted by a crash, a timeout or a lost response. The payment is not charged again because of a balance that was never recorded.
 - **A charge still settling is finished, not repeated.**
-  - When the payment's previous session is `AwaitingProvider` or `PaymentPending`, the plan completes it instead of starting a new one.
+  - When the payment's previous session is `AwaitingProvider` or `PaymentPending`, the charge command completes it instead of starting a new one.
   - A session that never reached the gateway is canceled, so it cannot be paid later by accident.
 - **Off-session charges are server-only.** Only the server sets the saved-card keys, so nothing the browser sends can spend a kept card.
 - **Idempotent gateway calls.** The Stripe provider sends deterministic idempotency keys. See [Payment resiliency](payments#payment-resiliency).
@@ -304,11 +311,11 @@ A payment plan charges a card without the customer present, so the feature is bu
 `InstallmentPlanBackgroundTask` runs every 15 minutes (`*/15 * * * *`):
 
 - It loads the open plans with `IInstallmentPlanStore.GetOpenAsync`. Those are the `Draft`, `Active` and `PastDue` plans.
-- It calls `ProcessAsync` on each one. When a plan fails, it logs the error and continues with the next.
+- It calls `ProcessAsync` on each one: it activates plans whose first payment came in, makes invoiced payments due, records what was paid or canceled, and completes or marks plans past due. When a plan fails, it logs the error and continues with the next.
 
-So a payment is charged within 15 minutes after its due time (00:00 UTC on the due date), and a retry within 15 minutes of its retry time.
+Payments charged to the card are charged by the **Saved Card Charges** task of the Transactions feature, every hour at half past: within the hour after the due time (00:00 UTC on the due date), and a retry within the hour of its retry time.
 
-Like every Orchard Core background task, its schedule can be changed, or the task disabled, for each tenant under **Configuration > Tasks**. Disabling it stops all scheduled collection.
+Like every Orchard Core background task, its schedule can be changed, or the task disabled, for each tenant under **Configuration > Tasks**. Disabling it stops invoiced payments falling due and plans being brought up to date; disabling **Saved Card Charges** stops the card charges.
 
 ## Customer notices
 

@@ -97,6 +97,12 @@ public sealed class InvoiceAutoCharge : IInvoiceObserver, ITransactionEventHandl
     /// <inheritdoc/>
     public async Task AutoChargeAbandonedAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
     {
+        // A part of a payment schedule is the installment plan's to follow up: it tells the customer about that part.
+        if (InvoiceTransactionLink.IsScheduledPayment(transaction))
+        {
+            return;
+        }
+
         if (await InvoiceTransactionLink.FindInvoiceAsync(_invoices, transaction, cancellationToken) is not { Status: InvoiceStatus.Open } invoice)
         {
             return;

@@ -23,6 +23,17 @@ public interface ISavedPaymentMethodChargeService
     Task<SavedPaymentMethodChargeResult> ScheduleAsync(string transactionId, string savedPaymentMethodId, DateTime chargeOnUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Schedules the charge of a transaction as the request says: to one of the owner's saved cards or the card a
+    /// checkout kept, on a day, retried on the request's own schedule or the reminder settings' one. It replaces any
+    /// charge scheduled before, and its declined charges count from zero again. A module that owns a debt with its own
+    /// card and retry schedule, such as an installment plan or a booking balance, schedules it this way, and a module
+    /// that creates the transaction can instead set <see cref="Transaction.AutoCharge"/> on it before saving it.
+    /// </summary>
+    /// <param name="request">What to charge, with which card, when, and how to retry.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<SavedPaymentMethodChargeResult> ScheduleAsync(SavedPaymentMethodChargeRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Charges a transaction whose charge is scheduled, now, and records what came of it: removed when it went through,
     /// moved to the next retry when it was declined, or handed to the owner when no retry is left.
     /// </summary>
@@ -43,6 +54,41 @@ public interface ISavedPaymentMethodChargeService
     /// <param name="transactionId">The transaction.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<SavedPaymentMethodChargeResult> CancelAsync(string transactionId, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// A charge of a transaction to schedule with <see cref="ISavedPaymentMethodChargeService.ScheduleAsync(SavedPaymentMethodChargeRequest, CancellationToken)"/>.
+/// </summary>
+public sealed class SavedPaymentMethodChargeRequest
+{
+    /// <summary>
+    /// Gets or sets the transaction to charge.
+    /// </summary>
+    public string TransactionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the owner's saved payment method to charge. When it and
+    /// <see cref="SourceSessionId"/> are both empty, the owner's default saved card is charged.
+    /// </summary>
+    public string SavedPaymentMethodId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the checkout whose kept card is charged, when <see cref="SavedPaymentMethodId"/> is empty. It must
+    /// belong to the transaction's owner (or, for a guest's transaction, be a guest's checkout too). It is only taken from
+    /// server code that recorded the checkout itself, never from a browser.
+    /// </summary>
+    public string SourceSessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets when to charge it, in UTC; now or earlier charges it on the next sweep.
+    /// </summary>
+    public DateTime ChargeOnUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the days between declined charges, one entry per retry, or <see langword="null"/> for the retry
+    /// schedule of the reminder settings. See <see cref="TransactionAutoCharge.RetryDays"/>.
+    /// </summary>
+    public int[] RetryDays { get; set; }
 }
 
 /// <summary>

@@ -172,6 +172,18 @@ public interface ITransactionCommandService
     Task<TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Charges what a transaction owes to the card a checkout kept, such as the card an installment plan's first payment or
+    /// a booking's deposit was paid with, as <see cref="ChargeSavedPaymentMethodAsync"/> charges a saved card: one charge
+    /// at a time, a charge already handed to the provider finished rather than repeated, and money a charge took but did
+    /// not record applied first. The checkout must belong to the transaction's owner (or be a guest's for a guest's
+    /// transaction). Only server code that recorded the checkout itself calls it.
+    /// </summary>
+    /// <param name="transactionId">The transaction to charge.</param>
+    /// <param name="sourceSessionId">The checkout that kept the card.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> ChargeKeptPaymentMethodAsync(string transactionId, string sourceSessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Pauses or resumes the scheduled reminders of a transaction, and notes it on its timeline. A paused transaction
     /// gets no reminder from the sweep until it is resumed; the reminders sent by hand still go.
     /// </summary>

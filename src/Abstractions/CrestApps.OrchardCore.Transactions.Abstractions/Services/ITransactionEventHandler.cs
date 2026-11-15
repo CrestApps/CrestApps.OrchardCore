@@ -85,4 +85,17 @@ public interface ITransactionEventHandler
     /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
     Task AutoChargeAbandonedAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// Called when <see cref="ISavedPaymentMethodChargeService"/> charged the saved card and it was declined, and a retry
+    /// is scheduled. The module that owns the debt records it and tells the customer when it is charged again. A charge
+    /// that could not be made at all (the provider could not be reached) is tried again soon without this event.
+    /// </summary>
+    /// <param name="transaction">The transaction, as saved with its next charge (<see cref="Transaction.AutoCharge"/>).</param>
+    /// <param name="reason">Why the charge was declined.</param>
+    /// <param name="nextAttemptUtc">When the card is charged again, in UTC.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
+    Task AutoChargeDeclinedAsync(Transaction transaction, string reason, DateTime nextAttemptUtc, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

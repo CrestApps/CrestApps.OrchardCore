@@ -8,9 +8,24 @@ namespace CrestApps.OrchardCore.Transactions.Models;
 public sealed class TransactionAutoCharge
 {
     /// <summary>
-    /// Gets or sets the identifier of the owner's saved payment method to charge.
+    /// Gets or sets the identifier of the owner's saved payment method to charge, or <see langword="null"/> when the
+    /// card is the one a checkout kept (<see cref="SourceSessionId"/>).
     /// </summary>
     public string SavedPaymentMethodId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the checkout whose kept card is charged when no <see cref="SavedPaymentMethodId"/> is set, such as
+    /// the checkout that took an installment plan's first payment or a booking's deposit. A guest's card is reached this
+    /// way, since it is not kept among any owner's saved cards.
+    /// </summary>
+    public string SourceSessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many days after each declined charge the card is charged again, one entry per retry, or
+    /// <see langword="null"/> to follow the retry schedule of the reminder settings. An empty list makes no retry. The
+    /// module that owns the debt sets its own schedule here, such as the installment plan settings' retry days.
+    /// </summary>
+    public int[] RetryDays { get; set; }
 
     /// <summary>
     /// Gets or sets when the next charge is made, in UTC.
@@ -32,4 +47,22 @@ public sealed class TransactionAutoCharge
     /// Gets or sets why the last charge was not taken.
     /// </summary>
     public string LastFailure { get; set; }
+
+    /// <summary>
+    /// Gets the delay before the next charge after <paramref name="declinedSoFar"/> declined ones by
+    /// <see cref="RetryDays"/>, or <see langword="null"/> when no retry is left. Only meaningful when
+    /// <see cref="RetryDays"/> is set.
+    /// </summary>
+    /// <param name="declinedSoFar">How many charges were declined so far.</param>
+    public TimeSpan? GetRetryDelay(int declinedSoFar)
+    {
+        var retries = RetryDays ?? [];
+
+        if (declinedSoFar < 1 || declinedSoFar > retries.Length)
+        {
+            return null;
+        }
+
+        return TimeSpan.FromDays(Math.Max(1, retries[declinedSoFar - 1]));
+    }
 }

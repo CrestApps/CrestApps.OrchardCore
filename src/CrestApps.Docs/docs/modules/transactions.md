@@ -133,18 +133,28 @@ A step before the due date is sent as the upcoming notice, the others as reminde
 
 #### Charging on a schedule, with retries
 
-`ISavedPaymentMethodChargeService` (`DefaultSavedPaymentMethodChargeService`, in the module) charges a transaction to
-its owner's saved card on a day and retries a declined card:
+`ISavedPaymentMethodChargeService` (`DefaultSavedPaymentMethodChargeService`, in the module) is the one
+charge-and-retry path for every debt collected with a card: invoices charged automatically, installment plan payments
+and booking balances. It charges a transaction on a day and retries a declined card. The charge is
+`Transaction.AutoCharge` (`TransactionAutoCharge`): the card (`SavedPaymentMethodId`, one of the owner's saved cards, or
+`SourceSessionId`, the checkout that kept it, which also reaches a guest's card), the next attempt, the declined
+attempts so far, and the debt's own retry days (`RetryDays`, `null` for the reminder settings' ones, empty for none). A
+module that owns a schedule sets it as the charge's inputs: installment plans their payments' due dates and
+`InstallmentPlanSettings.RetryDays`, Bookings the balance's due date and `[1, 1]`.
 
 | Member | What it does |
 | --- | --- |
 | `ScheduleAsync(id, savedPaymentMethodId, chargeOnUtc)` | Sets `Transaction.AutoCharge` (the card, the next attempt) and `AutoCollection` (the card's description, so the upcoming notice names it). `savedPaymentMethodId` `null` takes the owner's default card (`ISavedPaymentMethodStore.GetDefaultAsync`); refused when the owner kept none that can be charged, or without the Checkout feature. |
-| `ChargeAsync(id)` | Charges now through `ChargeSavedPaymentMethodAsync`. `Succeeded` or `Pending` removes the charge. `Declined` counts an attempt and moves the next one by `ChargeRetryDays` (`[1, 3, 5]` by default, **Retry a declined card after (days)** in the settings). `Failed` (the provider couldn't be reached) tries again in an hour without counting. `RequiresAuthentication`, a refusal before the provider was asked, or a decline with no retry left hands the transaction to its owner: the charge and `AutoCollection` are removed, a note is added, a `PaymentIssueKinds.AutoChargeFailed` payment issue is recorded, and `ITransactionEventHandler.AutoChargeAbandonedAsync` is raised so the module that owns the debt sends its own notice. |
+| `ScheduleAsync(SavedPaymentMethodChargeRequest)` | The same with every input: `SavedPaymentMethodId` or `SourceSessionId` (the checkout's owner must be the transaction's, a guest's for a guest's transaction), `ChargeOnUtc` and `RetryDays`. It replaces any charge before, so its declined attempts count from zero. A module that creates the transaction can instead set `Transaction.AutoCharge` before saving it, as installment plans and booking balances do. |
+| `ChargeAsync(id)` | Charges now through `ChargeSavedPaymentMethodAsync`, or `ChargeKeptPaymentMethodAsync` for a card a checkout kept. `Succeeded` or `Pending` removes the charge. `Declined` counts an attempt and moves the next one by the charge's `RetryDays`, or else `ChargeRetryDays` (`[1, 3, 5]` by default, **Retry a declined card after (days)** in the settings), and raises `ITransactionEventHandler.AutoChargeDeclinedAsync` with the next attempt; the reason kept is the provider's own, from the failed charge on the timeline. `Failed` (the provider couldn't be reached) tries again in an hour without counting. `RequiresAuthentication`, a refusal before the provider was asked, or a decline with no retry left hands the transaction to its owner: the charge and `AutoCollection` are removed, a note is added, a `PaymentIssueKinds.AutoChargeFailed` payment issue is recorded, and `ITransactionEventHandler.AutoChargeAbandonedAsync` is raised so the module that owns the debt sends its own notice. |
 | `ChargeDueAsync(utcNow)` | Charges up to 100 transactions whose next attempt is due (`TransactionIndex.AutoChargeNextAttemptUtc`), each in a unit of work of its own. The **Saved Card Charges** background task calls it every hour, at half past. |
 | `CancelAsync(id)` | Removes the scheduled charge; the owner pays themselves. The transaction page's **Cancel the charge** button calls it. |
 
-Each command takes the lock `Transactions:AutoCharge:{id}`. Installment plans keep their own charging and retries
-(`InstallmentPlanSettings.RetryDays`) for now.
+Each command takes the lock `Transactions:AutoCharge:{id}`. The ledger's charge commands
+(`ChargeSavedPaymentMethodAsync`, `ChargeKeptPaymentMethodAsync`) first apply any succeeded payment attempt for the
+transaction that is not on it yet (`ITransactionSettlementService`), so money a provider took whose recording was
+interrupted is never charged a second time, and they finish a charge still settling instead of starting another.
+`CheckoutKeptPaymentMethods.ReadAsync` (Checkout.Abstractions) reads the card a checkout kept from its settled attempts.
 
 ### Payment receipts
 
@@ -331,7 +341,9 @@ Every place a transaction changes goes through the manager, so the events cover 
 
 Handlers run after the save, and they are resolved when the event is raised (not injected into the manager), so a handler may depend on `ITransactionManager`. A handler that throws is logged and does not undo the change or stop the other handlers, the same as `ITransactionPaymentHandler`. The overdue sweep is part of the **Transaction Reminders** feature's background task (`TransactionReminderBackgroundTask`, every hour). It runs even when **Enabled** is turned off in the reminder settings, which only stops the reminders themselves.
 
-`AutoChargeAbandonedAsync(transaction, reason)` is raised once when `ISavedPaymentMethodChargeService` stops charging a saved card and hands the transaction to its owner. It does nothing by default.
+`AutoChargeDeclinedAsync(transaction, reason, nextAttemptUtc)` is raised when a scheduled charge was declined and a retry
+is set, so the module that owns the debt records it and tells the customer (installment plans, booking balances); a
+charge that could not be made at all is retried within the hour without it. `AutoChargeAbandonedAsync(transaction, reason)` is raised once when `ISavedPaymentMethodChargeService` stops charging a saved card and hands the transaction to its owner. It does nothing by default.
 
 ```csharp
 public sealed class RegistrationPaymentStatusHandler : TransactionEventHandlerBase
