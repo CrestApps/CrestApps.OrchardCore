@@ -6,6 +6,8 @@ using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
+using CrestApps.OrchardCore.Attachments.Services;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using YesSql;
 using YesSql.Services;
@@ -30,12 +32,14 @@ internal sealed class TicketPersonalDataContributor : IPersonalDataContributor
     private readonly ISession _session;
     private readonly IContentManager _contentManager;
     private readonly ITimelineService _timeline;
+    private readonly IServiceProvider _services;
 
-    public TicketPersonalDataContributor(ISession session, IContentManager contentManager, ITimelineService timeline)
+    public TicketPersonalDataContributor(ISession session, IContentManager contentManager, ITimelineService timeline, IServiceProvider services)
     {
         _session = session;
         _contentManager = contentManager;
         _timeline = timeline;
+        _services = services;
     }
 
     public async Task IdentifyAsync(PersonalDataSubject subject, CancellationToken cancellationToken = default)
@@ -88,6 +92,32 @@ internal sealed class TicketPersonalDataContributor : IPersonalDataContributor
 
         foreach (var ticket in await ListAsync(context.Subject, cancellationToken))
         {
+            ticket.TryGet<TicketPart>(out var current);
+            var requester = current?.Requester ?? default;
+
+            // Files the requester sent (on entries they wrote: theirs, or a guest's, which has no author) are deleted;
+            // files an agent attached are the business's own records and stay.
+            if (_services.GetService<IAttachmentService>() is { } attachments)
+            {
+                foreach (var entry in await RepliesAsync(ticket, cancellationToken))
+                {
+                    if (entry.AttachmentIds.Count > 0 && (entry.Author.IsEmpty || (!requester.IsEmpty && entry.Author == requester)))
+                    {
+                        foreach (var attachmentId in entry.AttachmentIds)
+                        {
+                            await attachments.DeleteAsync(attachmentId, cancellationToken);
+                        }
+                    }
+                }
+            }
+
+            // The e-mails to the requester kept in the outbox hold their address and the replies; a pending one would
+            // still go out to someone who asked to be forgotten.
+            foreach (var email in await _session.Query<TicketEmailOutboxItem, TicketEmailOutboxIndex>(index => index.TicketId == ticket.ContentItemId).ListAsync(cancellationToken))
+            {
+                _session.Delete(email);
+            }
+
             ticket.Alter<TicketPart>(part =>
             {
                 part.RequesterContact = part.RequesterContact is { } contact

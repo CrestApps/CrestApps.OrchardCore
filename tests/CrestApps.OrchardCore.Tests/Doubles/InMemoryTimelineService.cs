@@ -94,6 +94,12 @@ public sealed class InMemoryTimelineService : ITimelineService
         {
             entry.Body = scrub(entry.Body);
             entry.AuthorName = scrub(entry.AuthorName);
+
+            if (global::CrestApps.OrchardCore.Timeline.Core.Services.TimelineScrubbing.ScrubProperties(entry.Properties, scrub) is { } properties)
+            {
+                entry.Properties = properties;
+            }
+
             changed++;
         }
 

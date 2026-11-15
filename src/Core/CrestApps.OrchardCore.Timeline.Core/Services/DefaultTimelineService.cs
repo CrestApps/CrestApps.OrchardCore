@@ -221,12 +221,16 @@ public sealed class DefaultTimelineService : ITimelineService
         {
             var body = scrub(entry.Body);
             var authorName = scrub(entry.AuthorName);
+
+            // The stable key and the ids of a change aren't text about anyone; only the shown values are rewritten.
             var fieldChanges = (entry.Changes ?? [])
-                .Select(change => new TimelineFieldChange { Field = change.Field, From = scrub(change.From), To = scrub(change.To) })
+                .Select(change => new TimelineFieldChange { Key = change.Key, Field = change.Field, From = scrub(change.From), To = scrub(change.To), FromValue = change.FromValue, ToValue = change.ToValue })
                 .ToList();
+            var properties = TimelineScrubbing.ScrubProperties(entry.Properties, scrub);
 
             if (body == entry.Body
                 && authorName == entry.AuthorName
+                && properties is null
                 && fieldChanges.Zip(entry.Changes ?? []).All(pair => pair.First.From == pair.Second.From && pair.First.To == pair.Second.To))
             {
                 continue;
@@ -235,6 +239,11 @@ public sealed class DefaultTimelineService : ITimelineService
             entry.Body = body;
             entry.AuthorName = authorName;
             entry.Changes = fieldChanges;
+
+            if (properties is not null)
+            {
+                entry.Properties = properties;
+            }
 
             await _store.UpdateAsync(entry, cancellationToken);
             changed++;

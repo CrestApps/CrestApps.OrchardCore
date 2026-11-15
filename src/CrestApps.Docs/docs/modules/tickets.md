@@ -119,11 +119,20 @@ The **Tickets API** feature maps `api/tickets/v1` with Orchard Core's `Api` auth
 
 Files travel as `{ "fileName", "contentType", "content" }` with the content in base64, under the site's [attachment](./attachments) policy. Tickets opened through the API have the `Api` channel.
 
+This is the agents' API: `entries` returns internal notes to anyone who may view the ticket, and every call is scoped by desk permissions. It is never the requesters' API. A customer portal gets its own endpoints with the requester rule (their own tickets, public entries only) rather than reusing these.
+
 ## Accounts, personal data and AI tools
 
 With Accounts on, an account's page has a **Tickets** tab with its latest tickets in the user's scope and **New ticket** for the account.
 
-Tickets takes part in [personal data](./personal-data) requests: a person's tickets are found by their user and by the e-mail kept on a guest's ticket. An export lists each ticket and its public replies; an erasure removes the contact details, rewrites the subject and rewrites the text of the ticket's timeline (`ITimelineService.ScrubAsync`) so nothing names them.
+Tickets takes part in [personal data](./personal-data) requests: a person's tickets are found by their user and by the e-mail kept on a guest's ticket. An export lists each ticket and its public replies. An erasure:
+
+- removes the contact snapshot's e-mail, phone and address and replaces the name, so the ticket's index row (which the list searches) no longer holds the e-mail;
+- rewrites the subject and the text of the ticket's timeline (`ITimelineService.ScrubAsync`): bodies, author names, shown change values and text kept in entry properties, such as a "not delivered" notice;
+- deletes the files the requester sent (on entries they wrote; files an agent attached are the business's records and stay);
+- deletes the ticket's e-mails in the outbox, so a pending one never goes out.
+
+What the site can't recall: e-mails already sent, webhook payloads already delivered (the webhook module's outbox keeps its own payloads until sent), the input of workflow instances that already ran (Workflows keeps its own instances), and anything other systems copied. The audit trail entries of tickets keep ids only, never contact details.
 
 With AI on, these tools can be picked on AI profiles (category **Tickets**). Each acts as the signed-in user, within their scope and permissions.
 

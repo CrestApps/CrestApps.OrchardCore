@@ -35,6 +35,11 @@ public sealed class TicketPersonalDataAndAIToolTests
     {
         // Arrange
         var timeline = new InMemoryTimelineService();
+        var deleted = new List<string>();
+        var attachments = new Mock<CrestApps.OrchardCore.Attachments.Services.IAttachmentService>();
+        attachments.Setup(service => service.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((string id, CancellationToken _) => deleted.Add(id))
+            .ReturnsAsync(true);
         await using var harness = await CalendarTestHarness.CreateAsync(
             services =>
             {
@@ -48,9 +53,10 @@ public sealed class TicketPersonalDataAndAIToolTests
                     return contents.Object;
                 });
                 services.AddScoped<TicketPersonalDataContributor>();
+                services.AddSingleton(attachments.Object);
             },
             TicketIndexSchema.CreateAsync,
-            [new TicketIndexProvider()]);
+            [new TicketIndexProvider(), new TicketEmailOutboxIndexProvider()]);
 
         await harness.RunAsync(async services =>
         {
@@ -58,8 +64,11 @@ public sealed class TicketPersonalDataAndAIToolTests
             await session.SaveAsync(Ticket("t1", "Pat Doe can't print", new PartyRef(PartyKinds.User, "u1"), null));
             await session.SaveAsync(Ticket("t2", "Scanner offline", default, new ContactInfo { Name = "Pat Doe", Email = "Pat@Example.com" }));
             await session.SaveAsync(Ticket("t3", "Someone else", default, new ContactInfo { Name = "Lee", Email = "lee@example.com" }));
+            await session.SaveAsync(new TicketEmailOutboxItem { TicketId = "t2", To = "pat@example.com", Html = "<p>Hi Pat Doe</p>", Status = TicketEmailOutboxStatus.Pending });
+            await session.SaveAsync(new TicketEmailOutboxItem { TicketId = "t3", To = "lee@example.com", Status = TicketEmailOutboxStatus.Sent });
         });
-        timeline.Entries.Add(new TimelineEntry { ItemId = "e1", Subject = new RecordRef(TicketsConstants.RecordKind, "t2"), Kind = TicketsConstants.EntryKinds.Reply, Body = "Hi Pat Doe, try again.", AuthorName = "Agent" });
+        timeline.Entries.Add(new TimelineEntry { ItemId = "e1", Subject = new RecordRef(TicketsConstants.RecordKind, "t2"), Kind = TicketsConstants.EntryKinds.Reply, Visibility = TimelineVisibility.Public, Body = "Hi Pat Doe, try again.", AuthorName = "Agent", Author = new PartyRef(PartyKinds.User, "agent-1"), AttachmentIds = ["agent-file"], Properties = { ["Notice"] = "Not delivered: 550 pat@example.com unknown" } });
+        timeline.Entries.Add(new TimelineEntry { ItemId = "e0", Subject = new RecordRef(TicketsConstants.RecordKind, "t2"), Kind = TicketsConstants.EntryKinds.Reply, Visibility = TimelineVisibility.Public, Body = "My scanner is offline.", AuthorName = "Pat Doe", AttachmentIds = ["pats-photo"] });
 
         // Act
         var subject = new PersonalDataSubject("u1", "pat@example.com");
@@ -73,6 +82,8 @@ public sealed class TicketPersonalDataAndAIToolTests
             await contributor.AnonymizeAsync(new PersonalDataAnonymizeContext(subject, "[removed]", result), TestContext.Current.CancellationToken);
         });
         var t2 = await harness.RunAsync(services => services.GetRequiredService<ISession>().Query<ContentItem, TicketIndex>(index => index.ContentItemId == "t2").FirstOrDefaultAsync(), commit: false);
+        var t2Index = await harness.RunAsync(services => services.GetRequiredService<ISession>().QueryIndex<TicketIndex>(index => index.ContentItemId == "t2").FirstOrDefaultAsync(), commit: false);
+        var outbox = await harness.RunAsync(async services => (await services.GetRequiredService<ISession>().Query<TicketEmailOutboxItem>().ListAsync()).ToList(), commit: false);
 
         // Assert
         Assert.Equal(["t1", "t2"], export.Records.Where(record => record.Kind == TicketPersonalDataContributor.TicketKind).Select(record => record.Id).Order());
@@ -82,7 +93,15 @@ public sealed class TicketPersonalDataAndAIToolTests
         var contact = part.RequesterContact;
         Assert.Equal("[removed]", contact.Name);
         Assert.Null(contact.Email);
-        Assert.Equal("Hi [removed], try again.", timeline.Entries.Single().Body);
+        Assert.Equal("Hi [removed], try again.", timeline.Entries.Single(entry => entry.ItemId == "e1").Body);
+
+        // The index row no longer holds the e-mail, the requester's own file is gone and the agent's kept, and the
+        // ticket's e-mails to them are deleted; nothing kept for the ticket names the address any more.
+        Assert.Null(t2Index.RequesterEmail);
+        Assert.Equal(["pats-photo"], deleted);
+        Assert.Equal(["t3"], outbox.Select(email => email.TicketId));
+        Assert.DoesNotContain("pat@example.com", timeline.Entries.Single(entry => entry.ItemId == "e1").Properties["Notice"].ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("pat@example.com", System.Text.Json.JsonSerializer.Serialize(t2), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
