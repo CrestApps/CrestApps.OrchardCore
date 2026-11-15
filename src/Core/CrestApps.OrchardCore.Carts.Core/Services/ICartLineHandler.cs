@@ -132,6 +132,12 @@ public sealed class CartLineEvaluateContext
     public int MaxQuantity { get; set; }
 
     /// <summary>
+    /// Gets or sets why no more than <see cref="MaxQuantity"/> units can be bought, told to the shopper, such as "A
+    /// course is for one person." Left empty, the shopper is told how many are left.
+    /// </summary>
+    public LocalizedString MaxQuantityReason { get; set; }
+
+    /// <summary>
     /// Gets or sets how many people one unit is for, such as two for a double room. Add-ons priced per person are
     /// charged for each.
     /// </summary>

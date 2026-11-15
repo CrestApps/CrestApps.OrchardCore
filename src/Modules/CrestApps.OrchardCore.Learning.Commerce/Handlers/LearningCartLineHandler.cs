@@ -55,9 +55,10 @@ internal sealed class LearningCartLineHandler : ICartLineHandler
         context.Problem ??= await CheckAsync(context.ContentItem, context.ContentItem?.DisplayText, cancellationToken);
 
         // A course or a path is for the buyer alone: more than one would charge for access nobody gets.
-        if (context.ContentItem is not null && context.ContentItem.TryGet<LearningProductPart>(out var part) && !HasSeats(part))
+        if (context.ContentItem is not null && context.ContentItem.TryGet<LearningProductPart>(out var part) && !HasSeats(part) && context.MaxQuantity > 1)
         {
-            context.MaxQuantity = Math.Min(context.MaxQuantity, 1);
+            context.MaxQuantity = 1;
+            context.MaxQuantityReason = S["{0} is for you alone, so one is enough.", context.ContentItem.DisplayText ?? string.Empty];
         }
     }
 

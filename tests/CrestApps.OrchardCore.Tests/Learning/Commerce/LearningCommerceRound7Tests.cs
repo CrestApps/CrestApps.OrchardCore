@@ -228,6 +228,8 @@ public sealed class LearningCommerceRound7Tests
         // Assert
         Assert.Null(course.Problem);
         Assert.Equal(1, course.MaxQuantity);
+        Assert.Equal("Safety is for you alone, so one is enough.", course.MaxQuantityReason.Value);
+        Assert.Null(seats.MaxQuantityReason);
         Assert.Equal(99, seats.MaxQuantity);
     }
 
