@@ -1,3 +1,6 @@
+using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
+using CrestApps.OrchardCore.Learning.Assessments.Workflows;
 using OrchardCore.Recipes;
 using OrchardCore.Deployment;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -133,5 +136,45 @@ public sealed class AssessmentsRecipesSchemaStartup : StartupBase
         services.AddScoped<IRecipeStep, LearningAttemptsRecipeStepSchema>();
         services.AddDeploymentStepSchema<LearningGradeScalesDeploymentStepSchema>();
         services.AddDeploymentStepSchema<LearningAttemptsDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
+/// Adds the quiz attempt workflow events and tasks.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Workflows)]
+public sealed class AssessmentsWorkflowsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AttemptStartedEvent, AttemptEventActivityDisplayDriver<AttemptStartedEvent>>();
+        services.AddActivity<AttemptSubmittedEvent, AttemptEventActivityDisplayDriver<AttemptSubmittedEvent>>();
+        services.AddActivity<AttemptNeedsGradingEvent, AttemptEventActivityDisplayDriver<AttemptNeedsGradingEvent>>();
+        services.AddActivity<AttemptGradedEvent, AttemptEventActivityDisplayDriver<AttemptGradedEvent>>();
+        services.AddActivity<AttemptScoreChangedEvent, AttemptEventActivityDisplayDriver<AttemptScoreChangedEvent>>();
+        services.AddActivity<VoidAttemptTask, AttemptTaskDisplayDriver<VoidAttemptTask>>();
+        services.AddActivity<RegradeAttemptTask, AttemptTaskDisplayDriver<RegradeAttemptTask>>();
+        services.AddAttemptObserver<AssessmentsWorkflowObserver>();
+    }
+}
+
+/// <summary>
+/// Describes the quiz attempt workflow activities to CrestApps Recipes.
+/// </summary>
+[RequireFeatures(CrestAppsRecipesConstants.Feature.Area, OrchardCoreFeatureIds.Workflows)]
+public sealed class AssessmentsWorkflowsRecipeSchemaStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddWorkflowActivitySchema<AttemptStartedEventSchema>()
+            .AddWorkflowActivitySchema<AttemptSubmittedEventSchema>()
+            .AddWorkflowActivitySchema<AttemptNeedsGradingEventSchema>()
+            .AddWorkflowActivitySchema<AttemptGradedEventSchema>()
+            .AddWorkflowActivitySchema<AttemptScoreChangedEventSchema>()
+            .AddWorkflowActivitySchema<VoidAttemptTaskSchema>()
+            .AddWorkflowActivitySchema<RegradeAttemptTaskSchema>();
     }
 }
