@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.BusinessHours;
+using CrestApps.OrchardCore.BusinessHours.Core.Services;
 using CrestApps.OrchardCore.BusinessHours.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -42,11 +44,12 @@ public sealed class OmnichannelWithoutContactCenterActivationTests
     }
 
     [Fact]
-    public async Task WithBusinessHours_TheGateReadsTheContactCenterCalendars()
+    public async Task WithBusinessHours_TheGateReadsTheBusinessHoursSchedules()
     {
         // Arrange
         // The business hours feature has no dependency on Omnichannel, so its registration may run before or after
-        // the gate's; either way the gate reads the shared business hours, and the calendars are one of its sources.
+        // the gate's; either way the gate reads the shared business hours, whose schedules the Business Hours module
+        // keeps.
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
         var tenant = await host.CreateTenantAsync(Profile(
             "crm-with-business-hours",
@@ -59,16 +62,15 @@ public sealed class OmnichannelWithoutContactCenterActivationTests
 
         // Assert
         Assert.IsType<OpenHoursBusinessHoursGate>(gate);
-        Assert.Single(sources, source => source is BusinessHoursCalendarScheduleSource);
+        Assert.Single(sources, source => source is BusinessHoursScheduleSource);
     }
 
     [Fact]
-    public async Task WithBusinessHoursAlone_CalendarsAreRead_FromTheContactCenterCollection()
+    public async Task WithBusinessHoursAlone_TheBusinessHoursModuleComesWithIt()
     {
         // Arrange
-        // Calendars live in the Contact Center storage collection, which only the base feature registered. Pulled in
-        // without it (Omnichannel Activities depends on it alone), the calendar list answered 500: the collection's
-        // document table did not exist.
+        // Pulled in without the base feature (Omnichannel Activities depends on it alone), the Contact Center business
+        // hours bring the Business Hours module, whose schedules they read.
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
         var tenant = await host.CreateTenantAsync(Profile(
             "business-hours-alone",
@@ -76,18 +78,20 @@ public sealed class OmnichannelWithoutContactCenterActivationTests
             ContactCenterConstants.Feature.BusinessHours));
 
         // Act
-        var (contactCenterEnabled, calendars) = await host.ExecuteInTenantScopeAsync(tenant, async services =>
+        var (contactCenterEnabled, businessHoursEnabled, schedules) = await host.ExecuteInTenantScopeAsync(tenant, async services =>
         {
             var enabled = await services.GetRequiredService<IShellFeaturesManager>().GetEnabledFeaturesAsync();
 
             return (
                 enabled.Any(feature => feature.Id == ContactCenterConstants.Feature.Area),
-                await services.GetRequiredService<IBusinessHoursCalendarStore>().GetEnabledAsync());
+                enabled.Any(feature => feature.Id == BusinessHoursConstants.Features.BusinessHours),
+                await services.GetRequiredService<IOpenHoursService>().ListSchedulesAsync());
         });
 
         // Assert
         Assert.False(contactCenterEnabled);
-        Assert.Empty(calendars);
+        Assert.True(businessHoursEnabled);
+        Assert.Empty(schedules);
     }
 
     private static ContactCenterTenantProfile Profile(string id, params string[] features)

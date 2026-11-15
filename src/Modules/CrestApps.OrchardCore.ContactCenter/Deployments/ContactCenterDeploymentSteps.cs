@@ -16,7 +16,7 @@ public static class ContactCenterDeploymentSteps
     public const string QueueGroup = "ContactCenterQueueGroup";
 
     /// <summary>
-    /// The recipe step that carries business-hours calendars.
+    /// The recipe step older recipes carried business-hours calendars in; it is still read, as Business Hours schedules.
     /// </summary>
     public const string BusinessHoursCalendar = "ContactCenterBusinessHoursCalendar";
 

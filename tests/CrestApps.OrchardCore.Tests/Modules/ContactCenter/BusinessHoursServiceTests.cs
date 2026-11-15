@@ -1,8 +1,11 @@
+using CrestApps.OrchardCore.BusinessHours;
 using CrestApps.OrchardCore.BusinessHours.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.BusinessHours.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Legacy;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -10,8 +13,9 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 /// Pins the business-hours evaluation that gates every background-initiated send — most importantly the automated SMS
 /// re-engagement (cadence) task, which must never nudge a contact after hours. A regression here would either let a
 /// nudge fire outside the contact's local business hours (the exact behavior the feature exists to prevent) or wrongly
-/// hold a live, in-hours send. Both the pure <see cref="DefaultBusinessHoursService.IsOpen(BusinessHoursCalendar, DateTime, string)"/>
-/// branches and the service boundary the gate calls are covered.
+/// hold a live, in-hours send. Each case starts from a calendar as the Contact Center kept it, moved to a Business Hours
+/// schedule with the same id the way the upgrade moves it, so the gate answers exactly as it did before the move: the
+/// pure schedule branches and the service and gate boundary are covered.
 /// </summary>
 public sealed class BusinessHoursServiceTests
 {
@@ -26,7 +30,7 @@ public sealed class BusinessHoursServiceTests
         var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
 
         // Monday 12:00 UTC is inside 09:00–17:00.
-        Assert.True(DefaultBusinessHoursService.IsOpen(calendar, At(Monday, 12, 0), timeZoneId: null));
+        Assert.True(IsOpen(calendar, At(Monday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
@@ -35,7 +39,7 @@ public sealed class BusinessHoursServiceTests
         // This is the core after-hours nudge case: the contact's window has ended for the day, so no follow-up may fire.
         var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
 
-        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(Monday, 18, 0), timeZoneId: null));
+        Assert.False(IsOpen(calendar, At(Monday, 18, 0), timeZoneId: null));
     }
 
     [Fact]
@@ -43,7 +47,7 @@ public sealed class BusinessHoursServiceTests
     {
         var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
 
-        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(Monday, 8, 0), timeZoneId: null));
+        Assert.False(IsOpen(calendar, At(Monday, 8, 0), timeZoneId: null));
     }
 
     [Fact]
@@ -54,7 +58,7 @@ public sealed class BusinessHoursServiceTests
         // Sunday has no configured window at all.
         var sunday = new DateOnly(2026, 1, 4);
 
-        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(sunday, 12, 0), timeZoneId: null));
+        Assert.False(IsOpen(calendar, At(sunday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
@@ -63,7 +67,7 @@ public sealed class BusinessHoursServiceTests
         var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
         calendar.Holidays.Add(Monday);
 
-        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(Monday, 12, 0), timeZoneId: null));
+        Assert.False(IsOpen(calendar, At(Monday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
@@ -74,8 +78,8 @@ public sealed class BusinessHoursServiceTests
         var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
         var instant = At(Monday, 21, 0);
 
-        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, instant, timeZoneId: null));
-        Assert.True(DefaultBusinessHoursService.IsOpen(calendar, instant, timeZoneId: "America/New_York"));
+        Assert.False(IsOpen(calendar, instant, timeZoneId: null));
+        Assert.True(IsOpen(calendar, instant, timeZoneId: "America/New_York"));
     }
 
     [Fact]
@@ -88,13 +92,13 @@ public sealed class BusinessHoursServiceTests
         var saturday = new DateOnly(2026, 1, 10);
 
         // Late Friday is inside the window's opening side.
-        Assert.True(DefaultBusinessHoursService.IsOpen(calendar, At(friday, 23, 0), timeZoneId: null));
+        Assert.True(IsOpen(calendar, At(friday, 23, 0), timeZoneId: null));
 
         // Early Saturday is still inside the window that opened the night before.
-        Assert.True(DefaultBusinessHoursService.IsOpen(calendar, At(saturday, 1, 0), timeZoneId: null));
+        Assert.True(IsOpen(calendar, At(saturday, 1, 0), timeZoneId: null));
 
         // After the overnight window closes, Saturday is closed again.
-        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(saturday, 5, 0), timeZoneId: null));
+        Assert.False(IsOpen(calendar, At(saturday, 5, 0), timeZoneId: null));
     }
 
     // --- Service / gate boundary ------------------------------------------------------------------------------------
@@ -154,22 +158,52 @@ public sealed class BusinessHoursServiceTests
         Assert.True(await service.IsOpenAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
     }
 
-    // --- Helpers ----------------------------------------------------------------------------------------------------
-
-    private static DefaultBusinessHoursService CreateService(BusinessHoursCalendar calendar)
+    [Fact]
+    public async Task TheOmnichannelGate_ReadsTheMovedCalendar_InTheContactsTimeZone()
     {
-        var manager = new Mock<IBusinessHoursCalendarManager>();
+        // The re-engagement task asks the Omnichannel gate, in the contact's own time zone, and lists the calendars
+        // offered for a batch from the same schedules.
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
+        var gate = new OpenHoursBusinessHoursGate(CreateOpenHoursService(calendar));
 
-        manager
-            .Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(calendar);
-
-        return new DefaultBusinessHoursService(new DefaultOpenHoursService([new BusinessHoursCalendarScheduleSource(manager.Object)]), new StubClock());
+        Assert.False(await gate.IsOpenAsync("calendar-1", At(Monday, 21, 0), timeZoneId: null, TestContext.Current.CancellationToken));
+        Assert.True(await gate.IsOpenAsync("calendar-1", At(Monday, 21, 0), timeZoneId: "America/New_York", TestContext.Current.CancellationToken));
+        Assert.Equal(new BusinessHoursCalendarOption("calendar-1", "Test Calendar"), Assert.Single(await gate.GetCalendarOptionsAsync(TestContext.Current.CancellationToken)));
     }
 
-    private static BusinessHoursCalendar WeekdayCalendar(DayOfWeek day, int openMinute, int closeMinute)
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
+    private static bool IsOpen(LegacyBusinessHoursCalendar calendar, DateTime utcInstant, string timeZoneId)
+        => HoursScheduleEvaluator.IsOpen(Move(calendar).Hours, utcInstant, timeZoneId);
+
+    private static DefaultBusinessHoursService CreateService(LegacyBusinessHoursCalendar calendar)
+        => new(CreateOpenHoursService(calendar), new StubClock());
+
+    private static DefaultOpenHoursService CreateOpenHoursService(LegacyBusinessHoursCalendar calendar)
     {
-        return new BusinessHoursCalendar
+        var schedules = new InMemoryNamedCatalog<BusinessHoursSchedule>();
+
+        if (calendar is not null)
+        {
+            schedules.Entries.Add(Move(calendar));
+        }
+
+        return new DefaultOpenHoursService([new BusinessHoursScheduleSource(schedules)]);
+    }
+
+    // The schedule the upgrade makes of a calendar: the same id, name and enabled state, and the calendar's hours.
+    private static BusinessHoursSchedule Move(LegacyBusinessHoursCalendar calendar)
+        => new()
+        {
+            ItemId = calendar.ItemId,
+            Name = calendar.Name,
+            Enabled = calendar.Enabled,
+            Hours = BusinessHoursCalendarMove.ToHoursSchedule(calendar),
+        };
+
+    private static LegacyBusinessHoursCalendar WeekdayCalendar(DayOfWeek day, int openMinute, int closeMinute)
+    {
+        return new LegacyBusinessHoursCalendar
         {
             ItemId = "calendar-1",
             Name = "Test Calendar",
@@ -177,7 +211,7 @@ public sealed class BusinessHoursServiceTests
             Enabled = true,
             WeeklySchedule =
             [
-                new BusinessHoursDay
+                new LegacyBusinessHoursDay
                 {
                     Day = day,
                     IsOpen = true,

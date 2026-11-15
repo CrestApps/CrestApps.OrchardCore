@@ -1,7 +1,7 @@
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Caches small, slowly-changing routing configuration (such as enabled queues, skills, business-hours calendars, and
+/// Caches small, slowly-changing routing configuration (such as enabled queues, skills, and
 /// entry points) so that latency-critical routing decisions do not re-query the database on every call. Cached
 /// snapshots are invalidated whenever the underlying configuration changes, keeping every instance of the tenant
 /// consistent.
