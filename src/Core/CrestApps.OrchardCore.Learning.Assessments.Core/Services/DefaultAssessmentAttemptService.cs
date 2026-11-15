@@ -277,8 +277,9 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         var quiz = await _contentSource.GetItemAsync(attempt.QuizId);
 
+        // One question at a time: only the next unanswered question takes an answer; no answering ahead or going back.
         if (quiz?.Get<QuizPart>(nameof(QuizPart))?.Navigation == QuizNavigation.Sequential
-            && attempt.Items.Any(item => item.Index > index && item.Response is not null))
+            && !AttemptNavigation.CanAnswer(attempt, index))
         {
             return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.ItemLocked };
         }

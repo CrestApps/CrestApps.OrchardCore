@@ -95,7 +95,7 @@ public sealed class QuizController : Controller
     /// Shows an attempt: the questions while it is in progress, then the result and the review the policy allows.
     /// </summary>
     /// <param name="attemptId">The attempt.</param>
-    /// <param name="q">The question shown, for a quiz answered one question at a time.</param>
+    /// <param name="q">Ignored for a quiz answered one question at a time, which shows the next unanswered question.</param>
     /// <returns>The page.</returns>
     [HttpGet("learning/attempts/{attemptId}", Name = "LearningAttempt")]
     public async Task<IActionResult> Attempt(string attemptId, int? q)
@@ -126,10 +126,8 @@ public sealed class QuizController : Controller
 
         if (attempt.IsOpen && sequential)
         {
-            var next = attempt.Items.FirstOrDefault(item => item.Response is null)?.Index ?? attempt.Items.Count - 1;
-            var index = Math.Clamp(q ?? next, next, attempt.Items.Count - 1);
-
-            model.Items = [attempt.Items[index]];
+            // One question at a time means the next unanswered question only: a larger q does not read ahead.
+            model.Items = [attempt.Items[AttemptNavigation.CurrentIndex(attempt)]];
         }
 
         return View(attempt.IsOpen ? "Attempt" : "Result", model);

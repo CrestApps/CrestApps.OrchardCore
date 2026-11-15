@@ -164,6 +164,36 @@ public sealed class AttemptServiceTests
     }
 
     [Fact]
+    public async Task ASequentialQuiz_ShowsAndTakesOnlyTheNextUnansweredQuestion()
+    {
+        // Arrange
+        await using var h = await AssessmentTestHarness.CreateAsync();
+        h.Courses.AddCourse("course1");
+        h.Questions.AddChoice("q1", "a");
+        h.Questions.AddChoice("q2", "a");
+        h.Questions.AddChoice("q3", "a");
+        h.AddQuiz("course1", "quiz", quiz =>
+        {
+            quiz.QuestionIds = ["q1", "q2", "q3"];
+            quiz.Navigation = QuizNavigation.Sequential;
+        });
+        await h.EnrollAsync("learner", "course1");
+        var attempt = (await h.StartAsync("learner", "quiz")).Attempt;
+
+        // Act
+        var ahead = await h.RunAsync(service => service.SaveResponseAsync(attempt.ItemId, "learner", 2, new AttemptResponse { ChoiceIds = ["a"] }));
+        var first = await h.RunAsync(service => service.SaveResponseAsync(attempt.ItemId, "learner", 0, new AttemptResponse { ChoiceIds = ["a"] }));
+        var back = await h.RunAsync(service => service.SaveResponseAsync(attempt.ItemId, "learner", 0, new AttemptResponse { ChoiceIds = ["b"] }));
+
+        // Assert
+        Assert.Equal(AttemptErrors.ItemLocked, ahead.ErrorCode);
+        Assert.True(first.Succeeded, first.ErrorCode);
+        Assert.Equal(AttemptErrors.ItemLocked, back.ErrorCode);
+        Assert.Equal(1, AttemptNavigation.CurrentIndex(first.Attempt));
+        Assert.Equal(0, AttemptNavigation.CurrentIndex(attempt));
+    }
+
+    [Fact]
     public async Task Submit_ScoresAutomatically_ReportsThePassToLearning_AndASecondSubmitChangesNothing()
     {
         // Arrange
