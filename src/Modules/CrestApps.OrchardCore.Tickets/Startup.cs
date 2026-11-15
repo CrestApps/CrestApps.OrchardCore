@@ -92,6 +92,8 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketPriority>, TicketSettingsRecordHandler<TicketPriority>>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketDesk>, TicketSettingsRecordHandler<TicketDesk>>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketView>, TicketSettingsRecordHandler<TicketView>>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketBoard>, TicketSettingsRecordHandler<TicketBoard>>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TicketBoard>, TicketBoardHandler>());
 
         services.AddDisplayDriver<TicketStatus, TicketStatusDisplayDriver>();
         services.AddDisplayDriver<TicketPriority, TicketPriorityDisplayDriver>();

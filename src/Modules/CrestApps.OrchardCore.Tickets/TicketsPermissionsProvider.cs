@@ -13,6 +13,8 @@ internal sealed class TicketsPermissionsProvider : IPermissionProvider
     private static readonly Permission[] _global =
     [
         TicketsPermissions.ManageTicketSettings,
+        TicketsPermissions.ManageTicketBoards,
+        TicketsPermissions.ManageOwnTicketBoards,
         TicketsPermissions.ViewAllTickets,
         TicketsPermissions.ViewTeamTickets,
         TicketsPermissions.ViewAssignedTickets,
