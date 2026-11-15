@@ -341,18 +341,23 @@ public sealed class PayItemHandler : CatalogEntryHandlerBase<EmployeePayItem>
     /// <param name="codes">The pay codes.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public PayItemHandler(PayProfileStore profiles, IPayCodeManager codes, IClock clock, IStringLocalizer<PayItemHandler> stringLocalizer)
+    /// <param name="httpContextAccessor">The HTTP context accessor, for who changes an item.</param>
+    public PayItemHandler(PayProfileStore profiles, IPayCodeManager codes, IClock clock, IStringLocalizer<PayItemHandler> stringLocalizer, IHttpContextAccessor httpContextAccessor = null)
     {
         _profiles = profiles;
         _codes = codes;
         _clock = clock;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
+
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     /// <inheritdoc />
     public override Task InitializedAsync(InitializedContext<EmployeePayItem> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.ChangedById = ChangedBy() ?? context.Model.ChangedById;
 
         return Task.CompletedTask;
     }
@@ -361,9 +366,14 @@ public sealed class PayItemHandler : CatalogEntryHandlerBase<EmployeePayItem>
     public override Task UpdatingAsync(UpdatingContext<EmployeePayItem> context, CancellationToken cancellationToken = default)
     {
         context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ChangedById = ChangedBy() ?? context.Model.ChangedById;
 
         return Task.CompletedTask;
     }
+
+    // Who changes an item on a page; a recipe or a background job keeps who changed it last.
+    private string ChangedBy()
+        => _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
     /// <inheritdoc />
     public override async Task ValidatingAsync(ValidatingContext<EmployeePayItem> context, CancellationToken cancellationToken = default)
@@ -408,21 +418,32 @@ public sealed class PayItemHandler : CatalogEntryHandlerBase<EmployeePayItem>
 }
 
 /// <summary>
-/// The keyed hash of tax ids: an HMAC with a random key kept once per tenant, so a number used twice is found without
-/// keeping it in clear and without the hash being guessable from the number alone.
+/// The keyed hash of tax ids: an HMAC with a random key kept once per tenant, protected by the tenant's data protection
+/// keys, so a number used twice is found without keeping it in clear, and a database backup alone can't turn the hashes
+/// back into numbers. The key is made once, under a lock; a key kept in clear by an earlier version is protected in
+/// place, with the same value, so the hashes already stored still match.
 /// </summary>
 public sealed class PayrollTaxIdHasher
 {
-    private readonly ISession _session;
+    /// <summary>The data protection purpose of the key.</summary>
+    public const string KeyPurpose = "CrestApps.OrchardCore.Payroll.TaxIdHashKey";
+
+    private readonly IStore _store;
+    private readonly Microsoft.AspNetCore.DataProtection.IDataProtectionProvider _dataProtection;
+    private readonly global::OrchardCore.Locking.Distributed.IDistributedLock _locks;
     private byte[] _key;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PayrollTaxIdHasher"/> class.
     /// </summary>
-    /// <param name="session">The session.</param>
-    public PayrollTaxIdHasher(ISession session)
+    /// <param name="store">The store, for a session of its own that reads and saves the key.</param>
+    /// <param name="dataProtection">The data protection provider that protects the key.</param>
+    /// <param name="locks">The distributed lock, so the key is made once.</param>
+    public PayrollTaxIdHasher(IStore store, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtection, global::OrchardCore.Locking.Distributed.IDistributedLock locks)
     {
-        _session = session;
+        _store = store;
+        _dataProtection = dataProtection;
+        _locks = locks;
     }
 
     /// <summary>
@@ -457,15 +478,47 @@ public sealed class PayrollTaxIdHasher
             return _key;
         }
 
-        var stored = await _session.Query<PayrollKeys>(collection: PayrollConstants.CollectionName).FirstOrDefaultAsync();
+        var protector = global::Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.CreateProtector(_dataProtection, KeyPurpose);
 
-        if (stored is null)
+        // Read first without the lock: once the key is made and protected, every later read is just this.
+        await using (var reader = _store.CreateSession())
         {
-            stored = new PayrollKeys { TaxIdHashKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)) };
-            await _session.SaveAsync(stored, false, PayrollConstants.CollectionName);
+            if (await reader.Query<PayrollKeys>(collection: PayrollConstants.CollectionName).FirstOrDefaultAsync() is { ProtectedTaxIdHashKey.Length: > 0 } ready)
+            {
+                return _key = Convert.FromBase64String(global::Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.Unprotect(protector, ready.ProtectedTaxIdHashKey));
+            }
         }
 
-        return _key = Convert.FromBase64String(stored.TaxIdHashKey);
+        var (locker, locked) = await _locks.TryAcquireLockAsync("Payroll:TaxIdHashKey", TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(1));
+
+        if (!locked)
+        {
+            throw new InvalidOperationException("The payroll tax id key is being made: try again in a moment.");
+        }
+
+        await using (locker)
+        {
+            // In a session of its own, committed before the lock is let go: another one waiting reads the key made.
+            await using var session = _store.CreateSession();
+            var stored = await session.Query<PayrollKeys>(collection: PayrollConstants.CollectionName).FirstOrDefaultAsync();
+            string key;
+
+            if (stored is { ProtectedTaxIdHashKey.Length: > 0 })
+            {
+                return _key = Convert.FromBase64String(global::Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.Unprotect(protector, stored.ProtectedTaxIdHashKey));
+            }
+
+            // A key kept in clear by an earlier version keeps its value, so the hashes already stored still match.
+            key = stored is { TaxIdHashKey.Length: > 0 } ? stored.TaxIdHashKey : Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+            stored ??= new PayrollKeys();
+            stored.ProtectedTaxIdHashKey = global::Microsoft.AspNetCore.DataProtection.DataProtectionCommonExtensions.Protect(protector, key);
+            stored.TaxIdHashKey = null;
+
+            await session.SaveAsync(stored, false, PayrollConstants.CollectionName);
+            await session.SaveChangesAsync();
+
+            return _key = Convert.FromBase64String(key);
+        }
     }
 }
 
@@ -475,9 +528,15 @@ public sealed class PayrollTaxIdHasher
 public sealed class PayrollKeys
 {
     /// <summary>
-    /// Gets or sets the key of the tax id hash.
+    /// Gets or sets the key of the tax id hash as an earlier version kept it, in clear; protected and cleared the first
+    /// time the key is read.
     /// </summary>
     public string TaxIdHashKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key of the tax id hash, protected by the tenant's data protection keys.
+    /// </summary>
+    public string ProtectedTaxIdHashKey { get; set; }
 }
 
 /// <summary>

@@ -49,6 +49,16 @@ public abstract class PayrollTaskActivity<TActivity> : TaskActivity<TActivity>
     protected System.Security.Claims.ClaimsPrincipal User
         => Services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
+    /// <summary>
+    /// Gets or sets whether the run's amounts (gross, net, cash needed) are written to the output: "true" asks for
+    /// them, and they are written only when the workflow's user may view the employer's payroll reports.
+    /// </summary>
+    public string IncludeTotals
+    {
+        get => GetProperty<string>();
+        set => SetProperty(value);
+    }
+
     protected async Task<string> EvaluateAsync(string expression, WorkflowExecutionContext workflowContext)
     {
         if (string.IsNullOrWhiteSpace(expression))
@@ -88,14 +98,22 @@ public abstract class PayrollTaskActivity<TActivity> : TaskActivity<TActivity>
         return Outcome(outcome);
     }
 
-    protected static void WriteTotals(WorkflowExecutionContext workflowContext, PayRun run)
+    // Workflow state is kept and shown to whoever manages workflows: the run's amounts only when the task asks for them
+    // and its user may see them; a timer has no user, so never.
+    protected async Task WriteTotalsAsync(WorkflowExecutionContext workflowContext, PayRun run)
     {
         workflowContext.Output["PayRunId"] = run.ItemId;
         workflowContext.Output["PayRunNumber"] = run.Number;
         workflowContext.Output["Statements"] = run.Totals.Statements;
-        workflowContext.Output["Gross"] = run.Totals.Gross;
-        workflowContext.Output["Net"] = run.Totals.Net;
-        workflowContext.Output["CashNeeded"] = run.Totals.CashNeeded;
+
+        if (string.Equals(IncludeTotals, "true", StringComparison.OrdinalIgnoreCase)
+            && User is { Identity.IsAuthenticated: true } user
+            && await Services.GetRequiredService<IPayrollScopeService>().AuthorizeAsync(user, PayrollPermissions.ViewPayrollReports, run.EmployerId))
+        {
+            workflowContext.Output["Gross"] = run.Totals.Gross;
+            workflowContext.Output["Net"] = run.Totals.Net;
+            workflowContext.Output["CashNeeded"] = run.Totals.CashNeeded;
+        }
     }
 }
 
@@ -269,7 +287,7 @@ public sealed class CalculatePayRunTask : PayrollTaskActivity<CalculatePayRunTas
 
         var calculated = await Services.GetRequiredService<IPayRunManager>().FindByIdAsync(run.ItemId) ?? run;
 
-        WriteTotals(workflowContext, calculated);
+        await WriteTotalsAsync(workflowContext, calculated);
 
         return calculated.Issues.Any(issue => issue.IsBlocker)
             ? Fail(workflowContext, "Blocked", calculated.Issues.Where(issue => issue.IsBlocker).Select(issue => issue.Message))
@@ -421,7 +439,7 @@ public sealed class ProcessPayRunTask : PayrollTaskActivity<ProcessPayRunTask>
         var result = await Services.GetRequiredService<IPayRunService>().ProcessAsync(run, User);
         var processed = await Services.GetRequiredService<IPayRunManager>().FindByIdAsync(run.ItemId) ?? run;
 
-        WriteTotals(workflowContext, processed);
+        await WriteTotalsAsync(workflowContext, processed);
         workflowContext.LastResult = string.Join(" ", result.Errors);
 
         return processed.Status switch

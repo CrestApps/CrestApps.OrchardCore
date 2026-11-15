@@ -85,6 +85,8 @@ internal sealed class PayProfilesRecipeStep : NamedRecipeStepHandler
             profile.PayScheduleId = incoming.PayScheduleId;
             profile.WorkerType = incoming.WorkerType;
             profile.OvertimeStatus = incoming.OvertimeStatus;
+            profile.Tipped = incoming.Tipped;
+            profile.BackupWithholding = incoming.BackupWithholding;
             profile.Status = incoming.Status;
             profile.LegalName = incoming.LegalName;
             profile.HomeAddress = incoming.HomeAddress;

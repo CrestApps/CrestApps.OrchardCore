@@ -21,6 +21,7 @@ public sealed class UnitedStatesStartup : StartupBase
         services.AddPayrollFilingForm<Form940>();
         services.AddPayrollFilingForm<FormW2>();
         services.AddPayrollFilingForm<Form1099Nec>();
+        services.AddPayrollFilingForm<Form945>();
         services.AddPayrollTaxCategory(CrestApps.OrchardCore.Payroll.Models.PayrollTaxCategories.ContractorWithholding, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesStartup>("Backup withholding (contractors)"));
     }
 }

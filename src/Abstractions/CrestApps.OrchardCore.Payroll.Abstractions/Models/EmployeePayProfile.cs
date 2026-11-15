@@ -358,6 +358,11 @@ public sealed class EmployeePayItem : CatalogItem, IModifiedUtcAwareModel
     public decimal ArrearsBalance { get; set; }
 
     /// <summary>
+    /// Gets or sets the user who last added or changed the item, who then may not approve a run it is paid in.
+    /// </summary>
+    public string ChangedById { get; set; }
+
+    /// <summary>
     /// Gets or sets a note.
     /// </summary>
     public string Note { get; set; }

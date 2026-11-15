@@ -151,7 +151,17 @@ public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollD
         {
             AddField("Box" + box, S["Box {0}", box], DataFieldType.Decimal, row => row.Person.Boxes.GetValueOrDefault(box), boxes);
         }
+
+        AddField(OtherBoxesField, S["Other boxes"], DataFieldType.Text, row => UnitedStatesEfw2.Unwritten(row.Person.Boxes), boxes);
     }
+
+    /// <summary>The field with the boxes the EFW2 file doesn't write, such as 12W 1200.00.</summary>
+    public const string OtherBoxesField = "OtherBoxes";
+
+    /// <summary>
+    /// The parameter that reads a year's draft W-2 filing, such as an amendment being prepared, instead of the one filed.
+    /// </summary>
+    public const string DraftParameter = "Draft";
 
     /// <inheritdoc />
     public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
@@ -167,8 +177,23 @@ public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollD
             yield break;
         }
 
+        // One filing an employer and a year, so nobody is listed twice: the one filed, or the draft (a first one being
+        // prepared, or an amendment when the Draft parameter asks for it); never both.
+        var draft = query?.Parameters is { } parameters
+            && parameters.TryGetValue(DraftParameter, out var value)
+            && bool.TryParse(Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture), out var wanted)
+            && wanted;
         var filings = (await _filings.ListByEmployersAsync(scope.All ? null : [.. scope.EmployerIds], cancellationToken))
-            .Where(filing => filing.Form == FormW2.FormName && filing.Status != PayrollFilingStatus.Amended);
+            .Where(filing => filing.Form == FormW2.FormName && filing.Status != PayrollFilingStatus.Amended)
+            .GroupBy(filing => (filing.EmployerId, filing.Year))
+            .Select(group =>
+            {
+                var filed = group.Where(filing => filing.Status == PayrollFilingStatus.Filed).OrderBy(filing => filing.FiledOn).ThenBy(filing => filing.CreatedUtc).LastOrDefault();
+                var prepared = group.Where(filing => filing.Status == PayrollFilingStatus.Draft).OrderBy(filing => filing.CreatedUtc).LastOrDefault();
+
+                return draft ? prepared ?? filed : filed ?? prepared;
+            })
+            .Where(filing => filing is not null);
 
         foreach (var filing in filings.OrderBy(filing => filing.Year))
         {
@@ -264,6 +289,23 @@ public sealed class Efw2DataFileFormat : IDataFileFormat
         var year = rows.Max(YearOf);
 
         rows = [.. rows.Where(row => YearOf(row) == year)];
+
+        // Every person needs their full number: a row without it is the publisher not seeing tax ids, or a profile
+        // with none. The file is refused rather than written with zeros.
+        var missing = rows.Where(row => new string([.. (Text(row, "Ssn") ?? string.Empty).Where(char.IsAsciiDigit)]).Length != 9).ToList();
+
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException($"The EFW2 file needs each person's full social security number, and {missing.Count} rows have none (staff members {string.Join(", ", missing.Select(row => Text(row, "StaffMemberId")).Distinct(StringComparer.Ordinal))}): the user who published the pipeline needs View tax ids for the employer, and each person needs a tax id on file.");
+        }
+
+        // Amounts the file can't hold are refused rather than left out.
+        var unwritten = rows.Where(row => !string.IsNullOrEmpty(Text(row, WageRecordsDataSet.OtherBoxesField))).ToList();
+
+        if (unwritten.Count > 0)
+        {
+            throw new InvalidOperationException($"The EFW2 file doesn't write these boxes yet: {string.Join("; ", unwritten.Select(row => Text(row, "StaffMemberId") + ": " + Text(row, WageRecordsDataSet.OtherBoxesField)))}. File these wage statements another way.");
+        }
 
         var first = rows[0];
         var employers = rows

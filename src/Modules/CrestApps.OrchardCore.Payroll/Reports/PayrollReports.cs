@@ -35,8 +35,17 @@ public abstract class PayrollReportBase
     {
         var range = context.Filter.GetDateRange();
 
+        // On screen, the employers whose runs the user sees; in a file (an export or an attachment), only those of them
+        // whose payroll data the user may also export.
+        var scope = await Reader.GetReportScopeAsync(context, PayrollPermissions.ViewPayRuns, cancellationToken);
+
+        if (context.Mode == ReportRunMode.Export)
+        {
+            scope = PayrollReportReader.Intersect(scope, await Reader.GetReportScopeAsync(context, PayrollPermissions.ExportPayrollData, cancellationToken));
+        }
+
         return (
-            await Reader.GetReportScopeAsync(cancellationToken),
+            scope,
             range.FromUtc is { } from ? DateOnly.FromDateTime((await LocalClock.ConvertToLocalAsync(new DateTimeOffset(from, TimeSpan.Zero))).DateTime) : null,
             range.ToUtc is { } to ? DateOnly.FromDateTime((await LocalClock.ConvertToLocalAsync(new DateTimeOffset(to, TimeSpan.Zero))).DateTime) : null);
     }
@@ -89,6 +98,8 @@ public sealed class PayrollRegisterReport : PayrollReportBase, IReport
     public static string Category => ReportsConstants.Categories.WorkforcePayroll;
 
     public static Permission Permission => PayrollPermissions.ViewPayRuns;
+
+    public static Permission ExportPermission => PayrollPermissions.ExportPayrollData;
 
     public static ReportDefaultDateRange DefaultDateRange { get; } = ReportDefaultDateRange.LastDays(30);
 
@@ -164,6 +175,8 @@ public sealed class PayrollSummaryReport : PayrollReportBase, IReport
 
     public static Permission Permission => PayrollPermissions.ViewPayRuns;
 
+    public static Permission ExportPermission => PayrollPermissions.ExportPayrollData;
+
     public static ReportDefaultDateRange DefaultDateRange { get; } = ReportDefaultDateRange.LastDays(30);
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
@@ -218,6 +231,8 @@ public sealed class CashRequirementReport : PayrollReportBase, IReport
     public static string Category => ReportsConstants.Categories.WorkforcePayroll;
 
     public static Permission Permission => PayrollPermissions.ViewPayRuns;
+
+    public static Permission ExportPermission => PayrollPermissions.ExportPayrollData;
 
     public static ReportDefaultDateRange DefaultDateRange { get; } = ReportDefaultDateRange.LastDays(30);
 
@@ -287,6 +302,8 @@ public sealed class DeductionsAndContributionsReport : PayrollReportBase, IRepor
 
     public static Permission Permission => PayrollPermissions.ViewPayRuns;
 
+    public static Permission ExportPermission => PayrollPermissions.ExportPayrollData;
+
     public static ReportDefaultDateRange DefaultDateRange { get; } = ReportDefaultDateRange.LastDays(30);
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
@@ -344,6 +361,8 @@ public sealed class LaborDistributionReport : PayrollReportBase, IReport
     public static string Category => ReportsConstants.Categories.WorkforcePayroll;
 
     public static Permission Permission => PayrollPermissions.ViewPayRuns;
+
+    public static Permission ExportPermission => PayrollPermissions.ExportPayrollData;
 
     public static ReportDefaultDateRange DefaultDateRange { get; } = ReportDefaultDateRange.LastDays(30);
 
@@ -411,6 +430,8 @@ public sealed class YearToDateEarningsReport : PayrollReportBase, IReport
     public static string Category => ReportsConstants.Categories.WorkforcePayroll;
 
     public static Permission Permission => PayrollPermissions.ViewPayRuns;
+
+    public static Permission ExportPermission => PayrollPermissions.ExportPayrollData;
 
     public static ReportDefaultDateRange DefaultDateRange { get; } = ReportDefaultDateRange.Today;
 

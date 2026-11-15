@@ -1,5 +1,5 @@
 @model ShapeViewModel<TaxLiabilityPeriod>
 @using System.Globalization
 
-<strong>@Model.Value.Jurisdiction</strong> @(Model.Value.Group == TaxLiabilityGroups.Unemployment ? T["Unemployment"] : T["Withholding"])
+<strong>@Model.Value.Jurisdiction</strong> @(Model.Value.Group switch { TaxLiabilityGroups.Unemployment => T["Unemployment"], TaxLiabilityGroups.NonPayrollWithholding => T["Withholding from other payments"], _ => T["Withholding"] })
 <span class="text-muted small ms-1">@Model.Value.PeriodStart.ToString("d", CultureInfo.CurrentCulture) – @Model.Value.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)</span>

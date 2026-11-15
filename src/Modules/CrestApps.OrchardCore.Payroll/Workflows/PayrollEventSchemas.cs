@@ -19,7 +19,7 @@ internal sealed class PayRunOpenedEventSchema : PayrollEventSchemaBase
 
     protected override string DisplayText => "Pay Run Opened";
 
-    protected override string Description => "Starts when a pay run is added. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Gross, Net, CashNeeded, Change, Actor and Note.";
+    protected override string Description => "Starts when a pay run is added. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
 }
 
 internal sealed class PayRunCalculatedEventSchema : PayrollEventSchemaBase
@@ -28,7 +28,7 @@ internal sealed class PayRunCalculatedEventSchema : PayrollEventSchemaBase
 
     protected override string DisplayText => "Pay Run Calculated";
 
-    protected override string Description => "Starts when a pay run is calculated. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Gross, Net, CashNeeded, Change, Actor and Note.";
+    protected override string Description => "Starts when a pay run is calculated. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
 }
 
 internal sealed class PayRunSubmittedEventSchema : PayrollEventSchemaBase
@@ -37,7 +37,7 @@ internal sealed class PayRunSubmittedEventSchema : PayrollEventSchemaBase
 
     protected override string DisplayText => "Pay Run Submitted for Approval";
 
-    protected override string Description => "Starts when a pay run is submitted for approval. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Gross, Net, CashNeeded, Change, Actor and Note.";
+    protected override string Description => "Starts when a pay run is submitted for approval. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
 }
 
 internal sealed class PayRunApprovedEventSchema : PayrollEventSchemaBase
@@ -46,7 +46,7 @@ internal sealed class PayRunApprovedEventSchema : PayrollEventSchemaBase
 
     protected override string DisplayText => "Pay Run Approved";
 
-    protected override string Description => "Starts when a pay run is approved. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Gross, Net, CashNeeded, Change, Actor and Note.";
+    protected override string Description => "Starts when a pay run is approved. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
 }
 
 internal sealed class PayRunRejectedEventSchema : PayrollEventSchemaBase
@@ -55,7 +55,7 @@ internal sealed class PayRunRejectedEventSchema : PayrollEventSchemaBase
 
     protected override string DisplayText => "Pay Run Rejected";
 
-    protected override string Description => "Starts when a pay run's approval is rejected; Note is the approver's. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Gross, Net, CashNeeded, Change, Actor and Note.";
+    protected override string Description => "Starts when a pay run's approval is rejected; Note is the approver's. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
 }
 
 internal sealed class PayRunProcessedEventSchema : PayrollEventSchemaBase
@@ -64,7 +64,7 @@ internal sealed class PayRunProcessedEventSchema : PayrollEventSchemaBase
 
     protected override string DisplayText => "Pay Run Processed";
 
-    protected override string Description => "Starts when a pay run is processed, paid in full or not; Status is Paid, PartiallyPaid or Failed. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Gross, Net, CashNeeded, Change, Actor and Note.";
+    protected override string Description => "Starts when a pay run is processed, paid in full or not; Status is Paid, PartiallyPaid or Failed. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
 }
 
 internal sealed class PayRunPaidEventSchema : PayrollEventSchemaBase
@@ -73,7 +73,7 @@ internal sealed class PayRunPaidEventSchema : PayrollEventSchemaBase
 
     protected override string DisplayText => "Pay Run Paid";
 
-    protected override string Description => "Starts when every statement of a processed pay run is paid. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Gross, Net, CashNeeded, Change, Actor and Note.";
+    protected override string Description => "Starts when every statement of a processed pay run is paid. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
 }
 
 internal sealed class PayRunFailedEventSchema : PayrollEventSchemaBase
@@ -82,7 +82,7 @@ internal sealed class PayRunFailedEventSchema : PayrollEventSchemaBase
 
     protected override string DisplayText => "Pay Run Failed";
 
-    protected override string Description => "Starts when a processed pay run could pay nothing. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Gross, Net, CashNeeded, Change, Actor and Note.";
+    protected override string Description => "Starts when a processed pay run could pay nothing. Input: PayRunId, Number, EmployerId, PayScheduleId, Type, PeriodStart, PeriodEnd, PayDate, Status, Statements, Change, Actor and Note.";
 }
 
 internal sealed class PayStatementIssuedEventSchema : PayrollEventSchemaBase

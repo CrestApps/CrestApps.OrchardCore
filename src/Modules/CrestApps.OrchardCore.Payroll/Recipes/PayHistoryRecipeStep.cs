@@ -85,6 +85,14 @@ internal sealed class PayHistoryRecipeStep : NamedRecipeStepHandler
                 continue;
             }
 
+            // A tax line without its taxable wages would leave the year's Social Security and Medicare wages short.
+            if (statement.Lines.Any(line => line.Type == PayLineType.Tax && line.TaxableWages is null))
+            {
+                context.Errors.Add($"A pay statement in the {PayrollConstants.PayHistoryRecipeStepName} step has a tax line without TaxableWages: give the wages each tax was worked out on.");
+
+                continue;
+            }
+
             // Already there: the step can run again.
             if (!string.IsNullOrEmpty(statement.ItemId) && await _statements.FindByIdAsync(statement.ItemId) is not null)
             {
@@ -197,7 +205,7 @@ internal sealed class PayHistoryRecipeStepSchema : IRecipeStep
                 ("Hours", Number("The hours.")),
                 ("Rate", Number("The rate.")),
                 ("Amount", Number("The amount, positive.")),
-                ("TaxableWages", Number("The wages the tax was worked out on.")))
+                ("TaxableWages", Number("The wages the tax was worked out on; required on a tax line.")))
             .Required("Type", "Amount");
 
         _cached ??= new JsonSchemaBuilder()

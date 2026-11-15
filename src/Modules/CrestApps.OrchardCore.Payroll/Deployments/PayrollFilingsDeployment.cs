@@ -37,6 +37,20 @@ public sealed class PayrollFilingsDeploymentStep : DeploymentStep
     /// <inheritdoc />
     [JsonIgnore]
     public override LocalizationSource Title => _title;
+
+    /// <summary>
+    /// Gets or sets whether each filing's people (names, addresses and wage statements) are written; only for a user
+    /// who may see full tax ids.
+    /// </summary>
+    public bool IncludeSensitiveData { get; set; }
+}
+
+/// <summary>
+/// The editor of the tax deposits and filings step.
+/// </summary>
+public class PayrollFilingsDeploymentStepViewModel
+{
+    public bool IncludeSensitiveData { get; set; }
 }
 
 internal sealed class PayrollFilingsDeploymentSource : DeploymentSourceBase<PayrollFilingsDeploymentStep>
@@ -111,6 +125,13 @@ internal sealed class PayrollFilingsDeploymentSource : DeploymentSourceBase<Payr
             var node = JsonSerializer.SerializeToNode(filing, _options)!.AsObject();
 
             node.Remove(nameof(PayrollFiling.Period));
+
+            // People's wage statements are personal data: only with Include sensitive data, by one who may see tax ids.
+            if (!step.IncludeSensitiveData || !await _scope.AuthorizeAsync(user, PayrollPermissions.ViewTaxIds, filing.EmployerId))
+            {
+                node.Remove(nameof(PayrollFiling.People));
+            }
+
             filings.Add(node);
         }
 
@@ -147,13 +168,27 @@ internal sealed class PayrollFilingsDeploymentStepDisplayDriver : DisplayDriver<
             View("PayrollFilingsDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(PayrollFilingsDeploymentStep step, BuildEditorContext context)
-        => View("PayrollFilingsDeploymentStep_Fields_Edit", step).Location("Content");
+        => Initialize<PayrollFilingsDeploymentStepViewModel>("PayrollFilingsDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location("Content");
 
     public override async Task<IDisplayResult> UpdateAsync(PayrollFilingsDeploymentStep step, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ExportPayrollData))
+        var model = new PayrollFilingsDeploymentStepViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        var user = _httpContextAccessor.HttpContext?.User;
+
+        if (!await _authorizationService.AuthorizeAsync(user, PayrollPermissions.ExportPayrollData))
         {
             context.Updater.ModelState.AddModelError(Prefix, S["Only a user who may export payroll data for every employer can add this step."]);
+        }
+        else if (model.IncludeSensitiveData && !await _authorizationService.AuthorizeAsync(user, PayrollPermissions.ViewTaxIds))
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.IncludeSensitiveData), S["Only a user who may see full tax ids can export people's wage statements."]);
+        }
+        else
+        {
+            step.IncludeSensitiveData = model.IncludeSensitiveData;
         }
 
         return Edit(step, context);
@@ -166,10 +201,10 @@ internal sealed class PayrollFilingsDeploymentStepSchema : DeploymentStepSchemaD
 
     protected override string DisplayText => "Tax deposits and filings";
 
-    protected override string Description => "Exports the tax deposits and filings of the employers the user may export.";
+    protected override string Description => "Exports the tax deposits and filings of the employers the user may export. People's wage statements only with IncludeSensitiveData.";
 
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(DeploymentStepSchemaContext context)
-        => [];
+        => [("IncludeSensitiveData", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether each filing's people (names, addresses and wage statements) are written."))];
 }
 
 /// <summary>
@@ -225,7 +260,7 @@ internal sealed class TaxDepositsRecipeStepSchema : IRecipeStep
                             ("ItemId", Text("The deposit's 26-character id.")),
                             ("EmployerId", Text("The employer.")),
                             ("Jurisdiction", Text("The jurisdiction deposited to, such as US.")),
-                            ("Group", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Withholding", "Unemployment")),
+                            ("Group", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Withholding", "Unemployment", "NonPayrollWithholding")),
                             ("PeriodStart", new JsonSchemaBuilder().Type(SchemaValueType.String).Format(Formats.Date).Description("The first day of the period paid.")),
                             ("PeriodEnd", new JsonSchemaBuilder().Type(SchemaValueType.String).Format(Formats.Date).Description("The last day of the period paid.")),
                             ("Amount", new JsonSchemaBuilder().Type(SchemaValueType.Number).Description("The amount deposited.")),

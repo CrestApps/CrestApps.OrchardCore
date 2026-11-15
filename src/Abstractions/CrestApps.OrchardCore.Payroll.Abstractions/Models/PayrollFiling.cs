@@ -54,6 +54,12 @@ public static class TaxLiabilityGroups
 
     /// <summary>Unemployment taxes.</summary>
     public const string Unemployment = "Unemployment";
+
+    /// <summary>
+    /// Taxes withheld from payments that are not wages, such as backup withholding on a contractor's payments: deposited
+    /// and filed apart from the payroll taxes (Form 945 in the United States).
+    /// </summary>
+    public const string NonPayrollWithholding = "NonPayrollWithholding";
 }
 
 /// <summary>

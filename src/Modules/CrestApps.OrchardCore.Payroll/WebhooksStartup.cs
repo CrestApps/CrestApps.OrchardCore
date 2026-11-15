@@ -27,8 +27,8 @@ public static class PayrollWebhookEvents
 }
 
 /// <summary>
-/// Declares Payroll's webhook events and publishes them. A run's payload has its totals; a statement's has its ids and
-/// dates but never a person's pay, tax id or bank account.
+/// Declares Payroll's webhook events and publishes them. A run's payload has its ids, dates, status and number of
+/// statements, never its amounts; a statement's has its ids and dates but never a person's pay, tax id or bank account.
 /// </summary>
 [Feature(PayrollConstants.Features.Payroll)]
 [RequireFeatures(WebhooksConstants.Feature.Webhooks)]
@@ -37,7 +37,7 @@ public sealed class PayrollWebhooksStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        var run = new { payRunId = "4qz...", number = "12", employerId = "4ab...", type = "Regular", periodStart = "2026-11-01", periodEnd = "2026-11-14", payDate = "2026-11-20", status = "Approved", statements = 25, gross = 61250.00m, net = 48120.55m, cashNeeded = 66012.40m };
+        var run = new { payRunId = "4qz...", number = "12", employerId = "4ab...", type = "Regular", periodStart = "2026-11-01", periodEnd = "2026-11-14", payDate = "2026-11-20", status = "Approved", statements = 25 };
         var statement = new { statementId = "4st...", number = "1042", payRunId = "4qz...", staffMemberId = "4sm...", employerId = "4ab...", payDate = "2026-11-20", status = "Paid", reversalId = (string)null };
 
         services.AddWebhookEvent(PayrollWebhookEvents.PayRunApproved, "Pay run approved", "Payroll", run);
@@ -90,9 +90,6 @@ internal sealed class PayrollWebhookObserver : IPayRunObserver, IPayStatementObs
             payDate = Day(run.PayDate),
             status = run.Status.ToString(),
             statements = run.Totals.Statements,
-            gross = run.Totals.Gross,
-            net = run.Totals.Net,
-            cashNeeded = run.Totals.CashNeeded,
         }, $"{name}:{run.ItemId}:{run.Version}:{run.Status}", cancellationToken);
     }
 

@@ -19,7 +19,7 @@ Payroll works out what you owe and prepares the forms; you deposit the money and
 ## Liabilities and deposits
 
 1. Open **Payroll > Liabilities and Filings > Liabilities**, choose the employer and the year, and choose **Show**.
-2. Each row is a deposit period of a jurisdiction: what the employees' and the employer's taxes owe, what you deposited, and what is left with its due date. Withholding follows the **Deposit frequency** of the employer's registration (monthly, semi-weekly, quarterly or yearly); unemployment taxes are by quarter.
+2. Each row is a deposit period of a jurisdiction: what the employees' and the employer's taxes owe, what you deposited, and what is left with its due date. Withholding follows the **Deposit frequency** of the employer's registration (monthly, semi-weekly, quarterly or yearly); unemployment taxes are by quarter. Backup withholding from contractors' payments is its own row, **Withholding from other payments**: record its deposits with that choice under **Taxes**.
 3. After you make a deposit, enter it under **Record a deposit**: the jurisdiction, the taxes, the period's first and last days as shown in the list, the amount, the day you paid and the confirmation number. The row shows it as paid once the deposits cover it.
 
 A deposit counted in a filed return can't be deleted; amend the return instead.
@@ -37,7 +37,7 @@ For the Social Security Administration's wage report, run **United States Payrol
 
 ## Contractors and Form 1099-NEC
 
-Pay contractors with a pay run of type **Contractors** and an amount for each invoice; their profile's worker type is **Contractor**. Nothing is withheld, unless the contractor has no tax id on file or you checked **Withhold on a contractor's payments** on their profile because the IRS told you to: then backup withholding (24%) is taken. At year end, prepare **Forms 1099-NEC and 1096** like the wage statements: each contractor paid at least 2,000 in the year (600 before 2026), or withheld on, has a 1099-NEC with a PDF.
+Pay contractors with a pay run of type **Contractors** and an amount for each invoice; their profile's worker type is **Contractor**. Nothing is withheld, unless the contractor has no tax id on file or you checked **Withhold on a contractor's payments** on their profile because the IRS told you to: then backup withholding (24%) is taken. At year end, prepare **Forms 1099-NEC and 1096** like the wage statements: each contractor paid at least 2,000 in the year (600 before 2026), or withheld on, has a 1099-NEC with a PDF. Backup withholding is reported on **Form 945** for the year, never on Form 941: prepare it like the other returns.
 
 ## Close a year
 

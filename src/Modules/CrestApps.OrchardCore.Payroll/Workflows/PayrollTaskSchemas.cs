@@ -58,7 +58,7 @@ internal sealed class CalculatePayRunTaskSchema : PayrollTaskSchemaBase
 
     protected override string DisplayText => "Calculate Pay Run";
 
-    protected override string Description => "Calculates a pay run. Ends in Blocked when a person has a blocker. Writes Statements, Gross, Net and CashNeeded to the output.";
+    protected override string Description => "Calculates a pay run. Ends in Blocked when a person has a blocker. Writes Statements to the output, and Gross, Net and CashNeeded when IncludeTotals is true and the workflow's user may view the employer's payroll reports.";
 
     protected override IEnumerable<string> Outcomes => ["Done", "Blocked", "Failed"];
 

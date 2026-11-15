@@ -293,6 +293,12 @@ public sealed class PayRunInput : CatalogItem, IModifiedUtcAwareModel
     /// </summary>
     public string ImportKey { get; set; }
 
+    /// <summary>
+    /// Gets or sets the user who entered the input (on the page, in a file or in a workflow), who then may not approve
+    /// the run.
+    /// </summary>
+    public string EnteredById { get; set; }
+
     /// <summary>Gets or sets when it was added.</summary>
     public DateTime CreatedUtc { get; set; }
 

@@ -383,6 +383,7 @@ public sealed class PayRunHandler : CatalogEntryHandlerBase<PayRun>
 public sealed class PayRunInputHandler : CatalogEntryHandlerBase<PayRunInput>
 {
     private readonly IClock _clock;
+    private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
@@ -391,9 +392,11 @@ public sealed class PayRunInputHandler : CatalogEntryHandlerBase<PayRunInput>
     /// </summary>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public PayRunInputHandler(IClock clock, IStringLocalizer<PayRunInputHandler> stringLocalizer)
+    /// <param name="httpContextAccessor">The HTTP context accessor, for who entered an input on a page.</param>
+    public PayRunInputHandler(IClock clock, IStringLocalizer<PayRunInputHandler> stringLocalizer, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor = null)
     {
         _clock = clock;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -401,6 +404,7 @@ public sealed class PayRunInputHandler : CatalogEntryHandlerBase<PayRunInput>
     public override Task InitializedAsync(InitializedContext<PayRunInput> context, CancellationToken cancellationToken = default)
     {
         context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.EnteredById ??= _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
         return Task.CompletedTask;
     }
@@ -692,6 +696,42 @@ public sealed partial class DefaultPayRunService : IPayRunService
         return result;
     }
 
+    // The users who prepared a run: who calculated it, who entered its inputs, and who added or changed, since the start
+    // of its period, a pay item of a person it pays.
+    private async Task<List<string>> SubjectsAsync(PayRun run, CancellationToken cancellationToken)
+    {
+        var subjects = new HashSet<string>(StringComparer.Ordinal);
+
+        if (!string.IsNullOrEmpty(run.PreparedById))
+        {
+            subjects.Add(run.PreparedById);
+        }
+
+        foreach (var input in await _inputs.ListByRunAsync(run.ItemId, cancellationToken))
+        {
+            if (!string.IsNullOrEmpty(input.EnteredById))
+            {
+                subjects.Add(input.EnteredById);
+            }
+        }
+
+        var since = run.PeriodStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc).AddDays(-1);
+        var items = _services.GetRequiredService<IPayItemManager>();
+
+        foreach (var profileId in (await ListStatementsAsync(run, cancellationToken)).Select(statement => statement.ProfileId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
+        {
+            foreach (var item in await items.ListByProfileAsync(profileId, cancellationToken))
+            {
+                if (!string.IsNullOrEmpty(item.ChangedById) && (item.ModifiedUtc ?? item.CreatedUtc) >= since)
+                {
+                    subjects.Add(item.ChangedById);
+                }
+            }
+        }
+
+        return [.. subjects];
+    }
+
     /// <inheritdoc />
     public async Task<PayRunResult> SubmitAsync(PayRun run, ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
@@ -722,6 +762,7 @@ public sealed partial class DefaultPayRunService : IPayRunService
 
         var settings = _services.GetService<ISiteService>() is { } site ? await site.GetSettingsAsync<PayrollSettings>() : null;
         var employer = await _employers.FindByIdAsync(run.EmployerId, cancellationToken);
+        var subjects = settings?.AllowPreparerToApprove == true ? new List<string>() : await SubjectsAsync(run, cancellationToken);
         var submitted = await approvals.RequestAsync(new ApprovalSubmission
         {
             Policy = PayrollConstants.PayRunApprovalPolicy,
@@ -734,8 +775,9 @@ public sealed partial class DefaultPayRunService : IPayRunService
             Currency = employer?.Currency,
             SubjectVersion = run.Version,
 
-            // By default the person who prepared the run may not approve it.
-            SubjectUserIds = settings?.AllowPreparerToApprove == true || string.IsNullOrEmpty(run.PreparedById) ? [] : [run.PreparedById],
+            // By default nobody who prepared the run may approve it: who calculated it, who entered its inputs and who
+            // changed the pay items it pays, even when a timer calculated it.
+            SubjectUserIds = subjects,
         }, user, cancellationToken);
 
         if (!submitted.Succeeded)

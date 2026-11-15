@@ -234,6 +234,120 @@ public sealed class PayRunTests
     }
 
     [Fact]
+    public async Task Approval_LeavesOutWhoEnteredInputsAndChangedPayItems_EvenWhenATimerCalculated()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var setup = await SetUpAsync(harness);
+        var clerk = CalendarTestHarness.User("clerk", PayrollPermissions.PreparePayRuns.Name);
+        var itemUser = CalendarTestHarness.User("item-user", PayrollPermissions.ManagePayProfiles.Name);
+
+        // A bonus from a file saved by the clerk, and a pay item changed by someone else on its page.
+        await harness.RunAsync(async services =>
+        {
+            Assert.Null(await services.GetRequiredService<PayRunInputImporter>().SaveAsync(new PayRunInputRow { PayRun = setup.RunNumber, EmployeeNumber = "1001", PayCode = "BONUS", Amount = "100" }, clerk, "Pipeline bonuses"));
+
+            var accessor = services.GetService<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
+
+            if (accessor is not null)
+            {
+                accessor.HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = itemUser };
+            }
+
+            var items = services.GetRequiredService<IPayItemManager>();
+            var item = await items.NewAsync();
+
+            item.ProfileId = (await services.GetRequiredService<IPayProfileManager>().ListByEmployersAsync([setup.EmployerId])).Single().ItemId;
+            item.PayCodeId = setup.BonusCodeId;
+            item.Amount = 10;
+            item.StartDate = new DateOnly(2026, 1, 1);
+            await items.CreateAsync(item);
+
+            if (accessor is not null)
+            {
+                accessor.HttpContext = null;
+            }
+        });
+
+        // A timer calculates and submits: nobody is the preparer.
+        var request = await harness.RunAsync(async services =>
+        {
+            var service = services.GetRequiredService<IPayRunService>();
+            var run = await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId);
+
+            await service.CalculateAsync(run, null);
+            run = await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId);
+
+            var submitted = await service.SubmitAsync(run, CalendarTestHarness.User("submitter", PayrollPermissions.PreparePayRuns.Name));
+
+            Assert.True(submitted.Succeeded, string.Join(" ", submitted.Errors));
+
+            return await services.GetRequiredService<IApprovalRequestManager>().FindByIdAsync((await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId)).ApprovalRequestId);
+        });
+
+        Assert.Contains(clerk.FindFirstValue(ClaimTypes.NameIdentifier), request.SubjectUserIds);
+        Assert.Contains(itemUser.FindFirstValue(ClaimTypes.NameIdentifier), request.SubjectUserIds);
+    }
+
+    [Fact]
+    public async Task PayItems_AreForWhoManagesTheEmployersProfiles_AndNeverOnesOwn()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var setup = await SetUpAsync(harness);
+        var contoso = CalendarTestHarness.User("contoso", PayrollPermissionTemplates.For(PayrollPermissions.ManagePayProfiles, setup.EmployerId).Name, PayrollPermissionTemplates.For(PayrollPermissions.ViewPayProfiles, setup.EmployerId).Name);
+        var fabrikam = CalendarTestHarness.User("fabrikam", PayrollPermissionTemplates.For(PayrollPermissions.ManagePayProfiles, "fabrikam").Name, PayrollPermissionTemplates.For(PayrollPermissions.ViewPayProfiles, "fabrikam").Name);
+        var lee = CalendarTestHarness.User("lee", PayrollPermissions.ManagePayProfiles.Name, PayrollPermissions.ViewPayProfiles.Name);
+
+        var results = await harness.RunAsync(async services =>
+        {
+            var profileId = (await services.GetRequiredService<IPayProfileManager>().ListByEmployersAsync([setup.EmployerId])).Single().ItemId;
+            var staff = services.GetRequiredService<CrestApps.OrchardCore.Staff.Services.IStaffMemberManager>();
+            var member = await staff.FindByIdAsync(setup.StaffMemberId);
+
+            member.UserId = lee.FindFirstValue(ClaimTypes.NameIdentifier);
+            await staff.UpdateAsync(member);
+
+            CrestApps.OrchardCore.Payroll.Controllers.PayItemsController Controller(ClaimsPrincipal user)
+                => new(
+                    services.GetRequiredService<IPayItemManager>(),
+                    services.GetRequiredService<IPayProfileManager>(),
+                    services.GetRequiredService<IPayProfileService>(),
+                    services.GetRequiredService<IPayCodeManager>(),
+                    services.GetRequiredService<IPayrollScopeService>(),
+                    services.GetRequiredService<CrestApps.OrchardCore.Payroll.Services.PayrollNames>(),
+                    Moq.Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(accessor => accessor.ModelUpdater == new CrestApps.OrchardCore.Tests.Taxation.Fakes.FakeUpdateModel(new object())),
+                    Moq.Mock.Of<global::OrchardCore.DisplayManagement.IDisplayManager<EmployeePayItem>>(),
+                    Moq.Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
+                    new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughHtmlLocalizer<CrestApps.OrchardCore.Payroll.Controllers.PayItemsController>(),
+                    new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CrestApps.OrchardCore.Payroll.Controllers.PayItemsController>())
+                {
+                    ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+                    {
+                        HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+                        {
+                            User = user,
+                            RequestServices = new ServiceCollection()
+                                .AddSingleton(Moq.Mock.Of<Microsoft.AspNetCore.Mvc.ViewFeatures.ITempDataDictionaryFactory>())
+                                .AddSingleton<Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.ModelBinding.EmptyModelMetadataProvider>()
+                                .BuildServiceProvider(),
+                        },
+                    },
+                    Url = Moq.Mock.Of<Microsoft.AspNetCore.Mvc.IUrlHelper>(),
+                };
+
+            return (
+                await Controller(contoso).Create(profileId),
+                await Controller(fabrikam).Create(profileId),
+                await Controller(fabrikam).Index(profileId),
+                await Controller(lee).Create(profileId));
+        });
+
+        Assert.IsNotType<Microsoft.AspNetCore.Mvc.ForbidResult>(results.Item1);
+        Assert.IsType<Microsoft.AspNetCore.Mvc.ForbidResult>(results.Item2);
+        Assert.IsType<Microsoft.AspNetCore.Mvc.ForbidResult>(results.Item3);
+        Assert.IsType<Microsoft.AspNetCore.Mvc.ForbidResult>(results.Item4);
+    }
+
+    [Fact]
     public async Task Run_WithBlockers_CantBeSubmitted_AndACancelledRunTakesNoMoreWork()
     {
         await using var harness = await CreateHarnessAsync();

@@ -739,6 +739,12 @@ public class MyPayIndexViewModel
     /// Gets or sets the person's coming pay to review: the draft statement and its employer.
     /// </summary>
     public IList<(PayStatement Statement, string EmployerName)> ToReview { get; set; } = [];
+
+    /// <summary>Gets or sets the coming pay to review, as a list.</summary>
+    public AdminListContext ComingPay { get; set; }
+
+    /// <summary>Gets or sets the employers that pay the person, as a list.</summary>
+    public AdminListContext PayDetails { get; set; }
 }
 
 /// <summary>
@@ -755,6 +761,33 @@ public class MyPayReviewViewModel
     public bool IsCurrent { get; set; }
 
     public string Note { get; set; }
+}
+
+/// <summary>
+/// A statement of My Pay's coming pay, to review before the run is submitted.
+/// </summary>
+public sealed class MyPayComingPayRow
+{
+    /// <summary>Gets or sets the draft statement.</summary>
+    public PayStatement Statement { get; set; }
+
+    /// <summary>Gets or sets the name of the employer that pays it.</summary>
+    public string EmployerName { get; set; }
+}
+
+/// <summary>
+/// A pay profile of My Pay: one employer that pays the person.
+/// </summary>
+public sealed class MyPayProfileRow
+{
+    /// <summary>Gets or sets the profile.</summary>
+    public EmployeePayProfile Profile { get; set; }
+
+    /// <summary>Gets or sets the employer's name.</summary>
+    public string EmployerName { get; set; }
+
+    /// <summary>Gets or sets whether the person may change their elections and net pay split.</summary>
+    public bool CanManageDetails { get; set; }
 }
 
 public sealed class MyPayStatementRow

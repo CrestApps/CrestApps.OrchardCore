@@ -113,6 +113,21 @@ public sealed class ReportExportPermissionTests
     }
 
     [Fact]
+    public async Task ASubscription_SendsNothing_OnceWhoSavedItMayNoLongerViewTheReport()
+    {
+        var email = new Mock<IEmailService>();
+        var subscription = Subscription(modifiedBy: "former");
+
+        // The person who saved it lost the report's view permission (or the user is gone).
+        var sent = await SubscriptionService(email, grants: new() { ["former"] = [] }).SendAsync(subscription, DateTime.UtcNow, reschedule: false, TestContext.Current.CancellationToken);
+
+        Assert.False(sent);
+        Assert.Contains("former may no longer view it", subscription.LastError);
+        Assert.Empty(_runs);
+        email.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task ASubscription_SendsTheExport_WhileWhoSavedItHasTheExportPermission_WithTheScreenInTheEmail()
     {
         var email = new Mock<IEmailService>();

@@ -106,7 +106,7 @@ public sealed class PayrollFilingsController : Controller
 
         deposit.EmployerId = employer.ItemId;
         deposit.Jurisdiction = model.Jurisdiction?.Trim().ToUpperInvariant();
-        deposit.Group = model.Group == TaxLiabilityGroups.Unemployment ? TaxLiabilityGroups.Unemployment : TaxLiabilityGroups.Withholding;
+        deposit.Group = model.Group is TaxLiabilityGroups.Unemployment or TaxLiabilityGroups.NonPayrollWithholding ? model.Group : TaxLiabilityGroups.Withholding;
         deposit.PeriodStart = model.PeriodStart ?? default;
         deposit.PeriodEnd = model.PeriodEnd ?? default;
         deposit.Amount = decimal.TryParse(model.Amount?.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var amount) ? amount : 0;

@@ -66,4 +66,6 @@ public class PayrollTaskViewModel
     public string Amount { get; set; }
 
     public string Note { get; set; }
+
+    public string IncludeTotals { get; set; }
 }

@@ -397,7 +397,14 @@ public sealed class TaxLiabilityService : ITaxLiabilityService
         {
             foreach (var line in statement.Lines.Where(line => line.Type == PayLineType.Tax && !string.IsNullOrEmpty(line.Jurisdiction)))
             {
-                var group = line.TaxCategory == PayrollTaxCategories.Unemployment ? TaxLiabilityGroups.Unemployment : TaxLiabilityGroups.Withholding;
+                var group = line.TaxCategory switch
+                {
+                    PayrollTaxCategories.Unemployment => TaxLiabilityGroups.Unemployment,
+
+                    // Withheld from a contractor's payments: not a payroll tax, deposited and filed on its own.
+                    PayrollTaxCategories.ContractorWithholding => TaxLiabilityGroups.NonPayrollWithholding,
+                    _ => TaxLiabilityGroups.Withholding,
+                };
                 var schedule = group == TaxLiabilityGroups.Unemployment
                     ? DepositSchedules.Quarterly
                     : employer.Registrations.FirstOrDefault(registration => string.Equals(registration.Jurisdiction, line.Jurisdiction, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(registration.DepositFrequency))?.DepositFrequency ?? DepositSchedules.Monthly;

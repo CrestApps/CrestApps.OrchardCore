@@ -15,7 +15,9 @@ using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Moq;
 using OrchardCore.DataSources;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Payroll;
 
@@ -391,6 +393,77 @@ public sealed class PayrollReviewFixesTests
         Assert.Contains(result.Errors, error => error.Contains("Calculate the run again", StringComparison.Ordinal));
         Assert.Equal(PayRunStatus.Approved, run.Status);
         Assert.Empty(context.Checks.Store.Entries);
+    }
+
+    [Fact]
+    public async Task TaxIdHashKey_IsKeptProtected_AndAKeyKeptInClearIsProtectedWithTheSameValue()
+    {
+        await using var harness = await PayRunTests.CreateHarnessAsync();
+        var legacy = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+
+        // An earlier version kept the key in clear.
+        await harness.RunAsync(async services => await services.GetRequiredService<global::YesSql.ISession>().SaveAsync(new PayrollKeys { TaxIdHashKey = Convert.ToBase64String(legacy) }, false, PayrollConstants.CollectionName));
+
+        var hash = await harness.RunAsync(async services => await services.GetRequiredService<PayrollTaxIdHasher>().HashAsync("123-45-6789"));
+        var stored = await harness.RunAsync(async services => await services.GetRequiredService<global::YesSql.ISession>().Query<PayrollKeys>(collection: PayrollConstants.CollectionName).FirstOrDefaultAsync(), commit: false);
+
+        // The hashes already stored still match: the same key, now protected.
+        Assert.Equal(Convert.ToHexString(System.Security.Cryptography.HMACSHA256.HashData(legacy, System.Text.Encoding.UTF8.GetBytes("123456789"))), hash);
+        Assert.Null(stored.TaxIdHashKey);
+        Assert.False(string.IsNullOrEmpty(stored.ProtectedTaxIdHashKey));
+        Assert.DoesNotContain(Convert.ToBase64String(legacy), stored.ProtectedTaxIdHashKey, StringComparison.Ordinal);
+
+        // A second hasher, in another scope, reads the protected key back.
+        Assert.Equal(hash, await harness.RunAsync(async services => await services.GetRequiredService<PayrollTaxIdHasher>().HashAsync("123 45 6789"), commit: false));
+    }
+
+    [Fact]
+    public async Task TaxIdHashKey_MadeNew_IsNeverStoredAsItsRawBytes()
+    {
+        await using var harness = await PayRunTests.CreateHarnessAsync();
+
+        await harness.RunAsync(async services => await services.GetRequiredService<PayrollTaxIdHasher>().HashAsync("987654321"));
+
+        var stored = Assert.Single(await harness.RunAsync(async services => await services.GetRequiredService<global::YesSql.ISession>().Query<PayrollKeys>(collection: PayrollConstants.CollectionName).ListAsync(), commit: false));
+        var raw = new byte[64];
+
+        Assert.Null(stored.TaxIdHashKey);
+        Assert.False(Convert.TryFromBase64String(stored.ProtectedTaxIdHashKey, raw, out var length) && length == 32);
+    }
+
+    [Fact]
+    public void SameTaxId_NamesOnlyProfilesAtEmployersTheUserManages()
+    {
+        var same = new[]
+        {
+            new EmployeePayProfile { StaffMemberId = "ana", EmployerId = "contoso" },
+            new EmployeePayProfile { StaffMemberId = "ben", EmployerId = "fabrikam" },
+            new EmployeePayProfile { StaffMemberId = "cy", EmployerId = "fabrikam" },
+        };
+        var names = new Dictionary<string, string> { ["ana"] = "Ana Diaz", ["ben"] = "Ben Ode", ["cy"] = "Cy Wu" };
+
+        Assert.Equal(["Ana Diaz", "another pay profile"], CrestApps.OrchardCore.Payroll.Drivers.PayProfileDisplayDriver.SameTaxIdLabels(same, new PayrollScope(false, ["contoso"]), names, "another pay profile"));
+        Assert.Equal(["Ana Diaz", "Ben Ode", "Cy Wu"], CrestApps.OrchardCore.Payroll.Drivers.PayProfileDisplayDriver.SameTaxIdLabels(same, PayrollScope.Everyone, names, "another pay profile"));
+    }
+
+    [Fact]
+    public async Task SavedExportColumns_WaitQuietlyForDataPipelines_AndAreKeptUntilThen()
+    {
+        var features = new Moq.Mock<global::OrchardCore.Environment.Shell.IShellFeaturesManager>();
+
+        features.Setup(manager => manager.GetEnabledFeaturesAsync()).ReturnsAsync([]);
+
+        // Without Data Pipelines nothing is read or written: the saved columns stay for the next start.
+        var session = new Moq.Mock<global::YesSql.ISession>(Moq.MockBehavior.Strict);
+        var services = new ServiceCollection().AddSingleton(features.Object).BuildServiceProvider();
+        var importer = new CrestApps.OrchardCore.Workforce.Recipes.PayrollCsvPipelineImporter(services, session.Object, Microsoft.Extensions.Logging.Abstractions.NullLogger<CrestApps.OrchardCore.Workforce.Recipes.PayrollCsvPipelineImporter>.Instance);
+
+        await importer.RetrySavedColumnsAsync();
+
+        session.VerifyNoOtherCalls();
+
+        // The retry runs at each start of the site.
+        Assert.Contains(typeof(CrestApps.OrchardCore.Workforce.Recipes.PayrollCsvPipelineImporter).Assembly.GetTypes(), type => type.Name == "PayrollCsvColumnsRetry" && typeof(global::OrchardCore.Modules.IModularTenantEvents).IsAssignableFrom(type));
     }
 
     [Fact]

@@ -170,6 +170,50 @@ public sealed class Form941 : IPayrollFilingForm
 }
 
 /// <summary>
+/// Form 945, the annual return of federal income tax withheld from payments that are not wages: the backup withholding
+/// on contractors' payments, the deposits made for it and the balance. It is kept out of Form 941.
+/// </summary>
+public sealed class Form945 : IPayrollFilingForm
+{
+    private static readonly LocalizationSource _displayName = LocalizationSource.Create<Form945>("Form 945 (annual return of withheld federal income tax)");
+
+    /// <summary>The form's stored name.</summary>
+    public const string FormName = "US-945";
+
+    /// <inheritdoc />
+    public string Name => FormName;
+
+    /// <inheritdoc />
+    public LocalizationSource DisplayName => _displayName;
+
+    /// <inheritdoc />
+    public string Jurisdiction => UnitedStatesPayroll.Jurisdiction;
+
+    /// <inheritdoc />
+    public bool IsQuarterly => false;
+
+    /// <inheritdoc />
+    public bool HasPersonStatements => false;
+
+    /// <inheritdoc />
+    public Task PrepareAsync(PayrollFilingContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var boxes = context.Filing.Boxes;
+
+        boxes["1"] = 0;
+        boxes["2"] = UnitedStatesFilingSums.Tax(UnitedStatesFilingSums.Contractors(context), Form1099Nec.BackupWithholdingCode);
+        boxes["3"] = boxes["1"] + boxes["2"];
+        boxes["4"] = UnitedStatesFilingSums.Deposited(context.Deposits, TaxLiabilityGroups.NonPayrollWithholding);
+        boxes["5"] = Math.Max(0, boxes["3"] - boxes["4"]);
+        boxes["6"] = Math.Max(0, boxes["4"] - boxes["3"]);
+
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
 /// Form 940, the employer's annual federal unemployment return: payments to employees, the part exempt or over the
 /// wage base, the taxable wages, the tax at the federal rule's rate, the deposits and the balance.
 /// </summary>
@@ -458,6 +502,25 @@ public static class UnitedStatesEfw2
         ("12H", 331, 205),
     ];
 
+    /// <summary>The box 12 codes of retirement plan contributions, any of which sets the retirement plan indicator.</summary>
+    public static readonly IReadOnlyList<string> RetirementPlanCodes = ["12D", "12E", "12F", "12G", "12H", "12S"];
+
+    /// <summary>
+    /// Gets the boxes of a person with an amount the file doesn't write: box 12 codes other than D to H, and boxes 8
+    /// and 11. A file with one of them is refused, rather than written without it.
+    /// </summary>
+    /// <param name="boxes">The person's boxes.</param>
+    /// <returns>The boxes and their amounts, such as 12W 1200.00, or an empty text.</returns>
+    public static string Unwritten(IReadOnlyDictionary<string, decimal> boxes)
+    {
+        ArgumentNullException.ThrowIfNull(boxes);
+
+        return string.Join(", ", boxes
+            .Where(pair => pair.Value != 0 && (pair.Key is "8" or "11" || (pair.Key.StartsWith("12", StringComparison.Ordinal) && pair.Key.Length > 2 && !MoneyFields.Any(field => field.Box == pair.Key))))
+            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => $"{pair.Key} {pair.Value.ToString("0.00", CultureInfo.InvariantCulture)}"));
+    }
+
     /// <summary>
     /// Writes the file.
     /// </summary>
@@ -522,6 +585,9 @@ public static class UnitedStatesEfw2
         Set(record, 423, 15, Digits(submitter.ContactPhone));
         Set(record, 446, 40, submitter.ContactEmail, upper: false);
 
+        // The preparer code: the employer prepared its own file.
+        Set(record, 500, 1, "L");
+
         return new string(record);
     }
 
@@ -567,7 +633,7 @@ public static class UnitedStatesEfw2
         }
 
         Set(record, 488, 1, "0");
-        Set(record, 490, 1, person.Boxes.GetValueOrDefault("12D") + person.Boxes.GetValueOrDefault("12E") + person.Boxes.GetValueOrDefault("12G") > 0 ? "1" : "0");
+        Set(record, 490, 1, RetirementPlanCodes.Any(code => person.Boxes.GetValueOrDefault(code) > 0) ? "1" : "0");
         Set(record, 491, 1, "0");
 
         return new string(record);

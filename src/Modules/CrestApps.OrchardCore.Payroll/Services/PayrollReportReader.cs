@@ -47,15 +47,31 @@ public sealed class PayrollReportReader
         => user is null ? Task.FromResult(PayrollScope.None) : _scope.GetScopeAsync(user, permission, cancellationToken);
 
     /// <summary>
-    /// Gets the employers the user of a report may read. A report needs the global View pay runs permission, which the
-    /// reports framework checks; a report run in the background (a subscription) has no request and reads every employer.
+    /// Gets the employers the user of a report may read with a permission: the user the report runs for (a
+    /// subscription's owner), or else the user of the request. With neither, nothing is read.
     /// </summary>
+    /// <param name="context">The report's context.</param>
+    /// <param name="permission">The permission.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The scope.</returns>
-    public async Task<PayrollScope> GetReportScopeAsync(CancellationToken cancellationToken = default)
-        => _httpContextAccessor.HttpContext?.User is { Identity.IsAuthenticated: true } user
-            ? await _scope.GetScopeAsync(user, PayrollPermissions.ViewPayRuns, cancellationToken)
-            : PayrollScope.Everyone;
+    public async Task<PayrollScope> GetReportScopeAsync(CrestApps.OrchardCore.Reports.ReportContext context, Permission permission, CancellationToken cancellationToken = default)
+        => (context?.User ?? _httpContextAccessor.HttpContext?.User) is { Identity.IsAuthenticated: true } user
+            ? await _scope.GetScopeAsync(user, permission, cancellationToken)
+            : PayrollScope.None;
+
+    /// <summary>
+    /// Gets the employers in both scopes.
+    /// </summary>
+    /// <param name="first">A scope.</param>
+    /// <param name="second">Another scope.</param>
+    /// <returns>The employers in both.</returns>
+    public static PayrollScope Intersect(PayrollScope first, PayrollScope second)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(second);
+
+        return first.All ? second : second.All ? first : new PayrollScope(false, first.EmployerIds.Where(second.EmployerIds.Contains));
+    }
 
     /// <summary>
     /// Lists the final statements (reversals included) of the employers in a scope paid in a range of days.

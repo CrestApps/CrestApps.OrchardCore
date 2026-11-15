@@ -44,8 +44,8 @@ public sealed class PayrollIntegrationTests
     {
         var (harness, setup, _) = await ProcessedAsync();
         await using var _ = harness;
-        var viewer = CalendarTestHarness.User("viewer", PayrollPermissionTemplates.For(PayrollPermissions.ViewPayRuns, setup.EmployerId).Name);
-        var stranger = CalendarTestHarness.User("stranger", PayrollPermissionTemplates.For(PayrollPermissions.ViewPayRuns, "fabrikam").Name);
+        var viewer = CalendarTestHarness.User("viewer", PayrollPermissionTemplates.For(PayrollPermissions.ViewPayrollReports, setup.EmployerId).Name);
+        var stranger = CalendarTestHarness.User("stranger", PayrollPermissionTemplates.For(PayrollPermissions.ViewPayrollReports, "fabrikam").Name);
 
         var (statements, earnings, taxes, payments, yearToDate, runs, strangerRows, strangerMay) = await harness.RunAsync(async services =>
         {
@@ -160,6 +160,87 @@ public sealed class PayrollIntegrationTests
     }
 
     [Fact]
+    public async Task Reports_ExportOnlyWithExportPayrollData_AndReadNothingWithoutAUser()
+    {
+        var (harness, setup, _) = await ProcessedAsync();
+        await using var _ = harness;
+
+        // Every payroll report needs Export payroll data to be exported or attached.
+        Assert.All(
+            [PayrollRegisterReport.ExportPermission, PayrollSummaryReport.ExportPermission, CashRequirementReport.ExportPermission, DeductionsAndContributionsReport.ExportPermission, LaborDistributionReport.ExportPermission, YearToDateEarningsReport.ExportPermission],
+            permission => Assert.Equal(PayrollPermissions.ExportPayrollData.Name, permission.Name));
+
+        // Sees Contoso's runs, but exports only another employer's data: on screen the register has rows, in a file none.
+        var viewer = CalendarTestHarness.User("viewer", PayrollPermissions.ViewPayRuns.Name, PayrollPermissionTemplates.For(PayrollPermissions.ExportPayrollData, "fabrikam").Name);
+
+        var (display, export, background, owner) = await harness.RunAsync(async services =>
+        {
+            PayrollReportReader Reader(System.Security.Claims.ClaimsPrincipal user)
+                => new(services.GetRequiredService<IPayrollScopeService>(), services.GetRequiredService<PayStatementStore>(), services.GetRequiredService<PayRunStore>(), services.GetRequiredService<EmployerStore>(), new HttpContextAccessor { HttpContext = user is null ? null : new DefaultHttpContext { User = user } });
+
+            PayrollRegisterReport Register(System.Security.Claims.ClaimsPrincipal user)
+                => new(Reader(user), services.GetRequiredService<ILocalClock>(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<PayrollRegisterReport>());
+
+            return (
+                await Register(viewer).RunAsync(new ReportContext(new ReportFilter()), TestContext.Current.CancellationToken),
+                await Register(viewer).RunAsync(new ReportContext(new ReportFilter(), ReportRunMode.Export), TestContext.Current.CancellationToken),
+
+                // A subscription with no request and no owner reads nothing; with its owner, what the owner sees.
+                await Register(null).RunAsync(new ReportContext(new ReportFilter()), TestContext.Current.CancellationToken),
+                await Register(null).RunAsync(new ReportContext(new ReportFilter()) { User = viewer }, TestContext.Current.CancellationToken));
+        }, commit: false);
+
+        static int Rows(ReportDocument document)
+            => document.Sections.Where(section => section.Kind == ReportSectionKind.Table).Sum(section => section.Rows.Count);
+
+        Assert.True(Rows(display) > 0);
+        Assert.Empty(export.Sections);
+        Assert.Equal(0, Rows(background));
+        Assert.Equal(Rows(display), Rows(owner));
+    }
+
+    [Fact]
+    public async Task WorkflowTasks_WriteTheRunsAmountsOnlyWhenAskedAndAllowed()
+    {
+        var context = new DisbursementsTestContext();
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => PayRunProcessingTests.AddPayments(services, context, deposits: false, checks: true));
+        var setup = await PayRunTests.SetUpAsync(harness);
+        var evaluator = new Mock<global::OrchardCore.Workflows.Services.IWorkflowExpressionEvaluator>();
+
+        evaluator
+            .Setup(service => service.EvaluateAsync(It.IsAny<global::OrchardCore.Workflows.Models.WorkflowExpression<string>>(), It.IsAny<global::OrchardCore.Workflows.Models.WorkflowExecutionContext>(), It.IsAny<System.Text.Encodings.Web.TextEncoder>()))
+            .Returns<global::OrchardCore.Workflows.Models.WorkflowExpression<string>, global::OrchardCore.Workflows.Models.WorkflowExecutionContext, System.Text.Encodings.Web.TextEncoder>((expression, _, _) => Task.FromResult(expression.Expression));
+
+        async Task<IDictionary<string, object>> CalculateAsync(string includeTotals, System.Security.Claims.ClaimsPrincipal user)
+            => await harness.RunAsync(async services =>
+            {
+                if (services.GetService<IHttpContextAccessor>() is { } accessor)
+                {
+                    accessor.HttpContext = user is null ? null : new DefaultHttpContext { User = user };
+                }
+
+                var task = new CalculatePayRunTask(services, evaluator.Object, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CalculatePayRunTask>()) { PayRunId = setup.RunId, IncludeTotals = includeTotals };
+                var workflow = Context();
+
+                await task.ExecuteAsync(workflow, null);
+
+                return workflow.Output;
+            });
+
+        var preparer = CalendarTestHarness.User("preparer", PayrollPermissions.PreparePayRuns.Name);
+        var reader = CalendarTestHarness.User("reader", PayrollPermissions.PreparePayRuns.Name, PayrollPermissions.ViewPayrollReports.Name);
+
+        var notAsked = await CalculateAsync(null, reader);
+        var notAllowed = await CalculateAsync("true", preparer);
+        var allowed = await CalculateAsync("true", reader);
+
+        Assert.True(notAsked.ContainsKey("Statements"));
+        Assert.False(notAsked.ContainsKey("Gross"));
+        Assert.False(notAllowed.ContainsKey("Gross"));
+        Assert.Equal(1600m, Convert.ToDecimal(allowed["Gross"], System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
     public void WorkflowEvents_FollowEachStepOfARun()
     {
         Assert.Equal([nameof(PayRunOpenedEvent)], PayrollWorkflowObserver.EventsFor(PayRunChangeKind.Opened));
@@ -171,7 +252,7 @@ public sealed class PayrollIntegrationTests
     }
 
     [Fact]
-    public async Task Webhooks_SendARunsTotals_ButNeverAPersonsPay()
+    public async Task Webhooks_SendARunsCountAndDates_ButNeverAnAmount()
     {
         var published = new List<(string Name, string Payload)>();
         var publisher = new Mock<IWebhookPublisher>();
@@ -190,7 +271,9 @@ public sealed class PayrollIntegrationTests
         await observer.IssuedAsync(statement, TestContext.Current.CancellationToken);
 
         Assert.Equal([PayrollWebhookEvents.PayRunProcessed, PayrollWebhookEvents.PayStatementIssued], published.Select(entry => entry.Name));
-        Assert.Contains("\"net\":3001.60", published[0].Payload, StringComparison.Ordinal);
+        Assert.Contains("\"statements\":2", published[0].Payload, StringComparison.Ordinal);
+        Assert.DoesNotContain("3001.60", published[0].Payload, StringComparison.Ordinal);
+        Assert.DoesNotContain("3200", published[0].Payload, StringComparison.Ordinal);
         Assert.DoesNotContain("1500.80", published[1].Payload, StringComparison.Ordinal);
         Assert.DoesNotContain("1600", published[1].Payload, StringComparison.Ordinal);
         Assert.Contains("\"staffMemberId\":\"lee\"", published[1].Payload, StringComparison.Ordinal);
@@ -291,7 +374,7 @@ public sealed class PayrollIntegrationTests
                 ["Status"] = "Paid",
                 ["Lines"] = new JsonArray(
                     new JsonObject { ["Type"] = "Earning", ["PayCodeId"] = setup.BonusCodeId, ["Description"] = "Bonus", ["Amount"] = 2000m },
-                    new JsonObject { ["Type"] = "Tax", ["TaxCode"] = "US-SS", ["Payer"] = "Employee", ["Amount"] = 124m }),
+                    new JsonObject { ["Type"] = "Tax", ["TaxCode"] = "US-SS", ["Payer"] = "Employee", ["Amount"] = 124m, ["TaxableWages"] = 2000m }),
             }),
         };
 
@@ -477,6 +560,42 @@ public sealed class PayrollIntegrationTests
     {
         public object GetService(Type type)
             => type == serviceType ? instance : services.GetService(type);
+    }
+
+    [Fact]
+    public async Task PayHistory_RefusesATaxLineWithoutItsTaxableWages()
+    {
+        var (harness, setup, _) = await ProcessedAsync();
+        await using var _ = harness;
+        var step = new JsonObject
+        {
+            ["name"] = PayrollConstants.PayHistoryRecipeStepName,
+            [PayHistoryRecipeStep.EntriesName] = new JsonArray(new JsonObject
+            {
+                ["EmployerId"] = setup.EmployerId,
+                ["StaffMemberId"] = setup.StaffMemberId,
+                ["PayDate"] = "2026-03-06",
+                ["Status"] = "Paid",
+                ["Gross"] = 1000,
+                ["Net"] = 923.50,
+                ["Lines"] = new JsonArray(
+                    new JsonObject { ["Type"] = "Earning", ["PayCodeId"] = setup.BonusCodeId, ["Amount"] = 1000 },
+                    new JsonObject { ["Type"] = "Tax", ["TaxCode"] = "US-SS", ["Amount"] = 62, ["Payer"] = "Employee" },
+                    new JsonObject { ["Type"] = "Tax", ["TaxCode"] = "US-MED", ["Amount"] = 14.50, ["Payer"] = "Employee", ["TaxableWages"] = 1000 }),
+            }),
+        };
+
+        var errors = await harness.RunAsync(async services =>
+        {
+            var context = new global::OrchardCore.Recipes.Models.RecipeExecutionContext { Name = PayrollConstants.PayHistoryRecipeStepName, Step = step };
+
+            await ActivatorUtilities.CreateInstance<PayHistoryRecipeStep>(services).ExecuteAsync(context);
+
+            return context.Errors.ToList();
+        });
+
+        Assert.Contains(errors, error => error.Contains("without TaxableWages", StringComparison.Ordinal));
+        Assert.Empty(await harness.RunAsync(async services => await services.GetRequiredService<PayStatementStore>().ListAsync(index => index.PayDay == 20260306), commit: false));
     }
 
     private static List<Dictionary<string, object>> Rows(DataRowSet table)

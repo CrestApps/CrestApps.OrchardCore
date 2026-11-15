@@ -163,6 +163,9 @@ public sealed class MyPayController : Controller
             model.TaxForms = new AdminListContext<MyPayTaxFormViewModel> { Source = forms };
         }
 
+        model.ComingPay = new AdminListContext<MyPayComingPayRow> { Source = [.. model.ToReview.Select(pair => new MyPayComingPayRow { Statement = pair.Statement, EmployerName = pair.EmployerName })] };
+        model.PayDetails = new AdminListContext<MyPayProfileRow> { Source = [.. model.Profiles.Select(pair => new MyPayProfileRow { Profile = pair.Profile, EmployerName = pair.EmployerName, CanManageDetails = model.CanManageDetails })] };
+
         // Banking keeps the person's own bank accounts: link to it when it is on.
         model.CanManageBankAccounts = HttpContext.RequestServices.GetService<IBankAccountManager>() is not null
             && await _authorizationService.AuthorizeAsync(User, BankingPermissions.ManageOwnBankAccounts);

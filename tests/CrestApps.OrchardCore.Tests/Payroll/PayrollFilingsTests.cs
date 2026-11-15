@@ -181,6 +181,201 @@ public sealed class PayrollFilingsTests
         Assert.Equal("0000002", records[4][2..9]);
         Assert.Equal("000000000873456", records[4][9..24]);
         Assert.Equal("000000002", records[5][7..16]);
+
+        // The preparer code (self-prepared) and the retirement plan indicator of who has a box 12 plan code.
+        Assert.Equal('L', records[0][499]);
+        Assert.Equal(('1', '0'), (records[2][489], records[3][489]));
+        Assert.Equal("12W 1200.00", UnitedStatesEfw2.Unwritten(new Dictionary<string, decimal> { ["1"] = 10m, ["12D"] = 5m, ["12W"] = 1200m }));
+    }
+
+    [Fact]
+    public async Task WageRecords_ReadOneFilingAYear_AndTheFileRefusesAMissingNumberAndABoxItCantHold()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var (setup, _) = await SeedAsync(harness);
+
+        // The filed W-2s and an amendment being prepared: Lee is in both.
+        await harness.RunAsync(async services =>
+        {
+            var filings = services.GetRequiredService<IPayrollFilingManager>();
+            var profileId = (await services.GetRequiredService<IPayProfileManager>().ListByEmployersAsync([setup.EmployerId])).Single().ItemId;
+
+            PayrollFilingPerson Lee(decimal wages)
+                => new() { StaffMemberId = setup.StaffMemberId, ProfileId = profileId, Name = "Lee Park", Boxes = new Dictionary<string, decimal>(StringComparer.Ordinal) { ["1"] = wages } };
+
+            var filed = new PayrollFiling { ItemId = "w2filed000000000000000001", EmployerId = setup.EmployerId, Form = FormW2.FormName, Year = 2026, Status = PayrollFilingStatus.Filed, FiledOn = new DateOnly(2027, 1, 20), People = [Lee(7500)] };
+            var amendment = new PayrollFiling { ItemId = "w2amend000000000000000001", EmployerId = setup.EmployerId, Form = FormW2.FormName, Year = 2026, Status = PayrollFilingStatus.Draft, AmendsId = filed.ItemId, People = [Lee(7600)] };
+
+            await filings.CreateAsync(filed);
+            await filings.CreateAsync(amendment);
+        });
+
+        var exporter = CalendarTestHarness.User("exporter", PayrollPermissions.ExportPayrollData.Name);
+        var stranger = CalendarTestHarness.User("stranger", PayrollPermissionTemplates.For(PayrollPermissions.ExportPayrollData, "fabrikam").Name);
+
+        async Task<List<Dictionary<string, object>>> ReadAsync(string dataSet, System.Security.Claims.ClaimsPrincipal user, bool draft = false)
+            => await harness.RunAsync(async services =>
+            {
+                var reader = new CrestApps.OrchardCore.Payroll.Services.PayrollReportReader(services.GetRequiredService<IPayrollScopeService>(), services.GetRequiredService<PayStatementStore>(), services.GetRequiredService<PayRunStore>(), services.GetRequiredService<EmployerStore>(), new Microsoft.AspNetCore.Http.HttpContextAccessor());
+                var source = new CrestApps.OrchardCore.Payroll.DataSources.PayrollDataSource(
+                [
+                    ActivatorUtilities.CreateInstance<CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet>(services, reader),
+                    ActivatorUtilities.CreateInstance<CrestApps.OrchardCore.Payroll.DataSources.TaxLiabilitiesDataSet>(services, reader),
+                ]);
+                var table = await CrestApps.OrchardCore.Tests.Modules.Reports.Designer.ReportDesignerTestServices.ReadAsync(source, new global::OrchardCore.DataSources.DataSourceQuery
+                {
+                    DataSet = dataSet,
+                    Fields = new HashSet<string>(StringComparer.Ordinal),
+                    MaxRows = 100,
+                    Parameters = draft ? new Dictionary<string, object> { [CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.DraftParameter] = "true" } : null,
+                    Context = new global::OrchardCore.DataSources.DataSourceContext { User = user },
+                }, TestContext.Current.CancellationToken);
+
+                return table.Rows.Select(row => table.Fields.Select((field, index) => (field.Name, Value: row[index])).ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal)).ToList();
+            }, commit: false);
+
+        // Read once: the filed one, or the amendment when asked.
+        Assert.Equal(7500m, Convert.ToDecimal(Assert.Single(await ReadAsync("WageRecords", exporter))["Box1"], System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(7600m, Convert.ToDecimal(Assert.Single(await ReadAsync("WageRecords", exporter, draft: true))["Box1"], System.Globalization.CultureInfo.InvariantCulture));
+
+        // A clerk of another employer reads neither the wage records nor the liabilities.
+        Assert.Empty(await ReadAsync("WageRecords", stranger));
+        Assert.Empty(await ReadAsync("TaxLiabilities", stranger));
+        Assert.NotEmpty(await ReadAsync("TaxLiabilities", exporter));
+
+        // The exporter may not see tax ids: the file is refused, never written with zeros.
+        var row = Assert.Single(await ReadAsync("WageRecords", exporter));
+        var format = new CrestApps.OrchardCore.Payroll.DataSources.Efw2DataFileFormat();
+
+        async Task WriteAsync(Dictionary<string, object> values)
+        {
+            var fields = values.Keys.Select(name => new global::OrchardCore.DataSources.DataField(name, name, global::OrchardCore.DataSources.DataFieldType.Text)).ToList();
+
+            static async IAsyncEnumerable<global::OrchardCore.DataSources.DataBatch> Batches(List<global::OrchardCore.DataSources.DataField> fields, object[] row)
+            {
+                await Task.Yield();
+
+                yield return new global::OrchardCore.DataSources.DataBatch(fields, [row]);
+            }
+
+            await using var stream = new MemoryStream();
+
+            await format.WriteAsync(stream, fields, Batches(fields, [.. values.Values]), null, TestContext.Current.CancellationToken);
+        }
+
+        Assert.Null(row["Ssn"]);
+        Assert.Contains("full social security number", (await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(row))).Message, StringComparison.Ordinal);
+
+        row["Ssn"] = "123-45-6789";
+        row[CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.OtherBoxesField] = "12W 1200.00";
+
+        Assert.Contains("12W 1200.00", (await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(row))).Message, StringComparison.Ordinal);
+
+        row[CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.OtherBoxesField] = null;
+        await WriteAsync(row);
+    }
+
+    [Fact]
+    public async Task BackupWithholding_IsItsOwnLiability_OnForm945_AndStaysOutOfForm941()
+    {
+        await using var harness = await PayRunTests.CreateHarnessAsync(services =>
+        {
+            services.AddPayrollFilingsCore();
+            services.AddPayrollFilingForm<Form941>();
+            services.AddPayrollFilingForm<Form945>();
+        });
+        var setup = await PayRunTests.SetUpAsync(harness);
+        var filer = CalendarTestHarness.User("filer", PayrollPermissions.ManagePayrollFilings.Name);
+
+        var (liabilities, q4, annual) = await harness.RunAsync(async services =>
+        {
+            var profiles = services.GetRequiredService<IPayProfileManager>();
+            var profile = (await profiles.ListByEmployersAsync([setup.EmployerId])).Single();
+
+            profile.WorkerType = PayWorkerType.Contractor;
+            await profiles.UpdateAsync(profile);
+
+            // A contractor paid 3000 with 24% backup withholding, and a 700 deposit of it.
+            await services.GetRequiredService<PayStatementStore>().CreateAsync(new PayStatement
+            {
+                ItemId = "statement00000000000000945",
+                RunId = setup.RunId,
+                Number = "945",
+                EmployerId = setup.EmployerId,
+                StaffMemberId = setup.StaffMemberId,
+                ProfileId = profile.ItemId,
+                PeriodStart = new DateOnly(2026, 11, 1),
+                PeriodEnd = new DateOnly(2026, 11, 14),
+                PayDate = new DateOnly(2026, 11, 20),
+                Status = PayStatementStatus.Paid,
+                Currency = "USD",
+                Gross = 3000,
+                Snapshot = new PayStatementSnapshot { EmployeeName = "Lee Park" },
+                Lines =
+                [
+                    new PayStatementLine { Type = PayLineType.Earning, PayCodeId = setup.BonusCodeId, Amount = 3000 },
+                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = Form1099Nec.BackupWithholdingCode, TaxCategory = PayrollTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 720 },
+                ],
+            });
+
+            var deposits = services.GetRequiredService<ITaxDepositManager>();
+            var deposit = await deposits.NewAsync();
+
+            deposit.EmployerId = setup.EmployerId;
+            deposit.Jurisdiction = "US";
+            deposit.Group = TaxLiabilityGroups.NonPayrollWithholding;
+            deposit.PeriodStart = new DateOnly(2026, 11, 1);
+            deposit.PeriodEnd = new DateOnly(2026, 11, 30);
+            deposit.Amount = 700;
+            deposit.PaidOn = new DateOnly(2026, 12, 10);
+            await deposits.CreateAsync(deposit);
+
+            var employer = await services.GetRequiredService<IEmployerManager>().FindByIdAsync(setup.EmployerId);
+            var service = services.GetRequiredService<IPayrollFilingService>();
+
+            return (
+                await services.GetRequiredService<ITaxLiabilityService>().ListAsync(setup.EmployerId, new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31)),
+                (await service.PrepareAsync(employer, Form941.FormName, 2026, 4, filer)).Filing,
+                (await service.PrepareAsync(employer, Form945.FormName, 2026, 0, filer)).Filing);
+        });
+
+        var period = Assert.Single(liabilities);
+
+        Assert.Equal((TaxLiabilityGroups.NonPayrollWithholding, 720m, 700m), (period.Group, period.EmployeeTaxes, period.Deposited));
+        Assert.Equal((0m, 0m, 0m), (q4.Boxes["3"], q4.Boxes["13"], q4.Boxes["15"]));
+        Assert.Equal((720m, 720m, 700m, 20m, 0m), (annual.Boxes["2"], annual.Boxes["3"], annual.Boxes["4"], annual.Boxes["5"], annual.Boxes["6"]));
+    }
+
+    [Fact]
+    public async Task FilingsDeployment_WritesPeoplesWageStatementsOnlyWithIncludeSensitiveData_ForWhoMaySeeTaxIds()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var (setup, employer) = await SeedAsync(harness);
+        var filer = CalendarTestHarness.User("filer", PayrollPermissions.ManagePayrollFilings.Name);
+
+        await harness.RunAsync(async services => await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, FormW2.FormName, 2026, 0, filer));
+
+        async Task<System.Text.Json.Nodes.JsonObject> ExportAsync(System.Security.Claims.ClaimsPrincipal user, bool sensitive)
+            => await harness.RunAsync(async services =>
+            {
+                var accessor = new Microsoft.AspNetCore.Http.HttpContextAccessor { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = user } };
+                var source = ActivatorUtilities.CreateInstance<CrestApps.OrchardCore.Payroll.Deployments.PayrollFilingsDeploymentSource>(services, accessor, Moq.Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughHtmlLocalizer<CrestApps.OrchardCore.Payroll.Deployments.PayrollFilingsDeploymentSource>());
+                var result = new global::OrchardCore.Deployment.DeploymentPlanResult(null, new global::OrchardCore.Recipes.Models.RecipeDescriptor());
+
+                await source.ProcessDeploymentStepAsync(new CrestApps.OrchardCore.Payroll.Deployments.PayrollFilingsDeploymentStep { IncludeSensitiveData = sensitive }, result);
+
+                return result.Steps.OfType<System.Text.Json.Nodes.JsonObject>().Single(step => step["name"]!.GetValue<string>() == PayrollConstants.FilingsRecipeStepName);
+            }, commit: false);
+
+        var exporter = CalendarTestHarness.User("exporter", PayrollPermissions.ExportPayrollData.Name);
+        var revealer = CalendarTestHarness.User("revealer", PayrollPermissions.ExportPayrollData.Name, PayrollPermissions.ViewTaxIds.Name);
+
+        System.Text.Json.Nodes.JsonObject W2(System.Text.Json.Nodes.JsonObject step)
+            => step["Filings"]!.AsArray().Select(node => node!.AsObject()).Single(node => node["Form"]!.GetValue<string>() == FormW2.FormName);
+
+        Assert.False(W2(await ExportAsync(revealer, sensitive: false)).ContainsKey("People"));
+        Assert.False(W2(await ExportAsync(exporter, sensitive: true)).ContainsKey("People"));
+        Assert.Single(W2(await ExportAsync(revealer, sensitive: true))["People"]!.AsArray());
     }
 
     [Fact]

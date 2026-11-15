@@ -360,7 +360,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
         IReadOnlyDictionary<string, string> staffNames = string.IsNullOrEmpty(profile.StaffMemberId) ? new Dictionary<string, string>() : await _staff.GetNamesAsync([profile.StaffMemberId]);
         var blockers = isNew ? [] : await _profiles.GetBlockersAsync(profile);
         var same = isNew ? [] : await _profiles.FindSameTaxIdAsync(profile);
-        IReadOnlyDictionary<string, string> sameNames = same.Count == 0 ? new Dictionary<string, string>() : await _staff.GetNamesAsync(same.Select(item => item.StaffMemberId));
+        IReadOnlyDictionary<string, string> sameNames = same.Count == 0 ? new Dictionary<string, string>() : await _staff.GetNamesAsync(same.Where(item => manage.Allows(item.EmployerId)).Select(item => item.StaffMemberId));
         var canReveal = !isNew && profile.TaxId is { HasValue: true } && await _scope.AuthorizeAsync(user, PayrollPermissions.ViewTaxIds, profile.EmployerId);
         IList<SelectListItem> staffOptions = [];
 
@@ -391,12 +391,47 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             model.Job = profile.DefaultAllocation?.Job;
             model.TaxIdHint = profile.TaxId is { HasValue: true } ? profile.TaxId.ToString() : null;
             model.CanRevealTaxId = canReveal;
-            model.SameTaxIdStaff = [.. same.Select(item => sameNames.GetValueOrDefault(item.StaffMemberId, item.StaffMemberId))];
+            model.SameTaxIdStaff = SameTaxIdLabels(same, manage, sameNames, S["another pay profile"]);
             model.Employers = [.. employers.Select(employer => new SelectListItem(employer.Name, employer.ItemId, employer.ItemId == profile.EmployerId))];
             model.Schedules = [.. schedules.Where(schedule => schedule.Enabled || schedule.ItemId == profile.PayScheduleId).Select(schedule => new SelectListItem(schedule.Name, schedule.ItemId, schedule.ItemId == profile.PayScheduleId))];
             model.Teams = [.. teams.Select(team => new SelectListItem(team.Name, team.ItemId))];
             model.Blockers = blockers;
         }).Location("Content:1");
+    }
+
+    /// <summary>
+    /// Names the other profiles with the same tax id: by the person's name at the employers the user manages the
+    /// profiles of, and only as another pay profile elsewhere, so a clerk can't confirm another employer's employee's
+    /// number by guessing it.
+    /// </summary>
+    /// <param name="same">The other profiles with the same tax id.</param>
+    /// <param name="manage">The employers the user manages the profiles of.</param>
+    /// <param name="names">The names of the staff members of those profiles.</param>
+    /// <param name="elsewhere">What a profile elsewhere is called.</param>
+    /// <returns>The labels.</returns>
+    internal static List<string> SameTaxIdLabels(IEnumerable<EmployeePayProfile> same, PayrollScope manage, IReadOnlyDictionary<string, string> names, string elsewhere)
+    {
+        var labels = new List<string>();
+        var hidden = false;
+
+        foreach (var profile in same)
+        {
+            if (manage.Allows(profile.EmployerId))
+            {
+                labels.Add(names.GetValueOrDefault(profile.StaffMemberId ?? string.Empty, profile.StaffMemberId));
+            }
+            else
+            {
+                hidden = true;
+            }
+        }
+
+        if (hidden)
+        {
+            labels.Add(elsewhere);
+        }
+
+        return labels;
     }
 
     private async Task<ShapeResult> AddressAsync(AddressEditorViewModel address)

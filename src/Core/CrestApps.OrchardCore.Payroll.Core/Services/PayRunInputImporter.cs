@@ -192,6 +192,7 @@ public sealed class PayRunInputImporter
         var input = existing ?? await _inputs.NewAsync(cancellationToken: cancellationToken);
 
         input.ImportKey = importKey;
+        input.EnteredById = user?.FindFirstValue(ClaimTypes.NameIdentifier);
         input.RunId = run.ItemId;
         input.StaffMemberId = staffMemberId;
         input.PayCodeId = code.ItemId;

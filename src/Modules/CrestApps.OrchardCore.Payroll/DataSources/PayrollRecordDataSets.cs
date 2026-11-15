@@ -9,9 +9,10 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Payroll.DataSources;
 
 /// <summary>
-/// The base of Payroll's data sets of runs and statements: read by those who may see the runs of an employer
-/// (<see cref="PayrollPermissions.ViewPayRuns"/>, globally or per employer), each reading only the employers they may see,
-/// filtered by pay date.
+/// The base of Payroll's data sets of runs and statements: read by those who may read the employer's payroll reports
+/// (<see cref="PayrollPermissions.ViewPayrollReports"/>, implied by Export payroll data, globally or per employer), each
+/// reading only those employers, filtered by pay date. Seeing runs on their pages is not enough to take the records away
+/// in a file or a pipeline.
 /// </summary>
 /// <typeparam name="TRow">The row.</typeparam>
 public abstract class PayrollRecordDataSet<TRow> : RecordDataSet<TRow>, IPayrollDataSet
@@ -24,7 +25,7 @@ public abstract class PayrollRecordDataSet<TRow> : RecordDataSet<TRow>, IPayroll
 
     protected PayrollReportReader Reader { get; }
 
-    protected virtual Permission Permission => PayrollPermissions.ViewPayRuns;
+    protected virtual Permission Permission => PayrollPermissions.ViewPayrollReports;
 
     /// <inheritdoc />
     public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)

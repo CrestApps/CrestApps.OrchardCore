@@ -354,6 +354,74 @@ public sealed class PayProfileTests
     }
 
     [Fact]
+    public async Task Recipe_BringsBackEveryFieldOfAProfileItsDeploymentWrote()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var (contoso, _) = await AddEmployersAsync(harness);
+        var schedule = await AddScheduleAsync(harness);
+        var lee = await WorkforceTests.AddWorkerAsync(harness, "Lee Park");
+        var ignored = new HashSet<string>(StringComparer.Ordinal) { nameof(EmployeePayProfile.CreatedUtc), nameof(EmployeePayProfile.ModifiedUtc), nameof(EmployeePayProfile.TaxId), nameof(EmployeePayProfile.TaxIdHash), "Properties" };
+
+        var original = await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IPayProfileManager>();
+            var profile = await NewProfileAsync(manager, lee.ItemId, contoso.ItemId);
+
+            profile.PayScheduleId = schedule.ItemId;
+            profile.WorkerType = PayWorkerType.Contractor;
+            profile.OvertimeStatus = OvertimeStatus.Exempt;
+            profile.Tipped = true;
+            profile.BackupWithholding = true;
+            profile.LegalName = "Lee A. Park";
+            profile.HomeAddress = new CrestApps.OrchardCore.Addresses.Models.Address { AddressLine1 = "1 Main St", City = "Springfield", Region = "IL", PostalCode = "62701", Country = "US" };
+            profile.WorkSiteTeamId = "site1";
+            profile.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = new() { ["FilingStatus"] = "Single" }, EnteredBy = "admin", EnteredUtc = new DateTime(2026, 1, 2, 15, 0, 0, DateTimeKind.Utc) }];
+            profile.Distribution = [new NetPayRow { Method = NetPayMethod.Check, Split = NetPaySplit.Remainder }];
+            profile.DefaultAllocation = new PayInputAllocation { DepartmentTeamId = "dept1", ActivityCode = "A1", Job = "J1" };
+            profile.RetroPayFrom = new DateOnly(2026, 3, 1);
+            profile.Status = PayProfileStatus.OnLeave;
+            await services.GetRequiredService<IPayProfileService>().SetTaxIdAsync(profile, "123456789");
+            await manager.CreateAsync(profile);
+
+            return profile;
+        });
+
+        // Every field the test covers is set to something other than a new profile's.
+        var blank = new EmployeePayProfile();
+        var properties = typeof(EmployeePayProfile).GetProperties().Where(property => property.CanRead && property.CanWrite && !ignored.Contains(property.Name)).ToList();
+
+        string Json(object value)
+            => System.Text.Json.JsonSerializer.Serialize(value);
+
+        Assert.All(properties.Where(property => property.Name != nameof(EmployeePayProfile.ItemId)), property => Assert.NotEqual(Json(property.GetValue(blank)), Json(property.GetValue(original))));
+
+        var revealer = CalendarTestHarness.User("revealer", PayrollPermissions.ExportPayrollData.Name, PayrollPermissions.ViewTaxIds.Name);
+        var step = (await ExportAsync(harness, revealer, includeSensitive: true)).Single(candidate => candidate["name"]!.GetValue<string>() == PayrollConstants.PayProfilesRecipeStepName);
+
+        await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IPayProfileManager>();
+
+            await manager.DeleteAsync(await manager.FindByIdAsync(original.ItemId));
+        });
+
+        var errors = await harness.RunAsync(async services =>
+        {
+            var context = new RecipeExecutionContext { Name = PayrollConstants.PayProfilesRecipeStepName, Step = step };
+
+            await ActivatorUtilities.CreateInstance<PayProfilesRecipeStep>(services).ExecuteAsync(context);
+
+            return context.Errors.ToList();
+        });
+
+        var imported = await harness.RunAsync(async services => await services.GetRequiredService<IPayProfileManager>().FindByIdAsync(original.ItemId), commit: false);
+
+        Assert.Empty(errors);
+        Assert.All(properties, property => Assert.Equal(Json(property.GetValue(original)), Json(property.GetValue(imported))));
+        Assert.Equal((original.TaxId.Hint, original.TaxIdHash), (imported.TaxId.Hint, imported.TaxIdHash));
+    }
+
+    [Fact]
     public void Editor_ReadsTheSplit_AndElectionValues_WithADotForDecimals()
     {
         var driver = (PayProfileDisplayDriver)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(PayProfileDisplayDriver));

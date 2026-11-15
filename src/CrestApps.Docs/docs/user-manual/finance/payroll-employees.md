@@ -28,7 +28,7 @@ The yellow box at the top lists what keeps the person from being paid, and goes 
 
 - **Tax id**: type it under **New tax id**. Only its last characters show afterwards. When the same number is on file for someone else, the page says who.
 - **Tax elections**: add one for each jurisdiction the box names, with the day it starts. To change an election, add a new one from the day it changes: the old one stays in the history.
-- **Net pay**: choose how net pay is paid, in order. A deposit needs a bank account the person owns under **Banking**; the last row takes what is left.
+- **Net pay**: choose how net pay is paid, in order. A deposit needs a bank account the person owns under **Banking** (their staff record's or their user's; anyone else's account is refused, and is checked again when the deposit is made); the last row takes what is left.
 - **Pay rate**: enter the rate or salary on the staff member's **Pay** card.
 - **Home address**: for taxes and forms.
 
