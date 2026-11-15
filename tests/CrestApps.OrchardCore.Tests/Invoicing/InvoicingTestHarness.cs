@@ -347,6 +347,12 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddInvoicingRecurring();
         services.AddInvoicingCollections();
         services.AddInvoicingBilling();
+
+        // The catalog rules the module features register with their recipe steps.
+        services.AddScoped<ICatalogEntryHandler<LateFeePolicy>, LateFeePolicyHandler>();
+        services.AddScoped<ICatalogEntryHandler<UsageMeter>, UsageMeterHandler>();
+        services.AddScoped<ICatalogEntryHandler<RecurringPlan>, RecurringPlanHandler>();
+        services.AddScoped<ICatalogEntryHandler<CrestApps.OrchardCore.ExchangeRates.Models.ExchangeRate>, CrestApps.OrchardCore.ExchangeRates.Core.Services.ExchangeRateHandler>();
         CrestApps.OrchardCore.Transactions.Core.TransactionsServiceCollectionExtensions.AddPartyCollectionSettings(services);
         CrestApps.OrchardCore.ExchangeRates.Core.Services.ExchangeRatesServiceCollectionExtensions.AddExchangeRates(services);
         services.AddScoped<IRecurringPlanObserver>(_ => new RecordingPlanObserver(harness.Observed));

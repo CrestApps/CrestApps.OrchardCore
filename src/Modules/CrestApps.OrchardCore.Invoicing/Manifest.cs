@@ -25,6 +25,9 @@ using OrchardCore.Modules.Manifest;
         TransactionsConstants.Features.PaymentTerms,
         BusinessDocumentsConstants.Features.Area,
 
+        // Every issued invoice is archived as a PDF, and sent and downloaded as one.
+        BusinessDocumentsConstants.Features.Pdf,
+
         // The bill-to selector of the draft editor is the ItemSelector of the Resources feature.
         ResourcesConstants.Feature.Area,
     ]

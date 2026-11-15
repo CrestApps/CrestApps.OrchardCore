@@ -1,3 +1,6 @@
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Invoicing.Core.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Commerce.Emails;
@@ -55,6 +58,9 @@ public sealed class CollectionsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // With the recipe step below, so an imported policy gets the editor's rules.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<LateFeePolicy>, LateFeePolicyHandler>());
+
         services
             .AddInvoicingCollections()
             .AddIndexProvider<LateFeePolicyIndexProvider>()

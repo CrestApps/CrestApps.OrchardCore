@@ -123,9 +123,20 @@ public sealed class RecurringPlanTests
     [Fact]
     public async Task AFailedRun_KeepsItsDraft_IsRecorded_AndMovesOn()
     {
-        // Arrange: no one to bill, so the invoice can't be issued.
+        // Arrange: the plan's customer was taken off after it started, so the invoice can't be issued.
         await using var harness = await InvoicingTestHarness.CreateAsync();
-        var plan = await CreateActiveAsync(harness, new DateOnly(2026, 11, 1), configure: draft => draft.BillTo = new DocumentParty());
+        var plan = await CreateActiveAsync(harness, new DateOnly(2026, 11, 1));
+
+        await harness.InScopeAsync(async services =>
+        {
+            var manager = services.GetRequiredService<IRecurringPlanManager>();
+            var active = await manager.FindByIdAsync(plan.ItemId, TestContext.Current.CancellationToken);
+
+            active.BillTo = new DocumentParty();
+            await manager.UpdateAsync(active, cancellationToken: TestContext.Current.CancellationToken);
+
+            return true;
+        });
 
         // Act
         var made = await RunDueAsync(harness);
@@ -170,6 +181,24 @@ public sealed class RecurringPlanTests
 
         // Assert
         Assert.Equal(expected, rendered);
+    }
+
+    [Fact]
+    public async Task APlanWithNothingToBill_OrNoOneToBill_CannotBeStarted()
+    {
+        // Arrange: drafts saved half done.
+        await using var harness = await InvoicingTestHarness.CreateAsync();
+        var noLines = await CreateDraftAsync(harness, new DateOnly(2026, 12, 1), plan => plan.Lines.Clear());
+        var noOne = await CreateDraftAsync(harness, new DateOnly(2026, 12, 1), plan => plan.BillTo = new DocumentParty());
+
+        // Act
+        var first = await ServiceAsync(harness, service => service.ActivateAsync(noLines.ItemId, TestContext.Current.CancellationToken));
+        var second = await ServiceAsync(harness, service => service.ActivateAsync(noOne.ItemId, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Contains("at least one line", Assert.Single(first.Errors), StringComparison.Ordinal);
+        Assert.Contains("who the plan bills", Assert.Single(second.Errors), StringComparison.Ordinal);
+        Assert.Equal(RecurringPlanStatus.Draft, (await FindAsync(harness, noLines.ItemId)).Status);
     }
 
     private static Task<int> RunDueAsync(InvoicingTestHarness harness)

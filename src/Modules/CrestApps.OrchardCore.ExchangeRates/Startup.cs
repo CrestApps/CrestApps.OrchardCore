@@ -1,3 +1,4 @@
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.ExchangeRates.Core;
 using CrestApps.OrchardCore.ExchangeRates.Core.Indexes;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.ExchangeRates.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore;
 using OrchardCore.BackgroundTasks;
@@ -44,6 +46,9 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<ExchangeRateSettingsDisplayDriver>()
             .AddNavigationProvider<ExchangeRatesAdminMenu>()
             .AddRecipeExecutionStep<ExchangeRatesStep>();
+
+        // With the recipe step, so an imported rate gets the editor's rules.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ExchangeRate>, ExchangeRateHandler>());
 
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ExchangeRatesConstants.CollectionName));
         services.AddSiteSettingsPermission(ExchangeRatesConstants.SettingsGroupId, ExchangeRatesPermissions.ManageExchangeRates);

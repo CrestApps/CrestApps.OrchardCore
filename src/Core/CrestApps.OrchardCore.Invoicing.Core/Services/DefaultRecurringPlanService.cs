@@ -87,6 +87,22 @@ public sealed partial class DefaultRecurringPlanService : IRecurringPlanService
                 return Task.CompletedTask;
             }
 
+            // A draft may be saved half done; one that runs must have something to bill and someone to bill.
+            if ((plan.Lines?.Count ?? 0) == 0 && (plan.UsageCharges?.Count ?? 0) == 0)
+            {
+                result.Fail(S["Add at least one line or usage charge before starting the plan."]);
+            }
+
+            if ((plan.BillTo is null || plan.BillTo.Party.IsEmpty) && string.IsNullOrWhiteSpace(plan.BillTo?.Contact?.Name) && string.IsNullOrWhiteSpace(plan.BillTo?.Contact?.Email))
+            {
+                result.Fail(S["Choose who the plan bills, or give a name and e-mail, before starting it."]);
+            }
+
+            if (!result.Succeeded)
+            {
+                return Task.CompletedTask;
+            }
+
             var first = Next(plan, after: null);
 
             if (first is null)

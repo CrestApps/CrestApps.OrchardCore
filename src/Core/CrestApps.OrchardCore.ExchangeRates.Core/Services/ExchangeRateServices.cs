@@ -321,13 +321,12 @@ namespace CrestApps.OrchardCore.ExchangeRates.Core.Services
     public static class ExchangeRatesServiceCollectionExtensions
     {
         /// <summary>
-        /// Registers the exchange rate store, manager and handler, the rate service and the updater.
+        /// Registers the exchange rate store and manager, the rate service and the updater. The rules of a rate (`ExchangeRateHandler`) are registered by the feature that imports rates, with its recipe step.
         /// </summary>
         public static IServiceCollection AddExchangeRates(this IServiceCollection services)
         {
             services.TryAddScoped<IExchangeRateStore, ExchangeRateStore>();
             services.TryAddScoped<IExchangeRateManager, ExchangeRateManager>();
-            services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ExchangeRate>, ExchangeRateHandler>());
             services.TryAddScoped<IExchangeRateService, DefaultExchangeRateService>();
             services.TryAddScoped<ExchangeRateUpdater>();
 

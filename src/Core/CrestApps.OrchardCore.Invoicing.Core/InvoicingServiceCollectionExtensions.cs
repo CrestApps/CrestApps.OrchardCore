@@ -75,7 +75,6 @@ public static class InvoicingServiceCollectionExtensions
     {
         services.TryAddScoped<ILateFeePolicyStore, LateFeePolicyStore>();
         services.TryAddScoped<ILateFeePolicyManager, LateFeePolicyManager>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<LateFeePolicy>, LateFeePolicyHandler>());
         services.TryAddScoped<ILateFeeService, DefaultLateFeeService>();
         services.TryAddScoped<IInvoiceStatementService, DefaultInvoiceStatementService>();
 
@@ -99,7 +98,6 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, BillingInvoiceHandler>());
         services.TryAddScoped<IUsageMeterStore, UsageMeterStore>();
         services.TryAddScoped<IUsageMeterManager, UsageMeterManager>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<UsageMeter>, UsageMeterHandler>());
         services.TryAddScoped<IUsageService, DefaultUsageService>();
 
         return services;
@@ -134,7 +132,6 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddScoped<IRecurringPlanStore, RecurringPlanStore>();
         services.TryAddScoped<IRecurringPlanManager, RecurringPlanManager>();
         services.TryAddScoped<IRecurringPlanService, DefaultRecurringPlanService>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<RecurringPlan>, RecurringPlanHandler>());
 
         return services;
     }

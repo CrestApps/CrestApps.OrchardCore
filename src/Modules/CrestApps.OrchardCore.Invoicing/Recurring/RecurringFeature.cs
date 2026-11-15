@@ -1,3 +1,5 @@
+using CrestApps.Core.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars.Recurrence;
@@ -63,6 +65,9 @@ public sealed class RecurringStartup : StartupBase
             .AddRecipeExecutionStep<RecurringPlansStep>()
             .AddDisplayDriver<RecurringPlan, RecurringPlanDisplayDriver>()
             .AddNavigationProvider<RecurringPlansAdminMenu>();
+
+        // With the recipe step, so an imported plan gets the editor's rules.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<RecurringPlan>, RecurringPlanHandler>());
 
         services.AddSingleton<IBackgroundTask, RecurringInvoiceBackgroundTask>();
     }

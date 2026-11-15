@@ -18,9 +18,10 @@
     <breadcrumb name="InvoiceStatementsIndex" title="@T["Statements"]" />
 </zone>
 
-<form asp-action="Index" method="get" class="card mb-3">
+@* The criteria of the statement shown below: a small form for this page, so its button stays next to its fields. *@
+<div class="card mb-3">
     <div class="card-header">@T["Statement"]</div>
-    <div class="card-body">
+    <form asp-action="Index" method="get" class="card-body">
         <div class="ocat-wrapper">
             <label class="ocat-label">@T["Customer"]</label>
             <div class="ocat-end">
@@ -83,8 +84,8 @@
                 <button type="submit" class="btn btn-primary">@T["Show the statement"]</button>
             </div>
         </div>
-    </div>
-</form>
+    </form>
+</div>
 
 @if (Model.Document is not null)
 {

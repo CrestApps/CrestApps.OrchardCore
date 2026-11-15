@@ -1,3 +1,6 @@
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Invoicing.Core.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Text.Encodings.Web;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Calendars;
@@ -61,6 +64,9 @@ public sealed class UsageStartup : StartupBase
             .AddRecipeExecutionStep<UsageMetersStep>()
             .AddDisplayDriver<UsageMeter, UsageMeterDisplayDriver>()
             .AddNavigationProvider<UsageMetersAdminMenu>();
+
+        // With the recipe step, so an imported meter gets the editor's rules.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<UsageMeter>, UsageMeterHandler>());
     }
 }
 
