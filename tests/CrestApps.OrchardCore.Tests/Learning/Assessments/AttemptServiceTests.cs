@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Assessments;
 
@@ -134,6 +135,32 @@ public sealed class AttemptServiceTests
         Assert.Equal(AttemptErrors.TooManyAttempts, lockedOut.ErrorCode);
         Assert.True(later.Succeeded, later.ErrorCode);
         Assert.DoesNotContain("AccessCode", System.Text.Json.JsonSerializer.Serialize(quiz.Content), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Start_SanitizesThePromptAndFeedbackItCopies_WhateverWroteTheQuestion()
+    {
+        // Arrange: a question saved without its editor, as the content API, a recipe or an import would.
+        await using var h = await AssessmentTestHarness.CreateAsync();
+        h.Courses.AddCourse("course1");
+        var question = h.Questions.AddChoice("q1", "a");
+        question.Alter<QuestionPart>(part =>
+        {
+            part.Prompt = "<p>Which exit?</p><script>alert('prompt')</script><img src=x onerror=alert(1)>";
+            part.GeneralFeedback = "<b>Use the stairs.</b><script>alert('feedback')</script>";
+        });
+        h.AddQuiz("course1", "quiz", quiz => quiz.QuestionIds = ["q1"]);
+        await h.EnrollAsync("learner", "course1");
+
+        // Act
+        var item = Assert.Single((await h.StartAsync("learner", "quiz")).Attempt.Items);
+
+        // Assert
+        Assert.Contains("Which exit?", item.Prompt);
+        Assert.DoesNotContain("<script", item.Prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("onerror", item.Prompt, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Use the stairs.", item.Feedback);
+        Assert.DoesNotContain("<script", item.Feedback, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

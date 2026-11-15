@@ -50,6 +50,7 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
                 services.AddLearningAssessmentsCore();
                 services.RemoveAll<IAssessmentContentSource>();
                 services.AddSingleton<IAssessmentContentSource>(provider => questions);
+                services.AddSingleton<global::OrchardCore.Infrastructure.Html.IHtmlSanitizerService, global::OrchardCore.Infrastructure.Html.HtmlSanitizerService>();
                 configure?.Invoke(services);
             },
             AssessmentsIndexSchema.CreateAsync,

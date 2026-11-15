@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.WorkQueues;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
+using OrchardCore.Infrastructure.Html;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
@@ -39,6 +40,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
     private readonly IDistributedLock _distributedLock;
     private readonly EnrollmentWriteGate _writeGate;
     private readonly LearningSecretVerifier _secrets;
+    private readonly IHtmlSanitizerService _htmlSanitizer;
     private readonly ILeasedWorkQueue<AttemptDeadlineWork> _deadlines;
     private readonly IEnumerable<IQuestionScorer> _scorers;
     private readonly QuestionTypeOptions _questionTypes;
@@ -62,6 +64,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         IDistributedLock distributedLock,
         EnrollmentWriteGate writeGate,
         LearningSecretVerifier secrets,
+        IHtmlSanitizerService htmlSanitizer,
         ILeasedWorkQueue<AttemptDeadlineWork> deadlines,
         IEnumerable<IQuestionScorer> scorers,
         IOptions<QuestionTypeOptions> questionTypes,
@@ -81,6 +84,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         _distributedLock = distributedLock;
         _writeGate = writeGate;
         _secrets = secrets;
+        _htmlSanitizer = htmlSanitizer;
         _deadlines = deadlines;
         _scorers = scorers;
         _questionTypes = questionTypes.Value;
@@ -587,9 +591,11 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
                 QuestionVersionId = question.ContentItemVersionId,
                 QuestionType = type.Name,
                 Title = question.DisplayText,
-                Prompt = questionPart.Prompt,
+                // The prompt and feedback are shown as HTML to learners and graders, and a question can be saved without
+                // its editor (content API, recipe, import), so the copy kept in the attempt is sanitized here.
+                Prompt = Sanitize(questionPart.Prompt),
                 Points = Math.Max(questionPart.Points, 0),
-                Feedback = questionPart.GeneralFeedback,
+                Feedback = Sanitize(questionPart.GeneralFeedback),
             };
 
             scorer.Snapshot(question, item, random);
@@ -598,6 +604,9 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         return items;
     }
+
+    private string Sanitize(string html)
+        => string.IsNullOrWhiteSpace(html) ? null : _htmlSanitizer.Sanitize(html);
 
     private IQuestionScorer Scorer(string questionType)
         => _scorers.FirstOrDefault(scorer => string.Equals(scorer.QuestionType, questionType, StringComparison.Ordinal));
