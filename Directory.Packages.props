@@ -27,6 +27,7 @@
     <PackageVersion Include="NuGet.Versioning" Version="7.9.0" />
     <PackageVersion Include="OllamaSharp" Version="5.5.0" />
     <PackageVersion Include="PdfPig" Version="0.1.16" />
+    <PackageVersion Include="QRCoder" Version="1.7.0" />
     <PackageVersion Include="Stripe.net" Version="53.1.0" />
     <PackageVersion Include="ZString" Version="2.6.0" />
     <PackageVersion Include="YesSql.Abstractions" Version="6.3.0" />

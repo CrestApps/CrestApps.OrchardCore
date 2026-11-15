@@ -38,7 +38,7 @@ public sealed class QuestionImportHandlerTests
         Assert.Equal("Foam|*CO2|Water", exportRow["ChoiceQuestionPart_Options"]);
     }
 
-    private static IStringLocalizer<T> Localizer<T>()
+    private static EchoLocalizer<T> Localizer<T>()
         => new EchoLocalizer<T>();
 
     private sealed class EchoLocalizer<T> : IStringLocalizer<T>

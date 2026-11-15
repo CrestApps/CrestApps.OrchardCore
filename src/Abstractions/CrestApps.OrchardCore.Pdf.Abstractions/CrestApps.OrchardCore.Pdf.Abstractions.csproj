@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Pdf</RootNamespace>
+    <Title>CrestApps OrchardCore PDF Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The layout model of a designed PDF document (pages, background images, positioned and wrapped text, images,
+      lines, rectangles and QR codes) and the renderer contract any module uses to turn one into a PDF file.
+    </Description>
+    <PackageTags>$(PackageTags) PDF Abstractions</PackageTags>
+  </PropertyGroup>
+
+</Project>
