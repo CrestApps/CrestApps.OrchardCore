@@ -156,6 +156,8 @@ public sealed class PayrollStartup : StartupBase
 
         services.AddScoped<PayrollNames>();
         services.AddScoped<PayStubService>();
+        services.AddScoped<PayrollReportReader>();
+        CrestApps.OrchardCore.PersonalData.Core.PersonalDataServiceCollectionExtensions.AddPersonalDataContributor<PayrollPersonalDataContributor>(services);
         services.AddScoped<PayRunApprovalPolicySeeder>();
         services.AddScoped<PayProfileEditTracker>();
         services.AddDisplayDriver<EmployeePayProfile, PayProfileDisplayDriver>();
@@ -200,6 +202,9 @@ public sealed class PayrollAuditTrailStartup : StartupBase
     {
         services.AddTransient<IConfigureOptions<AuditTrailOptions>, PayrollAuditTrailEvents>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayProfileObserver, AuditTrailPayProfileObserver>());
+        services.TryAddScoped<AuditTrailPayRunObserver>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayRunObserver, AuditTrailPayRunObserver>(provider => provider.GetRequiredService<AuditTrailPayRunObserver>()));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayStatementObserver, AuditTrailPayRunObserver>(provider => provider.GetRequiredService<AuditTrailPayRunObserver>()));
     }
 }
 
@@ -230,6 +235,7 @@ public sealed class PayrollRecipesStartup : StartupBase
     {
         services.AddRecipeExecutionStep<EmployersRecipeStep>();
         services.AddRecipeExecutionStep<PayProfilesRecipeStep>();
+        services.AddRecipeExecutionStep<PayHistoryRecipeStep>();
         services.AddRecipeExecutionStep<PayItemsRecipeStep>();
     }
 }
@@ -246,6 +252,7 @@ public sealed class PayrollDeploymentStartup : StartupBase
     {
         services.AddDeployment<EmployersDeploymentSource, EmployersDeploymentStep, SummaryDeploymentStepDisplayDriver<EmployersDeploymentStep>>();
         services.AddDeployment<PayProfilesDeploymentSource, PayProfilesDeploymentStep, PayProfilesDeploymentStepDisplayDriver>();
+        services.AddDeployment<PayHistoryDeploymentSource, PayHistoryDeploymentStep, PayHistoryDeploymentStepDisplayDriver>();
         services.AddSiteSettingsPropertyDeploymentStep<PayrollSettings, PayrollDeploymentStartup>(
             S => S["Payroll settings"],
             S => S["Separation of duties and the defaults of a new employer."]);
@@ -265,8 +272,10 @@ public sealed class PayrollRecipesSchemaStartup : StartupBase
         services.AddScoped<IRecipeStep, EmployersRecipeStepSchema>();
         services.AddDeploymentStepSchema<EmployersDeploymentStepSchema>();
         services.AddScoped<IRecipeStep, PayProfilesRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, PayHistoryRecipeStepSchema>();
         services.AddScoped<IRecipeStep, PayItemsRecipeStepSchema>();
         services.AddDeploymentStepSchema<PayProfilesDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<PayHistoryDeploymentStepSchema>();
         services.AddScoped<ISiteSettingsSchemaDefinition, PayrollSettingsSchema>();
     }
 }
@@ -282,6 +291,14 @@ public sealed class PayrollDataSourcesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IPayrollDataSet, EmployeesDataSet>();
+        services.AddScoped<IPayrollDataSet, PayRunsDataSet>();
+        services.AddScoped<IPayrollDataSet, PayStatementsDataSet>();
+        services.AddScoped<IPayrollDataSet, PayEarningsDataSet>();
+        services.AddScoped<IPayrollDataSet, PayDeductionsDataSet>();
+        services.AddScoped<IPayrollDataSet, PayTaxesDataSet>();
+        services.AddScoped<IPayrollDataSet, PayEmployerContributionsDataSet>();
+        services.AddScoped<IPayrollDataSet, PayStatementPaymentsDataSet>();
+        services.AddScoped<IPayrollDataSet, YearToDateBalancesDataSet>();
     }
 }
 

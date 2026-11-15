@@ -627,7 +627,32 @@ public sealed partial class DefaultPayRunService : IPayRunService
             run.PreparedById = user?.FindFirstValue(ClaimTypes.NameIdentifier);
             run.PreparedBy = user?.Identity?.Name;
             await _runs.UpdateAsync(run, cancellationToken: cancellationToken);
+            await TellAsync(run, PayRunChangeKind.Calculated, user, null, cancellationToken);
         }
+
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<PayRunResult> OpenAsync(PayRun run, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        var result = new PayRunResult();
+        var validation = await _runs.ValidateAsync(run, cancellationToken);
+
+        if (!validation.Succeeded)
+        {
+            foreach (var error in validation.Errors)
+            {
+                result.Errors.Add(error.ErrorMessage);
+            }
+
+            return result;
+        }
+
+        await _runs.CreateAsync(run, cancellationToken);
+        await TellAsync(run, PayRunChangeKind.Opened, user, null, cancellationToken);
 
         return result;
     }
@@ -713,6 +738,12 @@ public sealed partial class DefaultPayRunService : IPayRunService
         }
 
         await _runs.UpdateAsync(run, cancellationToken: cancellationToken);
+        await TellAsync(run, PayRunChangeKind.Submitted, user, null, cancellationToken);
+
+        if (run.Status == PayRunStatus.Approved)
+        {
+            await TellAsync(run, PayRunChangeKind.Approved, user, null, cancellationToken);
+        }
 
         return result;
     }
@@ -741,6 +772,7 @@ public sealed partial class DefaultPayRunService : IPayRunService
         run.Status = PayRunStatus.Canceled;
         run.Totals = new PayRunTotals();
         await _runs.UpdateAsync(run, cancellationToken: cancellationToken);
+        await TellAsync(run, PayRunChangeKind.Canceled, null, reason, cancellationToken);
 
         return result;
     }
@@ -771,10 +803,14 @@ public sealed partial class DefaultPayRunService : IPayRunService
             return;
         }
 
+        var decision = request.Decisions.LastOrDefault();
+        PayRunChangeKind? kind = null;
+
         if (request.Status == ApprovalStatus.Approved && request.SubjectVersion == run.Version && run.Status == PayRunStatus.PendingApproval)
         {
             run.Status = PayRunStatus.Approved;
             run.ApprovedUtc = _clock.UtcNow;
+            kind = PayRunChangeKind.Approved;
         }
         else if (run.Status is PayRunStatus.PendingApproval or PayRunStatus.Approved)
         {
@@ -783,7 +819,8 @@ public sealed partial class DefaultPayRunService : IPayRunService
 
             if (request.Status == ApprovalStatus.Rejected)
             {
-                run.Issues.Add(new PayRunIssue { Message = S["The approval was rejected: {0}", request.Decisions.LastOrDefault()?.Note ?? string.Empty] });
+                run.Issues.Add(new PayRunIssue { Message = S["The approval was rejected: {0}", decision?.Note ?? string.Empty] });
+                kind = PayRunChangeKind.Rejected;
             }
         }
         else
@@ -792,6 +829,25 @@ public sealed partial class DefaultPayRunService : IPayRunService
         }
 
         await _runs.UpdateAsync(run, cancellationToken: cancellationToken);
+
+        if (kind is { } happened)
+        {
+            await TellAsync(run, happened, decision?.UserName, decision?.UserId, decision?.Note, cancellationToken);
+        }
+    }
+
+    private Task TellAsync(PayRun run, PayRunChangeKind kind, ClaimsPrincipal user, string note, CancellationToken cancellationToken)
+        => TellAsync(run, kind, user?.Identity?.Name, user?.FindFirstValue(ClaimTypes.NameIdentifier), note, cancellationToken);
+
+    // Tells the observers (workflows, webhooks, the audit trail) what happened to a run.
+    private async Task TellAsync(PayRun run, PayRunChangeKind kind, string actor, string actorId, string note, CancellationToken cancellationToken)
+    {
+        var change = new PayRunChange { Run = run, Kind = kind, Actor = actor, ActorId = actorId, Note = note };
+
+        foreach (var observer in _services.GetServices<IPayRunObserver>())
+        {
+            await observer.ChangedAsync(change, cancellationToken);
+        }
     }
 
     // The profiles a run pays: the people named, or every active profile of the employer on the schedule.
@@ -843,7 +899,7 @@ public sealed partial class DefaultPayRunService : IPayRunService
             PeriodEnd = run.PeriodEnd,
         };
 
-    private static PayRunTotals Totals(IEnumerable<PayStatement> statements)
+    internal static PayRunTotals Totals(IEnumerable<PayStatement> statements)
     {
         var totals = new PayRunTotals();
 

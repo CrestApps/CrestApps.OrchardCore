@@ -80,7 +80,7 @@ public sealed class PayEngineTests
             await store.CreateAsync(finalStatement);
             await store.CreateAsync(draftStatement);
 
-            return (await Record.ExceptionAsync(async () => await store.DeleteAsync(finalStatement)), await store.DeleteAsync(draftStatement));
+            return (await Record.ExceptionAsync(async () => await store.DeleteAsync(finalStatement, TestContext.Current.CancellationToken)), await store.DeleteAsync(draftStatement, TestContext.Current.CancellationToken));
         }, commit: false);
 
         Assert.IsType<InvalidOperationException>(final);

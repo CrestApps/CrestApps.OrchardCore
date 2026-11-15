@@ -207,7 +207,7 @@ public sealed class PayCodeRulesTests
         var (kept, other) = await harness.RunAsync(async services =>
         {
             var manager = services.GetRequiredService<IPayCodeManager>();
-            var failure = await Record.ExceptionAsync(async () => await manager.DeleteAsync(await manager.FindByCodeAsync("REG")));
+            var failure = await Record.ExceptionAsync(async () => await manager.DeleteAsync(await manager.FindByCodeAsync("REG", TestContext.Current.CancellationToken), TestContext.Current.CancellationToken));
             var unused = await services.GetRequiredService<PayCodeBaseUsage>().GetUsagesAsync(await manager.FindByCodeAsync("OT"));
 
             return (failure, unused);

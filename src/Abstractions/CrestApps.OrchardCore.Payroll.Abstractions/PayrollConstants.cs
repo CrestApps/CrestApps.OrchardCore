@@ -56,6 +56,11 @@ public static class PayrollConstants
     public const string EmployersRecipeStepName = "PayrollEmployers";
 
     /// <summary>
+    /// The opt-in recipe and deployment step of final pay statements, imported as history.
+    /// </summary>
+    public const string PayHistoryRecipeStepName = "PayrollPayHistory";
+
+    /// <summary>
     /// The group of Payroll's site settings.
     /// </summary>
     public const string SettingsGroupId = "payroll";
@@ -114,6 +119,16 @@ public static class PayrollConstants
     /// The notification type of a change to a person's tax elections or to where their pay goes: a security notice.
     /// </summary>
     public const string PayDetailsChangedNotificationType = "PayDetailsChanged";
+
+    /// <summary>
+    /// The notification type of a deposit of pay the bank returned.
+    /// </summary>
+    public const string DepositReturnedNotificationType = "DepositReturned";
+
+    /// <summary>
+    /// The notification type of a staff member's bank account added or changed: a security notice.
+    /// </summary>
+    public const string BankAccountChangedNotificationType = "BankAccountChanged";
 
     /// <summary>
     /// The editor group of a pay profile that a person edits in My Pay: their tax elections and net pay split only.

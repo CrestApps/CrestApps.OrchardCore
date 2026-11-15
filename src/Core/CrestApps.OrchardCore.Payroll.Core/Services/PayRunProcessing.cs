@@ -131,6 +131,12 @@ public sealed partial class DefaultPayRunService
             fresh.ProcessedBy = user?.Identity?.Name;
             fresh.Totals = Totals(statements);
             await _runs.UpdateAsync(fresh, cancellationToken: cancellationToken);
+            await TellAsync(fresh, fresh.Status switch
+            {
+                PayRunStatus.Paid => PayRunChangeKind.Paid,
+                PayRunStatus.Failed => PayRunChangeKind.Failed,
+                _ => PayRunChangeKind.PartiallyPaid,
+            }, user, null, cancellationToken);
 
             foreach (var observer in _services.GetServices<IPayStatementObserver>())
             {
@@ -161,6 +167,13 @@ public sealed partial class DefaultPayRunService
         if (string.IsNullOrWhiteSpace(reason))
         {
             result.Errors.Add(S["Say why the statement is voided."]);
+
+            return result;
+        }
+
+        if (await _runs.FindByIdAsync(statement.RunId, cancellationToken) is { Type: PayRunType.Historical })
+        {
+            result.Errors.Add(S["A statement imported as history can't be voided or paid again."]);
 
             return result;
         }
@@ -282,6 +295,13 @@ public sealed partial class DefaultPayRunService
         if (string.IsNullOrWhiteSpace(reason))
         {
             result.Errors.Add(S["Say why the payment is reissued."]);
+
+            return result;
+        }
+
+        if (await _runs.FindByIdAsync(statement.RunId, cancellationToken) is { Type: PayRunType.Historical })
+        {
+            result.Errors.Add(S["A statement imported as history can't be voided or paid again."]);
 
             return result;
         }

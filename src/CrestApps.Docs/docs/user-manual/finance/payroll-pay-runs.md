@@ -56,3 +56,12 @@ A final statement never changes. On its page, someone who voids pay statements f
 
 - **Reissue** a payment, such as a lost check: say why, and the old check is voided (or the deposit cancelled if it was not sent to the bank yet) and a new one is made;
 - **Void** the statement: say why, and a reversing statement with the opposite amounts cancels it in the year's totals, its pay items go back, its time clock hours can be paid again and its checks and deposits are stopped where they have not gone out. Pay what is owed in a new run.
+
+## Reports, automation and history
+
+- **Reports > Workforce & Payroll** has the Payroll Register, Payroll Summary, Cash Requirement, Deductions and Contributions, Labor Distribution and Year-to-date Earnings reports; export them or e-mail them on a schedule. The Payroll Cash Requirement and Payroll Summary widgets can go on the dashboard.
+- Data pipelines read the **Payroll** data source (pay runs, statements, earnings, deductions, taxes, contributions, payments, year-to-date balances), for example to send a file to an accounting system.
+- The **Automation: open and calculate pay runs on schedule** recipe (Tools > Recipes) adds a workflow, turned off, that opens and calculates the period's run every weekday morning and submits it for approval; set its employer and pay schedule and turn it on.
+- Pay dates show on the calendar: the runs of your employers, and each person's own pay dates on their calendar.
+- To start the year's totals from another system, import its pay statements with the **Pay history** step of a recipe; they land in historical pay runs that can't be changed.
+

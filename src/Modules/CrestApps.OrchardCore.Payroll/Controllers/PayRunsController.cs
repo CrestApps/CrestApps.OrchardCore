@@ -151,7 +151,7 @@ public sealed class PayRunsController : Controller
 
         if (await CatalogEntryValidation.ValidateAsync(_runs, run, _updateModelAccessor.ModelUpdater, string.Empty) && ModelState.IsValid)
         {
-            await _runs.CreateAsync(run);
+            await _service.OpenAsync(run, User, HttpContext.RequestAborted);
             await _notifier.SuccessAsync(H["Pay run {0} has been added. Enter its inputs, then calculate it.", run.Number]);
 
             return RedirectToAction(nameof(Details), new { id = run.ItemId });

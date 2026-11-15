@@ -69,6 +69,16 @@ public interface IPayRunService
     Task<PayRunResult> CancelAsync(PayRun run, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Adds a new run (from <see cref="IPayRunManager.NewAsync"/>, with its employer, schedule or people, type and period
+    /// set) and tells the observers it was opened.
+    /// </summary>
+    /// <param name="run">The run.</param>
+    /// <param name="user">Who opens it.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<PayRunResult> OpenAsync(PayRun run, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Processes an approved run: its statements become final and numbered, pay items move toward their goals and keep
     /// their arrears, the sources are told their inputs were paid, and each payment of net pay is paid by the feature of
     /// its method (a deposit with no way to pay falls back to a check). A partly paid run is processed again to pay what

@@ -24,4 +24,16 @@ public sealed class PayrollAuditData
     /// Gets or sets why the change or the reveal happened, such as the page it came from.
     /// </summary>
     public string Reason { get; set; }
+
+    /// <summary>Gets or sets the pay run's number, for a pay run event.</summary>
+    public string RunNumber { get; set; }
+
+    /// <summary>Gets or sets the statement's number, for a statement event.</summary>
+    public string StatementNumber { get; set; }
+
+    /// <summary>Gets or sets what happened, such as Approved or Voided.</summary>
+    public string Change { get; set; }
+
+    /// <summary>Gets or sets how many statements the run has.</summary>
+    public int? Statements { get; set; }
 }

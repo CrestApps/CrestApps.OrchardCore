@@ -509,6 +509,46 @@ public sealed class PayRunProcessingTests
         Assert.Equal((PayrollConstants.PayStatementReadyNotificationType, statement.ItemId), (Assert.Single(deleted).Type, deleted[0].ReferenceId));
     }
 
+    [Fact]
+    public async Task RunObservers_HearEachStepOfARun_InOrder_WithWhoDidIt()
+    {
+        var context = new DisbursementsTestContext();
+        var origin = await context.Checks.BusinessAccountAsync();
+        var observer = new RecordingRunObserver();
+        await using var harness = await PayRunTests.CreateHarnessAsync(services =>
+        {
+            AddPayments(services, context, deposits: false, checks: true);
+            services.AddSingleton<IPayRunObserver>(observer);
+        });
+        var setup = await PayRunTests.SetUpAsync(harness, employerSetup: employer => employer.FundingBankAccountId = origin.ItemId);
+        var preparer = CalendarTestHarness.User("preparer", PayrollPermissions.PreparePayRuns.Name);
+
+        var opened = await harness.RunAsync(async services =>
+        {
+            var runs = services.GetRequiredService<IPayRunManager>();
+            var run = await runs.NewAsync();
+            var existing = await runs.FindByIdAsync(setup.RunId);
+
+            run.EmployerId = existing.EmployerId;
+            run.PayScheduleId = existing.PayScheduleId;
+            run.PeriodStart = existing.PeriodStart;
+            run.PeriodEnd = existing.PeriodEnd;
+            run.PayDate = existing.PayDate;
+
+            return await services.GetRequiredService<IPayRunService>().OpenAsync(run, preparer);
+        });
+
+        await ApproveAsync(harness, setup);
+        await harness.RunAsync(async services => Assert.True((await services.GetRequiredService<IPayRunService>().ProcessAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), CalendarTestHarness.User("processor", PayrollPermissions.ProcessPayRuns.Name))).Succeeded));
+
+        Assert.True(opened.Succeeded, string.Join(" ", opened.Errors));
+        Assert.Equal(
+            new[] { PayRunChangeKind.Opened, PayRunChangeKind.Calculated, PayRunChangeKind.Submitted, PayRunChangeKind.Approved, PayRunChangeKind.Paid },
+            observer.Changes.Select(change => change.Kind));
+        Assert.Equal(new[] { "preparer", "preparer", "preparer", "approver", "processor" }, observer.Changes.Select(change => change.Actor));
+        Assert.All(observer.Changes.Skip(1), change => Assert.Equal(setup.RunId, change.Run.ItemId));
+    }
+
     internal static void AddPayments(IServiceCollection services, DisbursementsTestContext context, bool deposits, bool checks)
     {
         services.AddSingleton<IDisbursementService>(context.Service);
@@ -589,6 +629,21 @@ public sealed class PayRunProcessingTests
             await _session.SaveChangesAsync(cancellationToken);
 
             return true;
+        }
+    }
+
+    /// <summary>
+    /// Records the changes of pay runs.
+    /// </summary>
+    internal sealed class RecordingRunObserver : IPayRunObserver
+    {
+        public List<PayRunChange> Changes { get; } = [];
+
+        public Task ChangedAsync(PayRunChange change, CancellationToken cancellationToken = default)
+        {
+            Changes.Add(change);
+
+            return Task.CompletedTask;
         }
     }
 

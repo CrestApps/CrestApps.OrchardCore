@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Payroll.Workflows
+
+@model PayrollTaskViewModel
+
+<p class="hint">@T["Processes an approved pay run, or pays what is left of a partly paid one. Ends in Paid, PartiallyPaid or Failed."]</p>
+<div class="mb-3">
+    <label asp-for="PayRunId" class="form-label">@T["Pay run id"]</label>
+    <input asp-for="PayRunId" class="form-control code" />
+    <span class="hint">@T["The run's id or number. Liquid."]</span>
+</div>

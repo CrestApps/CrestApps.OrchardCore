@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Banking;
+using CrestApps.OrchardCore.Disbursements;
 using CrestApps.OrchardCore.Payroll.Core;
 using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -28,6 +30,42 @@ public sealed class PaychecksStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
         => services.AddPayrollPaychecksCore();
+}
+
+/// <summary>
+/// Tells a person that the bank returned a deposit of their pay.
+/// </summary>
+[Feature(PayrollConstants.Features.DirectDeposit)]
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class DirectDepositNotificationsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNotificationType(
+            PayrollConstants.DepositReturnedNotificationType,
+            LocalizationSource.Create<DirectDepositNotificationsStartup>("Deposit of pay returned"),
+            type => type.Description = LocalizationSource.Create<DirectDepositNotificationsStartup>("When the bank returns a deposit of your pay."));
+        services.AddDisbursementObserver<DepositReturnedNotificationObserver>();
+    }
+}
+
+/// <summary>
+/// Tells a staff member that a bank account of theirs was added or its number changed.
+/// </summary>
+[Feature(PayrollConstants.Features.Payroll)]
+[RequireFeatures(BankingConstants.Features.Banking, OrchardCoreFeatureIds.Notifications)]
+public sealed class PayrollBankingNotificationsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNotificationType(
+            PayrollConstants.BankAccountChangedNotificationType,
+            LocalizationSource.Create<PayrollBankingNotificationsStartup>("Bank account changed"),
+            type => type.Description = LocalizationSource.Create<PayrollBankingNotificationsStartup>("When a bank account of yours is added or its number changes: a security notice."));
+        services.AddBankAccountObserver<BankAccountChangedNotificationObserver>();
+    }
 }
 
 /// <summary>
