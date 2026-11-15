@@ -38,19 +38,19 @@ internal sealed class TicketsAdminMenu : AdminNavigationProvider
     /// <inheritdoc/>
     protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
-        // One Tickets menu: the list, for whoever may view the tickets of at least one desk (desk permissions are dynamic,
-        // so a menu permission can't say it), and the help desk's own setup for whoever manages it. A user with neither
-        // sees no Tickets menu.
+        // One Service Desk menu: the ticket list, for whoever may view the tickets of at least one desk (desk permissions
+        // are dynamic, so a menu permission can't say it), and the service desk's own setup for whoever manages it. A user
+        // with neither sees no Service Desk menu.
         var httpContext = _httpContextAccessor.HttpContext;
         var canViewTickets = httpContext is not null && (await _access.GetViewScopesAsync(httpContext.User, httpContext.RequestAborted)).Count > 0;
 
-        builder.Add(S["Tickets"], S["Tickets"].PrefixPosition("6"), tickets =>
+        builder.Add(S["Service Desk"], S["Service Desk"].PrefixPosition("6"), tickets =>
         {
             tickets
-                .AddClass("tickets")
+                .AddClass("service-desk")
                 .AddClass("icon-class-fa-solid")
-                .AddClass("icon-class-fa-ticket")
-                .Id("tickets");
+                .AddClass("icon-class-fa-headset")
+                .Id("serviceDesk");
 
             if (canViewTickets)
             {

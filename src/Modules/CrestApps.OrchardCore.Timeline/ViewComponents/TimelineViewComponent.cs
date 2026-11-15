@@ -89,7 +89,7 @@ public sealed class TimelineViewComponent : ViewComponent
             return Content(string.Empty);
         }
 
-        var pageKey = PageKey(record);
+        var pageKey = PageKey(record, kinds);
         var pageNumber = int.TryParse(HttpContext.Request.Query[pageKey], out var requested) && requested > 1 ? requested : 1;
 
         var page = await _timelineService.ListAsync(new TimelineQuery
@@ -179,8 +179,11 @@ public sealed class TimelineViewComponent : ViewComponent
     /// </summary>
     /// <param name="record">The record.</param>
     /// <returns>The key.</returns>
-    internal static string PageKey(RecordRef record)
-        => "timeline-" + record.Kind + "-" + record.Id;
+    /// <param name="kinds">The kinds the timeline shows, when it shows only some: a record's conversation and its
+    /// history page apart.</param>
+    internal static string PageKey(RecordRef record, string kinds = null)
+        => "timeline-" + record.Kind + "-" + record.Id
+            + (string.IsNullOrWhiteSpace(kinds) ? string.Empty : "-" + string.Join("-", kinds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).ToLowerInvariant());
 
     // The text a refused post kept, read once.
     private string Pop(string draft, RecordRef record)

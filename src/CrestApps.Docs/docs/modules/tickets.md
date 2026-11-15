@@ -5,7 +5,7 @@ description: "The Tickets help desk: tickets as content items of any ticket type
 user_manual: user-manual/administration/tickets
 ---
 
-**Tickets** is a help desk. A ticket is a content item of a ticket type, filed under a desk (such as IT, HR or customer support) that decides who may see and work on it. Replies, internal notes and every change are kept on the ticket's [timeline](./timeline); first response and resolution targets run on [service levels](./service-levels) counted in [business hours](./business-hours); new tickets go to a team's members through [Teams](./teams).
+**Tickets** is a help desk. A ticket is a content item of a ticket type, filed under a desk (such as IT, HR or customer support) that decides who may see and work on it. The admin menu is **Service Desk**: **Tickets**, and for those who manage it, **Desks**, **Statuses**, **Priorities**, **Views** and **E-mails**. A ticket's page shows its **Conversation** (replies and internal notes, `Reply` and `Note` entries) apart from its **History** (every change: status, assignee, priority, links and the rest, `Event` entries), each paged on its own. Replies, internal notes and every change are kept on the ticket's [timeline](./timeline); first response and resolution targets run on [service levels](./service-levels) counted in [business hours](./business-hours); new tickets go to a team's members through [Teams](./teams).
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -87,7 +87,7 @@ Tickets is a [service-level](./service-levels) scope named `Tickets`, with the m
 
 ## Notifications and e-mails
 
-With a desk that e-mails requesters, the requester gets the `ticket-received`, `ticket-reply` (public replies only) and `ticket-solved` [templated e-mails](./templated-emails), which the site can rewrite under **Settings > Tickets > E-mails**. A template has `Ticket` (`Number`, `Subject`, `Status`, `RequesterName`) and, in a reply, `Reply`: `Reply.Body` is the plain text, encoded where it is written, and `Reply.Html` is the reply already encoded as paragraphs with links to its files, written raw as `{{ Reply.Html | raw }}`. A reply's files are linked with signed download links that work for 30 days, from the site's **Base URL** (without one, the e-mail names the files and asks the requester to open the request).
+With a desk that e-mails requesters, the requester gets the `ticket-received`, `ticket-reply` (public replies only) and `ticket-solved` [templated e-mails](./templated-emails), which the site can rewrite under **Settings > Service Desk > E-mails**. A template has `Ticket` (`Number`, `Subject`, `Status`, `RequesterName`) and, in a reply, `Reply`: `Reply.Body` is the plain text, encoded where it is written, and `Reply.Html` is the reply already encoded as paragraphs with links to its files, written raw as `{{ Reply.Html | raw }}`. A reply's files are linked with signed download links that work for 30 days, from the site's **Base URL** (without one, the e-mail names the files and asks the requester to open the request).
 
 Every requester e-mail goes through an outbox: it is stored, tried at once, and when it fails tried again after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours, then given up. While a reply's e-mail hasn't reached the requester, the reply on the ticket shows a "not delivered" notice with the reason (the timeline's `Notice` entry property), and the notice goes away once it is sent. An e-mail that is given up is also logged as a warning. A ticket created with `TicketCreateRequest.IsImport` (a bulk import of past tickets) tells no observer, so no requester is e-mailed, no workflow starts and no webhook is sent; tickets brought in by a recipe's `Content` step are saved as content items and tell no observer either. With Notifications on, the assignee is told through Orchard Core notifications when a ticket is given to them (never about one they took). With Omnichannel Messaging on, reply templates of the `Tickets` scope are offered in the composer, filled in for the ticket, and can also set a status, priority or team.
 
@@ -184,7 +184,7 @@ This is the agents' API: `entries` returns internal notes to anyone who may view
 
 ## Accounts, personal data and AI tools
 
-With Accounts on, an account's page has a **Tickets** tab with its latest tickets in the user's scope and **New ticket** for the account.
+With Accounts on, an account's page has a **Tickets** tab with its latest 25 tickets in the user's scope, **New ticket** for the account, and **View all in the ticket list**, which opens the list filtered to the account (`?accountId=`, every state). The list shows the filter as an **Account** chip that removes it; the account's name shows to a user who may view the account.
 
 Tickets takes part in [personal data](./personal-data) requests: a person's tickets are found by their user and by the e-mail kept on a guest's ticket. An export lists each ticket and its public replies. An erasure:
 

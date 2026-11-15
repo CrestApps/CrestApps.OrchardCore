@@ -12,15 +12,16 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Tests.Tickets;
 
 /// <summary>
-/// The help desk has one Tickets menu (the list and its own setup), and the schedules and policies other modules share
-/// sit under Orchard Core's Settings menu; Orchard Core 4 has no Configuration menu.
+/// The help desk has one Service Desk menu (the ticket list and its own setup), and the schedules and policies other
+/// modules share sit under Orchard Core's Tools menu; Settings is for site settings, and Orchard Core 4 has no
+/// Configuration menu.
 /// </summary>
 public sealed class TicketsAdminMenuTests
 {
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task TheListAndTheHelpDeskSetup_AreOneTicketsMenu(bool canViewTickets)
+    public async Task TheListAndTheHelpDeskSetup_AreOneServiceDeskMenu(bool canViewTickets)
     {
         // Arrange
         var access = new Mock<ITicketAccessService>();
@@ -38,13 +39,14 @@ public sealed class TicketsAdminMenuTests
 
         // Assert
         var tickets = Assert.Single(builder.Build());
-        Assert.Equal("tickets", tickets.Id);
+        Assert.Equal("serviceDesk", tickets.Id);
+        Assert.Equal("Service Desk", tickets.Text.Value);
         string[] setup = ["ticketDesks", "ticketStatuses", "ticketPriorities", "ticketViews", "ticketEmails"];
         Assert.Equal(canViewTickets ? ["ticketList", .. setup] : setup, tickets.Items.OrderBy(item => item.Position).Select(item => item.Id));
     }
 
     [Fact]
-    public async Task BusinessHoursAndServiceLevels_AreUnderSettings()
+    public async Task BusinessHoursAndServiceLevels_AreUnderTools()
     {
         // Arrange
         var builder = new NavigationBuilder();
@@ -53,9 +55,9 @@ public sealed class TicketsAdminMenuTests
         await new BusinessHoursAdminMenu(new PassThroughLocalizer<BusinessHoursAdminMenu>()).BuildNavigationAsync(NavigationConstants.AdminId, builder);
         await new ServiceLevelsAdminMenu(new PassThroughLocalizer<ServiceLevelsAdminMenu>()).BuildNavigationAsync(NavigationConstants.AdminId, builder);
 
-        // Assert: each provider adds a Settings node (Orchard Core merges nodes of the same name into one menu).
+        // Assert: each provider adds a Tools node (Orchard Core merges nodes of the same name into one menu).
         var roots = builder.Build();
-        Assert.All(roots, root => Assert.Equal("Settings", root.Text.Value));
+        Assert.All(roots, root => Assert.Equal("Tools", root.Text.Value));
         Assert.Equal(["businessHoursSchedules", "serviceLevelPolicies"], roots.SelectMany(root => root.Items).Select(item => item.Id).Order());
     }
 

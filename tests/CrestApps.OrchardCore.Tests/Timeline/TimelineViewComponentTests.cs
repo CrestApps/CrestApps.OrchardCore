@@ -67,6 +67,15 @@ public sealed class TimelineViewComponentTests
         Assert.Equal("/tenant-a/Admin/orders/o1?tab=notes&" + key + "=2", model.ReturnUrl);
     }
 
+    [Fact]
+    public void TwoTimelinesOfOneRecord_ShowingDifferentKinds_PageApart()
+    {
+        // A ticket shows its conversation (replies and notes) and its history (changes) as two timelines.
+        Assert.Equal("timeline-Order-o1", TimelineViewComponent.PageKey(_order));
+        Assert.NotEqual(TimelineViewComponent.PageKey(_order, "Reply,Note"), TimelineViewComponent.PageKey(_order, "Event"));
+        Assert.Equal(TimelineViewComponent.PageKey(_order, "Reply, Note"), TimelineViewComponent.PageKey(_order, "Reply,Note"));
+    }
+
     private static TimelineViewModel Model(IViewComponentResult result)
         => Assert.IsType<TimelineViewModel>(Assert.IsType<ViewViewComponentResult>(result).ViewData.Model);
 

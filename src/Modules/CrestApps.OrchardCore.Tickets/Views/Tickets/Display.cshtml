@@ -160,14 +160,16 @@ else if (Model.IsReadOnly)
                             @if (Model.CanSetStatus)
                             {
                                 <div class="col-auto">
-                                    <label for="ticket-reply-status" class="visually-hidden">@T["Status after sending"]</label>
-                                    <select id="ticket-reply-status" name="setStatusId" class="form-select form-select-sm">
-                                        <option value="">@T["Keep the status"]</option>
-                                        @foreach (var status in Model.Statuses)
-                                        {
-                                            <option value="@status.Value" selected="@(status.Value == Model.DraftStatusId)">@T["Send and set {0}", status.Text]</option>
-                                        }
-                                    </select>
+                                    <div class="input-group input-group-sm">
+                                        <label for="ticket-reply-status" class="input-group-text">@T["Then set the status to"]</label>
+                                        <select id="ticket-reply-status" name="setStatusId" class="form-select form-select-sm">
+                                            <option value="">@T["Keep it as it is"]</option>
+                                            @foreach (var status in Model.Statuses)
+                                            {
+                                                <option value="@status.Value" selected="@(status.Value == Model.DraftStatusId)">@status.Text</option>
+                                            }
+                                        </select>
+                                    </div>
                                 </div>
                             }
                             <div class="col-auto">
@@ -179,7 +181,9 @@ else if (Model.IsReadOnly)
             </div>
         }
 
-        @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["Conversation"].Value })
+        @* The conversation is what people wrote; every change to the ticket (status, assignee, links...) is in its history. *@
+        @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["Conversation"].Value, kinds = $"{TicketsConstants.EntryKinds.Reply},{TicketsConstants.EntryKinds.Note}" })
+        @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["History"].Value, kinds = TicketsConstants.EntryKinds.Event })
     </div>
     <div class="col-12 col-lg-4">
         @await DisplayAsync(display.Sidebar)

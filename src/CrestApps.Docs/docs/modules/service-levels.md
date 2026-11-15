@@ -15,7 +15,7 @@ user_manual: user-manual/administration/service-levels
 | --- | --- |
 | `CrestApps.OrchardCore.ServiceLevels.Abstractions` | `ServiceLevelPolicy`, `ServiceLevelTarget`, `ServiceLevelTimer`, `ServiceLevelTimerState`, `ServiceLevelMetrics`, `ServiceLevelStart`, `IServiceLevelTracker`, `IServiceLevelObserver`, `IServiceLevelScopeProvider`, `IServiceLevelPolicyManager`, `IServiceLevelPolicyUsageProvider`, the registration helpers and `ServiceLevelsPermissions` |
 | `CrestApps.OrchardCore.ServiceLevels.Core` | The YesSql stores and indexes (collection `ServiceLevels`), `DefaultServiceLevelTracker`, `ServiceLevelMonitor`, `ServiceLevelTargetGrid` and `AddServiceLevelsCore()` |
-| `CrestApps.OrchardCore.ServiceLevels` (module) | **Settings > Service Levels**, the policy editor, the monitor background task, the migration and the recipe and deployment step |
+| `CrestApps.OrchardCore.ServiceLevels` (module) | **Tools > Service Levels**, the policy editor, the monitor background task, the migration and the recipe and deployment step |
 
 ## Policies
 

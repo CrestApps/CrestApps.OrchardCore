@@ -10,7 +10,7 @@ A **service level policy** says how long a piece of work may take: how soon it m
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Service Levels |
+| **Menu** | Tools > Service Levels |
 | **Permission** | Manage service level policies |
 | **Feature** | Service Levels, turned on by the features that use it, such as Work Orders |
 
@@ -18,7 +18,7 @@ A **service level policy** says how long a piece of work may take: how soon it m
 
 ## Create a policy
 
-1. Go to **Settings > Service Levels** and select **Add Policy**. When more than one kind of work uses service levels, choose the one the policy is for, such as **For Work orders**.
+1. Go to **Tools > Service Levels** and select **Add Policy**. When more than one kind of work uses service levels, choose the one the policy is for, such as **For Work orders**.
 2. In **General**, enter a **Name** such as *Premium support*.
 3. In **Counted on**, choose the business hours schedule the targets are counted in, or **Around the clock** to count every hour. A schedule that is never open can't be chosen: no target could be met. See [Business Hours Schedules](business-hours-schedules.md).
 4. In **Warn at**, enter how much of a target may pass before a warning is raised, such as *80* %.

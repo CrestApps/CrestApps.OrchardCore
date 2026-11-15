@@ -10,7 +10,7 @@ A **ticket** is a request someone made: a customer who can't sign in, an employe
 
 | | |
 | --- | --- |
-| **Menu** | **Tickets**: the ticket list, and for those who manage the help desk, Desks, Statuses, Priorities, Views and E-mails |
+| **Menu** | **Service Desk**: Tickets, and for those who manage the service desk, Desks, Statuses, Priorities, Views and E-mails |
 | **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the settings; **View ticket reports** for the reports |
 | **Feature** | Tickets |
 
@@ -38,7 +38,9 @@ Go to **Tickets**. The list shows the tickets you may see, latest change first.
 Open a ticket from the list. Its thread is on the left, newest first; its values, the requester, the service levels and the links are beside it.
 
 - Write in the composer and choose **Reply to the requester** (they are e-mailed when the desk e-mails requesters) or **Internal note** for the agents only. Mention a colleague with `@username` to tell them.
-- Choose a **Status after sending** to send and move the ticket in one step, such as **Waiting for the requester**.
+- Choose **Then set the status to** to send and move the ticket in one step, such as **Waiting for the requester**.
+
+The **Conversation** shows what people wrote: replies and internal notes. Every change to the ticket, such as its status, assignee or priority, is listed under **History** below it.
 - Pick a **Reply template** to start from a saved answer; it can also set a status, priority or team.
 - Change the status, priority, desk, team or assignee in the ticket's values, or select **Assign to me**.
 - Use **Actions** to run an action your administrator set up, such as **Escalate to tier 2**.
@@ -74,7 +76,7 @@ A desk's service-level policy sets how soon a ticket must first be answered and 
 
 ## Set up desks, statuses, priorities and views
 
-Under the **Tickets** menu:
+Under the **Service Desk** menu:
 
 | Page | What you set |
 | --- | --- |
@@ -88,7 +90,7 @@ The permissions to view and work tickets exist for each desk, so HR tickets can 
 
 ## The account tab
 
-An account's page has a **Tickets** tab: its latest tickets you may see, how many are open, and **New ticket** for the account.
+An account's page has a **Tickets** tab: its latest tickets you may see, how many are open, **New ticket** for the account, and **View all in the ticket list**, which opens the ticket list showing only that account's tickets, in every state. Remove the **Account** filter there to see every ticket again.
 
 ## Let customers open requests on the site
 
@@ -96,7 +98,7 @@ Turn on **Tickets Portal** under **Configuration > Features**. Then:
 
 1. Under **Content Definition**, edit the ticket type's **Ticket** part and tick **Customers can submit it**. Add a **Description for customers** so they can tell types apart.
    Customers see the subject and only the fields you mark **Customers fill this in** (in each field's settings); every other field stays your agents' own.
-2. Make sure a desk **Serves** customers (**Tickets > Desks**). Customers can only open requests on those desks. With Staff on, members of staff also see the desks that serve people inside the organization, so employees can ask IT or HR from the same page.
+2. Make sure a desk **Serves** customers (**Service Desk > Desks**). Customers can only open requests on those desks. With Staff on, members of staff also see the desks that serve people inside the organization, so employees can ask IT or HR from the same page.
 
 Signed-in people now find **Requests** under **My account**: their requests, **New request**, and each request's conversation with a reply box. They see your public replies, never your internal notes. Someone without a login follows **View your request** in their e-mails to read and answer their request. An account's administrators also see the account's requests.
 
@@ -115,7 +117,7 @@ To triage every new ticket, add the **Triage Ticket With AI** task to a workflow
 
 ## Ask for approval before work starts
 
-Turn on **Ticket Approvals** under **Configuration > Features**. Then, under **Content Definition**, edit the ticket type's **Ticket** part and fill in **Approval**: up to three steps, each with a name (such as *Manager* or *Finance*) and its approvers, or **The requester's manager**. Choose a **Status while waiting**, such as a *Waiting for approval* status you add under **Tickets > Statuses**.
+Turn on **Ticket Approvals** under **Configuration > Features**. Then, under **Content Definition**, edit the ticket type's **Ticket** part and fill in **Approval**: up to three steps, each with a name (such as *Manager* or *Finance*) and its approvers, or **The requester's manager**. Choose a **Status while waiting**, such as a *Waiting for approval* status you add under **Service Desk > Statuses**.
 
 A new ticket of that type then waits. Each approver of the current step is told in their notifications and opens the request's approval page; agents see the steps on the ticket. One approver per step decides: **Approve** moves to the next step, and after the last the ticket goes back to work. **Refuse** needs a comment, which the requester reads; the ticket is then solved. While a ticket waits, its status can't be changed any other way. If an approver can't decide (they left, say), an administrator opens the ticket and uses **Cancel the approval** with a reason; the ticket goes back to work.
 
