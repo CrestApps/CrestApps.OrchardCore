@@ -1,0 +1,10 @@
+@model CrestApps.OrchardCore.Tickets.ContactCenter.ViewModels.TicketDeskQueueViewModel
+
+<div class="mb-3">
+    <label asp-for="QueueId" class="form-label">@T["Contact Center queue"]</label>
+    <select asp-for="QueueId" asp-items="Model.Queues" class="form-select">
+        <option value="">@T["None"]</option>
+    </select>
+    <span asp-validation-for="QueueId" class="text-danger"></span>
+    <span class="hint">@T["New tickets on this desk that nobody has yet are offered to agents through this queue, with its presence, capacity and skills; the agent who accepts one gets the ticket. Agents accept offers in the agent desktop."]</span>
+</div>

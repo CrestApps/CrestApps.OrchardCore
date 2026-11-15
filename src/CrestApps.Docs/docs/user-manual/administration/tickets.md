@@ -52,6 +52,10 @@ A reply from the requester on a solved ticket reopens it within the desk's reope
 - **Merge** moves a duplicate into another ticket by its number. The duplicate becomes read only and points to the ticket it was merged into.
 - **Links** relate a ticket to another ticket or to any record, such as an order or a work order, with a relation such as **Related** or **Duplicate**.
 
+## Route tickets through the Contact Center
+
+Turn on **Tickets for Contact Center**, then edit a desk and choose its **Contact Center queue**. New tickets on that desk that nobody has yet are offered to the queue's available agents, by their skills and how busy they are; the agent who accepts one gets the ticket. If someone takes the ticket by hand, or it's solved first, the offer is called off. Agents accept offers in the agent desktop.
+
 ## Record your time on a ticket
 
 When your administrator has chosen a **Time on tickets** stage for the desk, the ticket has a **Time** panel. Select **Start working on this ticket** when you pick it up and **Stop working on this ticket** when you're done; your time goes back to what you were doing before. The panel shows how long each person worked on the ticket, and the time is part of your day in **My time**.

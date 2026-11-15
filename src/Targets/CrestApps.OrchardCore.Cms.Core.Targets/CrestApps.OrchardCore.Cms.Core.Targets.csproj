@@ -116,6 +116,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.ServiceLevels/CrestApps.OrchardCore.ServiceLevels.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Attachments/CrestApps.OrchardCore.Attachments.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.KnowledgeBase/CrestApps.OrchardCore.KnowledgeBase.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Tickets.ContactCenter/CrestApps.OrchardCore.Tickets.ContactCenter.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Timeline/CrestApps.OrchardCore.Timeline.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Tickets/CrestApps.OrchardCore.Tickets.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Teams/CrestApps.OrchardCore.Teams.csproj" PrivateAssets="none" />

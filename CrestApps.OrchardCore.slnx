@@ -229,6 +229,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.ServiceLevels/CrestApps.OrchardCore.ServiceLevels.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Attachments/CrestApps.OrchardCore.Attachments.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.KnowledgeBase/CrestApps.OrchardCore.KnowledgeBase.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Tickets.ContactCenter/CrestApps.OrchardCore.Tickets.ContactCenter.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Timeline/CrestApps.OrchardCore.Timeline.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Tickets/CrestApps.OrchardCore.Tickets.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Teams/CrestApps.OrchardCore.Teams.csproj" />

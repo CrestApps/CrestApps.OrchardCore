@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Tickets for Contact Center</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Offers help desk tickets to agents through Contact Center queues, so presence, capacity and skills routing apply,
+      and assigns a ticket to the agent who accepts it.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Tickets HelpDesk ContactCenter Routing</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Tickets.Abstractions\CrestApps.OrchardCore.Tickets.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Tickets.Core\CrestApps.OrchardCore.Tickets.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.ContactCenter.Core\CrestApps.OrchardCore.ContactCenter.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Tickets\CrestApps.OrchardCore.Tickets.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -14,6 +14,7 @@ user_manual: user-manual/administration/tickets
 | Tickets Portal | `CrestApps.OrchardCore.Tickets.Portal` | Tickets, My Account |
 | Ticket Web Form | `CrestApps.OrchardCore.Tickets.WebForm` | Tickets |
 | Ticket Approvals | `CrestApps.OrchardCore.Tickets.Approvals` | Tickets |
+| Tickets for Contact Center | `CrestApps.OrchardCore.Tickets.ContactCenter` (its own module) | Tickets, Contact Center Work Distribution |
 
 | Project | Holds |
 | --- | --- |
@@ -68,6 +69,10 @@ A ticket linked to another with **Its problem** (`TicketLinkKinds.Problem`) is a
 ## Work orders
 
 With Work Orders on, the ticket page has a **Work order** panel for agents who may change the ticket and hold **Manage work orders**: they choose a work order type and, optionally, a priority, and `TicketWorkOrders` creates the work order through `WorkOrderService` (the type's defaults, number and service level apply). The work order takes the ticket's subject as its summary (shortened to 120 characters), the first message as its description, the ticket's account, the requester (the contact when the requester is one, with name, e-mail, phone and address) and `Source` `Ticket` with the ticket's id as `SourceId`; the ticket links to it (**Related**), so it shows under **Links**. When the work order is completed or canceled, `TicketWorkOrderObserver` adds an internal event to the ticket's timeline (with the cancel reason); the ticket's status is left to the agent. The **Create Work Order From Ticket** workflow task does the same from a workflow, with the type by name or id, and sets the `WorkOrderId` and `WorkOrderNumber` outputs. This is an integration of the Tickets feature (`[RequireFeatures]`), not a feature of its own.
+
+## Contact Center routing
+
+The **Tickets for Contact Center** module (`CrestApps.OrchardCore.Tickets.ContactCenter`) lets a desk offer its tickets through a Contact Center queue, so the queue's presence, capacity and skills routing decide who gets them. A desk's editor gets **Contact Center queue** (`TicketDeskQueueSettings`, in the desk's properties). A new ticket on that desk that nobody has (and that isn't waiting for approval) becomes a task activity (`ActivityKind.Task`, source `Api`, the ticket's number and subject as its instructions, the ticket's id in `TicketActivityLink`) enqueued with the ticket's priority (`IActivityQueueService.EnqueueAsync`); the ticket links to the activity (`OmnichannelActivity:{id}`), which shows on its timeline. When an agent accepts the offer (`QueueItemAssigned`), `TicketOfferAcceptedHandler` gives them the ticket, unless someone already has it; replaying the event changes nothing. When the ticket is given to someone by hand, solved, closed, merged or deleted before an agent took it, the queued work is withdrawn (`IQueuedWorkWithdrawalService`); work an agent already took stays theirs to complete in the agent workspace, like any activity. Agents accept offers in the agent desktop, which needs the Contact Center Voice and real-time features.
 
 ## Time on tickets
 
