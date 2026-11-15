@@ -106,8 +106,10 @@ To learn how you did, set **Ask requesters to rate a solved ticket after (hours)
 
 With AI turned on, edit a desk and choose an **AI assistant**: a chat AI profile with the instructions and knowledge your agents should answer from. Tickets on that desk then show an **AI assistant** panel:
 
-- **Suggest a reply** writes a reply into the reply box from the conversation. Read it, change it, then send it; nothing is sent until you do.
-- **Triage** adds an internal note with a short summary and a suggested priority. Tick **A triage sets the priority it suggests** on the desk to have it change the priority too.
+- **Suggest a reply** writes a reply into the reply box from the conversation. Read it, change it, then send it; nothing is sent until you do, and it stays a public reply or an internal note as you had chosen.
+- **Triage** adds an internal note with a short summary and a suggested priority. Tick **A triage sets the priority it suggests** on the desk to have it change the priority too. It may lower the priority, or raise it at most one step above the ticket type's default; anything higher is only noted for an agent, so a requester can't talk their way to the top.
+
+The assistant sends the ticket's conversation, internal notes and names included, to the AI service of the profile you chose. Pick a service whose data terms fit what your tickets hold.
 
 To triage every new ticket, add the **Triage Ticket With AI** task to a workflow that starts with **Ticket Created**.
 

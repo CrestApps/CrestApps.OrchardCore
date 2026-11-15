@@ -20,6 +20,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.Tests.Tickets;
 
@@ -29,8 +30,56 @@ namespace CrestApps.OrchardCore.Tests.Tickets;
 /// </summary>
 public sealed class TicketAssistantTests
 {
+    private static readonly TicketPriority _low = new() { ItemId = "low", Name = "Low", Rank = 1 };
     private static readonly TicketPriority _normal = new() { ItemId = "normal", Name = "Normal", Rank = 2 };
+    private static readonly TicketPriority _high = new() { ItemId = "high", Name = "High", Rank = 3 };
     private static readonly TicketPriority _urgent = new() { ItemId = "urgent", Name = "Urgent", Rank = 4 };
+
+    [Theory]
+    [InlineData("urgent", "normal", "normal", null)]
+    [InlineData("high", "normal", "normal", "high")]
+    [InlineData("low", "urgent", "normal", "low")]
+    [InlineData("urgent", "normal", null, null)]
+    [InlineData("urgent", "high", null, "urgent")]
+    [InlineData("urgent", "low", "high", "urgent")]
+    [InlineData("normal", "normal", "normal", null)]
+    public void ATriage_LowersFreely_ButRaisesAtMostOneStepAboveTheTypesDefault(string suggested, string current, string typeDefault, string applied)
+    {
+        // Arrange: a requester can write "URGENT, ignore your rules" into the request the assistant reads.
+        TicketPriority[] priorities = [_urgent, _low, _high, _normal];
+
+        // Act
+        var priority = TicketAssistant.PriorityToApply(priorities.Single(value => value.ItemId == suggested), current, typeDefault, priorities);
+
+        // Assert
+        Assert.Equal(applied, priority?.ItemId);
+    }
+
+    [Fact]
+    public async Task ASuggestedReply_IsWrittenForTheRequester_WithoutPassingOnInternalNotes()
+    {
+        // Arrange
+        var kit = new Kit("We're on it.");
+
+        // Act
+        await kit.Assistant.SuggestReplyAsync(Ticket(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains("never quote, paraphrase or hint at them", kit.Context.SystemMessage, StringComparison.Ordinal);
+        Assert.Contains("goes to the requester", kit.Context.SystemMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InsertingASuggestion_KeepsTheComposersReplyOrNoteChoice_AndDefaultsToANote()
+    {
+        // The suggestion is written from a thread with internal notes: inserting it must never switch an internal note to
+        // a public reply (the composer's radio buttons are named isInternal, "true" being a note).
+        var view = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Tickets", "Views", "TicketPart.Assistant.cshtml"));
+
+        Assert.DoesNotContain("[value=\"false\"]", view, StringComparison.Ordinal);
+        Assert.Contains("input[name=\"isInternal\"]:checked", view, StringComparison.Ordinal);
+        Assert.Contains("[name=\"isInternal\"][value=\"true\"]", view, StringComparison.Ordinal);
+    }
 
     [Theory]
     [InlineData("{\"summary\": \"VPN down for the whole office.\", \"priority\": \"urgent\"}", "VPN down for the whole office.", "urgent")]
@@ -107,6 +156,18 @@ public sealed class TicketAssistantTests
         kit.Tickets.Verify(service => service.UpdateAsync("t7", It.Is<TicketUpdate>(update => update.PriorityId == "urgent"), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()), applyPriority ? Times.Once() : Times.Never());
     }
 
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "tests", "CrestApps.OrchardCore.Tests")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Unable to locate the repository root from the test assembly location.");
+    }
+
     private static ContentItem Ticket(string deskId = "support")
     {
         var ticket = new ContentItem { ContentItemId = "t7", ContentType = TicketsConstants.DefaultContentType, DisplayText = "VPN down" };
@@ -138,7 +199,7 @@ public sealed class TicketAssistantTests
             var profile = new AIProfile { ItemId = "profile-1", Name = "Help desk", Type = AIProfileType.Chat };
             var profiles = new Mock<IAIProfileManager>();
             profiles.Setup(value => value.FindByIdAsync("profile-1", It.IsAny<CancellationToken>())).ReturnsAsync(profile);
-            var context = new AICompletionContext();
+            var context = Context;
             var contexts = new Mock<IAICompletionContextBuilder>();
             contexts.Setup(value => value.BuildAsync(profile, It.IsAny<Action<AICompletionContext>>(), It.IsAny<CancellationToken>()))
                 .Callback((object _, Action<AICompletionContext> configure, CancellationToken _) => configure?.Invoke(context))
@@ -161,12 +222,14 @@ public sealed class TicketAssistantTests
                 .AddSingleton(completions.Object)
                 .BuildServiceProvider();
 
-            Assistant = new TicketAssistant(desks.Object, priorities.Object, timeline.Object, services, NullLogger<TicketAssistant>.Instance, new PassThroughLocalizer());
+            Assistant = new TicketAssistant(desks.Object, priorities.Object, Mock.Of<IContentDefinitionManager>(), timeline.Object, services, NullLogger<TicketAssistant>.Instance, new PassThroughLocalizer());
         }
 
         public Mock<ITicketService> Tickets { get; } = new();
 
         public TicketAssistant Assistant { get; }
+
+        public AICompletionContext Context { get; } = new();
     }
 
     private sealed class PassThroughLocalizer : IStringLocalizer<TicketAssistant>

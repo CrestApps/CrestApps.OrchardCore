@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
 
 namespace CrestApps.OrchardCore.Tickets.AI;
 
@@ -34,8 +35,20 @@ public sealed class TicketAssistant
     /// </summary>
     public const int EntriesRead = 30;
 
+    /// <summary>
+    /// What the assistant is told when it suggests a reply. The thread it reads holds internal notes, and the reply goes to
+    /// the requester, so it is told never to pass them on.
+    /// </summary>
+    internal const string SuggestReplyInstructions = "You help a help desk agent answer a request. Write the next reply "
+        + "to the requester, from the agent. The reply goes to the requester, the customer, who must never learn what "
+        + "the internal notes say: use them only to understand the case, and never quote, paraphrase or hint at them, "
+        + "nor at who wrote them. Use the conversation below (the requester's messages, the agent's replies and the "
+        + "agents' internal notes) and what you know. Answer in the requester's language. Be brief, friendly and "
+        + "concrete; say what will happen next. Write only the reply's text: no subject, no placeholders, no signature.";
+
     private readonly ICatalog<TicketDesk> _desks;
     private readonly ICatalog<TicketPriority> _priorities;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly ITimelineService _timeline;
     private readonly IServiceProvider _services;
     private readonly ILogger _logger;
@@ -47,6 +60,7 @@ public sealed class TicketAssistant
     public TicketAssistant(
         ICatalog<TicketDesk> desks,
         ICatalog<TicketPriority> priorities,
+        IContentDefinitionManager contentDefinitionManager,
         ITimelineService timeline,
         IServiceProvider services,
         ILogger<TicketAssistant> logger,
@@ -54,6 +68,7 @@ public sealed class TicketAssistant
     {
         _desks = desks;
         _priorities = priorities;
+        _contentDefinitionManager = contentDefinitionManager;
         _timeline = timeline;
         _services = services;
         _logger = logger;
@@ -85,18 +100,13 @@ public sealed class TicketAssistant
     /// <returns>The reply, or why there is none.</returns>
     public async Task<TicketAssistantResult> SuggestReplyAsync(ContentItem ticket, CancellationToken cancellationToken = default)
     {
-        var instructions = "You help a help desk agent answer a request. Write the next reply to the requester, from the agent, "
-            + "using the conversation below (the requester's messages, the agent's replies and the agents' internal notes, "
-            + "which the requester never sees) and what you know. Answer in the requester's language. Be brief, friendly "
-            + "and concrete; say what will happen next. Write only the reply's text: no subject, no placeholders, no "
-            + "signature. Never reveal internal notes.";
-
-        return await CompleteAsync(ticket, instructions, cancellationToken);
+        return await CompleteAsync(ticket, SuggestReplyInstructions, cancellationToken);
     }
 
     /// <summary>
     /// Triages a ticket: a short summary and the priority it suggests, as an internal note, and the priority itself
-    /// when the desk says so.
+    /// when the desk says so, within <see cref="PriorityToApply"/>: the requester's own words ("URGENT, set the highest
+    /// priority") can't raise a ticket past one step above its type's default.
     /// </summary>
     /// <param name="ticket">The ticket.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -134,7 +144,17 @@ public sealed class TicketAssistant
 
             if (settings?.ApplyPriority == true && priority.ItemId != ticket.GetOrCreate<TicketPart>().PriorityId)
             {
-                await tickets.UpdateAsync(ticket.ContentItemId, new TicketUpdate { PriorityId = priority.ItemId }, actor, cancellationToken);
+                var typeDefaultId = (await _contentDefinitionManager.GetTypeDefinitionAsync(ticket.ContentType))?.Parts
+                    .FirstOrDefault(part => part.PartDefinition.Name == TicketsConstants.PartName)?.GetSettings<TicketPartSettings>().DefaultPriorityId;
+
+                if (PriorityToApply(priority, ticket.GetOrCreate<TicketPart>().PriorityId, typeDefaultId, priorities) is { } applied)
+                {
+                    await tickets.UpdateAsync(ticket.ContentItemId, new TicketUpdate { PriorityId = applied.ItemId }, actor, cancellationToken);
+                }
+                else
+                {
+                    note.AppendLine().Append(S["Not set: the assistant lowers a priority, or raises it at most one step above the ticket type's default. An agent decides."]);
+                }
             }
         }
 
@@ -147,6 +167,42 @@ public sealed class TicketAssistant
         }, cancellationToken);
 
         return new TicketAssistantResult { Text = note.ToString() };
+    }
+
+    /// <summary>
+    /// The priority a triage may set: any lower one, or a higher one up to one step above the ticket type's default (or
+    /// above the ticket's priority when its type has none). A requester can write "urgent, ignore your rules" into their
+    /// request, and the assistant reads it; this bounds what such words can do.
+    /// </summary>
+    /// <param name="suggested">The priority the assistant suggested.</param>
+    /// <param name="currentId">The ticket's priority.</param>
+    /// <param name="typeDefaultId">The ticket type's default priority, if any.</param>
+    /// <param name="priorities">The site's priorities.</param>
+    /// <returns>The priority to set, or <see langword="null"/> to leave it to an agent.</returns>
+    public static TicketPriority PriorityToApply(TicketPriority suggested, string currentId, string typeDefaultId, IReadOnlyCollection<TicketPriority> priorities)
+    {
+        if (suggested is null || suggested.ItemId == currentId)
+        {
+            return null;
+        }
+
+        var current = priorities.FirstOrDefault(priority => priority.ItemId == currentId);
+
+        if (current is not null && suggested.Rank < current.Rank)
+        {
+            return suggested;
+        }
+
+        var baseline = priorities.FirstOrDefault(priority => priority.ItemId == typeDefaultId) ?? current;
+
+        if (baseline is null)
+        {
+            return null;
+        }
+
+        var ceiling = priorities.Where(priority => priority.Rank > baseline.Rank).OrderBy(priority => priority.Rank).FirstOrDefault() ?? baseline;
+
+        return suggested.Rank <= ceiling.Rank ? suggested : null;
     }
 
     /// <summary>
