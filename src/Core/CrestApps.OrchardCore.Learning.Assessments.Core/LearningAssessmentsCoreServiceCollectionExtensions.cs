@@ -26,6 +26,7 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
         services.TryAddScoped<GradeScaleStore>();
         services.TryAddScoped<IAssessmentContentSource, DefaultAssessmentContentSource>();
         services.TryAddScoped<AttemptReviewPolicy>();
+        services.AddAttemptObserver<AssessmentsTelemetryObserver>();
         services.TryAddScoped<IAssessmentAttemptService, DefaultAssessmentAttemptService>();
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, QuestionContentAccessHandler>());

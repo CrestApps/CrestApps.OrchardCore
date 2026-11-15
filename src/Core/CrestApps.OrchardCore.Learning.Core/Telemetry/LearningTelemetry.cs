@@ -65,6 +65,48 @@ public static class LearningTelemetry
         "The number of enrollments created.");
 
     /// <summary>
+    /// The tag of how an attempt was submitted or graded: <c>learner</c>, <c>deadline</c>, <c>automatic</c>, <c>staff</c>.
+    /// </summary>
+    public const string ByTag = "by";
+
+    /// <summary>
+    /// The tag of the kind of a score change: <c>Overridden</c>, <c>Regraded</c>, <c>Voided</c>.
+    /// </summary>
+    public const string ChangeTag = "change";
+
+    /// <summary>
+    /// The number of quiz attempts started.
+    /// </summary>
+    public static Counter<long> AttemptsStarted { get; } = Meter.CreateCounter<long>(
+        "crestapps.learning.attempts.started",
+        "{attempt}",
+        "The number of quiz attempts started.");
+
+    /// <summary>
+    /// The number of quiz attempts submitted, tagged with <see cref="ByTag"/> (learner or deadline).
+    /// </summary>
+    public static Counter<long> AttemptsSubmitted { get; } = Meter.CreateCounter<long>(
+        "crestapps.learning.attempts.submitted",
+        "{attempt}",
+        "The number of quiz attempts submitted.");
+
+    /// <summary>
+    /// The number of quiz attempts graded, tagged with <see cref="ByTag"/> (automatic or staff).
+    /// </summary>
+    public static Counter<long> AttemptsGraded { get; } = Meter.CreateCounter<long>(
+        "crestapps.learning.attempts.graded",
+        "{attempt}",
+        "The number of quiz attempts graded.");
+
+    /// <summary>
+    /// The number of quiz score changes after grading, tagged with <see cref="ChangeTag"/>.
+    /// </summary>
+    public static Counter<long> ScoreChanges { get; } = Meter.CreateCounter<long>(
+        "crestapps.learning.attempts.score_changes",
+        "{change}",
+        "The number of quiz scores overridden, regraded or voided.");
+
+    /// <summary>
     /// The number of enrollment status changes, tagged with <see cref="FromTag"/> and <see cref="ToTag"/>.
     /// </summary>
     public static Counter<long> StatusChanges { get; } = Meter.CreateCounter<long>(

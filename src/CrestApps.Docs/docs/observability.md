@@ -1048,6 +1048,10 @@ Ids (calendar, event, appointment, visit, work order, worker, timesheet, payroll
 | `crestapps.learning.courses.completed` | Counter | `{course}` | `source` | Courses completed. |
 | `crestapps.learning.notices` | Counter | `{notice}` | `notice` (`access_ending`, `due_soon`, `overdue`, `inactive`) | Notices the daily upkeep raised, once each per enrollment. |
 | `crestapps.learning.upkeep.duration` | Histogram | `s` | `outcome`, `error.type` | One run of the Learning upkeep (span `crestapps.learning.upkeep`). |
+| `crestapps.learning.attempts.started` | Counter | `{attempt}` | `by` (`learner`) | Quiz attempts started. |
+| `crestapps.learning.attempts.submitted` | Counter | `{attempt}` | `by` (`learner`, `deadline`) | Quiz attempts submitted, by the learner or when the time was up. |
+| `crestapps.learning.attempts.graded` | Counter | `{attempt}` | `by` (`automatic`, `staff`) | Quiz attempts graded. |
+| `crestapps.learning.attempts.score_changes` | Counter | `{change}` | `change` (`Overridden`, `Regraded`, `Voided`) | Quiz scores changed after grading. |
 | `crestapps.workforce.notifications` | Counter | `{notification}` | `channel` (channel name: `Inbox`, `Push`, `Email`, or another module's channel such as SMS), `kind` (`WorkforceNotificationKind`), `result` (`sent`, `skipped`, `failed`) | Each notification offered to each channel by `DefaultWorkforceNotifier`. `skipped`: the worker turned the channel or the kind off, or it is their quiet hours. |
 | `crestapps.workforce.adherence.alerts` | Counter | `{alert}` | `activity` (scheduled `ActivityKind`), `status` (`AgentPresenceStatus`) | Agent Out Of Adherence alerts raised (`AdherenceService.RaiseAlertsAsync`), once per episode. |
 | `crestapps.workforce.payroll.export.duration` | Histogram | `s` | `provider` (registered export provider, `unknown`), `outcome` (`ok`, `rejected`, `error`, `cancelled`), `reason` when rejected (`no_provider`, `no_calendar`, `busy`, `none_locked`, `all_exported`), `error.type` | One payroll export (`DefaultPayrollExportService.RunAsync`), lock wait included. |

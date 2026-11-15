@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.PersonalData.Core;
 using OrchardCore.Notifications;
 using OrchardCore.Localization;
 using OrchardCore.AuditTrail.Services.Models;
@@ -81,6 +82,7 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<AssessmentsPermissionsProvider>();
         services.AddNavigationProvider<AssessmentsAdminMenu>();
         services.AddSingleton<IBackgroundTask, AttemptDeadlineBackgroundTask>();
+        services.AddPersonalDataContributor<AssessmentsPersonalDataContributor>();
     }
 }
 
