@@ -45,3 +45,12 @@ If a quiz result a completed course rested on is voided or lowered, the enrollme
 
 - **My certifications** (`/learning/certifications`) shows each certification, where they stand, the certificate and its verification page, and what renews it.
 - The **verification page** proves a certificate to anyone with its code: the holder's name, the certification, the issuer, the dates and whether it is valid, expired or revoked. The code and a QR code are printed on the certificate.
+
+## Education credits
+
+Education credits, such as CPD hours or CEUs, count the learning people do. Open **Learning > Education Credits** and click **Add credit type** to create a type, with its unit and whether people can record learning done elsewhere.
+
+- To award credits for a course, edit the course and fill in **Education credits**: the type, the number of credits and, if they expire, for how many months they count. People earn them once when they complete the course. Learning paths can award credits the same way once the part is added to the Learning Path type.
+- People see their credits on **My education credits**, where they can also record learning done elsewhere with a certificate as evidence. Reviewers accept or reject it under **Learning > External Learning**; accepted learning adds the credits.
+- A certification can be renewed by credits: in the **Earned through learning** card, add the requirement **Education credits earned**, choose the credit type and put the number of credits in **Minimum grade or credits**. Only credits earned in the current cycle count.
+- To load many records at once, use the **Record external learning** step in a data pipeline.

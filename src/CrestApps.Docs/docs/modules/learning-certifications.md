@@ -65,6 +65,18 @@ When a completed enrollment is flagged for review (an attempt voided or regraded
 | My certifications | `/learning/certifications` | Signed in |
 | Verification page and certificate PDF | `/certificates/verify/{code}` (Skills) | Public, rate limited |
 
+## Education credits
+
+Education credits are kept in the module too. An **education credit type** (`EducationCreditType`), such as CEU, CPD hours or PDU, has a name, a unit and whether people can record external learning of it. **Learning > Education Credits** lists and edits them (`ManageEducationCredits`).
+
+- The **Education Credits** part (`EducationCreditsPart`, attachable, put on the Course type by the migration) lists the credits a content item awards: a type, an amount and how many months they count. A completed course awards them once per enrollment; with [Learning Programs](./learning-programs) on, a learning path with the part awards them once per path progress.
+- Credits are posted to the education credit ledger, a quantity ledger (`IQuantityLedger<TLedger>`) of its own collection (`LearningCreditLedger`): the account is the user, the bucket the credit type, and the idempotency key the source, its record and the type.
+- **External learning** (`ExternalLearningSubmission`) is learning done elsewhere that a person records on **My education credits** (`/learning/credits`) with an optional evidence file, kept in the protected file area `ExternalLearningEvidence`. A person with **Accept or reject external learning** reviews it under **Learning > External Learning**; accepting posts the credits.
+- The **Education credits earned** requirement (`CreditsEarned`) asks for a number of credits of a type earned in the cycle: its target is the credit type and its minimum the number. Posting credits checks the paths that ask for the type at once, and the hourly upkeep catches up with `ListAccountsSinceAsync`.
+- `IEducationCreditService` reads balances, sums and entries, awards credits and handles external learning; `IEducationCreditObserver` hears awards, submissions and reviews (`services.AddEducationCreditObserver<T>()`).
+- The **Record external learning** data pipeline step records the external learning of each row as accepted and posts its credits; rows that fail go to its Rejected output with the reason.
+- The `LearningCreditTypes` recipe and deployment steps move credit types; the workflow events Education Credits Awarded and External Learning Submitted and the task Award Education Credits start or award from workflows; the data source gains the Education credits and External learning data sets; credits and external learning are exported and deleted with a person's personal data.
+
 ## Integrations
 
 | | |

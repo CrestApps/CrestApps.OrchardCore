@@ -912,3 +912,32 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 | The certificate background image never prints | The media field is read from the item's content as a `JsonObject`; the dynamic indexer never gave a `JsonArray`. | `ef80e9e4f` |
 | Workflow hints show `{ x }` instead of `{{ x }}` | Liquid examples are arguments of the localized hint; a view lint guards every Learning view. | `ab8d4ae85` |
 | GET/POST route guard | `CertificationPathsController.People` says `HttpGet`. | `9c2bd7bd3` |
+
+### Phase 4: Programs and required learning (branch `ma/learning-phase-4`, stacked on `ma/learning-phase-3`)
+
+**Built.**
+
+- **Quantity ledger** (5.7): `IQuantityLedger<TLedger>` in `CrestApps.OrchardCore.Abstractions` with its YesSql implementation in `YesSql.Core` (one collection per ledger, idempotent posts, balance on a day without entries not started or expired, sums over a period, accounts with entries since a time, erasing an account). Workforce time off moved onto it, with an additive upgrade that copies the entries and keeps the old ones for a rolling upgrade.
+- **Protected files** (5.6): `FileStorage.Abstractions` and `FileStorage.Core` with `IProtectedFileStore<TArea>`, signed time-limited links (`IProtectedFileLinks<TArea>`) and access policies that must all allow (`IProtectedFileAccessPolicy<TArea>`). Downloads moved onto it with the same folder; Learning keeps exemption and external learning evidence in it.
+- **User audiences** (5.3): `IUserAudienceService` (list, member paging, `IsMemberAsync`, audiences administrators define with rules joined by all or any) and `IUserAudienceRuleSource`, with rule sources registered by their owners: role (Users), team with sub-teams (Teams), hire date and employment type (Staff; `StaffQuery` gained `EmploymentTypes`), skill and certification holders (Skills) and course learners (Learning). The User Audiences feature has the admin list, the rule editor, the members page, recipe and deployment steps and an "In a user audience" rule for layers.
+- **Learning Programs** module: learning paths (content type in code, course sets joined by then, and, or with all, any or at least N, stages that enroll as they open, self start, the people on a path), required learning (course, path or certification path targets, audience and named people, due dates fixed or counted from when it is required or from the hire date, reminders, escalation to the staff manager, exemptions with protected evidence, run and refresh on completion, the hourly upkeep that runs each rule daily, preview and Run now), My required learning, Team Learning through `IStaffHierarchy`, notifications, five workflow events and two tasks, the `LearningPrograms` data source, the `LearningRequirements` recipe and deployment steps, personal data.
+- **Education credits** (7.9) in Learning Certifications: credit types, the Education Credits part (courses, and paths when Programs is on) posting to the credit ledger once per source, external learning with evidence reviewed by a person with the permission, the `CreditsEarned` requirement within the cycle, My education credits, the Record external learning pipeline step, the `LearningCreditTypes` steps, workflows, data sets and personal data.
+
+**Differences from the plan, and why.**
+
+- Audiences are read through a new `IUserAudienceService` beside `IUserAudienceProvider` rather than by changing the provider contract: pickers keep their role-based providers, and the service pages and checks both kinds.
+- The spike chose a rule registry over a saved filter on Orchard Core's Users data set: the data set cannot join the Teams, Staff, Skills and Learning stores, and membership must be checked for one person without querying everyone. Recorded in the reusability audit.
+- Hire dates are compared in memory on the active staff linked to a user: the staff index has no hire date column. Employment types are filtered in the index.
+- No account-membership rule yet: `IAccountMemberService` lists no members; it comes with the Accounts changes of Phase 5. No Outreach audience adapter: no Learning feature sends bulk messages yet.
+- Membership changes are picked up by the daily run of each rule (and Run now), not by observers of every owner: the run reconciles joins and leaves in one place.
+- Workforce keeps its private targeting (`LaborRuleSet`, `TimeOffPolicyAssignment`) as an accepted gap in the audit: its rules carry dates and precedence an audience does not.
+- The `CreditsEarned` requirement reuses the requirement's minimum for the number of credits, labelled "Minimum grade or credits" in the editor, rather than adding a field.
+
+**Not checked in the browser.** Team Learning with a real manager and reports (checked only for an admin without a staff record; the hierarchy call is the Staff building block), the workflow editors of the new activities, the deployment steps, reminders and escalation on a live clock (unit-tested with a moved clock), the Record external learning step in a live pipeline (the row logic is unit-tested), and the time-off ledger copy on a live site with time-off data.
+
+**Fixed while verifying.**
+
+- The full guard run caught the ledger migration: dropping the old index table and querying documents from the Migrations folder broke the additive-migration guards. The move became an additive copy in Workforce.Core that skips entries already copied.
+- Required learning due dates carried ticks that enrollments drop: due dates are now the last whole second of the day.
+- Admin lists of new row types need a `<Type>.SummaryAdmin` template; feature audiences showed an empty actions menu.
+- Feature id literals in the Programs module were replaced by constants (the feature-id ratchet).

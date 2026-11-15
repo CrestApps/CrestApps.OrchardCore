@@ -89,3 +89,18 @@ See `src/CrestApps.Docs/docs/modules/learning.md` for the full reference.
 - Resolve a service lazily (`IServiceProvider`) from a handler or observer that the service itself depends on through a factory registration; a cycle through a factory is not detected and recurses until the request hangs.
 - Add a card to the certification editor with a `DisplayDriver<Certification>` that overrides `BuildPrefix`: every driver of a model gets the model's name as its prefix.
 - Offer an action on an enrollment's review card with `IEnrollmentReviewActionProvider` (Learning.Abstractions).
+
+## Programs and required learning
+
+- A learning path is content (`LearningPathPart`); a person's progress is a `LearningPathProgress` record. Never copy the stage rules: use `LearningPathRules` (then starts a stage, and binds tighter than or).
+- Require learning through `IRequiredLearningService`; add a kind of target with `services.AddRequiredLearningTarget<T>()` (`IRequiredLearningTarget`: options, name, start with a due date, status). Starting a target enrolls, which commits: save everything first and read assignments again afterwards.
+- Who is in an audience comes from `IUserAudienceService` (Users). Add a kind of audience rule in the module that owns the data with `services.AddUserAudienceRuleSource<T>()`; never keep a private list of target groups.
+- Due dates are the last second of a day in the site's time zone, converted with `ILocalClock.ConvertToUtcAsync`; enrollments keep due dates to the second.
+- Hear required learning with `IRequiredLearningObserver` and completed paths with `ILearningPathObserver`; both run after the save, and the hourly upkeep runs each rule once a day and sends reminders.
+
+## Education credits
+
+- Credits are entries of the education credit ledger, an `IQuantityLedger<EducationCreditLedger>` in its own collection: award through `IEducationCreditService.AwardAsync` with a source and source id, which posts once per source, record and type. Never keep a second credit balance.
+- The `EducationCreditsPart` on a course or path lists what it awards; completed courses and paths award it through observers.
+- External learning evidence is a protected file (`IProtectedFileStore<ExternalLearningEvidence>`) opened only through its access policy.
+- A certification asks for credits with the `CreditsEarned` requirement: the target is the credit type and the minimum the number of credits in the cycle.
