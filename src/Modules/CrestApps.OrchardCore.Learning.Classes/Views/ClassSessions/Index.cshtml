@@ -1,0 +1,36 @@
+@model ClassSessionsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningClassSessions" title="@T["Sessions"]">
+        <breadcrumb-item id="LearningClassItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = Model.ClassItem.ContentItemId })">@Model.ClassItem.DisplayText</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (string.IsNullOrEmpty(Model.Part?.AppointmentTypeId))
+{
+    <div class="alert alert-warning" role="alert">@T["Choose the class's appointment type on the class first. Sessions follow its rules, and cannot be saved without it."]</div>
+}
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-center">
+            <div class="col">
+                <span class="text-body-secondary">@T["The dated sessions learners of the course register for. Places, the waitlist and offers are kept by Scheduling."]</span>
+            </div>
+            <div class="col-auto">
+                <a asp-action="Create" asp-route-classItemId="@Model.ClassItem.ContentItemId" class="btn btn-secondary create">@T["Add session"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="LearningClassSessions" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> The class has no sessions yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Session"]" />
+        <admin-list-column name="Dates" position="30" title="@T["Dates"]" width="auto" />
+        <admin-list-column name="Places" position="40" title="@T["Places"]" width="auto" />
+        <admin-list-column name="Status" position="50" title="@T["Status"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

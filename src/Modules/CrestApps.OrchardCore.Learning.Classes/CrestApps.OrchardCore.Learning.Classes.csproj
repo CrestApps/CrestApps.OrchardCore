@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Classes Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Classes for the Learning module: a class course item whose dates are dated sessions in Scheduling, registration
+      of enrolled learners with a waitlist and offers, a roster to mark attendance, and attendance that completes the
+      class item.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Classes Sessions Attendance</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentManagement.Display" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Title" />
+    <PackageReference Include="OrchardCore.Users.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Calendars.Abstractions\CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Classes.Abstractions\CrestApps.OrchardCore.Learning.Classes.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Classes.Core\CrestApps.OrchardCore.Learning.Classes.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Scheduling.Core\CrestApps.OrchardCore.Scheduling.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Scheduling\CrestApps.OrchardCore.Scheduling.csproj" />
+  </ItemGroup>
+
+</Project>

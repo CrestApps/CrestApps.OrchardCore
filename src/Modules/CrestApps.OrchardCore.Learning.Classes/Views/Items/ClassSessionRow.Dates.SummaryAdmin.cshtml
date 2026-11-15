@@ -1,0 +1,8 @@
+@model ShapeViewModel<ClassSessionRow>
+
+<div class="admin-list-secondary">
+    @foreach (var meeting in Model.Value.Session.Meetings.OrderBy(meeting => meeting.StartUtc))
+    {
+        <div><i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(meeting.StartUtc, DateTimeKind.Utc), Format: "g")) - @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(meeting.EndUtc, DateTimeKind.Utc), Format: "t"))</div>
+    }
+</div>

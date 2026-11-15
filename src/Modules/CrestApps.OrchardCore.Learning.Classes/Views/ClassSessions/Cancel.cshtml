@@ -1,0 +1,34 @@
+@model ClassSessionCancelViewModel
+
+@{
+    var classItemId = Model.ClassItem.ContentItemId;
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningClassSessionsCancel" title="@T["Cancel {0}", Model.Session.Title]">
+        <breadcrumb-item id="LearningClassItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = classItemId })">@Model.ClassItem.DisplayText</breadcrumb-item>
+        <breadcrumb-item id="LearningClassSessions" action="Index" controller="ClassSessions" area="CrestApps.OrchardCore.Learning.Classes" route-classItemId="@classItemId">@T["Sessions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Cancel" asp-route-id="@Model.Session.ItemId" method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="alert alert-warning" role="alert">
+        @T.Plural(Model.Taken, "Cancelling the session cancels the place of 1 learner and empties its waitlist. It cannot be undone.", "Cancelling the session cancels the places of {0} learners and empties its waitlist. It cannot be undone.")
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Reason">
+        <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Reason" class="form-control" rows="3" maxlength="1000" required></textarea>
+            <span asp-validation-for="Reason"></span>
+            <span class="hint">@T["Kept on each cancelled registration."]</span>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-danger" type="submit">@T["Cancel the session"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-classItemId="@classItemId">@T["Back"]</a>
+    </div>
+</form>

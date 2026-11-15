@@ -1,0 +1,7 @@
+@model ShapeViewModel<ClassRosterRow>
+
+<span>@Model.Value.Name</span>
+@if (!string.IsNullOrEmpty(Model.Value.Appointment.CustomerEmail))
+{
+    <div class="admin-list-secondary">@Model.Value.Appointment.CustomerEmail</div>
+}

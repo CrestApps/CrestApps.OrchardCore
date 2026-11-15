@@ -69,6 +69,7 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         CrestApps.OrchardCore.Learning.Programs.ProgramsConstants.Features.RequiredLearning,
         CrestApps.OrchardCore.Workforce.WorkforceConstants.Features.TimeOff,
         CrestApps.OrchardCore.Learning.Commerce.LearningCommerceConstants.Feature,
+        CrestApps.OrchardCore.Learning.Classes.ClassesConstants.Feature,
     ];
 
     private WebApplication _application;

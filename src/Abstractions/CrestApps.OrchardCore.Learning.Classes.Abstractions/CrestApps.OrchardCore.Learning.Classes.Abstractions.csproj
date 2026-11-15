@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Abstractions\CrestApps.OrchardCore.Learning.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Scheduling.Abstractions\CrestApps.OrchardCore.Scheduling.Abstractions.csproj" />
   </ItemGroup>
 

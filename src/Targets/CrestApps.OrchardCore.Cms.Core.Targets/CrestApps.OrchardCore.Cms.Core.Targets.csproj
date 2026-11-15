@@ -115,6 +115,7 @@
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Learning/CrestApps.OrchardCore.Learning.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Learning.Assessments/CrestApps.OrchardCore.Learning.Assessments.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Learning.Certifications/CrestApps.OrchardCore.Learning.Certifications.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Learning.Classes/CrestApps.OrchardCore.Learning.Classes.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Learning.Programs/CrestApps.OrchardCore.Learning.Programs.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Learning.Commerce/CrestApps.OrchardCore.Learning.Commerce.csproj" PrivateAssets="none" />
     <ProjectReference Include="../../Modules/CrestApps.OrchardCore.Teams/CrestApps.OrchardCore.Teams.csproj" PrivateAssets="none" />
