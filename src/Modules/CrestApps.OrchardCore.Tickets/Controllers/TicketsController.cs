@@ -561,6 +561,49 @@ public sealed class TicketsController : Controller
     }
 
     /// <summary>
+    /// Creates a work order from the ticket, with Work Orders on.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="typeId">The work order type.</param>
+    /// <param name="priority">The priority, or <see langword="null"/> for the type's.</param>
+    /// <returns>Back to the ticket.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/work-order", "TicketsCreateWorkOrder")]
+    public async Task<IActionResult> CreateWorkOrder(string id, string typeId, global::CrestApps.OrchardCore.WorkOrders.Models.WorkOrderPriority? priority)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+        var workOrders = _serviceProvider.GetService<global::CrestApps.OrchardCore.Tickets.WorkOrders.TicketWorkOrders>();
+
+        if (workOrders is null || await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        if (!await _access.CanAsync(User, ticket, TicketOperation.Edit, cancellationToken)
+            || !await _authorizationService.AuthorizeAsync(User, global::CrestApps.OrchardCore.WorkOrders.WorkOrdersPermissions.ManageWorkOrders))
+        {
+            return Forbid();
+        }
+
+        var result = await workOrders.CreateAsync(id, typeId, priority, Actor(), cancellationToken);
+
+        if (result.WorkOrder is null)
+        {
+            await _notifier.ErrorAsync(H["The work order wasn't created: {0}", string.Join(" ", result.Errors)]);
+        }
+        else if (result.Errors.Count > 0)
+        {
+            await _notifier.WarningAsync(H["Work order {0} was created, but the ticket couldn't link to it: {1}", result.WorkOrder.Number, string.Join(" ", result.Errors)]);
+        }
+        else
+        {
+            await _notifier.SuccessAsync(H["Work order {0} was created.", result.WorkOrder.Number]);
+        }
+
+        return RedirectToAction(nameof(Display), new { id });
+    }
+
+    /// <summary>
     /// Adds a reply to the requester or an internal note, and optionally sets the status in the same step.
     /// </summary>
     /// <param name="id">The ticket.</param>

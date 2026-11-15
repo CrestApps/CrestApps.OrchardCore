@@ -60,6 +60,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Tickets.Core\CrestApps.OrchardCore.Tickets.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.WorkOrders.Core\CrestApps.OrchardCore.WorkOrders.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Omnichannel.Messaging.Core\CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions\CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.ServiceLevels\CrestApps.OrchardCore.ServiceLevels.csproj" />

@@ -64,6 +64,10 @@ An open ticket page checks in every 15 seconds (`POST Admin/ticket/{id}/presence
 
 A ticket linked to another with **Its problem** (`TicketLinkKinds.Problem`) is an incident of that problem. Ticket-to-ticket links are indexed both ways (`TicketLinkIndex`), so the problem's page lists its incidents, and solving the problem solves its open incidents with the same status, which e-mails their requesters as any solve does (`TicketProblemObserver`). An incident already solved, merged or only related stays as it is.
 
+## Work orders
+
+With Work Orders on, the ticket page has a **Work order** panel for agents who may change the ticket and hold **Manage work orders**: they choose a work order type and, optionally, a priority, and `TicketWorkOrders` creates the work order through `WorkOrderService` (the type's defaults, number and service level apply). The work order takes the ticket's subject as its summary (shortened to 120 characters), the first message as its description, the ticket's account, the requester (the contact when the requester is one, with name, e-mail, phone and address) and `Source` `Ticket` with the ticket's id as `SourceId`; the ticket links to it (**Related**), so it shows under **Links**. When the work order is completed or canceled, `TicketWorkOrderObserver` adds an internal event to the ticket's timeline (with the cancel reason); the ticket's status is left to the agent. The **Create Work Order From Ticket** workflow task does the same from a workflow, with the type by name or id, and sets the `WorkOrderId` and `WorkOrderNumber` outputs. This is an integration of the Tickets feature (`[RequireFeatures]`), not a feature of its own.
+
 ## Service levels
 
 With [Accounts](./accounts) on, an account's **Ticket service level** (`TicketAccountPart`, on the `Account` type) names the policy its tickets run on, before the ticket type's and the desk's, for a premium support plan, say. With **Account E-mail Domains** on, a new ticket without an account is filed under the account whose domain its requester's e-mail is on.
@@ -113,7 +117,7 @@ With Workflows on, these events start workflows. Each can be narrowed to desks; 
 | Ticket Action Requested | An agent runs a named action from the ticket's **Actions** menu |
 | Ticket Time Elapsed | A time passes, in clock or business hours, since creation, the last customer or agent reply, or the last status change |
 
-Tasks: Create Ticket, Update Ticket, Assign Ticket, Add Ticket Reply, Add Ticket Note, Escalate Ticket, Get Ticket, Find Tickets, Check Ticket Service Level, Link Tickets and Notify about a Ticket. Changes a workflow makes are marked, and a chain of workflow-caused changes stops starting workflows at depth 3, so rules can't loop.
+Tasks: Create Ticket, Update Ticket, Assign Ticket, Add Ticket Reply, Add Ticket Note, Escalate Ticket, Get Ticket, Find Tickets, Check Ticket Service Level, Link Tickets and Notify about a Ticket, and, with Work Orders on, Create Work Order From Ticket. Changes a workflow makes are marked, and a chain of workflow-caused changes stops starting workflows at depth 3, so rules can't loop.
 
 ## Webhooks and audit trail
 

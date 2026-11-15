@@ -373,6 +373,21 @@ internal sealed class LinkTicketsTaskSchema : TicketTaskSchemaBase
     ];
 }
 
+internal sealed class CreateTicketWorkOrderTaskSchema : TicketTaskSchemaBase
+{
+    public override string Name => nameof(CrestApps.OrchardCore.Tickets.WorkOrders.CreateTicketWorkOrderTask);
+
+    protected override string DisplayText => "Create Work Order From Ticket";
+
+    protected override string Description => "Creates a work order from a ticket, with the ticket's subject, first message, account and requester, and links the ticket to it";
+
+    protected override IEnumerable<(string Name, string Description)> Fields =>
+    [
+        ("Type", "Liquid giving the work order type's name or id."),
+        ("Priority", "Low, Normal, High or Urgent; empty for the type's."),
+    ];
+}
+
 internal sealed class NotifyTicketTaskSchema : TicketTaskSchemaBase
 {
     public override string Name => nameof(NotifyTicketTask);

@@ -52,6 +52,10 @@ A reply from the requester on a solved ticket reopens it within the desk's reope
 - **Merge** moves a duplicate into another ticket by its number. The duplicate becomes read only and points to the ticket it was merged into.
 - **Links** relate a ticket to another ticket or to any record, such as an order or a work order, with a relation such as **Related** or **Duplicate**.
 
+## Send someone on site
+
+When a request needs a visit, choose a type (and, if you like, a priority) under **Work order** on the ticket and select **Create a work order**. The work order gets the ticket's subject, first message, account and requester, and shows under **Links**. When the work order is completed or canceled, the ticket's conversation says so, as an internal note, so you know to answer the requester. You need the **Manage work orders** permission, and Work Orders must be on.
+
 ## Problems and incidents
 
 When many people report the same outage, open one ticket for the cause and link each report to it with **Its problem** under **Links**. The cause's page lists its incidents, and solving it solves every open incident, telling each requester.

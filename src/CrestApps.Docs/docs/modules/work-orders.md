@@ -28,6 +28,7 @@ The module works with other features when they are on:
 | Workflows | The five work order events. |
 | Skills | A type's required skills (with the lowest level) and certifications are edited on its page, for Dispatch. |
 | Dispatch | Visits for each work order, shown in a panel on its page. |
+| Tickets | A ticket becomes a work order from its page (`Source` `Ticket`, the ticket as `SourceId`), and the ticket hears when the work order is completed or canceled. See [Tickets](tickets.md#work-orders). |
 
 ## Records
 
