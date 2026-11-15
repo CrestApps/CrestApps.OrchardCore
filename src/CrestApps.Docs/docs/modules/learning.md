@@ -97,6 +97,18 @@ Two authorization handlers keep lessons from people who should not see them:
 
 A course's Instructors and Assistants who hold **Manage own courses** may edit, publish and preview that course and its lessons.
 
+### Pages that do not ask for each item
+
+Some Orchard Core features list or read content without asking `ViewContent` for each item. Learning keeps lesson bodies out of them:
+
+| Path | What a person who is not enrolled gets |
+| --- | --- |
+| Search results | The lesson's title and link only. Course items render without their body, files, video or link in the `Summary` display, for every content type with the course item part. The **Course catalog** recipe indexes courses only, so lessons are not searchable unless a site adds them to an index. |
+| RSS feed of a list | Nothing for a course: Learning turns off the List part feed of courses, because that feed writes the body of each contained item. |
+| Queries API | Nothing: a query answers only people granted its own permission, and no Learning role holds one. A query you add that returns lessons hands their full documents to whoever you grant it to. |
+| Sitemaps | A lesson's address and title, only if a sitemap is set to list the lesson types. The lesson page itself still refuses people who are not enrolled. |
+| Liquid templates | Whatever the template reads. Templates run with the trust of the person who wrote them; a template that loads a lesson by id prints it to everyone who sees the page. |
+
 ### Lesson files
 
 Turn on **Secure Media** (the **Learning setup** recipe does). A file attached to a lesson through a media field is stored under `mediafields/{type}/{contentItemId}/`, and each request for it asks `ViewContent` on the lesson, so a person who is not enrolled gets 404.

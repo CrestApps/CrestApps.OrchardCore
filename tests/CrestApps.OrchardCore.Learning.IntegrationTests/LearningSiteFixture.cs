@@ -53,6 +53,11 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         "OrchardCore.Recipes",
         "OrchardCore.Media.Security",
         "OrchardCore.Apis.GraphQL",
+        "OrchardCore.Feeds",
+        "OrchardCore.Search",
+        "OrchardCore.Lucene",
+        "OrchardCore.Queries.Sql",
+        "OrchardCore.Themes",
         LearningConstants.Features.Learning,
         LearningConstants.Features.LearnerPages,
         LearningConstants.Features.SelfEnrollment,
@@ -139,14 +144,26 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         await InTenantAsync(services => RunRecipeAsync(services, new JsonObject
         {
             ["name"] = "LearningTestRoles",
-            ["steps"] = new JsonArray(new JsonObject
-            {
-                ["name"] = "Roles",
-                ["Roles"] = new JsonArray(
-                    Role("Anonymous", "ViewContent", "ExecuteGraphQL"),
-                    Role("Authenticated", "ViewContent", "ExecuteGraphQL"),
-                    Role("CourseTeacher", "AccessAdminPanel", "ManageOwnCourses")),
-            }),
+            ["steps"] = new JsonArray(
+                // A front-end theme as on a real site: Orchard Core applies no placement without one.
+                new JsonObject
+                {
+                    ["name"] = "feature",
+                    ["enable"] = new JsonArray("CrestApps.OrchardCore.StorefrontTheme"),
+                },
+                new JsonObject
+                {
+                    ["name"] = "Themes",
+                    ["Site"] = "CrestApps.OrchardCore.StorefrontTheme",
+                },
+                new JsonObject
+                {
+                    ["name"] = "Roles",
+                    ["Roles"] = new JsonArray(
+                        Role("Anonymous", "ViewContent", "ExecuteGraphQL"),
+                        Role("Authenticated", "ViewContent", "ExecuteGraphQL"),
+                        Role("CourseTeacher", "AccessAdminPanel", "ManageOwnCourses")),
+                }),
         }));
 
         EnrolledUserId = await InTenantAsync(services => CreateUserAsync(services, "learner1"));

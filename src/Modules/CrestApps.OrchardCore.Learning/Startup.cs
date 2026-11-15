@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Learning.Pipelines;
 using CrestApps.OrchardCore.Learning.Recipes;
 using CrestApps.OrchardCore.Learning.Reports;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Learning.Shapes;
 using CrestApps.OrchardCore.Learning.Webhooks;
 using CrestApps.OrchardCore.Learning.Workflows;
 using CrestApps.OrchardCore.PageSections;
@@ -33,6 +34,8 @@ using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentManagement.Handlers;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DataPipelines.Models;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -94,6 +97,8 @@ public sealed class Startup : StartupBase
         services.AddContentPart<CourseItemPart>()
             .UseDisplayDriver<CourseItemPartDisplayDriver>()
             .AddHandler<CourseItemPartHandler>();
+        services.AddScoped<IContentHandler, CourseFeedHandler>();
+        services.AddShapeTableProvider<CourseItemSummaryShapes>();
         services.AddContentPart<AcknowledgementPart>()
             .UseDisplayDriver<AcknowledgementPartDisplayDriver>();
         services.AddContentPart<VideoLessonPart>()
