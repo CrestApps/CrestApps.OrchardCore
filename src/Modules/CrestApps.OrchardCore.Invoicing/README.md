@@ -6,6 +6,7 @@ Invoices and credit notes posted to the [Transactions](../CrestApps.OrchardCore.
 | --- | --- | --- |
 | Invoicing | `CrestApps.OrchardCore.Invoicing` | Transactions, Payment Terms, Business Documents, Resources |
 | Invoicing Estimates | `CrestApps.OrchardCore.Invoicing.Estimates` | Invoicing |
+| Invoicing API | `CrestApps.OrchardCore.Invoicing.Api` | Invoicing |
 | Invoicing Collections | `CrestApps.OrchardCore.Invoicing.Collections` | Invoicing |
 | Invoicing Recurring | `CrestApps.OrchardCore.Invoicing.Recurring` | Invoicing |
 
@@ -20,6 +21,7 @@ Invoices and credit notes posted to the [Transactions](../CrestApps.OrchardCore.
 - **Reports.** With Data Pipelines Core, the **Invoicing** data source (Invoices, Invoice lines, Invoice taxes, Credit notes); with Reports, the Receivables aging, Invoice register, Payments collected, Invoiced sales by customer, Invoiced sales by item and Invoiced tax summary reports.
 - **Personal data.** `InvoicingPersonalDataContributor` exports a person's invoices and credit notes (by their user, customer records and e-mails) and on erasure clears the contact details, keeping numbers, amounts, dates, tax ids and archived PDFs.
 - **Estimates.** `IEstimateCommandService` (send, accept, decline, revise, cancel, convert to an invoice or a deposit invoice, expire), Commerce > Estimates, the public page `estimates/view/{token}` to accept or decline, the `estimate-sent` e-mail, workflow events, webhooks, the recipe step and the data set.
+- **API.** `InvoicingApiEndpoints` on the commerce API: list, get, draft (and issue), issue, send, void, record payments, PDF; `me/invoices` for customers.
 - **Orders on account.** With Orders, `OrderInvoiceBuilder` invoices an order whose whole balance is a ledger debt (account terms, pay later), issuing the invoice against that debt (a draft with `TransactionId` set takes it over); the mirror finds such invoices by `TransactionId`.
 - **Statements.** `IInvoiceStatementService`: open-item (with aging) and activity statements per customer and currency, printed as the `InvoiceStatement` business document, e-mailed with the PDF (`invoice-statement`), Commerce > Statements.
 - **Deposits.** `IInvoicePrepaymentService`: a deposit invoice asked from a draft, listed once paid and deducted from the final invoice as a negative deposit line, once; an estimate's paid deposit is deducted when the work is invoiced.

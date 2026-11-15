@@ -42,6 +42,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = InvoicingConstants.Features.Api,
+    Name = "Invoicing API",
+    Description = "Lets back-office systems list, draft, issue, send and void invoices, record payments and download PDFs, and customers read their own invoices, over the commerce JSON API. Enable OpenAPI to document it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        InvoicingConstants.Features.Area,
+    ]
+)]
+
+[assembly: Feature(
     Id = InvoicingConstants.Features.Collections,
     Name = "Invoicing Collections",
     Description = "Late-fee policies that charge overdue invoices with debit notes linked to them, and customer statements.",

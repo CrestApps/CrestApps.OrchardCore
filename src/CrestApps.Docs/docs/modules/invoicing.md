@@ -11,6 +11,7 @@ user_manual:
 | --- | --- | --- |
 | **Invoicing** | `CrestApps.OrchardCore.Invoicing` | Invoices and credit notes, their stores and indexes, the invoice commands, the permissions and the invoicing settings. Depends on Transactions, Payment Terms and Business Documents. |
 | **Invoicing Estimates** | `CrestApps.OrchardCore.Invoicing.Estimates` | Estimates (quotes): drafted, sent with a number, accepted or declined by the customer online, revised, expired, and turned into a draft invoice or a deposit invoice. Depends on Invoicing. |
+| **Invoicing API** | `CrestApps.OrchardCore.Invoicing.Api` | Invoices over the commerce JSON API: staff list, draft, issue, send and void them, record payments and download PDFs; customers read their own. Depends on Invoicing. |
 | **Invoicing Collections** | `CrestApps.OrchardCore.Invoicing.Collections` | Late-fee policies that charge overdue invoices with debit notes linked to them; customers' open-item and activity statements as a page, a PDF and an e-mail. Depends on Invoicing. |
 | **Invoicing Recurring** | `CrestApps.OrchardCore.Invoicing.Recurring` | Recurring plans that make an invoice on a schedule (a draft, issued, issued and sent, or issued and charged), with the period written into their lines, catch-up within a limit, pause and resume, price rises, and an end by date or number of runs. Depends on Invoicing. |
 
@@ -148,6 +149,24 @@ With **Invoicing Recurring** enabled, `RecurringPlan` (Invoicing.Abstractions) i
 - The plan completes after its last run (end date or number of runs). `GetUpcoming` lists the next occurrences.
 
 `RecurringInvoiceBackgroundTask` runs the due plans every 30 minutes on the site's date. `IRecurringPlanObserver` hears an invoice generated and a run failed. The admin pages are **Commerce > Recurring invoices**: an `AdminList` with a status filter, the editor (the schedule, the bill-to and the invoice's line rows), and the plan's page with its next runs, the runs it made with links to their invoices, and **Start**, **Run what is due now**, **Pause**, **Resume**, **Cancel** and **Delete** (a draft only). A change to a running plan applies to the runs after it. Workflows get **Recurring Invoice Generated** and **Recurring Run Failed**; webhooks get `recurring-plan.invoice-generated` and `recurring-plan.run-failed`; recipes and deployment plans the `RecurringPlans` step; the Invoicing data source the **Recurring plans** data set. Permission: **Manage recurring invoices** (security critical, since its plans issue and charge on their own).
+
+## API
+
+With **Invoicing API**, invoices are on the commerce JSON API (`api/commerce/v1`, the `Api` authentication scheme with an API token, Problem Details errors, `Idempotency-Key` on the commands; see [Commerce API](commerce-api#authentication)). `InvoicingApiEndpoints`:
+
+| Method and path | Permission | What it does |
+| --- | --- | --- |
+| `GET invoices` | View invoices | Lists invoices newest first, by `status`, `settlement`, `billTo` (a party such as `User:42`) and `q`, with `skip` and `take`. |
+| `GET invoices/{id}`, `GET invoices/by-number/{number}` | View invoices | An invoice with its lines, tax breakdown, totals and amounts paid, credited and due. |
+| `POST invoices` | Create invoices and change drafts (and Issue invoices with `issue: true`) | Drafts an invoice from `billTo` (a party, or a name and e-mail), `currency`, `lines` and the header, worked out by the store's tax and rounding; `issue: true` issues it too. `201 Created`. |
+| `POST invoices/{id}/issue` | Issue invoices | Issues a draft; again returns the issued invoice. |
+| `POST invoices/{id}/send` | Create invoices and change drafts | E-mails it with its PDF and pay link, to `to` when given. |
+| `POST invoices/{id}/void` | Void and write off invoices | Voids an open invoice with nothing paid, with a `reason`. |
+| `POST invoices/{id}/payments` | Record invoice payments | Records a payment taken elsewhere (`amount`, `method`, `reference`, `note`) on the ledger; the invoice returned shows it. |
+| `GET invoices/{id}/pdf` | View invoices | The PDF archived at issue, or printed now. |
+| `GET me/invoices`, `GET me/invoices/{id}` | View own invoices | The signed-in customer's issued invoices and those of the accounts they pay for (`IInvoiceVisibilityService`); another's, or a draft, is not found; staff's note and the source are left out. |
+
+A refused command answers `409` with the code `invalid-state` and the reasons; a draft that doesn't validate answers `400` with the fields.
 
 ## Workflows and webhooks
 
