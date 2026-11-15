@@ -312,7 +312,7 @@ public sealed class EnrollmentServiceTests
         courses.AddCourse("keyed", part => part.EnrollmentMode = EnrollmentMode.Key);
         courses.AddCourse("approval", part => part.EnrollmentMode = EnrollmentMode.Approval);
         courses.AddCourse("closed", part => part.EnrollmentMode = EnrollmentMode.Closed);
-        await harness.RunAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().SetAsync("keyed", "K-123"));
+        await harness.RunAsync(services => services.GetRequiredService<LearningSecretStore>().SetAsync(LearningSecretKinds.EnrollmentKey, "keyed", "K-123"));
 
         // Act
         Task<EnrollmentResult> Self(string course, string key = null)
@@ -345,7 +345,7 @@ public sealed class EnrollmentServiceTests
         });
         await using var __ = harness;
         courses.AddCourse("keyed", part => part.EnrollmentMode = EnrollmentMode.Key);
-        await harness.RunAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().SetAsync("keyed", "K-123456"));
+        await harness.RunAsync(services => services.GetRequiredService<LearningSecretStore>().SetAsync(LearningSecretKinds.EnrollmentKey, "keyed", "K-123456"));
 
         Task<EnrollmentResult> Self(string key)
             => harness.RunAsync(services => services.GetRequiredService<ISelfEnrollmentService>().EnrollAsync("guesser", "keyed", key));
@@ -377,8 +377,8 @@ public sealed class EnrollmentServiceTests
         var course = courses.AddCourse("keyed", part => part.EnrollmentMode = EnrollmentMode.Key);
 
         // Act
-        await harness.RunAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().SetAsync("keyed", "K-123456"));
-        var hasKey = await harness.RunAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().HasKeyAsync("keyed"), commit: false);
+        await harness.RunAsync(services => services.GetRequiredService<LearningSecretStore>().SetAsync(LearningSecretKinds.EnrollmentKey, "keyed", "K-123456"));
+        var hasKey = await harness.RunAsync(services => services.GetRequiredService<LearningSecretStore>().HasAsync(LearningSecretKinds.EnrollmentKey, "keyed"), commit: false);
 
         // Assert
         Assert.True(hasKey);

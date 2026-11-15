@@ -23,7 +23,7 @@ internal sealed class LearningEnrollmentsDeploymentSource : DeploymentSourceBase
     private readonly EnrollmentStore _enrollmentStore;
     private readonly EnrollmentProgressStore _progressStore;
     private readonly LearnerUserLookup _userLookup;
-    private readonly CourseEnrollmentKeyStore _keyStore;
+    private readonly LearningSecretStore _keyStore;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IEnumerable<ILearnerRecordExportObserver> _exportObservers;
@@ -33,7 +33,7 @@ internal sealed class LearningEnrollmentsDeploymentSource : DeploymentSourceBase
         EnrollmentStore enrollmentStore,
         EnrollmentProgressStore progressStore,
         LearnerUserLookup userLookup,
-        CourseEnrollmentKeyStore keyStore,
+        LearningSecretStore keyStore,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IEnumerable<ILearnerRecordExportObserver> exportObservers,
@@ -118,11 +118,11 @@ internal sealed class LearningEnrollmentsDeploymentSource : DeploymentSourceBase
 
         var keys = new JsonArray();
 
-        foreach (var key in await _keyStore.ListAllAsync())
+        foreach (var key in await _keyStore.ListAsync(LearningSecretKinds.EnrollmentKey))
         {
-            if (step.CourseId is null || key.CourseId == step.CourseId)
+            if (step.CourseId is null || key.OwnerId == step.CourseId)
             {
-                keys.Add(new JsonObject { ["CourseId"] = key.CourseId, ["Hash"] = key.Hash });
+                keys.Add(new JsonObject { ["CourseId"] = key.OwnerId, ["Hash"] = key.Hash });
             }
         }
 

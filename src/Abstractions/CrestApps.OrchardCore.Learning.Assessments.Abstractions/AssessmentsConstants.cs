@@ -11,6 +11,11 @@ public static class AssessmentsConstants
     public const string QuizKind = "Quiz";
 
     /// <summary>
+    /// The kind of Learning secret that holds the access code of a quiz.
+    /// </summary>
+    public const string QuizAccessCodeSecret = "QuizAccessCode";
+
+    /// <summary>
     /// The name of the number sequence of attempts.
     /// </summary>
     public const string AttemptNumberSeries = "LearningAttempt";

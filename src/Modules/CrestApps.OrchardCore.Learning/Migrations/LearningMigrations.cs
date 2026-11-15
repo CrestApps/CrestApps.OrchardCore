@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
@@ -25,7 +26,7 @@ internal sealed class LearningMigrations : DataMigration
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseListSynchronizer _courseListSynchronizer;
     private readonly global::YesSql.ISession _session;
-    private readonly CourseEnrollmentKeyStore _keyStore;
+    private readonly LearningSecretStore _keyStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningMigrations"/> class.
@@ -38,7 +39,7 @@ internal sealed class LearningMigrations : DataMigration
         IContentDefinitionManager contentDefinitionManager,
         CourseListSynchronizer courseListSynchronizer,
         global::YesSql.ISession session,
-        CourseEnrollmentKeyStore keyStore)
+        LearningSecretStore keyStore)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _courseListSynchronizer = courseListSynchronizer;
@@ -64,7 +65,7 @@ internal sealed class LearningMigrations : DataMigration
         await DefineCourseAsync();
         await DefineLessonsAsync();
         await _courseListSynchronizer.SynchronizeAsync();
-        await LearningIndexSchema.CreateEnrollmentKeyIndexAsync(SchemaBuilder);
+        await LearningIndexSchema.CreateSecretIndexAsync(SchemaBuilder);
 
         return 3;
     }
@@ -88,7 +89,7 @@ internal sealed class LearningMigrations : DataMigration
     /// <returns>The version.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await LearningIndexSchema.CreateEnrollmentKeyIndexAsync(SchemaBuilder);
+        await LearningIndexSchema.CreateSecretIndexAsync(SchemaBuilder);
 
         var courses = await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType == LearningConstants.ContentTypes.Course).ListAsync();
 
@@ -103,7 +104,7 @@ internal sealed class LearningMigrations : DataMigration
 
             if (!string.IsNullOrEmpty(hash) && course.Latest)
             {
-                await _keyStore.SetHashAsync(course.ContentItemId, hash);
+                await _keyStore.SetHashAsync(LearningSecretKinds.EnrollmentKey, course.ContentItemId, hash);
             }
 
             part.Remove("EnrollmentKeyHash");

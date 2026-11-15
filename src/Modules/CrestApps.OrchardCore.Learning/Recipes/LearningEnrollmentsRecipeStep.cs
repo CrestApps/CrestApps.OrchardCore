@@ -25,7 +25,7 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
     private readonly EnrollmentStore _enrollmentStore;
     private readonly EnrollmentProgressStore _progressStore;
     private readonly LearnerUserLookup _userLookup;
-    private readonly CourseEnrollmentKeyStore _keyStore;
+    private readonly LearningSecretStore _keyStore;
 
     internal readonly IStringLocalizer S;
 
@@ -33,7 +33,7 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
         EnrollmentStore enrollmentStore,
         EnrollmentProgressStore progressStore,
         LearnerUserLookup userLookup,
-        CourseEnrollmentKeyStore keyStore,
+        LearningSecretStore keyStore,
         IStringLocalizer<LearningEnrollmentsRecipeStep> stringLocalizer)
         : base(LearningConstants.EnrollmentsRecipeStep)
     {
@@ -61,7 +61,7 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
                     continue;
                 }
 
-                await _keyStore.SetHashAsync(courseId, hash);
+                await _keyStore.SetHashAsync(LearningSecretKinds.EnrollmentKey, courseId, hash);
             }
         }
 

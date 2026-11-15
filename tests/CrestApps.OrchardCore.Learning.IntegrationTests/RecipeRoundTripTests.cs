@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Deployments;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.Contents.Deployment;
@@ -31,7 +32,7 @@ public sealed class RecipeRoundTripTests
     {
         // Arrange
         var original = await _fixture.InTenantAsync(async services => await services.GetRequiredService<EnrollmentStore>().FindByIdAsync(_fixture.EnrollmentId));
-        await _fixture.InTenantAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().SetAsync(_fixture.CourseId, "ROUND-TRIP-KEY"));
+        await _fixture.InTenantAsync(services => services.GetRequiredService<LearningSecretStore>().SetAsync(LearningSecretKinds.EnrollmentKey, _fixture.CourseId, "ROUND-TRIP-KEY"));
         var recipe = await _fixture.InTenantAsync(async services =>
         {
             var plan = new DeploymentPlan
@@ -74,7 +75,7 @@ public sealed class RecipeRoundTripTests
         {
             var store = services.GetRequiredService<EnrollmentStore>();
             await store.DeleteAsync(await store.FindByIdAsync(_fixture.EnrollmentId));
-            await services.GetRequiredService<CourseEnrollmentKeyStore>().SetHashAsync(_fixture.CourseId, null);
+            await services.GetRequiredService<LearningSecretStore>().SetHashAsync(LearningSecretKinds.EnrollmentKey, _fixture.CourseId, null);
         });
 
         Assert.Null(await _fixture.InTenantAsync(async services => await services.GetRequiredService<EnrollmentStore>().FindByIdAsync(_fixture.EnrollmentId)));
@@ -88,7 +89,7 @@ public sealed class RecipeRoundTripTests
         Assert.Equal(original.UserId, restored.UserId);
         Assert.Equal(original.Status, restored.Status);
         Assert.Equal(EnrollmentStatus.Active, restored.Status);
-        Assert.True(await _fixture.InTenantAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().VerifyAsync(_fixture.CourseId, "ROUND-TRIP-KEY")));
+        Assert.True(await _fixture.InTenantAsync(services => services.GetRequiredService<LearningSecretStore>().VerifyAsync(LearningSecretKinds.EnrollmentKey, _fixture.CourseId, "ROUND-TRIP-KEY")));
 
         var lesson = await _fixture.InTenantAsync(services => services.GetRequiredService<IContentManager>().GetAsync(_fixture.PageLessonId, VersionOptions.Published));
         Assert.NotNull(lesson);

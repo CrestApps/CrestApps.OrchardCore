@@ -45,7 +45,7 @@
         {
             <form method="post" action="@Url.RouteUrl("LearningQuizStart", new { quizId = Model.QuizId })">
                 @Html.AntiForgeryToken()
-                @if (!string.IsNullOrEmpty(quiz.AccessCodeHash))
+                @if (Model.NeedsAccessCode)
                 {
                     <div class="mb-2">
                         <label class="form-label" for="quiz-access-code-@Model.QuizId">@T["Access code"]</label>

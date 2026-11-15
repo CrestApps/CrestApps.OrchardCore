@@ -64,11 +64,6 @@ public sealed class QuizPart : ContentPart
     public DateTime? ClosesUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the hash of the access code a learner enters to start, or <see langword="null"/>.
-    /// </summary>
-    public string AccessCodeHash { get; set; }
-
-    /// <summary>
     /// Gets or sets the statement a learner confirms before starting, or <see langword="null"/>.
     /// </summary>
     public string HonorStatement { get; set; }

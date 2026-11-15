@@ -63,7 +63,12 @@ public sealed class AttemptServiceTests
             quiz.QuestionIds = ["q1"];
             quiz.ClosesUtc = LearningTestHarness.Now.AddHours(-1);
             quiz.HonorStatement = "I work alone.";
-            quiz.AccessCodeHash = CrestApps.OrchardCore.Learning.Core.Services.EnrollmentKeys.Hash("ROOM-12");
+        });
+        await h.RunAsync(async services =>
+        {
+            await services.GetRequiredService<CrestApps.OrchardCore.Learning.Core.Services.LearningSecretStore>().SetAsync(AssessmentsConstants.QuizAccessCodeSecret, "quiz", "ROOM-12");
+
+            return true;
         });
         await h.EnrollAsync("learner", "course1");
 
@@ -94,6 +99,41 @@ public sealed class AttemptServiceTests
         var started = await h.StartAsync("learner", "quiz", r => r.AccessCode = "ROOM-12");
         Assert.True(started.Succeeded, started.ErrorCode);
         Assert.Equal("I work alone.", started.Attempt.HonorStatement);
+    }
+
+    [Fact]
+    public async Task TheAccessCode_LocksOutAfterFiveWrongCodes_AndIsKeptOutsideTheQuizItem()
+    {
+        // Arrange
+        await using var h = await AssessmentTestHarness.CreateAsync(services => services.AddDistributedMemoryCache());
+        h.Courses.AddCourse("course1");
+        h.Questions.AddChoice("q1", "a");
+        var quiz = h.AddQuiz("course1", "quiz", quiz => quiz.QuestionIds = ["q1"]);
+        await h.RunAsync(async services =>
+        {
+            await services.GetRequiredService<CrestApps.OrchardCore.Learning.Core.Services.LearningSecretStore>().SetAsync(AssessmentsConstants.QuizAccessCodeSecret, "quiz", "ROOM-12");
+
+            return true;
+        });
+        await h.EnrollAsync("learner", "course1");
+
+        // Act
+        var wrong = new List<string>();
+
+        for (var i = 0; i < 5; i++)
+        {
+            wrong.Add((await h.StartAsync("learner", "quiz", r => r.AccessCode = "GUESS-" + i)).ErrorCode);
+        }
+
+        var lockedOut = await h.StartAsync("learner", "quiz", r => r.AccessCode = "ROOM-12");
+        h.Clock.UtcNow = LearningTestHarness.Now.AddMinutes(16);
+        var later = await h.StartAsync("learner", "quiz", r => r.AccessCode = "ROOM-12");
+
+        // Assert
+        Assert.All(wrong, code => Assert.Equal(AttemptErrors.WrongAccessCode, code));
+        Assert.Equal(AttemptErrors.TooManyAttempts, lockedOut.ErrorCode);
+        Assert.True(later.Succeeded, later.ErrorCode);
+        Assert.DoesNotContain("AccessCode", System.Text.Json.JsonSerializer.Serialize(quiz.Content), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

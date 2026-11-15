@@ -42,7 +42,7 @@ internal static class LearningTestHarness
             async schemaBuilder =>
             {
                 await LearningIndexSchema.CreateAsync(schemaBuilder);
-                await LearningIndexSchema.CreateEnrollmentKeyIndexAsync(schemaBuilder);
+                await LearningIndexSchema.CreateSecretIndexAsync(schemaBuilder);
 
                 if (extraSchema is not null)
                 {

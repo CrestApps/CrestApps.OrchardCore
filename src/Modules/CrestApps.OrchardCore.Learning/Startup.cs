@@ -77,7 +77,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<EnrollmentIndexProvider>()
             .AddIndexProvider<EnrollmentProgressIndexProvider>()
             .AddIndexProvider<CourseStaffIndexProvider>()
-            .AddIndexProvider<CourseEnrollmentKeyIndexProvider>();
+            .AddIndexProvider<LearningSecretIndexProvider>();
 
         services.AddNumberSequence();
         services.AddLearningCore();

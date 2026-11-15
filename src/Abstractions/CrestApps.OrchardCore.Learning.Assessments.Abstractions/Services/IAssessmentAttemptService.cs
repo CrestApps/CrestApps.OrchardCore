@@ -191,6 +191,9 @@ public static class AttemptErrors
     /// <summary>The access code is wrong.</summary>
     public const string WrongAccessCode = "WrongAccessCode";
 
+    /// <summary>Too many wrong access codes; the learner waits before trying again.</summary>
+    public const string TooManyAttempts = "TooManyAttempts";
+
     /// <summary>The honor statement was not confirmed.</summary>
     public const string HonorRequired = "HonorRequired";
 

@@ -13,8 +13,7 @@ public sealed class DefaultSelfEnrollmentService : ISelfEnrollmentService
 {
     private readonly IEnrollmentService _enrollmentService;
     private readonly ICourseStructureService _courseStructure;
-    private readonly CourseEnrollmentKeyStore _keyStore;
-    private readonly EnrollmentKeyAttempts _attempts;
+    private readonly LearningSecretVerifier _secrets;
     private readonly IClock _clock;
 
     /// <summary>
@@ -22,20 +21,17 @@ public sealed class DefaultSelfEnrollmentService : ISelfEnrollmentService
     /// </summary>
     /// <param name="enrollmentService">The enrollment service.</param>
     /// <param name="courseStructure">The course structure reader.</param>
-    /// <param name="keyStore">The enrollment keys.</param>
-    /// <param name="attempts">The limit on wrong keys.</param>
+    /// <param name="secrets">The enrollment keys, with the limit on wrong tries.</param>
     /// <param name="clock">The clock.</param>
     public DefaultSelfEnrollmentService(
         IEnrollmentService enrollmentService,
         ICourseStructureService courseStructure,
-        CourseEnrollmentKeyStore keyStore,
-        EnrollmentKeyAttempts attempts,
+        LearningSecretVerifier secrets,
         IClock clock)
     {
         _enrollmentService = enrollmentService;
         _courseStructure = courseStructure;
-        _keyStore = keyStore;
-        _attempts = attempts;
+        _secrets = secrets;
         _clock = clock;
     }
 
@@ -64,19 +60,19 @@ public sealed class DefaultSelfEnrollmentService : ISelfEnrollmentService
                 break;
 
             case EnrollmentMode.Key:
-                if (await _attempts.IsLockedOutAsync(userId, courseId, cancellationToken))
+                // A Key course without a stored key takes nobody by key.
+                if (!await _secrets.HasSecretAsync(LearningSecretKinds.EnrollmentKey, courseId, cancellationToken))
                 {
-                    return EnrollmentResult.Fail(EnrollmentErrors.TooManyAttempts);
-                }
-
-                if (!await _keyStore.VerifyAsync(courseId, enrollmentKey, cancellationToken))
-                {
-                    await _attempts.RecordFailureAsync(userId, courseId, cancellationToken);
-
                     return EnrollmentResult.Fail(EnrollmentErrors.InvalidKey);
                 }
 
-                await _attempts.ResetAsync(userId, courseId, cancellationToken);
+                switch (await _secrets.CheckAsync(LearningSecretKinds.EnrollmentKey, courseId, userId, enrollmentKey, cancellationToken))
+                {
+                    case SecretCheck.LockedOut:
+                        return EnrollmentResult.Fail(EnrollmentErrors.TooManyAttempts);
+                    case SecretCheck.Rejected:
+                        return EnrollmentResult.Fail(EnrollmentErrors.InvalidKey);
+                }
 
                 source = LearningConstants.EnrollmentSources.Key;
                 break;

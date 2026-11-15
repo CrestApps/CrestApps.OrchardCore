@@ -23,6 +23,7 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
     private readonly global::YesSql.ISession _session;
     private readonly QuestionTypeOptions _questionTypes;
     private readonly ILocalClock _localClock;
+    private readonly LearningSecretStore _secretStore;
 
     internal readonly IStringLocalizer S;
 
@@ -30,11 +31,13 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
         global::YesSql.ISession session,
         IOptions<QuestionTypeOptions> questionTypes,
         ILocalClock localClock,
+        LearningSecretStore secretStore,
         IStringLocalizer<QuizPartDisplayDriver> stringLocalizer)
     {
         _session = session;
         _questionTypes = questionTypes.Value;
         _localClock = localClock;
+        _secretStore = secretStore;
         S = stringLocalizer;
     }
 
@@ -58,7 +61,7 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
             model.Navigation = part.Navigation;
             model.Opens = part.OpensUtc is { } opens ? (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(opens, DateTimeKind.Utc)))).DateTime : null;
             model.Closes = part.ClosesUtc is { } closes ? (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(closes, DateTimeKind.Utc)))).DateTime : null;
-            model.HasAccessCode = !string.IsNullOrEmpty(part.AccessCodeHash);
+            model.HasAccessCode = await _secretStore.HasAsync(AssessmentsConstants.QuizAccessCodeSecret, part.ContentItem.ContentItemId);
             model.HonorStatement = part.HonorStatement;
             model.ReviewPolicy = part.ReviewPolicy;
 
@@ -97,13 +100,17 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
         part.HonorStatement = string.IsNullOrWhiteSpace(model.HonorStatement) ? null : model.HonorStatement.Trim();
         part.ReviewPolicy = model.ReviewPolicy;
 
-        if (model.ClearAccessCode)
+        // The code is kept in its own record, out of the content item; it changes only when the rest of the form is valid.
+        if (context.Updater.ModelState.IsValid)
         {
-            part.AccessCodeHash = null;
-        }
-        else if (!string.IsNullOrWhiteSpace(model.NewAccessCode))
-        {
-            part.AccessCodeHash = EnrollmentKeys.Hash(model.NewAccessCode.Trim());
+            if (model.ClearAccessCode)
+            {
+                await _secretStore.SetHashAsync(AssessmentsConstants.QuizAccessCodeSecret, part.ContentItem.ContentItemId, null);
+            }
+            else if (!string.IsNullOrWhiteSpace(model.NewAccessCode))
+            {
+                await _secretStore.SetAsync(AssessmentsConstants.QuizAccessCodeSecret, part.ContentItem.ContentItemId, model.NewAccessCode);
+            }
         }
 
         if (part.QuestionIds.Count == 0 && part.DrawRules.Count == 0)

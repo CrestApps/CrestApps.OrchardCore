@@ -95,21 +95,22 @@ public static class LearningIndexSchema
     }
 
     /// <summary>
-    /// Creates the index table of enrollment keys.
+    /// Creates the index table of Learning secrets (enrollment keys, quiz access codes).
     /// </summary>
     /// <param name="schemaBuilder">The schema builder.</param>
     /// <returns>A task.</returns>
-    public static async Task CreateEnrollmentKeyIndexAsync(ISchemaBuilder schemaBuilder)
+    public static async Task CreateSecretIndexAsync(ISchemaBuilder schemaBuilder)
     {
         ArgumentNullException.ThrowIfNull(schemaBuilder);
 
-        await schemaBuilder.CreateMapIndexTableAsync<CourseEnrollmentKeyIndex>(table => table
+        await schemaBuilder.CreateMapIndexTableAsync<LearningSecretIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("CourseId", column => column.WithLength(26)),
+            .Column<string>("Kind", column => column.WithLength(50))
+            .Column<string>("OwnerId", column => column.WithLength(26)),
             collection: LearningConstants.CollectionName);
 
-        await schemaBuilder.AlterIndexTableAsync<CourseEnrollmentKeyIndex>(table =>
-            table.CreateIndex("IDX_Learning_CourseEnrollmentKeyIndex_Course", "CourseId"), collection: LearningConstants.CollectionName);
+        await schemaBuilder.AlterIndexTableAsync<LearningSecretIndex>(table =>
+            table.CreateIndex("IDX_Learning_LearningSecretIndex_Owner", "Kind", "OwnerId"), collection: LearningConstants.CollectionName);
     }
 
     /// <summary>

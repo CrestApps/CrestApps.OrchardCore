@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.Core.Services;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
@@ -16,11 +17,13 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
 {
     private readonly AssessmentAttemptStore _attemptStore;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly LearningSecretStore _secretStore;
 
-    public QuizPartLearnerDisplayDriver(AssessmentAttemptStore attemptStore, IHttpContextAccessor httpContextAccessor)
+    public QuizPartLearnerDisplayDriver(AssessmentAttemptStore attemptStore, IHttpContextAccessor httpContextAccessor, LearningSecretStore secretStore)
     {
         _attemptStore = attemptStore;
         _httpContextAccessor = httpContextAccessor;
+        _secretStore = secretStore;
     }
 
     public override IDisplayResult Display(QuizPart part, BuildPartDisplayContext context)
@@ -32,6 +35,7 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
             model.Quiz = part;
             model.SignedIn = !string.IsNullOrEmpty(userId);
             model.QuestionCount = part.QuestionIds.Count + part.DrawRules.Sum(rule => rule.Count);
+            model.NeedsAccessCode = await _secretStore.HasAsync(AssessmentsConstants.QuizAccessCodeSecret, part.ContentItem.ContentItemId);
 
             if (model.SignedIn)
             {

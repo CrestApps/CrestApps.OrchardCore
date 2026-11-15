@@ -22,7 +22,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
     private readonly CourseSettingsPolicy _settingsPolicy;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IUserSearchService _userSearchService;
-    private readonly CourseEnrollmentKeyStore _keyStore;
+    private readonly LearningSecretStore _keyStore;
 
     internal readonly IStringLocalizer S;
 
@@ -31,7 +31,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         CourseSettingsPolicy settingsPolicy,
         IHttpContextAccessor httpContextAccessor,
         IUserSearchService userSearchService,
-        CourseEnrollmentKeyStore keyStore,
+        LearningSecretStore keyStore,
         IStringLocalizer<CoursePartDisplayDriver> stringLocalizer)
     {
         _editorOptions = editorOptions;
@@ -56,7 +56,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             model.EnrollmentMode = part.EnrollmentMode;
             // A course that was never saved has no key, even when this request wrote one before another part of the
             // form refused the save: the write is thrown away with the item.
-            model.HasEnrollmentKey = part.ContentItem.Id != 0 && await _keyStore.HasKeyAsync(courseId);
+            model.HasEnrollmentKey = part.ContentItem.Id != 0 && await _keyStore.HasAsync(LearningSecretKinds.EnrollmentKey, courseId);
             model.AccessDays = part.AccessDays;
             model.PassMark = part.PassMark;
             model.MinimumGrade = ReadDecimal(part, LearningRuleNames.MinimumGrade, "Grade");
@@ -135,7 +135,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         }
 
         var keyNeeded = model.EnrollmentMode == EnrollmentMode.Key;
-        var hasKey = await _keyStore.HasKeyAsync(part.ContentItem.ContentItemId) && !model.ClearEnrollmentKey;
+        var hasKey = await _keyStore.HasAsync(LearningSecretKinds.EnrollmentKey, part.ContentItem.ContentItemId) && !model.ClearEnrollmentKey;
 
         if (keyNeeded && !hasKey && string.IsNullOrWhiteSpace(model.NewEnrollmentKey))
         {
@@ -160,11 +160,11 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         {
             if (!string.IsNullOrWhiteSpace(model.NewEnrollmentKey))
             {
-                await _keyStore.SetAsync(part.ContentItem.ContentItemId, model.NewEnrollmentKey);
+                await _keyStore.SetAsync(LearningSecretKinds.EnrollmentKey, part.ContentItem.ContentItemId, model.NewEnrollmentKey);
             }
             else if (model.ClearEnrollmentKey)
             {
-                await _keyStore.SetHashAsync(part.ContentItem.ContentItemId, null);
+                await _keyStore.SetHashAsync(LearningSecretKinds.EnrollmentKey, part.ContentItem.ContentItemId, null);
             }
         }
 

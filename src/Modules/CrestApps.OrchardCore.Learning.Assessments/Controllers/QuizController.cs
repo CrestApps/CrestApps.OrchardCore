@@ -226,6 +226,7 @@ public sealed class QuizController : Controller
             AttemptErrors.NoAttemptsLeft => H["You have used every attempt of this quiz."],
             AttemptErrors.TooSoon => H["You can start the next attempt a little later."],
             AttemptErrors.WrongAccessCode => H["The access code is not right."],
+            AttemptErrors.TooManyAttempts => H["Too many wrong codes. Try again in 15 minutes."],
             AttemptErrors.HonorRequired => H["Confirm the statement to start."],
             AttemptErrors.NoQuestions => H["This quiz has no questions yet."],
             _ => H["The quiz could not be started. Try again."],

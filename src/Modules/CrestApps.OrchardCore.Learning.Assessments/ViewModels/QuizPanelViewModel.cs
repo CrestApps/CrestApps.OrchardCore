@@ -27,4 +27,9 @@ public class QuizPanelViewModel
 
     /// <summary>Gets or sets the number of questions when fixed and drawn.</summary>
     public int QuestionCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the learner must type an access code to start.
+    /// </summary>
+    public bool NeedsAccessCode { get; set; }
 }

@@ -38,6 +38,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
     private readonly INumberSequence _numberSequence;
     private readonly IDistributedLock _distributedLock;
     private readonly EnrollmentWriteGate _writeGate;
+    private readonly LearningSecretVerifier _secrets;
     private readonly ILeasedWorkQueue<AttemptDeadlineWork> _deadlines;
     private readonly IEnumerable<IQuestionScorer> _scorers;
     private readonly QuestionTypeOptions _questionTypes;
@@ -60,6 +61,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         INumberSequence numberSequence,
         IDistributedLock distributedLock,
         EnrollmentWriteGate writeGate,
+        LearningSecretVerifier secrets,
         ILeasedWorkQueue<AttemptDeadlineWork> deadlines,
         IEnumerable<IQuestionScorer> scorers,
         IOptions<QuestionTypeOptions> questionTypes,
@@ -78,6 +80,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         _numberSequence = numberSequence;
         _distributedLock = distributedLock;
         _writeGate = writeGate;
+        _secrets = secrets;
         _deadlines = deadlines;
         _scorers = scorers;
         _questionTypes = questionTypes.Value;
@@ -171,9 +174,12 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
                 return new AttemptResult { ErrorCode = AttemptErrors.TooSoon, AvailableFromUtc = submitted.AddMinutes(part.DelayMinutes) };
             }
 
-            if (!string.IsNullOrEmpty(part.AccessCodeHash) && !EnrollmentKeys.Verify(request.AccessCode, part.AccessCodeHash))
+            switch (await _secrets.CheckAsync(AssessmentsConstants.QuizAccessCodeSecret, request.QuizId, request.UserId, request.AccessCode, cancellationToken))
             {
-                return AttemptResult.Fail(AttemptErrors.WrongAccessCode);
+                case SecretCheck.LockedOut:
+                    return AttemptResult.Fail(AttemptErrors.TooManyAttempts);
+                case SecretCheck.Rejected:
+                    return AttemptResult.Fail(AttemptErrors.WrongAccessCode);
             }
 
             if (!string.IsNullOrWhiteSpace(part.HonorStatement) && !request.HonorConfirmed)
