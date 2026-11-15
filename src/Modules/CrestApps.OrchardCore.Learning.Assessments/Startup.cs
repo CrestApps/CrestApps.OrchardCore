@@ -1,3 +1,5 @@
+using OrchardCore.DataSources;
+using CrestApps.OrchardCore.Learning.Assessments.Reports;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Drivers;
@@ -61,5 +63,22 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<AssessmentsPermissionsProvider>();
         services.AddNavigationProvider<AssessmentsAdminMenu>();
         services.AddSingleton<IBackgroundTask, AttemptDeadlineBackgroundTask>();
+    }
+}
+
+/// <summary>
+/// Adds the Learning assessments data source of Data Pipelines and the Report Builder.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.DataPipelinesCore)]
+public sealed class AssessmentsDataSourcesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataSource<AssessmentsReportDataSource>();
+        services.AddScoped<IAssessmentsReportDataSet, LearningAttemptsReportDataSet>();
+        services.AddScoped<IAssessmentsReportDataSet, LearningAttemptAnswersReportDataSet>();
+        services.AddScoped<IAssessmentsReportDataSet, LearningAttemptScoreChangesReportDataSet>();
+        services.AddScoped<IAssessmentsReportDataSet, LearningQuizOverridesReportDataSet>();
     }
 }

@@ -32,6 +32,7 @@
     <PackageReference Include="OrchardCore.ContentManagement.Display" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.Contents.Core" />
+    <PackageReference Include="OrchardCore.DataSources.Core" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Html" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
@@ -50,6 +51,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Assessments.Core\CrestApps.OrchardCore.Learning.Assessments.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" />
   </ItemGroup>
