@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -102,6 +103,12 @@ public sealed class OrderViewController : Controller
         if (order is null || order.Status is OrderStatus.Draft or OrderStatus.Canceled)
         {
             return View("Invalid", await _shapeFactory.CreateAsync("GuestOrderInvalid"));
+        }
+
+        // Invoiced by another module (Invoicing): its invoice is the order's invoice.
+        if (await OrderDocumentLinks.GetInvoiceUrlAsync(HttpContext.RequestServices.GetServices<IOrderDocumentSender>(), order, forStaff: false, HttpContext.RequestAborted) is { } invoiceUrl)
+        {
+            return Redirect(invoiceUrl);
         }
 
         var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);

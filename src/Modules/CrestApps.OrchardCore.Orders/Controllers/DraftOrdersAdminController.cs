@@ -150,13 +150,18 @@ public sealed class DraftOrdersAdminController : Controller
             return NotFound();
         }
 
-        if (await _drafts.SendInvoiceAsync(order, User.Identity?.Name, HttpContext.RequestAborted))
+        var sent = await _drafts.SendAsync(order, User.Identity?.Name, HttpContext.RequestAborted);
+
+        if (sent.Sent)
         {
-            await _notifier.SuccessAsync(order.Quote is null ? H["Invoice emailed to {0}.", order.CustomerEmail] : H["Quote emailed to {0}.", order.CustomerEmail]);
+            await _notifier.SuccessAsync(H["{0}", sent.Message]);
         }
         else
         {
-            await _notifier.ErrorAsync(H["The invoice couldn't be emailed. Check the email settings and the site's base URL."]);
+            foreach (var error in sent.Errors)
+            {
+                await _notifier.ErrorAsync(H["{0}", error]);
+            }
         }
 
         return RedirectToAction("Detail", "OrdersAdmin", new { orderId });

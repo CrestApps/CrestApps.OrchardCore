@@ -199,7 +199,9 @@ A transaction its owner pays themselves (one that is not charged automatically) 
   on the payment step and the confirmation, and the confirmation is headed *Payment received*. A link that was
   altered or expired shows nothing about any transaction. Links use the site's **Base URL**
   from the general settings, so set it to the public address; without it, a link made outside a request is left out
-  and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them.
+  and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them. A transaction paid through a page of
+  its own, such as the checkout of the order an invoice bills, is linked there instead: the first `ITransactionPayUrlProvider` that names
+  a page wins, for the links, the reminders and the ledger's pay page alike.
 - **The invoice page.** With the Receipts module enabled, the transaction's page links its invoice: the same layout
   as a receipt, headed *Invoice*, with a *Due* status until it is paid. Administrators also see the pay link there,
   to send it by hand. The receipt for the payment names the invoice it settled.

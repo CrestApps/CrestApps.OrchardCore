@@ -258,6 +258,9 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
             case CreditNoteDisposition.Refund when transaction is null || transaction.AmountPaid - transaction.AmountRefunded < total:
                 return result.Fail(S["Only {0} was paid on this invoice, so {1} can't be refunded.", Money(Math.Max(0m, (transaction?.AmountPaid ?? 0m) - (transaction?.AmountRefunded ?? 0m)), currency), Money(total, currency)]);
 
+            case CreditNoteDisposition.RefundedElsewhere when transaction is null || transaction.AmountPaid < total:
+                return result.Fail(S["Only {0} was paid on this invoice, so a refund of {1} made elsewhere can't be recorded against it.", Money(transaction?.AmountPaid ?? 0m, currency), Money(total, currency)]);
+
             case CreditNoteDisposition.CustomerCredit when _serviceProvider.GetService<ICustomerCreditService>() is not { } credit || !credit.CanHold(invoice.BillTo?.Party ?? default):
                 return result.Fail(S["The customer can't hold credit (the Store Credit feature is off, or the invoice is billed to someone without an account). Choose another way to credit it."]);
         }
@@ -379,6 +382,12 @@ public sealed class DefaultCreditNoteCommandService : ICreditNoteCommandService
                 creditNote.AmountRefunded = refunded.Succeeded ? total : 0m;
 
                 return refunded.Succeeded;
+
+            case CreditNoteDisposition.RefundedElsewhere:
+                // The money already went back (the order's own refund, recorded on the ledger): nothing more moves.
+                creditNote.AmountRefunded = total;
+
+                return true;
 
             default:
                 var credit = _serviceProvider.GetRequiredService<ICustomerCreditService>();

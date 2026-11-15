@@ -138,6 +138,12 @@ public sealed class OrdersAdminController : Controller
             return NotFound();
         }
 
+        // Invoiced by another module (Invoicing): its invoice is the order's invoice.
+        if (await OrderDocumentLinks.GetInvoiceUrlAsync(HttpContext.RequestServices.GetServices<IOrderDocumentSender>(), order, forStaff: true, HttpContext.RequestAborted) is { } invoiceUrl)
+        {
+            return Redirect(invoiceUrl);
+        }
+
         var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);
 
         return View("Document", new OrderDocumentPageViewModel

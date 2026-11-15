@@ -25,7 +25,8 @@ public sealed class InvoiceShareLinkService : IInvoiceShareLinkService
 
     /// <inheritdoc/>
     public async Task<string> CreateUrlAsync(Invoice invoice, CancellationToken cancellationToken = default)
-        => await _urls.GetUrlAsync(InvoicingConstants.RouteNames.View, new { token = await CreateTokenAsync(invoice) });
+        // The route's own area, controller and action, so the link is built from any page, another module's included.
+        => await _urls.GetUrlAsync(InvoicingConstants.RouteNames.View, new { area = InvoicingConstants.Features.Area, controller = "Invoice", action = "Show", token = await CreateTokenAsync(invoice) });
 
     /// <summary>
     /// Creates the token of a link to the invoice's public page.

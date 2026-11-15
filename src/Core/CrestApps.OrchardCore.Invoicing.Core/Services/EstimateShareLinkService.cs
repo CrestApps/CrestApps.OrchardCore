@@ -27,7 +27,8 @@ public sealed class EstimateShareLinkService
     /// Creates the absolute address of the estimate's public page.
     /// </summary>
     public async Task<string> CreateUrlAsync(Estimate estimate)
-        => await _urls.GetUrlAsync(InvoicingConstants.RouteNames.EstimateView, new { token = await CreateTokenAsync(estimate) });
+        // The route's own area, controller and action, so the link is built from any page, another module's included.
+        => await _urls.GetUrlAsync(InvoicingConstants.RouteNames.EstimateView, new { area = InvoicingConstants.Features.Area, controller = "Estimate", action = "Show", token = await CreateTokenAsync(estimate) });
 
     /// <summary>
     /// Creates the token of a link to the estimate's public page.

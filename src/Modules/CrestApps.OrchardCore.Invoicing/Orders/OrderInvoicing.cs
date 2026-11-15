@@ -195,21 +195,22 @@ public sealed class OrderInvoiceBuilder
     }
 
     /// <summary>
-    /// Builds the draft invoice of an order whose balance is the ledger debt.
+    /// Builds the draft invoice of an order: one whose balance is the ledger debt <paramref name="transaction"/>, which
+    /// the invoice takes over, or, with no transaction, a draft order the store sends as an invoice, which posts its own
+    /// debt when issued and is due when the order says.
     /// </summary>
     public async Task<Invoice> BuildDraftAsync(Order order, Transaction transaction, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(order);
-        ArgumentNullException.ThrowIfNull(transaction);
 
         var settings = await _siteService.GetSettingsAsync<InvoicingSettings>();
         var invoice = await _invoices.NewAsync(cancellationToken: cancellationToken);
-        var payer = transaction.GetPayer();
+        var payer = transaction?.GetPayer() ?? default;
 
         invoice.SourceType = InvoicingConstants.OrderReferenceType;
         invoice.SourceId = order.ItemId;
-        invoice.TransactionId = transaction.ItemId;
-        invoice.Currency = order.Currency ?? transaction.Currency;
+        invoice.TransactionId = transaction?.ItemId;
+        invoice.Currency = order.Currency ?? transaction?.Currency;
         invoice.Reference = order.OrderNumber;
         invoice.PurchaseOrderNumber = order.PurchaseOrderNumber;
         invoice.PricesIncludeTax = order.TaxLines.Any(line => line.IncludedInPrice);
@@ -227,7 +228,7 @@ public sealed class OrderInvoiceBuilder
             ShippingAddress = order.ShippingAddress,
         };
 
-        if (transaction.DueUtc is { } dueUtc && _serviceProvider.GetService<ILocalClock>() is { } localClock)
+        if ((transaction?.DueUtc ?? order.Invoice?.DueUtc) is { } dueUtc && _serviceProvider.GetService<ILocalClock>() is { } localClock)
         {
             invoice.DueDate = DateOnly.FromDateTime((await localClock.ConvertToLocalAsync(DateTime.SpecifyKind(dueUtc, DateTimeKind.Utc))).DateTime);
         }

@@ -57,6 +57,13 @@ public sealed class TransactionPayController : Controller
             return View("Invalid", await _shapeFactory.CreateAsync("TransactionPayInvalid"));
         }
 
+        // Paid through a page of its own, such as the checkout of the order an invoice bills: the payer goes there.
+        if (IsPayable(transaction) &&
+            await TransactionPayUrls.GetOwnPayUrlAsync(HttpContext.RequestServices, transaction, HttpContext.RequestAborted) is { } own)
+        {
+            return Redirect(own);
+        }
+
         var invoiceBuilder = HttpContext.RequestServices.GetService<ITransactionInvoiceBuilder>();
 
         var invoice = invoiceBuilder is null ? null : await invoiceBuilder.BuildAsync(transaction, HttpContext.RequestAborted);
@@ -90,7 +97,8 @@ public sealed class TransactionPayController : Controller
 
         var engine = HttpContext.RequestServices.GetService<ICheckoutEngine>();
 
-        if (!IsPayable(transaction) || engine is null)
+        if (!IsPayable(transaction) || engine is null ||
+            await TransactionPayUrls.GetOwnPayUrlAsync(HttpContext.RequestServices, transaction, HttpContext.RequestAborted) is not null)
         {
             return RedirectToRoute(TransactionsConstants.RouteNames.Pay, new { token });
         }

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Navigation;
@@ -130,6 +131,12 @@ public sealed class AccountOrdersController : Controller
             !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
         {
             return NotFound();
+        }
+
+        // Invoiced by another module (Invoicing): its invoice is the order's invoice.
+        if (await OrderDocumentLinks.GetInvoiceUrlAsync(HttpContext.RequestServices.GetServices<IOrderDocumentSender>(), order, forStaff: false, HttpContext.RequestAborted) is { } invoiceUrl)
+        {
+            return Redirect(invoiceUrl);
         }
 
         var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);

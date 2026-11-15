@@ -204,14 +204,76 @@ public sealed class DraftOrderService
     /// Emails the buyer the order and a link to pay it. Returns whether it went.
     /// </summary>
     public async Task<bool> SendInvoiceAsync(Order order, string actorName, CancellationToken cancellationToken = default)
+        => (await SendAsync(order, actorName, cancellationToken)).Sent;
+
+    /// <summary>
+    /// Sends the buyer the order to pay: as another module's document when one sends it (an invoicing module's invoice,
+    /// or its estimate for a quote; see <see cref="IOrderDocumentSender"/>), otherwise as the order's own invoice or quote
+    /// e-mail with its pay link. Either way the buyer pays through the order's own pay link and checkout.
+    /// </summary>
+    public async Task<OrderDocumentSendResult> SendAsync(Order order, string actorName, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(order);
 
         if (order.Invoice is null || order.Status is OrderStatus.Paid or OrderStatus.Canceled)
         {
-            return false;
+            return new OrderDocumentSendResult().Fail(S["Only a draft order that isn't paid or canceled can be sent."]);
         }
 
+        OrderDocumentSendResult handled = null;
+
+        foreach (var documentSender in _serviceProvider?.GetServices<IOrderDocumentSender>() ?? [])
+        {
+            handled = await documentSender.SendAsync(order, cancellationToken);
+
+            if (handled is not null)
+            {
+                break;
+            }
+        }
+
+        if (handled is not null)
+        {
+            if (!handled.Sent)
+            {
+                return handled;
+            }
+
+            // The other module may have saved and committed; the order is read again before it is marked sent.
+            order = await _orderStore.FindByIdAsync(order.ItemId, cancellationToken) ?? order;
+        }
+        else if (!await SendOwnEmailAsync(order, cancellationToken))
+        {
+            return new OrderDocumentSendResult().Fail(S["The invoice couldn't be emailed. Check the email settings and the site's base URL."]);
+        }
+
+        order.Invoice.SentUtc = _clock.UtcNow;
+
+        // A quote is offered once it's sent, until the date to pay by.
+        if (order.Quote is { Status: OrderQuoteStatus.Requested or OrderQuoteStatus.Sent } quote)
+        {
+            quote.Status = OrderQuoteStatus.Sent;
+            quote.SentUtc = order.Invoice.SentUtc;
+            quote.ExpiresUtc = order.Invoice.DueUtc;
+        }
+
+        await _orderStore.UpdateAsync(order, cancellationToken);
+        await _orderService.AddNoteAsync(order, handled?.Note ?? (order.Quote is null
+            ? S["Invoice emailed to {0}.", order.CustomerEmail]
+            : S["Quote emailed to {0}.", order.CustomerEmail]), OrderNoteKind.Event, actorName, cancellationToken);
+
+        var result = handled ?? new OrderDocumentSendResult();
+
+        result.Message ??= order.Quote is null
+            ? S["Invoice emailed to {0}.", order.CustomerEmail]
+            : S["Quote emailed to {0}.", order.CustomerEmail];
+
+        return result;
+    }
+
+    // The order's own invoice or quote e-mail, with the link to its pay page.
+    private async Task<bool> SendOwnEmailAsync(Order order, CancellationToken cancellationToken)
+    {
         var sent = await _emailSender.SendAsync(new CommerceEmail
         {
             Kind = order.Quote is null ? OrderEmailKinds.Invoice : OrderEmailKinds.Quote,
@@ -241,27 +303,7 @@ public sealed class DraftOrderService
             };
         }, cancellationToken);
 
-        if (!sent)
-        {
-            return false;
-        }
-
-        order.Invoice.SentUtc = _clock.UtcNow;
-
-        // A quote is offered once it's sent, until the date to pay by.
-        if (order.Quote is { Status: OrderQuoteStatus.Requested or OrderQuoteStatus.Sent } quote)
-        {
-            quote.Status = OrderQuoteStatus.Sent;
-            quote.SentUtc = order.Invoice.SentUtc;
-            quote.ExpiresUtc = order.Invoice.DueUtc;
-        }
-
-        await _orderStore.UpdateAsync(order, cancellationToken);
-        await _orderService.AddNoteAsync(order, order.Quote is null
-            ? S["Invoice emailed to {0}.", order.CustomerEmail]
-            : S["Quote emailed to {0}.", order.CustomerEmail], OrderNoteKind.Event, actorName, cancellationToken);
-
-        return true;
+        return sent;
     }
 
     /// <summary>

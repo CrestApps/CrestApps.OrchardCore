@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Invoicing.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -106,6 +107,18 @@ public sealed class EstimateController : Controller
             UserId = User.Identity?.IsAuthenticated == true ? User.FindFirstValue(ClaimTypes.NameIdentifier) : null,
             Today = await GetTodayAsync(),
         }, HttpContext.RequestAborted);
+
+        // An estimate that stands for something paid through its own checkout, such as an order's quote, is paid there.
+        if (result.Succeeded && result.Estimate is { } accepted)
+        {
+            foreach (var provider in HttpContext.RequestServices.GetServices<IEstimatePayLinkProvider>())
+            {
+                if (await provider.GetPayUrlAsync(accepted, HttpContext.RequestAborted) is { Length: > 0 } payUrl)
+                {
+                    return Redirect(payUrl);
+                }
+            }
+        }
 
         await NotifyAsync(result, H["Thank you: you accepted the estimate. We'll be in touch."]);
 

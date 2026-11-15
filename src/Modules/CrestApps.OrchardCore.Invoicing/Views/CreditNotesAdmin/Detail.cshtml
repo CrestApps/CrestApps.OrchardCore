@@ -23,6 +23,7 @@
     {
         CreditNoteDisposition.Refund => T["Refund what was paid"],
         CreditNoteDisposition.CustomerCredit => T["Keep it as the customer's credit"],
+        CreditNoteDisposition.RefundedElsewhere => T["Record a refund already made, such as the order's"],
         _ => T["Lower what is owed on the invoice"],
     };
 }

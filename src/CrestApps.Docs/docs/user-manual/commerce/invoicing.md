@@ -149,6 +149,10 @@ To bill a large job as it goes, use **Invoice in part** on the estimate's page: 
 
 To change a sent estimate, click **Revise**: you get a copy to change, sent as **EST-1001-2**, and the old one is canceled. An estimate nobody answered expires the day after **Valid until**. How long estimates are valid by default is set under **Settings > Commerce > Invoicing**.
 
+## Draft orders and quotes
+
+With **Orders** on, **Send invoice** on a draft order issues a numbered invoice from the order instead of the order's own e-mail. The buyer pays it from the invoice's **Pay this invoice** button, which opens the order's own checkout, so there is one amount to pay and one way to pay it; when they pay, the invoice is marked paid (anything the checkout adds, such as shipping, goes on a small debit note paid at the same time). Canceling the order voids the invoice, and refunding it adds a credit note. With **Invoicing Estimates** on, **Send quote** sends an estimate instead: the buyer accepts it on the estimate's page and goes straight to the order's checkout, and once they pay, the estimate shows **Invoiced**. The order's **Invoice** links open the invoice.
+
 ## Orders paid on account
 
 When a customer checks out on account terms (or pays later) and the whole order goes on their account, the order gets a numbered invoice automatically, with the order's lines, shipping, discounts and tax, billed to their account. It is the same debt, not a second one: paying the invoice pays the order's balance. If the invoice's total doesn't match the order's (for example because tax came out differently), it is left as a draft under **Commerce > Invoices** for you to check and issue.
