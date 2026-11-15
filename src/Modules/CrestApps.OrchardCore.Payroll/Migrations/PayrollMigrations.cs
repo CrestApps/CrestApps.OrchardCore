@@ -22,10 +22,11 @@ internal sealed class PayrollMigrations : DataMigration
     public async Task<int> CreateAsync()
     {
         await PayrollIndexSchema.CreateAsync(SchemaBuilder);
+        await PayrollFilingIndexSchema.CreateAsync(SchemaBuilder);
         await _seeder.SeedAsync();
         await _policySeeder.SeedAsync();
 
-        return 6;
+        return 7;
     }
 
     // Pay profiles and pay items.
@@ -67,5 +68,13 @@ internal sealed class PayrollMigrations : DataMigration
         await _seeder.SeedAsync();
 
         return 6;
+    }
+
+    // Tax deposits and filings.
+    public async Task<int> UpdateFrom6Async()
+    {
+        await PayrollFilingIndexSchema.CreateAsync(SchemaBuilder);
+
+        return 7;
     }
 }

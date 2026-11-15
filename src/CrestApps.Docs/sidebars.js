@@ -198,6 +198,7 @@ const sidebars = {
                 'user-manual/finance/payroll-employees',
                 'user-manual/finance/payroll-taxes',
                 'user-manual/finance/payroll-garnishments',
+                'user-manual/finance/payroll-filings',
                 'user-manual/finance/payroll-pay-runs',
                 'user-manual/finance/payroll-my-pay',
             ],

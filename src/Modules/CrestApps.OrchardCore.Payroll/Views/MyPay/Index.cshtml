@@ -47,4 +47,20 @@ else
             </admin-list-grid>
         </admin-list>
     </form>
+
+    @if (Model.HasTaxForms)
+    {
+        <h5 class="mt-4">@T["Tax forms"]</h5>
+        <form method="get" class="no-multisubmit" data-list-management data-client-side-search="false">
+            <admin-list name="PayrollMyPayTaxForms" context="Model.TaxForms"
+                        show-select-all="false"
+                        empty-message="@T["No tax form yet."]">
+                <admin-list-list item-css-class="list-group-item" />
+                <admin-list-grid>
+                    <admin-list-column name="Name" position="20" title="@T["Form"]" width="auto" />
+                    <admin-list-column type="Actions" title="@T["Actions"]" />
+                </admin-list-grid>
+            </admin-list>
+        </form>
+    }
 }

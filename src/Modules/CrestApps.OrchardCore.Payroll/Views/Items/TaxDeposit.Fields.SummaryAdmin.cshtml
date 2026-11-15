@@ -1,0 +1,10 @@
+@model ShapeViewModel<TaxDeposit>
+@using System.Globalization
+
+@{
+    var deposit = Model.Value;
+}
+
+<strong>@deposit.Amount.ToString("N2", CultureInfo.CurrentCulture)</strong>
+<span class="ms-1">@deposit.Jurisdiction @(deposit.Group == TaxLiabilityGroups.Unemployment ? T["Unemployment"] : T["Withholding"])</span>
+<span class="text-muted small ms-1">@T["for {0} – {1}, paid {2}", deposit.PeriodStart.ToString("d", CultureInfo.CurrentCulture), deposit.PeriodEnd.ToString("d", CultureInfo.CurrentCulture), deposit.PaidOn.ToString("d", CultureInfo.CurrentCulture)]@(string.IsNullOrEmpty(deposit.Reference) ? string.Empty : " · " + deposit.Reference)</span>

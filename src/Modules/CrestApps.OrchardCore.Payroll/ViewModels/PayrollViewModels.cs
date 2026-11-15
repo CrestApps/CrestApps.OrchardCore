@@ -719,6 +719,12 @@ public class MyPayIndexViewModel
 
     [BindNever]
     public IList<(EmployeePayProfile Profile, string EmployerName)> Profiles { get; set; } = [];
+
+    [BindNever]
+    public AdminListContext TaxForms { get; set; }
+
+    [BindNever]
+    public bool HasTaxForms { get; set; }
 }
 
 /// <summary>

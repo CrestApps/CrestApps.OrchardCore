@@ -1,0 +1,4 @@
+@model ShapeViewModel<MyPayTaxFormViewModel>
+
+<strong>@T["Form W-2 for {0}", Model.Value.Filing.Year]</strong>
+<span class="text-muted small ms-1">@Model.Value.EmployerName</span>

@@ -75,6 +75,22 @@ public static class PaySetupServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds a tax form a country pack prepares from the final statements.
+    /// </summary>
+    /// <typeparam name="TForm">The form.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddPayrollFilingForm<TForm>(this IServiceCollection services)
+        where TForm : class, IPayrollFilingForm
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayrollFilingForm, TForm>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds a source of pay inputs, read by pay runs and by the Pay Inputs data set.
     /// </summary>
     /// <typeparam name="TSource">The source.</typeparam>

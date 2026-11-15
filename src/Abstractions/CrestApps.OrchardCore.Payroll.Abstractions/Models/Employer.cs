@@ -86,6 +86,12 @@ public sealed class Employer : CatalogItem, INameAwareModel, IModifiedUtcAwareMo
     public EmployerStatus Status { get; set; } = EmployerStatus.Active;
 
     /// <summary>
+    /// Gets or sets the years closed at year end: no pay run with a pay date in them is opened, calculated or processed,
+    /// and no statement of them is voided.
+    /// </summary>
+    public IList<int> ClosedYears { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets when it was added.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

@@ -38,6 +38,10 @@ Add a calculation step with `IPayCalculationStep` (orders in `PayCalculationOrde
 
 `IPayRunService`: `OpenAsync`, `CalculateAsync`, `SubmitAsync` (to Approvals), `ProcessAsync`, `VoidStatementAsync`, `ReissuePaymentAsync`, `ListStatementsAsync`. Statements never change once final; a void is a reversing statement. Hear steps with `IPayRunObserver` (Opened, Calculated, Submitted, Approved, Rejected, Paid, PartiallyPaid, Failed, Canceled) and statements with `IPayStatementObserver` (Issued, Voided). Approvals, Disbursements and the pay input sources commit the session: re-read a record by id after calling them before saving it.
 
+## Liabilities and filings
+
+`ITaxLiabilityService` derives the taxes owed by deposit period from the final statements and `ITaxDepositManager`'s deposits. A country pack adds its forms with `services.AddPayrollFilingForm<T>()` (`IPayrollFilingForm.PrepareAsync(PayrollFilingContext)`); `IPayrollFilingService` prepares, files, amends and closes a year (`Employer.ClosedYears` stops runs and voids). Never keep another liability or filing record.
+
 ## Garnishments
 
 `IGarnishmentOrderManager` keeps garnishment orders (a pay profile, the kind, an amount or percent of disposable earnings, limits, a total owed, the payee). `GarnishmentsPayCalculationStep` applies the limits; `GarnishmentStatementObserver` moves what was withheld and pays the payee through Checks or Disbursements. Never withhold a garnishment as a pay item.

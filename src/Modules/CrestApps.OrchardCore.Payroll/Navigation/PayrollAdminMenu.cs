@@ -69,8 +69,9 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
         var runs = await AnyAsync(user, PayrollPermissions.ViewPayRuns);
         var profiles = await AnyAsync(user, PayrollPermissions.ViewPayProfiles);
         var employers = await AnyAsync(user, PayrollPermissions.ManagePayrollSettings);
+        var filings = await AnyAsync(user, PayrollPermissions.ManagePayrollFilings);
 
-        if (runs || profiles || employers)
+        if (runs || profiles || employers || filings)
         {
             builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll =>
             {
@@ -90,6 +91,24 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
                         .Id("payrollEmployees")
                         .Action("Index", "PayProfiles", PayrollConstants.Features.Payroll)
                         .LocalNav());
+                }
+
+                if (filings)
+                {
+                    payroll.Add(S["Liabilities and Filings"], S["Liabilities and Filings"].PrefixPosition("40"), group => group
+                        .Id("payrollFilings")
+                        .Add(S["Liabilities"], S["Liabilities"].PrefixPosition("10"), item => item
+                            .Id("payrollLiabilities")
+                            .Action("Liabilities", "PayrollFilings", PayrollConstants.Features.Payroll)
+                            .LocalNav())
+                        .Add(S["Filings"], S["Filings"].PrefixPosition("20"), item => item
+                            .Id("payrollFilingsList")
+                            .Action("Index", "PayrollFilings", PayrollConstants.Features.Payroll)
+                            .LocalNav())
+                        .Add(S["Year end"], S["Year end"].PrefixPosition("30"), item => item
+                            .Id("payrollYearEnd")
+                            .Action("YearEnd", "PayrollFilings", PayrollConstants.Features.Payroll)
+                            .LocalNav()));
                 }
 
                 if (employers)

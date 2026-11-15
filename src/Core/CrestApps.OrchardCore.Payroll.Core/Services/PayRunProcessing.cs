@@ -26,6 +26,13 @@ public sealed partial class DefaultPayRunService
 
         var result = new PayRunResult();
 
+        if (await YearClosedAsync(run.EmployerId, run.PayDate, cancellationToken))
+        {
+            result.Errors.Add(S["The employer's year {0} is closed: reopen it at year end first.", run.PayDate.Year]);
+
+            return result;
+        }
+
         // Processing is also allowed again: the run's lock means a run left processing was stopped half-way.
         if (run.Status is not (PayRunStatus.Approved or PayRunStatus.PartiallyPaid or PayRunStatus.Failed or PayRunStatus.Processing))
         {
@@ -174,6 +181,13 @@ public sealed partial class DefaultPayRunService
         if (await _runs.FindByIdAsync(statement.RunId, cancellationToken) is { Type: PayRunType.Historical })
         {
             result.Errors.Add(S["A statement imported as history can't be voided or paid again."]);
+
+            return result;
+        }
+
+        if (await YearClosedAsync(statement.EmployerId, statement.PayDate, cancellationToken))
+        {
+            result.Errors.Add(S["The employer's year {0} is closed: its wage statements are prepared. Correct the pay in a new run and amend the wage statement instead.", statement.PayDate.Year]);
 
             return result;
         }

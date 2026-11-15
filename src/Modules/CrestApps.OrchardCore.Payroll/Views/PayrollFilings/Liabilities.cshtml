@@ -1,0 +1,106 @@
+@model PayrollLiabilitiesViewModel
+@using System.Globalization
+
+<zone Name="Title">
+    <breadcrumb name="PayrollLiabilities" title="@T["Liabilities"]" />
+</zone>
+
+<form method="get" class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label for="employerId" class="form-label">@T["Employer"]</label>
+                <select id="employerId" name="employerId" asp-items="Model.Employers" class="form-select"><option value="">@T["Choose…"]</option></select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label for="year" class="form-label">@T["Year"]</label>
+                <input id="year" name="year" type="number" min="2000" max="2100" value="@Model.Year" class="form-control" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-secondary">@T["Show"]</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (string.IsNullOrEmpty(Model.EmployerId))
+{
+    <div class="alert alert-info">@T["Choose the employer whose payroll taxes you want to see."]</div>
+}
+else
+{
+    <p class="hint">@T["The payroll taxes the final statements owe, both sides, by deposit period: withholding by the deposit schedule of the employer's registration, unemployment by quarter. Payroll never moves the money: record each deposit you make."]</p>
+
+    <form method="post" class="no-multisubmit" data-list-management>
+        <admin-list name="PayrollLiabilityPeriods" context="Model.PeriodList"
+                    show-select-all="false"
+                    empty-message="@T["<strong>Nothing here!</strong> No final statement has a pay date in this year."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Name" position="20" title="@T["Period"]" />
+                <admin-list-column name="Details" position="30" title="@T["Owed"]" width="auto" />
+            </admin-list-grid>
+        </admin-list>
+    </form>
+
+    <div class="card my-3">
+        <div class="card-header">@T["Record a deposit"]</div>
+        <div class="card-body">
+            <form asp-action="RecordDeposit" method="post" class="row g-2 align-items-end">
+                <input type="hidden" name="NewDeposit.EmployerId" value="@Model.EmployerId" />
+                <div class="col-6 col-md-2">
+                    <label for="NewDeposit_Jurisdiction" class="form-label">@T["Jurisdiction"]</label>
+                    <input id="NewDeposit_Jurisdiction" name="NewDeposit.Jurisdiction" class="form-control text-uppercase" placeholder="US" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="NewDeposit_Group" class="form-label">@T["Taxes"]</label>
+                    <select id="NewDeposit_Group" name="NewDeposit.Group" class="form-select">
+                        <option value="Withholding">@T["Withholding"]</option>
+                        <option value="Unemployment">@T["Unemployment"]</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="NewDeposit_PeriodStart" class="form-label">@T["Period from"]</label>
+                    <input id="NewDeposit_PeriodStart" name="NewDeposit.PeriodStart" type="date" class="form-control" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="NewDeposit_PeriodEnd" class="form-label">@T["Period to"]</label>
+                    <input id="NewDeposit_PeriodEnd" name="NewDeposit.PeriodEnd" type="date" class="form-control" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="NewDeposit_Amount" class="form-label">@T["Amount"]</label>
+                    <input id="NewDeposit_Amount" name="NewDeposit.Amount" class="form-control" inputmode="decimal" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="NewDeposit_PaidOn" class="form-label">@T["Paid on"]</label>
+                    <input id="NewDeposit_PaidOn" name="NewDeposit.PaidOn" type="date" class="form-control" />
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="NewDeposit_Reference" class="form-label">@T["Confirmation number"]</label>
+                    <input id="NewDeposit_Reference" name="NewDeposit.Reference" class="form-control" />
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-secondary w-100">@T["Record"]</button>
+                </div>
+                <div class="col-12">
+                    <span class="hint">@T["The period's first and last days are the ones shown in the list above."]</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <h5>@T["Deposits"]</h5>
+    <form method="post" class="no-multisubmit" data-list-management>
+        <admin-list name="PayrollTaxDeposits" context="Model.DepositList"
+                    show-select-all="false"
+                    empty-message="@T["<strong>Nothing here!</strong> No deposit has been recorded for this year."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Name" position="20" title="@T["Deposit"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
+    </form>
+}
+
+<script asp-name="list-management-ui" at="Foot"></script>

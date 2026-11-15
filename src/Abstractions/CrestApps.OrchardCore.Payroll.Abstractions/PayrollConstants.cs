@@ -91,6 +91,21 @@ public static class PayrollConstants
     public const string GarnishmentsRecipeStepName = "PayrollGarnishments";
 
     /// <summary>
+    /// The name of the recipe and deployment step of tax deposits and filings.
+    /// </summary>
+    public const string FilingsRecipeStepName = "PayrollFilings";
+
+    /// <summary>
+    /// The name of the recipe step of tax deposits.
+    /// </summary>
+    public const string TaxDepositsRecipeStepName = "PayrollTaxDeposits";
+
+    /// <summary>
+    /// The notification type telling a person a tax form of theirs is ready, such as a wage statement.
+    /// </summary>
+    public const string TaxFormReadyNotificationType = "TaxFormReady";
+
+    /// <summary>
     /// The name of the pipeline step that saves rows as the inputs of a pay run.
     /// </summary>
     public const string SavePayInputsStepName = "SavePayInputs";

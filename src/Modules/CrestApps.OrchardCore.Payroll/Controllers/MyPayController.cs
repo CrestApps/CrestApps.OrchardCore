@@ -136,6 +136,24 @@ public sealed class MyPayController : Controller
 
         model.CanManageDetails = await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ManageOwnPayDetails);
 
+        // The person's filed tax forms, such as wage statements.
+        if (HttpContext.RequestServices.GetService<IPayrollFilingManager>() is { } filings && model.Profiles.Count > 0)
+        {
+            var forms = (await filings.ListByEmployersAsync([.. model.Profiles.Select(pair => pair.Profile.EmployerId).Distinct(StringComparer.Ordinal)], HttpContext.RequestAborted))
+                .Where(filing => filing.Status == PayrollFilingStatus.Filed)
+                .SelectMany(filing => filing.People.Where(person => person.StaffMemberId == meId).Select(person => new MyPayTaxFormViewModel
+                {
+                    Filing = filing,
+                    Person = person,
+                    EmployerName = model.Profiles.FirstOrDefault(pair => pair.Profile.EmployerId == filing.EmployerId).EmployerName,
+                }))
+                .OrderByDescending(form => form.Filing.Year)
+                .ToList();
+
+            model.HasTaxForms = forms.Count > 0;
+            model.TaxForms = new AdminListContext<MyPayTaxFormViewModel> { Source = forms };
+        }
+
         // Banking keeps the person's own bank accounts: link to it when it is on.
         model.CanManageBankAccounts = HttpContext.RequestServices.GetService<IBankAccountManager>() is not null
             && await _authorizationService.AuthorizeAsync(User, BankingPermissions.ManageOwnBankAccounts);
@@ -195,6 +213,34 @@ public sealed class MyPayController : Controller
     /// </summary>
     /// <param name="id">The pay profile's id.</param>
     /// <returns>The page.</returns>
+    /// <summary>
+    /// One of the person's filed tax forms, as a PDF.
+    /// </summary>
+    /// <param name="id">The filing's id.</param>
+    /// <param name="documents">The documents.</param>
+    /// <returns>The PDF.</returns>
+    [Admin("my-pay/tax-forms/{id}", "PayrollMyPayTaxForm")]
+    public async Task<IActionResult> TaxForm(string id, [FromServices] PayrollTaxFormDocuments documents)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ViewOwnPay))
+        {
+            return Forbid();
+        }
+
+        var me = await MeAsync();
+
+        // Only a filed form, and only the person's own statement in it.
+        if (me is null || string.IsNullOrEmpty(id)
+            || HttpContext.RequestServices.GetService<IPayrollFilingManager>() is not { } filings
+            || await filings.FindByIdAsync(id) is not { Status: PayrollFilingStatus.Filed } filing
+            || filing.People.FirstOrDefault(person => person.StaffMemberId == me.ItemId) is not { } person)
+        {
+            return NotFound();
+        }
+
+        return File(await documents.WriteAsync(filing, person), "application/pdf", PayrollTaxFormDocuments.FileName(filing));
+    }
+
     [Admin("my-pay/details/{id}", "PayrollMyPayDetails")]
     public async Task<IActionResult> Details(string id)
     {

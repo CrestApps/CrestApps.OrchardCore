@@ -24,6 +24,7 @@ public sealed class MyPayStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<MyPayStatementRow, MyPayStatementRowDisplayDriver>();
+        services.AddDisplayDriver<MyPayTaxFormViewModel, CrestApps.OrchardCore.Payroll.Drivers.MyPayTaxFormDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IStaffHomeLinkProvider, MyPayStaffHomeLinks>());
     }
 }

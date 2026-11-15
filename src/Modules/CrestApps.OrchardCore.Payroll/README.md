@@ -47,6 +47,9 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - Integration: `IPayRunObserver`; workflow events and tasks; the Payroll data sets and six reports with two dashboard
   widgets; webhook events; the pay date calendar source; audit events; notices of returned deposits and changed bank
   accounts; personal data; the opt-in `PayrollPayHistory` step; the scheduled-run workflow recipe.
+- Liabilities and filings (Payroll): tax liabilities by deposit period with recorded deposits, filings prepared by
+  country forms (`IPayrollFilingForm`), filed and amended, and year end; the United States pack adds Forms 941, 940 and
+  W-2/W-3 and the SSA EFW2 file format.
 - Garnishments (`CrestApps.OrchardCore.Payroll.Garnishments`): orders withheld within the law's limits and sent to
   their payees by check or deposit.
 - United States Payroll (`CrestApps.OrchardCore.Payroll.UnitedStates`): the Form W-4 election and withholding method; the

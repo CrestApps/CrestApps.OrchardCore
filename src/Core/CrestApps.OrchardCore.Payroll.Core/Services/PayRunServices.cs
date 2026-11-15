@@ -518,6 +518,13 @@ public sealed partial class DefaultPayRunService : IPayRunService
             return result;
         }
 
+        if (await YearClosedAsync(run.EmployerId, run.PayDate, cancellationToken))
+        {
+            result.Errors.Add(S["The employer's year {0} is closed: reopen it at year end first.", run.PayDate.Year]);
+
+            return result;
+        }
+
         var (locker, locked) = await _locks.TryAcquireLockAsync("Payroll:PayRun:" + run.ItemId, _lockTimeout, _lockExpiration);
 
         if (!locked)
@@ -628,6 +635,13 @@ public sealed partial class DefaultPayRunService : IPayRunService
         ArgumentNullException.ThrowIfNull(run);
 
         var result = new PayRunResult();
+
+        if (await YearClosedAsync(run.EmployerId, run.PayDate, cancellationToken))
+        {
+            result.Errors.Add(S["The employer's year {0} is closed: reopen it at year end first.", run.PayDate.Year]);
+
+            return result;
+        }
         var validation = await _runs.ValidateAsync(run, cancellationToken);
 
         if (!validation.Succeeded)
@@ -917,6 +931,16 @@ public sealed partial class DefaultPayRunService : IPayRunService
 
         return grossed;
     }
+
+    /// <summary>
+    /// Gets whether an employer's year of a pay date was closed at year end.
+    /// </summary>
+    /// <param name="employerId">The employer.</param>
+    /// <param name="payDate">The pay date.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="true"/> when it is closed.</returns>
+    internal async Task<bool> YearClosedAsync(string employerId, DateOnly payDate, CancellationToken cancellationToken)
+        => !string.IsNullOrEmpty(employerId) && await _employers.FindByIdAsync(employerId, cancellationToken) is { } employer && employer.ClosedYears.Contains(payDate.Year);
 
     private static PayInput ToPayInput(PayRun run, PayRunInput input)
         => new()

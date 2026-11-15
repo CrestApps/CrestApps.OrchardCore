@@ -447,8 +447,9 @@ public sealed class PayRunTests
                 await PayrollIndexSchema.CreateAsync(schemaBuilder);
                 await PayrollTaxRuleIndexSchema.CreateAsync(schemaBuilder);
                 await GarnishmentOrderIndexSchema.CreateAsync(schemaBuilder);
+                await PayrollFilingIndexSchema.CreateAsync(schemaBuilder);
             },
-            [.. PayrollIndexSchema.Providers(), new PayrollTaxRuleIndexProvider(), new GarnishmentOrderIndexProvider()]);
+            [.. PayrollIndexSchema.Providers(), new PayrollTaxRuleIndexProvider(), new GarnishmentOrderIndexProvider(), new PayrollFilingIndexProvider(), new PayrollFilingRecordIndexProvider()]);
 
     /// <summary>
     /// Names approvers by the permission a rule gives, through the harness's claim authorization.
