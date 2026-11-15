@@ -126,6 +126,11 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     public List<string> Observed { get; } = [];
 
     /// <summary>
+    /// Numbers the other series (estimates) as <c>EST-1001</c>, <c>EST-1002</c>..., without a store.
+    /// </summary>
+    public FakeNumberSeries Series { get; } = new();
+
+    /// <summary>
     /// Creates the harness. With <paramref name="realNumbers"/>, invoices are numbered by the site's generator over the
     /// number sequence kept in the store, whose series lock is <paramref name="numberLock"/> (the harness's lock when
     /// none is given); otherwise by <see cref="FakeNumberGenerator"/>.
@@ -148,7 +153,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
 
         store.RegisterIndexes([new TransactionIndexProvider()], TransactionsConstants.CollectionName);
-        store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider()], InvoicingConstants.CollectionName);
+        store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider()], InvoicingConstants.CollectionName);
 
         var cancellationToken = TestContext.Current.CancellationToken;
 
@@ -164,6 +169,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
             await new TransactionMigrations { SchemaBuilder = schema }.CreateAsync();
             await new InvoicingMigrations { SchemaBuilder = schema }.CreateAsync();
+            await new EstimatesMigrations { SchemaBuilder = schema }.CreateAsync();
             await transaction.CommitAsync(cancellationToken);
         }
 
@@ -225,6 +231,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         else
         {
             services.AddSingleton<IFinancialDocumentNumberGenerator>(_ => harness.Numbers);
+            services.AddSingleton<INumberSeries>(_ => harness.Series);
         }
         services.AddSingleton(_ => harness.Contacts.Object);
         services.AddSingleton(_ => harness.Credit.Object);
@@ -251,6 +258,8 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddSingleton(email.Object);
 
         services.AddInvoicingCore();
+        services.AddInvoicingEstimates();
+        services.AddScoped<IEstimateObserver>(_ => new RecordingEstimateObserver(harness.Observed));
 
         harness = new InvoicingTestHarness(path, store, services.BuildServiceProvider());
 
@@ -433,6 +442,56 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             lock (_observed)
             {
                 _observed.Add($"{kind}:{invoice.Number ?? invoice.ItemId}" + (detail is null ? string.Empty : ":" + detail));
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
+    internal sealed class FakeNumberSeries : INumberSeries
+    {
+        private long _next = 1001;
+
+        public Task<NumberSeriesFormat> GetFormatAsync(string series, CancellationToken cancellationToken = default)
+            => Task.FromResult(new NumberSeriesFormat("EST-{seq}", 1001));
+
+        public Task<SeriesNumber> NextAsync(string series, NumberSeriesRequest request = null, CancellationToken cancellationToken = default)
+        {
+            var sequence = _next++;
+
+            return Task.FromResult(new SeriesNumber(sequence, $"EST-{sequence}"));
+        }
+    }
+
+    private sealed class RecordingEstimateObserver : IEstimateObserver
+    {
+        private readonly List<string> _observed;
+
+        public RecordingEstimateObserver(List<string> observed)
+        {
+            _observed = observed;
+        }
+
+        public Task SentAsync(Estimate estimate, CancellationToken cancellationToken = default)
+            => Add("EstimateSent", estimate);
+
+        public Task AcceptedAsync(Estimate estimate, CancellationToken cancellationToken = default)
+            => Add("EstimateAccepted", estimate);
+
+        public Task DeclinedAsync(Estimate estimate, CancellationToken cancellationToken = default)
+            => Add("EstimateDeclined", estimate);
+
+        public Task ExpiredAsync(Estimate estimate, CancellationToken cancellationToken = default)
+            => Add("EstimateExpired", estimate);
+
+        public Task ConvertedAsync(Estimate estimate, Invoice invoice, CancellationToken cancellationToken = default)
+            => Add("EstimateConverted", estimate);
+
+        private Task Add(string kind, Estimate estimate)
+        {
+            lock (_observed)
+            {
+                _observed.Add($"{kind}:{estimate.Number ?? estimate.ItemId}");
             }
 
             return Task.CompletedTask;

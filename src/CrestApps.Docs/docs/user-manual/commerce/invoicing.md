@@ -117,6 +117,17 @@ For example, to thank customers when they pay, start a workflow with **Invoice P
 
 With **Commerce Webhooks** enabled, the same moments can be sent to another system: tick the events under **Invoicing** when you add a webhook under **Configuration > Webhooks** (see [Webhooks](webhooks.md)).
 
+## Estimates
+
+With **Invoicing Estimates** enabled, **Commerce > Estimates** lists the quotes you send before the work.
+
+1. Click **New estimate**, choose who it is for, add the lines, and set **Valid until**, a **Deposit** if you ask one, and **When accepted** (do nothing, make the invoice, or make a deposit invoice).
+2. Click **Save and send**. The estimate gets its number, such as **EST-1001**, and can no longer be changed. With e-mail set up, **Send to the customer** e-mails it with its PDF; otherwise copy the **Link for the customer** from its page.
+3. The customer opens the link, reads the estimate, and types their name to **Accept** it, or **Decline** it. If they answer by phone or e-mail, use **Mark accepted** or **Mark declined** on its page.
+4. **Make the invoice** puts the estimate on a draft invoice; **Invoice the deposit** makes a deposit invoice first. Check the draft and issue it.
+
+To change a sent estimate, click **Revise**: you get a copy to change, sent as **EST-1001-2**, and the old one is canceled. An estimate nobody answered expires the day after **Valid until**. How long estimates are valid by default is set under **Settings > Commerce > Invoicing**.
+
 ## See how invoicing is doing
 
 With **Reports** enabled, **Reports > Commerce** has six invoicing reports. Each shows amounts per currency.

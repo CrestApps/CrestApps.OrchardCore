@@ -294,6 +294,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.BusinessDocuments` | Business Documents | [Business Documents](./modules/business-documents) |
 | `CrestApps.OrchardCore.BusinessDocuments.Pdf` | Business Documents PDF | [Business Documents](./modules/business-documents#the-pdf) |
 | `CrestApps.OrchardCore.Invoicing` | Invoicing | [Invoicing](./modules/invoicing) |
+| `CrestApps.OrchardCore.Invoicing.Estimates` | Invoicing Estimates | [Invoicing](./modules/invoicing#estimates) |
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Taxation.TaxJar` | TaxJar | [Taxation](./modules/taxation#taxjar) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |

@@ -50,6 +50,13 @@ public static class InvoicingPermissions
         isSecurityCritical: true);
 
     /// <summary>
+    /// Create, send, revise and cancel estimates, and turn them into draft invoices.
+    /// </summary>
+    public static readonly Permission ManageEstimates = new(
+        "ManageEstimates",
+        LocalizationSource.Create("Manage estimates", typeof(InvoicingPermissions)));
+
+    /// <summary>
     /// Change the invoicing settings.
     /// </summary>
     public static readonly Permission ManageInvoicingSettings = new(
@@ -62,7 +69,7 @@ public static class InvoicingPermissions
     public static readonly Permission ViewInvoices = new(
         "ViewInvoices",
         LocalizationSource.Create("View invoices", typeof(InvoicingPermissions)),
-        [ManageInvoices, IssueInvoices, VoidInvoices, ManageCreditNotes, RecordInvoicePayments]);
+        [ManageInvoices, IssueInvoices, VoidInvoices, ManageCreditNotes, RecordInvoicePayments, ManageEstimates]);
 
     /// <summary>
     /// See the invoices billed to the signed-in user and to the parties they have billing access to.
@@ -82,6 +89,7 @@ public static class InvoicingPermissions
         VoidInvoices,
         ManageCreditNotes,
         RecordInvoicePayments,
+        ManageEstimates,
         ManageInvoicingSettings,
         ViewOwnInvoices,
     ];

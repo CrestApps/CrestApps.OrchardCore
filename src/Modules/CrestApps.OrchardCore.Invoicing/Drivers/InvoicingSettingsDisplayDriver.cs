@@ -65,6 +65,7 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
             model.ChronologicalIssueDates = settings.ChronologicalIssueDates;
             model.CashRoundingIncrement = settings.CashRoundingIncrement;
             model.ShareLinkDays = settings.ShareLinkDays;
+            model.EstimateValidDays = settings.EstimateValidDays;
             model.PaymentTerms = [.. (await _paymentTerms.GetEnabledAsync()).Select(term => new SelectListItem(term.Name, term.ItemId))];
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, InvoicingPermissions.ManageInvoicingSettings))
@@ -95,6 +96,11 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.CashRoundingIncrement), S["The cash rounding increment must be more than zero, such as 0.05, or left empty."]);
         }
 
+        if (model.EstimateValidDays is < 1 or > 3650)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.EstimateValidDays), S["An estimate must be valid for 1 to 3650 days."]);
+        }
+
         if (model.ShareLinkDays is < 1 or > 3650)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.ShareLinkDays), S["A share link must last from 1 to 3650 days."]);
@@ -112,6 +118,7 @@ public sealed class InvoicingSettingsDisplayDriver : SiteDisplayDriver<Invoicing
         settings.ChronologicalIssueDates = model.ChronologicalIssueDates;
         settings.CashRoundingIncrement = model.CashRoundingIncrement;
         settings.ShareLinkDays = model.ShareLinkDays;
+        settings.EstimateValidDays = model.EstimateValidDays;
 
         return Edit(site, settings, context);
     }

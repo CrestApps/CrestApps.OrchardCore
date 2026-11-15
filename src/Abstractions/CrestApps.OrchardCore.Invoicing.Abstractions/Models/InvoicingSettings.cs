@@ -75,6 +75,11 @@ public sealed class InvoicingSettings
     public int ShareLinkDays { get; set; } = 60;
 
     /// <summary>
+    /// Gets or sets how many days a sent estimate can be accepted, when it has no expiry date of its own.
+    /// </summary>
+    public int EstimateValidDays { get; set; } = 30;
+
+    /// <summary>
     /// Gets or sets whether an invoice may be issued with a date after today. Off by default: an invoice is dated the day
     /// it is issued or earlier.
     /// </summary>

@@ -54,4 +54,29 @@ public static class DocumentEventKinds
     /// A note was added.
     /// </summary>
     public const string Note = "note";
+
+    /// <summary>
+    /// The customer accepted an estimate.
+    /// </summary>
+    public const string Accepted = "accepted";
+
+    /// <summary>
+    /// The customer declined an estimate.
+    /// </summary>
+    public const string Declined = "declined";
+
+    /// <summary>
+    /// An estimate expired.
+    /// </summary>
+    public const string Expired = "expired";
+
+    /// <summary>
+    /// An estimate was withdrawn or replaced by a revision.
+    /// </summary>
+    public const string Canceled = "canceled";
+
+    /// <summary>
+    /// A document was turned into another, such as an estimate into an invoice.
+    /// </summary>
+    public const string Converted = "converted";
 }

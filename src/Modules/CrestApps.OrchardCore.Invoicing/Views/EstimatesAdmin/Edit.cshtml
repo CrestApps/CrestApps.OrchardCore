@@ -1,0 +1,188 @@
+@model EstimateEditViewModel
+
+@{
+    var isNew = string.IsNullOrEmpty(Model.ItemId);
+    var billToJson = string.IsNullOrEmpty(Model.BillTo)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.BillTo, text = Model.BillToName ?? Model.BillTo, selected = true } });
+}
+
+<zone Name="Title">
+    <breadcrumb name="@(isNew ? "EstimatesCreate" : "EstimatesEdit")" title="@(isNew ? T["New estimate"] : T["Edit draft estimate"])">
+        <breadcrumb-item id="EstimatesIndex" action="Index" controller="EstimatesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Estimates"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Prepared for"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="BillTo">
+                <label class="ocat-label">@T["Customer"]</label>
+                <div class="ocat-end">
+                    @await Component.InvokeAsync("ItemSelector", new
+                    {
+                        id = "estimate-bill-to",
+                        inputName = Html.NameFor(m => m.BillTo).ToString(),
+                        endpoint = Model.PartySearchEndpoint,
+                        initialItemsJson = billToJson,
+                        multiple = false,
+                        enableSearch = true,
+                        buttonText = T["Find a customer"].Value,
+                        searchPlaceholder = T["Search users, customers and accounts"].Value,
+                        emptyResultsText = T["No one found."].Value,
+                        noSelectionText = T["No one chosen."].Value,
+                        selectedItemsLabel = T["Prepared for"].Value,
+                        availableItemsLabel = T["Found"].Value,
+                        smallButton = false,
+                    })
+                    <span class="hint">@T["A user, customer or business account. Leave it empty to send the estimate to someone by name and e-mail only."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="ContactName">
+                <label asp-for="ContactName" class="ocat-label">@T["Name on the estimate"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactName" class="form-control" autocomplete="off" maxlength="255" />
+                    <span class="hint">@T["Left empty, the customer's billing name is used."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="ContactEmail">
+                <label asp-for="ContactEmail" class="ocat-label">@T["E-mail"]</label>
+                <div class="ocat-end">
+                    <input asp-for="ContactEmail" type="email" class="form-control" autocomplete="off" maxlength="255" />
+                    <span class="hint">@T["Where the estimate is sent."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <partial name="_DocumentLinesEditor" model="Model" view-data='new ViewDataDictionary(ViewData) { ["LinesHint"] = T["Fill in the empty row to add a line, then click Update to work out the totals and get another empty row. Tax is worked out again when the estimate is sent."].Value }' />
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Offer"]</div>
+        <div class="card-body">
+            <div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+                <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="Currency" class="form-control text-uppercase" maxlength="3" autocomplete="off" placeholder="USD" />
+                    <span class="hint">@T["Left empty, the site's default currency is used."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="ExpiryDate">
+                <label asp-for="ExpiryDate" class="ocat-label">@T["Valid until"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="ExpiryDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+                    <span class="hint">@T["The last day the customer can accept it. Left empty, it is valid for the number of days set in the invoicing settings from the day it is sent."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="DepositPercent">
+                <label asp-for="DepositPercent" class="ocat-label">@T["Deposit (%)"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="DepositPercent" type="number" step="any" min="0" max="100" class="form-control" />
+                    <span class="hint">@T["Optional. The percent of the total asked when the estimate is accepted."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-limited-wrapper" asp-validation-class-for="DepositAmount">
+                <label asp-for="DepositAmount" class="ocat-label">@T["Deposit (amount)"]</label>
+                <div class="ocat-limited">
+                    <input asp-for="DepositAmount" type="number" step="any" min="0" class="form-control" />
+                    <span class="hint">@T["Optional. An amount asked instead of a percent."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="OnAcceptance">
+                <label asp-for="OnAcceptance" class="ocat-label">@T["When accepted"]</label>
+                <div class="ocat-end">
+                    <select asp-for="OnAcceptance" class="form-select">
+                        <option value="@EstimateConversion.None">@T["Do nothing; I'll invoice it"]</option>
+                        <option value="@EstimateConversion.Full">@T["Make a draft invoice of the whole estimate"]</option>
+                        <option value="@EstimateConversion.Deposit">@T["Make a draft prepayment invoice of the deposit"]</option>
+                    </select>
+                    <span class="hint">@T["What happens when the customer accepts it online."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="PricesIncludeTax" />
+                        <label class="form-check-label" asp-for="PricesIncludeTax">@T["Prices include tax"]</label>
+                        <span class="hint dashed">@T["The prices typed are tax-inclusive, and the tax is worked out of them."]</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="PurchaseOrderNumber">
+                <label asp-for="PurchaseOrderNumber" class="ocat-label">@T["Purchase order"]</label>
+                <div class="ocat-end">
+                    <input asp-for="PurchaseOrderNumber" class="form-control" maxlength="100" autocomplete="off" />
+                    <span class="hint">@T["The customer's purchase order number, if they gave one."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Reference">
+                <label asp-for="Reference" class="ocat-label">@T["Reference"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reference" class="form-control" maxlength="100" autocomplete="off" />
+                    <span class="hint">@T["Your own reference, such as a job or project. Printed and searchable."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Printed text"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper" asp-validation-class-for="Notes">
+                <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Notes" rows="2" class="form-control" maxlength="4000"></textarea>
+                    <span class="hint">@T["Left empty, the default notes from the invoicing settings are printed."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Terms">
+                <label asp-for="Terms" class="ocat-label">@T["Terms"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Terms" rows="2" class="form-control" maxlength="4000"></textarea>
+                    <span class="hint">@T["Left empty, the default terms from the invoicing settings are printed."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="Footer">
+                <label asp-for="Footer" class="ocat-label">@T["Footer"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Footer" rows="2" class="form-control" maxlength="4000"></textarea>
+                    <span class="hint">@T["Left empty, the default footer from the invoicing settings is printed."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper" asp-validation-class-for="InternalNote">
+                <label asp-for="InternalNote" class="ocat-label">@T["Internal note"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="InternalNote" rows="2" class="form-control" maxlength="4000"></textarea>
+                    <span class="hint">@T["Seen by staff only, never printed."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
+        <button type="submit" name="submit" value="update" class="btn btn-secondary">@T["Update"]</button>
+        @if (Model.CanSend)
+        {
+            <button type="submit" name="submit" value="send" class="btn btn-success action-bar-secondary">@T["Save and send"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" href="@(isNew ? Url.Action("Index", "EstimatesAdmin") : Url.Action("Detail", "EstimatesAdmin", new { itemId = Model.ItemId }))">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script asp-name="item-selector" depends-on="bootstrap-select" at="Foot"></script>

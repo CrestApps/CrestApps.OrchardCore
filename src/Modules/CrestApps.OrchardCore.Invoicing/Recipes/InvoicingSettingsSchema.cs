@@ -30,6 +30,7 @@ internal sealed class InvoicingSettingsSchema : SiteSettingsSchemaBase
                 ("ChronologicalIssueDates", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(false).Description("Whether an invoice can't be dated before the last invoice issued.")),
                 ("ArchivePdfOnIssue", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Default(true).Description("Whether the PDF of an invoice is stored when it is issued.")),
                 ("CashRoundingIncrement", new JsonSchemaBuilder().Type(SchemaValueType.Number, SchemaValueType.Null).Description("The step totals are rounded to for cash, such as 0.05, or null for none.")),
-                ("ShareLinkDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Default(60).Description("How many days the link that shows an invoice without signing in keeps working.")))
+                ("ShareLinkDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Default(60).Description("How many days the link that shows an invoice without signing in keeps working.")),
+                ("EstimateValidDays", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Default(30).Description("How many days a sent estimate without an expiry date of its own can be accepted.")))
             .AdditionalProperties(true);
 }

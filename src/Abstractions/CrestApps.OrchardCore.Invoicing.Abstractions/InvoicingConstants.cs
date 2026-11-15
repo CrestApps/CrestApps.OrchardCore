@@ -21,6 +21,16 @@ public static class InvoicingConstants
     public const string CreditNoteDocumentKind = "CreditNote";
 
     /// <summary>
+    /// The source type of an invoice made from an estimate, and the document kind of an estimate.
+    /// </summary>
+    public const string EstimateReferenceType = "Estimate";
+
+    /// <summary>
+    /// The number series of estimates.
+    /// </summary>
+    public const string EstimateNumberSeries = "Invoicing.Estimate";
+
+    /// <summary>
     /// The reference type of an invoice history entry copied from an entry of the invoice's transaction; its reference
     /// id is the transaction entry's id.
     /// </summary>
@@ -45,6 +55,11 @@ public static class InvoicingConstants
         /// A credit note.
         /// </summary>
         public const string CreditNote = "CreditNote";
+
+        /// <summary>
+        /// An estimate.
+        /// </summary>
+        public const string Estimate = "Estimate";
     }
 
     /// <summary>
@@ -61,6 +76,11 @@ public static class InvoicingConstants
         /// A credit note sent to its customer.
         /// </summary>
         public const string CreditNoteIssued = "credit-note-issued";
+
+        /// <summary>
+        /// An estimate sent to its customer, with its PDF and a link to accept or decline it.
+        /// </summary>
+        public const string EstimateSent = "estimate-sent";
 
         /// <summary>
         /// The name the invoice or credit note has in an e-mail template.
@@ -127,6 +147,11 @@ public static class InvoicingConstants
         /// The signed-in customer's invoices, in their account.
         /// </summary>
         public const string MyInvoices = "InvoicingMyInvoices";
+
+        /// <summary>
+        /// The public page of an estimate, by signed link, where the customer accepts or declines it.
+        /// </summary>
+        public const string EstimateView = "InvoicingEstimateView";
     }
 
     /// <summary>
@@ -190,6 +215,31 @@ public static class InvoicingConstants
         /// A credit note for an invoice was issued.
         /// </summary>
         public const string CreditNoteIssued = "credit-note.issued";
+
+        /// <summary>
+        /// An estimate was sent.
+        /// </summary>
+        public const string EstimateSent = "estimate.sent";
+
+        /// <summary>
+        /// The customer accepted an estimate.
+        /// </summary>
+        public const string EstimateAccepted = "estimate.accepted";
+
+        /// <summary>
+        /// The customer declined an estimate.
+        /// </summary>
+        public const string EstimateDeclined = "estimate.declined";
+
+        /// <summary>
+        /// An estimate expired.
+        /// </summary>
+        public const string EstimateExpired = "estimate.expired";
+
+        /// <summary>
+        /// An estimate was turned into an invoice.
+        /// </summary>
+        public const string EstimateConverted = "estimate.converted";
     }
 
     /// <summary>

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using CrestApps.OrchardCore.Numbering;
 
 namespace CrestApps.OrchardCore.Invoicing.Core;
 
@@ -54,6 +55,26 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddScoped<IInvoiceLedgerSyncScheduler, DeferredInvoiceLedgerSyncScheduler>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionPaymentHandler, InvoiceTransactionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionEventHandler, InvoiceTransactionHandler>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers estimates: their store, manager and handler, the commands, the share links and the number series.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddInvoicingEstimates(this IServiceCollection services)
+    {
+        services.TryAddScoped<IEstimateStore, EstimateStore>();
+        services.TryAddScoped<IEstimateManager, EstimateManager>();
+        services.TryAddScoped<IEstimateCommandService, DefaultEstimateCommandService>();
+        services.TryAddScoped<EstimateShareLinkService>();
+        services.TryAddScoped<EstimateSender>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Estimate>, EstimateHandler>());
+        services.AddNumberSeries(
+            InvoicingConstants.EstimateNumberSeries,
+            global::OrchardCore.Localization.LocalizationSource.Create("Estimates", typeof(InvoicingServiceCollectionExtensions)),
+            new CrestApps.OrchardCore.Numbering.NumberSeriesFormat("EST-{seq}", 1001));
 
         return services;
     }

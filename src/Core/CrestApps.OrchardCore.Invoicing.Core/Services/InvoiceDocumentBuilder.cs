@@ -56,6 +56,7 @@ public sealed class InvoiceDocumentBuilder : IInvoiceDocumentBuilder
 
         var creditNote = document as CreditNote;
         var invoice = document as Invoice;
+        var estimate = document as Estimate;
         var issued = document.IssuedUtc.HasValue;
         var currency = document.Currency;
         var culture = string.IsNullOrEmpty(document.Culture) ? null : CultureInfo.GetCultureInfo(document.Culture);
@@ -65,16 +66,16 @@ public sealed class InvoiceDocumentBuilder : IInvoiceDocumentBuilder
 
         var business = new BusinessDocument
         {
-            Kind = creditNote is null ? InvoicingConstants.BusinessDocumentKinds.Invoice : InvoicingConstants.BusinessDocumentKinds.CreditNote,
-            Title = creditNote is null ? S["Invoice"] : S["Credit note"],
+            Kind = estimate is not null ? InvoicingConstants.BusinessDocumentKinds.Estimate : creditNote is null ? InvoicingConstants.BusinessDocumentKinds.Invoice : InvoicingConstants.BusinessDocumentKinds.CreditNote,
+            Title = estimate is not null ? S["Estimate"] : creditNote is null ? S["Invoice"] : S["Credit note"],
             Number = document.Number,
             Culture = document.Culture,
             Status = GetStatus(document),
-            Watermark = !issued ? S["Draft"] : invoice?.Status == InvoiceStatus.Void || creditNote?.Status == CreditNoteStatus.Void ? S["Void"] : null,
+            Watermark = !issued ? S["Draft"] : invoice?.Status == InvoiceStatus.Void || creditNote?.Status == CreditNoteStatus.Void ? S["Void"] : estimate?.Status == EstimateStatus.Canceled ? S["Canceled"] : null,
             Issuer = await GetIssuerAsync(document.Issuer),
             LogoUrl = document.Issuer?.LogoUrl,
             Recipient = await GetRecipientAsync(document.BillTo),
-            RecipientTitle = S["Bill to"],
+            RecipientTitle = estimate is null ? S["Bill to"] : S["Prepared for"],
             Footer = document.Footer,
         };
 
@@ -100,6 +101,11 @@ public sealed class InvoiceDocumentBuilder : IInvoiceDocumentBuilder
         if (creditNote is not null)
         {
             business.Fields.Add(new BusinessDocumentField(S["Credits invoice"], creditNote.InvoiceNumber));
+        }
+
+        if (estimate?.ExpiryDate is { } expiryDate)
+        {
+            business.Fields.Add(new BusinessDocumentField(S["Valid until"], expiryDate.ToString("d", culture ?? CultureInfo.CurrentCulture)));
         }
 
         if (!string.IsNullOrEmpty(document.PurchaseOrderNumber))
@@ -129,6 +135,18 @@ public sealed class InvoiceDocumentBuilder : IInvoiceDocumentBuilder
         }
 
         AddTotals(business, document, invoice, Money);
+
+        if (estimate is not null && (estimate.DepositAmount is > 0m || estimate.DepositPercent is > 0m))
+        {
+            business.Sections.Add(new BusinessDocumentSection(S["Deposit"], estimate.DepositAmount is > 0m
+                ? S["A deposit of {0} is due when the estimate is accepted.", Money(estimate.DepositAmount.Value)]
+                : S["A deposit of {0}% ({1}) is due when the estimate is accepted.", estimate.DepositPercent.Value.ToString("0.##", culture ?? CultureInfo.CurrentCulture), Money(Math.Round((document.Totals?.Total ?? 0m) * estimate.DepositPercent.Value / 100m, 2, MidpointRounding.AwayFromZero))]));
+        }
+
+        if (estimate?.Acceptance is { } acceptance)
+        {
+            business.Sections.Add(new BusinessDocumentSection(S["Accepted"], S["Accepted by {0}.", acceptance.Name]));
+        }
 
         if (creditNote is not null && !string.IsNullOrWhiteSpace(creditNote.Reason))
         {
@@ -252,6 +270,20 @@ public sealed class InvoiceDocumentBuilder : IInvoiceDocumentBuilder
 
     private BusinessDocumentStatus GetStatus(InvoicingDocument document)
     {
+        if (document is Estimate estimate)
+        {
+            return estimate.Status switch
+            {
+                EstimateStatus.Sent => new BusinessDocumentStatus(S["Awaiting answer"], BusinessDocumentTone.Info),
+                EstimateStatus.Accepted => new BusinessDocumentStatus(S["Accepted"], BusinessDocumentTone.Success),
+                EstimateStatus.Invoiced => new BusinessDocumentStatus(S["Invoiced"], BusinessDocumentTone.Success),
+                EstimateStatus.Declined => new BusinessDocumentStatus(S["Declined"], BusinessDocumentTone.Danger),
+                EstimateStatus.Expired => new BusinessDocumentStatus(S["Expired"], BusinessDocumentTone.Warning),
+                EstimateStatus.Canceled => new BusinessDocumentStatus(S["Canceled"], BusinessDocumentTone.Neutral),
+                _ => new BusinessDocumentStatus(S["Draft"], BusinessDocumentTone.Neutral),
+            };
+        }
+
         if (document is CreditNote creditNote)
         {
             return creditNote.Status switch

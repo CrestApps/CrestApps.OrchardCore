@@ -29,3 +29,14 @@ using OrchardCore.Modules.Manifest;
         ResourcesConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = InvoicingConstants.Features.Estimates,
+    Name = "Invoicing Estimates",
+    Description = "Estimates (quotes) sent to customers, accepted or declined online, revised, expired, and turned into invoices or deposit invoices.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        InvoicingConstants.Features.Area,
+    ]
+)]

@@ -10,6 +10,7 @@ user_manual:
 | Feature | Feature ID | What it adds |
 | --- | --- | --- |
 | **Invoicing** | `CrestApps.OrchardCore.Invoicing` | Invoices and credit notes, their stores and indexes, the invoice commands, the permissions and the invoicing settings. Depends on Transactions, Payment Terms and Business Documents. |
+| **Invoicing Estimates** | `CrestApps.OrchardCore.Invoicing.Estimates` | Estimates (quotes): drafted, sent with a number, accepted or declined by the customer online, revised, expired, and turned into a draft invoice or a deposit invoice. Depends on Invoicing. |
 
 Invoicing owns the documents: an invoice is drafted with lines, issued with a number, and posted to [Transactions](transactions) as what the customer owes. Everything about the money (payments, refunds, adjustments, reminders, pay links) stays in the ledger; the invoice mirrors what the ledger says. Prices, discounts and tax are worked out by one calculator (EN 16931 arithmetic) shared with credit notes, estimates and recurring plans.
 
@@ -81,6 +82,18 @@ Draft credit notes are edited (`CreditNotesAdminController`, routes `Admin/credi
 ## Work orders
 
 With Work Orders enabled, Invoicing's `WorkOrdersStartup` registers `InvoicingWorkOrderBilling` (`IWorkOrderBilling`, `Priority` 10, so it bills instead of the plain debt Transactions posts). It turns the `WorkOrderBillingRequest` into an invoice: parts as `Item` lines (with the product), labor and other lines as `Service` lines, each with the line's or the request's tax category; billed to the request's payer with the work order's contact; `SourceType` `WorkOrder`, `SourceId` the work order and `Reference` its number; the request's payment term. It issues the invoice at once, which posts what is owed; an invoice that can't be issued stays a draft for someone to finish. Billing a work order again returns its invoice.
+
+## Estimates
+
+With **Invoicing Estimates** enabled, `Estimate` (Invoicing.Abstractions) is a catalog record with the invoice's header and lines, `EstimateIndex`, and the commands of `IEstimateCommandService` (`DefaultEstimateCommandService`, each under the estimate's lock, idempotent, refusing with reasons):
+
+- **Send** numbers a draft from the `Invoicing.Estimate` number series (`EST-{seq}` from 1001, passing over held numbers), works out its totals, sets its date and, when it has none, an expiry `EstimateValidDays` days later (**Settings > Commerce > Invoicing**, 30 by default), and locks it: `EstimateHandler` refuses any change to a sent estimate.
+- **Accept** records the customer's typed name, the time, the address and the terms they were shown (`EstimateAcceptance`) while it is valid on the site's date, and invoices what the estimate's `OnAcceptance` says: nothing, the whole of it, or its deposit. **Decline** records an optional reason.
+- **Revise** starts a draft copy numbered after it when sent (`EST-1001-2`); the estimate it revises is canceled and points at it. **Cancel** withdraws one that was not invoiced.
+- **Convert** makes a draft invoice: `Full` copies the lines (`SourceType` `Estimate`, `Reference` the estimate's number) and marks it `Invoiced`; `Deposit` makes a `Prepayment` invoice with one `Deposit` line of the deposit percent or amount. Converting again returns the invoice made the first time.
+- **Expire**: `EstimateExpiryBackgroundTask` (hourly) expires the sent estimates whose expiry date has passed in the site's time zone.
+
+`IEstimateObserver` hears sent, accepted, declined, expired and converted. The admin pages are **Commerce > Estimates** (an `AdminList`, the draft editor with the invoice's line rows, and the estimate's page with the document, its history, the actions and the customer's link). The customer's page is `estimates/view/{token}` (`EstimateShareLinkService`, signed), where they read it, download its PDF, and accept or decline it while it is valid. `EstimateSender` e-mails it (the `estimate-sent` kind, with the PDF and the link); without e-mail, **Mark sent** numbers it so its link can be shared. The PDF and pages render through `IInvoiceDocumentBuilder` (business document kind `Estimate`, with **Valid until**, the deposit asked and the acceptance). Workflows get **Estimate Sent**, **Accepted**, **Declined** and **Expired**; webhooks get `estimate.sent`, `estimate.accepted`, `estimate.declined`, `estimate.expired` and `estimate.converted`; recipes and deployment plans the `Estimates` step; the Invoicing data source the **Estimates** data set. Permission: **Manage estimates** (create, send, revise, cancel, record an answer, invoice; making the invoice also needs **Create invoices and change drafts**).
 
 ## Workflows and webhooks
 

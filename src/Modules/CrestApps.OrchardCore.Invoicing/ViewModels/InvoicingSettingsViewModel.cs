@@ -31,5 +31,7 @@ public class InvoicingSettingsViewModel
 
     public int ShareLinkDays { get; set; }
 
+    public int EstimateValidDays { get; set; }
+
     public IList<SelectListItem> PaymentTerms { get; set; } = [];
 }

@@ -93,6 +93,15 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="EstimateValidDays">
+    <label asp-for="EstimateValidDays" class="ocat-label">@T["Estimates are valid for (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="EstimateValidDays" type="number" min="1" max="3650" class="form-control" />
+        <span asp-validation-for="EstimateValidDays"></span>
+        <span class="hint">@T["How long the customer can accept a sent estimate that has no expiry date of its own. Used with the Estimates feature."]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="DefaultNotes">
     <label asp-for="DefaultNotes" class="ocat-label">@T["Default notes"]</label>
     <div class="ocat-end">

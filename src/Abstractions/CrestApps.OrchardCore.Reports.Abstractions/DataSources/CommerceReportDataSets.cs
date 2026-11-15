@@ -364,6 +364,11 @@ public static class CommerceReportDataSets
         /// The credit notes data set: one row per credit note.
         /// </summary>
         public const string CreditNotes = "CreditNotes";
+
+        /// <summary>
+        /// The estimates data set: one row per estimate.
+        /// </summary>
+        public const string Estimates = "Estimates";
     }
 
     /// <summary>

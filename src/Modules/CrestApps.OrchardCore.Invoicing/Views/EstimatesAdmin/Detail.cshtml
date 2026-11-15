@@ -1,0 +1,179 @@
+@model EstimateDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    // Stored times are UTC; people read them in the site time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    var estimate = Model.Estimate;
+    var waiting = estimate.Status == EstimateStatus.Sent;
+}
+
+<zone Name="Title">
+    <breadcrumb name="EstimatesDetail" title="@(string.IsNullOrEmpty(estimate.Number) ? T["Draft estimate"] : T["Estimate {0}", estimate.Number])">
+        <breadcrumb-item id="EstimatesIndex" action="Index" controller="EstimatesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Estimates"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@(string.IsNullOrEmpty(estimate.Number) ? T["Draft estimate"] : T["Estimate {0}", estimate.Number])</span>
+                <partial name="_EstimateStatusBadge" model="estimate" />
+            </div>
+            <div class="card-body">
+                @await DisplayAsync(await New.BusinessDocument(Document: Model.Document))
+            </div>
+        </div>
+
+        @if (estimate.History.Count > 0)
+        {
+            <div class="card">
+                <div class="card-header">@T["History"]</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var entry in estimate.History.OrderByDescending(entry => entry.CreatedUtc))
+                    {
+                        <li class="list-group-item">
+                            <div>@entry.Message</div>
+                            <div class="small text-muted">
+                                @((await LocalAsync(entry.CreatedUtc)).ToString("g"))
+                                @if (!string.IsNullOrEmpty(entry.ActorName))
+                                {
+                                    <span>· @entry.ActorName</span>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header">@T["Actions"]</div>
+            <div class="card-body d-grid gap-2">
+                <a class="btn btn-outline-secondary" asp-action="Pdf" asp-route-itemId="@estimate.ItemId">@T["Download PDF"]</a>
+
+                @if (Model.CanManage && estimate.Status == EstimateStatus.Draft)
+                {
+                    <a class="btn btn-primary" asp-action="Edit" asp-route-itemId="@estimate.ItemId">@T["Edit"]</a>
+                    <form asp-action="Send" asp-route-itemId="@estimate.ItemId" method="post" class="d-grid">
+                        <button type="submit" class="btn btn-success">@(Model.CanEmail ? T["Send to the customer"] : T["Mark sent"])</button>
+                    </form>
+                    <form asp-action="Delete" asp-route-itemId="@estimate.ItemId" method="post" class="d-grid">
+                        <button type="submit" class="btn btn-outline-danger" data-url-af="RemoveUrl">@T["Delete draft"]</button>
+                    </form>
+                }
+
+                @if (Model.CanManage && waiting)
+                {
+                    @if (Model.CanEmail)
+                    {
+                        <form asp-action="Send" asp-route-itemId="@estimate.ItemId" method="post" class="d-grid">
+                            <button type="submit" class="btn btn-outline-secondary">@T["E-mail it again"]</button>
+                        </form>
+                    }
+                    <form asp-action="Accept" asp-route-itemId="@estimate.ItemId" method="post">
+                        <label for="accept-name" class="form-label small">@T["Accepted outside the site? Record who accepted it:"]</label>
+                        <div class="input-group">
+                            <input id="accept-name" name="name" class="form-control" maxlength="255" required placeholder="@T["Name"]" />
+                            <button type="submit" class="btn btn-success">@T["Mark accepted"]</button>
+                        </div>
+                    </form>
+                    <form asp-action="Decline" asp-route-itemId="@estimate.ItemId" method="post">
+                        <div class="input-group">
+                            <input name="reason" class="form-control" maxlength="1000" placeholder="@T["Reason (optional)"]" aria-label="@T["Reason"]" />
+                            <button type="submit" class="btn btn-outline-danger">@T["Mark declined"]</button>
+                        </div>
+                    </form>
+                }
+
+                @if (Model.CanManage && estimate.Status is EstimateStatus.Sent or EstimateStatus.Accepted)
+                {
+                    <form asp-action="Convert" asp-route-itemId="@estimate.ItemId" method="post" class="d-grid">
+                        <input type="hidden" name="conversion" value="@EstimateConversion.Full" />
+                        <button type="submit" class="btn btn-primary">@T["Make the invoice"]</button>
+                    </form>
+                    @if (Model.CanConvertDeposit)
+                    {
+                        <form asp-action="Convert" asp-route-itemId="@estimate.ItemId" method="post" class="d-grid">
+                            <input type="hidden" name="conversion" value="@EstimateConversion.Deposit" />
+                            <button type="submit" class="btn btn-outline-primary">@T["Invoice the deposit"]</button>
+                        </form>
+                    }
+                }
+
+                @if (Model.CanManage && estimate.Status is EstimateStatus.Sent or EstimateStatus.Declined or EstimateStatus.Expired)
+                {
+                    <form asp-action="Revise" asp-route-itemId="@estimate.ItemId" method="post" class="d-grid">
+                        <button type="submit" class="btn btn-outline-secondary">@T["Revise"]</button>
+                    </form>
+                }
+
+                @if (Model.CanManage && estimate.Status is not (EstimateStatus.Draft or EstimateStatus.Canceled or EstimateStatus.Invoiced))
+                {
+                    <form asp-action="Cancel" asp-route-itemId="@estimate.ItemId" method="post" class="d-grid">
+                        <button type="submit" class="btn btn-outline-danger">@T["Cancel the estimate"]</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.ShareUrl))
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Link for the customer"]</div>
+                <div class="card-body">
+                    <input class="form-control form-control-sm" readonly value="@Model.ShareUrl" aria-label="@T["Link for the customer"]" onclick="this.select();" />
+                    <span class="hint">@T["The customer reads the estimate and accepts or declines it there, without signing in."]</span>
+                </div>
+            </div>
+        }
+
+        @if (estimate.Acceptance is { } acceptance)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Accepted"]</div>
+                <div class="card-body small">
+                    <div>@T["By {0}", acceptance.Name]</div>
+                    <div>@((await LocalAsync(acceptance.AcceptedUtc)).ToString("g"))</div>
+                    @if (!string.IsNullOrEmpty(acceptance.IpAddress))
+                    {
+                        <div class="text-muted">@T["From {0}", acceptance.IpAddress]</div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Model.Invoices.Count > 0)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@T["Invoices"]</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var invoice in Model.Invoices)
+                    {
+                        <li class="list-group-item">
+                            <a asp-action="Detail" asp-controller="InvoicesAdmin" asp-route-itemId="@invoice.ItemId">@(string.IsNullOrEmpty(invoice.Number) ? T["Draft invoice"].Value : invoice.Number)</a>
+                            @if (invoice.Kind == InvoiceKind.Prepayment)
+                            {
+                                <span class="badge text-bg-light">@T["Deposit"]</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(estimate.ReplacedById))
+        {
+            <a class="btn btn-link" asp-action="Detail" asp-route-itemId="@estimate.ReplacedById">@T["Open the revision that replaced it"]</a>
+        }
+    </div>
+</div>
+
+<a class="btn btn-link" asp-action="Index">@T["Back to estimates"]</a>

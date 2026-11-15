@@ -67,6 +67,26 @@ public sealed class InvoicingDocumentImporter
             S["credit note"],
             cancellationToken);
 
+    /// <summary>
+    /// Imports estimates. Needs the Estimates feature.
+    /// </summary>
+    /// <param name="entries">The estimates, as JSON objects.</param>
+    /// <param name="estimates">The estimate store.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>What was imported, kept and refused.</returns>
+    public Task<InvoicingImportResult> ImportEstimatesAsync(IEnumerable<JsonObject> entries, IEstimateStore estimates, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(estimates);
+
+        return ImportAsync(
+            entries,
+            estimates,
+            estimate => estimate.Status != EstimateStatus.Draft,
+            async number => await estimates.FindByNumberAsync(number, cancellationToken),
+            S["estimate"],
+            cancellationToken);
+    }
+
     private async Task<InvoicingImportResult> ImportAsync<T>(
         IEnumerable<JsonObject> entries,
         ICatalog<T> store,
