@@ -57,6 +57,7 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
                     CreatedUtc = transaction.CreatedUtc,
                     UpdatedUtc = transaction.UpdatedUtc,
                     PendingCredit = transaction.Events?.Any(entry => entry.CreditState == TransactionCreditState.Pending) == true ? true : null,
+                    AutoChargeNextAttemptUtc = transaction.AutoCharge?.NextAttemptUtc,
                 };
             });
     }

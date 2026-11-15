@@ -28,4 +28,10 @@ public static class PaymentIssueKinds
     /// corrects one of them.
     /// </summary>
     public const string CreditNotReconciled = "CreditNotReconciled";
+
+    /// <summary>
+    /// A transaction was charged to its owner's saved payment method on its schedule and every retry was declined (or the
+    /// card needed its holder's approval), so the owner was asked to pay it themselves.
+    /// </summary>
+    public const string AutoChargeFailed = "AutoChargeFailed";
 }

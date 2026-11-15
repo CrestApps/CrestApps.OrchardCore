@@ -115,6 +115,35 @@ its due date (`SendUpcomingReminderAsync`). A transaction that will be collected
 installment charged to a saved card — carries a `TransactionAutoCollection` describing the card, and its notice
 says which card will be charged and when instead of asking the owner to pay.
 
+**Staged reminders.** `TransactionReminderSettings.Steps` lists the days, relative to the due date, a reminder is sent
+on, such as `[-3, 0, 7, 14, 30]`. When it is set it replaces the first delay, interval, maximum and upcoming reminder:
+`TransactionReminderSchedule.GetDueStep` gives the latest step whose day has come and that was not sent
+(`Transaction.ReminderStepsSent`), passing over earlier steps missed meanwhile, so an owner never gets several at once.
+A step before the due date is sent as the upcoming notice, the others as reminders. Either way, the sweep:
+
+- skips a transaction whose reminders are paused (`Transaction.RemindersPaused`, set by
+  `ITransactionCommandService.SetRemindersPausedAsync` and the **Pause reminders** button, noted on the timeline);
+- sends no owed reminder while a charge of a saved card is scheduled (`Transaction.AutoCharge`);
+- reads the transaction again in a unit of work of its own right before each reminder, and skips it when it was paid,
+  paused or closed meanwhile, or a payment for it is being taken (a checkout `AwaitingProvider` or `PaymentPending`);
+- sends only between `SendFromHour` and `SendUntilHour` (8 and 20 by default) in the site's time zone. The task now runs
+  every hour, so the next run in those hours sends what is due; overdue is still raised at any hour.
+
+#### Charging on a schedule, with retries
+
+`ISavedPaymentMethodChargeService` (`DefaultSavedPaymentMethodChargeService`, in the module) charges a transaction to
+its owner's saved card on a day and retries a declined card:
+
+| Member | What it does |
+| --- | --- |
+| `ScheduleAsync(id, savedPaymentMethodId, chargeOnUtc)` | Sets `Transaction.AutoCharge` (the card, the next attempt) and `AutoCollection` (the card's description, so the upcoming notice names it). `savedPaymentMethodId` `null` takes the owner's default card (`ISavedPaymentMethodStore.GetDefaultAsync`); refused when the owner kept none that can be charged, or without the Checkout feature. |
+| `ChargeAsync(id)` | Charges now through `ChargeSavedPaymentMethodAsync`. `Succeeded` or `Pending` removes the charge. `Declined` counts an attempt and moves the next one by `ChargeRetryDays` (`[1, 3, 5]` by default, **Retry a declined card after (days)** in the settings). `Failed` (the provider couldn't be reached) tries again in an hour without counting. `RequiresAuthentication`, a refusal before the provider was asked, or a decline with no retry left hands the transaction to its owner: the charge and `AutoCollection` are removed, a note is added, a `PaymentIssueKinds.AutoChargeFailed` payment issue is recorded, and `ITransactionEventHandler.AutoChargeAbandonedAsync` is raised so the module that owns the debt sends its own notice. |
+| `ChargeDueAsync(utcNow)` | Charges up to 100 transactions whose next attempt is due (`TransactionIndex.AutoChargeNextAttemptUtc`), each in a unit of work of its own. The **Saved Card Charges** background task calls it every hour, at half past. |
+| `CancelAsync(id)` | Removes the scheduled charge; the owner pays themselves. The transaction page's **Cancel the charge** button calls it. |
+
+Each command takes the lock `Transactions:AutoCharge:{id}`. Installment plans keep their own charging and retries
+(`InstallmentPlanSettings.RetryDays`) for now.
+
 ### Payment receipts
 
 Printable receipts and invoices come with the [Receipts](receipts) module: whenever it is enabled with Transactions,
@@ -298,7 +327,9 @@ The command spends a card without its owner present, so only server code may cal
 
 Every place a transaction changes goes through the manager, so the events cover the console (**Cancel**, **Mark paid**, **Record payment**), an online settlement, a refund that brings what was kept to zero (`Refunded`), an installment charge that was declined (`Failed`, then `Outstanding` once no retries are left, or `Paid` when a retry goes through), and a canceled installment plan. The manager diffs the status itself, so a consumer no longer needs a catalog handler that re-reads every save.
 
-Handlers run after the save, and they are resolved when the event is raised (not injected into the manager), so a handler may depend on `ITransactionManager`. A handler that throws is logged and does not undo the change or stop the other handlers, the same as `ITransactionPaymentHandler`. The overdue sweep is part of the **Transaction Reminders** feature's background task (`TransactionReminderBackgroundTask`, every 6 hours). It runs even when **Enabled** is turned off in the reminder settings, which only stops the reminders themselves.
+Handlers run after the save, and they are resolved when the event is raised (not injected into the manager), so a handler may depend on `ITransactionManager`. A handler that throws is logged and does not undo the change or stop the other handlers, the same as `ITransactionPaymentHandler`. The overdue sweep is part of the **Transaction Reminders** feature's background task (`TransactionReminderBackgroundTask`, every hour). It runs even when **Enabled** is turned off in the reminder settings, which only stops the reminders themselves.
+
+`AutoChargeAbandonedAsync(transaction, reason)` is raised once when `ISavedPaymentMethodChargeService` stops charging a saved card and hands the transaction to its owner. It does nothing by default.
 
 ```csharp
 public sealed class RegistrationPaymentStatusHandler : TransactionEventHandlerBase

@@ -73,4 +73,16 @@ public interface ITransactionEventHandler
     /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
     Task ReversedAsync(Transaction transaction, TransactionEvent reversal, TransactionEvent reversed, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// Called once when <see cref="ISavedPaymentMethodChargeService"/> stops charging the owner's saved payment method
+    /// and hands the transaction to its owner to pay: the retries ran out, or the card's bank asked the cardholder to
+    /// approve the payment. The module that owns the debt sends its own notice here, such as the invoice with its pay link.
+    /// </summary>
+    /// <param name="transaction">The transaction, as saved without its scheduled charge.</param>
+    /// <param name="reason">Why the last charge was not taken.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>It does nothing by default, so a handler written before this event existed keeps compiling.</remarks>
+    Task AutoChargeAbandonedAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

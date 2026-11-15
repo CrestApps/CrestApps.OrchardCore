@@ -24,6 +24,48 @@
 
 @if (Model.CanManage)
 {
+    @if (transaction.AutoCharge is { } autoCharge)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Charged to a saved card"]</div>
+            <div class="card-body">
+                <p class="mb-1">
+                    @T["{0} is charged on {1}.", transaction.AutoCollection?.PaymentMethodDescription ?? T["The saved card"].Value, (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(autoCharge.NextAttemptUtc, DateTimeKind.Utc))).DateTime.ToString("g")]
+                </p>
+                @if (autoCharge.Attempts > 0)
+                {
+                    <p class="text-muted mb-1">@T["Charges declined so far: {0}. The last reason: {1}", autoCharge.Attempts, autoCharge.LastFailure]</p>
+                }
+                <form asp-action="CancelAutoCharge" method="post" class="mt-2">
+                    <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                    <button type="submit" class="btn btn-outline-danger"
+                            data-url-af="UnsafeUrl" data-title="@T["Cancel the charge"]" data-message="@T["The card is not charged, and the owner pays the balance themselves."]" data-ok-text="@T["Cancel the charge"]" data-cancel-text="@T["Keep it"]">
+                        @T["Cancel the charge"]
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+
+    @if (TransactionStateMachine.IsCollectable(transaction.Status) && transaction.OutstandingAmount > 0m)
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Scheduled reminders"]</div>
+            <div class="card-body">
+                <p class="text-muted">
+                    @(transaction.RemindersPaused
+                        ? T["Paused: the owner gets no scheduled reminder for this balance until they are resumed."]
+                        : T["The owner is reminded of this balance on the schedule set under Settings > Commerce > Transactions."])
+                </p>
+                <form asp-action="PauseReminders" method="post">
+                    <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                    <input type="hidden" name="paused" value="@(transaction.RemindersPaused ? "false" : "true")" />
+                    <button type="submit" class="btn btn-outline-secondary">@(transaction.RemindersPaused ? T["Resume reminders"] : T["Pause reminders"])</button>
+                </form>
+            </div>
+        </div>
+    }
+
     @if (Model.CanSendReminder)
     {
         <div class="card mb-3">

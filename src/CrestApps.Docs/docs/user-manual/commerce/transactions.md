@@ -204,7 +204,7 @@ If two people work on the same transaction at once, the second to save sees *Thi
 
 ## Payment reminders
 
-With the **Transaction Reminders** feature on, the site reminds customers about money they owe. It checks about every six hours.
+With the **Transaction Reminders** feature on, the site reminds customers about money they owe. It checks every hour, and sends reminders only in the daytime hours you set (8:00 to 20:00 by default, in the site's time zone).
 
 - **Before the due date:** once per transaction, a set number of days before it falls due. If the payment is charged automatically to a saved card, the reminder says which card will be charged and on which date, and tells the customer they don't need to do anything. If the customer pays it themselves, the reminder is their invoice, with a link that pays it.
 - **On and after the due date:** for each transaction that is **Outstanding** or **Partially paid** and past its due date, a first reminder, then more at a fixed interval, up to a maximum number. A transaction with no due date is counted from the day it was created.
@@ -234,7 +234,19 @@ Customers with an account get reminders through the site's notifications, on the
 | **Maximum reminders** | The most reminders sent for one transaction. 0 means no limit; the default is 3. |
 | **Remind before the due date (days)** | How many days before the due date the customer is told a payment is coming due. Sent once per payment. 0 turns these reminders off; the default is 3. |
 
+| **Reminder steps (days)** | Optional. The days, counted from the due date, a reminder is sent on, such as `-3, 0, 7, 14, 30`: three days before, on the day, then one week, two weeks and a month after. When set, these steps replace the four fields above. A step missed (for example while reminders were paused) is passed over, so a customer never gets several reminders at once. |
+| **Send between** | The hours of the day, in the site's time zone, reminders are sent in. 0 and 24 send them at any time. |
+| **Retry a declined card after (days)** | When a balance charged automatically to a saved card is declined, it is charged again after each of these numbers of days, in order (1, 3 and 5 by default). After the last one, the customer is asked to pay it themselves. |
+
 A reminder you send by hand counts toward **Maximum reminders**, and the next scheduled reminder waits a full interval after it.
+
+### Pause the reminders of one transaction
+
+On the transaction's page, the **Scheduled reminders** card has **Pause reminders**, for example while the customer disputes the amount or agreed to pay later. The customer gets no scheduled reminder for it until you click **Resume reminders**; you can still send one by hand. Both are noted on the **Timeline**.
+
+### A balance charged to a saved card
+
+A balance charged automatically to the customer's saved card, such as an invoice marked **Charge the customer's saved card**, shows a **Charged to a saved card** card with the card and the day it is charged, and how many charges were declined so far. The customer gets no reminder that it is owed while the charge is pending. If the card is declined, it is tried again on the retry schedule above; when no try is left, or the card's bank asks the customer to approve the payment, the customer is asked to pay it themselves (an invoice is e-mailed to them) and a payment issue is recorded under **Commerce > Payment issues**. **Cancel the charge** stops it, and the customer pays themselves.
 
 ## My Transactions (for customers)
 

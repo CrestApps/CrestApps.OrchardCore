@@ -29,4 +29,24 @@ public class TransactionReminderSettingsViewModel
     /// Gets or sets how many days before a payment falls due the owner is told it is coming due.
     /// </summary>
     public int UpcomingReminderDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the staged reminder steps, in days relative to the due date, separated by commas.
+    /// </summary>
+    public string Steps { get; set; }
+
+    /// <summary>
+    /// Gets or sets the first hour of the day reminders are sent.
+    /// </summary>
+    public int SendFromHour { get; set; }
+
+    /// <summary>
+    /// Gets or sets the hour of the day reminders stop being sent.
+    /// </summary>
+    public int SendUntilHour { get; set; }
+
+    /// <summary>
+    /// Gets or sets the days after a declined charge of a saved card each retry is made, separated by commas.
+    /// </summary>
+    public string ChargeRetryDays { get; set; }
 }

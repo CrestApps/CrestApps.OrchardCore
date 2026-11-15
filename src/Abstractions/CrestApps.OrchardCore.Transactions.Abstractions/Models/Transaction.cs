@@ -273,6 +273,23 @@ public sealed class Transaction : CatalogItem, ITimestampedModel
     public TransactionAutoCollection AutoCollection { get; set; }
 
     /// <summary>
+    /// Gets or sets the charge of the owner's saved payment method scheduled by
+    /// <see cref="Services.ISavedPaymentMethodChargeService"/>, with its attempts, while it is pending.
+    /// </summary>
+    public TransactionAutoCharge AutoCharge { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the reminder sweep leaves the transaction alone, for example while its
+    /// owner disputes it or arranged to pay later.
+    /// </summary>
+    public bool RemindersPaused { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many steps of the staged reminder policy (<c>TransactionReminderSettings.Steps</c>) were sent.
+    /// </summary>
+    public int ReminderStepsSent { get; set; }
+
+    /// <summary>
     /// Gets the audit timeline of the transaction.
     /// </summary>
     public IList<TransactionEvent> Events { get; init; } = [];

@@ -124,4 +124,9 @@ public sealed class TransactionIndex : CatalogItemIndex
     /// to complete.
     /// </summary>
     public bool? PendingCredit { get; set; }
+
+    /// <summary>
+    /// When the scheduled charge of the owner's saved payment method is next made, when one is scheduled.
+    /// </summary>
+    public DateTime? AutoChargeNextAttemptUtc { get; set; }
 }

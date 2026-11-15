@@ -308,6 +308,37 @@ public sealed class DefaultTransactionCommandService : ITransactionCommandServic
     }
 
     /// <inheritdoc/>
+    public Task<TransactionCommandResult> SetRemindersPausedAsync(string transactionId, bool paused, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(transactionId, async (transaction, result) =>
+        {
+            if (transaction.RemindersPaused == paused)
+            {
+                return null;
+            }
+
+            var note = new TransactionEvent
+            {
+                Id = IdGenerator.GenerateId(),
+                CreatedUtc = _clock.UtcNow,
+                Type = TransactionEventType.Note,
+                Message = paused
+                    ? S["The scheduled reminders were paused."].Value
+                    : S["The scheduled reminders were resumed."].Value,
+            };
+
+            await SetActorAsync(note);
+
+            transaction.RemindersPaused = paused;
+            transaction.Events.Add(note);
+            transaction.UpdatedUtc = note.CreatedUtc;
+            result.Event = note;
+
+            return NoFollowUp;
+        }, saveOnFailure: false, save: true, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public Task<TransactionCommandResult> MarkPaidAsync(string transactionId, string note, CancellationToken cancellationToken = default)
     {
         return ExecuteAsync(transactionId, async (transaction, result) =>

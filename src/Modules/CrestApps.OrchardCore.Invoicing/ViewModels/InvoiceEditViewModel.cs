@@ -38,6 +38,8 @@ public class InvoiceEditViewModel
 
     public bool AllowPartialPayment { get; set; }
 
+    public bool AutoCharge { get; set; }
+
     public string Notes { get; set; }
 
     public string Terms { get; set; }

@@ -60,8 +60,9 @@ internal sealed class TransactionMigrations : DataMigration
         await CreatePayerColumnsAsync();
 
         await CreatePendingCreditColumnAsync();
+        await CreateAutoChargeColumnAsync();
 
-        return 4;
+        return 5;
     }
 
     /// <summary>
@@ -104,6 +105,29 @@ internal sealed class TransactionMigrations : DataMigration
         await CreatePendingCreditColumnAsync();
 
         return 4;
+    }
+
+    /// <summary>
+    /// Adds the column the saved payment method charge sweep finds the scheduled charges through. No existing
+    /// transaction has one scheduled, so nothing is filled.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await CreateAutoChargeColumnAsync();
+
+        return 5;
+    }
+
+    private async Task CreateAutoChargeColumnAsync()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(
+            table => table.AddColumn<DateTime>("AutoChargeNextAttemptUtc", column => column.Nullable()),
+            collection: TransactionsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(
+            table => table.CreateIndex("IDX_TransactionIndex_AutoCharge", "AutoChargeNextAttemptUtc"),
+            collection: TransactionsConstants.CollectionName);
     }
 
     private async Task CreatePendingCreditColumnAsync()

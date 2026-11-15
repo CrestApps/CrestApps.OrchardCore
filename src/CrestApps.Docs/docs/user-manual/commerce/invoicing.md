@@ -117,6 +117,10 @@ For example, to thank customers when they pay, start a workflow with **Invoice P
 
 With **Commerce Webhooks** enabled, the same moments can be sent to another system: tick the events under **Invoicing** when you add a webhook under **Configuration > Webhooks** (see [Webhooks](webhooks.md)).
 
+## Charge an invoice to the customer's saved card
+
+Tick **Charge the customer's saved card** in the invoice editor, or choose **Issues the invoice and charges the customer's saved payment method** on a recurring plan. When the invoice is issued, it is charged to the customer's default saved card: at once when it is due, or on the morning of its due date. A declined card is tried again on the retry schedule set under **Settings > Commerce > Transactions**. When the customer has no saved card (customers billed by name and e-mail only never do), or every try is declined, the invoice is e-mailed to them to pay instead. The invoice's transaction shows the scheduled charge; see [Transactions](transactions.md#a-balance-charged-to-a-saved-card).
+
 ## Estimates
 
 With **Invoicing Estimates** enabled, **Commerce > Estimates** lists the quotes you send before the work.

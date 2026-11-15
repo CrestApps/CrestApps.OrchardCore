@@ -170,4 +170,13 @@ public interface ITransactionCommandService
     /// <param name="savedPaymentMethodId">The identifier of the owner's kept payment method to charge.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<TransactionCommandResult> ChargeSavedPaymentMethodAsync(string transactionId, string savedPaymentMethodId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Pauses or resumes the scheduled reminders of a transaction, and notes it on its timeline. A paused transaction
+    /// gets no reminder from the sweep until it is resumed; the reminders sent by hand still go.
+    /// </summary>
+    /// <param name="transactionId">The transaction identifier.</param>
+    /// <param name="paused">Whether its reminders are paused.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<TransactionCommandResult> SetRemindersPausedAsync(string transactionId, bool paused, CancellationToken cancellationToken = default);
 }

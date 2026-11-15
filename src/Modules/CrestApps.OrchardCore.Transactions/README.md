@@ -15,7 +15,7 @@ show it to the customer, remind them, let them settle it online, and report on w
 
 - **Transactions** (`CrestApps.OrchardCore.Transactions`) — the ledger, the administration report, the
   customer statement, and the payments and refunds screens.
-- **Transaction Reminders** (`...Notification`) — chases unpaid balances on a configured cadence through
+- **Transaction Reminders** (`...Notification`) — chases unpaid balances on a configured cadence (or staged steps before, on and after the due date, in the site's daytime hours, never for a paused transaction) through
   each user's preferred notification channel.
 - **Payment Terms** (`...PaymentTerms`) — the catalog of payment terms (net days, due on receipt, end of month,
   a day of the next month, an early-payment discount) under **Commerce > Payment terms**, read through

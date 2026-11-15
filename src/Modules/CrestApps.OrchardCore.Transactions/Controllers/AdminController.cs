@@ -389,6 +389,59 @@ public sealed class AdminController : Controller
     }
 
     /// <summary>
+    /// Pauses or resumes the scheduled reminders of a transaction.
+    /// </summary>
+    /// <param name="itemId">The transaction identifier.</param>
+    /// <param name="paused">Whether its reminders are paused.</param>
+    [HttpPost]
+    public async Task<IActionResult> PauseReminders(string itemId, bool paused)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
+        }
+
+        var result = await _commandService.SetRemindersPausedAsync(itemId, paused);
+
+        return await CompleteAsync(result, itemId, paused ? H["The scheduled reminders were paused."] : H["The scheduled reminders were resumed."]);
+    }
+
+    /// <summary>
+    /// Cancels the scheduled charge of the owner's saved card, so the owner pays the balance themselves.
+    /// </summary>
+    /// <param name="itemId">The transaction identifier.</param>
+    /// <param name="charges">The saved card charges.</param>
+    [HttpPost]
+    public async Task<IActionResult> CancelAutoCharge(string itemId, [FromServices] ISavedPaymentMethodChargeService charges)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
+        }
+
+        var result = await charges.CancelAsync(itemId);
+
+        if (result.Transaction is null && result.Errors.Count > 0)
+        {
+            return NotFound();
+        }
+
+        if (result.Succeeded)
+        {
+            await _notifier.SuccessAsync(H["The scheduled charge was canceled. The owner pays the balance themselves."]);
+        }
+        else
+        {
+            foreach (var error in result.Errors)
+            {
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+            }
+        }
+
+        return RedirectToAction(nameof(Detail), new { itemId });
+    }
+
+    /// <summary>
     /// Cancels an outstanding transaction so it is no longer collectable.
     /// </summary>
     /// <param name="itemId">The transaction identifier.</param>

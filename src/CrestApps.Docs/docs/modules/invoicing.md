@@ -84,6 +84,10 @@ Draft credit notes are edited (`CreditNotesAdminController`, routes `Admin/credi
 
 With Work Orders enabled, Invoicing's `WorkOrdersStartup` registers `InvoicingWorkOrderBilling` (`IWorkOrderBilling`, `Priority` 10, so it bills instead of the plain debt Transactions posts). It turns the `WorkOrderBillingRequest` into an invoice: parts as `Item` lines (with the product), labor and other lines as `Service` lines, each with the line's or the request's tax category; billed to the request's payer with the work order's contact; `SourceType` `WorkOrder`, `SourceId` the work order and `Reference` its number; the request's payment term. It issues the invoice at once, which posts what is owed; an invoice that can't be issued stays a draft for someone to finish. Billing a work order again returns its invoice.
 
+## Charging a saved card
+
+An invoice with `AutoCharge` (the editor's **Charge the customer's saved card**, or a recurring plan in `IssueAndCharge` mode) is charged by `InvoiceAutoCharge` (Invoicing.Core, an `IInvoiceObserver` and an `ITransactionEventHandler`) when it is issued: it schedules the charge of its transaction to the payer's default saved card through `ISavedPaymentMethodChargeService` ([Transactions](transactions#charging-on-a-schedule-with-retries)) on the morning of the due day in the site's time zone, or charges it at once when it is due on issue. A declined card is retried on the ledger's retry schedule. When the payer kept no card that can be charged (a guest payer never has one), or the retries run out (`AutoChargeAbandonedAsync`), the invoice is sent to the payer with `IInvoiceSender` instead.
+
 ## Estimates
 
 With **Invoicing Estimates** enabled, `Estimate` (Invoicing.Abstractions) is a catalog record with the invoice's header and lines, `EstimateIndex`, and the commands of `IEstimateCommandService` (`DefaultEstimateCommandService`, each under the estimate's lock, idempotent, refusing with reasons):

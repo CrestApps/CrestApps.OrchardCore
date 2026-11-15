@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Stores;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Invoicing;
@@ -131,6 +132,21 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     public FakeNumberSeries Series { get; } = new();
 
     /// <summary>
+    /// The saved cards the payers kept, for the charges of invoices marked to be charged automatically.
+    /// </summary>
+    public Mock<ISavedPaymentMethodStore> SavedCards { get; } = new();
+
+    /// <summary>
+    /// What each charge of a saved card comes to, in order; a charge that goes through records the payment.
+    /// </summary>
+    public Queue<SavedPaymentMethodChargeStatus> ChargeOutcomes { get; } = new();
+
+    /// <summary>
+    /// The saved cards charged, in order.
+    /// </summary>
+    public List<string> ChargedCards { get; } = [];
+
+    /// <summary>
     /// Creates the harness. With <paramref name="realNumbers"/>, invoices are numbered by the site's generator over the
     /// number sequence kept in the store, whose series lock is <paramref name="numberLock"/> (the harness's lock when
     /// none is given); otherwise by <see cref="FakeNumberGenerator"/>.
@@ -235,6 +251,47 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             services.AddSingleton<INumberSeries>(_ => harness.Series);
         }
         services.AddSingleton(_ => harness.Contacts.Object);
+        services.AddSingleton(_ => harness.SavedCards.Object);
+        services.AddScoped<ISavedPaymentMethodChargeService>(sp =>
+        {
+            // The provider is played by ChargeOutcomes: a charge that goes through is recorded as the checkout records it.
+            var commands = new Mock<ITransactionCommandService>();
+            commands
+                .Setup(service => service.ChargeSavedPaymentMethodAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(async (string transactionId, string cardId, CancellationToken token) =>
+                {
+                    harness.ChargedCards.Add(cardId);
+                    var status = harness.ChargeOutcomes.Count > 0 ? harness.ChargeOutcomes.Dequeue() : SavedPaymentMethodChargeStatus.Succeeded;
+
+                    if (status == SavedPaymentMethodChargeStatus.Succeeded)
+                    {
+                        var ledger = sp.GetRequiredService<ITransactionCommandService>();
+                        var owed = (await sp.GetRequiredService<ITransactionManager>().FindByIdAsync(transactionId, token)).OutstandingAmount;
+                        var paid = await ledger.RecordOfflinePaymentAsync(transactionId, owed, "card", "Charged to the saved card.", token);
+
+                        Assert.True(paid.Succeeded, string.Join(" ", paid.Errors));
+
+                        paid.ChargeStatus = status;
+
+                        return paid;
+                    }
+
+                    var refused = new TransactionCommandResult { ChargeStatus = status };
+
+                    return refused.Fail(status == SavedPaymentMethodChargeStatus.Failed ? "The provider could not be reached." : "The card was declined.");
+                });
+
+            return new DefaultSavedPaymentMethodChargeService(
+                sp.GetRequiredService<ITransactionManager>(),
+                commands.Object,
+                sp.GetRequiredService<IDistributedLock>(),
+                sp.GetRequiredService<ISession>(),
+                sp.GetRequiredService<ISiteService>(),
+                sp.GetRequiredService<IClock>(),
+                sp,
+                NullLogger<DefaultSavedPaymentMethodChargeService>.Instance,
+                new PassThroughStringLocalizer<DefaultSavedPaymentMethodChargeService>());
+        });
         services.AddSingleton(_ => harness.Credit.Object);
         services.AddSingleton<IInvoiceLedgerSyncScheduler>(_ => harness.Deferred);
         services.AddScoped<ITransactionEventHandler>(_ => new StatusHook(harness));

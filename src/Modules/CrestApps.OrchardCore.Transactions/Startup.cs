@@ -68,6 +68,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
         services.AddScoped<ITransactionCommandService, DefaultTransactionCommandService>();
+        services.AddScoped<ISavedPaymentMethodChargeService, DefaultSavedPaymentMethodChargeService>();
 
         // The rows of the transactions report and of the customer's own statement.
         services
@@ -128,6 +129,7 @@ public sealed class NotificationStartup : StartupBase
         services.AddSiteSettingsPermission(TransactionsConstants.SettingsGroupId, TransactionsPermissions.ManageTransactionSettings);
 
         services.AddSingleton<IBackgroundTask, TransactionReminderBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, SavedPaymentMethodChargeBackgroundTask>();
     }
 }
 
