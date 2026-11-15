@@ -28,6 +28,7 @@ public sealed class EnrollmentIndexProvider : IndexProvider<Enrollment>
                 OfferingId = string.IsNullOrEmpty(enrollment.OfferingId) ? null : enrollment.OfferingId,
                 Status = enrollment.Status,
                 IsOpen = enrollment.IsOpen,
+                NeedsReview = enrollment.NeedsReview,
                 Number = enrollment.Number,
                 Cycle = enrollment.Cycle,
                 CreatedUtc = enrollment.CreatedUtc,

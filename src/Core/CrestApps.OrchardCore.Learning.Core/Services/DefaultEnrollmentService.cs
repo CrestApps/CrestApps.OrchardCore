@@ -402,6 +402,31 @@ public sealed class DefaultEnrollmentService : IEnrollmentService
         return expired;
     }
 
+    /// <inheritdoc />
+    public Task<EnrollmentResult> ClearReviewAsync(string enrollmentId, string actor, string note, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return Task.FromResult(EnrollmentResult.Fail(EnrollmentErrors.ReasonRequired));
+        }
+
+        return WriteAsync(enrollmentId, async (enrollment, notifications) =>
+        {
+            if (!enrollment.NeedsReview)
+            {
+                return new EnrollmentResult { Enrollment = enrollment };
+            }
+
+            enrollment.Review.ClearedUtc = _clock.UtcNow;
+            enrollment.Review.ClearedBy = actor;
+            enrollment.Review.ClearNote = note.Trim();
+            enrollment.ModifiedUtc = _clock.UtcNow;
+            await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+
+            return new EnrollmentResult { Enrollment = enrollment, Changed = true };
+        }, cancellationToken);
+    }
+
     private Task<EnrollmentResult> WriteAsync(string enrollmentId, Func<Enrollment, IList<Func<Task>>, Task<EnrollmentResult>> work, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(enrollmentId))

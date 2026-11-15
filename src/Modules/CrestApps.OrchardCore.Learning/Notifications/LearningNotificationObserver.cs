@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Notifications;
@@ -53,10 +54,29 @@ internal sealed class LearningNotificationObserver : IEnrollmentObserver
         Send(enrollment, LearningConstants.NotificationTypes.Overdue, S["{0} is overdue", title], S["The course {0} has passed its due date. Complete it as soon as you can.", title]);
     }
 
+    public async Task ReviewNeededAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+    {
+        var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
+        var title = course?.DisplayText ?? enrollment.Completion?.CourseTitle ?? S["your course"].Value;
+        var instructors = (course?.As<CoursePart>()?.Staff ?? [])
+            .Where(member => member.Role == LearningConstants.CourseStaffRoles.Instructor && !string.IsNullOrEmpty(member.UserId))
+            .Select(member => member.UserId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        foreach (var instructor in instructors)
+        {
+            Send(enrollment, LearningConstants.NotificationTypes.ReviewNeeded, S["A completion in {0} needs review", title], S["A result a completed enrollment in {0} rests on changed after completion. Open the enrollment to decide what follows.", title], instructor, $"/Admin/learning/enrollments/{enrollment.ItemId}");
+        }
+    }
+
     private async Task<string> TitleAsync(Enrollment enrollment)
         => (await _courseStructure.GetCourseAsync(enrollment.CourseId))?.DisplayText ?? enrollment.Completion?.CourseTitle ?? S["your course"].Value;
 
     private void Send(Enrollment enrollment, string type, string subject, string body)
+        => Send(enrollment, type, subject, body, enrollment.UserId, $"/learning/courses/{enrollment.CourseId}/play");
+
+    private void Send(Enrollment enrollment, string type, string subject, string body, string userId, string path)
     {
         var prefix = string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix) ? string.Empty : "/" + _shellSettings.RequestUrlPrefix;
         var message = new LearningNotificationMessage
@@ -66,10 +86,8 @@ internal sealed class LearningNotificationObserver : IEnrollmentObserver
             TextBody = body,
             Type = type,
             ReferenceId = enrollment.ItemId,
-            Url = $"{prefix}/learning/courses/{enrollment.CourseId}/play",
+            Url = prefix + path,
         };
-
-        var userId = enrollment.UserId;
 
         ShellScope.AddDeferredTask(async scope =>
         {

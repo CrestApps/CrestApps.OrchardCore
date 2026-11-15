@@ -111,4 +111,14 @@ public interface IEnrollmentObserver
     /// <returns>A task.</returns>
     Task OverdueAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// A completed enrollment was flagged for review, because a result it rests on changed after completion. Raised
+    /// after the flag is committed.
+    /// </summary>
+    /// <param name="enrollment">The enrollment, with its <see cref="Enrollment.Review"/>.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task ReviewNeededAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }

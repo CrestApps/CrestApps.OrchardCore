@@ -268,6 +268,7 @@ public sealed class NotificationsStartup : StartupBase
     {
         services.AddNotificationType(LearningConstants.NotificationTypes.Enrolled, LocalizationSource.Create<NotificationsStartup>("Enrolled in a course"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When you are enrolled in a course."));
         services.AddNotificationType(LearningConstants.NotificationTypes.DueSoon, LocalizationSource.Create<NotificationsStartup>("Course due soon"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("A few days before a course you are taking is due."));
+        services.AddNotificationType(LearningConstants.NotificationTypes.ReviewNeeded, LocalizationSource.Create<NotificationsStartup>("Completion needs review"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When a result a completed enrollment in a course you teach rests on changes after completion."));
         services.AddNotificationType(LearningConstants.NotificationTypes.Overdue, LocalizationSource.Create<NotificationsStartup>("Course overdue"), type => type.Description = LocalizationSource.Create<NotificationsStartup>("When a course you are taking passes its due date."));
         services.AddEnrollmentObserver<LearningNotificationObserver>();
     }

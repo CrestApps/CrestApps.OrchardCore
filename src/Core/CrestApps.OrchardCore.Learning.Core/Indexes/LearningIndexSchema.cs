@@ -27,6 +27,7 @@ public static class LearningIndexSchema
             .Column<string>("OfferingId", column => column.Nullable().WithLength(26))
             .Column<EnrollmentStatus>("Status")
             .Column<bool>("IsOpen")
+            .Column<bool>("NeedsReview", column => column.WithDefault(false))
             .Column<string>("Number", column => column.Nullable().WithLength(32))
             .Column<int>("Cycle")
             .Column<DateTime>("CreatedUtc")
@@ -92,6 +93,19 @@ public static class LearningIndexSchema
             table.CreateIndex("IDX_Learning_CourseItemProgressIndex_Enrollment", "EnrollmentId");
             table.CreateIndex("IDX_Learning_CourseItemProgressIndex_LastAccessUtc", "LastAccessUtc", "Id");
         }, collection: collection);
+    }
+
+    /// <summary>
+    /// Adds the review column to the enrollment index of a site created before reviews existed.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task AddEnrollmentReviewColumnAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.AlterIndexTableAsync<EnrollmentIndex>(table => table
+            .AddColumn<bool>("NeedsReview", column => column.WithDefault(false)), collection: LearningConstants.CollectionName);
     }
 
     /// <summary>

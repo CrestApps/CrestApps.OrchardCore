@@ -76,4 +76,14 @@ public interface IEnrollmentService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The number of enrollments expired.</returns>
     Task<int> ExpireEndedAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Clears the open review of an enrollment, recording who decided what.
+    /// </summary>
+    /// <param name="enrollmentId">The enrollment.</param>
+    /// <param name="actor">Who cleared it.</param>
+    /// <param name="note">What they decided; required.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<EnrollmentResult> ClearReviewAsync(string enrollmentId, string actor, string note, CancellationToken cancellationToken = default);
 }

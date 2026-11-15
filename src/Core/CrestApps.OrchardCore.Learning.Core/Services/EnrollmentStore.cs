@@ -117,6 +117,11 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
             search = search.Where(index => index.UserId == query.UserId);
         }
 
+        if (query.NeedsReview is { } needsReview)
+        {
+            search = search.Where(index => index.NeedsReview == needsReview);
+        }
+
         if (query.UserIds is not null)
         {
             search = search.Where(index => index.UserId.IsIn(query.UserIds));

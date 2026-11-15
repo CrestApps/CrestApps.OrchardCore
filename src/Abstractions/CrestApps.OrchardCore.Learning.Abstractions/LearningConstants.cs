@@ -231,5 +231,10 @@ public static class LearningConstants
         /// A course is overdue.
         /// </summary>
         public const string Overdue = "LearningOverdue";
+
+        /// <summary>
+        /// A completed enrollment in a course the person teaches needs review.
+        /// </summary>
+        public const string ReviewNeeded = "LearningReviewNeeded";
     }
 }

@@ -196,7 +196,36 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
             context.Result = result;
 
             return null;
-        }, cancellationToken);
+        }, cancellationToken, whenCompleted: (completed, progress, notifications) => FlagForReviewAsync(completed, progress, result, notifications, cancellationToken));
+    }
+
+    // After completion a result only matters when it undoes what the completion rests on: the item's score was voided,
+    // fell, or is no longer a pass. Then the enrollment stays Completed and is flagged for review, once while open.
+    private async Task FlagForReviewAsync(Enrollment enrollment, EnrollmentProgress progress, CourseItemResult result, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    {
+        var item = progress.Find(result.ItemId);
+        var previous = item?.Score;
+        var lowered = result.ResetScore
+            || result.Passed == false
+            || (result.Score is { } score && previous is { } before && score < before);
+
+        if (!lowered || enrollment.NeedsReview)
+        {
+            return;
+        }
+
+        enrollment.Review = new EnrollmentReview
+        {
+            Reason = LearningReviewReasons.ResultChangedAfterCompletion,
+            ItemId = result.ItemId,
+            PreviousScore = previous,
+            NewScore = result.ResetScore ? null : result.Score,
+            FlaggedUtc = _clock.UtcNow,
+        };
+        enrollment.ModifiedUtc = _clock.UtcNow;
+
+        await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+        notifications.Add(() => NotifyAsync(observer => observer.ReviewNeededAsync(enrollment, cancellationToken)));
     }
 
     /// <inheritdoc />
@@ -301,7 +330,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         enrollment.Status = EnrollmentStatus.Completed;
     }
 
-    private Task<ProgressUpdate> UpdateAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, CancellationToken cancellationToken, bool manual = false)
+    private Task<ProgressUpdate> UpdateAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, CancellationToken cancellationToken, bool manual = false, Func<Enrollment, EnrollmentProgress, IList<Func<Task>>, Task> whenCompleted = null)
     {
         if (enrollment is null || string.IsNullOrEmpty(itemId))
         {
@@ -310,12 +339,12 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         return _writeGate.RunAsync(
             enrollment.ItemId,
-            notifications => UpdateCoreAsync(enrollment, itemId, apply, notifications, manual, cancellationToken),
+            notifications => UpdateCoreAsync(enrollment, itemId, apply, notifications, manual, cancellationToken, whenCompleted),
             () => new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.Busy },
             cancellationToken);
     }
 
-    private async Task<ProgressUpdate> UpdateCoreAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, IList<Func<Task>> notifications, bool manual, CancellationToken cancellationToken)
+    private async Task<ProgressUpdate> UpdateCoreAsync(Enrollment enrollment, string itemId, Func<UpdateContext, string> apply, IList<Func<Task>> notifications, bool manual, CancellationToken cancellationToken, Func<Enrollment, EnrollmentProgress, IList<Func<Task>>, Task> whenCompleted = null)
     {
         // Read the enrollment again inside the lock: a caller may hold a copy read earlier or in another scope, and
         // deciding on that copy could complete the course twice or save a second document.
@@ -350,7 +379,13 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
         if (enrollment.Status == EnrollmentStatus.Completed)
         {
-            // A completed enrollment is a record: the learner may review the course, but nothing changes.
+            // A completed enrollment is a record: the learner may review the course, but nothing changes. A result that
+            // changed after completion only flags the enrollment for a person to review.
+            if (whenCompleted is not null)
+            {
+                await whenCompleted(enrollment, progress, notifications);
+            }
+
             return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = progress.Find(itemId) };
         }
 

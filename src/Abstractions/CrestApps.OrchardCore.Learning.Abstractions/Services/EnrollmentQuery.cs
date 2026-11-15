@@ -36,4 +36,10 @@ public sealed class EnrollmentQuery
     /// Gets or sets an enrollment number to find.
     /// </summary>
     public string Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to list only enrollments with an open review (<see langword="true"/>) or only those without
+    /// one (<see langword="false"/>), or <see langword="null"/> for both.
+    /// </summary>
+    public bool? NeedsReview { get; set; }
 }

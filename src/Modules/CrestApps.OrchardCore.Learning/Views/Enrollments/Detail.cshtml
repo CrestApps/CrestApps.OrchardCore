@@ -74,6 +74,35 @@
     </div>
 </div>
 
+@if (enrollment.Review is { } review)
+{
+    <div class="card mb-3 @(enrollment.NeedsReview ? "border-warning" : string.Empty)">
+        <div class="card-header">@(enrollment.NeedsReview ? T["Needs review"] : T["Review"])</div>
+        <div class="card-body">
+            <p class="mb-2">@T["A result this completion rests on changed after the course was completed: {0}.", Model.Outline?.Find(review.ItemId)?.Item?.DisplayText ?? review.ItemId]</p>
+            <dl class="row mb-2">
+                <dt class="col-sm-3">@T["Flagged"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(review.FlaggedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+                <dt class="col-sm-3">@T["Score"]</dt><dd class="col-sm-9">@(review.PreviousScore?.ToString("0.##") ?? T["none"].Value) &rarr; @(review.NewScore?.ToString("0.##") ?? T["voided"].Value)</dd>
+                @if (review.ClearedUtc is { } cleared)
+                {
+                    <dt class="col-sm-3">@T["Cleared"]</dt><dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(cleared, DateTimeKind.Utc), Format: "g")) · @(Model.ActorNames.TryGetValue(review.ClearedBy ?? string.Empty, out var clearedBy) ? clearedBy : review.ClearedBy) · @review.ClearNote</dd>
+                }
+            </dl>
+            @if (enrollment.NeedsReview && Model.CanManage)
+            {
+                <form asp-action="ClearReview" asp-route-id="@enrollment.ItemId" method="post">
+                    <label class="form-label" for="review-note">@T["What you decided"]</label>
+                    <div class="input-group">
+                        <input id="review-note" name="note" class="form-control" required maxlength="500" placeholder="@T["Such as: retake booked, completion kept"]" />
+                        <button type="submit" class="btn btn-warning">@T["Clear the review"]</button>
+                    </div>
+                    <span class="hint">@T["The enrollment stays completed. Clearing the review records your decision."]</span>
+                </form>
+            }
+        </div>
+    </div>
+}
+
 @if (Model.CanManage && enrollment.Status is not (EnrollmentStatus.Completed or EnrollmentStatus.Withdrawn))
 {
     <div class="card mb-3">

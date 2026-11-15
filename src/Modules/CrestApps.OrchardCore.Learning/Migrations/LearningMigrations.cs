@@ -67,7 +67,7 @@ internal sealed class LearningMigrations : DataMigration
         await _courseListSynchronizer.SynchronizeAsync();
         await LearningIndexSchema.CreateSecretIndexAsync(SchemaBuilder);
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -112,6 +112,17 @@ internal sealed class LearningMigrations : DataMigration
         }
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds the review flag to the enrollment index, so a completed enrollment whose result changed can be listed.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await LearningIndexSchema.AddEnrollmentReviewColumnAsync(SchemaBuilder);
+
+        return 4;
     }
 
     private async Task DefinePartsAsync()

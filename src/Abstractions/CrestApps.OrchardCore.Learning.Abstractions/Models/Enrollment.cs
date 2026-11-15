@@ -114,4 +114,15 @@ public sealed class Enrollment : CatalogItem
     /// Gets a value indicating whether the enrollment is open: not completed, expired or withdrawn.
     /// </summary>
     public bool IsOpen => Status is EnrollmentStatus.Pending or EnrollmentStatus.Active or EnrollmentStatus.Suspended;
+
+    /// <summary>
+    /// Gets or sets the review of a completed enrollment whose result changed after completion, or
+    /// <see langword="null"/>.
+    /// </summary>
+    public EnrollmentReview Review { get; set; }
+
+    /// <summary>
+    /// Gets whether the enrollment has a review nobody has cleared yet.
+    /// </summary>
+    public bool NeedsReview => Review is { ClearedUtc: null };
 }

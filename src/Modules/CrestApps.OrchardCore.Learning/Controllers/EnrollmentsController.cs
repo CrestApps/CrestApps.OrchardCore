@@ -25,6 +25,9 @@ namespace CrestApps.OrchardCore.Learning.Controllers;
 /// </summary>
 public sealed class EnrollmentsController : Controller
 {
+    // The status filter value that lists completed enrollments whose result changed after completion.
+    private const string NeedsReviewFilter = "NeedsReview";
+
     private readonly IAuthorizationService _authorizationService;
     private readonly IEnrollmentService _enrollmentService;
     private readonly IEnrollmentStore _enrollmentStore;
@@ -107,6 +110,7 @@ public sealed class EnrollmentsController : Controller
         {
             CourseId = string.IsNullOrEmpty(model.CourseId) ? null : model.CourseId,
             Status = Enum.TryParse<EnrollmentStatus>(model.Status, out var status) ? status : null,
+            NeedsReview = model.Status == NeedsReviewFilter ? true : null,
             Number = string.IsNullOrWhiteSpace(model.Search) ? null : model.Search.Trim(),
         };
 
@@ -143,6 +147,7 @@ public sealed class EnrollmentsController : Controller
             new SelectListItem(S["Completed"], nameof(EnrollmentStatus.Completed), model.Status == nameof(EnrollmentStatus.Completed)),
             new SelectListItem(S["Access ended"], nameof(EnrollmentStatus.Expired), model.Status == nameof(EnrollmentStatus.Expired)),
             new SelectListItem(S["Withdrawn"], nameof(EnrollmentStatus.Withdrawn), model.Status == nameof(EnrollmentStatus.Withdrawn)),
+            new SelectListItem(S["Needs review"], NeedsReviewFilter, model.Status == NeedsReviewFilter),
         ];
 
         model.List.ToolbarActions = await shapeFactory.CreateAsync("LearningEnrollmentFilters", Arguments.From(new { Model = model }));
@@ -435,6 +440,27 @@ public sealed class EnrollmentsController : Controller
         {
             await _notifier.ErrorAsync(H["The completion was not approved: {0}", _refusalText.Get(update.RefusedReason)]);
         }
+
+        return RedirectToAction(nameof(Detail), new { id });
+    }
+
+    /// <summary>
+    /// Clears the review of a completed enrollment whose result changed after completion.
+    /// </summary>
+    /// <param name="id">The enrollment.</param>
+    /// <param name="note">What the reviewer decided.</param>
+    /// <returns>The enrollment.</returns>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("learning/enrollments/{id}/clear-review", "LearningEnrollmentsClearReview")]
+    public async Task<IActionResult> ClearReview(string id, string note)
+    {
+        if (await AuthorizeManageAsync(id) is null)
+        {
+            return Forbid();
+        }
+
+        await ReportAsync(await _enrollmentService.ClearReviewAsync(id, CurrentUserId(), note), H["The review is cleared."]);
 
         return RedirectToAction(nameof(Detail), new { id });
     }

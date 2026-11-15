@@ -34,6 +34,11 @@ public sealed class EnrollmentIndex : CatalogItemIndex
     public bool IsOpen { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the enrollment has an open review.
+    /// </summary>
+    public bool NeedsReview { get; set; }
+
+    /// <summary>
     /// Gets or sets the enrollment number.
     /// </summary>
     public string Number { get; set; }
