@@ -19,6 +19,25 @@ namespace CrestApps.OrchardCore.Tests.Tickets;
 public sealed class TicketServiceSqliteTests
 {
     [Fact]
+    public async Task ARefusedUpdate_StagesNothing_NotEvenARetargetedTimer()
+    {
+        // Arrange: a ticket on a policy, so a priority change retargets its timers.
+        await using var kit = await TicketKit.CreateAsync(withPolicy: true);
+        var ticketId = (await kit.CreateAsync()).Ticket.ContentItemId;
+        var before = (await kit.TimersAsync(ticketId)).Select(timer => (timer.Metric, timer.Priority, timer.DueUtc)).OrderBy(pair => pair.Metric).ToList();
+
+        // Act: a valid priority with a status that doesn't exist; the request commits whatever is pending.
+        var result = await kit.RunAsync(services => services.GetRequiredService<ITicketService>().UpdateAsync(ticketId, new TicketUpdate { PriorityId = TicketKit.Urgent.ItemId, StatusId = "no-such-status" }, cancellationToken: TestContext.Current.CancellationToken));
+        var after = (await kit.TimersAsync(ticketId)).Select(timer => (timer.Metric, timer.Priority, timer.DueUtc)).OrderBy(pair => pair.Metric).ToList();
+        var part = (await kit.GetAsync(ticketId)).GetOrCreate<TicketPart>();
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(before, after);
+        Assert.Equal(TicketKit.Normal.ItemId, part.PriorityId);
+    }
+
+    [Fact]
     public async Task TwoAgentsReplyingAtOnce_BothCount_AndTheStatusChangeIsKept()
     {
         // Arrange

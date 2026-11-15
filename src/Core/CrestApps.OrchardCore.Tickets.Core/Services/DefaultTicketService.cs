@@ -834,6 +834,60 @@ public sealed class DefaultTicketService : ITicketService
 
     // A ticket that waits for approval changes status only through the approval (byApproval), whoever asks: the panel,
     // a bulk action, the API or a workflow.
+    // The checks of an update that ApplyAsync otherwise makes as it goes: all of them, before anything is changed.
+    private async Task<List<string>> CheckAsync(ContentItem ticket, TicketPart part, TicketUpdate update, CancellationToken cancellationToken)
+    {
+        var errors = new List<string>();
+
+        if (!string.IsNullOrEmpty(update.DeskId) && update.DeskId != part.DeskId)
+        {
+            var desk = await _desks.FindByIdAsync(update.DeskId, cancellationToken);
+
+            if (desk is null)
+            {
+                errors.Add(S["The desk no longer exists."]);
+            }
+            else if (desk.TicketTypes.Count > 0 && !desk.TicketTypes.Contains(ticket.ContentType, StringComparer.OrdinalIgnoreCase))
+            {
+                errors.Add(S["The {0} desk does not take this kind of ticket.", desk.Name]);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(update.PriorityId) && update.PriorityId != part.PriorityId && await _priorities.FindByIdAsync(update.PriorityId, cancellationToken) is null)
+        {
+            errors.Add(S["The priority no longer exists."]);
+        }
+
+        if (update.TeamId is not null && NullIfEmpty(update.TeamId) is { } newTeam && newTeam != part.TeamId
+            && _serviceProvider.GetService<ITeamManager>() is { } teamManager && await teamManager.FindByIdAsync(newTeam, cancellationToken) is null)
+        {
+            errors.Add(S["The team no longer exists."]);
+        }
+
+        if (update.AssigneeId is not null && NullIfEmpty(update.AssigneeId) is { } newAssignee && newAssignee != part.AssigneeId
+            && _serviceProvider.GetService<ITicketAccessService>() is { } access
+            && !await access.CanBeAssignedAsync(newAssignee, update.DeskId ?? part.DeskId, cancellationToken))
+        {
+            errors.Add(S["That person can't see tickets on this desk, so they can't be given this ticket."]);
+        }
+
+        if (!string.IsNullOrEmpty(update.StatusId) && update.StatusId != part.StatusId)
+        {
+            var status = await _statuses.FindByIdAsync(update.StatusId, cancellationToken);
+
+            if (status is null)
+            {
+                errors.Add(S["The status no longer exists."]);
+            }
+            else if (!TicketLifecycle.Transitions.CanMove(part.StatusCategory, status.Category))
+            {
+                errors.Add(S["A ticket can't move from {0} to {1}.", part.StatusCategory, status.Category]);
+            }
+        }
+
+        return errors;
+    }
+
     private async Task<List<string>> ApplyAsync(ContentItem ticket, TicketPart part, TicketUpdate update, List<TimelineFieldChange> changes, bool byApproval, CancellationToken cancellationToken)
     {
         var errors = new List<string>();
@@ -842,6 +896,15 @@ public sealed class DefaultTicketService : ITicketService
         {
             errors.Add(S["The ticket waits for approval, so its status can't change until it is decided or canceled."]);
 
+            return errors;
+        }
+
+        // Every check comes before the first change: a refused update stages nothing (no retargeted timer, no moved
+        // status) that the request's own commit could still save.
+        errors.AddRange(await CheckAsync(ticket, part, update, cancellationToken));
+
+        if (errors.Count > 0)
+        {
             return errors;
         }
         var now = _clock.UtcNow;
@@ -1523,7 +1586,13 @@ public sealed class DefaultTicketService : ITicketService
     // Locks the tickets (in id order), loads each as saved, does the work and, if it succeeded, commits it while the locks
     // are still held: the next change of a ticket reads what this one saved. Only then are the locks released and the
     // observers told, so a workflow sees the saved ticket and can lock it itself. A change that is refused writes nothing
-    // and tells nobody.
+    // and tells nobody: every operation checks all it can refuse before it stages anything (replies, updates through
+    // CheckAsync, approvals, ratings), so nothing of a refused change is left for the request's own commit.
+    //
+    // The commit inside the locks saves everything pending in the request's session, not only this change: something
+    // else the request staged earlier (a draft, another document) is committed with it. That is right for the ticket
+    // pages, which do one ticket operation per request; don't call a ticket operation in the middle of an unrelated unit
+    // of work that expects to commit all or nothing.
     private async Task<TicketResult> WithLocksAsync(IReadOnlyList<string> ticketIds, TicketActor actor, Func<IReadOnlyDictionary<string, ContentItem>, Task<TicketResult>> work, CancellationToken cancellationToken)
     {
         var lockers = new List<ILocker>();
