@@ -345,6 +345,45 @@ public sealed class DefaultCertificationPathService : ICertificationPathService
         => string.IsNullOrEmpty(userId) ? Task.FromResult<IReadOnlyList<CertificationPathProgress>>([]) : _progress.ListForUserAsync(userId, cancellationToken);
 
     /// <summary>
+    /// Lists the certificates that rest on an enrollment: the cycle that earned them counted the enrollment, or an
+    /// attempt made in it.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <param name="attemptEnrollments">Finds the enrollment an attempt was made in.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The progress and the certificate of each affected cycle.</returns>
+    public async Task<IReadOnlyList<(CertificationPathProgress Progress, string RecordId)>> ListRestingOnAsync(
+        Enrollment enrollment,
+        Func<string, Task<string>> attemptEnrollments,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(enrollment);
+
+        var affected = new List<(CertificationPathProgress, string)>();
+
+        foreach (var progress in await _progress.ListForUserAsync(enrollment.UserId, cancellationToken))
+        {
+            foreach (var cycle in progress.Cycles.Where(cycle => !string.IsNullOrEmpty(cycle.RecordId)))
+            {
+                foreach (var evidence in cycle.Evidence)
+                {
+                    var rests = evidence.SourceId == enrollment.ItemId
+                        || (evidence.Kind == CertificationsConstants.RequirementKinds.AssessmentPassed && attemptEnrollments is not null && await attemptEnrollments(evidence.SourceId) == enrollment.ItemId);
+
+                    if (rests)
+                    {
+                        affected.Add((progress, cycle.RecordId));
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        return affected;
+    }
+
+    /// <summary>
     /// Moves the progress of an expired certificate to lapsed.
     /// </summary>
     /// <param name="recordId">The certificate that expired.</param>

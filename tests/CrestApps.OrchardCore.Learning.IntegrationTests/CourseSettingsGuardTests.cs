@@ -89,7 +89,7 @@ public sealed class CourseSettingsGuardTests
         Assert.Contains(stored.Staff, member => member.UserId == _fixture.SpareLearnerId);
     }
 
-    private Task AsUserAsync(string userName, Func<IServiceProvider, Task> work)
+    private Task<bool> AsUserAsync(string userName, Func<IServiceProvider, Task> work)
         => _fixture.InTenantAsync(async services =>
         {
             var userManager = services.GetRequiredService<UserManager<IUser>>();

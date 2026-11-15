@@ -26,6 +26,37 @@ public static class CertificationsConstants
     public const string RecipeStepName = "LearningCertificationPaths";
 
     /// <summary>
+    /// The name of the data source.
+    /// </summary>
+    public const string DataSourceName = "LearningCertifications";
+
+    /// <summary>
+    /// The notification types.
+    /// </summary>
+    public static class NotificationTypes
+    {
+        /// <summary>
+        /// A certificate was issued or renewed.
+        /// </summary>
+        public const string Issued = "LearningCertificateIssued";
+
+        /// <summary>
+        /// Renewal opened.
+        /// </summary>
+        public const string RenewalOpened = "LearningCertificationRenewalOpened";
+
+        /// <summary>
+        /// A certificate expires soon.
+        /// </summary>
+        public const string Expiring = "LearningCertificateExpiring";
+
+        /// <summary>
+        /// A certificate lapsed.
+        /// </summary>
+        public const string Lapsed = "LearningCertificationLapsed";
+    }
+
+    /// <summary>
     /// The feature ids.
     /// </summary>
     public static class Features

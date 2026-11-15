@@ -133,6 +133,11 @@ public static class LearningTelemetry
     /// <summary>
     /// The number of notices the upkeep raised, tagged with <see cref="NoticeTag"/>.
     /// </summary>
+    public static Counter<long> CertificationChanges { get; } = Meter.CreateCounter<long>(
+        "crestapps.learning.certification.changes",
+        unit: "{change}",
+        description: "Certification path changes: certificates issued and renewed, renewals opened, lapses and revocations.");
+
     public static Counter<long> Notices { get; } = Meter.CreateCounter<long>(
         "crestapps.learning.notices",
         "{notice}",

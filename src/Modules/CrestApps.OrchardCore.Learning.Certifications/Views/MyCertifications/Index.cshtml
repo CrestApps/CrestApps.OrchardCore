@@ -1,0 +1,70 @@
+@model MyCertificationsViewModel
+
+@{
+    ViewData["Title"] = T["My certifications"];
+}
+
+<div class="container my-4">
+    <h1 class="h3 mb-4">@T["My certifications"]</h1>
+
+    @if (Model.Entries.Count == 0)
+    {
+        <p class="text-muted">@T["You are not working towards any certification yet. Completing a course that leads to one adds it here."]</p>
+    }
+
+    <div class="row g-3">
+        @foreach (var entry in Model.Entries)
+        {
+            var progress = entry.Progress;
+            var (css, text) = progress.State switch
+            {
+                CertificationPathState.Certified => ("bg-success text-white", T["Certified"]),
+                CertificationPathState.RenewalOpen => ("bg-warning text-dark", T["Renewal open"]),
+                CertificationPathState.Lapsed => ("bg-secondary text-white", T["Lapsed"]),
+                CertificationPathState.Revoked => ("bg-danger text-white", T["Revoked"]),
+                _ => ("bg-info text-dark", T["In progress"]),
+            };
+
+            <div class="col-12 col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h2 class="h5 mb-0">@entry.CertificationName</h2>
+                            <span class="badge @css">@text</span>
+                        </div>
+                        @if (entry.IssuedOn is not null)
+                        {
+                            <p class="mb-1">@T["Issued {0}", entry.IssuedOn.Value.ToString("D")]@(string.IsNullOrEmpty(entry.Number) ? string.Empty : " · " + entry.Number)</p>
+                        }
+                        @if (progress.ExpiresOn is not null)
+                        {
+                            <p class="mb-1">@T["Valid until {0}", progress.ExpiresOn.Value.ToString("D")]</p>
+                        }
+                        @if (progress.State == CertificationPathState.InProgress)
+                        {
+                            <p class="mb-1 text-muted">@T["{0} requirement(s) met so far.", progress.CurrentCycle()?.Evidence.Count ?? 0]</p>
+                        }
+                        @if (entry.RenewalCourses.Count > 0)
+                        {
+                            <p class="mb-1">@T["Renew it by completing:"]</p>
+                            <ul class="mb-2">
+                                @foreach (var course in entry.RenewalCourses)
+                                {
+                                    <li><a href="@Url.Content("~/Contents/ContentItems/" + course.CourseId)">@course.Title</a></li>
+                                }
+                            </ul>
+                        }
+                        @if (!string.IsNullOrEmpty(entry.VerificationCode))
+                        {
+                            <div class="d-flex gap-2 mt-2 flex-wrap">
+                                <a class="btn btn-sm btn-primary" asp-controller="CertificateVerification" asp-action="Pdf" asp-route-code="@entry.VerificationCode" asp-route-area="CrestApps.OrchardCore.Skills" target="_blank"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Certificate"]</a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-controller="CertificateVerification" asp-action="Show" asp-route-code="@entry.VerificationCode" asp-route-area="CrestApps.OrchardCore.Skills" target="_blank">@T["Verification page"]</a>
+                            </div>
+                            <p class="small text-muted mt-2 mb-0">@T["Anyone you give the code {0} to can check this certificate.", entry.VerificationCode]</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

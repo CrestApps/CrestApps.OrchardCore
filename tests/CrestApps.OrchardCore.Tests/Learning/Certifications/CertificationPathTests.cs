@@ -336,7 +336,7 @@ internal sealed class CertificationHarness : IAsyncDisposable
 
     public TestClock Clock => Inner.Clock;
 
-    public static async Task<CertificationHarness> CreateAsync(bool dropCompletionEvents = false)
+    public static async Task<CertificationHarness> CreateAsync(bool dropCompletionEvents = false, Action<IServiceCollection> configure = null)
     {
         AssessmentTestHarness inner = null;
 
@@ -350,6 +350,8 @@ internal sealed class CertificationHarness : IAsyncDisposable
                 services.AddScoped<CertificateHolderResolver, NamedHolderResolver>();
                 services.TryAddSingleton(Mock.Of<IContentManager>());
                 services.AddSingleton<ILocalClock>(provider => new UtcLocalClock(provider.GetRequiredService<IClock>()));
+
+                configure?.Invoke(services);
 
                 if (dropCompletionEvents)
                 {
