@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.PersonalData.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -39,6 +40,9 @@ public sealed class Startup : StartupBase
 
         // The store's setup guide, whose steps come from the modules they're about.
         services.AddPermissionProvider<CommercePermissionProvider>();
+
+        // A tenant that ran Commerce before My Account moved to Users gets that feature turned on.
+        services.AddDataMigration<Migrations.CommerceAccountFeatureMigrations>();
     }
 }
 

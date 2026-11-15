@@ -17,4 +17,12 @@ public sealed class AccountAreaConstantsTests
         Assert.Equal(UsersConstants.Account.NavigationShape, CommerceConstants.Account.NavigationShape);
         Assert.Equal(UsersConstants.Account.PageShape, CommerceConstants.Account.PageShape);
     }
+
+    [Theory]
+    [InlineData(new[] { "CrestApps.OrchardCore.Commerce" }, true)]
+    [InlineData(new[] { "CrestApps.OrchardCore.Commerce", "CrestApps.OrchardCore.Users.Account" }, false)]
+    [InlineData(new[] { "CrestApps.OrchardCore.Users.Account" }, false)]
+    [InlineData(new string[0], false)]
+    public void ATenantThatRanCommerceBeforeTheMove_GetsMyAccountTurnedOn(string[] enabled, bool needs)
+        => Assert.Equal(needs, CrestApps.OrchardCore.Commerce.Migrations.CommerceAccountFeatureMigrations.NeedsAccount(enabled));
 }
