@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.ServiceLevels.Abstractions\CrestApps.OrchardCore.ServiceLevels.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Teams.Abstractions\CrestApps.OrchardCore.Teams.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>
 
 </Project>

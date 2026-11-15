@@ -22,6 +22,8 @@ public static class TicketsCoreServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        // Ticket numbers come from the shared number sequence; nothing else in the feature registers it.
+        services.AddNumberSequence();
         services.TryAddScoped<ITicketService, DefaultTicketService>();
         services.TryAddScoped<ITicketAccessService, DefaultTicketAccessService>();
         services.TryAddScoped<TicketAutoCloser>();
