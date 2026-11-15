@@ -88,6 +88,22 @@ An item is complete when its completion mode is met. The course is complete when
 
 **Release rules** decide when an item opens: `ItemCompleted` (after another item), `Date`, `DaysAfterEnrollment`. Add one with `AddCourseItemReleaseRule<T>()`.
 
+### Writes, locks and commits
+
+Every change to an enrollment or its progress runs under one distributed lock per enrollment (`EnrollmentWriteGate`): the enrollment is read again inside the lock, the session is committed before the lock is let go, and the enrollment observers run after the commit, only for what the call changed. Enrolling takes a lock per learner and course and commits the new enrollment inside it, so two requests never create two enrollments; adding a grant to an open enrollment goes through the enrollment's own lock. The daily upkeep raises its notices the same way. A call that cannot get the lock in time returns `Busy` and changes nothing.
+
+The commit is the whole session's, not only the enrollment's. Code that calls the enrollment or progress services in the middle of a larger unit of work should finish its own writes first, or accept that they are committed with the enrollment:
+
+| Caller | Effect of the commit |
+| --- | --- |
+| Player, learner pages, enrollment admin | The request has no other pending writes. |
+| Workflow tasks (Enroll user, Approve, Reject, Change status, Extend, Mark item complete) | Writes made earlier in the same workflow run are committed with the enrollment. A later failure in the run does not undo them. |
+| **Enroll learners** pipeline step | Each row is committed as it is enrolled, so a run that fails part way keeps the rows already done; the step reports each row's result. |
+| `LearningEnrollments` recipe step | Does not use the gate; the recipe's own transaction applies. |
+| An order or payment handler (another module) | Enroll after the order itself is saved, never inside the order's own save. |
+
+Observers that send something out (webhooks, notifications, workflow events) queue their work as deferred tasks, so it runs after the request. They log and swallow their own failures: an event can be lost after a committed change. A consumer that must not miss one, such as certificate issue, must be idempotent and have a catch-up that finds what was missed.
+
 ## Who may open what
 
 Two authorization handlers keep lessons from people who should not see them:
