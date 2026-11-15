@@ -31,6 +31,80 @@ public sealed class Register : CatalogItem
 
     public bool IsEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the department keys on the register's keypad, in the order they're shown. None shows a key for
+    /// every department that's on.
+    /// </summary>
+    public List<RegisterKey> Keys { get; set; } = [];
+
+    public DateTime CreatedUtc { get; set; }
+
+    public DateTime ModifiedUtc { get; set; }
+}
+
+/// <summary>
+/// A key on a register's keypad that rings up an amount in a department.
+/// </summary>
+public sealed class RegisterKey
+{
+    public string DepartmentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the key reads, or <see langword="null"/> for the department's name.
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount the key rings up when nothing is keyed in, such as 1.00 for a coffee, or
+    /// <see langword="null"/> for a key that needs an amount keyed in first.
+    /// </summary>
+    public decimal? PresetAmount { get; set; }
+}
+
+/// <summary>
+/// A department of the store a register rings up amounts in, such as Candy or Grocery: a sale without an item to
+/// track, counted toward its department and taxed by its tax category.
+/// </summary>
+public sealed class PosDepartment : CatalogItem
+{
+    public long Id { get; set; }
+
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the department's number, such as 1 for Grocery, which receipts and reports show and which order
+    /// lines keep as their SKU.
+    /// </summary>
+    public string Number { get; set; }
+
+    /// <summary>
+    /// Gets or sets the code of the tax category its sales are taxed by, or <see langword="null"/> for the store's
+    /// default rate.
+    /// </summary>
+    public string TaxCategoryCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the color of its key on the register, a CSS color such as #2e7d32, or <see langword="null"/>.
+    /// </summary>
+    public string Color { get; set; }
+
+    /// <summary>
+    /// Gets or sets the least amount one ring-up can be, or <see langword="null"/> for any amount.
+    /// </summary>
+    public decimal? MinimumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most one ring-up can be, so a mistyped amount is caught, or <see langword="null"/> for no limit.
+    /// </summary>
+    public decimal? MaximumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets where it comes among the departments: a smaller number first.
+    /// </summary>
+    public int Position { get; set; }
+
+    public bool IsEnabled { get; set; } = true;
+
     public DateTime CreatedUtc { get; set; }
 
     public DateTime ModifiedUtc { get; set; }
@@ -141,4 +215,34 @@ public sealed class RegisterShiftSummary
     public decimal Other { get; set; }
 
     public decimal Refunded { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tax collected on the sales.
+    /// </summary>
+    public decimal Tax { get; set; }
+
+    /// <summary>
+    /// Gets or sets what was rung up in each department, before tax, largest first.
+    /// </summary>
+    public List<RegisterShiftDepartmentTotal> Departments { get; set; } = [];
+}
+
+/// <summary>
+/// What a shift rang up in one department.
+/// </summary>
+public sealed class RegisterShiftDepartmentTotal
+{
+    public string DepartmentId { get; set; }
+
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many were rung up: a line of three counts three.
+    /// </summary>
+    public int Quantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets what they came to before tax.
+    /// </summary>
+    public decimal Total { get; set; }
 }

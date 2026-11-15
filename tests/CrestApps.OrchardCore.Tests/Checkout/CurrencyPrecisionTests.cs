@@ -24,7 +24,7 @@ public sealed class CurrencyPrecisionTests
     {
         var strategy = new DefaultTaxRoundingStrategy(Options.Create(new TaxationOptions()));
 
-        Assert.Equal((decimal)expected, strategy.Round((decimal)value, currency));
+        Assert.Equal(DecimalConversion.FromDouble(expected), strategy.Round(DecimalConversion.FromDouble(value), currency));
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class CurrencyPrecisionTests
     [InlineData("MGA", 100.4, 100)]
     public void Stripe_SendsTheCurrencysPrecision_WithItsOwnAmountFormat(string currency, double amount, long expected)
     {
-        Assert.Equal(expected, StripeCurrency.ToMinorUnits((decimal)amount, currency));
+        Assert.Equal(expected, StripeCurrency.ToMinorUnits(DecimalConversion.FromDouble(amount), currency));
     }
 
     [Theory]
@@ -58,9 +58,9 @@ public sealed class CurrencyPrecisionTests
     [InlineData("USD", 10, 3, 3.33)]
     public void AReturnedUnitsPrice_IsRoundedAtTheCurrencysPrecision(string currency, double lineTotal, int quantity, double expected)
     {
-        var line = new OrderLine { LineTotal = (decimal)lineTotal, Quantity = quantity };
+        var line = new OrderLine { LineTotal = DecimalConversion.FromDouble(lineTotal), Quantity = quantity };
 
-        Assert.Equal((decimal)expected, OrderReturnPolicy.UnitPriceOf(line, currency));
+        Assert.Equal(DecimalConversion.FromDouble(expected), OrderReturnPolicy.UnitPriceOf(line, currency));
     }
 
     [Theory]
@@ -69,7 +69,7 @@ public sealed class CurrencyPrecisionTests
     [InlineData("USD", 10.05, 10, 9.04)]
     public void ABookingRefund_IsRoundedAtTheCurrencysPrecision(string currency, double price, double feePercent, double expected)
     {
-        Assert.Equal((decimal)expected, BookingSchedule.GetRefund((decimal)price, (decimal)price, (decimal)feePercent, currency));
+        Assert.Equal(DecimalConversion.FromDouble(expected), BookingSchedule.GetRefund(DecimalConversion.FromDouble(price), DecimalConversion.FromDouble(price), DecimalConversion.FromDouble(feePercent), currency));
     }
 
     [Theory]
@@ -78,6 +78,6 @@ public sealed class CurrencyPrecisionTests
     [InlineData("USD", 54, 10, 5.4, 48.6)]
     public void AVendorsCommission_IsRoundedAtTheCurrencysPrecision(string currency, double gross, double percent, double commission, double net)
     {
-        Assert.Equal(((decimal)commission, (decimal)net), MarketplaceLedger.Split((decimal)gross, (decimal)percent, currency));
+        Assert.Equal((DecimalConversion.FromDouble(commission), DecimalConversion.FromDouble(net)), MarketplaceLedger.Split(DecimalConversion.FromDouble(gross), DecimalConversion.FromDouble(percent), currency));
     }
 }

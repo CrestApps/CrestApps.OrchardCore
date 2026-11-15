@@ -131,6 +131,83 @@ public sealed class ContactCenterRealTimeNotifierTests
     }
 
     [Fact]
+    public async Task NotifyOfferRevokedAsync_AcceptedOffer_NamesTheRecordOnlyToTheAgentWhoAcceptedIt()
+    {
+        // Arrange
+        // Live: an agent answered a queue's call, and administrators who had once signed in to that queue -- its
+        // supervisors, on whatever admin page they were -- were taken to that call's record, two of them to the same
+        // one at once. The acceptance went to the queue and its supervisors with the record on it, and every screen
+        // that heard it opened the record.
+        var acceptingUserClient = new Mock<IContactCenterHubClient>();
+        var queueClient = new Mock<IContactCenterHubClient>();
+        var supervisorClient = new Mock<IContactCenterHubClient>();
+        var clients = new Mock<IHubClients<IContactCenterHubClient>>();
+        var shellSettings = new ShellSettings
+        {
+            Name = "TenantA",
+        };
+        var userGroup = TenantSignalRGroupName.ForUser(shellSettings.Name, "u1");
+        var queueGroup = TenantSignalRGroupName.ForGroup(shellSettings.Name, ContactCenterHub.QueueGroup("q1"));
+        var supervisorsGroup = TenantSignalRGroupName.ForGroup(shellSettings.Name, ContactCenterHub.SupervisorQueueGroup("q1"));
+
+        clients.Setup(c => c.Group(userGroup)).Returns(acceptingUserClient.Object);
+        clients.Setup(c => c.Group(queueGroup)).Returns(queueClient.Object);
+        clients.Setup(c => c.Groups(It.Is<IReadOnlyList<string>>(groups => groups.SequenceEqual(new[] { supervisorsGroup })))).Returns(supervisorClient.Object);
+
+        var hubContext = new Mock<IHubContext<ContactCenterHub, IContactCenterHubClient>>();
+        hubContext.SetupGet(c => c.Clients).Returns(clients.Object);
+
+        var notifier = new ContactCenterRealTimeNotifier(
+            hubContext.Object,
+            new Mock<IAgentSessionManager>().Object,
+            Mock.Of<IAgentProfileManager>(),
+            shellSettings);
+        var notification = new AgentOfferRevokedNotification
+        {
+            UserId = "u1",
+            AgentId = "a1",
+            ReservationId = "r1",
+            ActivityItemId = "act1",
+            QueueId = "q1",
+            Reason = AgentOfferRevokedReason.Accepted,
+            Kind = AgentOfferKind.InboundCall,
+        };
+
+        // Act
+        await notifier.NotifyOfferRevokedAsync(notification, TestContext.Current.CancellationToken);
+
+        // Assert
+        acceptingUserClient.Verify(
+            client => client.OfferRevoked(It.Is<AgentOfferRevokedNotification>(revoked => revoked.ActivityItemId == "act1")),
+            Times.Once);
+
+        // The queue's and the supervisors' views still learn whose offer ended and how, to refresh themselves.
+        queueClient.Verify(
+            client => client.OfferRevoked(It.Is<AgentOfferRevokedNotification>(revoked =>
+                revoked.ActivityItemId == null &&
+                revoked.UserId == "u1" &&
+                revoked.AgentId == "a1" &&
+                revoked.ReservationId == "r1" &&
+                revoked.QueueId == "q1" &&
+                revoked.Reason == AgentOfferRevokedReason.Accepted &&
+                revoked.Kind == AgentOfferKind.InboundCall)),
+            Times.Once);
+        supervisorClient.Verify(
+            client => client.OfferRevoked(It.Is<AgentOfferRevokedNotification>(revoked =>
+                revoked.ActivityItemId == null &&
+                revoked.UserId == "u1" &&
+                revoked.ReservationId == "r1" &&
+                revoked.Reason == AgentOfferRevokedReason.Accepted)),
+            Times.Once);
+        queueClient.Verify(
+            client => client.OfferRevoked(It.Is<AgentOfferRevokedNotification>(revoked => revoked.ActivityItemId != null)),
+            Times.Never);
+        supervisorClient.Verify(
+            client => client.OfferRevoked(It.Is<AgentOfferRevokedNotification>(revoked => revoked.ActivityItemId != null)),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task NotifyAgentMembershipChangedAsync_RemovesEveryConnectionFromRevokedQueueGroups()
     {
         // Arrange

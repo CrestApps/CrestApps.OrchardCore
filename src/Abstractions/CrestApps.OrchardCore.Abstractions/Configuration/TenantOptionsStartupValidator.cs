@@ -14,9 +14,9 @@ namespace CrestApps.OrchardCore.Configuration;
 /// <remarks>
 /// <para>
 /// <see cref="OptionsBuilderExtensions.ValidateOnStart{TOptions}"/> records its validators against
-/// <see cref="IStartupValidator"/>, which the generic host invokes once, against the root container, while
+/// <see cref="IAsyncStartupValidator"/>, which the generic host invokes once, against the root container, while
 /// starting. Orchard builds a separate container per tenant and nothing in the framework invokes
-/// <see cref="IStartupValidator"/> for those containers, so a <c>ValidateOnStart</c> call written inside a
+/// <see cref="IAsyncStartupValidator"/> for those containers, so a <c>ValidateOnStart</c> call written inside a
 /// module's <c>Startup</c> has no effect on its own: the rule only fires when something first resolves the
 /// option, which may be minutes into serving traffic or never. This type closes that gap by invoking the
 /// validator at the one moment that corresponds to "start" for a tenant.
@@ -51,20 +51,20 @@ public sealed class TenantOptionsStartupValidator : ModularTenantEvents
     }
 
     /// <inheritdoc/>
-    public override Task ActivatingAsync()
+    public override async Task ActivatingAsync()
     {
-        var validator = _serviceProvider.GetService<IStartupValidator>();
+        var validator = _serviceProvider.GetService<IAsyncStartupValidator>();
 
         // Absent when no module in this tenant registered a ValidateOnStart rule, which is a valid state and
         // not a failure to report.
         if (validator is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         try
         {
-            validator.Validate();
+            await validator.ValidateAsync(CancellationToken.None);
         }
         catch (OptionsValidationException ex)
         {
@@ -91,7 +91,5 @@ public sealed class TenantOptionsStartupValidator : ModularTenantEvents
 
             throw;
         }
-
-        return Task.CompletedTask;
     }
 }

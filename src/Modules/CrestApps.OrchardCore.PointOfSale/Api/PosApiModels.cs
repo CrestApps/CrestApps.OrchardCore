@@ -21,6 +21,8 @@ public sealed record ApiRegister(string Id, string Name, string LocationId, stri
 /// <param name="ExpectedCash">What the drawer should hold: the float, the cash kept, and the cash put in less taken out.</param>
 /// <param name="CountedCash">What was counted in the drawer at the close.</param>
 /// <param name="Difference">The counted cash less the expected; negative when the drawer is short.</param>
+/// <param name="Tax">The tax collected on the shift's sales.</param>
+/// <param name="Departments">What was rung up in each department, before tax, largest first.</param>
 public sealed record ApiShift(
     string Id,
     string RegisterId,
@@ -40,7 +42,29 @@ public sealed record ApiShift(
     string OpenedBy,
     DateTime OpenedUtc,
     string ClosedBy,
-    DateTime? ClosedUtc);
+    DateTime? ClosedUtc,
+    ApiMoney Tax,
+    IReadOnlyList<ApiShiftDepartment> Departments);
+
+/// <summary>
+/// What a shift rang up in one department.
+/// </summary>
+/// <param name="Quantity">How many were rung up: a line of three counts three.</param>
+/// <param name="Total">What they came to before tax.</param>
+public sealed record ApiShiftDepartment(string DepartmentId, string Name, int Quantity, ApiMoney Total);
+
+/// <summary>
+/// A department key on a register's keypad: staff key in an amount and press it to ring the amount up in its
+/// department, or press it alone to ring up its preset amount.
+/// </summary>
+/// <param name="DepartmentId">The department, to send as a sale line's <c>departmentId</c>.</param>
+/// <param name="Label">What the key reads.</param>
+/// <param name="Number">The department's number, or none.</param>
+/// <param name="Color">The key's color, a hex color such as <c>#2E7D32</c>, or none.</param>
+/// <param name="PresetAmount">What the key rings up with nothing keyed in, or none.</param>
+/// <param name="MinimumAmount">The least one ring-up can be, or none.</param>
+/// <param name="MaximumAmount">The most one ring-up can be, or none.</param>
+public sealed record ApiRegisterKey(string DepartmentId, string Label, string Number, string Color, ApiMoney PresetAmount, ApiMoney MinimumAmount, ApiMoney MaximumAmount);
 
 /// <summary>
 /// Cash put in the drawer or taken out of it outside a sale.

@@ -49,7 +49,6 @@ public sealed class AICallMetricsTests
             InputAudioTokens = 1_000_000,
             OutputTextTokens = 500_000,
         };
-        var carrier = new AICostSettings { TelephonyPerMinute = 0.01m };
         var pricing = new AIDeploymentPricing
         {
             Prices =
@@ -61,7 +60,7 @@ public sealed class AICallMetricsTests
         };
 
         // Act
-        var (cost, currency) = AICallMetrics.EstimateCost(summary, carrier, pricing);
+        var (cost, currency) = AICallMetrics.EstimateCost(summary, 0.01m, "USD", pricing);
 
         // Assert
         Assert.Equal(0.02m + 0.10m + 32m + 8m, cost);
@@ -71,7 +70,7 @@ public sealed class AICallMetricsTests
     [Fact]
     public void EstimateCost_IsUnknownWithoutPrices()
     {
-        var (cost, currency) = AICallMetrics.EstimateCost(new AIVoiceSessionSummary { SessionDurationMs = 60_000 }, new AICostSettings(), null);
+        var (cost, currency) = AICallMetrics.EstimateCost(new AIVoiceSessionSummary { SessionDurationMs = 60_000 }, 0, "USD", null);
 
         Assert.Null(cost);
         Assert.Null(currency);
@@ -81,14 +80,13 @@ public sealed class AICallMetricsTests
     public void EstimateCost_KeepsTheAIPartWhenTheCarrierUsesAnotherCurrency()
     {
         var summary = new AIVoiceSessionSummary { SessionDurationMs = 60_000 };
-        var carrier = new AICostSettings { Currency = "USD", TelephonyPerMinute = 0.01m };
         var pricing = new AIDeploymentPricing
         {
             Currency = "EUR",
             Prices = [new AIDeploymentPrice { Meter = AIUsageMeters.AudioSeconds, Amount = 0.06m, Per = 60 }],
         };
 
-        var (cost, currency) = AICallMetrics.EstimateCost(summary, carrier, pricing);
+        var (cost, currency) = AICallMetrics.EstimateCost(summary, 0.01m, "USD", pricing);
 
         Assert.Equal(0.06m, cost);
         Assert.Equal("EUR", currency);

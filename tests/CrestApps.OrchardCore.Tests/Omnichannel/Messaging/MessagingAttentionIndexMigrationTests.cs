@@ -26,10 +26,12 @@ public sealed class MessagingAttentionIndexMigrationTests
     private static readonly string[] _ownerAttentionColumns = ["OwnerType", "OwnerId", "Status", "IsRead", "AssignmentStatus", "AssignedAgentId", "DocumentId"];
     private const string FirstResponseDueIndexName = "IDX_MessagingConversationIndex_FirstResponseDue";
     private const string ContactIndexName = "IDX_MessagingConversationIndex_Contact";
+    private const string CampaignIndexName = "IDX_MessagingConversationIndex_Campaign";
 
     private static readonly string[] _activityColumns = ["LastActivityUtc", "DocumentId"];
     private static readonly string[] _firstResponseDueColumns = ["Status", "FirstResponseDueUtc", "DocumentId"];
     private static readonly string[] _contactColumns = ["Channel", "ContactAddress", "DocumentId"];
+    private static readonly string[] _campaignColumns = ["CampaignId", "DocumentId"];
 
     [Fact]
     public async Task CreateAsync_CreatesTheAttentionIndexes()
@@ -38,7 +40,9 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(7, version);
+            Assert.Equal(8, version);
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.Equal("0", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE Scope IS NOT NULL"));
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));
             Assert.Equal(_ownerAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.OwnerAttentionIndexName));
             Assert.Equal(_activityColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.ActivityIndexName));
@@ -47,22 +51,63 @@ public sealed class MessagingAttentionIndexMigrationTests
         });
     }
 
-    // A reply template can be written for another kind of work, such as tickets; existing templates stay the workspace's.
+    // The inbox's campaign filter reads the campaign a conversation was handed off from.
     [Fact]
-    public async Task UpdateFrom6Async_OnAVersion6Table_AddsTheTemplateScope()
+    public async Task UpdateFrom6Async_OnAVersion6Table_AddsTheCampaignColumnAndIndex()
     {
         await WithSchemaAsync(async (store, schemaBuilder) =>
         {
             var migration = CreateMigration(store, schemaBuilder);
             await migration.CreateAsync();
 
-            // What version 6 released: the template table without the scope column.
-            var templates = schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(MessageTemplateIndex), MessagingStorage.CollectionName);
-            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {templates} DROP COLUMN Scope");
-            await ExecuteAsync(schemaBuilder, $"INSERT INTO {templates} (DocumentId, ItemId, Name) VALUES (1, 't1', 'Thanks')");
+            // What version 6 released: the same table without the campaign column and its index.
+            await DropIndexAsync(schemaBuilder, CampaignIndexName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TableName(schemaBuilder)} DROP COLUMN CampaignId");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TableName(schemaBuilder)} (DocumentId, ItemId, LastMessageUtc, IsRead, UnreadCount) VALUES (1, 'c1', '2026-10-24 05:59:00', 0, 0)");
 
             Assert.Equal(7, await migration.UpdateFrom6Async());
-            Assert.Equal("1", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {templates} WHERE ItemId = 't1' AND Scope IS NULL"));
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.True(string.IsNullOrEmpty(await ScalarAsync(schemaBuilder, $"SELECT CampaignId FROM {TableName(schemaBuilder)} WHERE ItemId = 'c1'")));
+        });
+    }
+
+    // A reply template can be written for another kind of work, such as tickets; existing templates stay the workspace's.
+    // Version 7 is the campaign step that main released, so a tenant built from main gets the scope as version 8.
+    [Fact]
+    public async Task UpdateFrom7Async_OnTheVersion7MainReleased_AddsTheTemplateScope()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            // What version 7 released: the campaign column and index, and the template table without the scope column.
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TemplateTableName(schemaBuilder)} DROP COLUMN Scope");
+            await ExecuteAsync(schemaBuilder, $"INSERT INTO {TemplateTableName(schemaBuilder)} (DocumentId, ItemId, Name) VALUES (1, 't1', 'Thanks')");
+
+            Assert.Equal(8, await migration.UpdateFrom7Async());
+            Assert.Equal("1", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE ItemId = 't1' AND Scope IS NULL"));
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+        });
+    }
+
+    // A tenant at version 6 runs main's step and then the scope step, and ends where a fresh install does.
+    [Fact]
+    public async Task AVersion6Tenant_RunsBothSteps_AndEndsLikeAFreshInstall()
+    {
+        await WithSchemaAsync(async (store, schemaBuilder) =>
+        {
+            var migration = CreateMigration(store, schemaBuilder);
+            await migration.CreateAsync();
+
+            await DropIndexAsync(schemaBuilder, CampaignIndexName);
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TableName(schemaBuilder)} DROP COLUMN CampaignId");
+            await ExecuteAsync(schemaBuilder, $"ALTER TABLE {TemplateTableName(schemaBuilder)} DROP COLUMN Scope");
+
+            Assert.Equal(7, await migration.UpdateFrom6Async());
+            Assert.Equal(8, await migration.UpdateFrom7Async());
+            Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
+            Assert.Equal("0", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE Scope IS NOT NULL"));
         });
     }
 
@@ -161,6 +206,9 @@ public sealed class MessagingAttentionIndexMigrationTests
 
     private static string TableName(SchemaBuilder schemaBuilder)
         => schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(MessagingConversationIndex), MessagingStorage.CollectionName);
+
+    private static string TemplateTableName(SchemaBuilder schemaBuilder)
+        => schemaBuilder.TablePrefix + schemaBuilder.TableNameConvention.GetIndexTable(typeof(MessageTemplateIndex), MessagingStorage.CollectionName);
 
     private static async Task ExecuteAsync(SchemaBuilder schemaBuilder, string sql)
     {

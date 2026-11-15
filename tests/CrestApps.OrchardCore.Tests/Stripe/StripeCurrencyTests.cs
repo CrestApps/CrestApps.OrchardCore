@@ -29,10 +29,10 @@ public sealed class StripeCurrencyTests
     [InlineData(500, "JPY", 500)]
     [InlineData(1.005, "KWD", 1010)]
     [InlineData(1.001, "KWD", 1000)]
-    public void ToMinorUnits_ConvertsUsingCurrencyPrecision(decimal amount, string currency, long expected)
+    public void ToMinorUnits_ConvertsUsingCurrencyPrecision(double amount, string currency, long expected)
     {
         // Act
-        var minor = StripeCurrency.ToMinorUnits(amount, currency);
+        var minor = StripeCurrency.ToMinorUnits(DecimalConversion.FromDouble(amount), currency);
 
         // Assert
         Assert.Equal(expected, minor);
@@ -52,21 +52,23 @@ public sealed class StripeCurrencyTests
     [InlineData(1000, "USD", 10.00)]
     [InlineData(500, "JPY", 500)]
     [InlineData(1010, "KWD", 1.01)]
-    public void FromMinorUnits_ConvertsBackToMajorUnits(long minor, string currency, decimal expected)
+    public void FromMinorUnits_ConvertsBackToMajorUnits(long minor, string currency, double expected)
     {
         // Act
         var major = StripeCurrency.FromMinorUnits(minor, currency);
 
         // Assert
-        Assert.Equal(expected, major);
+        Assert.Equal(DecimalConversion.FromDouble(expected), major);
     }
 
     [Theory]
     [InlineData(10.00, "USD")]
     [InlineData(500, "JPY")]
     [InlineData(29.99, "EUR")]
-    public void RoundTrip_PreservesTwoAndZeroDecimalAmounts(decimal amount, string currency)
+    public void RoundTrip_PreservesTwoAndZeroDecimalAmounts(double amountValue, string currency)
     {
+        var amount = DecimalConversion.FromDouble(amountValue);
+
         // Act
         var minor = StripeCurrency.ToMinorUnits(amount, currency);
         var back = StripeCurrency.FromMinorUnits(minor, currency);

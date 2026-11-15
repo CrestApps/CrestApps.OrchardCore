@@ -94,7 +94,7 @@ internal sealed class FakeTelnyxCallControl : HttpMessageHandler
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var body = request.Content is null ? default : JsonDocument.Parse(await request.Content.ReadAsStringAsync(cancellationToken)).RootElement.Clone();
+        var body = request.Content is null ? default : JsonElement.Parse(await request.Content.ReadAsStringAsync(cancellationToken));
         var path = request.RequestUri.AbsolutePath;
         path = path.StartsWith("/v2/", StringComparison.Ordinal) ? path[4..] : path.TrimStart('/');
         var query = Uri.UnescapeDataString(request.RequestUri.Query ?? string.Empty);

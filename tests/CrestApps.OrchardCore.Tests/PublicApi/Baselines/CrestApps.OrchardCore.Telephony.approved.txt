@@ -188,6 +188,13 @@ namespace CrestApps.OrchardCore.Telephony.Drivers
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidgetSettings settings, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidgetSettings settings, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
+    public sealed class TelephonyCostSettingsDisplayDriver : OrchardCore.DisplayManagement.Entities.SiteDisplayDriver<CrestApps.OrchardCore.Telephony.TelephonyCostSettings>
+    {
+        public TelephonyCostSettingsDisplayDriver(Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService) { }
+        protected override string SettingsGroupId { get; }
+        public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.TelephonyCostSettings settings, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
+        public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.TelephonyCostSettings settings, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
+    }
     public sealed class TelephonySettingsDisplayDriver : OrchardCore.DisplayManagement.Entities.SiteDisplayDriver<CrestApps.OrchardCore.Telephony.TelephonySettings>
     {
         public TelephonySettingsDisplayDriver(Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.Extensions.Options.IOptionsMonitor<CrestApps.OrchardCore.Telephony.TelephonyProviderOptions> providerOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Drivers.TelephonySettingsDisplayDriver> stringLocalizer) { }
@@ -542,6 +549,12 @@ namespace CrestApps.OrchardCore.Telephony.ViewModels
         public bool EnableDiagnostics { get; set; }
         public bool Enabled { get; set; }
         public int RecentCallsCount { get; set; }
+    }
+    public class TelephonyCostSettingsViewModel
+    {
+        public TelephonyCostSettingsViewModel() { }
+        public string Currency { get; set; }
+        public decimal PerMinute { get; set; }
     }
     public class TelephonyExtensionFieldsViewModel
     {

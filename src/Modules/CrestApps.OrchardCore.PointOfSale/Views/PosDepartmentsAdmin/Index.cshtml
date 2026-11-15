@@ -1,0 +1,29 @@
+@model PosDepartmentsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PosDepartmentsIndex" title="@T["Departments"]" />
+</zone>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2">
+            <div class="col">
+                <p class="mb-0 text-body-secondary">@T["A department is what a register rings an amount up in when there's no item to track, such as $10 of Candy. Its sales are counted toward it and taxed by its tax category."]</p>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-secondary text-nowrap" asp-action="Create">@T["Add department"]</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<admin-list name="PosDepartments" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No departments yet. Add one for each kind of sale you ring up by amount, such as Grocery or Candy."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Department"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
