@@ -450,6 +450,25 @@ public sealed class DefaultEstimateCommandService : IEstimateCommandService
 
         await InvoiceCalculation.ApplyAsync(_calculator, invoice, settings, issueDate: null, cancellationToken);
 
+        if (kind == InvoiceKind.Standard)
+        {
+            // The deposit paid on the estimate's prepayment invoices is deducted from the final invoice.
+            var deducted = false;
+
+            foreach (var invoiceId in estimate.InvoiceIds)
+            {
+                if (await _invoices.FindByIdAsync(invoiceId, cancellationToken) is { Kind: InvoiceKind.Prepayment, Status: InvoiceStatus.Open, AmountPaid: > 0m } prepayment)
+                {
+                    deducted |= InvoicePrepayments.AddDeduction(invoice, prepayment, S);
+                }
+            }
+
+            if (deducted)
+            {
+                await InvoiceCalculation.ApplyAsync(_calculator, invoice, settings, issueDate: null, cancellationToken);
+            }
+        }
+
         var validation = await _invoices.ValidateAsync(invoice, cancellationToken);
 
         if (!validation.Succeeded)

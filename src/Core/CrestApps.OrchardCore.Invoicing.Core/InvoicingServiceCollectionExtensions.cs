@@ -56,6 +56,9 @@ public static class InvoicingServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionPaymentHandler, InvoiceTransactionHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionEventHandler, InvoiceTransactionHandler>());
 
+        // Deposits invoiced before the work, deducted from the final invoice.
+        services.TryAddScoped<IInvoicePrepaymentService, DefaultInvoicePrepaymentService>();
+
         // An invoice marked to be charged automatically is charged to the payer's saved card, or sent when it can't be.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, InvoiceAutoCharge>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITransactionEventHandler, InvoiceAutoCharge>());

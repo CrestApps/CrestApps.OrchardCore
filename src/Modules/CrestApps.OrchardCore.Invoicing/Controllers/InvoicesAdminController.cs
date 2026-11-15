@@ -689,6 +689,7 @@ public sealed class InvoicesAdminController : Controller
             new(S["Time"], nameof(DocumentLineKind.Time)),
             new(S["Expense"], nameof(DocumentLineKind.Expense)),
             new(S["Fee"], nameof(DocumentLineKind.Fee)),
+            new(S["Deposit"], nameof(DocumentLineKind.Deposit)),
             new(S["Text"], nameof(DocumentLineKind.Text)),
             new(S["Section heading"], nameof(DocumentLineKind.Section)),
         ];

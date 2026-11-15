@@ -16,7 +16,7 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span>@(string.IsNullOrEmpty(invoice.Number) ? T["Draft invoice"] : (invoice.Kind == InvoiceKind.DebitNote ? T["Debit note {0}", invoice.Number] : T["Invoice {0}", invoice.Number]))</span>
+        <span>@(string.IsNullOrEmpty(invoice.Number) ? T["Draft invoice"] : (invoice.Kind == InvoiceKind.DebitNote ? T["Debit note {0}", invoice.Number] : invoice.Kind == InvoiceKind.Prepayment ? T["Deposit invoice {0}", invoice.Number] : T["Invoice {0}", invoice.Number]))</span>
         <span><partial name="_InvoiceStatusBadge" model="invoice" /></span>
     </div>
     <div class="card-body">

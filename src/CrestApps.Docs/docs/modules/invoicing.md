@@ -85,6 +85,18 @@ Draft credit notes are edited (`CreditNotesAdminController`, routes `Admin/credi
 
 With Work Orders enabled, Invoicing's `WorkOrdersStartup` registers `InvoicingWorkOrderBilling` (`IWorkOrderBilling`, `Priority` 10, so it bills instead of the plain debt Transactions posts). It turns the `WorkOrderBillingRequest` into an invoice: parts as `Item` lines (with the product), labor and other lines as `Service` lines, each with the line's or the request's tax category; billed to the request's payer with the work order's contact; `SourceType` `WorkOrder`, `SourceId` the work order and `Reference` its number; the request's payment term. It issues the invoice at once, which posts what is owed; an invoice that can't be issued stays a draft for someone to finish. Billing a work order again returns its invoice.
 
+## Deposits and installments
+
+A deposit is invoiced before the work as a deposit invoice (`Kind` `Prepayment`, titled **Deposit invoice** on its pages and PDF). `IInvoicePrepaymentService` (`DefaultInvoicePrepaymentService`, Invoicing.Core):
+
+- `RequestDepositAsync(invoiceId, percent, amount)` drafts a deposit invoice for a percent or an amount of a draft invoice's total (worked out by the calculator first), billed to the same customer, with `RelatedInvoiceId` the draft and one `Deposit` line out of scope of tax (the final invoice carries the tax).
+- `ListDeductibleAsync(invoiceId)` lists the deposit invoices a draft can deduct: issued, paid at least in part, in its currency, asked from it or billed to the same party, and not deducted by another invoice that is not void.
+- `DeductAsync(invoiceId, prepaymentInvoiceId)` adds a `Deposit` line of a negative price, what was paid (at most the draft's total), with `SourceType` `Prepayment` and `SourceId` the deposit invoice (`InvoicePrepayments.AddDeduction`), so it is deducted once.
+
+Converting an estimate in full deducts what was paid on its own deposit invoices (B1's `Deposit` conversion) the same way. A draft invoice's page has a **Deposits** card (`InvoiceDepositsDisplayDriver`, `InvoiceDepositsController`, **Create invoices and change drafts**) to **Ask for a deposit first** and to **Deduct from this invoice** each paid deposit; a deposit invoice's page links to the invoice it is for. The invoice editor offers the **Deposit** line kind, so a deduction keeps it when the draft is saved again.
+
+Installments use the ledger's installment plans: with the [Installment Plans](installment-plans) feature, adding `Invoicing` (the invoices' `Transaction.Source`) to **Offer for balances from** (`InstallmentPlanSettings.CheckoutSources`) lets a customer paying an invoice choose to pay it in installments, each with its own due date, reminders and card charge. A schedule set by staff on the invoice itself is not built.
+
 ## Charging a saved card
 
 An invoice with `AutoCharge` (the editor's **Charge the customer's saved card**, or a recurring plan in `IssueAndCharge` mode) is charged by `InvoiceAutoCharge` (Invoicing.Core, an `IInvoiceObserver` and an `ITransactionEventHandler`) when it is issued: it schedules the charge of its transaction to the payer's default saved card through `ISavedPaymentMethodChargeService` ([Transactions](transactions#charging-on-a-schedule-with-retries)) on the morning of the due day in the site's time zone, or charges it at once when it is due on issue. A declined card is retried on the ledger's retry schedule. When the payer kept no card that can be charged (a guest payer never has one), or the retries run out (`AutoChargeAbandonedAsync`), the invoice is sent to the payer with `IInvoiceSender` instead.

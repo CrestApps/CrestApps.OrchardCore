@@ -117,6 +117,17 @@ For example, to thank customers when they pay, start a workflow with **Invoice P
 
 With **Commerce Webhooks** enabled, the same moments can be sent to another system: tick the events under **Invoicing** when you add a webhook under **Configuration > Webhooks** (see [Webhooks](webhooks.md)).
 
+## Ask for a deposit first
+
+To be paid part of a job before you start:
+
+1. Create the invoice for the whole job and click **Save draft**.
+2. On its page, under **Deposits**, enter a percent (or an amount) and click **Ask for a deposit first**. A **deposit invoice** is drafted for that part; issue and send it.
+3. When the customer has paid the deposit, open the draft again: the deposit is listed under **Deposits**. Click **Deduct from this invoice**; a line takes what was paid off the total.
+4. Issue the invoice when the work is done.
+
+An estimate that asked for a deposit works the same way: the deposit invoice made from it is deducted automatically when you invoice the whole estimate. Customers can also pay an invoice in installments when the store offers installments for invoices; see [Installment plans](installment-plans.md).
+
 ## Charge an invoice to the customer's saved card
 
 Tick **Charge the customer's saved card** in the invoice editor, or choose **Issues the invoice and charges the customer's saved payment method** on a recurring plan. When the invoice is issued, it is charged to the customer's default saved card: at once when it is due, or on the morning of its due date. A declined card is tried again on the retry schedule set under **Settings > Commerce > Transactions**. When the customer has no saved card (customers billed by name and e-mail only never do), or every try is declined, the invoice is e-mailed to them to pay instead. The invoice's transaction shows the scheduled charge; see [Transactions](transactions.md#a-balance-charged-to-a-saved-card).

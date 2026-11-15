@@ -70,6 +70,7 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<InvoicesAdminMenu>()
             .AddNavigationProvider<InvoicesAccountMenu>()
             .AddDisplayDriver<Invoice, InvoiceDisplayDriver>()
+            .AddDisplayDriver<Invoice, InvoiceDepositsDisplayDriver>()
             .AddMoneyFormatter();
 
         services.AddScoped<ICheckoutReferenceDescriber, InvoiceCheckoutReferenceDescriber>();

@@ -5,7 +5,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="InvoicesDetail" title="@(string.IsNullOrEmpty(invoice.Number) ? T["Draft invoice"] : (invoice.Kind == InvoiceKind.DebitNote ? T["Debit note {0}", invoice.Number] : T["Invoice {0}", invoice.Number]))">
+    <breadcrumb name="InvoicesDetail" title="@(string.IsNullOrEmpty(invoice.Number) ? T["Draft invoice"] : (invoice.Kind == InvoiceKind.DebitNote ? T["Debit note {0}", invoice.Number] : invoice.Kind == InvoiceKind.Prepayment ? T["Deposit invoice {0}", invoice.Number] : T["Invoice {0}", invoice.Number]))">
         <breadcrumb-item id="InvoicesIndex" action="Index" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoices"]</breadcrumb-item>
     </breadcrumb>
 </zone>
