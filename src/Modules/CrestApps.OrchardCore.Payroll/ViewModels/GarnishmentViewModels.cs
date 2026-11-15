@@ -30,6 +30,13 @@ public class GarnishmentOrderViewModel
 
     public string ExemptAmount { get; set; }
 
+    public bool OtherDependents { get; set; }
+
+    public bool ArrearsOver12Weeks { get; set; }
+
+    [BindNever]
+    public string OrderId { get; set; }
+
     public string TotalOwed { get; set; }
 
     public string Priority { get; set; }

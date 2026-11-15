@@ -136,6 +136,9 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
         var type = Enum.TryParse<GarnishmentType>(model.Type, out var parsedType) ? parsedType : GarnishmentType.Other;
         var typeChanged = context.IsNew || type != order.Type;
 
+        // A support limit that was the one the old answers gave follows the new answers.
+        var derivedLimit = GarnishmentDefaults.LimitPercentFor(order);
+
         order.Type = type;
         order.CaseNumber = model.CaseNumber?.Trim();
         order.Agency = model.Agency?.Trim();
@@ -145,6 +148,8 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
         order.LimitPercent = Number(model.LimitPercent, nameof(model.LimitPercent), context);
         order.ProtectedWeeklyAmount = Number(model.ProtectedWeeklyAmount, nameof(model.ProtectedWeeklyAmount), context);
         order.ExemptAmount = Number(model.ExemptAmount, nameof(model.ExemptAmount), context);
+        order.OtherDependents = model.OtherDependents;
+        order.ArrearsOver12Weeks = model.ArrearsOver12Weeks;
         order.TotalOwed = Number(model.TotalOwed, nameof(model.TotalOwed), context);
         order.Priority = int.TryParse(model.Priority, NumberStyles.Integer, CultureInfo.InvariantCulture, out var priority) ? priority : 0;
         order.ReceivedDate = model.ReceivedDate ?? order.ReceivedDate;
@@ -157,6 +162,12 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
 
         // An empty start date is the handler's to refuse, as for a recipe.
         order.StartDate = model.StartDate ?? default;
+
+        if (type == GarnishmentType.Support && !typeChanged && order.LimitPercent == derivedLimit)
+        {
+            order.LimitPercent = null;
+            GarnishmentOrderHandler.Defaults(order);
+        }
 
         // A new kind brings its own limits where the form left them empty.
         if (typeChanged)
@@ -207,6 +218,9 @@ internal sealed class GarnishmentOrderDisplayDriver : DisplayDriver<GarnishmentO
         model.LimitPercent = Text(order.LimitPercent);
         model.ProtectedWeeklyAmount = Text(order.ProtectedWeeklyAmount);
         model.ExemptAmount = Text(order.ExemptAmount);
+        model.OtherDependents = order.OtherDependents;
+        model.ArrearsOver12Weeks = order.ArrearsOver12Weeks;
+        model.OrderId = order.ItemId;
         model.TotalOwed = Text(order.TotalOwed);
         model.Priority = order.Priority == 0 ? null : order.Priority.ToString(CultureInfo.InvariantCulture);
         model.ReceivedDate = order.ReceivedDate == default ? null : order.ReceivedDate;

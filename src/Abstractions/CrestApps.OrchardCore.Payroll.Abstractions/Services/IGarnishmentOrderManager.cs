@@ -41,6 +41,30 @@ public static class GarnishmentDefaults
     /// </summary>
     /// <param name="type">The kind.</param>
     /// <returns>The percent, or <see langword="null"/> for no percent limit.</returns>
+    public static decimal? LimitPercentFor(GarnishmentOrder order)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        return order.Type == GarnishmentType.Support
+            ? SupportLimitPercent(order.OtherDependents, order.ArrearsOver12Weeks)
+            : LimitPercentFor(order.Type);
+    }
+
+    /// <summary>
+    /// Gets the federal limit of support orders on disposable earnings: 60%, or 50% when the person supports another
+    /// spouse or child, plus 5 points for arrears more than 12 weeks old (so 50, 55, 60 or 65).
+    /// </summary>
+    /// <param name="otherDependents">Whether the person supports another spouse or child.</param>
+    /// <param name="arrearsOver12Weeks">Whether the order is for arrears more than 12 weeks old.</param>
+    /// <returns>The percent.</returns>
+    public static decimal SupportLimitPercent(bool otherDependents, bool arrearsOver12Weeks)
+        => (otherDependents ? 50m : 60m) + (arrearsOver12Weeks ? 5m : 0m);
+
+    /// <summary>
+    /// Gets the default limit of a kind on disposable earnings.
+    /// </summary>
+    /// <param name="type">The kind.</param>
+    /// <returns>The percent, or <see langword="null"/> for no percent limit.</returns>
     public static decimal? LimitPercentFor(GarnishmentType type)
         => type switch
         {

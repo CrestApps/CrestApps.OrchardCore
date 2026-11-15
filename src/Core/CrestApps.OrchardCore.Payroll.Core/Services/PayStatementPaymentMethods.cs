@@ -44,13 +44,17 @@ public sealed class DirectDepositPaymentMethod : IPayStatementPaymentMethod
     /// <param name="manager">The disbursements.</param>
     /// <param name="accounts">The bank accounts, for the name of the account paid.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public DirectDepositPaymentMethod(IDisbursementService disbursements, IDisbursementManager manager, IBankAccountManager accounts, IStringLocalizer<DirectDepositPaymentMethod> stringLocalizer)
+    /// <param name="staff">The staff directory, for whose account is paid.</param>
+    public DirectDepositPaymentMethod(IDisbursementService disbursements, IDisbursementManager manager, IBankAccountManager accounts, IStringLocalizer<DirectDepositPaymentMethod> stringLocalizer, CrestApps.OrchardCore.Staff.Services.IStaffDirectory staff)
     {
         _disbursements = disbursements;
         _manager = manager;
         _accounts = accounts;
+        _staff = staff;
         S = stringLocalizer;
     }
+
+    private readonly CrestApps.OrchardCore.Staff.Services.IStaffDirectory _staff;
 
     /// <inheritdoc />
     public NetPayMethod Method => NetPayMethod.BankAccount;
@@ -65,6 +69,16 @@ public sealed class DirectDepositPaymentMethod : IPayStatementPaymentMethod
         if (string.IsNullOrEmpty(context.Employer?.FundingBankAccountId))
         {
             result.Errors.Add(S["The employer has no account to pay from: choose one under its Funding account."]);
+
+            return result;
+        }
+
+        // Checked again at payment: net pay goes only to the person's own account, whatever the profile says.
+        var destination = string.IsNullOrEmpty(context.Payment.BankAccountId) ? null : await _accounts.FindByIdAsync(context.Payment.BankAccountId, cancellationToken);
+
+        if (!await PayAccountOwnership.IsOwnedByAsync(destination, context.Statement.StaffMemberId, _staff, cancellationToken))
+        {
+            result.Errors.Add(S["The bank account isn't the person's own: net pay is not sent to it."]);
 
             return result;
         }
@@ -98,9 +112,7 @@ public sealed class DirectDepositPaymentMethod : IPayStatementPaymentMethod
         }
 
         result.ReferenceId = created.Disbursement.ItemId;
-        result.Reference = await _accounts.FindByIdAsync(context.Payment.BankAccountId, cancellationToken) is { } account
-            ? S["to {0}", account.Name]
-            : null;
+        result.Reference = S["to {0}", destination.Name];
 
         return result;
     }

@@ -54,6 +54,12 @@ public sealed class GarnishmentOrder : CatalogItem, IModifiedUtcAwareModel
     /// <summary>Gets or sets the pay each period exempt from a tax levy, from the levy notice.</summary>
     public decimal? ExemptAmount { get; set; }
 
+    /// <summary>Gets or sets whether the person supports another spouse or child not covered by a support order, which lowers the support limit from 60% to 50%.</summary>
+    public bool OtherDependents { get; set; }
+
+    /// <summary>Gets or sets whether the support order is for arrears more than 12 weeks old, which raises the support limit by 5 points.</summary>
+    public bool ArrearsOver12Weeks { get; set; }
+
     /// <summary>Gets or sets the total owed, or <see langword="null"/> for an order with no end amount.</summary>
     public decimal? TotalOwed { get; set; }
 
@@ -205,4 +211,7 @@ public sealed class GarnishmentRemittance
 
     /// <summary>Gets or sets whether the statement was voided (the withholding given back).</summary>
     public bool Voided { get; set; }
+
+    /// <summary>Gets or sets how many times the payment to the payee was sent again after a problem.</summary>
+    public int Attempt { get; set; }
 }

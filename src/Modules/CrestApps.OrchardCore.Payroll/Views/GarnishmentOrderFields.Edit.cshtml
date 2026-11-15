@@ -131,6 +131,20 @@
                 <span class="hint">@T["The most the law lets the order take: 50 to 65 for support (shared by the person's support orders), 25 for a creditor and 15 for a student loan (shared with the orders before it). Empty takes the kind's."]</span>
             </div>
         </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="OtherDependents" type="checkbox" class="form-check-input" />
+                    <label asp-for="OtherDependents" class="form-check-label">@T["Supports another spouse or child"]</label>
+                    <span class="hint dashed">@T["For a support order: the person supports a spouse or child the order doesn't cover, so the limit is 50% instead of 60%."]</span>
+                </div>
+                <div class="form-check">
+                    <input asp-for="ArrearsOver12Weeks" type="checkbox" class="form-check-input" />
+                    <label asp-for="ArrearsOver12Weeks" class="form-check-label">@T["Arrears over 12 weeks old"]</label>
+                    <span class="hint dashed">@T["For a support order: it collects support more than 12 weeks overdue, so the limit is 5 points higher (55% or 65%)."]</span>
+                </div>
+            </div>
+        </div>
         <div class="ocat-wrapper" asp-validation-class-for="ProtectedWeeklyAmount">
             <label asp-for="ProtectedWeeklyAmount" class="ocat-label">@T["Pay left each week"]</label>
             <div class="ocat-end">
@@ -233,6 +247,10 @@
                         @if (!string.IsNullOrEmpty(row.Problem))
                         {
                             <div class="text-danger small">@row.Problem</div>
+                        }
+                        @if (!row.Voided && string.IsNullOrEmpty(row.ReferenceId) && row.Method != CrestApps.OrchardCore.Payroll.Models.GarnishmentPaymentMethod.Outside && row.Amount > 0 && !string.IsNullOrEmpty(Model.OrderId))
+                        {
+                            <button type="submit" class="btn btn-sm btn-outline-secondary mt-1" formaction="@Url.Action("Retry", "Garnishments", new { area = "CrestApps.OrchardCore.Payroll", id = Model.OrderId, statementId = row.StatementId })" formnovalidate>@T["Send again"]</button>
                         }
                     </li>
                 }

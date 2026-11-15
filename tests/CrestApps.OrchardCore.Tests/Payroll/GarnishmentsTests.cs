@@ -146,7 +146,7 @@ public sealed class GarnishmentsTests
         Assert.StartsWith("Check ", remittance.Reference, StringComparison.Ordinal);
 
         var check = await payments.Checks.Manager.FindByIdAsync(remittance.ReferenceId, TestContext.Current.CancellationToken);
-        Assert.Equal(("State disbursement unit", 400m, PayStatementSources.Kind, statement.ItemId, setup.EmployerId), (check.PayeeName, check.Amount, check.SourceKind, check.SourceId, check.AccessScope));
+        Assert.Equal(("State disbursement unit", 400m, GarnishmentSources.Kind, GarnishmentSources.SourceId(orderId, statement.ItemId), setup.EmployerId), (check.PayeeName, check.Amount, check.SourceKind, check.SourceId, check.AccessScope));
 
         var voider = CalendarTestHarness.User("voider", PayrollPermissions.VoidPayStatements.Name);
         var voided = await harness.RunAsync(async services =>

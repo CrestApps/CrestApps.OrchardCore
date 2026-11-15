@@ -6,13 +6,17 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Banking.Services;
+using System.Security.Claims;
+using CrestApps.OrchardCore.Checks;
 using CrestApps.OrchardCore.Checks.Models;
 using CrestApps.OrchardCore.Checks.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Disbursements;
 using CrestApps.OrchardCore.Disbursements.Models;
 using CrestApps.OrchardCore.Disbursements.Services;
+using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.SourceAccess;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -21,6 +25,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Indexes;
@@ -257,7 +263,7 @@ public sealed class GarnishmentOrderHandler : CatalogEntryHandlerBase<Garnishmen
             order.Priority = GarnishmentDefaults.PriorityFor(order.Type);
         }
 
-        order.LimitPercent ??= GarnishmentDefaults.LimitPercentFor(order.Type);
+        order.LimitPercent ??= GarnishmentDefaults.LimitPercentFor(order);
 
         if (GarnishmentDefaults.ProtectsWeeklyAmount(order.Type))
         {
@@ -295,6 +301,24 @@ public sealed class GarnishmentOrderHandler : CatalogEntryHandlerBase<Garnishmen
             context.Result.Fail(new ValidationResult(S["A percent is from 0 to 100."], [nameof(GarnishmentOrder.Percent)]));
         }
 
+        // Federal law caps support at 50% or 60% of disposable earnings, 5 points more for old arrears; an order may ask
+        // for less, never more.
+        if (order.Type == GarnishmentType.Support)
+        {
+            var maximum = GarnishmentDefaults.SupportLimitPercent(order.OtherDependents, order.ArrearsOver12Weeks);
+
+            if (order.Percent > maximum || order.LimitPercent > maximum)
+            {
+                context.Result.Fail(new ValidationResult(S["A support order takes at most {0}% of disposable earnings: 50% when the person supports another spouse or child, 60% otherwise, 5 more for arrears over 12 weeks old.", maximum], [nameof(GarnishmentOrder.LimitPercent)]));
+            }
+        }
+
+        // A federal levy leaves the exempt amount of its notice: without it, the levy would take all of the pay.
+        if (order.Type == GarnishmentType.FederalTaxLevy && order.ExemptAmount is null)
+        {
+            context.Result.Fail(new ValidationResult(S["Enter the amount exempt each pay from the levy notice."], [nameof(GarnishmentOrder.ExemptAmount)]));
+        }
+
         if (order.Amount is < 0 || order.TotalOwed is < 0 || order.ExemptAmount is < 0 || order.ProtectedWeeklyAmount is < 0)
         {
             context.Result.Fail(new ValidationResult(S["An amount is zero or more."], [nameof(GarnishmentOrder.Amount)]));
@@ -326,8 +350,8 @@ public sealed class GarnishmentOrderHandler : CatalogEntryHandlerBase<Garnishmen
                 ? null
                 : await accounts.FindByIdAsync(order.PayeeBankAccountId, cancellationToken);
 
-            // The payee's own account: never one of the business's, nor the person's.
-            if (account is null || account.Owner.IsEmpty || (account.Owner.Kind == Staff.StaffConstants.PartyKind && account.Owner.Id == order.StaffMemberId))
+            // The payee's own account: never one of the business's, nor a staff member's or a user's personal account.
+            if (account is null || account.Owner.IsEmpty || account.Owner.Kind is Staff.StaffConstants.PartyKind or PartyKinds.User)
             {
                 context.Result.Fail(new ValidationResult(S["Choose the payee's bank account."], [nameof(GarnishmentOrder.PayeeBankAccountId)]));
             }
@@ -511,46 +535,51 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
 
         foreach (var group in Withholdings(statement))
         {
+            await using var locker = await LockAsync(group.OrderId);
+
+            if (locker is null)
+            {
+                throw new InvalidOperationException($"The garnishment order {group.OrderId} is being worked on.");
+            }
+
+            // Read under the order's lock: another run issuing for the same order waits, then sees what this one withheld.
             if (await _orders.FindByIdAsync(group.OrderId, cancellationToken) is not { } order || order.Remittances.Any(remittance => remittance.StatementId == statement.ItemId))
             {
                 continue;
             }
 
-            order.Withheld += group.Amount;
+            // Two runs calculated against the same balance: never send the payee more than the order still owes.
+            var amount = order.Remaining is { } remaining ? Math.Min(group.Amount, Math.Max(0, remaining)) : group.Amount;
+            var row = new GarnishmentRemittance
+            {
+                StatementId = statement.ItemId,
+                StatementNumber = statement.Number,
+                PayDate = statement.PayDate,
+                Amount = amount,
+                Method = order.PaymentMethod,
+            };
+
+            if (amount < group.Amount)
+            {
+                row.Problem = S["{0} more was withheld than the order still owed: refund it to the employee.", (group.Amount - amount).ToString("N2", CultureInfo.CurrentCulture)];
+            }
+
+            order.Withheld += amount;
 
             if (order.Remaining is 0)
             {
                 order.Status = GarnishmentStatus.Completed;
             }
 
-            order.Remittances.Add(new GarnishmentRemittance
-            {
-                StatementId = statement.ItemId,
-                StatementNumber = statement.Number,
-                PayDate = statement.PayDate,
-                Amount = group.Amount,
-                Method = order.PaymentMethod,
-            });
-
+            order.Remittances.Add(row);
             await _orders.UpdateAsync(order, cancellationToken: cancellationToken);
 
-            if (order.PaymentMethod == GarnishmentPaymentMethod.Outside)
+            if (order.PaymentMethod != GarnishmentPaymentMethod.Outside && amount > 0)
             {
-                continue;
+                await SendAsync(order, statement, row, cancellationToken);
             }
 
-            // Paying may commit the session: the order is read again before it is saved.
-            var (referenceId, reference, problem) = await PayAsync(order, statement, group.Amount, cancellationToken);
-            var fresh = await _orders.FindByIdAsync(order.ItemId, cancellationToken) ?? order;
-            var row = fresh.Remittances.LastOrDefault(remittance => remittance.StatementId == statement.ItemId);
-
-            if (row is not null)
-            {
-                row.ReferenceId = referenceId;
-                row.Reference = reference;
-                row.Problem = problem;
-                await _orders.UpdateAsync(fresh, cancellationToken: cancellationToken);
-            }
+            await Committer().CommitAsync(cancellationToken);
         }
     }
 
@@ -561,41 +590,119 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
 
         foreach (var group in Withholdings(statement))
         {
+            await using var locker = await LockAsync(group.OrderId);
+
+            if (locker is null)
+            {
+                throw new InvalidOperationException($"The garnishment order {group.OrderId} is being worked on.");
+            }
+
             if (await _orders.FindByIdAsync(group.OrderId, cancellationToken) is not { } order
                 || order.Remittances.FirstOrDefault(remittance => remittance.StatementId == statement.ItemId && !remittance.Voided) is not { } row)
             {
                 continue;
             }
 
-            order.Withheld = Math.Max(0, order.Withheld - group.Amount);
-            row.Voided = true;
+            // The withholding is given back only once the payee's payment is stopped (or none went out); a payment that
+            // went out stays on the order, flagged for a person to recover.
+            var stopped = string.IsNullOrEmpty(row.ReferenceId)
+                || row.Method == GarnishmentPaymentMethod.Outside
+                || await StopAsync(row, S["Pay statement {0} voided", statement.Number], cancellationToken);
+            var fresh = await _orders.FindByIdAsync(order.ItemId, cancellationToken) ?? order;
+            var freshRow = fresh.Remittances.FirstOrDefault(remittance => remittance.StatementId == statement.ItemId && !remittance.Voided) ?? row;
 
-            if (order.Status == GarnishmentStatus.Completed && order.Remaining is > 0)
+            if (stopped)
             {
-                order.Status = GarnishmentStatus.Active;
-            }
+                fresh.Withheld = Math.Max(0, fresh.Withheld - freshRow.Amount);
+                freshRow.Voided = true;
 
-            await _orders.UpdateAsync(order, cancellationToken: cancellationToken);
-
-            if (string.IsNullOrEmpty(row.ReferenceId))
-            {
-                continue;
-            }
-
-            var stopped = await StopAsync(row, S["Pay statement {0} voided", statement.Number], cancellationToken);
-
-            if (!stopped)
-            {
-                var fresh = await _orders.FindByIdAsync(order.ItemId, cancellationToken) ?? order;
-
-                if (fresh.Remittances.FirstOrDefault(remittance => remittance.StatementId == statement.ItemId) is { } freshRow)
+                if (fresh.Status == GarnishmentStatus.Completed && fresh.Remaining is > 0)
                 {
-                    freshRow.Problem = S["The payment to the payee could not be stopped: it is in a bank file or was cashed. Ask the payee to refund it."];
-                    await _orders.UpdateAsync(fresh, cancellationToken: cancellationToken);
+                    fresh.Status = GarnishmentStatus.Active;
                 }
             }
+            else
+            {
+                freshRow.Problem = S["The statement was voided, but the payment to the payee could not be stopped: it is in a bank file or was cashed. Ask the payee to refund it; the withholding stays on the order until then."];
+            }
+
+            await _orders.UpdateAsync(fresh, cancellationToken: cancellationToken);
+            await Committer().CommitAsync(cancellationToken);
         }
     }
+
+    /// <summary>
+    /// Sends again a payment to the payee that failed: the remittance of a statement with a problem and no payment.
+    /// </summary>
+    /// <param name="orderId">The order.</param>
+    /// <param name="statementId">The statement whose remittance is sent again.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The problem, or <see langword="null"/> when the payment went out.</returns>
+    public async Task<string> RetryAsync(string orderId, string statementId, CancellationToken cancellationToken = default)
+    {
+        await using var locker = await LockAsync(orderId);
+
+        if (locker is null)
+        {
+            return S["The order is being worked on. Try again in a moment."];
+        }
+
+        if (await _orders.FindByIdAsync(orderId, cancellationToken) is not { } order
+            || order.Remittances.FirstOrDefault(remittance => remittance.StatementId == statementId && !remittance.Voided) is not { } row)
+        {
+            return S["The payment to send again was not found."];
+        }
+
+        if (!string.IsNullOrEmpty(row.ReferenceId) || order.PaymentMethod == GarnishmentPaymentMethod.Outside || row.Amount <= 0)
+        {
+            return S["This payment went out already, or isn't sent from payroll."];
+        }
+
+        if (await _services.GetRequiredService<PayStatementStore>().FindByIdAsync(statementId, cancellationToken) is not { } statement
+            || statement.Status is not (PayStatementStatus.Final or PayStatementStatus.Paid))
+        {
+            return S["The pay statement is no longer final: nothing is sent."];
+        }
+
+        row.Attempt++;
+        row.Method = order.PaymentMethod;
+        await _orders.UpdateAsync(order, cancellationToken: cancellationToken);
+
+        var problem = await SendAsync(order, statement, row, cancellationToken);
+
+        await Committer().CommitAsync(cancellationToken);
+
+        return problem;
+    }
+
+    // Sends the remittance and records its payment or problem on a fresh read of the order.
+    private async Task<string> SendAsync(GarnishmentOrder order, PayStatement statement, GarnishmentRemittance row, CancellationToken cancellationToken)
+    {
+        // Paying may commit the session: the order is read again before it is saved.
+        var (referenceId, reference, problem) = await PayAsync(order, statement, row, cancellationToken);
+        var fresh = await _orders.FindByIdAsync(order.ItemId, cancellationToken) ?? order;
+        var freshRow = fresh.Remittances.LastOrDefault(remittance => remittance.StatementId == statement.ItemId && !remittance.Voided);
+
+        if (freshRow is not null)
+        {
+            freshRow.ReferenceId = referenceId;
+            freshRow.Reference = reference;
+            freshRow.Problem = problem ?? (freshRow.Problem is { } kept && kept != row.Problem ? kept : row.Problem);
+            await _orders.UpdateAsync(fresh, cancellationToken: cancellationToken);
+        }
+
+        return problem;
+    }
+
+    private async Task<ILocker> LockAsync(string orderId)
+    {
+        var (locker, locked) = await _services.GetRequiredService<IDistributedLock>().TryAcquireLockAsync("Payroll:Garnishment:" + orderId, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(10));
+
+        return locked ? locker : null;
+    }
+
+    private IPayrollCommitter Committer()
+        => _services.GetRequiredService<IPayrollCommitter>();
 
     private static IEnumerable<(string OrderId, decimal Amount)> Withholdings(PayStatement statement)
         => statement.Lines
@@ -604,7 +711,7 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
             .Select(group => (group.Key, group.Sum(line => line.Amount)))
             .Where(group => group.Item2 > 0);
 
-    private async Task<(string ReferenceId, string Reference, string Problem)> PayAsync(GarnishmentOrder order, PayStatement statement, decimal amount, CancellationToken cancellationToken)
+    private async Task<(string ReferenceId, string Reference, string Problem)> PayAsync(GarnishmentOrder order, PayStatement statement, GarnishmentRemittance row, CancellationToken cancellationToken)
     {
         var employer = await _employers.FindByIdAsync(order.EmployerId, cancellationToken);
 
@@ -614,6 +721,12 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
         }
 
         var memo = string.IsNullOrEmpty(order.CaseNumber) ? statement.Snapshot?.EmployeeName : $"{order.CaseNumber} {statement.Snapshot?.EmployeeName}";
+        var key = row.Attempt > 0
+            ? $"payroll-garnishment:{statement.ItemId}:{order.ItemId}:{row.Attempt}"
+            : $"payroll-garnishment:{statement.ItemId}:{order.ItemId}";
+
+        // The payment's source is the remittance, not the statement: its voucher shows the order, never the person's pay.
+        var sourceId = GarnishmentSources.SourceId(order.ItemId, statement.ItemId);
 
         if (order.PaymentMethod == GarnishmentPaymentMethod.BankAccount)
         {
@@ -623,27 +736,34 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
             }
 
             var account = await accounts.FindByIdAsync(order.PayeeBankAccountId, cancellationToken);
+
+            // Checked again at payment: the account may have changed hands since the order was saved.
+            if (account is null || account.Owner.IsEmpty || account.Owner.Kind is Staff.StaffConstants.PartyKind or PartyKinds.User)
+            {
+                return (null, null, S["The payee's bank account is gone or is a personal account: choose the payee's own account on the order."]);
+            }
+
             var created = await disbursements.CreateAsync(new DisbursementRequest
             {
-                Payee = account?.Owner ?? default,
+                Payee = account.Owner,
                 PayeeName = order.PayeeName,
                 PayeeAddress = order.PayeeAddress,
                 IsBusinessPayee = true,
-                Amount = amount,
+                Amount = row.Amount,
                 Currency = statement.Currency,
                 Method = DisbursementsConstants.Methods.Ach,
                 SourceBankAccountId = employer.FundingBankAccountId,
                 DestinationBankAccountId = order.PayeeBankAccountId,
-                SourceKind = PayStatementSources.Kind,
-                SourceId = statement.ItemId,
+                SourceKind = GarnishmentSources.Kind,
+                SourceId = sourceId,
                 AccessScope = statement.EmployerId,
                 Memo = memo,
                 EffectiveDate = statement.PayDate,
-                IdempotencyKey = $"payroll-garnishment:{statement.ItemId}:{order.ItemId}",
+                IdempotencyKey = key,
             }, cancellationToken);
 
             return created.Succeeded
-                ? (created.Disbursement.ItemId, account is null ? null : S["to {0}", account.Name].Value, null)
+                ? (created.Disbursement.ItemId, S["to {0}", account.Name].Value, null)
                 : (null, null, string.Join(" ", created.Errors));
         }
 
@@ -658,13 +778,14 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
             Payee = default,
             PayeeName = order.PayeeName,
             PayeeAddress = order.PayeeAddress,
-            Amount = amount,
+            Amount = row.Amount,
             Currency = statement.Currency,
             CheckDate = statement.PayDate,
             Memo = memo,
-            SourceKind = PayStatementSources.Kind,
-            SourceId = statement.ItemId,
+            SourceKind = GarnishmentSources.Kind,
+            SourceId = sourceId,
             AccessScope = statement.EmployerId,
+            IdempotencyKey = key,
         }, cancellationToken);
 
         return issued.Succeeded
@@ -676,16 +797,155 @@ public sealed class GarnishmentStatementObserver : IPayStatementObserver
     {
         if (row.Method == GarnishmentPaymentMethod.BankAccount)
         {
-            return _services.GetService<IDisbursementManager>() is { } manager
-                && _services.GetService<IDisbursementService>() is { } disbursements
-                && await manager.FindByIdAsync(row.ReferenceId, cancellationToken) is { } disbursement
-                && await disbursements.CancelAsync(disbursement, reason, cancellationToken);
+            if (_services.GetService<IDisbursementManager>() is not { } manager
+                || _services.GetService<IDisbursementService>() is not { } disbursements
+                || await manager.FindByIdAsync(row.ReferenceId, cancellationToken) is not { } disbursement)
+            {
+                return false;
+            }
+
+            // A deposit the bank returned, that failed or that was cancelled never reached the payee.
+            return disbursement.Status is DisbursementStatus.Returned or DisbursementStatus.Failed or DisbursementStatus.Canceled
+                || await disbursements.CancelAsync(disbursement, reason, cancellationToken);
         }
 
-        return _services.GetService<ICheckManager>() is { } checks
-            && _services.GetService<ICheckService>() is { } service
-            && await checks.FindByIdAsync(row.ReferenceId, cancellationToken) is { } check
-            && await service.VoidAsync(check, reason, cancellationToken);
+        if (_services.GetService<ICheckManager>() is not { } checks
+            || _services.GetService<ICheckService>() is not { } service
+            || await checks.FindByIdAsync(row.ReferenceId, cancellationToken) is not { } check)
+        {
+            return false;
+        }
+
+        return check.Status == CheckStatus.Voided || await service.VoidAsync(check, reason, cancellationToken);
+    }
+}
+
+/// <summary>
+/// The source of a payment to a garnishment payee: one order's remittance of one statement, scoped by its employer.
+/// </summary>
+public static class GarnishmentSources
+{
+    /// <summary>The source kind.</summary>
+    public const string Kind = "PayrollGarnishment";
+
+    /// <summary>
+    /// Gets the source id of a remittance.
+    /// </summary>
+    /// <param name="orderId">The order.</param>
+    /// <param name="statementId">The statement.</param>
+    /// <returns>The source id.</returns>
+    public static string SourceId(string orderId, string statementId)
+        => orderId + ":" + statementId;
+
+    /// <summary>
+    /// Reads a source id back into its order and statement.
+    /// </summary>
+    /// <param name="sourceId">The source id.</param>
+    /// <param name="orderId">The order.</param>
+    /// <param name="statementId">The statement.</param>
+    /// <returns>Whether the id has both.</returns>
+    public static bool TryParse(string sourceId, out string orderId, out string statementId)
+    {
+        var parts = (sourceId ?? string.Empty).Split(':');
+
+        (orderId, statementId) = parts.Length == 2 && parts.All(part => part.Length > 0) ? (parts[0], parts[1]) : (null, null);
+
+        return orderId is not null;
+    }
+}
+
+/// <summary>
+/// Limits who sees and works the checks and deposits that pay garnishment payees to the employers they may see or
+/// process the pay runs of, as for the statements they come from.
+/// </summary>
+public sealed class GarnishmentSourceAccess : ISourceAccess
+{
+    private readonly IPayrollScopeService _scope;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GarnishmentSourceAccess"/> class.
+    /// </summary>
+    /// <param name="scope">The payroll scope.</param>
+    public GarnishmentSourceAccess(IPayrollScopeService scope)
+    {
+        _scope = scope;
+    }
+
+    /// <inheritdoc />
+    public string SourceKind => GarnishmentSources.Kind;
+
+    /// <inheritdoc />
+    public async Task<SourceAccessScope> GetScopeAsync(ClaimsPrincipal user, SourceAccessLevel level, CancellationToken cancellationToken = default)
+    {
+        var scope = await _scope.GetScopeAsync(user, level == SourceAccessLevel.Manage ? PayrollPermissions.ProcessPayRuns : PayrollPermissions.ViewPayRuns, cancellationToken);
+
+        return scope.All ? SourceAccessScope.All : SourceAccessScope.Of(scope.EmployerIds);
+    }
+}
+
+/// <summary>
+/// Prints the voucher of a check to a garnishment payee: the case, the person it is withheld from, the pay date and
+/// period and the amount; never the person's earnings, taxes, other orders or year-to-date amounts.
+/// </summary>
+public sealed class GarnishmentCheckVoucherSource : ICheckVoucherSource
+{
+    private readonly IGarnishmentOrderManager _orders;
+    private readonly PayStatementStore _statements;
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GarnishmentCheckVoucherSource"/> class.
+    /// </summary>
+    /// <param name="orders">The orders.</param>
+    /// <param name="statements">The statements.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public GarnishmentCheckVoucherSource(IGarnishmentOrderManager orders, PayStatementStore statements, IStringLocalizer<GarnishmentCheckVoucherSource> stringLocalizer)
+    {
+        _orders = orders;
+        _statements = statements;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public string SourceKind => GarnishmentSources.Kind;
+
+    /// <inheritdoc />
+    public async Task<CheckVoucher> GetVoucherAsync(CheckRecord check, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(check);
+
+        if (!GarnishmentSources.TryParse(check.SourceId, out var orderId, out var statementId)
+            || await _orders.FindByIdAsync(orderId, cancellationToken) is not { } order
+            || await _statements.FindByIdAsync(statementId, cancellationToken) is not { } statement)
+        {
+            return null;
+        }
+
+        var amount = string.IsNullOrEmpty(check.Currency) ? check.Amount.ToString("N2", CultureInfo.InvariantCulture) : CurrencyScale.Format(check.Amount, check.Currency);
+        var lines = new List<CheckVoucherLine>();
+
+        void Add(string label, string value)
+        {
+            if (!string.IsNullOrEmpty(value))
+            {
+                lines.Add(new CheckVoucherLine { Label = label, Values = [value] });
+            }
+        }
+
+        Add(S["Case number"], order.CaseNumber);
+        Add(S["Court or agency"], order.Agency);
+        Add(S["Withheld from"], statement.Snapshot?.EmployeeName);
+        Add(S["Pay date"], statement.PayDate.ToString("d", CultureInfo.CurrentCulture));
+        Add(S["Pay period"], S["{0} to {1}", statement.PeriodStart.ToString("d", CultureInfo.CurrentCulture), statement.PeriodEnd.ToString("d", CultureInfo.CurrentCulture)]);
+        lines.Add(new CheckVoucherLine { Label = S["Amount"], Values = [amount], IsEmphasized = true });
+
+        return new CheckVoucher
+        {
+            Title = string.IsNullOrEmpty(order.CaseNumber) ? S["Garnishment payment"] : S["Garnishment payment, case {0}", order.CaseNumber],
+            Columns = [S["Remittance"], string.Empty],
+            Lines = lines,
+        };
     }
 }
 
@@ -757,6 +1017,9 @@ public static class GarnishmentsServiceCollectionExtensions
         services.TryAddScoped<ICatalogManager<GarnishmentOrder>>(serviceProvider => serviceProvider.GetRequiredService<IGarnishmentOrderManager>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, GarnishmentsPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayStatementObserver, GarnishmentStatementObserver>());
+        services.TryAddScoped<GarnishmentStatementObserver>();
+        services.AddSourceAccess<GarnishmentSourceAccess>();
+        services.AddCheckVoucherSource<GarnishmentCheckVoucherSource>();
 
         return services;
     }

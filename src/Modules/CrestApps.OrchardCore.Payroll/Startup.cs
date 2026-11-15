@@ -235,6 +235,7 @@ public sealed class PayrollBankingStartup : StartupBase
     {
         services.AddDisplayDriver<Employer, EmployerFundingDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerFundingHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<EmployeePayProfile>, PayProfileAccountHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayProfileBlockerProvider, BankAccountPayBlockers>());
     }
 }

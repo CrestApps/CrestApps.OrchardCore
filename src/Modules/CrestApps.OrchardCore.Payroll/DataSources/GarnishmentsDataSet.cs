@@ -8,7 +8,11 @@ using OrchardCore.DataSources;
 namespace CrestApps.OrchardCore.Payroll.DataSources;
 
 /// <summary>A garnishment order with the names of its person and employer.</summary>
-public sealed record GarnishmentRow(GarnishmentOrder Order, string EmployeeName, string EmployerName);
+/// <param name="Order">The order.</param>
+/// <param name="EmployeeName">The person's name.</param>
+/// <param name="EmployerName">The employer's name.</param>
+/// <param name="ShowsCase">Whether the reader manages garnishments for the employer, and so sees the case number and agency.</param>
+public sealed record GarnishmentRow(GarnishmentOrder Order, string EmployeeName, string EmployerName, bool ShowsCase = false);
 
 /// <summary>
 /// Garnishments: one row per order of the employers a user may export payroll data for.
@@ -35,8 +39,8 @@ public sealed class GarnishmentsDataSet : RecordDataSet<GarnishmentRow>, IPayrol
         AddField("StaffMemberId", S["Staff member ID"], DataFieldType.Text, row => row.Order.StaffMemberId, group);
         AddField("EmployeeName", S["Name"], DataFieldType.Text, row => row.EmployeeName, group);
         AddField("Type", S["Kind"], DataFieldType.Text, row => row.Order.Type.ToString(), group);
-        AddField("CaseNumber", S["Case number"], DataFieldType.Text, row => row.Order.CaseNumber, group);
-        AddField("Agency", S["Court or agency"], DataFieldType.Text, row => row.Order.Agency, group);
+        AddField("CaseNumber", S["Case number"], DataFieldType.Text, row => row.ShowsCase ? row.Order.CaseNumber : null, group);
+        AddField("Agency", S["Court or agency"], DataFieldType.Text, row => row.ShowsCase ? row.Order.Agency : null, group);
         AddField("PayeeName", S["Payee"], DataFieldType.Text, row => row.Order.PayeeName, group);
         AddField("PaymentMethod", S["Paid by"], DataFieldType.Text, row => row.Order.PaymentMethod.ToString(), group);
         AddField("Amount", S["Amount each pay"], DataFieldType.Decimal, row => row.Order.Amount, group);
@@ -65,9 +69,12 @@ public sealed class GarnishmentsDataSet : RecordDataSet<GarnishmentRow>, IPayrol
             yield break;
         }
 
+        // The case number and the court say what the person owes and to whom: only for who manages the employer's orders.
+        var manage = await _reader.GetScopeAsync(query?.Context?.User, PayrollPermissions.ManageGarnishments, cancellationToken);
+
         foreach (var order in await _orders.ListByEmployersAsync(scope.All ? null : [.. scope.EmployerIds], cancellationToken))
         {
-            yield return new GarnishmentRow(order, await _names.StaffAsync(order.StaffMemberId), await _names.EmployerAsync(order.EmployerId));
+            yield return new GarnishmentRow(order, await _names.StaffAsync(order.StaffMemberId), await _names.EmployerAsync(order.EmployerId), manage.Allows(order.EmployerId));
         }
     }
 

@@ -1,8 +1,9 @@
 using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.Services;
+using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
-using CrestApps.OrchardCore.Staff;
+using CrestApps.OrchardCore.Staff.Services;
 using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Payroll.Services;
@@ -14,12 +15,14 @@ namespace CrestApps.OrchardCore.Payroll.Services;
 internal sealed class BankAccountPayBlockers : IPayProfileBlockerProvider
 {
     private readonly IBankAccountManager _accounts;
+    private readonly IStaffDirectory _staff;
 
     internal readonly IStringLocalizer S;
 
-    public BankAccountPayBlockers(IBankAccountManager accounts, IStringLocalizer<BankAccountPayBlockers> stringLocalizer)
+    public BankAccountPayBlockers(IBankAccountManager accounts, IStaffDirectory staff, IStringLocalizer<BankAccountPayBlockers> stringLocalizer)
     {
         _accounts = accounts;
+        _staff = staff;
         S = stringLocalizer;
     }
 
@@ -29,7 +32,7 @@ internal sealed class BankAccountPayBlockers : IPayProfileBlockerProvider
         {
             var account = await _accounts.FindByIdAsync(row.BankAccountId, cancellationToken);
 
-            if (account is null || account.Owner.Kind != StaffConstants.PartyKind || account.Owner.Id != profile.StaffMemberId)
+            if (!await PayAccountOwnership.IsOwnedByAsync(account, profile.StaffMemberId, _staff, cancellationToken))
             {
                 blockers.Add(new PayBlocker("BankAccountMissing", S["A deposit goes to a bank account that is gone or isn't the person's."]));
             }

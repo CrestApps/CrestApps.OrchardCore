@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Core.Validation;
+using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
@@ -264,6 +265,34 @@ public sealed class GarnishmentsController : Controller
         await _notifier.SuccessAsync(H["The garnishment has been released: nothing more is withheld."]);
 
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [Admin("payroll/garnishments/retry/{id}", "PayrollGarnishmentsRetry")]
+    public async Task<IActionResult> Retry(string id, string statementId, [FromServices] GarnishmentStatementObserver observer)
+    {
+        if (string.IsNullOrEmpty(id) || await _manager.FindByIdAsync(id) is not { } order)
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!await MayManageAsync(order.EmployerId, order.StaffMemberId))
+        {
+            return Forbid();
+        }
+
+        var problem = await observer.RetryAsync(order.ItemId, statementId, HttpContext.RequestAborted);
+
+        if (problem is null)
+        {
+            await _notifier.SuccessAsync(H["The payment to the payee has been sent."]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["{0}", problem]);
+        }
+
+        return RedirectToAction(nameof(Edit), new { id });
     }
 
     private async Task<bool> MayManageAsync(string employerId, string staffMemberId)
