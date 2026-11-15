@@ -294,12 +294,26 @@ public sealed partial class DefaultRecurringPlanService : IRecurringPlanService
             });
         }
 
+        // The customer's charges kept to bill later, up to the run's day, when the plan bills them too.
+        if (plan.BillUnbilledCharges && _serviceProvider.GetService<IBillingService>() is { } billing)
+        {
+            var charges = await billing.ListUnbilledAsync(ChargesBillableSource.SourceType, new BillableQuery { Party = invoice.BillTo.Party, Currency = invoice.Currency, Through = occurrence }, cancellationToken);
+
+            await billing.AddToDraftAsync(invoice, ChargesBillableSource.SourceType, charges, cancellationToken);
+        }
+
         await InvoiceCalculation.ApplyAsync(_calculator, invoice, settings, issueDate: null, cancellationToken);
 
         var validation = await _invoices.ValidateAsync(invoice, cancellationToken);
 
         if (!validation.Succeeded)
         {
+            // The draft is not kept, so the charges it took are let go.
+            if (invoice.BilledItems.Count > 0 && _serviceProvider.GetService<IBillingService>() is { } releasing)
+            {
+                await releasing.ReconcileAsync(invoice, releaseAll: true, cancellationToken);
+            }
+
             await FailAsync(plan, record, string.Join(" ", validation.Errors.Select(error => error.ErrorMessage)), result);
 
             return;

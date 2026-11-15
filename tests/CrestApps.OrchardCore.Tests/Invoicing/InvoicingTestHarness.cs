@@ -174,7 +174,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
 
         store.RegisterIndexes([new TransactionIndexProvider()], TransactionsConstants.CollectionName);
-        store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider(), new RecurringPlanIndexProvider(), new LateFeePolicyIndexProvider()], InvoicingConstants.CollectionName);
+        store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider(), new RecurringPlanIndexProvider(), new LateFeePolicyIndexProvider(), new BillableItemIndexProvider()], InvoicingConstants.CollectionName);
 
         var cancellationToken = TestContext.Current.CancellationToken;
 
@@ -193,6 +193,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             await new EstimatesMigrations { SchemaBuilder = schema }.CreateAsync();
             await new RecurringPlansMigrations { SchemaBuilder = schema }.CreateAsync();
             await new LateFeePolicyMigrations { SchemaBuilder = schema }.CreateAsync();
+            await new BillableItemMigrations { SchemaBuilder = schema }.CreateAsync();
             await transaction.CommitAsync(cancellationToken);
         }
 
@@ -328,6 +329,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddInvoicingEstimates();
         services.AddInvoicingRecurring();
         services.AddInvoicingCollections();
+        services.AddInvoicingBilling();
         services.AddScoped<IRecurringPlanObserver>(_ => new RecordingPlanObserver(harness.Observed));
         services.AddScoped<IEstimateObserver>(_ => new RecordingEstimateObserver(harness.Observed));
 

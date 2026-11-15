@@ -296,6 +296,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Invoicing` | Invoicing | [Invoicing](./modules/invoicing) |
 | `CrestApps.OrchardCore.Invoicing.Estimates` | Invoicing Estimates | [Invoicing](./modules/invoicing#estimates) |
 | `CrestApps.OrchardCore.Invoicing.Api` | Invoicing API | [Invoicing](./modules/invoicing#api) |
+| `CrestApps.OrchardCore.Invoicing.Billing` | Invoicing Billing | [Invoicing](./modules/invoicing#billing-work-and-costs) |
 | `CrestApps.OrchardCore.Invoicing.Collections` | Invoicing Collections | [Invoicing](./modules/invoicing#late-fees-and-debit-notes) |
 | `CrestApps.OrchardCore.Invoicing.Recurring` | Invoicing Recurring | [Invoicing](./modules/invoicing#recurring-plans) |
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |

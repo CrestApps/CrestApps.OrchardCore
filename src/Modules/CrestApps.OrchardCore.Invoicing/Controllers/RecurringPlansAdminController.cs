@@ -449,6 +449,7 @@ public sealed class RecurringPlansAdminController : Controller
             Mode = plan.Mode,
             PriceIncreasePercent = plan.PriceIncreasePercent,
             PriceIncreaseEveryRuns = plan.PriceIncreaseEveryRuns,
+            BillUnbilledCharges = plan.BillUnbilledCharges,
             BillTo = plan.BillTo?.Party.IsEmpty == false ? plan.BillTo.Party.ToString() : null,
             ContactName = plan.BillTo?.Contact?.Name,
             ContactEmail = plan.BillTo?.Contact?.Email,
@@ -481,6 +482,7 @@ public sealed class RecurringPlansAdminController : Controller
         plan.Mode = model.Mode;
         plan.PriceIncreasePercent = model.PriceIncreasePercent is > 0m ? model.PriceIncreasePercent : null;
         plan.PriceIncreaseEveryRuns = model.PriceIncreaseEveryRuns is > 0 ? model.PriceIncreaseEveryRuns : null;
+        plan.BillUnbilledCharges = model.BillUnbilledCharges;
         plan.BillTo ??= new DocumentParty();
         plan.BillTo.Party = PartyRef.TryParse(model.BillTo?.Trim(), out var party) ? party : default;
         plan.BillTo.Contact = (plan.BillTo.Contact ?? new ContactInfo()) with { Name = Clean(model.ContactName), Email = Clean(model.ContactEmail) };

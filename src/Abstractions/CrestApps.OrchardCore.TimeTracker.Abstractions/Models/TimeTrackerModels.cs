@@ -193,6 +193,17 @@ public sealed class TimeEntry : CatalogItem
     public List<TimeEntryChange> Changes { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the invoice that billed this time to a customer, when one did. Billed time can't be changed or
+    /// removed until the invoice lets it go (it is voided, or the line is taken off or credited).
+    /// </summary>
+    public string BilledInvoiceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the line of <see cref="BilledInvoiceId"/> that bills this time.
+    /// </summary>
+    public string BilledLineId { get; set; }
+
+    /// <summary>
     /// Gets whether the person is still in it.
     /// </summary>
     public bool IsOpen => EndUtc is null;

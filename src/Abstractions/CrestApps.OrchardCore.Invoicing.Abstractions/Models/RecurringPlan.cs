@@ -62,6 +62,11 @@ public sealed class RecurringPlan : InvoicingDocument
     public decimal? PriceIncreasePercent { get; set; }
 
     /// <summary>
+    /// Gets or sets whether each run also bills the customer's unbilled charges up to its day (with Invoicing Billing).
+    /// </summary>
+    public bool BillUnbilledCharges { get; set; }
+
+    /// <summary>
     /// Gets or sets how many runs pass between price rises, such as 12 for a yearly rise on a monthly plan.
     /// </summary>
     public int? PriceIncreaseEveryRuns { get; set; }

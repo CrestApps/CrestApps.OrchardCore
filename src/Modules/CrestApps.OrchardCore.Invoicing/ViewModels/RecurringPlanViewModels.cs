@@ -28,6 +28,8 @@ public class RecurringPlanEditViewModel : InvoiceEditViewModel
     public decimal? PriceIncreasePercent { get; set; }
 
     public int? PriceIncreaseEveryRuns { get; set; }
+
+    public bool BillUnbilledCharges { get; set; }
 }
 
 public class RecurringPlansAdminIndexOptions

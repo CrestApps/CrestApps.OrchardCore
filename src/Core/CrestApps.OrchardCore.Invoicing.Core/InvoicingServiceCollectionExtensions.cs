@@ -82,6 +82,25 @@ public static class InvoicingServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers billing: the billable charges, their store and manager, the charges source, the billing service and
+    /// the handler that keeps billed work in step with its invoices. Other sources (such as time) register an
+    /// <see cref="IBillableSource"/>.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddInvoicingBilling(this IServiceCollection services)
+    {
+        services.TryAddScoped<IBillableItemStore, BillableItemStore>();
+        services.TryAddScoped<IBillableItemManager, BillableItemManager>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<BillableItem>, BillableItemHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IBillableSource, ChargesBillableSource>());
+        services.TryAddScoped<IBillingService, DefaultBillingService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Invoice>, BillingInvoiceHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IInvoiceObserver, BillingInvoiceHandler>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers estimates: their store, manager and handler, the commands, the share links and the number series.
     /// </summary>
     /// <param name="services">The services.</param>

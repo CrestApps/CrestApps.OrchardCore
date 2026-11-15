@@ -42,6 +42,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = InvoicingConstants.Features.Billing,
+    Name = "Invoicing Billing",
+    Description = "Bill customers for work and costs: charges kept to bill later (expenses with a markup, fees), and with Time Tracker, the time people tracked at an hourly rate, put on draft invoices and released if the invoice is voided.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        InvoicingConstants.Features.Area,
+    ]
+)]
+
+[assembly: Feature(
     Id = InvoicingConstants.Features.Api,
     Name = "Invoicing API",
     Description = "Lets back-office systems list, draft, issue, send and void invoices, record payments and download PDFs, and customers read their own invoices, over the commerce JSON API. Enable OpenAPI to document it.",

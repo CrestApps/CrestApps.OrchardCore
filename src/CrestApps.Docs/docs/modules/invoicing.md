@@ -12,6 +12,7 @@ user_manual:
 | **Invoicing** | `CrestApps.OrchardCore.Invoicing` | Invoices and credit notes, their stores and indexes, the invoice commands, the permissions and the invoicing settings. Depends on Transactions, Payment Terms and Business Documents. |
 | **Invoicing Estimates** | `CrestApps.OrchardCore.Invoicing.Estimates` | Estimates (quotes): drafted, sent with a number, accepted or declined by the customer online, revised, expired, and turned into a draft invoice or a deposit invoice. Depends on Invoicing. |
 | **Invoicing API** | `CrestApps.OrchardCore.Invoicing.Api` | Invoices over the commerce JSON API: staff list, draft, issue, send and void them, record payments and download PDFs; customers read their own. Depends on Invoicing. |
+| **Invoicing Billing** | `CrestApps.OrchardCore.Invoicing.Billing` | Bill work and costs: charges kept to bill later (expenses with a markup, fees) and, with Time Tracker, tracked time at an hourly rate, put on draft invoices and let go if the invoice is voided. Depends on Invoicing. |
 | **Invoicing Collections** | `CrestApps.OrchardCore.Invoicing.Collections` | Late-fee policies that charge overdue invoices with debit notes linked to them; customers' open-item and activity statements as a page, a PDF and an e-mail. Depends on Invoicing. |
 | **Invoicing Recurring** | `CrestApps.OrchardCore.Invoicing.Recurring` | Recurring plans that make an invoice on a schedule (a draft, issued, issued and sent, or issued and charged), with the period written into their lines, catch-up within a limit, pause and resume, price rises, and an end by date or number of runs. Depends on Invoicing. |
 
@@ -101,6 +102,15 @@ Installments use the ledger's installment plans: with the [Installment Plans](in
 ## Charging a saved card
 
 An invoice with `AutoCharge` (the editor's **Charge the customer's saved card**, or a recurring plan in `IssueAndCharge` mode) is charged by `InvoiceAutoCharge` (Invoicing.Core, an `IInvoiceObserver` and an `ITransactionEventHandler`) when it is issued: it schedules the charge of its transaction to the payer's default saved card through `ISavedPaymentMethodChargeService` ([Transactions](transactions#charging-on-a-schedule-with-retries)) on the morning of the due day in the site's time zone, or charges it at once when it is due on issue. A declined card is retried on the ledger's retry schedule. When the payer kept no card that can be charged (a guest payer never has one), or the retries run out (`AutoChargeAbandonedAsync`), the invoice is sent to the payer with `IInvoiceSender` instead.
+
+## Billing work and costs
+
+With **Invoicing Billing**, work and costs are billed through billable sources (`IBillableSource`): each offers what is unbilled (`BillableCandidate`), records the invoice line that bills an item, and lets it go. `IBillingService` (`DefaultBillingService`) adds chosen items to a draft as lines (source type `billable:{source}`, the item's id; the item's day as the line's service dates) and keeps the invoice's `BilledItems` (source, id, line). `BillingInvoiceHandler` keeps them in step: a draft saved without an item's line lets it go, a draft deleted or an invoice voided lets all of them go, and a credit note that credits all of a line lets its item go.
+
+- **Charges** (`charges`): `BillableItem` (Invoicing.Abstractions, `BillableItemIndex`) is a charge kept to bill a customer later: the party, kind (expense, time, service, item, fee), day, description, quantity and unit, cost, markup percent (billed at cost plus markup, rounded to the cent), currency and tax category. **Commerce > Unbilled charges** lists, adds and edits them (**Create invoices and change drafts**); a billed charge can't be changed or deleted.
+- **Time** (`time`, with Time Tracker): ended Time Tracker entries of one person in a period, not billed yet, at an hourly rate given when billing; each becomes a time line in hours. `TimeEntry` gains `BilledInvoiceId` and `BilledLineId` (`ITimeTrackerService.SetBilledAsync`), and Time Tracker refuses to change or remove billed time. There is no second record of the time.
+
+A draft invoice's page has an **Unbilled work** card: the customer's unbilled charges in the invoice's currency to **Add the charges chosen**, and with Time Tracker, **Find time** for a person, days and rate, then **Add the time chosen**. A recurring plan with **Also bill the customer's unbilled charges** (`RecurringPlan.BillUnbilledCharges`) adds the charges up to each run's day.
 
 ## Late fees and debit notes
 

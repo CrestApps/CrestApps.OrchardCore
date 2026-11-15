@@ -116,4 +116,31 @@ public sealed class Invoice : InvoicingDocument
     /// Gets or sets whether no late fee is charged on the invoice, whatever the late-fee policies say.
     /// </summary>
     public bool LateFeesExempt { get; set; }
+
+    /// <summary>
+    /// Gets or sets the billable work and costs the invoice bills, each with the line that bills it, so they are let go
+    /// when the line is taken off or the invoice is voided.
+    /// </summary>
+    public IList<InvoiceBilledItem> BilledItems { get; set; } = [];
+}
+
+/// <summary>
+/// An item of a billable source an invoice bills.
+/// </summary>
+public sealed class InvoiceBilledItem
+{
+    /// <summary>
+    /// Gets or sets the source's type, such as <c>charges</c> or <c>time</c>.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the item's id in the source.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the line that bills it.
+    /// </summary>
+    public string LineId { get; set; }
 }

@@ -147,6 +147,15 @@ To change a sent estimate, click **Revise**: you get a copy to change, sent as *
 
 When a customer checks out on account terms (or pays later) and the whole order goes on their account, the order gets a numbered invoice automatically, with the order's lines, shipping, discounts and tax, billed to their account. It is the same debt, not a second one: paying the invoice pays the order's balance. If the invoice's total doesn't match the order's (for example because tax came out differently), it is left as a draft under **Commerce > Invoices** for you to check and issue.
 
+## Bill expenses and time
+
+With **Invoicing Billing** enabled:
+
+- **Commerce > Unbilled charges** keeps what you will bill a customer later: click **Add a charge**, choose the customer, describe it, and enter the quantity, your cost and a **Markup (%)** (for example 10 to pass an expense on at cost plus 10%).
+- On a draft invoice's page, the **Unbilled work** card lists the customer's unbilled charges: tick them and click **Add the charges chosen**. With Time Tracker on, choose a person, the days and the **Rate an hour**, click **Find time**, and add the hours you want to bill.
+
+A charge or hours on an invoice are billed: they aren't offered again, and billed time can't be changed in Time Tracker. Taking the line off the draft, deleting the draft or voiding the invoice makes them unbilled again. A recurring plan can bill the customer's charges on each run: tick **Also bill the customer's unbilled charges**.
+
 ## Late fees
 
 With **Invoicing Collections** enabled, **Commerce > Late fees** holds the policies that charge customers who pay late. Each late fee is a separate **debit note**, numbered like an invoice and linked to the overdue invoice; the invoice itself never changes.

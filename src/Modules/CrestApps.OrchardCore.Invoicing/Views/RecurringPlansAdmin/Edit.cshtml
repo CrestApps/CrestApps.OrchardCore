@@ -100,6 +100,16 @@
                     <span class="hint">@T["Optional. Raises the prices of the lines by this percent each time this many runs have passed, such as 5% every 12 runs."]</span>
                 </div>
             </div>
+
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" asp-for="BillUnbilledCharges" />
+                        <label class="form-check-label" asp-for="BillUnbilledCharges">@T["Also bill the customer's unbilled charges"]</label>
+                        <span class="hint dashed">@T["Each run adds the charges kept to bill the customer (Commerce > Unbilled charges) up to its day, with Invoicing Billing on."]</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
