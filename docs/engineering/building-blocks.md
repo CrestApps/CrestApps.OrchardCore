@@ -110,6 +110,7 @@ Rules that follow from the table:
 
 | Concept | Owner (feature) | Reuse it through | Do not |
 | --- | --- | --- | --- |
+| Exchange rates between currencies | **Exchange Rates** (`ExchangeRates.Abstractions`/`.Core`) | `IExchangeRateService.GetRateAsync(currency, baseCurrency, date)` and `GetBaseCurrencyAsync()`; `IExchangeRateProvider` to fetch rates from a feed | Keep a rate on a module's own records (Markets' fixed market rate predates this and is a consumer to move) or convert with a hard-coded rate |
 | Money, currency precision | `CrestApps.OrchardCore.Abstractions` (`CrestApps.OrchardCore.Currencies`) and **Payments.Abstractions** | `CurrencyScale` (the only precision table; Stripe overrides only real API differences), `Money`, `BalanceLedger` for stored balances | Round to 2 decimals or keep another currency table |
 | Products and prices | **Products** | `ProductPart`, `ISellableProduct`, `IPriceResolver`, `IBuyerPriceProvider` | Model a sellable thing outside Products |
 | Product feeds and feed item ids | **Products** (Product Feeds) through `Products.Core.Feeds` | `IProductFeedService` to read the feed, `IProductFeedItemContributor` to add a module's values to each item, `ProductFeedItemIds` and `IProductItemIdResolver` for the item id checkouts accept | Build a second product feed, or make item ids another way |

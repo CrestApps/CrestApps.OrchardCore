@@ -58,6 +58,10 @@ internal static class InvoicingReportFields
 
     public static PartyRef Party(InvoicingDocument document)
         => document.BillTo?.Party is { IsEmpty: false } party ? party : default;
+
+    // An amount at the document's rate to the reporting currency, rounded to the cent, or nothing without a rate.
+    public static decimal? InBaseCurrency(decimal? amount, InvoicingDocument document)
+        => amount is { } value && document.ExchangeRate is { } rate ? Math.Round(value * rate, 2, MidpointRounding.AwayFromZero) : null;
 }
 
 /// <summary>
@@ -107,6 +111,10 @@ public sealed class InvoicesReportDataSet : IndexedReportDataSet<Invoice, Invoic
         AddField(nameof(Invoice.AmountPaid), S["Paid"], DataFieldType.Decimal, record => record.AmountPaid, money).Description = inCurrency;
         AddField(nameof(Invoice.AmountCredited), S["Credited"], DataFieldType.Decimal, record => record.AmountCredited, money).Description = inCurrency;
         AddField(nameof(Invoice.AmountDue), S["Still due"], DataFieldType.Decimal, record => record.AmountDue, money).Description = inCurrency;
+        AddField(nameof(Invoice.BaseCurrency), S["Reporting currency"], DataFieldType.Text, record => record.BaseCurrency, money).Description = S["The currency the store reports in, when the invoice was issued with a rate to it."].Value;
+        AddField(nameof(Invoice.ExchangeRate), S["Exchange rate"], DataFieldType.Decimal, record => record.ExchangeRate, money).Description = S["What one unit of the invoice's currency was worth in the reporting currency on the issue day."].Value;
+        AddField("TotalInBaseCurrency", S["Total in reporting currency"], DataFieldType.Decimal, record => InvoicingReportFields.InBaseCurrency(record.Totals?.Total, record), money).Description = S["The total at the rate of the issue day; empty without a rate."].Value;
+        AddField("AmountDueInBaseCurrency", S["Still due in reporting currency"], DataFieldType.Decimal, record => InvoicingReportFields.InBaseCurrency(record.AmountDue, record), money).Description = S["What is still due at the rate of the issue day; empty without a rate."].Value;
 
         AddField("IssueDate", S["Issue date"], DataFieldType.Date, record => InvoicingReportFields.ToDate(record.IssueDate), dates);
         AddField("DueDate", S["Due date"], DataFieldType.Date, record => InvoicingReportFields.ToDate(record.DueDate), dates);
@@ -318,6 +326,9 @@ public sealed class CreditNotesReportDataSet : IndexedReportDataSet<CreditNote, 
         AddField(nameof(CreditNote.AmountApplied), S["Taken off the balance"], DataFieldType.Decimal, record => record.AmountApplied, money).Description = inCurrency;
         AddField(nameof(CreditNote.AmountRefunded), S["Refunded"], DataFieldType.Decimal, record => record.AmountRefunded, money).Description = inCurrency;
         AddField(nameof(CreditNote.AmountCredited), S["Kept as credit"], DataFieldType.Decimal, record => record.AmountCredited, money).Description = inCurrency;
+        AddField(nameof(CreditNote.BaseCurrency), S["Reporting currency"], DataFieldType.Text, record => record.BaseCurrency, money).Description = S["The currency the store reports in, when the credit note has a rate to it."].Value;
+        AddField(nameof(CreditNote.ExchangeRate), S["Exchange rate"], DataFieldType.Decimal, record => record.ExchangeRate, money).Description = S["The rate of the invoice it credits."].Value;
+        AddField("TotalInBaseCurrency", S["Total in reporting currency"], DataFieldType.Decimal, record => InvoicingReportFields.InBaseCurrency(record.Totals?.Total, record), money).Description = S["The total at the invoice's rate; empty without a rate."].Value;
 
         AddField("IssueDate", S["Issue date"], DataFieldType.Date, record => InvoicingReportFields.ToDate(record.IssueDate), dates);
         AddField(InvoicingReportFields.CreatedUtcField, S["Created"], DataFieldType.DateTime, record => record.CreatedUtc, dates);

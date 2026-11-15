@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Commerce.Stores;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.ExchangeRates.Services;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Parties.Models;
@@ -169,6 +170,8 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
 
             invoice.IssueDate = issueDate;
             invoice.Currency = invoice.Currency.Trim().ToUpperInvariant();
+
+            await ApplyExchangeRateAsync(invoice, issueDate, cancellationToken);
 
             // The final calculation: what is issued is exactly what the calculator says now.
             await InvoiceCalculation.ApplyAsync(_calculator, invoice, settings, issueDate, cancellationToken);
@@ -607,6 +610,27 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
     // at the bill-to's e-mail. An earlier attempt that already posted it is reused, so nothing is posted twice.
     // Takes over a transaction already on the ledger for the invoice: it must be in the invoice's currency, owe what the
     // invoice comes to (to the cent), still be open, and not belong to another invoice. Its timeline names the invoice.
+    // With Exchange Rates on and a reporting currency set, records the rate of the issue day to it (1 in that currency).
+    // No rate known leaves the invoice without one, and reports leave it out of their totals in that currency.
+    private async Task ApplyExchangeRateAsync(Invoice invoice, DateOnly issueDate, CancellationToken cancellationToken)
+    {
+        if (_serviceProvider.GetService<IExchangeRateService>() is not { } rates ||
+            await rates.GetBaseCurrencyAsync(cancellationToken) is not { Length: > 0 } baseCurrency)
+        {
+            return;
+        }
+
+        var quote = await rates.GetRateAsync(invoice.Currency, baseCurrency, issueDate, cancellationToken);
+
+        invoice.BaseCurrency = quote is null ? null : baseCurrency;
+        invoice.ExchangeRate = quote?.Rate;
+
+        if (quote is null && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("No {Currency} to {BaseCurrency} rate was known on {IssueDate}, so the invoice was issued without one.", invoice.Currency, baseCurrency, issueDate);
+        }
+    }
+
     private async Task<bool> AdoptTransactionAsync(Invoice invoice, DateTime now, InvoiceCommandResult result, CancellationToken cancellationToken)
     {
         var transaction = await _transactions.FindByIdAsync(invoice.TransactionId, cancellationToken);
@@ -645,6 +669,13 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
             DocumentNumber = invoice.Number,
         });
         transaction.UpdatedUtc = now;
+
+        // The debt reports in the store's currency at the rate the invoice was issued with, unless it had one already.
+        if (transaction.ExchangeRate is null && invoice.ExchangeRate is not null)
+        {
+            transaction.ExchangeRate = invoice.ExchangeRate;
+            transaction.BaseCurrency = invoice.BaseCurrency;
+        }
 
         await _transactions.UpdateAsync(transaction, data: null, cancellationToken);
 

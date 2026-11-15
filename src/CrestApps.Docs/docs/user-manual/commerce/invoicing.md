@@ -160,6 +160,10 @@ With **Invoicing Billing** enabled:
 
 A charge or hours on an invoice are billed: they aren't offered again, and billed time can't be changed in Time Tracker. Taking the line off the draft, deleting the draft or voiding the invoice makes them unbilled again. A recurring plan can bill the customer's charges on each run: tick **Also bill the customer's unbilled charges**.
 
+## Invoices in other currencies
+
+With **Exchange Rates** on and a reporting currency set (see [Exchange rates](exchange-rates)), an invoice issued in another currency records the rate of its issue day, and reports on invoices can total in your reporting currency.
+
 ## Bill usage
 
 To bill customers for what they use, such as API calls, seats or storage:

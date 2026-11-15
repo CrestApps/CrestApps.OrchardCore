@@ -156,7 +156,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     /// number sequence kept in the store, whose series lock is <paramref name="numberLock"/> (the harness's lock when
     /// none is given); otherwise by <see cref="FakeNumberGenerator"/>.
     /// </summary>
-    public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null, bool realNumbers = false, IDistributedLock numberLock = null, bool writeAheadLog = false)
+    public static async Task<InvoicingTestHarness> CreateAsync(InvoicingSettings settings = null, bool realNumbers = false, IDistributedLock numberLock = null, bool writeAheadLog = false, string reportingCurrency = null)
     {
         var path = Path.Combine(Path.GetTempPath(), $"crestapps-invoicing-{Guid.NewGuid():N}.db");
 
@@ -174,6 +174,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
 
         store.RegisterIndexes([new TransactionIndexProvider()], TransactionsConstants.CollectionName);
+        store.RegisterIndexes([new CrestApps.OrchardCore.ExchangeRates.Core.Indexes.ExchangeRateIndexProvider()], CrestApps.OrchardCore.ExchangeRates.ExchangeRatesConstants.CollectionName);
         store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider(), new RecurringPlanIndexProvider(), new LateFeePolicyIndexProvider(), new BillableItemIndexProvider(), new UsageMeterIndexProvider(), new UsageRecordIndexProvider()], InvoicingConstants.CollectionName);
 
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -181,6 +182,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         await store.InitializeAsync(cancellationToken);
         await store.InitializeCollectionAsync(TransactionsConstants.CollectionName, cancellationToken);
         await store.InitializeCollectionAsync(InvoicingConstants.CollectionName, cancellationToken);
+        await store.InitializeCollectionAsync(CrestApps.OrchardCore.ExchangeRates.ExchangeRatesConstants.CollectionName, cancellationToken);
 
         await using (var connection = store.Configuration.ConnectionFactory.CreateConnection())
         {
@@ -195,6 +197,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
             await new LateFeePolicyMigrations { SchemaBuilder = schema }.CreateAsync();
             await new BillableItemMigrations { SchemaBuilder = schema }.CreateAsync();
             await new UsageMigrations { SchemaBuilder = schema }.CreateAsync();
+            await new CrestApps.OrchardCore.ExchangeRates.Migrations.ExchangeRateMigrations { SchemaBuilder = schema }.CreateAsync();
             await transaction.CommitAsync(cancellationToken);
         }
 
@@ -221,6 +224,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
         var site = new SiteSettings();
         site.Put(settings ?? new InvoicingSettings());
+        site.Put(new CrestApps.OrchardCore.ExchangeRates.Models.ExchangeRateSettings { BaseCurrency = reportingCurrency });
         site.Put(new StoreProfileSettings { Name = "Contoso Supplies", Email = "billing@contoso.example" });
         services.AddSingleton(Mock.Of<ISiteService>(service => service.GetSiteSettingsAsync() == Task.FromResult<ISite>(site)));
 
@@ -332,6 +336,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddInvoicingRecurring();
         services.AddInvoicingCollections();
         services.AddInvoicingBilling();
+        CrestApps.OrchardCore.ExchangeRates.Core.Services.ExchangeRatesServiceCollectionExtensions.AddExchangeRates(services);
         services.AddScoped<IRecurringPlanObserver>(_ => new RecordingPlanObserver(harness.Observed));
         services.AddScoped<IEstimateObserver>(_ => new RecordingEstimateObserver(harness.Observed));
 
