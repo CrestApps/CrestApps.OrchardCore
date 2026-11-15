@@ -38,16 +38,7 @@ internal sealed class TimeOffMigrations : DataMigration
 
             try
             {
-                var session = services.GetRequiredService<ISession>();
-                var entries = await session.Query<TimeOffLedgerEntry>(collection: WorkforceConstants.CollectionName).ListAsync();
-
-                foreach (var entry in entries)
-                {
-                    await session.SaveAsync(TimeOffLedgerMapping.ToQuantity(entry), checkConcurrency: false, collection: WorkforceConstants.TimeOffLedgerCollectionName);
-                    session.Delete(entry, WorkforceConstants.CollectionName);
-                }
-
-                await session.SaveChangesAsync();
+                await MoveLedgerEntriesAsync(services.GetRequiredService<ISession>());
             }
             catch (Exception exception)
             {
@@ -56,5 +47,27 @@ internal sealed class TimeOffMigrations : DataMigration
         });
 
         return 2;
+    }
+
+    /// <summary>
+    /// Moves every time-off entry of the Workforce collection to the time-off ledger collection, keeping its id.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <returns>How many entries were moved.</returns>
+    internal static async Task<int> MoveLedgerEntriesAsync(ISession session)
+    {
+        var entries = await session.Query<TimeOffLedgerEntry>(collection: WorkforceConstants.CollectionName).ListAsync();
+        var moved = 0;
+
+        foreach (var entry in entries)
+        {
+            await session.SaveAsync(TimeOffLedgerMapping.ToQuantity(entry), checkConcurrency: false, collection: WorkforceConstants.TimeOffLedgerCollectionName);
+            session.Delete(entry, WorkforceConstants.CollectionName);
+            moved++;
+        }
+
+        await session.SaveChangesAsync();
+
+        return moved;
     }
 }
