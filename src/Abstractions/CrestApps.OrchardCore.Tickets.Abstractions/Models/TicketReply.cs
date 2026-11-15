@@ -57,4 +57,10 @@ public sealed class TicketReply
     /// Gets or sets the channel's delivery data, such as the message id, kept on the entry.
     /// </summary>
     public Dictionary<string, string> Properties { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets who sends it, when that isn't simply the author: a workflow's reply (<see cref="TicketActor.FromWorkflow"/>)
+    /// is an automated one, which never counts as an agent's response for the service-level targets or the reports.
+    /// </summary>
+    public TicketActor Actor { get; set; }
 }

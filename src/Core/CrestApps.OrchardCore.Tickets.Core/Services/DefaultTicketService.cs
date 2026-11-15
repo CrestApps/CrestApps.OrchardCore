@@ -20,6 +20,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -60,6 +61,10 @@ public sealed class DefaultTicketService : ITicketService
     // What each ticket changed under this service's lock was when it was loaded, so a save can tell observers that it
     // was assigned or its status changed, whichever path made the change.
     private readonly Dictionary<string, (string AssigneeId, string StatusId)> _snapshots = new(StringComparer.Ordinal);
+
+    // What observers are told, in order, once the change is committed and the ticket's lock released: a workflow or
+    // any other observer then reads the saved ticket and can change it under the lock itself.
+    private readonly List<Func<ITicketObserver, Task>> _pending = [];
 
     internal readonly IStringLocalizer S;
 
@@ -165,6 +170,11 @@ public sealed class DefaultTicketService : ITicketService
             errors.Add(S["Write a subject."]);
         }
 
+        if (request.Body?.Trim().Length > TimelineConstants.MaxBodyLength)
+        {
+            errors.Add(S["The message is longer than {0} characters.", TimelineConstants.MaxBodyLength]);
+        }
+
         var status = TicketLifecycle.FirstOf(await _statuses.GetAllAsync(cancellationToken), TicketStatusCategory.New);
 
         if (status is null)
@@ -225,7 +235,7 @@ public sealed class DefaultTicketService : ITicketService
 
         if (!string.IsNullOrWhiteSpace(request.Body) || request.AttachmentIds.Count > 0)
         {
-            await _timeline.AddAsync(new TimelineEntry
+            var added = await _timeline.AddAsync(new TimelineEntry
             {
                 ItemId = string.IsNullOrEmpty(request.EntryId) ? null : request.EntryId,
                 Subject = SubjectOf(ticket.ContentItemId),
@@ -240,6 +250,15 @@ public sealed class DefaultTicketService : ITicketService
                 Channel = request.Channel,
                 CreatedUtc = now,
             }, cancellationToken);
+
+            // The ticket isn't kept without its first message; nothing of it reaches the database.
+            if (!added.Succeeded)
+            {
+                await _contentManager.RemoveAsync(ticket);
+                _pending.Clear();
+
+                return new TicketResult { Errors = added.Errors };
+            }
 
             part.ReplyCount = 1;
         }
@@ -275,7 +294,7 @@ public sealed class DefaultTicketService : ITicketService
         // The ticket starts in its first status, unassigned as far as observers are concerned.
         _snapshots[ticket.ContentItemId] = (null, part.StatusId);
 
-        await NotifyAsync(observer => observer.CreatedAsync(ticket, cancellationToken));
+        Enqueue(observer => observer.CreatedAsync(ticket, cancellationToken));
 
         if (!string.IsNullOrEmpty(part.AssigneeId))
         {
@@ -287,6 +306,11 @@ public sealed class DefaultTicketService : ITicketService
         {
             await AssignToTeamMemberAsync(ticket, part, settings, desk.AssignmentStrategy, TicketActor.Site, cancellationToken);
         }
+
+        // Committed before anyone is told, so a Ticket Created workflow reads the saved ticket and its changes aren't
+        // overwritten by this method.
+        await _session.SaveChangesAsync(cancellationToken);
+        await RaisePendingAsync(request.CreatedBy.IsEmpty ? TicketActor.Site : new TicketActor { Party = request.CreatedBy });
 
         return new TicketResult { Ticket = ticket };
     }
@@ -323,7 +347,7 @@ public sealed class DefaultTicketService : ITicketService
     {
         ArgumentNullException.ThrowIfNull(update);
 
-        return WithLockAsync(ticketId, async ticket =>
+        return WithLockAsync(ticketId, actor, async ticket =>
         {
             var part = ticket.GetOrCreate<TicketPart>();
 
@@ -347,7 +371,7 @@ public sealed class DefaultTicketService : ITicketService
 
             await SaveAsync(ticket, part, cancellationToken);
             await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, null, changes, cancellationToken);
-            await NotifyAsync(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+            Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
 
             return new TicketResult { Ticket = ticket };
         }, cancellationToken);
@@ -364,7 +388,7 @@ public sealed class DefaultTicketService : ITicketService
         }
 
         ContentItem followUpOf = null;
-        var result = await WithLockAsync(ticketId, async ticket =>
+        var result = await WithLockAsync(ticketId, ActorOf(reply), async ticket =>
         {
             var part = ticket.GetOrCreate<TicketPart>();
             var now = _clock.UtcNow;
@@ -386,6 +410,45 @@ public sealed class DefaultTicketService : ITicketService
             if (part.StatusCategory == TicketStatusCategory.Closed)
             {
                 return Refuse(S["A closed ticket can't change."], ticket);
+            }
+
+            if (reply.Body?.Trim().Length > TimelineConstants.MaxBodyLength)
+            {
+                return Refuse(S["The message is longer than {0} characters.", TimelineConstants.MaxBodyLength], ticket);
+            }
+
+            // Everything that can refuse the reply is checked before anything is written, so a refused reply leaves no
+            // entry, no completed timer and no changed counter behind.
+            var automated = reply.Actor?.FromWorkflow == true;
+            var agentReply = !reply.IsInternal && !reply.FromRequester && !automated;
+            var statuses = await _statuses.GetAllAsync(cancellationToken);
+            var statusId = reply.SetStatusId;
+
+            if (statusId is null && !reply.IsInternal)
+            {
+                if (reply.FromRequester && part.StatusCategory is TicketStatusCategory.Solved or TicketStatusCategory.Pending)
+                {
+                    statusId = TicketLifecycle.FirstOf(statuses, TicketStatusCategory.Open)?.ItemId;
+                }
+                else if (agentReply && part.StatusCategory == TicketStatusCategory.New)
+                {
+                    statusId = TicketLifecycle.FirstOf(statuses, TicketStatusCategory.Open)?.ItemId;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(statusId) && statusId != part.StatusId)
+            {
+                var target = statuses.FirstOrDefault(status => status.ItemId == statusId);
+
+                if (target is null)
+                {
+                    return Refuse(S["The status no longer exists."], ticket);
+                }
+
+                if (!TicketLifecycle.Transitions.CanMove(part.StatusCategory, target.Category))
+                {
+                    return Refuse(S["A ticket can't move from {0} to {1}.", part.StatusCategory, target.Category], ticket);
+                }
             }
 
             var entry = new TimelineEntry
@@ -416,7 +479,6 @@ public sealed class DefaultTicketService : ITicketService
 
             var changes = new List<TimelineFieldChange>();
             var subject = SubjectOf(ticket.ContentItemId);
-            string statusId = reply.SetStatusId;
 
             if (!reply.IsInternal)
             {
@@ -430,15 +492,12 @@ public sealed class DefaultTicketService : ITicketService
                     {
                         await StartNextResponseAsync(ticket, part, desk, now, cancellationToken);
                     }
-
-                    if (statusId is null && part.StatusCategory is TicketStatusCategory.Solved or TicketStatusCategory.Pending)
-                    {
-                        statusId = TicketLifecycle.FirstOf(await _statuses.GetAllAsync(cancellationToken), TicketStatusCategory.Open)?.ItemId;
-                    }
                 }
-                else
+                else if (agentReply)
                 {
+                    // Only a person's answer counts as a response; an automated acknowledgement doesn't.
                     part.LastAgentActivityUtc = now;
+                    part.AgentReplyCount++;
 
                     if (part.FirstResponseUtc is null)
                     {
@@ -447,22 +506,13 @@ public sealed class DefaultTicketService : ITicketService
                     }
 
                     await _serviceLevels.CompleteAsync(subject, ServiceLevelMetrics.NextResponse, now, cancellationToken);
-
-                    if (statusId is null && part.StatusCategory == TicketStatusCategory.New)
-                    {
-                        statusId = TicketLifecycle.FirstOf(await _statuses.GetAllAsync(cancellationToken), TicketStatusCategory.Open)?.ItemId;
-                    }
                 }
             }
 
             if (!string.IsNullOrEmpty(statusId) && statusId != part.StatusId)
             {
-                var errors = await ApplyAsync(ticket, part, new TicketUpdate { StatusId = statusId }, changes, cancellationToken);
-
-                if (errors.Count > 0)
-                {
-                    return new TicketResult { Ticket = ticket, Errors = errors };
-                }
+                // Checked above, so it can't be refused now.
+                await ApplyAsync(ticket, part, new TicketUpdate { StatusId = statusId }, changes, cancellationToken);
             }
 
             await SaveAsync(ticket, part, cancellationToken);
@@ -472,11 +522,11 @@ public sealed class DefaultTicketService : ITicketService
                 await AddEventAsync(ticket.ContentItemId, ActorOf(reply), null, changes, cancellationToken);
             }
 
-            await NotifyAsync(observer => observer.RepliedAsync(ticket, added.Entry, reply.FromRequester, cancellationToken));
+            Enqueue(observer => observer.RepliedAsync(ticket, added.Entry, reply.FromRequester, cancellationToken));
 
             if (changes.Count > 0)
             {
-                await NotifyAsync(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+                Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
             }
 
             return new TicketResult { Ticket = ticket };
@@ -495,6 +545,7 @@ public sealed class DefaultTicketService : ITicketService
             Subject = followUpOf.DisplayText,
             Body = reply.Body,
             AttachmentIds = reply.AttachmentIds,
+            EntryId = reply.EntryId,
             DeskId = closed.DeskId,
             PriorityId = closed.PriorityId,
             Requester = closed.Requester,
@@ -515,7 +566,7 @@ public sealed class DefaultTicketService : ITicketService
 
     /// <inheritdoc/>
     public Task<TicketResult> AutoAssignAsync(string ticketId, TicketActor actor = null, CancellationToken cancellationToken = default)
-        => WithLockAsync(ticketId, async ticket =>
+        => WithLockAsync(ticketId, actor, async ticket =>
         {
             var part = ticket.GetOrCreate<TicketPart>();
 
@@ -548,21 +599,24 @@ public sealed class DefaultTicketService : ITicketService
 
         actor ??= TicketActor.Site;
 
-        var into = await GetAsync(intoTicketId);
-
-        if (into is null || TicketLifecycle.IsReadOnly(into.GetOrCreate<TicketPart>()))
+        // Both tickets are locked, always in the same order so two merges of the same pair can't wait on each other, and
+        // checked again inside the locks: A into B and B into A can't both succeed, and a lock that can't be had leaves
+        // both tickets as they were.
+        return await WithLocksAsync([ticketId, intoTicketId], actor, async tickets =>
         {
-            return Refuse(S["The ticket to merge into is closed or gone."]);
-        }
-
-        ContentItem merged = null;
-        var result = await WithLockAsync(ticketId, async ticket =>
-        {
+            var ticket = tickets[ticketId];
+            var target = tickets[intoTicketId];
             var part = ticket.GetOrCreate<TicketPart>();
+            var targetPart = target.GetOrCreate<TicketPart>();
 
             if (TicketLifecycle.IsReadOnly(part))
             {
                 return Refuse(S["A closed or merged ticket can't change."], ticket);
+            }
+
+            if (TicketLifecycle.IsReadOnly(targetPart))
+            {
+                return Refuse(S["The ticket to merge into is closed or gone."], ticket);
             }
 
             var closed = TicketLifecycle.FirstOf(await _statuses.GetAllAsync(cancellationToken), TicketStatusCategory.Closed);
@@ -581,25 +635,7 @@ public sealed class DefaultTicketService : ITicketService
             part.ClosedUtc = now;
             part.NextDueUtc = null;
 
-            await _serviceLevels.CancelAsync(SubjectOf(ticket.ContentItemId), cancellationToken: cancellationToken);
-            await SaveAsync(ticket, part, cancellationToken);
-            await AddEventAsync(ticket.ContentItemId, actor, S["Merged into {0}.", into.GetOrCreate<TicketPart>().Number], [], cancellationToken);
-            merged = ticket;
-
-            return new TicketResult { Ticket = ticket };
-        }, cancellationToken);
-
-        if (!result.Succeeded)
-        {
-            return result;
-        }
-
-        return await WithLockAsync(intoTicketId, async target =>
-        {
-            var targetPart = target.GetOrCreate<TicketPart>();
-            var mergedPart = merged.GetOrCreate<TicketPart>();
-
-            foreach (var party in new[] { mergedPart.Requester }.Concat(mergedPart.Participants))
+            foreach (var party in new[] { part.Requester }.Concat(part.Participants))
             {
                 if (!party.IsEmpty && party != targetPart.Requester && !targetPart.Participants.Contains(party))
                 {
@@ -607,9 +643,12 @@ public sealed class DefaultTicketService : ITicketService
                 }
             }
 
+            await _serviceLevels.CancelAsync(SubjectOf(ticket.ContentItemId), cancellationToken: cancellationToken);
+            await SaveAsync(ticket, part, cancellationToken);
             await SaveAsync(target, targetPart, cancellationToken);
-            await AddEventAsync(target.ContentItemId, actor, S["{0} was merged into this ticket.", mergedPart.Number], [], cancellationToken);
-            await NotifyAsync(observer => observer.MergedAsync(merged, target, cancellationToken));
+            await AddEventAsync(ticket.ContentItemId, actor, S["Merged into {0}.", targetPart.Number], [], cancellationToken);
+            await AddEventAsync(target.ContentItemId, actor, S["{0} was merged into this ticket.", part.Number], [], cancellationToken);
+            Enqueue(observer => observer.MergedAsync(ticket, target, cancellationToken));
 
             return new TicketResult { Ticket = target };
         }, cancellationToken);
@@ -623,7 +662,7 @@ public sealed class DefaultTicketService : ITicketService
             return Task.FromResult(Refuse(S["Choose a record to link."]));
         }
 
-        return WithLockAsync(ticketId, async ticket =>
+        return WithLockAsync(ticketId, actor, async ticket =>
         {
             var part = ticket.GetOrCreate<TicketPart>();
             var existing = part.Links.FirstOrDefault(link => link.Record == record);
@@ -637,16 +676,16 @@ public sealed class DefaultTicketService : ITicketService
                 }
 
                 part.Links.Remove(existing);
-                changes.Add(new TimelineFieldChange { Field = S["Link"], From = record.ToString() });
+                changes.Add(new TimelineFieldChange { Field = S["Link"], Key = TicketChangeKeys.Link, From = record.ToString(), FromValue = record.ToString() });
             }
             else if (existing is null)
             {
                 part.Links.Add(new TicketLink { Record = record, Kind = kind });
-                changes.Add(new TimelineFieldChange { Field = S["Link"], To = $"{kind}: {record}" });
+                changes.Add(new TimelineFieldChange { Field = S["Link"], Key = TicketChangeKeys.Link, To = $"{kind}: {record}", ToValue = record.ToString() });
             }
             else if (existing.Kind != kind)
             {
-                changes.Add(new TimelineFieldChange { Field = S["Link"], From = $"{existing.Kind}: {record}", To = $"{kind}: {record}" });
+                changes.Add(new TimelineFieldChange { Field = S["Link"], Key = TicketChangeKeys.Link, From = $"{existing.Kind}: {record}", To = $"{kind}: {record}", FromValue = record.ToString(), ToValue = record.ToString() });
                 existing.Kind = kind;
             }
             else
@@ -656,7 +695,7 @@ public sealed class DefaultTicketService : ITicketService
 
             await SaveAsync(ticket, part, cancellationToken);
             await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, null, changes, cancellationToken);
-            await NotifyAsync(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+            Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
 
             return new TicketResult { Ticket = ticket };
         }, cancellationToken);
@@ -779,7 +818,7 @@ public sealed class DefaultTicketService : ITicketService
 
         if (update.Subject is { } title && !string.IsNullOrWhiteSpace(title) && title.Trim() != ticket.DisplayText)
         {
-            changes.Add(new TimelineFieldChange { Field = S["Subject"], From = ticket.DisplayText, To = title.Trim() });
+            changes.Add(new TimelineFieldChange { Field = S["Subject"], Key = TicketChangeKeys.Subject, From = ticket.DisplayText, To = title.Trim() });
             ticket.DisplayText = title.Trim();
             SetTitle(ticket, ticket.DisplayText);
         }
@@ -795,7 +834,7 @@ public sealed class DefaultTicketService : ITicketService
             else
             {
                 var from = await _desks.FindByIdAsync(part.DeskId, cancellationToken);
-                changes.Add(new TimelineFieldChange { Field = S["Desk"], From = from?.Name, To = desk.Name });
+                changes.Add(new TimelineFieldChange { Field = S["Desk"], Key = TicketChangeKeys.Desk, From = from?.Name, To = desk.Name, FromValue = part.DeskId, ToValue = desk.ItemId });
                 part.DeskId = desk.ItemId;
             }
         }
@@ -811,7 +850,7 @@ public sealed class DefaultTicketService : ITicketService
             else
             {
                 var from = await _priorities.FindByIdAsync(part.PriorityId, cancellationToken);
-                changes.Add(new TimelineFieldChange { Field = S["Priority"], From = from?.Name, To = priority.Name });
+                changes.Add(new TimelineFieldChange { Field = S["Priority"], Key = TicketChangeKeys.Priority, From = from?.Name, To = priority.Name, FromValue = part.PriorityId, ToValue = priority.ItemId });
                 part.PriorityId = priority.ItemId;
                 part.PriorityRank = priority.Rank;
 
@@ -826,13 +865,13 @@ public sealed class DefaultTicketService : ITicketService
 
         if (update.TeamId is not null && NullIfEmpty(update.TeamId) != part.TeamId)
         {
-            changes.Add(new TimelineFieldChange { Field = S["Team"], From = await TeamNameAsync(part.TeamId, cancellationToken), To = await TeamNameAsync(update.TeamId, cancellationToken) });
+            changes.Add(new TimelineFieldChange { Field = S["Team"], Key = TicketChangeKeys.Team, From = await TeamNameAsync(part.TeamId, cancellationToken), To = await TeamNameAsync(update.TeamId, cancellationToken), FromValue = part.TeamId, ToValue = NullIfEmpty(update.TeamId) });
             part.TeamId = NullIfEmpty(update.TeamId);
         }
 
         if (update.AssigneeId is not null && NullIfEmpty(update.AssigneeId) != part.AssigneeId)
         {
-            changes.Add(new TimelineFieldChange { Field = S["Assignee"], From = await UserNameAsync(part.AssigneeId, cancellationToken), To = await UserNameAsync(update.AssigneeId, cancellationToken) });
+            changes.Add(new TimelineFieldChange { Field = S["Assignee"], Key = TicketChangeKeys.Assignee, From = await UserNameAsync(part.AssigneeId, cancellationToken), To = await UserNameAsync(update.AssigneeId, cancellationToken), FromValue = part.AssigneeId, ToValue = NullIfEmpty(update.AssigneeId) });
 
             if (!string.IsNullOrEmpty(part.AssigneeId))
             {
@@ -845,7 +884,7 @@ public sealed class DefaultTicketService : ITicketService
 
         if (update.EscalationLevel is { } level && level != part.EscalationLevel && level >= 0)
         {
-            changes.Add(new TimelineFieldChange { Field = S["Escalation level"], From = part.EscalationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture), To = level.ToString(System.Globalization.CultureInfo.InvariantCulture) });
+            changes.Add(new TimelineFieldChange { Field = S["Escalation level"], Key = TicketChangeKeys.EscalationLevel, From = part.EscalationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture), To = level.ToString(System.Globalization.CultureInfo.InvariantCulture), FromValue = part.EscalationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture), ToValue = level.ToString(System.Globalization.CultureInfo.InvariantCulture) });
             part.EscalationLevel = level;
         }
 
@@ -864,7 +903,7 @@ public sealed class DefaultTicketService : ITicketService
             else
             {
                 var from = await _statuses.FindByIdAsync(part.StatusId, cancellationToken);
-                changes.Add(new TimelineFieldChange { Field = S["Status"], From = from?.Name, To = status.Name });
+                changes.Add(new TimelineFieldChange { Field = S["Status"], Key = TicketChangeKeys.Status, From = from?.Name, To = status.Name, FromValue = part.StatusId, ToValue = status.ItemId });
                 await MoveAsync(ticket, part, from, status, now, cancellationToken);
             }
         }
@@ -886,6 +925,10 @@ public sealed class DefaultTicketService : ITicketService
             case TicketStatusCategory.Solved:
                 part.SolvedUtc = now;
                 await _serviceLevels.CompleteAsync(subject, ServiceLevelMetrics.Resolution, now, cancellationToken);
+
+                // A ticket solved without an answer has no response left to wait for: its response targets end here, so
+                // the monitor doesn't breach a solved ticket.
+                await _serviceLevels.CancelAsync(subject, ServiceLevelMetrics.FirstResponse, cancellationToken);
                 await _serviceLevels.CancelAsync(subject, ServiceLevelMetrics.NextResponse, cancellationToken);
                 break;
             case TicketStatusCategory.Closed:
@@ -902,13 +945,15 @@ public sealed class DefaultTicketService : ITicketService
                 break;
         }
 
+        // The timers follow the status the ticket is in now, not the step it came from: a ticket that waited (paused),
+        // was solved and is reopened counts again. Pausing and resuming leave timers already in that state alone.
         if (to.Category is not TicketStatusCategory.Solved and not TicketStatusCategory.Closed)
         {
-            if (to.PausesTimers && from?.PausesTimers != true)
+            if (to.PausesTimers)
             {
                 await _serviceLevels.PauseAsync(subject, cancellationToken: cancellationToken);
             }
-            else if (!to.PausesTimers && from?.PausesTimers == true)
+            else
             {
                 await _serviceLevels.ResumeAsync(subject, cancellationToken: cancellationToken);
             }
@@ -1018,7 +1063,7 @@ public sealed class DefaultTicketService : ITicketService
         await ApplyAsync(ticket, part, new TicketUpdate { AssigneeId = member.UserId }, changes, cancellationToken);
         await SaveAsync(ticket, part, cancellationToken);
         await AddEventAsync(ticket.ContentItemId, actor, null, changes, cancellationToken);
-        await NotifyAsync(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+        Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
 
         return true;
     }
@@ -1029,7 +1074,7 @@ public sealed class DefaultTicketService : ITicketService
         {
             // The ticket's timeline and timers go with it (TicketContentCleanup), whichever way the item is removed.
             await _contentManager.RemoveAsync(ticket);
-            await NotifyAsync(observer => observer.DeletedAsync(ticket, cancellationToken));
+            Enqueue(observer => observer.DeletedAsync(ticket, cancellationToken));
 
             return new TicketResult { Ticket = ticket };
         }, cancellationToken);
@@ -1039,7 +1084,7 @@ public sealed class DefaultTicketService : ITicketService
     {
         ArgumentNullException.ThrowIfNull(edit);
 
-        return WithLockAsync(ticketId, async ticket =>
+        return WithLockAsync(ticketId, actor, async ticket =>
         {
             if (TicketLifecycle.IsReadOnly(ticket.GetOrCreate<TicketPart>()))
             {
@@ -1062,47 +1107,130 @@ public sealed class DefaultTicketService : ITicketService
                     return Refuse(S["Write a subject."], ticket);
                 }
 
-                changes.Add(new TimelineFieldChange { Field = S["Subject"], From = subjectBefore, To = ticket.DisplayText });
+                changes.Add(new TimelineFieldChange { Field = S["Subject"], Key = TicketChangeKeys.Subject, From = subjectBefore, To = ticket.DisplayText });
             }
 
             // The editor changes the type's fields; the ticket's own values are read back from the edited item.
             await SaveAsync(ticket, ticket.GetOrCreate<TicketPart>(), cancellationToken);
             await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, S["Changed the ticket's fields."], changes, cancellationToken);
-            await NotifyAsync(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+            Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
 
             return new TicketResult { Ticket = ticket };
         }, cancellationToken);
     }
 
-    private async Task<TicketResult> WithLockAsync(string ticketId, Func<ContentItem, Task<TicketResult>> work, CancellationToken cancellationToken)
+    private Task<TicketResult> WithLockAsync(string ticketId, Func<ContentItem, Task<TicketResult>> work, CancellationToken cancellationToken)
+        => WithLockAsync(ticketId, null, work, cancellationToken);
+
+    private async Task<TicketResult> WithLockAsync(string ticketId, TicketActor actor, Func<ContentItem, Task<TicketResult>> work, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(ticketId))
         {
             return Refuse(S["The ticket no longer exists."]);
         }
 
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync($"ticket:{ticketId}", _lockTimeout, _lockExpiration);
+        return await WithLocksAsync([ticketId], actor, tickets => work(tickets[ticketId]), cancellationToken);
+    }
 
-        if (!locked)
+    // Locks the tickets (in id order), loads each as saved, does the work and, if it succeeded, commits it while the locks
+    // are still held: the next change of a ticket reads what this one saved. Only then are the locks released and the
+    // observers told, so a workflow sees the saved ticket and can lock it itself. A change that is refused writes nothing
+    // and tells nobody.
+    private async Task<TicketResult> WithLocksAsync(IReadOnlyList<string> ticketIds, TicketActor actor, Func<IReadOnlyDictionary<string, ContentItem>, Task<TicketResult>> work, CancellationToken cancellationToken)
+    {
+        var lockers = new List<ILocker>();
+        TicketResult result;
+
+        try
         {
-            return Refuse(S["Someone else is changing the ticket; try again."]);
-        }
-
-        await using (locker)
-        {
-            var ticket = await GetAsync(ticketId);
-
-            if (ticket is null)
+            foreach (var id in ticketIds.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
             {
-                return Refuse(S["The ticket no longer exists."]);
+                var (locker, locked) = await _distributedLock.TryAcquireLockAsync($"ticket:{id}", _lockTimeout, _lockExpiration);
+
+                if (!locked)
+                {
+                    return Refuse(S["Someone else is changing the ticket; try again."]);
+                }
+
+                lockers.Add(locker);
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
+            var tickets = new Dictionary<string, ContentItem>(StringComparer.Ordinal);
 
-            var loaded = ticket.GetOrCreate<TicketPart>();
-            _snapshots[ticket.ContentItemId] = (loaded.AssigneeId, loaded.StatusId);
+            foreach (var id in ticketIds)
+            {
+                var ticket = await LoadSavedAsync(id);
 
-            return await work(ticket);
+                if (ticket is null)
+                {
+                    return Refuse(S["The ticket no longer exists."]);
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var loaded = ticket.GetOrCreate<TicketPart>();
+                _snapshots[ticket.ContentItemId] = (loaded.AssigneeId, loaded.StatusId);
+                tickets[id] = ticket;
+            }
+
+            result = await work(tickets);
+
+            if (!result.Succeeded)
+            {
+                _pending.Clear();
+
+                return result;
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            for (var i = lockers.Count - 1; i >= 0; i--)
+            {
+                await lockers[i].DisposeAsync();
+            }
+        }
+
+        await RaisePendingAsync(actor);
+
+        return result;
+    }
+
+    // Reads the ticket as it was saved, not a copy this request read before it held the lock.
+    private async Task<ContentItem> LoadSavedAsync(string ticketId)
+    {
+        if (await GetAsync(ticketId) is not { } cached)
+        {
+            return null;
+        }
+
+        _session.Detach(cached);
+        _serviceProvider.GetService<IContentManagerSession>()?.Clear();
+
+        return await GetAsync(ticketId);
+    }
+
+    private void Enqueue(Func<ITicketObserver, Task> notify)
+        => _pending.Add(notify);
+
+    // Tells the observers what was queued, in order. An observer that changes a ticket (a workflow task) queues and raises
+    // its own events through its own call.
+    private async Task RaisePendingAsync(TicketActor actor)
+    {
+        if (_pending.Count == 0)
+        {
+            return;
+        }
+
+        var pending = _pending.ToArray();
+        _pending.Clear();
+
+        using var scope = TicketEventActor.Use(actor ?? TicketActor.Site);
+
+        foreach (var notify in pending)
+        {
+            await NotifyAsync(notify);
         }
     }
 
@@ -1126,7 +1254,7 @@ public sealed class DefaultTicketService : ITicketService
 
         if (!string.Equals(before.AssigneeId, part.AssigneeId, StringComparison.Ordinal))
         {
-            await NotifyAsync(observer => observer.AssignedAsync(ticket, before.AssigneeId, cancellationToken));
+            Enqueue(observer => observer.AssignedAsync(ticket, before.AssigneeId, cancellationToken));
         }
 
         if (!string.Equals(before.StatusId, part.StatusId, StringComparison.Ordinal))
@@ -1134,7 +1262,7 @@ public sealed class DefaultTicketService : ITicketService
             var previous = string.IsNullOrEmpty(before.StatusId) ? null : await _statuses.FindByIdAsync(before.StatusId, cancellationToken);
             var current = await _statuses.FindByIdAsync(part.StatusId, cancellationToken);
 
-            await NotifyAsync(observer => observer.StatusChangedAsync(ticket, previous, current, cancellationToken));
+            Enqueue(observer => observer.StatusChangedAsync(ticket, previous, current, cancellationToken));
         }
     }
 
@@ -1225,7 +1353,7 @@ public sealed class DefaultTicketService : ITicketService
     }
 
     private static TicketActor ActorOf(TicketReply reply)
-        => reply.Author.IsEmpty ? new TicketActor { Name = reply.AuthorName } : new TicketActor { Party = reply.Author, Name = reply.AuthorName };
+        => reply.Actor ?? (reply.Author.IsEmpty ? new TicketActor { Name = reply.AuthorName } : new TicketActor { Party = reply.Author, Name = reply.AuthorName });
 
     private static string FirstNonEmpty(params string[] values)
         => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));

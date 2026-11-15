@@ -19,4 +19,22 @@ public sealed class TimelineFieldChange
     /// Gets or sets the value after, or <see langword="null"/> when it is empty.
     /// </summary>
     public string To { get; set; }
+
+    /// <summary>
+    /// Gets or sets a stable name of what changed, such as <c>Status</c>, the same in every language, for code that
+    /// reacts to the change (workflows, webhooks, reports). <see cref="Field"/> is what people read.
+    /// </summary>
+    public string Key { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value before the change as code knows it, such as a status id; <see cref="From"/> is what
+    /// people read.
+    /// </summary>
+    public string FromValue { get; set; }
+
+    /// <summary>
+    /// Gets or sets the value after the change as code knows it, such as a status id; <see cref="To"/> is what people
+    /// read.
+    /// </summary>
+    public string ToValue { get; set; }
 }

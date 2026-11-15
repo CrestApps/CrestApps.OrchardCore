@@ -160,7 +160,7 @@ internal sealed class TicketWorkflowObserver : ITicketObserver
         => TriggerAsync(TicketsConstants.Events.Created, ticket);
 
     public Task UpdatedAsync(ContentItem ticket, IReadOnlyList<TimelineFieldChange> changes, CancellationToken cancellationToken = default)
-        => TriggerAsync(TicketsConstants.Events.Updated, ticket, input => input[TicketWorkflowInput.ChangedFields] = changes.Select(change => change.Field).ToArray());
+        => TriggerAsync(TicketsConstants.Events.Updated, ticket, input => input[TicketWorkflowInput.ChangedFields] = changes.Select(change => change.Key ?? change.Field).ToArray());
 
     public Task RepliedAsync(ContentItem ticket, TimelineEntry entry, bool fromRequester, CancellationToken cancellationToken = default)
     {

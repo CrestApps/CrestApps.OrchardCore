@@ -1,3 +1,4 @@
+@using CrestApps.OrchardCore.Tickets.Models
 @using CrestApps.OrchardCore.Tickets.Workflows
 @model TicketEventViewModel
 
@@ -21,10 +22,20 @@
 {
     <div class="mb-3">
         <label asp-for="ChangedFields" class="form-label">@T["Only when these change"]</label>
-        <select asp-for="ChangedFields" class="form-select" multiple size="6">
-            @foreach (var field in new[] { "Status", "Priority", "Desk", "Team", "Assignee", "Subject" })
+        <select asp-for="ChangedFields" class="form-select" multiple size="8">
+            @foreach (var (key, label) in new[]
             {
-                <option value="@field" selected="@Model.ChangedFields.Contains(field)">@T[field]</option>
+                (TicketChangeKeys.Status, T["Status"]),
+                (TicketChangeKeys.Priority, T["Priority"]),
+                (TicketChangeKeys.Desk, T["Desk"]),
+                (TicketChangeKeys.Team, T["Team"]),
+                (TicketChangeKeys.Assignee, T["Assignee"]),
+                (TicketChangeKeys.Subject, T["Subject"]),
+                (TicketChangeKeys.EscalationLevel, T["Escalation level"]),
+                (TicketChangeKeys.Link, T["Links"]),
+            })
+            {
+                <option value="@key" selected="@Model.ChangedFields.Contains(key)">@label</option>
             }
         </select>
         <span class="hint">@T["Leave none selected to start for any change."]</span>

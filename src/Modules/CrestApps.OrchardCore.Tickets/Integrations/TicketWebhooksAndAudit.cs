@@ -42,7 +42,7 @@ internal sealed class TicketWebhookObserver : ITicketObserver
         => _publisher.PublishAsync(TicketWebhookEvents.Created, new { ticket = TicketApiModel.From(ticket) }, $"evt_ticket-created_{ticket.ContentItemId}", cancellationToken);
 
     public Task UpdatedAsync(ContentItem ticket, IReadOnlyList<TimelineFieldChange> changes, CancellationToken cancellationToken = default)
-        => _publisher.PublishAsync(TicketWebhookEvents.Updated, new { ticket = TicketApiModel.From(ticket), changed = changes.Select(change => change.Field).ToArray() }, eventId: null, cancellationToken);
+        => _publisher.PublishAsync(TicketWebhookEvents.Updated, new { ticket = TicketApiModel.From(ticket), changed = changes.Select(change => change.Key ?? change.Field).ToArray() }, eventId: null, cancellationToken);
 
     public Task AssignedAsync(ContentItem ticket, string previousAssigneeId, CancellationToken cancellationToken = default)
         => _publisher.PublishAsync(TicketWebhookEvents.Assigned, new { ticket = TicketApiModel.From(ticket), previousAssigneeId }, eventId: null, cancellationToken);

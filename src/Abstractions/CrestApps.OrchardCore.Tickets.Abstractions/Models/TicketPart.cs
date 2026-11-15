@@ -126,6 +126,11 @@ public sealed class TicketPart : ContentPart
     public int ReplyCount { get; set; }
 
     /// <summary>
+    /// Gets or sets how many public replies agents sent themselves (not automated ones).
+    /// </summary>
+    public int AgentReplyCount { get; set; }
+
+    /// <summary>
     /// Gets or sets how many times the ticket was reopened.
     /// </summary>
     public int ReopenCount { get; set; }

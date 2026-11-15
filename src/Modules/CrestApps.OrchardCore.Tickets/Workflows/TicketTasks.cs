@@ -349,6 +349,7 @@ public sealed class AddTicketReplyTask : TicketTaskActivity
             AuthorName = S["Workflow"],
             Channel = "Workflow",
             SetStatusId = await FieldAsync("StatusId", workflowContext),
+            Actor = Actor,
         }));
 }
 
@@ -373,6 +374,7 @@ public sealed class AddTicketNoteTask : TicketTaskActivity
             IsInternal = true,
             AuthorName = S["Workflow"],
             Channel = "Workflow",
+            Actor = Actor,
         }));
 }
 
