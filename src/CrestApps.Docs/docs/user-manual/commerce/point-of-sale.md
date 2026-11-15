@@ -169,6 +169,8 @@ Click **View** to open a shift:
 
 The note given at the close is shown with it.
 
+**Tips** on a closed shift holds the tips the cashier declared: **Added on card** (tips customers added to card payments) and **Cash tips kept**. The till app sends them when it closes the shift, and **Save tips** on the shift page corrects them. With Payroll and Staff on, card tips are paid to the cashier on their next pay run and cash tips are reported for tax; once payroll took them, they can't change.
+
 ## What a register sale does differently
 
 <YouTube video="point-of-sale-till" title="Video of register sales and returns as orders" start={170} end={199} />

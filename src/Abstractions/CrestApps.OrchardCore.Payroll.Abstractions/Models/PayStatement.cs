@@ -81,6 +81,16 @@ public sealed class PayStatement : CatalogItem, IModifiedUtcAwareModel
     public IList<string> Warnings { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the balances shown on the statement, such as time off, as of the pay date.
+    /// </summary>
+    public IList<PayStatementBalance> Balances { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the employee's review of the draft before the run was submitted, or <see langword="null"/>.
+    /// </summary>
+    public PayStatementReview Review { get; set; }
+
+    /// <summary>
     /// Gets or sets the statement this one reverses, or <see langword="null"/>.
     /// </summary>
     public string VoidOf { get; set; }
@@ -112,6 +122,97 @@ public sealed class PayStatement : CatalogItem, IModifiedUtcAwareModel
 
     /// <inheritdoc />
     public DateTime? ModifiedUtc { get; set; }
+}
+
+/// <summary>
+/// A balance a pay statement shows, such as time off, as of its pay date.
+/// </summary>
+public sealed class PayStatementBalance
+{
+    /// <summary>
+    /// The unit of a balance kept in hours.
+    /// </summary>
+    public const string Hours = "Hours";
+
+    /// <summary>
+    /// The unit of a balance kept in days.
+    /// </summary>
+    public const string Days = "Days";
+
+    /// <summary>
+    /// Gets or sets what the balance is, such as Vacation.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets its unit, <see cref="Hours"/> or <see cref="Days"/>.
+    /// </summary>
+    public string Unit { get; set; } = Hours;
+
+    /// <summary>
+    /// Gets or sets the balance.
+    /// </summary>
+    public decimal Balance { get; set; }
+}
+
+/// <summary>
+/// An employee's review of their draft pay before the run is submitted.
+/// </summary>
+public sealed class PayStatementReview
+{
+    /// <summary>
+    /// Gets or sets what the employee said.
+    /// </summary>
+    public PayStatementReviewStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the employee's note, for a question.
+    /// </summary>
+    public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets the net pay the employee saw; a calculation that changes the net makes the review out of date.
+    /// </summary>
+    public decimal ReviewedNet { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user who reviewed.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets when, in UTC.
+    /// </summary>
+    public DateTime? ReviewedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the net pay the employee was last told to review, so a calculation tells them again only when it
+    /// changed.
+    /// </summary>
+    public decimal? NotifiedNet { get; set; }
+
+    /// <summary>
+    /// Gets whether the review is about the statement's current net pay.
+    /// </summary>
+    /// <param name="net">The statement's net pay.</param>
+    /// <returns><see langword="true"/> when the employee reviewed this net pay.</returns>
+    public bool IsCurrentFor(decimal net)
+        => Status != PayStatementReviewStatus.Pending && ReviewedNet == net;
+}
+
+/// <summary>
+/// What an employee said of their draft pay.
+/// </summary>
+public enum PayStatementReviewStatus
+{
+    /// <summary>Asked, not answered.</summary>
+    Pending,
+
+    /// <summary>The employee says it is right.</summary>
+    Confirmed,
+
+    /// <summary>The employee says something is wrong.</summary>
+    Questioned,
 }
 
 /// <summary>

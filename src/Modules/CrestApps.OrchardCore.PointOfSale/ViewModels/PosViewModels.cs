@@ -72,4 +72,9 @@ public class RegisterShiftDetailViewModel
     public RegisterShiftSummary Summary { get; set; }
 
     public decimal ExpectedCash { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether payroll took the shift's tips, so they can no longer change.
+    /// </summary>
+    public bool TipsTaken { get; set; }
 }

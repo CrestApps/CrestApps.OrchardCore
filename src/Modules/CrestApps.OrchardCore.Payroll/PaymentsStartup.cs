@@ -92,5 +92,14 @@ public sealed class PayrollNotificationsStartup : StartupBase
             PayrollConstants.TaxFormReadyNotificationType,
             LocalizationSource.Create<PayrollNotificationsStartup>("Tax form ready"),
             type => type.Description = LocalizationSource.Create<PayrollNotificationsStartup>("When a tax form of yours, such as a wage statement, is filed and ready in My pay."));
+        services.AddNotificationType(
+            PayrollConstants.PayReviewRequestedNotificationType,
+            LocalizationSource.Create<PayrollNotificationsStartup>("Review your coming pay"),
+            type => type.Description = LocalizationSource.Create<PayrollNotificationsStartup>("When your pay is calculated and ready to look at before it is approved."));
+        services.AddNotificationType(
+            PayrollConstants.PayReviewQuestionedNotificationType,
+            LocalizationSource.Create<PayrollNotificationsStartup>("Pay questioned"),
+            type => type.Description = LocalizationSource.Create<PayrollNotificationsStartup>("When an employee asks about their pay in a run you prepared."));
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayRunObserver, PayReviewNotificationObserver>());
     }
 }

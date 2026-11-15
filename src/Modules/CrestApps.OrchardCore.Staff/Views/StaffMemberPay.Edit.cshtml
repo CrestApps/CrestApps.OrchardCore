@@ -29,6 +29,14 @@
                 <span class="hint">@T["Pay, taxes and benefits for an hour of their work, used to price labor on jobs. Empty to use the hourly rate."]</span>
             </div>
         </div>
+        <div class="ocat-wrapper" asp-validation-class-for="CommissionRate">
+            <label asp-for="CommissionRate" class="ocat-label">@T["Commission on sales (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="CommissionRate" class="form-control" inputmode="decimal" style="max-width: 14rem" placeholder="5" />
+                <span asp-validation-for="CommissionRate" class="text-danger"></span>
+                <span class="hint">@T["The percent of the orders they sell, after discounts and refunds, that payroll pays them as commission. Empty for none."]</span>
+            </div>
+        </div>
 
         <h6 class="mt-3">@T["Rates"]</h6>
         <div class="row g-2 fw-semibold small mb-1"><div class="col-md-4">@T["From"]</div><div class="col-md-4">@T["Rate"]</div><div class="col-md-4">@T["Kind of work"]</div></div>

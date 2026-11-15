@@ -51,6 +51,7 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
         {
             model.AllowPreparerToApprove = settings.AllowPreparerToApprove;
             model.AllowChangingOwnPay = settings.AllowChangingOwnPay;
+            model.EmployeeReview = settings.EmployeeReview;
             model.DefaultCountryPack = settings.DefaultCountryPack;
             model.DefaultCurrency = settings.DefaultCurrency;
             model.TaxProvider = settings.TaxProvider;
@@ -80,6 +81,7 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
 
         settings.AllowPreparerToApprove = model.AllowPreparerToApprove;
         settings.AllowChangingOwnPay = model.AllowChangingOwnPay;
+        settings.EmployeeReview = model.EmployeeReview;
         settings.DefaultCountryPack = string.IsNullOrWhiteSpace(model.DefaultCountryPack) ? null : model.DefaultCountryPack.Trim().ToUpperInvariant();
         settings.DefaultCurrency = string.IsNullOrWhiteSpace(model.DefaultCurrency) ? null : model.DefaultCurrency.Trim().ToUpperInvariant();
         settings.TaxProvider = string.IsNullOrEmpty(model.TaxProvider) ? null : model.TaxProvider;

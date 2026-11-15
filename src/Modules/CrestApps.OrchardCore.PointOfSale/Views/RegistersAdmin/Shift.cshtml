@@ -47,6 +47,41 @@
             </div>
         </div>
     </div>
+    @if (shift.Status == RegisterShiftStatus.Closed)
+    {
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">@T["Tips"]</div>
+                <div class="card-body">
+                    @if (Model.TipsTaken)
+                    {
+                        <dl class="row mb-0">
+                            <dt class="col-7">@T["Added on card"]</dt><dd class="col-5 text-end">@Money(shift.CardTips ?? 0m)</dd>
+                            <dt class="col-7">@T["Cash tips kept"]</dt><dd class="col-5 text-end">@Money(shift.CashTips ?? 0m)</dd>
+                        </dl>
+                        <p class="hint mb-0">@T["Payroll took these tips, so they can't change here."]</p>
+                    }
+                    else
+                    {
+                        <form asp-action="ShiftTips" asp-route-itemId="@shift.ItemId" method="post" class="row g-2 align-items-end">
+                            <div class="col-sm-4">
+                                <label for="cardTips" class="form-label">@T["Added on card"]</label>
+                                <input id="cardTips" name="cardTips" class="form-control" inputmode="decimal" value="@shift.CardTips?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" placeholder="0.00" />
+                            </div>
+                            <div class="col-sm-4">
+                                <label for="cashTips" class="form-label">@T["Cash tips kept"]</label>
+                                <input id="cashTips" name="cashTips" class="form-control" inputmode="decimal" value="@shift.CashTips?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" placeholder="0.00" />
+                            </div>
+                            <div class="col-sm-4">
+                                <button type="submit" class="btn btn-primary">@T["Save tips"]</button>
+                            </div>
+                            <div class="col-12"><span class="hint">@T["The tips {0} declared for the shift. With Payroll on, card tips are paid on their next pay run and cash tips are reported for tax.", shift.OpenedByName]</span></div>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
     <div class="col-12">
         <div class="card">
             <div class="card-header">

@@ -86,4 +86,12 @@ public static class MyPayUrls
     /// <returns>The address.</returns>
     public static string Statement(string statementId)
         => "~/Admin/my-pay/statements/" + statementId;
+
+    /// <summary>
+    /// Gets the address where a person reviews their coming pay.
+    /// </summary>
+    /// <param name="statementId">The draft statement's id.</param>
+    /// <returns>The address.</returns>
+    public static string Review(string statementId)
+        => "~/Admin/my-pay/review/" + statementId;
 }

@@ -98,6 +98,8 @@ public class PayrollSettingsViewModel
 
     public bool AllowChangingOwnPay { get; set; }
 
+    public bool EmployeeReview { get; set; }
+
     public string DefaultCountryPack { get; set; }
 
     public string DefaultCurrency { get; set; }
@@ -678,6 +680,11 @@ public class PayRunDetailsViewModel
     [BindNever]
     public AdminListContext Statements { get; set; }
 
+    /// <summary>
+    /// Gets or sets the open questions of employees about their pay: their name and note.
+    /// </summary>
+    public IList<(string StaffName, string Note)> Questions { get; set; } = [];
+
     public PayRunInputViewModel NewInput { get; set; } = new();
 }
 
@@ -727,11 +734,29 @@ public class MyPayIndexViewModel
 
     [BindNever]
     public bool HasTaxForms { get; set; }
+
+    /// <summary>
+    /// Gets or sets the person's coming pay to review: the draft statement and its employer.
+    /// </summary>
+    public IList<(PayStatement Statement, string EmployerName)> ToReview { get; set; } = [];
 }
 
 /// <summary>
 /// A row of My Pay's statements.
 /// </summary>
+public class MyPayReviewViewModel
+{
+    public PayStatementViewModel Statement { get; set; }
+
+    public string EmployerName { get; set; }
+
+    public PayStatementReview Review { get; set; }
+
+    public bool IsCurrent { get; set; }
+
+    public string Note { get; set; }
+}
+
 public sealed class MyPayStatementRow
 {
     /// <summary>Gets or sets the statement.</summary>

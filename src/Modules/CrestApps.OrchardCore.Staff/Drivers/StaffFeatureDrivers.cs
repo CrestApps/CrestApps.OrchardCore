@@ -44,6 +44,8 @@ public class StaffPayViewModel
 
     public string HourlyCost { get; set; }
 
+    public string CommissionRate { get; set; }
+
     public IList<StaffPayRateRowViewModel> Rates { get; set; } = [];
 
     public IList<StaffSalaryRowViewModel> Salaries { get; set; } = [];
@@ -108,6 +110,7 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
             model.CurrentRate = pay.RateOn(today);
             model.AnnualSalary = pay.SalaryOn(today);
             model.HourlyCost = pay.HourlyCost;
+            model.CommissionRate = pay.CommissionRate;
             model.Rates = [.. pay.Rates.OrderByDescending(rate => rate.EffectiveFrom).Where(rate => rate.ActivityCodeId is null).Select(rate => new StaffPayRateRowViewModel
             {
                 EffectiveFrom = rate.EffectiveFrom,
@@ -146,6 +149,7 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
             PayBasis = pay.PayBasis.ToString(),
             Currency = pay.Currency,
             HourlyCost = Text(pay.HourlyCost),
+            CommissionRate = Text(pay.CommissionRate),
             Rates = pay.Rates.OrderBy(rate => rate.EffectiveFrom).Select(rate => new StaffPayRateRowViewModel
             {
                 EffectiveFrom = rate.EffectiveFrom,
@@ -223,6 +227,13 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.HourlyCost), S["Enter the cost of an hour as a number of zero or more, such as 38.20."]);
         }
 
+        var commission = Parse(model.CommissionRate);
+
+        if (!string.IsNullOrWhiteSpace(model.CommissionRate) && commission is not (>= 0 and <= 100))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CommissionRate), S["Enter the commission as a percent from 0 to 100, such as 5 for 5%."]);
+        }
+
         var currency = string.IsNullOrWhiteSpace(model.Currency) ? null : model.Currency.Trim().ToUpperInvariant();
 
         if (currency is not null && (currency.Length != 3 || !currency.All(char.IsAsciiLetterUpper)))
@@ -242,6 +253,7 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
                 PayBasis = basis,
                 Currency = currency,
                 HourlyCost = cost,
+                CommissionRate = commission,
                 Rates = rates,
                 Salaries = salaries,
 
@@ -273,6 +285,7 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
             model.PayBasis = values.PayBasis;
             model.Currency = values.Currency;
             model.HourlyCost = values.HourlyCost;
+            model.CommissionRate = values.CommissionRate;
             model.Rates = rates;
             model.Salaries = salaries;
         }).Location("Content:20");

@@ -61,6 +61,7 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddScoped<PayRunStore>();
         services.TryAddScoped<PayRunInputStore>();
         services.TryAddScoped<IPayRunManager, PayRunManager>();
+        services.TryAddScoped<PayStatementReviewService>();
         services.TryAddScoped<IPayRunInputManager, PayRunInputManager>();
         services.TryAddScoped<ICatalogManager<PayRun>>(serviceProvider => serviceProvider.GetRequiredService<IPayRunManager>());
         services.TryAddScoped<ICatalogManager<PayRunInput>>(serviceProvider => serviceProvider.GetRequiredService<IPayRunInputManager>());

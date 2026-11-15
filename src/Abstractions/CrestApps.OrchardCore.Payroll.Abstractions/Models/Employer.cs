@@ -213,6 +213,12 @@ public sealed class PayrollSettings
     public bool AllowChangingOwnPay { get; set; }
 
     /// <summary>
+    /// Gets or sets whether employees review their coming pay in My Pay after a run is calculated and before it is
+    /// submitted for approval: each is told, may say it is right or ask about it, and the run shows their answers.
+    /// </summary>
+    public bool EmployeeReview { get; set; }
+
+    /// <summary>
     /// Gets or sets the country pack of a new employer.
     /// </summary>
     public string DefaultCountryPack { get; set; }

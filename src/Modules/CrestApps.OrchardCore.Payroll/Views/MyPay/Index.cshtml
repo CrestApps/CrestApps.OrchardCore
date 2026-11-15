@@ -10,6 +10,27 @@
 }
 else
 {
+    @if (Model.ToReview.Count > 0)
+    {
+        <div class="card mb-3 border-primary">
+            <div class="card-header">@T["Your coming pay"]</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var (statement, employerName) in Model.ToReview)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            @T["{0}, paid on {1}", employerName, statement.PayDate.ToString("d", System.Globalization.CultureInfo.CurrentCulture)]
+                            @if (statement.Review is { } review && review.IsCurrentFor(statement.Net))
+                            {
+                                <span class="badge @(review.Status == PayStatementReviewStatus.Confirmed ? "text-bg-success" : "text-bg-warning") fw-normal ms-1">@(review.Status == PayStatementReviewStatus.Confirmed ? T["You said it's right"] : T["You asked about it"])</span>
+                            }
+                        </span>
+                        <a asp-action="Review" asp-route-id="@statement.ItemId" class="btn btn-sm btn-primary">@T["Review"]</a>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
     @if (Model.Profiles.Count > 0)
     {
         <div class="card mb-3">

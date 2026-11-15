@@ -9,6 +9,21 @@
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Gross"]">@T["Gross {0}", Money(statement.Gross)]</span>
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Net pay"]">@T["Net {0}", Money(statement.Net)]</span>
+@if (statement.Status == PayStatementStatus.Draft && statement.Review is { } review && review.Status != PayStatementReviewStatus.Pending)
+{
+    @if (!review.IsCurrentFor(statement.Net))
+    {
+        <span class="badge text-bg-secondary fw-normal" data-bs-toggle="tooltip" title="@T["The net pay changed after the employee reviewed it."]">@T["Pay changed since review"]</span>
+    }
+    else if (review.Status == PayStatementReviewStatus.Confirmed)
+    {
+        <span class="badge text-bg-success fw-normal">@T["Employee says it's right"]</span>
+    }
+    else
+    {
+        <span class="badge text-bg-danger fw-normal" data-bs-toggle="tooltip" title="@review.Note">@T["Employee asked about it"]</span>
+    }
+}
 @if (statement.Warnings.Count > 0)
 {
     <span class="badge text-bg-warning fw-normal">@T.Plural(statement.Warnings.Count, "1 warning", "{0} warnings")</span>

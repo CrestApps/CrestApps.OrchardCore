@@ -235,6 +235,159 @@ public sealed class MyPayTests
         return [.. Flatten(builder.Build()).Select(item => item.Id).Where(id => !string.IsNullOrEmpty(id))];
     }
 
+    [Fact]
+    public async Task Review_ShowsTheComingPay_TakesAnAnswer_TellsThePreparer_AndGoesOutOfDateWhenPayChanges()
+    {
+        var sent = new List<(string To, global::OrchardCore.Notifications.INotificationMessage Message)>();
+        var notifications = new Mock<global::OrchardCore.Notifications.INotificationService>();
+        var users = new Mock<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>(Mock.Of<Microsoft.AspNetCore.Identity.IUserStore<global::OrchardCore.Users.IUser>>(), null, null, null, null, null, null, null, null);
+        var site = new global::OrchardCore.Settings.SiteSettings { TimeZoneId = "America/New_York" };
+        var siteService = new Mock<global::OrchardCore.Settings.ISiteService>();
+
+        global::OrchardCore.Entities.EntityExtensions.Put(site, new PayrollSettings { EmployeeReview = true });
+        siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(site);
+        notifications
+            .Setup(service => service.SendAsync(It.IsAny<object>(), It.IsAny<global::OrchardCore.Notifications.INotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<object, global::OrchardCore.Notifications.INotificationMessage, CancellationToken>((to, message, _) => sent.Add((((global::OrchardCore.Users.Models.User)to).UserId, message)))
+            .ReturnsAsync(new global::OrchardCore.Notifications.NotificationSendResult());
+        users.Setup(manager => manager.FindByIdAsync("lee-user")).ReturnsAsync(new global::OrchardCore.Users.Models.User { UserId = "lee-user", UserName = "lee" });
+        users.Setup(manager => manager.FindByIdAsync("preparer")).ReturnsAsync(new global::OrchardCore.Users.Models.User { UserId = "preparer", UserName = "preparer" });
+
+        await using var harness = await PayRunTests.CreateHarnessAsync(services =>
+        {
+            services.AddSingleton(notifications.Object);
+            services.AddSingleton(users.Object);
+            services.AddSingleton(siteService.Object);
+            services.AddScoped<IPayRunObserver, PayReviewNotificationObserver>();
+        });
+        var setup = await PayRunTests.SetUpAsync(harness);
+        await LinkAsync(harness, setup.StaffMemberId, "lee-user");
+
+        var preparer = CalendarTestHarness.User("preparer", PayrollPermissions.PreparePayRuns.Name);
+        var lee = CalendarTestHarness.User("lee-user", PayrollPermissions.ViewOwnPay.Name);
+        var sam = CalendarTestHarness.User("sam-user", PayrollPermissions.ViewOwnPay.Name);
+
+        async Task CalculateAsync()
+            => await harness.RunAsync(async services => Assert.True((await services.GetRequiredService<IPayRunService>().CalculateAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), preparer)).Succeeded));
+
+        Task<PayStatement> DraftAsync()
+            => harness.RunAsync(async services => (await services.GetRequiredService<IPayRunService>().ListStatementsAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId))).Single(), commit: false);
+
+        await CalculateAsync();
+        var draft = await DraftAsync();
+
+        // Calculated: Lee is asked once, and sees the coming pay in My Pay; someone else can't open it.
+        var asked = Assert.Single(sent);
+        Assert.Equal(("lee-user", PayrollConstants.PayReviewRequestedNotificationType, MyPayUrls.Review(draft.ItemId)), (asked.To, asked.Message.Type, asked.Message.Url));
+
+        var (index, page, strangerPage) = await harness.RunAsync(async services =>
+        {
+            var reviews = services.GetRequiredService<PayStatementReviewService>();
+
+            return (
+                (MyPayIndexViewModel)Assert.IsType<ViewResult>(await Controller(services, lee).Index()).Model,
+                await Controller(services, lee).Review(draft.ItemId, reviews),
+                await Controller(services, sam).Review(draft.ItemId, reviews));
+        }, commit: false);
+
+        Assert.Equal(draft.ItemId, Assert.Single(index.ToReview).Statement.ItemId);
+        Assert.Equal(draft.Net, ((MyPayReviewViewModel)Assert.IsType<ViewResult>(page).Model).Statement.Statement.Net);
+        Assert.IsType<NotFoundResult>(strangerPage);
+
+        // A question needs a note; with one it is kept and the preparer is told.
+        var (noNote, asking) = await harness.RunAsync(async services =>
+        {
+            var reviews = services.GetRequiredService<PayStatementReviewService>();
+            var controller = Controller(services, lee);
+            var refused = await controller.ReviewPost(draft.ItemId, confirmed: false, note: " ", reviews);
+
+            return (refused is ViewResult && !controller.ModelState.IsValid, await Controller(services, lee).ReviewPost(draft.ItemId, confirmed: false, note: "Two hours are missing on Monday.", reviews));
+        });
+
+        Assert.True(noNote);
+        Assert.IsType<RedirectToActionResult>(asking);
+
+        var questioned = await DraftAsync();
+
+        Assert.Equal((PayStatementReviewStatus.Questioned, "Two hours are missing on Monday."), (questioned.Review.Status, questioned.Review.Note));
+        Assert.True(questioned.Review.IsCurrentFor(questioned.Net));
+        Assert.Contains(sent, item => item.To == "preparer" && item.Message.Type == PayrollConstants.PayReviewQuestionedNotificationType && item.Message.ReferenceId == draft.ItemId);
+
+        // Calculated again with the same pay: Lee isn't asked again and the question stays.
+        sent.Clear();
+        await CalculateAsync();
+        Assert.Empty(sent);
+        Assert.True((await DraftAsync()).Review.IsCurrentFor(questioned.Net));
+
+        // Two more hours change the net pay: Lee is asked again and the answer is out of date.
+        await harness.RunAsync(async services =>
+        {
+            var inputs = services.GetRequiredService<IPayRunInputManager>();
+            var input = await inputs.NewAsync();
+            var reg = (await services.GetRequiredService<IPayCodeManager>().GetAllAsync()).Single(code => code.Code == "REG");
+
+            input.RunId = setup.RunId;
+            input.StaffMemberId = setup.StaffMemberId;
+            input.PayCodeId = reg.ItemId;
+            input.Hours = 2;
+            await inputs.CreateAsync(input);
+        });
+        await CalculateAsync();
+
+        var changed = await DraftAsync();
+
+        Assert.NotEqual(questioned.Net, changed.Net);
+        Assert.False(changed.Review.IsCurrentFor(changed.Net));
+        Assert.Equal(PayrollConstants.PayReviewRequestedNotificationType, Assert.Single(sent).Message.Type);
+
+        // Lee says it is right; once the run is submitted the pay can't be reviewed any more.
+        await harness.RunAsync(async services => Assert.IsType<RedirectToActionResult>(await Controller(services, lee).ReviewPost(draft.ItemId, confirmed: true, note: null, services.GetRequiredService<PayStatementReviewService>())));
+        Assert.Equal(PayStatementReviewStatus.Confirmed, (await DraftAsync()).Review.Status);
+        await harness.RunAsync(async services => Assert.True((await services.GetRequiredService<IPayRunService>().SubmitAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), preparer)).Succeeded));
+
+        var (afterSubmit, closed) = await harness.RunAsync(async services =>
+        {
+            var reviews = services.GetRequiredService<PayStatementReviewService>();
+
+            return ((MyPayIndexViewModel)Assert.IsType<ViewResult>(await Controller(services, lee).Index()).Model, await Controller(services, lee).ReviewPost(draft.ItemId, confirmed: false, note: "Late.", reviews));
+        }, commit: false);
+
+        Assert.Empty(afterSubmit.ToReview);
+        Assert.IsType<NotFoundResult>(closed);
+
+        // With the setting off nobody is asked and nothing is shown.
+        global::OrchardCore.Entities.EntityExtensions.Put(site, new PayrollSettings { EmployeeReview = false });
+        Assert.Empty(await harness.RunAsync(services => services.GetRequiredService<PayStatementReviewService>().ListOpenAsync(setup.StaffMemberId), commit: false));
+    }
+
+    [Fact]
+    public async Task Calculation_StoresTheBalancesOfEverySource_OnTheStatement_AndTheStubPrintsThem()
+    {
+        var source = new Mock<IPayStatementBalanceSource>();
+
+        source.Setup(value => value.GetBalancesAsync(It.IsAny<string>(), new DateOnly(2026, 11, 20), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new PayStatementBalance { Name = "Vacation", Unit = PayStatementBalance.Hours, Balance = 24 }]);
+
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => services.AddSingleton(source.Object));
+        var setup = await PayRunTests.SetUpAsync(harness);
+        var preparer = CalendarTestHarness.User("preparer", PayrollPermissions.PreparePayRuns.Name);
+
+        var (statement, pdf) = await harness.RunAsync(async services =>
+        {
+            var service = services.GetRequiredService<IPayRunService>();
+            var run = await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId);
+
+            Assert.True((await service.CalculateAsync(run, preparer)).Succeeded);
+
+            var draft = (await service.ListStatementsAsync(run)).Single();
+
+            return (draft, PayStubDocument.Write(draft, new Dictionary<string, string>(), null, new PayStubTexts()));
+        });
+
+        Assert.Equal(("Vacation", 24m), (Assert.Single(statement.Balances).Name, statement.Balances[0].Balance));
+        Assert.NotEmpty(pdf);
+    }
+
     private static IEnumerable<MyPayStatementRow> Rows(MyPayIndexViewModel model)
         => ((global::OrchardCore.Admin.AdminListContext<MyPayStatementRow>)model.Statements).Source;
 
@@ -325,6 +478,7 @@ public sealed class MyPayTests
                     User = user,
                     RequestServices = new ServiceCollection()
                         .AddSingleton(Mock.Of<Microsoft.AspNetCore.Mvc.ViewFeatures.ITempDataDictionaryFactory>())
+                        .AddSingleton(services.GetRequiredService<PayStatementReviewService>())
                         .AddSingleton<Microsoft.AspNetCore.Mvc.ModelBinding.IModelMetadataProvider, Microsoft.AspNetCore.Mvc.ModelBinding.EmptyModelMetadataProvider>()
                         .BuildServiceProvider(),
                 },

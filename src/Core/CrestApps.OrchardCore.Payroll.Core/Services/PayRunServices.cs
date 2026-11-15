@@ -579,6 +579,7 @@ public sealed partial class DefaultPayRunService : IPayRunService
                     TaxIdHint = profile.TaxId?.Hint,
                     EmployerName = employer?.PrintedName,
                 };
+                statement.Balances = [.. await BalancesAsync(profile.StaffMemberId, run.PayDate, cancellationToken)];
 
                 if (drafts.Contains(statement))
                 {
@@ -627,6 +628,19 @@ public sealed partial class DefaultPayRunService : IPayRunService
         }
 
         return result;
+    }
+
+    // The balances a statement shows, such as time off, from every source.
+    private async Task<IReadOnlyList<PayStatementBalance>> BalancesAsync(string staffMemberId, DateOnly payDate, CancellationToken cancellationToken)
+    {
+        var balances = new List<PayStatementBalance>();
+
+        foreach (var source in _services.GetServices<IPayStatementBalanceSource>())
+        {
+            balances.AddRange(await source.GetBalancesAsync(staffMemberId, payDate, cancellationToken));
+        }
+
+        return balances;
     }
 
     /// <inheritdoc />

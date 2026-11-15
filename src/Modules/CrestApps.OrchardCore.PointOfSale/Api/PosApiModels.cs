@@ -40,7 +40,9 @@ public sealed record ApiShift(
     string OpenedBy,
     DateTime OpenedUtc,
     string ClosedBy,
-    DateTime? ClosedUtc);
+    DateTime? ClosedUtc,
+    ApiMoney CardTips = null,
+    ApiMoney CashTips = null);
 
 /// <summary>
 /// Cash put in the drawer or taken out of it outside a sale.
@@ -112,6 +114,16 @@ public sealed class ApiCloseShiftRequest
     public decimal? CountedCash { get; set; }
 
     public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tips customers added on card, which the cashier is paid through payroll.
+    /// </summary>
+    public decimal? CardTips { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cash tips the cashier kept, reported to payroll.
+    /// </summary>
+    public decimal? CashTips { get; set; }
 }
 
 public sealed class ApiPosSaleRequest

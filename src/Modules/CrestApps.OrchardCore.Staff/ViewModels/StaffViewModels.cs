@@ -334,6 +334,8 @@ public class StaffPayProfileViewModel
 
     public decimal? HourlyCost { get; set; }
 
+    public decimal? CommissionRate { get; set; }
+
     public IList<CrestApps.OrchardCore.Staff.Drivers.StaffPayRateRowViewModel> Rates { get; set; } = [];
 }
 

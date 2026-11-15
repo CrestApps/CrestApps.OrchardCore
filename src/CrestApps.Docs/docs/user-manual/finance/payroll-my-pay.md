@@ -24,6 +24,10 @@ A statement shows once your pay is processed. A statement marked **Voided** was 
 
 If the page says your user is not linked to a staff member, ask your payroll contact to link it.
 
+## Review your coming pay
+
+Where your employer asks for it, you're told when your pay is calculated, before it is approved. **My pay** then shows **Your coming pay**: click **Review** to see the pay statement as it stands, with its lines, your net pay and your time-off balances. Click **This looks right**, or write what looks wrong (such as missing hours) and click **Ask about it**: payroll sees your question on the pay run before it is submitted. If your pay changes after you looked, you're told again. Once the run is submitted, the pay can no longer be reviewed.
+
 ## Change your tax election or where your pay goes
 
 Under **Your pay details**, choose **Tax elections and where your pay goes** for the employer:

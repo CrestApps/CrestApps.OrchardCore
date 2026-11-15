@@ -59,3 +59,18 @@
         </div>
     </div>
 </div>
+@if (statement.Balances.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Balances on {0}", statement.PayDate.ToString("d", CultureInfo.CurrentCulture)]</div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                @foreach (var balance in statement.Balances)
+                {
+                    <dt class="col-sm-6">@balance.Name</dt>
+                    <dd class="col-sm-6">@(balance.Unit == PayStatementBalance.Days ? T["{0} days", balance.Balance.ToString("0.##", CultureInfo.CurrentCulture)] : T["{0} hours", balance.Balance.ToString("0.##", CultureInfo.CurrentCulture)])</dd>
+                }
+            </dl>
+        </div>
+    </div>
+}

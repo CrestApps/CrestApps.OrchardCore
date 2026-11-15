@@ -49,6 +49,15 @@ public sealed class PayStubTexts
 
     /// <summary>Gets or sets the mark of a voided or reversing statement.</summary>
     public string Voided { get; set; } = "VOID";
+
+    /// <summary>Gets or sets the heading of the balances, such as time off.</summary>
+    public string Balances { get; set; } = "Balances";
+
+    /// <summary>Gets or sets the unit of a balance in hours.</summary>
+    public string HoursUnit { get; set; } = "hours";
+
+    /// <summary>Gets or sets the unit of a balance in days.</summary>
+    public string DaysUnit { get; set; } = "days";
 }
 
 /// <summary>
@@ -184,6 +193,22 @@ public static class PayStubDocument
 
                 Text(PdfText.Fit(PdfText.Clean(label), regular, 9, currentAt - Margin - 90), regular, 9, Margin, y);
                 TextRight(Money(payment.Amount), regular, 9, currentAt, y);
+                y += LineHeight;
+            }
+        }
+
+        if (statement.Balances.Count > 0)
+        {
+            y += LineHeight / 2;
+            Text(texts.Balances, bold, 9, Margin, y);
+            y += LineHeight;
+
+            foreach (var balance in statement.Balances)
+            {
+                var unit = balance.Unit == PayStatementBalance.Days ? texts.DaysUnit : texts.HoursUnit;
+
+                Text(PdfText.Fit(PdfText.Clean(balance.Name), regular, 9, currentAt - Margin - 90), regular, 9, Margin, y);
+                TextRight(PdfText.Clean($"{balance.Balance.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} {unit}"), regular, 9, currentAt, y);
                 y += LineHeight;
             }
         }

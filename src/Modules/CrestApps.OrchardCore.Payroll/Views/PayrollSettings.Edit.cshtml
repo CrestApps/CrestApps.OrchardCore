@@ -21,6 +21,15 @@
                 </div>
             </div>
         </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="EmployeeReview" type="checkbox" class="form-check-input" />
+                    <label asp-for="EmployeeReview" class="form-check-label">@T["Employees review their coming pay before the run is submitted"]</label>
+                    <span class="hint dashed">@T["Once a run is calculated, each employee with a user is told to look at their pay in My Pay and say it is right or ask about it; the run shows their answers and warns before it is submitted with a question open."]</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

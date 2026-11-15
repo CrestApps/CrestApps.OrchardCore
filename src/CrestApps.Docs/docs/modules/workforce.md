@@ -152,6 +152,10 @@ A team's `TimeOffShiftHandling` (`Flag`, `Remove`, or `null` for its parent's) s
 
 **Background task.** *Time off accrual* runs every hour at a quarter past and calls `RunAsync` for the site's today.
 
+### Time off in payroll
+
+With Pay Setup on, `TimeOffPayoutPayInputSource` (source kind `TimeOffPayout`) gives payroll each `Payout` ledger entry as hours on the type's pay code, and `TimeOffPayStatementBalanceSource` puts the paid types' balances on pay statements (`AddWorkforceTimeOffPayrollCore`).
+
 ## Labor rules
 
 The **Workforce Labor Rules** feature (`CrestApps.OrchardCore.Workforce.LaborRules`) registers its services with `AddWorkforceLaborRulesCore()`, and adds the index tables, the admin screens, the permissions and the `WorkforceLaborRules` recipe step.

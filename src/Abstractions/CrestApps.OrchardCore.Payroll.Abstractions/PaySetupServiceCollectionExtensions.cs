@@ -105,4 +105,20 @@ public static class PaySetupServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers a source of the balances a pay statement shows, such as time off.
+    /// </summary>
+    /// <typeparam name="TSource">The source.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddPayStatementBalanceSource<TSource>(this IServiceCollection services)
+        where TSource : class, IPayStatementBalanceSource
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayStatementBalanceSource, TSource>());
+
+        return services;
+    }
 }

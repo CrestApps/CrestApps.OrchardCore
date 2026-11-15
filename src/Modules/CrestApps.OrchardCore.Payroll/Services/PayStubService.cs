@@ -59,6 +59,9 @@ public sealed class PayStubService
             Deposit = S["Deposit"],
             Check = S["Check"],
             Voided = S["VOID"],
+            Balances = S["Balances"],
+            HoursUnit = S["hours"],
+            DaysUnit = S["days"],
         });
     }
 

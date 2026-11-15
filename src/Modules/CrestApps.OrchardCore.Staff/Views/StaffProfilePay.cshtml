@@ -14,6 +14,10 @@
             <dt class="col-sm-4">@(Model.PayBasis == StaffPayBasis.PerUnit ? T["Rate per unit today"] : T["Hourly rate today"])</dt><dd class="col-sm-8">@Amount(Model.CurrentRate)</dd>
             <dt class="col-sm-4">@T["Yearly salary today"]</dt><dd class="col-sm-8">@Amount(Model.AnnualSalary)</dd>
             <dt class="col-sm-4">@T["Cost of an hour"]</dt><dd class="col-sm-8">@Amount(Model.HourlyCost)</dd>
+            @if (Model.CommissionRate is { } commission)
+            {
+                <dt class="col-sm-4">@T["Commission on sales"]</dt><dd class="col-sm-8">@commission.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%</dd>
+            }
         </dl>
         @if (Model.Rates.Count > 0)
         {

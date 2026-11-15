@@ -54,6 +54,10 @@ A contractor profile has nothing withheld except rules of the `ContractorWithhol
 
 Implement `IPayStatementPaymentMethod` (`Method`, `PayAsync`, `VoidAsync`) for a `NetPayMethod`; Direct Deposit pays through Disbursements and Paychecks through Checks, with the statement as the check's voucher (`ICheckVoucherSource`). Disbursements and checks of pay use the source kind `PayStatement` with the employer as access scope.
 
+## Inputs from other modules
+
+A module that has hours or amounts to pay implements `IPayInputSource` in its own project (register it in a startup with `[RequireFeatures(PayrollConstants.Features.PaySetup)]`) and stamps its records when a run takes them, like `TimeOffPayoutPayInputSource`, `PosTipsPayInputSource` and `OrderCommissionPayInputSource`. Balances a stub shows come from `IPayStatementBalanceSource`. Commission rates live on Staff compensation (`StaffPayRates.CommissionRate`), never in Payroll.
+
 ## Payroll journal
 
 Never write a journal file or keep a ledger in Payroll: `PayrollJournal.EntriesFor` turns statement lines into debits and credits on the accounts of `PayrollJournalSettings` (per kind, or a mapping by pay code or tax code), and the **Journal entries** data set (`ExportPayrollData` scope) feeds a Data Pipeline that groups and delivers them.

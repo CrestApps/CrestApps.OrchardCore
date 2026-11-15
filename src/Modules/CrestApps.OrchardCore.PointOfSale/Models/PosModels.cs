@@ -85,6 +85,16 @@ public sealed class RegisterShift : CatalogItem
     public string CloseNote { get; set; }
 
     /// <summary>
+    /// Gets or sets the tips the cashier declared that customers added on card, paid to them through payroll.
+    /// </summary>
+    public decimal? CardTips { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cash tips the cashier declared they kept, reported to payroll for tax.
+    /// </summary>
+    public decimal? CashTips { get; set; }
+
+    /// <summary>
     /// Gets or sets what the shift sold, kept when it closes.
     /// </summary>
     public RegisterShiftSummary Summary { get; set; }

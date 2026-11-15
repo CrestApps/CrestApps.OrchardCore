@@ -97,6 +97,12 @@ public sealed class StaffPayRates
     public decimal? HourlyCost { get; set; }
 
     /// <summary>
+    /// Gets or sets the commission on the sales the staff member makes, as a percent of what the orders came to after
+    /// discounts and refunds, such as 5 for 5%; <see langword="null"/> for none.
+    /// </summary>
+    public decimal? CommissionRate { get; set; }
+
+    /// <summary>
     /// Gets the hourly rate on a day for a kind of work: the latest started rate for that work, else the latest started
     /// general rate.
     /// </summary>

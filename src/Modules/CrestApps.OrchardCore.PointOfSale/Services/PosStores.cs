@@ -49,6 +49,14 @@ public interface IRegisterShiftStore : ICatalog<RegisterShift>
     /// <param name="take">The most shifts returned for each way the person took part.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<IReadOnlyList<RegisterShift>> ListForUsersAsync(IEnumerable<string> userIds, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the closed shifts opened from one instant to another.
+    /// </summary>
+    /// <param name="fromUtc">The first instant, or <see langword="null"/> for any.</param>
+    /// <param name="toUtc">The instant after the last, or <see langword="null"/> for any.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    Task<IReadOnlyList<RegisterShift>> ListClosedAsync(DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default);
 }
 
 public sealed class RegisterShiftStore : DocumentCatalog<RegisterShift, RegisterShiftIndex>, IRegisterShiftStore
@@ -60,6 +68,18 @@ public sealed class RegisterShiftStore : DocumentCatalog<RegisterShift, Register
         : base(session)
     {
         CollectionName = PosConstants.CollectionName;
+    }
+
+    public async Task<IReadOnlyList<RegisterShift>> ListClosedAsync(DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken = default)
+    {
+        var closed = (int)RegisterShiftStatus.Closed;
+        var from = fromUtc ?? DateTime.MinValue;
+        var to = toUtc ?? DateTime.MaxValue;
+        var shifts = await Session.Query<RegisterShift, RegisterShiftIndex>(index => index.Status == closed && index.OpenedUtc >= from && index.OpenedUtc < to, collection: CollectionName)
+            .OrderBy(index => index.OpenedUtc)
+            .ListAsync(cancellationToken);
+
+        return [.. shifts];
     }
 
     public Task<RegisterShift> FindOpenAsync(string registerId, CancellationToken cancellationToken = default)

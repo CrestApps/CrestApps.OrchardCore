@@ -259,7 +259,47 @@ public sealed class RegistersAdminController : Controller
             Shift = shift,
             Summary = summary,
             ExpectedCash = shift.ExpectedCash ?? shift.GetExpectedCash(summary.Cash),
+            TipsTaken = PosShiftService.TipsTaken(shift),
         });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ShiftTips(string itemId, string cardTips, string cashTips)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, PosPermissions.ManageRegisters))
+        {
+            return Forbid();
+        }
+
+        if (await _shifts.FindByIdAsync(itemId) is not { } shift)
+        {
+            return NotFound();
+        }
+
+        static (bool Valid, decimal? Amount) Read(string value)
+            => string.IsNullOrWhiteSpace(value)
+                ? (true, null)
+                : decimal.TryParse(value.Trim(), System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out var amount) && amount >= 0m
+                    ? (true, Math.Round(amount, 2))
+                    : (false, null);
+
+        var card = Read(cardTips);
+        var cash = Read(cashTips);
+
+        if (!card.Valid || !cash.Valid)
+        {
+            await _notifier.ErrorAsync(H["Enter each tip amount as a number of zero or more, such as 42.50."]);
+        }
+        else if (await _shiftService.DeclareTipsAsync(shift, card.Amount, cash.Amount, HttpContext.RequestAborted))
+        {
+            await _notifier.SuccessAsync(H["The tips were saved."]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["Tips can be declared only for a closed shift whose tips payroll hasn't taken yet."]);
+        }
+
+        return RedirectToAction(nameof(Shift), new { itemId });
     }
 
     private async Task ValidateAsync(RegisterEditViewModel model)

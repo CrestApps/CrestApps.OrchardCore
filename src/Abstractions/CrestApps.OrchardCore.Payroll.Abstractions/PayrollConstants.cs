@@ -136,6 +136,16 @@ public static class PayrollConstants
     public const string PayStatementReadyNotificationType = "PayStatementReady";
 
     /// <summary>
+    /// The notification type that asks an employee to review their coming pay.
+    /// </summary>
+    public const string PayReviewRequestedNotificationType = "PayReviewRequested";
+
+    /// <summary>
+    /// The notification type that tells the preparer of a run an employee asked about their pay.
+    /// </summary>
+    public const string PayReviewQuestionedNotificationType = "PayReviewQuestioned";
+
+    /// <summary>
     /// The notification type of a change to a person's tax elections or to where their pay goes: a security notice.
     /// </summary>
     public const string PayDetailsChangedNotificationType = "PayDetailsChanged";

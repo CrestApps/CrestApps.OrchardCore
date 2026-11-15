@@ -136,6 +136,15 @@ public sealed class MyPayController : Controller
 
         model.CanManageDetails = await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ManageOwnPayDetails);
 
+        // Coming pay to review before the run is submitted, when employees review their pay.
+        if (HttpContext.RequestServices.GetService<PayStatementReviewService>() is { } reviews)
+        {
+            foreach (var (statement, _) in await reviews.ListOpenAsync(meId, HttpContext.RequestAborted))
+            {
+                model.ToReview.Add((statement, (await _employers.FindByIdAsync(statement.EmployerId))?.Name ?? statement.Snapshot?.EmployerName));
+            }
+        }
+
         // The person's filed tax forms, such as wage statements.
         if (HttpContext.RequestServices.GetService<IPayrollFilingManager>() is { } filings && model.Profiles.Count > 0)
         {
@@ -301,6 +310,102 @@ public sealed class MyPayController : Controller
         {
             EmployerName = (await _employers.FindByIdAsync(profile.EmployerId))?.Name ?? profile.EmployerId,
             Editor = editor,
+        };
+
+    /// <summary>
+    /// The person's coming pay, to review before the run is submitted.
+    /// </summary>
+    /// <param name="id">The draft statement's id.</param>
+    /// <param name="reviews">The reviews.</param>
+    /// <returns>The page.</returns>
+    [Admin("my-pay/review/{id}", "PayrollMyPayReview")]
+    public async Task<IActionResult> Review(string id, [FromServices] PayStatementReviewService reviews)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ViewOwnPay))
+        {
+            return Forbid();
+        }
+
+        if (await OwnDraftAsync(id, reviews) is not { } open)
+        {
+            return NotFound();
+        }
+
+        return View(await ReviewModelAsync(open.Statement, open.Run, null));
+    }
+
+    /// <summary>
+    /// Records the person's answer about their coming pay.
+    /// </summary>
+    /// <param name="id">The draft statement's id.</param>
+    /// <param name="confirmed"><see langword="true"/> when it is right.</param>
+    /// <param name="note">What the person asks.</param>
+    /// <param name="reviews">The reviews.</param>
+    /// <returns>My Pay, or the page again with the reason.</returns>
+    [HttpPost]
+    [ActionName(nameof(Review))]
+    [Admin("my-pay/review/{id}", "PayrollMyPayReviewPost")]
+    public async Task<IActionResult> ReviewPost(string id, bool confirmed, string note, [FromServices] PayStatementReviewService reviews)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ViewOwnPay))
+        {
+            return Forbid();
+        }
+
+        if (await OwnDraftAsync(id, reviews) is not { } open)
+        {
+            return NotFound();
+        }
+
+        var result = await reviews.ReviewAsync(open.Statement, User, confirmed, note, HttpContext.RequestAborted);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error);
+            }
+
+            return View(await ReviewModelAsync(open.Statement, open.Run, note));
+        }
+
+        await _notifier.SuccessAsync(confirmed ? H["Thanks: payroll knows your pay looks right."] : H["Thanks: payroll was told about your question before the run is approved."]);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    // The person's draft statement of a run that takes reviews, or null.
+    private async Task<(PayStatement Statement, PayRun Run)?> OwnDraftAsync(string id, PayStatementReviewService reviews)
+    {
+        if (string.IsNullOrEmpty(id) || await MeAsync() is not { } me)
+        {
+            return null;
+        }
+
+        foreach (var open in await reviews.ListOpenAsync(me.ItemId, HttpContext.RequestAborted))
+        {
+            if (open.Statement.ItemId == id)
+            {
+                return open;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<MyPayReviewViewModel> ReviewModelAsync(PayStatement statement, PayRun run, string note)
+        => new()
+        {
+            Statement = new PayStatementViewModel
+            {
+                Statement = statement,
+                Run = run,
+                Codes = (await _codes.GetAllAsync()).ToDictionary(code => code.ItemId, code => code.Code, StringComparer.Ordinal),
+            },
+            EmployerName = (await _employers.FindByIdAsync(statement.EmployerId))?.Name ?? statement.Snapshot?.EmployerName,
+            Review = statement.Review,
+            IsCurrent = statement.Review?.IsCurrentFor(statement.Net) == true,
+            Note = note ?? (statement.Review?.Status == PayStatementReviewStatus.Questioned ? statement.Review.Note : null),
         };
 
     // The staff member linked to the signed-in user, or null.

@@ -544,6 +544,10 @@ public sealed class PayRunsController : Controller
             },
         };
 
+        model.Questions = [.. ((AdminListContext<PayStatement>)model.Statements).Source
+            .Where(statement => statement.Status == PayStatementStatus.Draft && statement.Review is { Status: PayStatementReviewStatus.Questioned } review && review.IsCurrentFor(statement.Net))
+            .Select(statement => (NameOf(statement.StaffMemberId) ?? statement.Snapshot?.EmployeeName, statement.Review.Note))];
+
         if (!string.IsNullOrEmpty(run.ApprovalRequestId) && HttpContext.RequestServices.GetService<IApprovalRequestManager>() is { } requests
             && await requests.FindByIdAsync(run.ApprovalRequestId) is { } request)
         {
