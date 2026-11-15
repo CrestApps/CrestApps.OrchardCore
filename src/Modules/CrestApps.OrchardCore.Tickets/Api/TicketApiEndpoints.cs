@@ -92,7 +92,7 @@ internal static class TicketApiEndpoints
         return routes;
     }
 
-    internal static async Task<Results<Ok<TicketApiPage>, ProblemHttpResult>> ListAsync(
+    internal static async Task<Results<Ok<TicketApiPage>, ProblemHttpResult, ValidationProblem>> ListAsync(
         string q,
         string deskId,
         string status,
@@ -107,15 +107,23 @@ internal static class TicketApiEndpoints
     {
         var pageSkip = TicketApiPage.ClampSkip(skip);
         var pageTake = TicketApiPage.ClampTake(take);
+        var categories = new List<TicketStatusCategory>();
+
+        foreach (var value in (status ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!Enum.TryParse<TicketStatusCategory>(value, ignoreCase: true, out var category) || !Enum.IsDefined(category))
+            {
+                return ApiProblems.Validation(nameof(status), "Give status categories from New, Open, Pending, OnHold, Solved and Closed.");
+            }
+
+            categories.Add(category);
+        }
+
         var query = new TicketQuery
         {
             Search = string.IsNullOrWhiteSpace(q) ? null : q.Trim(),
             DeskIds = string.IsNullOrEmpty(deskId) ? [] : [deskId],
-            Categories = [.. (status ?? string.Empty)
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(value => Enum.TryParse<TicketStatusCategory>(value, ignoreCase: true, out var category) ? category : (TicketStatusCategory?)null)
-                .Where(category => category.HasValue)
-                .Select(category => category.Value)],
+            Categories = categories,
             Assignee = string.IsNullOrEmpty(assignee) ? null : assignee,
             Requester = string.IsNullOrEmpty(requester) ? null : requester,
             AccountId = string.IsNullOrEmpty(accountId) ? null : accountId,
@@ -178,12 +186,11 @@ internal static class TicketApiEndpoints
             ? []
             : await attachments.GetAsync(page.Entries.SelectMany(entry => entry.AttachmentIds ?? []), httpContext.RequestAborted);
         var byEntry = files.ToLookup(file => file.Owner.Id, StringComparer.Ordinal);
-        var basePath = httpContext.Request.PathBase.Value ?? string.Empty;
 
         IReadOnlyList<TicketApiEntry> entries = [.. page.Entries.Select(entry => TicketApiEntry.From(
             entry,
             byEntry[entry.ItemId],
-            file => attachments is null ? null : basePath + attachments.CreateSignedPath(file.ItemId, _linkLifetime)))];
+            file => attachments?.CreateSignedPath(file.ItemId, _linkLifetime)))];
 
         return TypedResults.Ok(entries);
     }
@@ -374,6 +381,11 @@ internal static class TicketApiEndpoints
             return ApiProblems.Forbidden();
         }
 
+        if (!isInternal && !string.IsNullOrEmpty(request.SetStatusId) && !await access.CanAsync(httpContext.User, ticket, TicketOperation.Edit, cancellationToken))
+        {
+            return ApiProblems.Forbidden("Setting a status needs the edit permission.");
+        }
+
         var entryId = UniqueId.GenerateId();
         var (attached, uploadErrors) = await StoreFilesAsync(services, httpContext.User, request.Attachments, entryId, cancellationToken);
 
@@ -408,7 +420,7 @@ internal static class TicketApiEndpoints
 
         return TypedResults.Created(
             $"{basePath}/{Prefix}/tickets/{ticket.ContentItemId}/entries",
-            entry is null ? null : TicketApiEntry.From(entry, files, file => basePath + attachments.CreateSignedPath(file.ItemId, _linkLifetime)));
+            entry is null ? null : TicketApiEntry.From(entry, files, file => attachments?.CreateSignedPath(file.ItemId, _linkLifetime)));
     }
 
     private static async Task<ContentItem> FindAsync(ITicketService tickets, string ticketId)

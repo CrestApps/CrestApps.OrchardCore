@@ -2,6 +2,8 @@ using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tickets.Models;
+using Microsoft.AspNetCore.Identity;
+using OrchardCore.Users;
 using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,6 +123,33 @@ public sealed class DefaultTicketAccessService : ITicketAccessService
         };
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> CanBeAssignedAsync(string userId, string deskId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(deskId))
+        {
+            return false;
+        }
+
+        var users = _serviceProvider.GetService<UserManager<IUser>>();
+        var principals = _serviceProvider.GetService<IUserClaimsPrincipalFactory<IUser>>();
+
+        // Without the user services the site can't tell; the assignment stands as before.
+        if (users is null || principals is null)
+        {
+            return true;
+        }
+
+        if (await users.FindByIdAsync(userId) is not { } user)
+        {
+            return false;
+        }
+
+        var principal = await principals.CreateAsync(user);
+
+        return (await GetViewScopesAsync(principal, cancellationToken)).ContainsKey(deskId);
+    }
+
     private async Task<bool> InScopeAsync(ClaimsPrincipal user, TicketPart part, TicketViewScope scope, CancellationToken cancellationToken)
     {
         var userId = UserIdOf(user);
@@ -128,7 +157,8 @@ public sealed class DefaultTicketAccessService : ITicketAccessService
         return scope switch
         {
             TicketViewScope.All => true,
-            TicketViewScope.Teams => part.AssigneeId == userId || (!string.IsNullOrEmpty(part.TeamId) && (await TeamsOfAsync(userId, cancellationToken)).Contains(part.TeamId)),
+            // A principal without a user id (an API token for a client) is never the assignee, even of an unassigned ticket.
+            TicketViewScope.Teams => (!string.IsNullOrEmpty(userId) && part.AssigneeId == userId) || (!string.IsNullOrEmpty(part.TeamId) && (await TeamsOfAsync(userId, cancellationToken)).Contains(part.TeamId)),
             TicketViewScope.Assigned => !string.IsNullOrEmpty(userId) && part.AssigneeId == userId,
             _ => false,
         };

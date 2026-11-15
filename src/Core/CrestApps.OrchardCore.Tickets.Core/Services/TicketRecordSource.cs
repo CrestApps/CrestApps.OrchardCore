@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.Localization;
 
@@ -23,6 +24,8 @@ public sealed class TicketRecordSource : IRecordSource
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketRecordSource"/> class.
     /// </summary>
@@ -36,8 +39,10 @@ public sealed class TicketRecordSource : IRecordSource
         ITicketAccessService access,
         IContentManager contentManager,
         LinkGenerator linkGenerator,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<TicketRecordSource> stringLocalizer)
     {
+        S = stringLocalizer;
         _serviceProvider = serviceProvider;
         _access = access;
         _contentManager = contentManager;
@@ -88,12 +93,19 @@ public sealed class TicketRecordSource : IRecordSource
             return summaries;
         }
 
+        var user = _httpContextAccessor.HttpContext?.User;
+
         foreach (var ticket in await _contentManager.GetAsync(wanted, VersionOptions.Latest))
         {
-            if (ticket.Has<TicketPart>())
+            if (!ticket.Has<TicketPart>())
             {
-                summaries[ticket.ContentItemId] = ToSummary(ticket);
+                continue;
             }
+
+            // A link to a ticket the reader can't see shows that there is one, not its number or subject.
+            summaries[ticket.ContentItemId] = user is not null && await _access.CanAsync(user, ticket, TicketOperation.ViewAssigned, cancellationToken)
+                ? ToSummary(ticket)
+                : new RecordSummary { Id = ticket.ContentItemId, Title = S["A ticket you can't see"] };
         }
 
         return summaries;

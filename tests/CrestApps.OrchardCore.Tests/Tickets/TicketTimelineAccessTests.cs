@@ -11,7 +11,8 @@ using OrchardCore.ContentManagement;
 namespace CrestApps.OrchardCore.Tests.Tickets;
 
 /// <summary>
-/// A ticket's timeline: whoever may view the ticket reads its replies and notes; nobody else reads anything, a missing
+/// A ticket's timeline: whoever may view the ticket reads its replies and notes; its requester reads only its public
+/// entries; nobody else reads anything, a missing
 /// ticket has no timeline, and nothing is added through the generic timeline composer, because replies and notes go
 /// through the ticket service, which keeps the counters, the service levels and the life cycle.
 /// </summary>
@@ -19,6 +20,23 @@ public sealed class TicketTimelineAccessTests
 {
     private static readonly ClaimsPrincipal _agent = new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "agent-1")], "test"));
     private static readonly ClaimsPrincipal _stranger = new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "stranger")], "test"));
+    private static readonly ClaimsPrincipal _requester = new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "requester-1")], "test"));
+
+    [Fact]
+    public async Task TheRequester_ReadsOnlyThePublicEntriesOfTheirOwnTicket()
+    {
+        // Arrange
+        var access = Create();
+        var subject = new RecordRef(TicketsConstants.RecordKind, "t1");
+
+        // Act
+        var requesterPublic = await access.CanViewAsync(_requester, subject, TimelineVisibility.Public, TestContext.Current.CancellationToken);
+        var requesterInternal = await access.CanViewAsync(_requester, subject, TimelineVisibility.Internal, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(requesterPublic);
+        Assert.False(requesterInternal);
+    }
 
     [Fact]
     public async Task WhoeverMayViewTheTicket_ReadsItsRepliesAndNotes_AndNobodyElseReadsAnything()
@@ -59,7 +77,7 @@ public sealed class TicketTimelineAccessTests
     private static TicketTimelineAccess Create()
     {
         var ticket = new ContentItem { ContentItemId = "t1", ContentType = TicketsConstants.DefaultContentType };
-        ticket.Apply(new TicketPart { DeskId = "support" });
+        ticket.Apply(new TicketPart { DeskId = "support", Requester = new CrestApps.OrchardCore.Parties.Models.PartyRef(CrestApps.OrchardCore.Parties.Models.PartyKinds.User, "requester-1") });
         var contentManager = new Mock<IContentManager>();
         contentManager.Setup(manager => manager.GetAsync("t1", It.IsAny<VersionOptions>())).ReturnsAsync(ticket);
 

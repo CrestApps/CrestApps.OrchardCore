@@ -24,6 +24,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
+using OrchardCore.Contents;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
@@ -167,6 +168,17 @@ public sealed class TicketsController : Controller
             Teams = [.. (await TeamOptionsAsync(cancellationToken)).Select(item => new SelectListItem(item.Text, item.Value, item.Value == form.TeamId))],
             Types = [.. (await TicketTypesAsync()).Select(item => new SelectListItem(item.Text, item.Value, item.Value == form.ContentType))],
         };
+
+        foreach (var desk in lookups.Desks.Values)
+        {
+            // Opening a ticket for someone is replying on a desk.
+            if (await _authorizationService.AuthorizeAsync(User, TicketsPermissions.ForDesk(TicketOperation.Reply, desk)))
+            {
+                form.CanCreate = true;
+
+                break;
+            }
+        }
 
         form.BulkActions = [new SelectListItem(S["Assign to me"], BulkActions.AssignToMe)];
         form.BulkActions.AddRange(form.Options.Statuses.Select(status => new SelectListItem(S["Set status: {0}", status.Text], BulkActions.StatusPrefix + status.Value)));
@@ -334,6 +346,27 @@ public sealed class TicketsController : Controller
         {
             requester = default;
         }
+
+        // A requester is only taken from a kind of party the user may search (as the party picker allows), so a posted id
+        // can't be used to read someone's contact details; an account only if the user may view it.
+        if (!requester.IsEmpty
+            && !(_serviceProvider.GetService<IOptions<PartySourceOptions>>()?.Value.Kinds.TryGetValue(requester.Kind, out var descriptor) == true
+                && descriptor.SearchPermission is not null
+                && await _authorizationService.AuthorizeAsync(User, descriptor.SearchPermission)))
+        {
+            ModelState.AddModelError(nameof(model.Requester), S["You may not choose that requester."]);
+
+            return View(model);
+        }
+
+        if (!string.IsNullOrEmpty(model.AccountId)
+            && (await _contentManager.GetAsync(model.AccountId, VersionOptions.Latest) is not { } account
+                || !await _authorizationService.AuthorizeAsync(User, CommonPermissions.ViewContent, account)))
+        {
+            ModelState.AddModelError(nameof(model.AccountId), S["You may not open a ticket for that account."]);
+
+            return View(model);
+        }
         var entryId = UniqueId.GenerateId();
         var (attached, uploadError) = await StoreFilesAsync(files, entryId, cancellationToken);
 
@@ -420,7 +453,6 @@ public sealed class TicketsController : Controller
             CanDelete = await _access.CanAsync(User, ticket, TicketOperation.Delete, cancellationToken),
             CanAttach = _serviceProvider.GetService<IAttachmentService>() is not null,
             IsReadOnly = readOnly,
-            Draft = TempData?.Peek(DraftKey) is string draft && draft.StartsWith(id + "\n", StringComparison.Ordinal) ? PopDraft(id) : null,
             MergedInto = string.IsNullOrEmpty(part.MergedIntoId) ? null : await _tickets.GetAsync(part.MergedIntoId),
             Actions = !readOnly && await _access.CanAsync(User, ticket, TicketOperation.Edit, cancellationToken) && _serviceProvider.GetService<ITicketActionSource>() is { } actions
                 ? await actions.ListAsync(ticket, cancellationToken)
@@ -430,6 +462,21 @@ public sealed class TicketsController : Controller
                 : [],
             FollowUpOf = string.IsNullOrEmpty(part.FollowUpOfId) ? null : await _tickets.GetAsync(part.FollowUpOfId),
         };
+
+        // A ticket this one points to is named only to people who may see it.
+        model.MergedIntoVisible = model.MergedInto is not null && await _access.CanAsync(User, model.MergedInto, TicketOperation.ViewAssigned, cancellationToken);
+        model.FollowUpOfVisible = model.FollowUpOf is not null && await _access.CanAsync(User, model.FollowUpOf, TicketOperation.ViewAssigned, cancellationToken);
+
+        // Sending and setting a status changes the ticket, so the status choice needs the edit permission.
+        model.CanSetStatus = model.CanEdit;
+
+        if (TempData?.Peek(DraftKey) is string kept && kept.StartsWith(id + "\n", StringComparison.Ordinal))
+        {
+            var draft = PopDraft(id);
+            model.Draft = draft.Body;
+            model.DraftIsInternal = draft.IsInternal;
+            model.DraftStatusId = model.CanSetStatus ? draft.StatusId : null;
+        }
 
         return View(model);
     }
@@ -460,12 +507,19 @@ public sealed class TicketsController : Controller
             return Forbid();
         }
 
+        if (!string.IsNullOrEmpty(setStatusId) && !await _access.CanAsync(User, ticket, TicketOperation.Edit, cancellationToken))
+        {
+            await _notifier.ErrorAsync(H["You may not change this ticket's status."]);
+
+            return await KeepDraftAsync(id, body, isInternal, null);
+        }
+
         var entryId = UniqueId.GenerateId();
         var (attached, uploadError) = await StoreFilesAsync(files, entryId, cancellationToken);
 
         if (uploadError)
         {
-            return await KeepDraftAsync(id, body);
+            return await KeepDraftAsync(id, body, isInternal, setStatusId);
         }
 
         var result = await _tickets.ReplyAsync(id, new TicketReply
@@ -489,7 +543,7 @@ public sealed class TicketsController : Controller
                 await _notifier.ErrorAsync(H["{0}", error]);
             }
 
-            return await KeepDraftAsync(id, body);
+            return await KeepDraftAsync(id, body, isInternal, setStatusId);
         }
 
         await _notifier.SuccessAsync(isInternal ? H["The note was added."] : H["The reply was sent."]);
@@ -507,7 +561,7 @@ public sealed class TicketsController : Controller
     /// <returns>The ticket page.</returns>
     [HttpPost]
     [Admin("ticket/{id}/update", "TicketsUpdate")]
-    public async Task<IActionResult> Update(string id, TicketUpdate update)
+    public async Task<IActionResult> Update(string id, TicketUpdate update, [Bind(Prefix = "loaded")] TicketUpdate loaded)
     {
         var cancellationToken = HttpContext.RequestAborted;
 
@@ -525,18 +579,35 @@ public sealed class TicketsController : Controller
             return Forbid();
         }
 
-        // A value the user may not change, or didn't change, is left alone.
+        // Only what the user changed on the form is applied: a value they left as the page showed it stays as it is now,
+        // so two agents changing different values don't undo each other. A value they changed that someone else changed
+        // since the page was loaded is refused, so nobody overwrites a change they never saw.
+        loaded ??= new TicketUpdate();
+        var userChanged = (Edited(update.StatusId, loaded.StatusId), Edited(update.PriorityId, loaded.PriorityId), Edited(update.DeskId, loaded.DeskId), Edited(update.TeamId, loaded.TeamId), Edited(update.AssigneeId, loaded.AssigneeId));
+
+        if ((userChanged.Item1 && Edited(part.StatusId, loaded.StatusId))
+            || (userChanged.Item2 && Edited(part.PriorityId, loaded.PriorityId))
+            || (userChanged.Item3 && Edited(part.DeskId, loaded.DeskId))
+            || (userChanged.Item4 && Edited(part.TeamId, loaded.TeamId))
+            || (userChanged.Item5 && Edited(part.AssigneeId, loaded.AssigneeId)))
+        {
+            await _notifier.WarningAsync(H["Someone else changed this ticket while you had it open. Check its values and try again."]);
+
+            return RedirectToAction(nameof(Display), new { id });
+        }
+
         var change = new TicketUpdate
         {
-            StatusId = canEdit && Changed(update.StatusId, part.StatusId) ? update.StatusId : null,
-            PriorityId = canEdit && Changed(update.PriorityId, part.PriorityId) ? update.PriorityId : null,
-            DeskId = canEdit && Changed(update.DeskId, part.DeskId) ? update.DeskId : null,
-            TeamId = canAssign && (update.TeamId ?? string.Empty) != (part.TeamId ?? string.Empty) ? update.TeamId ?? string.Empty : null,
-            AssigneeId = canAssign && (update.AssigneeId ?? string.Empty) != (part.AssigneeId ?? string.Empty) ? update.AssigneeId ?? string.Empty : null,
+            StatusId = canEdit && userChanged.Item1 && !string.IsNullOrEmpty(update.StatusId) ? update.StatusId : null,
+            PriorityId = canEdit && userChanged.Item2 && !string.IsNullOrEmpty(update.PriorityId) ? update.PriorityId : null,
+            DeskId = canEdit && userChanged.Item3 && !string.IsNullOrEmpty(update.DeskId) ? update.DeskId : null,
+            TeamId = canAssign && userChanged.Item4 ? update.TeamId ?? string.Empty : null,
+            AssigneeId = canAssign && userChanged.Item5 ? update.AssigneeId ?? string.Empty : null,
         };
 
         if (change.DeskId is not null && await _desks.FindByIdAsync(change.DeskId, cancellationToken) is { } newDesk
-            && !(await _access.GetViewScopesAsync(User, cancellationToken)).ContainsKey(newDesk.ItemId))
+            && (!(await _access.GetViewScopesAsync(User, cancellationToken)).ContainsKey(newDesk.ItemId)
+                || !await _authorizationService.AuthorizeAsync(User, TicketsPermissions.ForDesk(TicketOperation.Edit, newDesk))))
         {
             await _notifier.ErrorAsync(H["You may not move tickets to the {0} desk.", newDesk.Name]);
 
@@ -691,6 +762,15 @@ public sealed class TicketsController : Controller
         if (!RecordRef.TryParse(record, out var target))
         {
             await _notifier.ErrorAsync(H["Choose a record to link."]);
+
+            return RedirectToAction(nameof(Display), new { id });
+        }
+
+        // A link is only made to a record the user may see: a ticket in their scope, or a record of a kind they may search.
+        // Removing a link needs no such check.
+        if (!string.IsNullOrEmpty(kind) && !await CanSeeRecordAsync(target, cancellationToken))
+        {
+            await _notifier.ErrorAsync(H["You can't link to that record."]);
 
             return RedirectToAction(nameof(Display), new { id });
         }
@@ -906,10 +986,21 @@ public sealed class TicketsController : Controller
         var teamNames = (await TeamOptionsAsync(cancellationToken)).ToDictionary(item => item.Value, item => item.Text.Trim(' '), StringComparer.Ordinal);
         var now = _clock.UtcNow;
 
+        var editableDesks = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var desk in lookups.Desks.Values)
+        {
+            if (await _authorizationService.AuthorizeAsync(User, TicketsPermissions.ForDesk(TicketOperation.Edit, desk)))
+            {
+                editableDesks.Add(desk.ItemId);
+            }
+        }
+
         return [.. parts.Select(item => new TicketRow
         {
             Ticket = item.Ticket,
             Part = item.Part,
+            CanEdit = editableDesks.Contains(item.Part.DeskId ?? string.Empty) && !TicketLifecycle.IsReadOnly(item.Part),
             Status = lookups.Statuses.GetValueOrDefault(item.Part.StatusId ?? string.Empty),
             Priority = lookups.Priorities.GetValueOrDefault(item.Part.PriorityId ?? string.Empty),
             DeskName = lookups.Desks.GetValueOrDefault(item.Part.DeskId ?? string.Empty)?.Name,
@@ -1003,7 +1094,9 @@ public sealed class TicketsController : Controller
 
     // The draft travels in the TempData cookie, so a long one isn't kept: it would push the request headers past what
     // servers accept.
-    private async Task<RedirectToActionResult> KeepDraftAsync(string id, string body)
+    // The draft keeps who it was for and the status chosen with it, so a refused internal note never comes back as a reply
+    // to the requester.
+    private async Task<RedirectToActionResult> KeepDraftAsync(string id, string body, bool isInternal, string setStatusId)
     {
         if (body?.Length > TimelineConstants.MaxKeptDraftLength)
         {
@@ -1011,18 +1104,34 @@ public sealed class TicketsController : Controller
         }
         else if (!string.IsNullOrEmpty(body))
         {
-            TempData[DraftKey] = id + "\n" + body;
+            TempData[DraftKey] = string.Join("\n", id, isInternal ? "note" : "reply", setStatusId ?? string.Empty, body);
         }
 
         return RedirectToAction(nameof(Display), new { id });
     }
 
-    private string PopDraft(string id)
+    private (string Body, bool IsInternal, string StatusId) PopDraft(string id)
     {
-        var draft = (string)TempData[DraftKey];
+        var parts = ((string)TempData[DraftKey]).Split('\n', 4);
 
-        return draft[(id.Length + 1)..];
+        // A draft kept by an older version holds only the text: it comes back as a note, never as a public reply.
+        return parts.Length == 4 && parts[1] is "note" or "reply"
+            ? (parts[3], parts[1] == "note", string.IsNullOrEmpty(parts[2]) ? null : parts[2])
+            : (string.Join("\n", parts.Skip(1)), true, null);
     }
+
+    private async Task<bool> CanSeeRecordAsync(RecordRef record, CancellationToken cancellationToken)
+    {
+        if (record.Kind == TicketsConstants.RecordKind)
+        {
+            return await _tickets.GetAsync(record.Id) is { } linked && await _access.CanAsync(User, linked, TicketOperation.ViewAssigned, cancellationToken);
+        }
+
+        return _serviceProvider.GetService<IRecordDirectory>()?.GetSource(record.Kind) is { } source && await source.CanSearchAsync(User, cancellationToken);
+    }
+
+    private static bool Edited(string value, string loaded)
+        => !string.Equals(string.IsNullOrEmpty(value) ? null : value, string.IsNullOrEmpty(loaded) ? null : loaded, StringComparison.Ordinal);
 
     // The list's search and pickers, kept on the pager's links.
     private RouteData PagerRouteData()

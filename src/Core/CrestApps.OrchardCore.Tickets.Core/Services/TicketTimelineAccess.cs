@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -43,8 +44,23 @@ public sealed class TicketTimelineAccess : ITimelineAccessProvider
 
         var ticket = await _contentManager.GetAsync(subject.Id, VersionOptions.Latest);
 
-        // Any view scope lets the user see the ticket; the access service checks the ticket is in that scope.
-        return ticket?.Has<TicketPart>() == true && await _access.CanAsync(user, ticket, TicketOperation.ViewAssigned, cancellationToken);
+        if (ticket?.TryGet<TicketPart>(out var part) != true)
+        {
+            return false;
+        }
+
+        // An agent who may see the ticket reads all of it, internal notes included.
+        if (await _access.CanAsync(user, ticket, TicketOperation.ViewAssigned, cancellationToken))
+        {
+            return true;
+        }
+
+        // The requester reads the public entries of their own ticket, never an internal note.
+        var userId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        return visibility == TimelineVisibility.Public
+            && !string.IsNullOrEmpty(userId)
+            && part.Requester == new PartyRef(PartyKinds.User, userId);
     }
 
     /// <inheritdoc/>

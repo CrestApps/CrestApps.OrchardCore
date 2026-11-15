@@ -36,4 +36,14 @@ public interface ITicketAccessService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The scoped query, or <see langword="null"/> when the user may view no tickets.</returns>
     Task<TicketScopedQuery> ApplyScopeAsync(ClaimsPrincipal user, TicketQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets whether a user may be given a ticket: they may see tickets on its desk, so they can work on it once assigned.
+    /// </summary>
+    /// <param name="userId">The user.</param>
+    /// <param name="deskId">The ticket's desk.</param>
+    /// <param name="cancellationToken">A token to cancel the check.</param>
+    /// <returns><see langword="true"/> when the user may be given tickets of the desk, or when the site can't tell.</returns>
+    Task<bool> CanBeAssignedAsync(string userId, string deskId, CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
 }

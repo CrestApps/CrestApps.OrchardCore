@@ -51,7 +51,7 @@ public sealed class TicketApiTests
 
         // Act
         var stranger = await TicketApiEndpoints.ListAsync(null, null, null, null, null, null, null, null, Context(User("stranger")), access.Object, tickets.Object);
-        var ana = await TicketApiEndpoints.ListAsync(" printer ", "support", "open,pending,nonsense", null, null, null, 5, 500, Context(User("ana")), access.Object, tickets.Object);
+        var ana = await TicketApiEndpoints.ListAsync(" printer ", "support", "open, Pending", null, null, null, 5, 500, Context(User("ana")), access.Object, tickets.Object);
 
         // Assert
         Assert.Equal(403, Assert.IsType<ProblemHttpResult>(stranger.Result).StatusCode);
@@ -63,6 +63,48 @@ public sealed class TicketApiTests
         Assert.Equal("printer", query.Search);
         Assert.Equal([TicketStatusCategory.Open, TicketStatusCategory.Pending], query.Categories);
         Assert.Equal(5, query.Skip);
+    }
+
+    [Fact]
+    public async Task AnUnknownStatus_IsRefused_InsteadOfListingEveryTicket()
+    {
+        // Arrange
+        var access = new Mock<ITicketAccessService>();
+        access.Setup(service => service.ApplyScopeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<TicketQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ClaimsPrincipal _, TicketQuery query, CancellationToken _) => new TicketScopedQuery { Query = query, AllDeskIds = ["support"] });
+
+        // Act
+        var result = await TicketApiEndpoints.ListAsync(null, null, "Solvd", null, null, null, null, null, Context(User("ana")), access.Object, new Mock<ITicketService>(MockBehavior.Strict).Object);
+
+        // Assert
+        Assert.IsType<ValidationProblem>(result.Result);
+    }
+
+    [Fact]
+    public async Task FileLinks_CarryTheTenantPrefixOnce_AndAReplyToATicketOutOfScopeIsNotFound()
+    {
+        // Arrange
+        var tickets = new Mock<ITicketService>();
+        tickets.Setup(service => service.GetAsync("t1")).ReturnsAsync(Ticket("t1"));
+        var timeline = new Mock<ITimelineService>();
+        timeline.Setup(service => service.ListAsync(It.IsAny<TimelineQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TimelinePage([new TimelineEntry { ItemId = "e1", Kind = TicketsConstants.EntryKinds.Reply, AttachmentIds = ["a1"] }], 1));
+        var attachments = new Mock<IAttachmentService>();
+        attachments.Setup(service => service.GetAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Attachment { ItemId = "a1", Owner = new RecordRef(TimelineConstants.AttachmentOwnerKind, "e1"), FileName = "jam.png" }]);
+        attachments.Setup(service => service.CreateSignedPath("a1", It.IsAny<TimeSpan>())).Returns("/tenant-a/attachments/a1?sig=x");
+        var services = new ServiceCollection().AddSingleton(attachments.Object).BuildServiceProvider();
+        var context = Context(User("ana"));
+        context.Request.PathBase = "/tenant-a";
+
+        // Act
+        var entries = await TicketApiEndpoints.EntriesAsync("t1", null, null, context, Access(TicketOperation.ViewAssigned).Object, tickets.Object, timeline.Object, services);
+        var hidden = await TicketApiEndpoints.ReplyAsync("t1", new TicketApiReplyRequest { Body = "Hi" }, Context(User("ana")), Access().Object, tickets.Object, timeline.Object, services);
+
+        // Assert
+        var file = Assert.Single(Assert.Single(Assert.IsType<Ok<IReadOnlyList<TicketApiEntry>>>(entries.Result).Value).Attachments);
+        Assert.Equal("/tenant-a/attachments/a1?sig=x", file.Url);
+        Assert.Equal(404, Assert.IsType<ProblemHttpResult>(hidden.Result).StatusCode);
     }
 
     [Fact]

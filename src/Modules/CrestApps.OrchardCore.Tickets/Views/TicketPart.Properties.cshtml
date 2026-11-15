@@ -10,6 +10,12 @@
     <div class="card-body">
         <h2 class="h6">@T["Ticket"]</h2>
         <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Update" asp-route-id="@ticketId" method="post" class="no-multisubmit">
+            @* The values the page showed, so only what the user changes is applied and a change made meanwhile is noticed. *@
+            <input type="hidden" name="loaded.StatusId" value="@part.StatusId" />
+            <input type="hidden" name="loaded.PriorityId" value="@part.PriorityId" />
+            <input type="hidden" name="loaded.DeskId" value="@part.DeskId" />
+            <input type="hidden" name="loaded.TeamId" value="@part.TeamId" />
+            <input type="hidden" name="loaded.AssigneeId" value="@part.AssigneeId" />
             <div class="mb-2">
                 <label for="ticket-status" class="form-label small mb-1">@T["Status"]</label>
                 <select id="ticket-status" name="StatusId" class="form-select form-select-sm" asp-items="Model.Statuses" disabled="@(!Model.CanEdit)"></select>

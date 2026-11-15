@@ -13,6 +13,12 @@ namespace CrestApps.OrchardCore.Tickets.ViewModels;
 public sealed class TicketsListViewModel
 {
     /// <summary>
+    /// Gets or sets whether the user may open a ticket on any desk.
+    /// </summary>
+    [BindNever]
+    public bool CanCreate { get; set; }
+
+    /// <summary>
     /// Gets or sets the search text: a ticket number or words of the subject.
     /// </summary>
     public string Q { get; set; }
@@ -132,6 +138,11 @@ public sealed class TicketRow
     /// Gets or sets the ticket.
     /// </summary>
     public ContentItem Ticket { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user may edit the ticket's fields.
+    /// </summary>
+    public bool CanEdit { get; set; }
 
     /// <summary>
     /// Gets or sets the ticket's part.
@@ -339,6 +350,31 @@ public sealed class TicketPageViewModel
     /// Gets or sets the text a refused reply kept.
     /// </summary>
     public string Draft { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the kept draft was an internal note.
+    /// </summary>
+    public bool DraftIsInternal { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status chosen with the kept draft.
+    /// </summary>
+    public string DraftStatusId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user may set a status when sending.
+    /// </summary>
+    public bool CanSetStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user may see the ticket this one was merged into.
+    /// </summary>
+    public bool MergedIntoVisible { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user may see the ticket this one follows up.
+    /// </summary>
+    public bool FollowUpOfVisible { get; set; }
 
     /// <summary>
     /// Gets or sets the ticket this one was merged into.

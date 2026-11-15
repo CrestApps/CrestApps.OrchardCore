@@ -68,7 +68,14 @@
 
 @if (Model.MergedInto is not null)
 {
-    <div class="alert alert-info">@T["This ticket was merged into"] <a asp-action="Display" asp-route-id="@Model.MergedInto.ContentItemId">@(Model.MergedInto.GetOrCreate<TicketPart>().Number) @Model.MergedInto.DisplayText</a>.</div>
+    @if (Model.MergedIntoVisible)
+    {
+        <div class="alert alert-info">@T["This ticket was merged into"] <a asp-action="Display" asp-route-id="@Model.MergedInto.ContentItemId">@(Model.MergedInto.GetOrCreate<TicketPart>().Number) @Model.MergedInto.DisplayText</a>.</div>
+    }
+    else
+    {
+        <div class="alert alert-info">@T["This ticket was merged into a ticket you can't see."]</div>
+    }
 }
 else if (Model.IsReadOnly)
 {
@@ -76,7 +83,14 @@ else if (Model.IsReadOnly)
 }
 @if (Model.FollowUpOf is not null)
 {
-    <div class="alert alert-light border">@T["Follows up"] <a asp-action="Display" asp-route-id="@Model.FollowUpOf.ContentItemId">@(Model.FollowUpOf.GetOrCreate<TicketPart>().Number) @Model.FollowUpOf.DisplayText</a>.</div>
+    @if (Model.FollowUpOfVisible)
+    {
+        <div class="alert alert-light border">@T["Follows up"] <a asp-action="Display" asp-route-id="@Model.FollowUpOf.ContentItemId">@(Model.FollowUpOf.GetOrCreate<TicketPart>().Number) @Model.FollowUpOf.DisplayText</a>.</div>
+    }
+    else
+    {
+        <div class="alert alert-light border">@T["Follows up a ticket you can't see."]</div>
+    }
 }
 
 <div class="row g-3">
@@ -97,9 +111,9 @@ else if (Model.IsReadOnly)
                         @if (Model.CanReply && Model.CanNote)
                         {
                             <div class="btn-group mb-2" role="group" aria-label="@T["Who sees it"]">
-                                <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-public" value="false" checked autocomplete="off" />
+                                <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-public" value="false" checked="@(!Model.DraftIsInternal)" autocomplete="off" />
                                 <label class="btn btn-sm btn-outline-primary" for="ticket-reply-public"><i class="fa-solid fa-reply me-1" aria-hidden="true"></i>@T["Reply to the requester"]</label>
-                                <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-note" value="true" autocomplete="off" />
+                                <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-note" value="true" checked="@Model.DraftIsInternal" autocomplete="off" />
                                 <label class="btn btn-sm btn-outline-warning" for="ticket-reply-note"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Internal note"]</label>
                             </div>
                         }
@@ -132,16 +146,19 @@ else if (Model.IsReadOnly)
                                     <input id="ticket-reply-files" type="file" name="files" class="form-control form-control-sm" multiple />
                                 </div>
                             }
-                            <div class="col-auto">
-                                <label for="ticket-reply-status" class="visually-hidden">@T["Status after sending"]</label>
-                                <select id="ticket-reply-status" name="setStatusId" class="form-select form-select-sm">
-                                    <option value="">@T["Keep the status"]</option>
-                                    @foreach (var status in Model.Statuses)
-                                    {
-                                        <option value="@status.Value">@T["Send and set {0}", status.Text]</option>
-                                    }
-                                </select>
-                            </div>
+                            @if (Model.CanSetStatus)
+                            {
+                                <div class="col-auto">
+                                    <label for="ticket-reply-status" class="visually-hidden">@T["Status after sending"]</label>
+                                    <select id="ticket-reply-status" name="setStatusId" class="form-select form-select-sm">
+                                        <option value="">@T["Keep the status"]</option>
+                                        @foreach (var status in Model.Statuses)
+                                        {
+                                            <option value="@status.Value" selected="@(status.Value == Model.DraftStatusId)">@T["Send and set {0}", status.Text]</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
                             <div class="col-auto">
                                 <button type="submit" class="btn btn-primary btn-sm">@T["Send"]</button>
                             </div>

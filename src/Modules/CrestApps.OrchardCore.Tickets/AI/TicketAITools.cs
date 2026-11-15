@@ -293,6 +293,11 @@ public sealed class AddTicketReplyTool : TicketAITool
             return isInternal ? "The user may not add notes to this ticket." : "The user may not reply on this ticket.";
         }
 
+        if (!isInternal && Text(arguments, "setStatusId") is not null && !await arguments.Services.GetRequiredService<ITicketAccessService>().CanAsync(user, ticket, TicketOperation.Edit, cancellationToken))
+        {
+            return "The user may not change this ticket's status.";
+        }
+
         var result = await arguments.Services.GetRequiredService<ITicketService>().ReplyAsync(ticket.ContentItemId, new TicketReply
         {
             Body = Text(arguments, "body"),

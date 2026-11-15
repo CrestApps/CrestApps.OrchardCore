@@ -1,3 +1,6 @@
 @model ShapeViewModel<TicketRow>
 
-<a asp-controller="Tickets" asp-action="Edit" asp-route-id="@Model.Value.Ticket.ContentItemId" class="dropdown-item">@T["Edit fields"]</a>
+@if (Model.Value.CanEdit)
+{
+    <a asp-controller="Tickets" asp-action="Edit" asp-route-id="@Model.Value.Ticket.ContentItemId" class="dropdown-item">@T["Edit fields"]</a>
+}

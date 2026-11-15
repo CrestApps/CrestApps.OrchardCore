@@ -831,9 +831,23 @@ public sealed class DefaultTicketService : ITicketService
             {
                 errors.Add(S["The desk no longer exists."]);
             }
+            else if (desk.TicketTypes.Count > 0 && !desk.TicketTypes.Contains(ticket.ContentType, StringComparer.OrdinalIgnoreCase))
+            {
+                errors.Add(S["The {0} desk does not take this kind of ticket.", desk.Name]);
+            }
             else
             {
                 var from = await _desks.FindByIdAsync(part.DeskId, cancellationToken);
+
+                // The ticket's targets follow the new desk's policy, unless its type names one of its own.
+                var settings = await GetSettingsAsync(ticket.ContentType);
+
+                if (string.IsNullOrEmpty(settings.ServiceLevelPolicyId) && !string.IsNullOrEmpty(desk.ServiceLevelPolicyId) && desk.ServiceLevelPolicyId != from?.ServiceLevelPolicyId)
+                {
+                    var current = await _priorities.FindByIdAsync(part.PriorityId, cancellationToken);
+                    await _serviceLevels.RetargetAsync(subject, desk.ServiceLevelPolicyId, current?.Name, cancellationToken);
+                }
+
                 changes.Add(new TimelineFieldChange { Field = S["Desk"], Key = TicketChangeKeys.Desk, From = from?.Name, To = desk.Name, FromValue = part.DeskId, ToValue = desk.ItemId });
                 part.DeskId = desk.ItemId;
             }
@@ -863,13 +877,24 @@ public sealed class DefaultTicketService : ITicketService
             }
         }
 
-        if (update.TeamId is not null && NullIfEmpty(update.TeamId) != part.TeamId)
+        if (update.TeamId is not null && NullIfEmpty(update.TeamId) is { } newTeam && newTeam != part.TeamId
+            && _serviceProvider.GetService<ITeamManager>() is { } teamManager && await teamManager.FindByIdAsync(newTeam, cancellationToken) is null)
+        {
+            errors.Add(S["The team no longer exists."]);
+        }
+        else if (update.TeamId is not null && NullIfEmpty(update.TeamId) != part.TeamId)
         {
             changes.Add(new TimelineFieldChange { Field = S["Team"], Key = TicketChangeKeys.Team, From = await TeamNameAsync(part.TeamId, cancellationToken), To = await TeamNameAsync(update.TeamId, cancellationToken), FromValue = part.TeamId, ToValue = NullIfEmpty(update.TeamId) });
             part.TeamId = NullIfEmpty(update.TeamId);
         }
 
-        if (update.AssigneeId is not null && NullIfEmpty(update.AssigneeId) != part.AssigneeId)
+        if (update.AssigneeId is not null && NullIfEmpty(update.AssigneeId) is { } newAssignee && newAssignee != part.AssigneeId
+            && _serviceProvider.GetService<ITicketAccessService>() is { } access
+            && !await access.CanBeAssignedAsync(newAssignee, update.DeskId ?? part.DeskId, cancellationToken))
+        {
+            errors.Add(S["That person can't see tickets on this desk, so they can't be given this ticket."]);
+        }
+        else if (update.AssigneeId is not null && NullIfEmpty(update.AssigneeId) != part.AssigneeId)
         {
             changes.Add(new TimelineFieldChange { Field = S["Assignee"], Key = TicketChangeKeys.Assignee, From = await UserNameAsync(part.AssigneeId, cancellationToken), To = await UserNameAsync(update.AssigneeId, cancellationToken), FromValue = part.AssigneeId, ToValue = NullIfEmpty(update.AssigneeId) });
 
@@ -1060,7 +1085,11 @@ public sealed class DefaultTicketService : ITicketService
 
         var changes = new List<TimelineFieldChange>();
 
-        await ApplyAsync(ticket, part, new TicketUpdate { AssigneeId = member.UserId }, changes, cancellationToken);
+        if ((await ApplyAsync(ticket, part, new TicketUpdate { AssigneeId = member.UserId }, changes, cancellationToken)).Count > 0)
+        {
+            return false;
+        }
+
         await SaveAsync(ticket, part, cancellationToken);
         await AddEventAsync(ticket.ContentItemId, actor, null, changes, cancellationToken);
         Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
