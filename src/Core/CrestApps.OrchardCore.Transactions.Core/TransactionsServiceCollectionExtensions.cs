@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Parties;
+using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -45,6 +46,22 @@ public static class TransactionsServiceCollectionExtensions
         // A signed-in user sees the transactions they own and those owed by the parties they act for.
         services.AddPartyMembership();
         services.TryAddScoped<ITransactionVisibilityService, DefaultTransactionVisibilityService>();
+
+        // Whether a party is reminded and charged late fees, kept once for the party and shown in its billing profile.
+        services.AddPartyCollectionSettings();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the parties' collection settings: their store, service and billing profile source. The host also
+    /// registers <c>PartyCollectionSettingsIndexProvider</c> and creates its index table.
+    /// </summary>
+    public static IServiceCollection AddPartyCollectionSettings(this IServiceCollection services)
+    {
+        services.TryAddScoped<PartyCollectionSettingsStore>();
+        services.TryAddScoped<IPartyCollectionSettingsService, DefaultPartyCollectionSettingsService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPartyBillingProfileSource, PartyCollectionSettingsBillingProfileSource>());
 
         return services;
     }

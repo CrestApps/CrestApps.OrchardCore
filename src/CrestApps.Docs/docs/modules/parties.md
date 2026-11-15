@@ -51,9 +51,11 @@ A business document billed to a party, such as an invoice, needs the party's bil
 | `Currency`, `Culture` | The ISO 4217 currency and the culture of its documents, or `null` for the site's. |
 | `PaymentTermId`, `NetDays` | The id of a payment term record, or the days a document is due in where the owner keeps only a day count. |
 | `CreditLimit` | The most the party may owe at once, or `null`. |
+| `RemindersPaused` | Whether the party is sent no payment reminders (kept by Transactions). |
+| `LateFeesExempt` | Whether the party is charged no late fees (kept by Transactions). |
 | `CopyTo` | Extra e-mail addresses that get its billing documents; `AddCopyTo(email)` leaves out blanks, repeats and the contact's own address. |
 
-Every `IPartyBillingProfileSource` of the party's kind adds what it knows, in registration order: a later source fills or overrides what an earlier one set. When no source names the party, the name comes from `IPartyDirectory`. The service returns a profile for any party with a kind and an id, even when nothing is known about it, and `null` for an empty reference.
+Every `IPartyBillingProfileSource` of the party's kind, and every source of kind `PartyKinds.Any` (`*`), adds what it knows, in registration order: a later source fills or overrides what an earlier one set. When no source names the party, the name comes from `IPartyDirectory`. The service returns a profile for any party with a kind and an id, even when nothing is known about it, and `null` for an empty reference.
 
 | Kind | Sources, in order | Registered by |
 | --- | --- | --- |

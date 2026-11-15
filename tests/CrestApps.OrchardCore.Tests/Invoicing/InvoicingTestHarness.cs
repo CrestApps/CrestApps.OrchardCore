@@ -173,7 +173,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
 
         var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={path};Pooling=False"));
 
-        store.RegisterIndexes([new TransactionIndexProvider()], TransactionsConstants.CollectionName);
+        store.RegisterIndexes([new TransactionIndexProvider(), new CrestApps.OrchardCore.Transactions.Core.Indexes.PartyCollectionSettingsIndexProvider()], TransactionsConstants.CollectionName);
         store.RegisterIndexes([new CrestApps.OrchardCore.ExchangeRates.Core.Indexes.ExchangeRateIndexProvider()], CrestApps.OrchardCore.ExchangeRates.ExchangeRatesConstants.CollectionName);
         store.RegisterIndexes([new InvoiceIndexProvider(), new CreditNoteIndexProvider(), new EstimateIndexProvider(), new RecurringPlanIndexProvider(), new LateFeePolicyIndexProvider(), new BillableItemIndexProvider(), new UsageMeterIndexProvider(), new UsageRecordIndexProvider()], InvoicingConstants.CollectionName);
 
@@ -336,6 +336,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddInvoicingRecurring();
         services.AddInvoicingCollections();
         services.AddInvoicingBilling();
+        CrestApps.OrchardCore.Transactions.Core.TransactionsServiceCollectionExtensions.AddPartyCollectionSettings(services);
         CrestApps.OrchardCore.ExchangeRates.Core.Services.ExchangeRatesServiceCollectionExtensions.AddExchangeRates(services);
         services.AddScoped<IRecurringPlanObserver>(_ => new RecordingPlanObserver(harness.Observed));
         services.AddScoped<IEstimateObserver>(_ => new RecordingEstimateObserver(harness.Observed));

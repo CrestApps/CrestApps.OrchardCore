@@ -54,7 +54,8 @@ public sealed class Startup : StartupBase
             .AddTransactionsCore()
             .AddCustomersCore()
             .AddDataMigration<TransactionMigrations>()
-            .AddIndexProvider<TransactionIndexProvider>();
+            .AddIndexProvider<TransactionIndexProvider>()
+            .AddIndexProvider<PartyCollectionSettingsIndexProvider>();
 
         // The ledger travels between sites in the Transactions recipe step.
         services.AddRecipeExecutionStep<CrestApps.OrchardCore.Transactions.Recipes.TransactionLedgerRecipeStep>();

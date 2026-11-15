@@ -69,6 +69,16 @@ public sealed class PartyBillingProfile
     public IList<string> CopyTo { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets whether the party is sent no payment reminders, for any debt it owes or pays.
+    /// </summary>
+    public bool RemindersPaused { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the party is charged no late fees, on any invoice billed to it.
+    /// </summary>
+    public bool LateFeesExempt { get; set; }
+
+    /// <summary>
     /// Adds an e-mail address that gets a copy of the party's billing documents. A blank address, one already listed
     /// and the contact's own address are left out. Addresses compare without case.
     /// </summary>

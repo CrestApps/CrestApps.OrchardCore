@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.Parties.Models;
 namespace CrestApps.OrchardCore.Parties.Services;
 
 /// <summary>
-/// The default <see cref="IPartyBillingProfileService"/>: every source of the party's kind adds what it knows, in
+/// The default <see cref="IPartyBillingProfileService"/>: every source of the party's kind (or of <see cref="PartyKinds.Any"/>) adds what it knows, in
 /// registration order, and the <see cref="IPartyDirectory"/> names a party no source named. Kinds compare without case.
 /// </summary>
 public sealed class PartyBillingProfileService : IPartyBillingProfileService
@@ -37,7 +37,9 @@ public sealed class PartyBillingProfileService : IPartyBillingProfileService
 
         foreach (var source in _sources)
         {
-            if (source is null || !string.Equals(source.Kind, party.Kind, StringComparison.OrdinalIgnoreCase))
+            if (source is null ||
+                !string.Equals(source.Kind, PartyKinds.Any, StringComparison.Ordinal) &&
+                !string.Equals(source.Kind, party.Kind, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

@@ -61,8 +61,9 @@ internal sealed class TransactionMigrations : DataMigration
 
         await CreatePendingCreditColumnAsync();
         await CreateAutoChargeColumnAsync();
+        await CreatePartyCollectionSettingsIndexAsync();
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -117,6 +118,34 @@ internal sealed class TransactionMigrations : DataMigration
         await CreateAutoChargeColumnAsync();
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the index of the parties' collection settings.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await CreatePartyCollectionSettingsIndexAsync();
+
+        return 6;
+    }
+
+    private async Task CreatePartyCollectionSettingsIndexAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<PartyCollectionSettingsIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("PartyKind", column => column.Nullable().WithLength(50))
+            .Column<string>("PartyId", column => column.Nullable().WithLength(255))
+            .Column<bool>("RemindersPaused")
+            .Column<bool>("LateFeesExempt"),
+            collection: TransactionsConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<PartyCollectionSettingsIndex>(table =>
+        {
+            table.CreateIndex("IDX_PartyCollectionSettingsIndex_Party", "PartyKind", "PartyId");
+            table.CreateIndex("IDX_PartyCollectionSettingsIndex_Excluded", "RemindersPaused", "LateFeesExempt");
+        }, collection: TransactionsConstants.CollectionName);
     }
 
     private async Task CreateAutoChargeColumnAsync()

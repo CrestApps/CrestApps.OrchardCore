@@ -70,9 +70,14 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
 
         var reminderService = serviceProvider.GetRequiredService<ITransactionReminderService>();
 
+        // The parties kept out of reminders, read once for the sweep.
+        var exclusions = serviceProvider.GetService<IPartyCollectionSettingsService>() is { } partySettings
+            ? await partySettings.GetExclusionsAsync(cancellationToken)
+            : new PartyCollectionExclusions([]);
+
         if (TransactionReminderSchedule.IsStaged(settings))
         {
-            await SendStagedAsync(serviceProvider, manager, reminderService, candidates, settings, utcNow, run, logger, cancellationToken);
+            await SendStagedAsync(serviceProvider, manager, reminderService, [.. candidates.Where(transaction => !exclusions.AreRemindersPaused(transaction))], settings, utcNow, run, logger, cancellationToken);
 
             return;
         }
@@ -85,7 +90,7 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
             }
 
             // A transaction charged to a saved card is not chased while the charge and its retries are pending.
-            if (transaction.RemindersPaused || transaction.AutoCharge is not null || !IsReminderDue(transaction, settings, utcNow))
+            if (transaction.RemindersPaused || exclusions.AreRemindersPaused(transaction) || transaction.AutoCharge is not null || !IsReminderDue(transaction, settings, utcNow))
             {
                 continue;
             }
@@ -120,7 +125,7 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
                 break;
             }
 
-            if (transaction.RemindersPaused || !IsUpcomingReminderDue(transaction, settings, utcNow))
+            if (transaction.RemindersPaused || exclusions.AreRemindersPaused(transaction) || !IsUpcomingReminderDue(transaction, settings, utcNow))
             {
                 continue;
             }

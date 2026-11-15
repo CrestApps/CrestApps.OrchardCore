@@ -196,7 +196,7 @@ With **Invoicing Collections** enabled, **Commerce > Late fees** holds the polic
 4. Optionally, set a **Minimum balance** below which no fee is charged, tick **Tax the fee** if late fees are taxed where you are, and tick **E-mail each fee to the customer**.
 5. Click **Save**.
 
-Fees are charged automatically every hour. An overdue invoice's page lists its late fees and has **Charge the late fee due now**; a debit note's page links to the invoice it charges a fee on. To spare one invoice, tick **No late fees** in its editor. A late fee can be voided or credited like any invoice.
+Fees are charged automatically every hour. An overdue invoice's page lists its late fees and has **Charge the late fee due now**; a debit note's page links to the invoice it charges a fee on. To spare one invoice, tick **No late fees** in its editor. To spare a customer altogether, open their account or customer page and tick **Charge no late fees** (and **Send no payment reminders** to stop reminders too) under **Reminders and late fees**, then click **Save**. A late fee can be voided or credited like any invoice.
 
 ## Send a customer their statement
 

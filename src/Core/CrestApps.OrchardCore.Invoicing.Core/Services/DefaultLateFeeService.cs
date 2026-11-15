@@ -126,6 +126,14 @@ public sealed class DefaultLateFeeService : ILateFeeService
             return result;
         }
 
+        // A party kept out of late fees, read when the fee would be charged.
+        if (invoice.BillTo?.Party is { IsEmpty: false } billTo &&
+            _serviceProvider.GetService<IPartyCollectionSettingsService>() is { } partySettings &&
+            (await partySettings.GetExclusionsAsync(cancellationToken)).IsLateFeeExempt(billTo))
+        {
+            return result;
+        }
+
         var daysLate = today.DayNumber - dueDate.DayNumber;
 
         if (daysLate <= 0)

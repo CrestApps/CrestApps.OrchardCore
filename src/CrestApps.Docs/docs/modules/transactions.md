@@ -123,6 +123,8 @@ A step before the due date is sent as the upcoming notice, the others as reminde
 
 - skips a transaction whose reminders are paused (`Transaction.RemindersPaused`, set by
   `ITransactionCommandService.SetRemindersPausedAsync` and the **Pause reminders** button, noted on the timeline);
+- skips every transaction of a party kept out of reminders: the user who owns it or the party that pays it
+  (`PartyCollectionSettings.RemindersPaused`, read once per sweep through `IPartyCollectionSettingsService.GetExclusionsAsync`);
 - sends no owed reminder while a charge of a saved card is scheduled (`Transaction.AutoCharge`);
 - reads the transaction again in a unit of work of its own right before each reminder, and skips it when it was paid,
   paused or closed meanwhile, or a payment for it is being taken (a checkout `AwaitingProvider` or `PaymentPending`);
@@ -563,6 +565,10 @@ The terms travel with recipes and deployment plans: the step is `PaymentTerms`, 
 ```
 
 The recipe step and the deployment step have schemas for the CrestApps Recipes feature.
+
+## Keeping a party out of reminders and late fees
+
+`PartyCollectionSettings` (Transactions.Abstractions; `PartyCollectionSettingsIndex` in the `Transactions` collection, migration step 6) is kept once per party: **reminders paused** and **late fees exempt**. `IPartyCollectionSettingsService` gets and saves it, and `GetExclusionsAsync` reads the excluded parties for a sweep (`PartyCollectionExclusions.AreRemindersPaused(transaction)` for the owner user or the payer, `IsLateFeeExempt(party)`). `PartyCollectionSettingsBillingProfileSource` puts both into the party's billing profile (`PartyBillingProfile.RemindersPaused` and `LateFeesExempt`) for any kind of party: a billing profile source of kind `PartyKinds.Any` (`*`) contributes to every party. Nothing is copied onto debts or invoices; the reminder sweep and Invoicing's late fees read it when they run. An account's page (Overview section, with Accounts) and a customer's page (with Customers) have a **Reminders and late fees** card (**Manage transactions**) to change it.
 
 ## Moving the ledger between sites
 
