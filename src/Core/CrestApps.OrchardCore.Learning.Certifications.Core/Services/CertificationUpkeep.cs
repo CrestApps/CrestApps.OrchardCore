@@ -17,6 +17,8 @@ public sealed class CertificationUpkeep
     private static readonly TimeSpan _lease = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan _overlap = TimeSpan.FromHours(1);
 
+    private const int PageSize = 500;
+
     private static readonly CertificationPathState[] _workingStates = [CertificationPathState.InProgress, CertificationPathState.RenewalOpen, CertificationPathState.Lapsed];
 
     private readonly ICertificationPathService _paths;
@@ -72,10 +74,26 @@ public sealed class CertificationUpkeep
         }
 
         var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+        var enabledPaths = (await _paths.ListAsync(cancellationToken)).Where(path => path.Enabled).ToArray();
+        var enabledIds = enabledPaths.Select(path => path.ItemId).ToArray();
 
-        foreach (var progress in await _progress.ListRenewalDueAsync(CertificationDates.ToKey(today).Value, 100, cancellationToken))
+        // Every certified person whose renewal is due, a page at a time; a disabled path opens no renewal and is left
+        // out, so it never holds a place that others need.
+        for (var afterId = 0L; ;)
         {
-            await RunSafelyAsync(() => _paths.OpenRenewalAsync(progress.ItemId, cancellationToken), progress.ItemId);
+            var due = await _progress.PageRenewalDueAsync(enabledIds, CertificationDates.ToKey(today).Value, afterId, PageSize, cancellationToken);
+
+            foreach (var (progressId, _) in due)
+            {
+                await RunSafelyAsync(() => _paths.OpenRenewalAsync(progressId, cancellationToken), progressId);
+            }
+
+            if (due.Count < PageSize)
+            {
+                break;
+            }
+
+            afterId = due[^1].RowId;
         }
 
         var issued = 0;
@@ -83,11 +101,13 @@ public sealed class CertificationUpkeep
         var now = _clock.UtcNow;
         var done = new Dictionary<string, DateTime>(StringComparer.Ordinal);
 
-        foreach (var path in (await _paths.ListAsync(cancellationToken)).Where(path => path.Enabled))
+        foreach (var path in enabledPaths)
         {
             var since = (checkedUtc.TryGetValue(path.ItemId, out var last) ? last : path.CreatedUtc) - _overlap;
             var users = new HashSet<string>(StringComparer.Ordinal);
 
+            // Each requirement lists everyone who met it since the last look, however many: a bulk import of
+            // completions is read to the end before the time moves on.
             foreach (var requirement in path.InitialRequirements.Concat(path.RenewalRequirements))
             {
                 var kind = _requirements.FirstOrDefault(candidate => candidate.Kind == requirement.Kind);
@@ -98,9 +118,19 @@ public sealed class CertificationUpkeep
                 }
             }
 
-            foreach (var progress in await _progress.ListByStatesAsync(path.ItemId, _workingStates, 500, cancellationToken))
+            // Everyone still working on a cycle, a page at a time in a stable order, so nobody is left out for good.
+            for (var afterId = 0L; ;)
             {
-                users.Add(progress.UserId);
+                var page = await _progress.PageUserIdsByStatesAsync(path.ItemId, _workingStates, afterId, PageSize, cancellationToken);
+
+                users.UnionWith(page.Select(row => row.UserId));
+
+                if (page.Count < PageSize)
+                {
+                    break;
+                }
+
+                afterId = page[^1].RowId;
             }
 
             foreach (var userId in users)

@@ -135,6 +135,51 @@ public sealed class CertificationPathProgressStore : DocumentCatalog<Certificati
     }
 
     /// <summary>
+    /// Pages the people working on a path in some states, in the order the rows were written, after a row.
+    /// </summary>
+    /// <param name="pathId">The path.</param>
+    /// <param name="states">The states.</param>
+    /// <param name="afterId">The index row to start after; 0 for the first page.</param>
+    /// <param name="take">The page size.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Each person with the index row it came from.</returns>
+    public async Task<IReadOnlyList<(string UserId, long RowId)>> PageUserIdsByStatesAsync(string pathId, IReadOnlyCollection<CertificationPathState> states, long afterId, int take, CancellationToken cancellationToken = default)
+    {
+        var rows = await Session.QueryIndex<CertificationPathProgressIndex>(index => index.PathId == pathId && index.State.IsIn(states) && index.Id > afterId, collection: CollectionName)
+            .OrderBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
+        return rows.Select(row => (row.UserId, row.Id)).ToArray();
+    }
+
+    /// <summary>
+    /// Pages the certified people of some paths whose renewal should be open by a day, after an index row.
+    /// </summary>
+    /// <param name="pathIds">The paths to look at: the enabled ones.</param>
+    /// <param name="onOrBeforeKey">The day, as yyyyMMdd.</param>
+    /// <param name="afterId">The index row to start after; 0 for the first page.</param>
+    /// <param name="take">The page size.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Each progress id with the index row it came from.</returns>
+    public async Task<IReadOnlyList<(string ProgressId, long RowId)>> PageRenewalDueAsync(IReadOnlyCollection<string> pathIds, int onOrBeforeKey, long afterId, int take, CancellationToken cancellationToken = default)
+    {
+        if (pathIds.Count == 0)
+        {
+            return [];
+        }
+
+        var rows = await Session.QueryIndex<CertificationPathProgressIndex>(
+            index => index.PathId.IsIn(pathIds) && index.State == CertificationPathState.Certified && index.RenewalOpensOn != null && index.RenewalOpensOn <= onOrBeforeKey && index.Id > afterId,
+            collection: CollectionName)
+            .OrderBy(index => index.Id)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
+        return rows.Select(row => (row.ItemId, row.Id)).ToArray();
+    }
+
+    /// <summary>
     /// Lists certified people whose renewal should be open by a day.
     /// </summary>
     public async Task<IReadOnlyList<CertificationPathProgress>> ListRenewalDueAsync(int onOrBeforeKey, int take, CancellationToken cancellationToken = default)

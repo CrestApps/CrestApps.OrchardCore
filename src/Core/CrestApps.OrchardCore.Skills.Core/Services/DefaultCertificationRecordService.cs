@@ -160,6 +160,13 @@ internal sealed class DefaultCertificationRecordService : ICertificationRecordSe
             return result;
         }
 
+        // A second revocation changes nothing: who revoked it, when and why stay as first recorded, and nobody is
+        // told again.
+        if (record.Status == CertificationStatus.Revoked)
+        {
+            return result;
+        }
+
         record.Status = CertificationStatus.Revoked;
         record.RevokedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
         record.RevokedBy = actor;

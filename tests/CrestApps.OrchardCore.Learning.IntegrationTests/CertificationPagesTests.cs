@@ -70,6 +70,24 @@ public sealed class CertificationPagesTests
     }
 
     [Fact]
+    public async Task CertificationPathActions_RefuseAPostWithoutTheAntiforgeryToken()
+    {
+        // Arrange: review round 4, finding 5. An administrator may run each action, so only the token stops them.
+        using var admin = await _fixture.CreateClientAsync("admin");
+        using var empty = new FormUrlEncodedContent(new Dictionary<string, string>());
+
+        // Act
+        var start = await admin.PostAsync("Admin/learning/certification-paths/some-path/start", empty, TestContext.Current.CancellationToken);
+        var check = await admin.PostAsync("Admin/learning/certification-paths/some-path/check/some-user", empty, TestContext.Current.CancellationToken);
+        var revoke = await admin.PostAsync("Admin/learning/certification-paths/revoke-from-review/some-enrollment/some-record", empty, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, start.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, check.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, revoke.StatusCode);
+    }
+
+    [Fact]
     public async Task MyCertifications_NeedsASignIn()
     {
         // Arrange

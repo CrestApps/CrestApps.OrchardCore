@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 
@@ -14,6 +15,7 @@ namespace CrestApps.OrchardCore.Learning.Certifications.Core.Requirements;
 public sealed class AssessmentPassedRequirement : ICertificationRequirement
 {
     private readonly AssessmentAttemptStore _attempts;
+    private readonly EnrollmentStore _enrollments;
     private readonly IContentManager _contentManager;
 
     internal readonly IStringLocalizer S;
@@ -21,9 +23,10 @@ public sealed class AssessmentPassedRequirement : ICertificationRequirement
     /// <summary>
     /// Initializes a new instance of the <see cref="AssessmentPassedRequirement"/> class.
     /// </summary>
-    public AssessmentPassedRequirement(AssessmentAttemptStore attempts, IContentManager contentManager, IStringLocalizer<AssessmentPassedRequirement> stringLocalizer)
+    public AssessmentPassedRequirement(AssessmentAttemptStore attempts, EnrollmentStore enrollments, IContentManager contentManager, IStringLocalizer<AssessmentPassedRequirement> stringLocalizer)
     {
         _attempts = attempts;
+        _enrollments = enrollments;
         _contentManager = contentManager;
         S = stringLocalizer;
     }
@@ -38,12 +41,24 @@ public sealed class AssessmentPassedRequirement : ICertificationRequirement
     public async Task<CertificationEvidence> FindEvidenceAsync(CertificationRequirementContext context, CancellationToken cancellationToken = default)
     {
         var attempts = await _attempts.ListAsync(context.UserId, context.Requirement.TargetId, cancellationToken);
-        var best = attempts
+        AssessmentAttempt best = null;
+
+        // An attempt counts only when it was made in an enrollment that counts: a preview attempt is made in none, and
+        // an exam whose enrollment failed or is under review supports nothing while staff decide.
+        foreach (var attempt in attempts
             .Where(IsScoredPass)
             .Where(attempt => context.SinceUtc is null || CompletedUtc(attempt) >= context.SinceUtc)
             .Where(attempt => context.Requirement.MinimumGrade is null || attempt.Percent >= context.Requirement.MinimumGrade)
-            .OrderByDescending(CompletedUtc)
-            .FirstOrDefault();
+            .Where(attempt => !string.IsNullOrEmpty(attempt.EnrollmentId))
+            .OrderByDescending(CompletedUtc))
+        {
+            if (CourseCompletedRequirement.CountsAsEvidence(await _enrollments.FindByIdAsync(attempt.EnrollmentId, cancellationToken)))
+            {
+                best = attempt;
+
+                break;
+            }
+        }
 
         if (best is null)
         {
@@ -64,9 +79,7 @@ public sealed class AssessmentPassedRequirement : ICertificationRequirement
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<string>> ListUsersSinceAsync(CertificationRequirement requirement, DateTime sinceUtc, CancellationToken cancellationToken = default)
     {
-        var attempts = await _attempts.ListPassedSinceAsync(requirement.TargetId, sinceUtc, 1000, cancellationToken);
-
-        return attempts.Select(attempt => attempt.UserId).Distinct(StringComparer.Ordinal).ToArray();
+        return await _attempts.ListPassedUserIdsSinceAsync(requirement.TargetId, sinceUtc, cancellationToken);
     }
 
     /// <inheritdoc/>

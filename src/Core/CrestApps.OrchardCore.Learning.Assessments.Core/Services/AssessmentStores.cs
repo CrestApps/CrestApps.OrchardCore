@@ -140,6 +140,39 @@ public sealed class AssessmentAttemptStore : DocumentCatalog<AssessmentAttempt, 
     /// <param name="take">The most attempts to read.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The attempts.</returns>
+    /// <summary>
+    /// Lists everyone who passed a quiz since a time, reading the index a page at a time to the end.
+    /// </summary>
+    /// <param name="quizId">The quiz.</param>
+    /// <param name="sinceUtc">The time, in UTC.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The user ids, each once.</returns>
+    public async Task<IReadOnlyCollection<string>> ListPassedUserIdsSinceAsync(string quizId, DateTime sinceUtc, CancellationToken cancellationToken = default)
+    {
+        const int pageSize = 1000;
+
+        var users = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var afterId = 0L; ;)
+        {
+            var rows = (await Session.QueryIndex<AssessmentAttemptIndex>(
+                index => index.QuizId == quizId && index.Passed == true && index.SubmittedUtc >= sinceUtc && index.Id > afterId,
+                collection: CollectionName)
+                .OrderBy(index => index.Id)
+                .Take(pageSize)
+                .ListAsync(cancellationToken)).ToArray();
+
+            users.UnionWith(rows.Select(row => row.UserId));
+
+            if (rows.Length < pageSize)
+            {
+                return users;
+            }
+
+            afterId = rows[^1].Id;
+        }
+    }
+
     public async Task<IReadOnlyList<AssessmentAttempt>> ListPassedSinceAsync(string quizId, DateTime sinceUtc, int take, CancellationToken cancellationToken = default)
     {
         return (await Session.Query<AssessmentAttempt, AssessmentAttemptIndex>(

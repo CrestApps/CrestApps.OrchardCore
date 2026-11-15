@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -101,6 +103,7 @@ public sealed class CertificationPathsController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Admin("learning/certification-paths/{id}/start", "LearningCertificationPathStart")]
     public async Task<IActionResult> Start(string id, string userName)
     {
@@ -126,6 +129,7 @@ public sealed class CertificationPathsController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Admin("learning/certification-paths/{id}/check/{userId}", "LearningCertificationPathCheck")]
     public async Task<IActionResult> Check(string id, string userId)
     {
@@ -142,12 +146,25 @@ public sealed class CertificationPathsController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [Admin("learning/certification-paths/revoke-from-review/{enrollmentId}/{recordId}", "LearningCertificationRevokeFromReview")]
-    public async Task<IActionResult> RevokeFromReview(string enrollmentId, string recordId, [FromServices] ICertificateIssuer issuer, [FromServices] IEnrollmentStore enrollments)
+    public async Task<IActionResult> RevokeFromReview(string enrollmentId, string recordId, [FromServices] ICertificateIssuer issuer, [FromServices] IEnrollmentStore enrollments, [FromServices] DefaultCertificationPathService paths)
     {
         var enrollment = await enrollments.FindByIdAsync(enrollmentId, HttpContext.RequestAborted);
 
         if (enrollment is null || !await _authorizationService.AuthorizeAsync(User, LearningPermissions.ManageEnrollments, enrollment))
+        {
+            return Forbid();
+        }
+
+        // Managing this enrollment allows revoking only a certificate that rests on it, while its review is open.
+        var attempts = HttpContext.RequestServices.GetService<AssessmentAttemptStore>();
+
+        if (!await paths.CanRevokeFromReviewAsync(
+            enrollment,
+            recordId,
+            attempts is null ? null : async attemptId => (await attempts.FindByIdAsync(attemptId, HttpContext.RequestAborted))?.EnrollmentId,
+            HttpContext.RequestAborted))
         {
             return Forbid();
         }

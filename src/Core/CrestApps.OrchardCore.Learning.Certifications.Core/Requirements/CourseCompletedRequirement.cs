@@ -39,6 +39,7 @@ public sealed class CourseCompletedRequirement : ICertificationRequirement
         var enrollments = await _enrollments.ListByCourseForUserAsync(context.UserId, context.Requirement.TargetId, cancellationToken);
         var best = enrollments
             .Where(enrollment => enrollment.Status == EnrollmentStatus.Completed && enrollment.CompletedUtc is not null)
+            .Where(CountsAsEvidence)
             .Where(enrollment => context.SinceUtc is null || enrollment.CompletedUtc >= context.SinceUtc)
             .Where(enrollment => context.Requirement.MinimumGrade is null || (enrollment.Grade ?? enrollment.Completion?.Grade) >= context.Requirement.MinimumGrade)
             .OrderByDescending(enrollment => enrollment.CompletedUtc)
@@ -60,12 +61,19 @@ public sealed class CourseCompletedRequirement : ICertificationRequirement
         };
     }
 
+    /// <summary>
+    /// Tells whether an enrollment may support a certificate: a failed one never does, and one under review does not
+    /// while staff are deciding.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <returns><see langword="true"/> when it counts.</returns>
+    public static bool CountsAsEvidence(Enrollment enrollment)
+        => enrollment is not null && enrollment.Passed != false && !enrollment.NeedsReview;
+
     /// <inheritdoc/>
     public async Task<IReadOnlyCollection<string>> ListUsersSinceAsync(CertificationRequirement requirement, DateTime sinceUtc, CancellationToken cancellationToken = default)
     {
-        var enrollments = await _enrollments.ListCompletedForCourseAsync(requirement.TargetId, sinceUtc, 1000, cancellationToken);
-
-        return enrollments.Select(enrollment => enrollment.UserId).Distinct(StringComparer.Ordinal).ToArray();
+        return await _enrollments.ListCompletedUserIdsForCourseAsync(requirement.TargetId, sinceUtc, cancellationToken);
     }
 
     /// <inheritdoc/>

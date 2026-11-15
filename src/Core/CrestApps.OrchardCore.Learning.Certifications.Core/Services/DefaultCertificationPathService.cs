@@ -384,6 +384,30 @@ public sealed class DefaultCertificationPathService : ICertificationPathService
     }
 
     /// <summary>
+    /// Tells whether a certificate may be revoked from the review of an enrollment: the enrollment has an open review,
+    /// and the certificate rests on it. Managing one enrollment never reaches a certificate earned elsewhere or
+    /// recorded by hand.
+    /// </summary>
+    /// <param name="enrollment">The reviewed enrollment.</param>
+    /// <param name="recordId">The certificate to revoke.</param>
+    /// <param name="attemptEnrollments">Finds the enrollment an attempt was made in.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when the certificate may be revoked from this review.</returns>
+    public async Task<bool> CanRevokeFromReviewAsync(
+        Enrollment enrollment,
+        string recordId,
+        Func<string, Task<string>> attemptEnrollments,
+        CancellationToken cancellationToken = default)
+    {
+        if (enrollment is null || string.IsNullOrEmpty(recordId) || !enrollment.NeedsReview)
+        {
+            return false;
+        }
+
+        return (await ListRestingOnAsync(enrollment, attemptEnrollments, cancellationToken)).Any(item => item.RecordId == recordId);
+    }
+
+    /// <summary>
     /// Moves the progress of an expired certificate to lapsed.
     /// </summary>
     /// <param name="recordId">The certificate that expired.</param>
@@ -423,14 +447,39 @@ public sealed class DefaultCertificationPathService : ICertificationPathService
     /// <returns>A task.</returns>
     internal async Task RevokeAsync(string recordId, CancellationToken cancellationToken = default)
     {
-        foreach (var progress in await _progress.ListByRecordAsync(recordId, cancellationToken))
+        foreach (var found in (await _progress.ListByRecordAsync(recordId, cancellationToken)).Select(item => (item.ItemId, item.PathId, item.UserId)).ToArray())
         {
-            progress.State = CertificationPathState.Revoked;
-            progress.ModifiedUtc = _clock.UtcNow;
-            await _progress.UpdateAsync(progress, cancellationToken);
-        }
+            // Like every other progress write: under the path-and-person lock, on a fresh read.
+            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey(found.PathId, found.UserId), _lockTimeout, _lockExpiration);
 
-        await _session.SaveChangesAsync(cancellationToken);
+            if (!locked)
+            {
+                // The revocation must still reach the progress; log that it was written without the lock.
+                _logger.LogWarning("The certification progress '{ProgressId}' was revoked without its lock, which another change held.", found.ItemId);
+            }
+
+            try
+            {
+                var progress = await _progress.FindFreshByIdAsync(found.ItemId, cancellationToken);
+
+                if (progress is null || progress.State == CertificationPathState.Revoked)
+                {
+                    continue;
+                }
+
+                progress.State = CertificationPathState.Revoked;
+                progress.ModifiedUtc = _clock.UtcNow;
+                await _progress.UpdateAsync(progress, cancellationToken);
+                await _session.SaveChangesAsync(cancellationToken);
+            }
+            finally
+            {
+                if (locked)
+                {
+                    await locker.DisposeAsync();
+                }
+            }
+        }
     }
 
     private async Task EvaluateCoreAsync(CertificationPath path, CertificationPathProgress progress, DateOnly today, CertificationPathResult result, CancellationToken cancellationToken)
