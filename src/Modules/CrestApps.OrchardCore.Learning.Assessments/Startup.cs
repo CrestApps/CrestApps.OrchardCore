@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer;
+using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.PersonalData.Core;
 using OrchardCore.Notifications;
@@ -243,5 +245,23 @@ public sealed class AssessmentsWebhooksStartup : StartupBase
         services.AddWebhookEvent(AssessmentsWebhookObserver.AttemptSubmitted, "Quiz attempt submitted", "Learning");
         services.AddWebhookEvent(AssessmentsWebhookObserver.AttemptGraded, "Quiz attempt graded", "Learning");
         services.AddAttemptObserver<AssessmentsWebhookObserver>();
+    }
+}
+
+/// <summary>
+/// Lets questions be written in a spreadsheet and imported, or exported, through ContentTransfer.
+/// </summary>
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+public sealed class AssessmentsContentTransferStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPartImportHandler<QuestionPart, QuestionPartImportHandler>();
+        services.AddContentPartImportHandler<ChoiceQuestionPart, ChoiceQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<TrueFalseQuestionPart, TrueFalseQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<ShortTextQuestionPart, ShortTextQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<NumericQuestionPart, NumericQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<EssayQuestionPart, EssayQuestionPartImportHandler>();
     }
 }
