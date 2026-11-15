@@ -24,7 +24,7 @@ public sealed class BusinessHoursAdminMenu : AdminNavigationProvider
     {
         // Schedules are shared by queues, service levels and automations, so they sit under Configuration rather than
         // under any one of the modules that read them.
-        builder.Add(S["Configuration"], configuration => configuration
+        builder.Add(S["Settings"], settings => settings
             .Add(S["Business Hours"], S["Business Hours"].PrefixPosition(), hours => hours
                 .Id("businessHoursSchedules")
                 .Action("Index", "Schedules", BusinessHoursConstants.Features.BusinessHours)

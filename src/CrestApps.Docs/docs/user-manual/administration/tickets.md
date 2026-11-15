@@ -10,7 +10,7 @@ A **ticket** is a request someone made: a customer who can't sign in, an employe
 
 | | |
 | --- | --- |
-| **Menu** | Tickets; the settings under **Configuration > Tickets** (Desks, Statuses, Priorities, Views, E-mails) |
+| **Menu** | **Tickets**: the ticket list, and for those who manage the help desk, Desks, Statuses, Priorities, Views and E-mails |
 | **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the settings; **View ticket reports** for the reports |
 | **Feature** | Tickets |
 
@@ -74,7 +74,7 @@ A desk's service-level policy sets how soon a ticket must first be answered and 
 
 ## Set up desks, statuses, priorities and views
 
-Under **Configuration > Tickets**:
+Under the **Tickets** menu:
 
 | Page | What you set |
 | --- | --- |

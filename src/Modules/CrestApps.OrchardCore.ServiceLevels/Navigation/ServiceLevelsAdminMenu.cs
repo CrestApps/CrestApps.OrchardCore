@@ -22,9 +22,9 @@ public sealed class ServiceLevelsAdminMenu : AdminNavigationProvider
     /// <inheritdoc />
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        // Policies serve several kinds of work (work orders, tickets), so they sit under Configuration rather than under
-        // any one of the modules that use them.
-        builder.Add(S["Configuration"], configuration => configuration
+        // Policies serve several kinds of work (work orders, tickets), so they sit under Settings rather than under any
+        // one of the modules that use them.
+        builder.Add(S["Settings"], settings => settings
             .Add(S["Service Levels"], S["Service Levels"].PrefixPosition(), levels => levels
                 .Id("serviceLevelPolicies")
                 .Action("Index", "Policies", ServiceLevelsConstants.Features.ServiceLevels)

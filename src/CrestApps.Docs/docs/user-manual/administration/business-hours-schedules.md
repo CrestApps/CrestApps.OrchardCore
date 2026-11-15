@@ -10,7 +10,7 @@ A **business hours schedule** says when you are open: the hours of each day of t
 
 | | |
 | --- | --- |
-| **Menu** | Configuration > Business Hours |
+| **Menu** | Settings > Business Hours |
 | **Permission** | Manage business hours schedules |
 | **Feature** | Business Hours |
 
@@ -18,7 +18,7 @@ A **business hours schedule** says when you are open: the hours of each day of t
 
 ## Create a schedule
 
-1. Go to **Configuration > Business Hours** and select **Add Schedule**.
+1. Go to **Settings > Business Hours** and select **Add Schedule**.
 2. In **General**, enter a **Name** such as *Support desk hours* and an optional **Description**.
 3. Choose the **Time zone** the hours are written in. A new schedule starts with the site's time zone.
 4. In **Weekly hours**, tick **Open** for each day you are open and enter **From** and **To**. A new schedule starts with Monday to Friday, 09:00 to 17:00.

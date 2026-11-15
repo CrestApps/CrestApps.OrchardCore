@@ -18,7 +18,7 @@ A work order is a job done for a customer, such as a repair or an installation. 
 
 ## Set up a service level
 
-A service level policy says how fast work orders are responded to and resolved, at each priority. Work order policies are kept with every other policy in **Configuration > Service Levels**; **Field Service > Service Levels** opens the same page.
+A service level policy says how fast work orders are responded to and resolved, at each priority. Work order policies are kept with every other policy in **Settings > Service Levels**; **Field Service > Service Levels** opens the same page.
 
 1. Go to **Field Service > Service Levels** and select **Add Policy** (choose **For Work orders** when it asks).
 2. Enter a name and choose in **Counted on** the business hours to count in, or **Around the clock**. See [Business Hours Schedules](../administration/business-hours-schedules.md).
