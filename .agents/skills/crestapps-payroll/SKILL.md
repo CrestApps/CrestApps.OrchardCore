@@ -58,6 +58,10 @@ Implement `IPayStatementPaymentMethod` (`Method`, `PayAsync`, `VoidAsync`) for a
 
 A module that has hours or amounts to pay implements `IPayInputSource` in its own project (register it in a startup with `[RequireFeatures(PayrollConstants.Features.PaySetup)]`) and stamps its records when a run takes them, like `TimeOffPayoutPayInputSource`, `PosTipsPayInputSource` and `OrderCommissionPayInputSource`. Balances a stub shows come from `IPayStatementBalanceSource`. Commission rates live on Staff compensation (`StaffPayRates.CommissionRate`), never in Payroll.
 
+## AI tools
+
+Payroll AI tools live in the opt-in `CrestApps.OrchardCore.Payroll.AI` feature (pay goes to the AI provider), run as the signed-in person, check the permission of the page they mirror (`ViewOwnPay`, `ViewPayRuns` per employer) and never return a tax id or account number. Compare statements with `PayStatementComparison`.
+
 ## Payroll journal
 
 Never write a journal file or keep a ledger in Payroll: `PayrollJournal.EntriesFor` turns statement lines into debits and credits on the accounts of `PayrollJournalSettings` (per kind, or a mapping by pay code or tax code), and the **Journal entries** data set (`ExportPayrollData` scope) feeds a Data Pipeline that groups and delivers them.

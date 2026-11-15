@@ -352,6 +352,17 @@ A pay run takes the inputs of every `IPayInputSource` for its people and period,
 
 With **Employees review their coming pay before the run is submitted** (`PayrollSettings.EmployeeReview`), a calculation sends each person whose net pay changed since they were last asked a **Review your coming pay** notice (`PayReviewRequested`); My Pay lists their draft statements of calculated runs, and the review page (`my-pay/review/{id}`) takes **This looks right** or **Ask about it** with a note (`PayStatementReviewService`, stored as `PayStatement.Review`). A question tells the run's preparer (`PayReviewQuestioned`). The run page shows each answer on its statement, lists open questions, and asks before **Submit for approval** while one is open; an answer is out of date once a calculation changes the net pay. Nothing is blocked.
 
+## AI tools
+
+The **Payroll AI Tools** feature (`CrestApps.OrchardCore.Payroll.AI`, depends on Payroll and AI Services) is off by default: once on, pay goes to the site's AI provider whenever a profile uses a tool. It registers two tools with `AddCoreAITool`, in the **Payroll** category of an AI profile's tools:
+
+| Tool | Name | Mirrors | Answers |
+| --- | --- | --- | --- |
+| Explain my pay statement | `payrollMyPayStatement` | My Pay, `ViewOwnPay` | The person's own final statement (the latest, or `number`): each line with its code, type, hours, rate and amount, gross and net, how net pay was paid (deposit or check, never the account), the balances, and the change of each kind of line since their statement before it (`PayStatementComparison`). |
+| What changed since the last pay run | `payrollPayRunChanges` | The pay run page, `ViewPayRuns` for its employer | A run (`run`, its number) against the latest paid run before it of the same employer and pay schedule: the change in totals, who joined or left, and whose net pay changed most (25 at most) with the lines that made the difference. A run of an employer the person may not see is not found. |
+
+Neither tool returns a tax id or a bank account number, and both run as the signed-in person.
+
 ## Payroll journal
 
 Payroll keeps no ledger: it turns each line of a final statement into a debit and a credit (`PayrollJournal.EntriesFor`) and offers them as the **Journal entries** data set of the `Payroll` data source, for the employers in the user's `ExportPayrollData` scope, filtered by pay date. An earning debits wages expense and credits net pay owed; a deduction debits net pay owed and credits deductions payable; an employee's tax debits net pay owed and credits taxes payable; an employer's tax debits its expense and credits taxes payable; an employer contribution debits benefits expense and credits benefits payable; a reimbursement debits its expense and credits net pay owed. Imputed income and memo lines move no money and have no entry. A void's reversing statement has negative amounts, which swap the sides, so it cancels the original entries. Each entry carries the ledger code of the line's department team (`PayrollTeamSettings.LedgerCode`).

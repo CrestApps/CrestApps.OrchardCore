@@ -206,6 +206,12 @@ public static class PayrollConstants
         public const string SelfService = "CrestApps.OrchardCore.Payroll.SelfService";
 
         /// <summary>
+        /// Payroll AI Tools: tools an AI assistant uses to explain a person's own pay and what changed in a pay run.
+        /// Off unless a site turns it on, because pay then goes to the site's AI provider.
+        /// </summary>
+        public const string AI = "CrestApps.OrchardCore.Payroll.AI";
+
+        /// <summary>
         /// United States Payroll: the Form W-4 election and withholding method, and the federal tax rules as recipes.
         /// </summary>
         public const string UnitedStates = "CrestApps.OrchardCore.Payroll.UnitedStates";

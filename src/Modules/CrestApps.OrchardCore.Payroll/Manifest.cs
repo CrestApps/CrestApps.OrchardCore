@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Approvals;
 using CrestApps.OrchardCore.Banking;
 using CrestApps.OrchardCore.Checks;
@@ -67,6 +68,18 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         PayrollConstants.Features.Payroll,
+    ]
+)]
+
+[assembly: Feature(
+    Id = PayrollConstants.Features.AI,
+    Name = "Payroll AI Tools",
+    Description = "Tools an AI assistant uses to explain a person's own pay statement and what changed in a pay run since the last one, each checking the permission of the page it mirrors. Turn it on only if pay may go to the site's AI provider.",
+    Category = "Payroll",
+    Dependencies =
+    [
+        PayrollConstants.Features.Payroll,
+        AIConstants.Feature.Area,
     ]
 )]
 

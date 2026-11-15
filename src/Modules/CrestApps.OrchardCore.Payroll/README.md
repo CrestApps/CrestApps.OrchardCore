@@ -37,6 +37,7 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - The recipe **Payroll: sample roles**.
 - The employee review (`PayrollSettings.EmployeeReview`, `PayStatementReviewService`, `PayReviewNotificationObserver`,
   **Your coming pay** in My Pay) and statement balances (`IPayStatementBalanceSource`, `PayStatement.Balances`).
+- **Payroll AI Tools** (`CrestApps.OrchardCore.Payroll.AI`, off by default): `MyPayStatementTool` and `PayRunChangesTool`.
 - The payroll journal: `PayrollJournal.EntriesFor` (debits and credits of a statement's lines), the **Journal accounts**
   card of **Settings > Payroll** (`PayrollJournalSettings`), the **Journal entries** data set (`ExportPayrollData`) and
   the recipe **Payroll: export the payroll journal to a CSV file**.
