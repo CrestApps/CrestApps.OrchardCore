@@ -9,11 +9,12 @@
         TicketLinkKinds.Child => T["Part of this ticket"].Value,
         TicketLinkKinds.Duplicate => T["Duplicate"].Value,
         TicketLinkKinds.FollowUpOf => T["Followed up by"].Value,
+        TicketLinkKinds.Problem => T["Its problem"].Value,
         _ => T["Related"].Value,
     };
 }
 
-@if (Model.Links.Count > 0 || Model.CanEdit)
+@if (Model.Links.Count > 0 || Model.Incidents.Count > 0 || Model.CanEdit)
 {
     <div class="card mb-3">
         <div class="card-body">
@@ -46,6 +47,26 @@
                     }
                 </ul>
             }
+            @if (Model.Incidents.Count > 0)
+            {
+                <h3 class="h6 small text-muted mt-2">@T["Incidents of this problem ({0})", Model.Incidents.Count]</h3>
+                <ul class="list-unstyled small">
+                    @foreach (var incident in Model.Incidents)
+                    {
+                        <li class="mb-1">
+                            @if (string.IsNullOrEmpty(incident.Url))
+                            {
+                                @incident.Name
+                            }
+                            else
+                            {
+                                <a href="@incident.Url">@incident.Name</a>
+                            }
+                        </li>
+                    }
+                </ul>
+                <p class="small text-muted mb-0">@T["Solving this ticket solves its open incidents."]</p>
+            }
             @if (Model.CanEdit && Model.Kinds.Count > 0)
             {
                 <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Link" asp-route-id="@ticketId" method="post" id="@formId" class="no-multisubmit">
@@ -72,6 +93,7 @@
                             <option value="@TicketLinkKinds.Parent">@T["Parent of this ticket"]</option>
                             <option value="@TicketLinkKinds.Child">@T["Part of this ticket"]</option>
                             <option value="@TicketLinkKinds.Duplicate">@T["Duplicate"]</option>
+                            <option value="@TicketLinkKinds.Problem">@T["Its problem (solving it solves this one)"]</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-secondary btn-sm">@T["Add link"]</button>

@@ -29,4 +29,9 @@ public static class TicketLinkKinds
     /// This ticket follows up the linked, closed one.
     /// </summary>
     public const string FollowUpOf = "FollowUpOf";
+
+    /// <summary>
+    /// The linked ticket is the problem behind this one, an incident of it: solving the problem solves this ticket too.
+    /// </summary>
+    public const string Problem = "Problem";
 }

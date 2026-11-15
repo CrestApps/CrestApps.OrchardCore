@@ -60,7 +60,8 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<TicketIndexProvider>()
             .AddIndexProvider<TicketBacklogIndexProvider>()
             .AddIndexProvider<TicketTimeElapsedMarkIndexProvider>()
-            .AddIndexProvider<TicketEmailOutboxIndexProvider>();
+            .AddIndexProvider<TicketEmailOutboxIndexProvider>()
+            .AddIndexProvider<TicketLinkIndexProvider>();
 
         services.AddTicketsCore();
         services.AddScoped<IContentHandler, TicketContentCleanup>();

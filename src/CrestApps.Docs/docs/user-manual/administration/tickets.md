@@ -50,6 +50,10 @@ A reply from the requester on a solved ticket reopens it within the desk's reope
 - **Merge** moves a duplicate into another ticket by its number. The duplicate becomes read only and points to the ticket it was merged into.
 - **Links** relate a ticket to another ticket or to any record, such as an order or a work order, with a relation such as **Related** or **Duplicate**.
 
+## Problems and incidents
+
+When many people report the same outage, open one ticket for the cause and link each report to it with **Its problem** under **Links**. The cause's page lists its incidents, and solving it solves every open incident, telling each requester.
+
 ## Service levels
 
 A desk's service-level policy sets how soon a ticket must first be answered and how soon it must be solved, at each priority, counted in the desk's business hours. The ticket shows each target with **Due soon**, **Late**, **Met** or **Missed**. A status that waits for the requester can pause the clock. See [Service Levels](service-levels.md).

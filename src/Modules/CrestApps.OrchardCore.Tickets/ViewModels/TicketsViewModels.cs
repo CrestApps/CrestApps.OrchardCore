@@ -511,6 +511,11 @@ public class TicketLinksViewModel
     public List<TicketLinkView> Links { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the tickets that name this one as their problem.
+    /// </summary>
+    public List<TicketLinkView> Incidents { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the record kinds a link can point at.
     /// </summary>
     public List<SelectListItem> Kinds { get; set; } = [];

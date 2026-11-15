@@ -37,6 +37,7 @@ public static class TicketsCoreServiceCollectionExtensions
         services.AddServiceLevelPolicyUsage<TicketSettingsUsage>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberLoadSource, TicketTeamMemberLoadSource>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketEmailObserver>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketProblemObserver>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IServiceLevelObserver, TicketServiceLevelObserver>());
         services.AddTemplatedEmailTemplateSource<TicketEmailTemplateSource>();
         services.AddServiceLevelScope<TicketServiceLevelScope>();

@@ -58,6 +58,10 @@ A new ticket with a team and no assignee goes to a member by the desk's **New ti
 
 A staff member who leaves, or whose user is unlinked from their staff record, hands back their open tickets: each is unassigned, with the change on its timeline.
 
+## Problems and incidents
+
+A ticket linked to another with **Its problem** (`TicketLinkKinds.Problem`) is an incident of that problem. Ticket-to-ticket links are indexed both ways (`TicketLinkIndex`), so the problem's page lists its incidents, and solving the problem solves its open incidents with the same status, which e-mails their requesters as any solve does (`TicketProblemObserver`). An incident already solved, merged or only related stays as it is.
+
 ## Service levels
 
 Tickets is a [service-level](./service-levels) scope named `Tickets`, with the metrics `FirstResponse`, `NextResponse` and `Resolution` and the priorities by name. A new ticket takes the policy of its account, then its type, then its desk. The first public reply from an agent completes the first response; each customer reply starts a next response; solving completes the resolution; a status that pauses timers pauses them. `TicketPart.NextDueUtc` keeps the next due time for the list and the reports.

@@ -76,7 +76,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 10;
+        return 11;
     }
 
     /// <summary>
@@ -212,6 +212,19 @@ internal sealed class TicketsMigrations : DataMigration
         await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table.CreateIndex("IDX_TicketIndex_Rating", "DeskId", "RatingRequestedUtc", "SolvedUtc", "DocumentId"));
 
         return 10;
+    }
+
+    /// <summary>
+    /// Adds the index of ticket-to-ticket links and fills it by saving every ticket again in the background.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom10Async()
+    {
+        await TicketIndexSchema.CreateLinkIndexAsync(SchemaBuilder);
+
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TicketReindexStep.StepName));
+
+        return 11;
     }
 
     private async Task SeedAsync()

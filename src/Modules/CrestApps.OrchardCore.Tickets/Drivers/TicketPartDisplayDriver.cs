@@ -19,6 +19,7 @@ using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tickets.Drivers;
 
@@ -190,6 +191,21 @@ internal sealed class TicketPartDisplayDriver : ContentPartDisplayDriver<TicketP
             Name = summaries.TryGetValue(link.Record, out var summary) ? summary.Title : link.Record.Id,
             Url = summary?.AdminUrl,
             KindName = _records.GetSource(link.Record.Kind)?.DisplayName is { } displayName ? _localizerFactory.Localize(displayName).Value : link.Record.Kind,
+        })];
+
+        // The tickets that name this one as their problem: solving it solves them.
+        var session = _serviceProvider.GetRequiredService<global::YesSql.ISession>();
+        var ticketId = ticket.ContentItemId;
+        var incidents = (await session.QueryIndex<Core.Indexes.TicketLinkIndex>(index => index.LinkedTicketId == ticketId && index.Kind == TicketLinkKinds.Problem).ListAsync(CancellationToken))
+            .Select(index => new RecordRef(TicketsConstants.RecordKind, index.TicketId))
+            .Distinct()
+            .ToList();
+        var incidentSummaries = await _records.GetSummariesAsync(incidents, CancellationToken);
+        model.Incidents = [.. incidents.Select(record => new TicketLinkView
+        {
+            Link = new TicketLink { Record = record, Kind = TicketLinkKinds.Problem },
+            Name = incidentSummaries.TryGetValue(record, out var summary) ? summary.Title : record.Id,
+            Url = summary?.AdminUrl,
         })];
 
         foreach (var source in await _records.GetSearchableSourcesAsync(User, CancellationToken))

@@ -70,6 +70,25 @@ public static class TicketIndexSchema
         await CreateDueSortIndexAsync(schemaBuilder);
         await CreateTimeElapsedMarksAsync(schemaBuilder);
         await CreateEmailOutboxAsync(schemaBuilder);
+        await CreateLinkIndexAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the table of ticket-to-ticket links.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateLinkIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<TicketLinkIndex>(table => table
+            .Column<string>("TicketId", column => column.WithLength(26))
+            .Column<string>("LinkedTicketId", column => column.WithLength(26))
+            .Column<string>("Kind", column => column.WithLength(50)));
+
+        await schemaBuilder.AlterIndexTableAsync<TicketLinkIndex>(table =>
+            table.CreateIndex("IDX_TicketLinkIndex_Linked", "LinkedTicketId", "Kind", "DocumentId"));
     }
 
     /// <summary>
