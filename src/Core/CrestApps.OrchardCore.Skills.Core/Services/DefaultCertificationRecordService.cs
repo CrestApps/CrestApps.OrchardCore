@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Skills.Core.Services;
 
@@ -13,6 +15,9 @@ internal sealed class DefaultCertificationRecordService : ICertificationRecordSe
     private readonly CertificationRecordStore _store;
     private readonly CertificationStore _certificationStore;
     private readonly IClock _clock;
+    private readonly ISession _session;
+    private readonly IEnumerable<ICertificationRecordObserver> _observers;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -20,11 +25,17 @@ internal sealed class DefaultCertificationRecordService : ICertificationRecordSe
         CertificationRecordStore store,
         CertificationStore certificationStore,
         IClock clock,
+        ISession session,
+        IEnumerable<ICertificationRecordObserver> observers,
+        ILogger<DefaultCertificationRecordService> logger,
         IStringLocalizer<DefaultCertificationRecordService> stringLocalizer)
     {
         _store = store;
         _certificationStore = certificationStore;
         _clock = clock;
+        _session = session;
+        _observers = observers;
+        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -68,7 +79,7 @@ internal sealed class DefaultCertificationRecordService : ICertificationRecordSe
             result.Fail(S["The certificate expires before it was issued."]);
         }
 
-        if (certification is not null && record.Status == CertificationStatus.Valid && certification.RequiresDocument && string.IsNullOrWhiteSpace(record.DocumentPath))
+        if (certification is not null && record.Status == CertificationStatus.Valid && certification.RequiresDocument && string.IsNullOrWhiteSpace(record.DocumentPath) && string.IsNullOrEmpty(record.VerificationCode))
         {
             result.Fail(S["Add a copy of the certificate before marking it valid."]);
         }
@@ -150,15 +161,31 @@ internal sealed class DefaultCertificationRecordService : ICertificationRecordSe
         }
 
         record.Status = CertificationStatus.Revoked;
+        record.RevokedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        record.RevokedBy = actor;
+        record.RevokedUtc = _clock.UtcNow;
 
-        if (!string.IsNullOrWhiteSpace(reason))
+        var saved = await SaveAsync(record, actor, cancellationToken);
+
+        if (!saved.Succeeded)
         {
-            record.Notes = string.IsNullOrWhiteSpace(record.Notes)
-                ? reason.Trim()
-                : $"{record.Notes}{Environment.NewLine}{reason.Trim()}";
+            return saved;
         }
 
-        return await SaveAsync(record, actor, cancellationToken);
+        // The revocation is committed before anyone hears of it, so the verification page shows it at once and an
+        // observer never acts on a revocation that was rolled back.
+        await _session.SaveChangesAsync(cancellationToken);
+
+        var context = new CertificationRecordContext
+        {
+            Record = record,
+            Certification = await _certificationStore.FindByIdAsync(record.CertificationId, cancellationToken),
+            Actor = actor,
+        };
+
+        await CertificationRecordObservers.NotifyAsync(_observers, observer => observer.RevokedAsync(context, cancellationToken), record, _logger);
+
+        return saved;
     }
 
     public async Task<bool> DeleteAsync(string id, CancellationToken cancellationToken = default)
@@ -209,6 +236,15 @@ internal sealed class DefaultCertificationRecordService : ICertificationRecordSe
         target.VerifiedBy = source.VerifiedBy;
         target.VerifiedUtc = source.VerifiedUtc;
         target.Notes = source.Notes;
+        target.Source = source.Source;
+        target.SourceId = source.SourceId;
+        target.Evidence = source.Evidence;
+        target.VerificationCode = source.VerificationCode;
+        target.PreviousRecordId = source.PreviousRecordId;
+        target.RenewedByRecordId = source.RenewedByRecordId;
+        target.RevokedReason = source.RevokedReason;
+        target.RevokedBy = source.RevokedBy;
+        target.RevokedUtc = source.RevokedUtc;
         target.Properties = source.Properties;
     }
 }

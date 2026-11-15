@@ -33,6 +33,8 @@ public static class SkillsCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Certification>, CertificationCatalogHandler>());
         services.TryAddScoped<ISkillAssignmentService, DefaultSkillAssignmentService>();
         services.TryAddScoped<ICertificationRecordService, DefaultCertificationRecordService>();
+        services.TryAddScoped<ICertificateIssuer, DefaultCertificateIssuer>();
+        services.AddNumberSequence();
         services.TryAddScoped<SkillsDailyCheck>();
         services.TryAddScoped<SkillsDailyCheckpointStore>();
 
