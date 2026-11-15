@@ -59,6 +59,35 @@ public sealed class EnrollmentListService
     }
 
     /// <summary>
+    /// Gets the courses a person may enroll learners into: <see langword="null"/> for every course (the person holds
+    /// Manage enrollments), else the courses where they are an instructor or assistant and hold Manage own courses.
+    /// </summary>
+    /// <param name="user">The person.</param>
+    /// <returns>The course ids, or <see langword="null"/> for every course.</returns>
+    public async Task<IReadOnlyCollection<string>> GetEnrollableCourseIdsAsync(ClaimsPrincipal user)
+    {
+        if (await _authorizationService.AuthorizeAsync(user, LearningPermissions.ManageEnrollments))
+        {
+            return null;
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(user, LearningPermissions.ManageOwnCourses))
+        {
+            return [];
+        }
+
+        return await _courseStructure.GetStaffCourseIdsAsync(user?.FindFirstValue(ClaimTypes.NameIdentifier), LearningConstants.CourseStaffRoles.Instructor, LearningConstants.CourseStaffRoles.Assistant);
+    }
+
+    /// <summary>
+    /// Gets whether a user exists.
+    /// </summary>
+    /// <param name="userId">The user id.</param>
+    /// <returns><see langword="true"/> when it does.</returns>
+    public async Task<bool> UserExistsAsync(string userId)
+        => !string.IsNullOrWhiteSpace(userId) && (await _userSearchService.GetAsync([userId])).Any(user => user.UserId == userId);
+
+    /// <summary>
     /// Pages enrollments within a person's scope.
     /// </summary>
     /// <param name="user">The person.</param>

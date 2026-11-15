@@ -58,6 +58,42 @@ public sealed class LearningRecordAuthorizationTests
         Assert.False(context.HasFailed);
     }
 
+    [Theory]
+    [InlineData("teacher", true, true)]
+    [InlineData("teacher", false, false)]
+    [InlineData("assistant", true, true)]
+    [InlineData("grader", true, false)]
+    [InlineData("other-teacher", true, false)]
+    [InlineData("learner", true, false)]
+    public async Task RecordHandler_LetsAnInstructorEnrollIntoTheirOwnCourse(string userId, bool staffPermission, bool granted)
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1", part => part.Staff =
+        [
+            new CourseStaffMember { UserId = "teacher", Role = LearningConstants.CourseStaffRoles.Instructor },
+            new CourseStaffMember { UserId = "assistant", Role = LearningConstants.CourseStaffRoles.Assistant },
+            new CourseStaffMember { UserId = "grader", Role = LearningConstants.CourseStaffRoles.Grader },
+        ]);
+        courses.AddCourse("course2", part => part.Staff = [new CourseStaffMember { UserId = "other-teacher", Role = LearningConstants.CourseStaffRoles.Instructor }]);
+
+        // Act
+        var context = await harness.RunAsync(async services =>
+        {
+            var handler = ActivatorUtilities.CreateInstance<LearningRecordAuthorizationHandler>(services);
+            var user = staffPermission ? CalendarTestHarness.User(userId, LearningPermissions.ManageOwnCourses.Name) : CalendarTestHarness.User(userId);
+            var authorization = new AuthorizationHandlerContext([new PermissionRequirement(LearningPermissions.ManageEnrollments)], user, new LearningCourseResource("course1"));
+
+            await handler.HandleAsync(authorization);
+
+            return authorization;
+        }, commit: false);
+
+        // Assert
+        Assert.Equal(granted, context.HasSucceeded);
+    }
+
     [Fact]
     public async Task RecordHandler_IgnoresAnonymousPeopleAndOtherResources()
     {

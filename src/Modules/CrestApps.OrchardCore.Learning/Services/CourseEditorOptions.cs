@@ -91,9 +91,15 @@ public sealed class CourseEditorOptions
     /// </summary>
     /// <param name="exceptId">A course to leave out, such as the one being edited.</param>
     /// <param name="selectedIds">The selected courses.</param>
+    /// <param name="onlyIds">When set, only these courses, such as the courses a person teaches.</param>
     /// <returns>The options.</returns>
-    public async Task<IList<SelectListItem>> GetCourseOptionsAsync(string exceptId, IEnumerable<string> selectedIds)
+    public async Task<IList<SelectListItem>> GetCourseOptionsAsync(string exceptId, IEnumerable<string> selectedIds, IReadOnlyCollection<string> onlyIds = null)
     {
+        if (onlyIds is { Count: 0 })
+        {
+            return [];
+        }
+
         var courseTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
             .Where(type => type.Parts.Any(part => part.PartDefinition?.Name == nameof(CoursePart)))
             .Select(type => type.Name)
@@ -111,7 +117,7 @@ public sealed class CourseEditorOptions
             .ListAsync();
 
         return courses
-            .Where(course => course.ContentItemId != exceptId)
+            .Where(course => course.ContentItemId != exceptId && (onlyIds is null || onlyIds.Contains(course.ContentItemId)))
             .Select(course => new SelectListItem(course.DisplayText, course.ContentItemId, selected.Contains(course.ContentItemId)))
             .ToList();
     }

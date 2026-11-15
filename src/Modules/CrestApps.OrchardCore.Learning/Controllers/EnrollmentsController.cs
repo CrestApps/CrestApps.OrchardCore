@@ -124,7 +124,10 @@ public sealed class EnrollmentsController : Controller
             }),
         };
 
-        model.CourseOptions = [new SelectListItem(S["All courses"], string.Empty), .. await _editorOptions.GetCourseOptionsAsync(null, [model.CourseId])];
+        // A person who sees only their own courses' enrollments is offered only those courses to filter by.
+        var visibleCourses = await _authorizationService.AuthorizeAsync(User, LearningPermissions.ViewEnrollments) ? null : query.CourseIds;
+
+        model.CourseOptions = [new SelectListItem(S["All courses"], string.Empty), .. await _editorOptions.GetCourseOptionsAsync(null, [model.CourseId], visibleCourses)];
         model.StatusOptions =
         [
             new SelectListItem(S["Any status"], string.Empty),
@@ -149,14 +152,16 @@ public sealed class EnrollmentsController : Controller
     [Admin("learning/enrollments/new", "LearningEnrollmentsCreate")]
     public async Task<IActionResult> Create(string courseId)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, LearningPermissions.ManageEnrollments))
+        var enrollable = await _listService.GetEnrollableCourseIdsAsync(User);
+
+        if (enrollable is { Count: 0 })
         {
             return Forbid();
         }
 
         var model = new EnrollViewModel { CourseId = courseId };
 
-        model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, [courseId]);
+        model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, [courseId], enrollable);
 
         return View(model);
     }
@@ -171,7 +176,9 @@ public sealed class EnrollmentsController : Controller
     [Admin("learning/enrollments/new", "LearningEnrollmentsCreate")]
     public async Task<IActionResult> Create(EnrollViewModel model)
     {
-        if (!await _authorizationService.AuthorizeAsync(User, LearningPermissions.ManageEnrollments))
+        var enrollable = await _listService.GetEnrollableCourseIdsAsync(User);
+
+        if (enrollable is { Count: 0 })
         {
             return Forbid();
         }
@@ -180,10 +187,18 @@ public sealed class EnrollmentsController : Controller
         {
             ModelState.AddModelError(nameof(model.UserId), S["Choose the learner."]);
         }
+        else if (!await _listService.UserExistsAsync(model.UserId))
+        {
+            ModelState.AddModelError(nameof(model.UserId), S["The learner does not exist."]);
+        }
 
         if (string.IsNullOrWhiteSpace(model.CourseId))
         {
             ModelState.AddModelError(nameof(model.CourseId), S["Choose the course."]);
+        }
+        else if (!await _authorizationService.AuthorizeAsync(User, LearningPermissions.ManageEnrollments, new LearningCourseResource(model.CourseId)))
+        {
+            return Forbid();
         }
 
         if (ModelState.IsValid)
@@ -210,7 +225,7 @@ public sealed class EnrollmentsController : Controller
             ModelState.AddModelError(string.Empty, ErrorText(result.ErrorCode));
         }
 
-        model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, [model.CourseId]);
+        model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(null, [model.CourseId], enrollable);
 
         return View(model);
     }

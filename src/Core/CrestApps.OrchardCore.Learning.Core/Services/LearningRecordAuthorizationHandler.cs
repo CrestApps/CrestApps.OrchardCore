@@ -31,7 +31,10 @@ public sealed class LearningRecordAuthorizationHandler : AuthorizationHandler<Pe
     /// <inheritdoc />
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
-        if (context.HasSucceeded || context.Resource is not Enrollment enrollment || context.User?.Identity?.IsAuthenticated != true)
+        var enrollment = context.Resource as Enrollment;
+        var courseId = enrollment?.CourseId ?? (context.Resource as LearningCourseResource)?.CourseId;
+
+        if (context.HasSucceeded || string.IsNullOrEmpty(courseId) || context.User?.Identity?.IsAuthenticated != true)
         {
             return;
         }
@@ -45,7 +48,7 @@ public sealed class LearningRecordAuthorizationHandler : AuthorizationHandler<Pe
 
         var name = requirement.Permission.Name;
 
-        if (name == LearningPermissions.ViewLearnerRecords.Name && enrollment.UserId == userId)
+        if (name == LearningPermissions.ViewLearnerRecords.Name && enrollment?.UserId == userId)
         {
             context.Succeed(requirement);
 
@@ -61,7 +64,7 @@ public sealed class LearningRecordAuthorizationHandler : AuthorizationHandler<Pe
 
         if (name == LearningPermissions.ViewLearnerRecords.Name || name == LearningPermissions.ViewEnrollments.Name)
         {
-            if (await _courseStructure.Value.IsCourseStaffAsync(userId, enrollment.CourseId))
+            if (await _courseStructure.Value.IsCourseStaffAsync(userId, courseId))
             {
                 context.Succeed(requirement);
             }
@@ -69,7 +72,7 @@ public sealed class LearningRecordAuthorizationHandler : AuthorizationHandler<Pe
             return;
         }
 
-        if (name == LearningPermissions.ManageEnrollments.Name && await _courseStructure.Value.IsCourseStaffAsync(userId, enrollment.CourseId, _managingRoles))
+        if (name == LearningPermissions.ManageEnrollments.Name && await _courseStructure.Value.IsCourseStaffAsync(userId, courseId, _managingRoles))
         {
             context.Succeed(requirement);
         }

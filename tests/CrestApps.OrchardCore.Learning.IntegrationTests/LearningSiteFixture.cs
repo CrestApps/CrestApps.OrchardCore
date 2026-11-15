@@ -76,6 +76,21 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
     public string EnrolledUserId { get; private set; }
 
     /// <summary>
+    /// Gets a learner no test enrolls in the fixture's set-up, for tests that enroll someone.
+    /// </summary>
+    public string SpareLearnerId { get; private set; }
+
+    /// <summary>
+    /// Gets the instructor of the course, who holds Manage own courses.
+    /// </summary>
+    public string InstructorId { get; private set; }
+
+    /// <summary>
+    /// Gets a published course without staff.
+    /// </summary>
+    public string OtherCourseId { get; private set; }
+
+    /// <summary>
     /// Gets the path of the file attached to the file lesson.
     /// </summary>
     public string LessonFilePath => $"media/mediafields/{LearningConstants.ContentTypes.FileLesson}/{FileLessonId}/guide.txt";
@@ -129,12 +144,15 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
                 ["name"] = "Roles",
                 ["Roles"] = new JsonArray(
                     Role("Anonymous", "ViewContent", "ExecuteGraphQL"),
-                    Role("Authenticated", "ViewContent", "ExecuteGraphQL")),
+                    Role("Authenticated", "ViewContent", "ExecuteGraphQL"),
+                    Role("CourseTeacher", "AccessAdminPanel", "ManageOwnCourses")),
             }),
         }));
 
         EnrolledUserId = await InTenantAsync(services => CreateUserAsync(services, "learner1"));
         await InTenantAsync(services => CreateUserAsync(services, "learner2"));
+        SpareLearnerId = await InTenantAsync(services => CreateUserAsync(services, "learner3"));
+        InstructorId = await InTenantAsync(services => CreateUserAsync(services, "instructor1", "CourseTeacher"));
         await InTenantAsync(CreateCourseAsync);
         EnrollmentId = await InTenantAsync(async services =>
         {
@@ -283,7 +301,7 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
             ["Permissions"] = new JsonArray(permissions.Select(permission => (JsonNode)permission).ToArray()),
         };
 
-    private static async Task<string> CreateUserAsync(IServiceProvider services, string userName)
+    private static async Task<string> CreateUserAsync(IServiceProvider services, string userName, params string[] roles)
     {
         var errors = new List<string>();
         var user = await services.GetRequiredService<IUserService>().CreateUserAsync(new User
@@ -292,6 +310,7 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
             Email = userName + "@example.com",
             EmailConfirmed = true,
             IsEnabled = true,
+            RoleNames = roles.ToList(),
         }, Password, (_, message) => errors.Add(message));
 
         Assert.True(user is not null, string.Join(", ", errors));
@@ -306,7 +325,11 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         var course = await contentManager.NewAsync(LearningConstants.ContentTypes.Course);
         course.DisplayText = "Workplace Safety";
         course.Alter<TitlePart>(part => part.Title = "Workplace Safety");
-        course.Alter<CoursePart>(part => part.EnrollmentMode = EnrollmentMode.Open);
+        course.Alter<CoursePart>(part =>
+        {
+            part.EnrollmentMode = EnrollmentMode.Open;
+            part.Staff = [new CourseStaffMember { UserId = InstructorId, Role = LearningConstants.CourseStaffRoles.Instructor }];
+        });
         await contentManager.CreateAsync(course, VersionOptions.Draft);
 
         var page = await LessonAsync(contentManager, course, LearningConstants.ContentTypes.PageLesson, "Fire exits", SecretLessonText);
@@ -332,6 +355,12 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("Evacuation guide for enrolled learners."));
         await mediaFileStore.CreateFileFromStreamAsync($"mediafields/{LearningConstants.ContentTypes.FileLesson}/{file.ContentItemId}/guide.txt", stream, overwrite: true);
 
+        var other = await contentManager.NewAsync(LearningConstants.ContentTypes.Course);
+        other.DisplayText = "Forklift Basics";
+        other.Alter<TitlePart>(part => part.Title = "Forklift Basics");
+        await contentManager.CreateAsync(other, VersionOptions.Published);
+
+        OtherCourseId = other.ContentItemId;
         CourseId = course.ContentItemId;
         PageLessonId = page.ContentItemId;
         FileLessonId = file.ContentItemId;
