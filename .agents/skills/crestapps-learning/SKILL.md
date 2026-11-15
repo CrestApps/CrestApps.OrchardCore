@@ -71,3 +71,10 @@ Implement `IEnrollmentObserver` (every method has a default) and register it wit
 - Show times with `ILocalClock`; enrollment dates are stored in UTC.
 
 See `src/CrestApps.Docs/docs/modules/learning.md` for the full reference.
+
+## Assessments
+
+- Add a question type with `services.AddQuestionType(...)` and an `IQuestionScorer`; the scorer snapshots the key into the attempt item and scores it there. Never read the question again after the attempt starts.
+- React to attempts with `IAttemptObserver` (`services.AddAttemptObserver<T>()`); observers run after the commit.
+- Keep any secret a learner types (a code, a key) in `LearningSecretStore` with your own kind, and check it with `LearningSecretVerifier`, which limits wrong tries.
+- Write to an attempt or an enrollment only through `IAssessmentAttemptService` / `IEnrollmentService` / `ILearnerProgressService`: they take the per-record lock, read again, commit and then notify.

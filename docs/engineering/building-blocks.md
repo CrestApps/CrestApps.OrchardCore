@@ -93,6 +93,7 @@ Rules that follow from the table:
 
 | Concept | Owner (feature) | Reuse it through | Do not |
 | --- | --- | --- | --- |
+| Questions, quizzes, attempts, grading and item analysis | **Learning Assessments** (`Learning.Assessments.Abstractions`/`.Core`) | `IAssessmentAttemptService`, `AddQuestionType` with an `IQuestionScorer`, `IAttemptObserver` | Score answers in the browser; keep a quiz secret or key in a content item (use `LearningSecretStore`) |
 | Courses, lessons, enrollments, progress and completion | **Learning** (`Learning.Abstractions`/`.Core`) | `IEnrollmentService` (grants with a source: `AddEnrollmentSource`), `ILearnerProgressService`, `ICourseAccessService`, `AddCourseItemKind<TPart>`, `AddCourseItemReleaseRule<T>`, `AddCourseCompletionCriterion<T>`, `IEnrollmentObserver`, `ICourseItemHandler` | Gate content another way; add an enrollment, seat or course-access record of your own (an order or a subscription grants access through an enrollment source) |
 
 ### Communication

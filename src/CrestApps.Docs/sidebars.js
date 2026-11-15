@@ -192,6 +192,8 @@ const sidebars = {
                 'user-manual/learning/courses',
                 'user-manual/learning/enrollments',
                 'user-manual/learning/learner-pages',
+                'user-manual/learning/quizzes',
+                'user-manual/learning/grading',
             ],
         },
         {
@@ -480,6 +482,7 @@ const sidebars = {
             className: icon('book-a'),
             items: [
                 'modules/learning',
+                'modules/learning-assessments',
             ],
         },
         {

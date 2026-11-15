@@ -52,6 +52,10 @@ At the bottom of an enrollment:
 
 Each change is kept in the history and, with Audit Trail on, in the Audit Trail.
 
+## Reviews after completion
+
+If a quiz result a completed enrollment rests on is voided or lowered later, the enrollment stays completed and shows **Needs review**. Filter the list by **Needs review**, open the enrollment, decide what follows (such as booking a retake) and **Clear the review** with a note. The course's instructors get a notification when a review is needed.
+
 ## Reminders
 
 Learners get a notice when they are enrolled, a few days before a course is due, and when it is overdue. Each learner can switch each notice off in their notification preferences.

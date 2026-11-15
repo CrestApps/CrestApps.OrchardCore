@@ -53,7 +53,7 @@ Lessons are contained in their course through Orchard's List part, so **New** on
 
 ### Course part
 
-`Code`, `Summary`, `Level`, `EstimatedMinutes`, `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash, never shown again), `AccessDays` (how long an enrollment gives access; empty for no end), `PassMark`, `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
+`Code`, `Summary`, `Level`, `EstimatedMinutes`, `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash outside the content item, in `LearningSecretStore`, never shown again; five wrong keys for one course within 15 minutes lock that person out of it for 15 minutes), `AccessDays` (how long an enrollment gives access; empty for no end), `PassMark`, `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
 
 ### Course item part
 
@@ -87,6 +87,10 @@ Each has its own index table (`EnrollmentIndex`, `EnrollmentGrantIndex`, `Enroll
 An item is complete when its completion mode is met. The course is complete when every required item is complete and every completion criterion passes: `MinimumGrade`, `MinimumTime`, `ItemPassed` and `StaffApproval`. Another module adds a criterion with `AddCourseCompletionCriterion<T>()`.
 
 **Release rules** decide when an item opens: `ItemCompleted` (after another item), `Date`, `DaysAfterEnrollment`. Add one with `AddCourseItemReleaseRule<T>()`.
+
+### Reviews after completion
+
+A completed enrollment is a record and does not change. When a result it rests on changes afterwards, such as a final exam attempt voided for cheating or regraded below the pass mark, `RecordResultAsync` keeps the enrollment completed and sets `Enrollment.Review` (the item, the old and new score, when), once while the review is open. Observers hear `ReviewNeededAsync` after the commit, the course's instructors get a *Completion needs review* notification, and the enrollment list filters by **Needs review**. A person who manages the enrollment clears the review with a note of what they decided (`IEnrollmentService.ClearReviewAsync`). A certification module revokes a certificate from this review; nothing is un-completed on its own.
 
 ### Writes, locks and commits
 
