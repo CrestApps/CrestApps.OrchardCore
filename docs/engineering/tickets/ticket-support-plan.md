@@ -275,7 +275,7 @@ End checks on 2026-11-13: Release build of the solution with warnings as errors 
 
 Open items left from phase 1: files attached to a timeline entry are removed when the action fails, but not when the request's session commit fails after the action returned (an orphan sweep would catch them); a content item's timeline is deleted in a deferred task, so a failure there is logged and leaves the entries and files behind; a business-hours schedule that never opens, set after a timer started, is not handled.
 
-### Phase 2 (in progress)
+### Phase 2 (done, review fixes reported 2026-11-14)
 
 | Slice | State | Notes |
 | --- | --- | --- |
@@ -308,7 +308,13 @@ Open items left from phase 1: files attached to a timeline entry are removed whe
 | Data sets 1-3, backlog | d18d829af | Timeline access has a batched form (`ITimelineAccessProvider.GetVisibleAsync`, `ITimelineAccessService.GetVisibleAsync`) answered with one index query for tickets and one load for content items, and the TimelineEntries data set checks 500 rows at a time; Work Orders registers a service-level timer access provider (view work orders); tests pin an empty text for redacted entries, a publisher who loses access getting nothing on the next run, and the backlog recorder recording a desk's day once under a lock (second run, two nodes) and late in the day; a day the site never ran stays a gap |
 | P1, P2, API4 | 351979b01 | Erasure deletes the files the requester sent (agents' files stay) and the ticket's outbox e-mails, the index row loses the e-mail on re-map, and scrub rewrites text kept in entry properties (a delivery notice); scrub keeps a change's stable key and ids, which it used to drop; the docs list what can't be recalled (sent e-mails, delivered webhooks, workflow instances, other systems) and say this API is never the portal's. P2's length risk doesn't exist (author names and change values aren't indexed), so no length check was added |
 | Phase-end gate fixes | 8a2e82053 | Service Levels keys a policy's targets by its scope's priority keys (`ServiceLevelPriorityKeys`), replacing a Tickets handler on `ServiceLevelPolicy` that the validation-ownership rule refuses; the workflow field partials moved to `Views/Shared`; Tickets added to the call-topology gate's scanned folders (it reaches Contact Center Core through the Messaging reply templates); the priority-keys pass recorded in the reviewed dynamic SQL register |
-| Browser pass fixes | this group | The New ticket and Edit fields pages no longer render the content editor's hidden Publish bar under their own (pressing Enter would have posted Publish); a long timeline notice wraps instead of being clipped |
+| Browser pass fixes | 95c00d93a | The New ticket and Edit fields pages no longer render the content editor's hidden Publish bar under their own (pressing Enter would have posted Publish); a long timeline notice wraps instead of being clipped |
+
+### Phase 3 (in progress)
+
+| Slice | State | Notes |
+| --- | --- | --- |
+| The account area out of Commerce (6.1, decision in section 10) | Done, unit tested, browser checked | A **My Account** feature in Users (`CrestApps.OrchardCore.Users.Account`, enabled by dependency): `/account` (route `CommerceAccount`), the home page's menu item (`AccountHomeMenu`), the user menu link, and the `AccountOverview`, `CommerceAccountNavigation` and `CommerceAccountPage` shapes, all moved from Commerce with unchanged names (`UsersConstants.Account`). Commerce depends on the feature; `CommerceConstants.Account` stays (it lives in the base Abstractions, which Users builds on, so it can't alias Users) and a test pins the two equal. Checked in the browser: `/account` lists Addresses, Account details and Orders, and the user menu links to it |
 
 ## 12. Not in this plan
 

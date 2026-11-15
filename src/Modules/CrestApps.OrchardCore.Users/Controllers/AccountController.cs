@@ -1,16 +1,18 @@
-using CrestApps.OrchardCore.Commerce.ViewModels;
+using CrestApps.OrchardCore.Users.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.DisplayManagement;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
-namespace CrestApps.OrchardCore.Commerce.Controllers;
+namespace CrestApps.OrchardCore.Users.Controllers;
 
 /// <summary>
-/// The storefront account's home page: a tile for each page the modules add to the account menu. The tiles are the
+/// The site's "my account" home page: a tile for each page the modules add to the account menu. The tiles are the
 /// <c>AccountOverview</c> shape, so a theme can override them.
 /// </summary>
 [Authorize]
+[Feature(UsersConstants.Feature.Account)]
 public sealed class AccountController : Controller
 {
     // The home page's own menu item, left out of its tiles.
@@ -25,10 +27,10 @@ public sealed class AccountController : Controller
         _shapeFactory = shapeFactory;
     }
 
-    [HttpGet("account", Name = CommerceConstants.Account.HomeRouteName)]
+    [HttpGet("account", Name = UsersConstants.Account.HomeRouteName)]
     public async Task<IActionResult> Index()
     {
-        var items = await _navigationManager.BuildMenuAsync(CommerceConstants.Account.MenuName, ControllerContext);
+        var items = await _navigationManager.BuildMenuAsync(UsersConstants.Account.MenuName, ControllerContext);
 
         return View(await _shapeFactory.CreateAsync<AccountOverviewViewModel>("AccountOverview", model =>
         {

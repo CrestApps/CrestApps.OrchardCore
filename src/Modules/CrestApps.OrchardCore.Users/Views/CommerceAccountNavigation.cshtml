@@ -8,7 +8,7 @@
 *@
 
 @{
-    var items = (await NavigationManager.BuildMenuAsync(CommerceConstants.Account.MenuName, ViewContext))
+    var items = (await NavigationManager.BuildMenuAsync(CrestApps.OrchardCore.Users.UsersConstants.Account.MenuName, ViewContext))
         .Where(item => !string.IsNullOrEmpty(item.Href))
         .ToList();
 

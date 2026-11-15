@@ -1,6 +1,6 @@
 using OrchardCore.Navigation;
 
-namespace CrestApps.OrchardCore.Commerce.ViewModels;
+namespace CrestApps.OrchardCore.Users.ViewModels;
 
 /// <summary>
 /// The storefront account's home page: the pages the modules add to the account menu, one tile each. It is the

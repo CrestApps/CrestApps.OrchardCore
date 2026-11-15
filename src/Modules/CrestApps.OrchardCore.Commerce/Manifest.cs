@@ -14,5 +14,9 @@ using OrchardCore.Modules.Manifest;
     Id = CommerceConstants.Features.Area,
     Description = "Registers the shared Commerce admin menu and its icon for commerce-related modules.",
     Category = "Commerce",
+    Dependencies =
+    [
+        CrestApps.OrchardCore.Users.UsersConstants.Feature.Account,
+    ],
     EnabledByDependencyOnly = true
 )]

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Commerce.Drivers;
 using CrestApps.OrchardCore.Commerce.Navigation;
 using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Commerce.Services;
@@ -8,12 +7,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement;
-using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
-using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Commerce;
 
@@ -28,8 +25,6 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddNavigationProvider<CommerceAdminMenu>();
-        services.AddNavigationProvider<CommerceAccountMenu>();
-        services.AddDisplayDriver<UserMenu, CommerceAccountUserMenuDisplayDriver>();
         services.AddScoped<IFinancialDocumentPolicy, ReceiptsOnlyFinancialDocumentPolicy>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CommerceResourceManagementOptionsConfiguration>();
         services.AddScoped<IAuthorizationHandler, CustomerAdminPageAuthorizationHandler>();

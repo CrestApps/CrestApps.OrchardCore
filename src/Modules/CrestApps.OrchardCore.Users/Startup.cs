@@ -92,6 +92,19 @@ public sealed class CachingStartup : StartupBase
 /// <summary>
 /// Registers services and configuration for the DisplayName feature.
 /// </summary>
+/// <summary>
+/// Registers the "my account" area: its home page's menu item and the user menu's link to it.
+/// </summary>
+[Feature(UsersConstants.Feature.Account)]
+public sealed class AccountStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<Navigation.AccountHomeMenu>();
+        services.AddDisplayDriver<UserMenu, AccountUserMenuDisplayDriver>();
+    }
+}
+
 [Feature(UsersConstants.Feature.DisplayName)]
 public sealed class DisplayNameStartup : StartupBase
 {

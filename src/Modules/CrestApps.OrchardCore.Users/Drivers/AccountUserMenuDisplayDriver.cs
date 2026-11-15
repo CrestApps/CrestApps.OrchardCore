@@ -2,12 +2,12 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Users.Models;
 
-namespace CrestApps.OrchardCore.Commerce.Drivers;
+namespace CrestApps.OrchardCore.Users.Drivers;
 
 /// <summary>
-/// Adds a link to the storefront account to the user menu on the site's pages.
+/// Adds a link to the "my account" area to the user menu on the site's pages.
 /// </summary>
-public sealed class CommerceAccountUserMenuDisplayDriver : DisplayDriver<UserMenu>
+public sealed class AccountUserMenuDisplayDriver : DisplayDriver<UserMenu>
 {
     public override IDisplayResult Display(UserMenu model, BuildDisplayContext context)
         => View("UserMenuItems__CommerceAccount", model)
