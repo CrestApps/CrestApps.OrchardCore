@@ -191,6 +191,11 @@ public sealed class TicketRow
 public sealed class TicketCreateViewModel
 {
     /// <summary>
+    /// Gets or sets the messaging conversation the ticket follows up, if any; the ticket links to it.
+    /// </summary>
+    public string ConversationId { get; set; }
+
+    /// <summary>
     /// Gets or sets the ticket type.
     /// </summary>
     public string ContentType { get; set; }

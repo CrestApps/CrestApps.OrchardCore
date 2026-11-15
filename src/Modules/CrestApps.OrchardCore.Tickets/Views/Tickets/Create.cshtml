@@ -7,6 +7,7 @@
 <form asp-action="Create" asp-route-contentType="@Model.ContentType" method="post" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
     <input type="hidden" asp-for="AccountId" />
+    <input type="hidden" asp-for="ConversationId" />
 
     @if (Model.Types.Count > 1)
     {

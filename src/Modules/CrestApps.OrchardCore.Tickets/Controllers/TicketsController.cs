@@ -301,7 +301,7 @@ public sealed class TicketsController : Controller
     /// <param name="accountId">The account, when started from an account.</param>
     /// <returns>The page.</returns>
     [Admin("tickets/new/{contentType?}", "TicketsCreate")]
-    public async Task<IActionResult> Create(string contentType = null, string requester = null, string accountId = null)
+    public async Task<IActionResult> Create(string contentType = null, string requester = null, string accountId = null, string conversation = null)
     {
         var model = new TicketCreateViewModel { ContentType = contentType, Requester = requester, AccountId = accountId };
 
@@ -311,6 +311,28 @@ public sealed class TicketsController : Controller
         }
 
         var ticket = await _contentManager.NewAsync(model.ContentType);
+
+        // Started from a messaging conversation: the customer, a subject and the latest messages are filled in.
+        if (!string.IsNullOrEmpty(conversation)
+            && _serviceProvider.GetService<Messaging.TicketConversationSource>() is { } conversations
+            && await conversations.GetAsync(User, conversation, HttpContext.RequestAborted) is { } seed)
+        {
+            model.ConversationId = seed.ConversationId;
+            model.Body = seed.Body;
+
+            if (!seed.Requester.IsEmpty)
+            {
+                model.Requester = seed.Requester.ToString();
+            }
+            else
+            {
+                model.RequesterName = seed.CustomerName;
+            }
+
+            ticket.DisplayText = seed.Subject;
+            ticket.Alter<global::OrchardCore.Title.Models.TitlePart>(title => title.Title = seed.Subject);
+        }
+
         model.Editor = await _contentItemDisplayManager.BuildEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
@@ -414,6 +436,14 @@ public sealed class TicketsController : Controller
             }
 
             return View(model);
+        }
+
+        // A ticket that follows up a conversation links to it, once the agent may still read it.
+        if (!string.IsNullOrEmpty(model.ConversationId)
+            && _serviceProvider.GetService<Messaging.TicketConversationSource>() is { } conversations
+            && await conversations.GetAsync(User, model.ConversationId, cancellationToken) is not null)
+        {
+            await _tickets.LinkAsync(result.Ticket.ContentItemId, new RecordRef(Messaging.TicketConversationSource.RecordKind, model.ConversationId), TicketLinkKinds.Related, Actor(), cancellationToken);
         }
 
         await _notifier.SuccessAsync(H["Ticket {0} was created.", result.Ticket.GetOrCreate<TicketPart>().Number]);

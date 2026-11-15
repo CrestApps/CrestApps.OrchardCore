@@ -66,6 +66,10 @@ With a desk that e-mails requesters, the requester gets the `ticket-received`, `
 
 Every requester e-mail goes through an outbox: it is stored, tried at once, and when it fails tried again after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours, then given up. While a reply's e-mail hasn't reached the requester, the reply on the ticket shows a "not delivered" notice with the reason (the timeline's `Notice` entry property), and the notice goes away once it is sent. A ticket created with `TicketCreateRequest.IsImport` (a bulk import of past tickets) tells no observer, so no requester is e-mailed, no workflow starts and no webhook is sent; tickets brought in by a recipe's `Content` step are saved as content items and tell no observer either. With Notifications on, the assignee is told through Orchard Core notifications when a ticket is given to them (never about one they took). With Omnichannel Messaging on, reply templates of the `Tickets` scope are offered in the composer, filled in for the ticket, and can also set a status, priority or team.
 
+## From a messaging conversation
+
+With the [messaging workspace](./omnichannel-messaging) on, each conversation row has **Open a ticket**. It opens **New ticket** with the customer as requester (their contact, or their address as a name), a subject and the latest 30 messages, oldest first, with who wrote each, as the first message, for an agent who may read the conversation (`TicketConversationSource`). The new ticket links back to the conversation (`MessagingConversation:{id}`, Related).
+
 ## Portal
 
 The **Tickets Portal** feature (`CrestApps.OrchardCore.Tickets.Portal`) adds a **Requests** page to the site's [My account](./users#my-account) area:
