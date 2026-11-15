@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
+using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -47,6 +48,16 @@ public sealed class TicketPortalController : Controller
     public const string RateRouteName = "TicketPortalRate";
 
     private const int PageSize = 20;
+
+    // How many replies a requester may send on one request in an hour.
+    private const int MaxRepliesPerHour = 20;
+
+    // The original request and the latest messages are shown; a long thread drops the ones between.
+    private const int ThreadTake = 200;
+
+    // Guest and rating links are traded for these cookies on first use, so the token leaves the address bar and logs.
+    private const string GuestCookieName = "tickets-guest";
+    private const string RatingCookieName = "tickets-rating";
 
     private static readonly TimeSpan _fileLinkLifetime = TimeSpan.FromHours(1);
 
@@ -98,6 +109,17 @@ public sealed class TicketPortalController : Controller
         H = htmlLocalizer;
     }
 
+    /// <inheritdoc/>
+    public override void OnActionExecuting(Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext context)
+    {
+        // Private pages: never cached, never indexed, and no address (with a token) handed on to other sites.
+        Response.Headers.CacheControl = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+        Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+
+        base.OnActionExecuting(context);
+    }
+
     /// <summary>
     /// The requester's requests, or their account's for an account administrator.
     /// </summary>
@@ -124,7 +146,7 @@ public sealed class TicketPortalController : Controller
         {
             Organization = organization,
             AccountName = viewer.AdminAccountName,
-            CanCreate = (await SubmittableTypesAsync()).Count > 0 && (await CustomerDesksAsync()).Count > 0,
+            CanCreate = (await SubmittableTypesAsync()).Count > 0 && (await CustomerDesksAsync(viewer)).Count > 0,
             Page = page,
             Total = total,
             PageSize = PageSize,
@@ -159,7 +181,7 @@ public sealed class TicketPortalController : Controller
     {
         var model = new TicketPortalCreateViewModel { ContentType = contentType };
 
-        if (!await PrepareCreateAsync(model))
+        if (!await PrepareCreateAsync(model, await _access.GetViewerAsync(User, HttpContext.RequestAborted)))
         {
             return NotFound();
         }
@@ -179,13 +201,16 @@ public sealed class TicketPortalController : Controller
     /// <param name="files">The files of the first message.</param>
     /// <returns>The new request, or the form with what's wrong.</returns>
     [Authorize]
-    [HttpPost("account/requests/new")]
+    [HttpPost("account/requests/new", Name = "TicketPortalCreatePost")]
     [ActionName(nameof(Create))]
+    [RequestSizeLimit(TicketUploads.MaxRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = TicketUploads.MaxRequestBytes)]
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalCreate)]
     public async Task<IActionResult> CreatePost(TicketPortalCreateViewModel model, List<IFormFile> files)
     {
         var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
 
-        if (viewer is null || !await PrepareCreateAsync(model) || string.IsNullOrEmpty(model.ContentType))
+        if (viewer is null || !await PrepareCreateAsync(model, viewer) || string.IsNullOrEmpty(model.ContentType))
         {
             return NotFound();
         }
@@ -230,6 +255,9 @@ public sealed class TicketPortalController : Controller
             AttachmentIds = attached,
             DeskId = model.DeskId,
             Requester = viewer.Party,
+
+            // Filed under the requester's account (on a desk that serves customers), so its administrators follow it.
+            AccountId = (await _desks.FindByIdAsync(model.DeskId))?.Audience == TicketDeskAudience.Customers ? viewer.MemberAccountId : null,
             Channel = TicketsConstants.Channels.Portal,
             CreatedBy = viewer.Party,
         }, HttpContext.RequestAborted);
@@ -246,30 +274,31 @@ public sealed class TicketPortalController : Controller
             return View(model);
         }
 
-        var number = result.Ticket.GetOrCreate<TicketPart>().Number;
-        await _notifier.SuccessAsync(H["We received your request {0}.", number]);
-
-        return RedirectToRoute(DisplayRouteName, new { number });
+        return RedirectToRoute(DisplayRouteName, new { number = result.Ticket.GetOrCreate<TicketPart>().Number, done = Done.Created });
     }
 
     /// <summary>
     /// A request and its conversation.
     /// </summary>
     /// <param name="number">The request's number.</param>
+    /// <param name="done">What was just done, to say so.</param>
     /// <returns>The page.</returns>
     [Authorize]
     [HttpGet("account/requests/{number}", Name = DisplayRouteName)]
-    public async Task<IActionResult> Display(string number)
+    public async Task<IActionResult> Display(string number, string done = null)
     {
         var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
         var ticket = await _tickets.FindByNumberAsync(number);
 
-        if (!TicketPortalAccess.CanSee(viewer, ticket))
+        if (!await _access.CanSeeAsync(viewer, ticket, HttpContext.RequestAborted))
         {
             return NotFound();
         }
 
-        return View(await BuildDisplayAsync(ticket, viewer.Party, guestToken: null));
+        var model = await BuildDisplayAsync(ticket, viewer.Party, guest: false);
+        model.Message = DoneMessage(done);
+
+        return View(model);
     }
 
     /// <summary>
@@ -278,63 +307,116 @@ public sealed class TicketPortalController : Controller
     /// <param name="number">The request's number.</param>
     /// <param name="body">The reply.</param>
     /// <param name="files">Its files.</param>
-    /// <returns>The request.</returns>
+    /// <returns>The request, or the page with what's wrong and the reply kept.</returns>
     [Authorize]
     [HttpPost("account/requests/{number}/reply", Name = "TicketPortalReply")]
+    [RequestSizeLimit(TicketUploads.MaxRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = TicketUploads.MaxRequestBytes)]
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalReply)]
     public async Task<IActionResult> Reply(string number, string body, List<IFormFile> files)
     {
         var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
         var ticket = await _tickets.FindByNumberAsync(number);
 
-        if (!TicketPortalAccess.CanSee(viewer, ticket))
+        if (!await _access.CanSeeAsync(viewer, ticket, HttpContext.RequestAborted))
         {
             return NotFound();
         }
 
-        await ReplyAsync(ticket, body, files, viewer.Party, viewer.UserName);
+        var (sent, error) = await ReplyAsync(ticket, body, files, viewer.Party, viewer.UserName);
 
-        return RedirectToRoute(DisplayRouteName, new { number });
+        if (error is not null)
+        {
+            var model = await BuildDisplayAsync(ticket, viewer.Party, guest: false);
+            model.Error = error;
+            model.Draft = Draft(body);
+
+            return View(nameof(Display), model);
+        }
+
+        // A reply on a closed request opens a follow-up, which is where it shows.
+        return RedirectToRoute(DisplayRouteName, new { number = sent.GetOrCreate<TicketPart>().Number, done = Done.Sent });
     }
 
     /// <summary>
-    /// A request opened from the signed link in a guest's e-mail.
+    /// A request opened from the signed link in a guest's e-mail. The link's token is traded for a cookie on this page
+    /// only, and the page reloads without it.
     /// </summary>
     /// <param name="id">The ticket's id.</param>
-    /// <param name="token">The signed token.</param>
+    /// <param name="token">The signed token, on the first visit.</param>
+    /// <param name="done">What was just done, to say so.</param>
     /// <returns>The page.</returns>
     [AllowAnonymous]
     [HttpGet("requests/{id}", Name = GuestRouteName)]
-    public async Task<IActionResult> Guest(string id, string token)
+    public async Task<IActionResult> Guest(string id, string token, string done = null)
     {
-        if (!_access.IsGuestTokenFor(token, id) || await _tickets.GetAsync(id) is not { } ticket)
+        if (await _tickets.GetAsync(id) is not { } ticket)
         {
             return NotFound();
         }
 
-        return View(nameof(Display), await BuildDisplayAsync(ticket, default, token));
+        if (!string.IsNullOrEmpty(token))
+        {
+            if (!_access.IsGuestTokenFor(token, ticket))
+            {
+                return NotFound();
+            }
+
+            KeepToken(GuestCookieName, id, token);
+
+            return RedirectToRoute(GuestRouteName, new { id });
+        }
+
+        if (!_access.IsGuestTokenFor(Request.Cookies[GuestCookieName], ticket))
+        {
+            return NotFound();
+        }
+
+        var model = await BuildDisplayAsync(ticket, default, guest: true);
+        model.Message = DoneMessage(done);
+
+        return View(nameof(Display), model);
     }
 
     /// <summary>
-    /// Adds a guest's reply from the signed link.
+    /// Adds a guest's reply, with the cookie their link was traded for.
     /// </summary>
     /// <param name="id">The ticket's id.</param>
-    /// <param name="token">The signed token.</param>
     /// <param name="body">The reply.</param>
     /// <param name="files">Its files.</param>
-    /// <returns>The request.</returns>
+    /// <returns>The request, or the page with what's wrong and the reply kept.</returns>
     [AllowAnonymous]
     [HttpPost("requests/{id}/reply", Name = "TicketPortalGuestReply")]
-    public async Task<IActionResult> GuestReply(string id, string token, string body, List<IFormFile> files)
+    [RequestSizeLimit(TicketUploads.MaxRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = TicketUploads.MaxRequestBytes)]
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalGuest)]
+    public async Task<IActionResult> GuestReply(string id, string body, List<IFormFile> files)
     {
-        if (!_access.IsGuestTokenFor(token, id) || await _tickets.GetAsync(id) is not { } ticket)
+        if (await _tickets.GetAsync(id) is not { } ticket || !_access.IsGuestTokenFor(Request.Cookies[GuestCookieName], ticket))
         {
             return NotFound();
         }
 
+        // The cookie proves who it is: the requester.
         var part = ticket.GetOrCreate<TicketPart>();
-        await ReplyAsync(ticket, body, files, default, part.RequesterContact?.Name ?? part.RequesterContact?.Email);
+        var (sent, error) = await ReplyAsync(ticket, body, files, part.Requester, part.RequesterContact?.Name ?? part.RequesterContact?.Email);
 
-        return RedirectToRoute(GuestRouteName, new { id, token });
+        if (error is not null)
+        {
+            var model = await BuildDisplayAsync(ticket, default, guest: true);
+            model.Error = error;
+            model.Draft = Draft(body);
+
+            return View(nameof(Display), model);
+        }
+
+        if (sent.ContentItemId != id)
+        {
+            // A follow-up of a closed request: the guest follows it with a link of its own.
+            KeepToken(GuestCookieName, sent.ContentItemId, _access.CreateGuestToken(sent));
+        }
+
+        return RedirectToRoute(GuestRouteName, new { id = sent.ContentItemId, done = Done.Sent });
     }
 
     /// <summary>
@@ -346,34 +428,61 @@ public sealed class TicketPortalController : Controller
     /// <returns>The request.</returns>
     [Authorize]
     [HttpPost("account/requests/{number}/rate", Name = "TicketPortalRateOwn")]
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalReply)]
     public async Task<IActionResult> RateOwn(string number, int score, string comment)
     {
         var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
         var ticket = await _tickets.FindByNumberAsync(number);
 
         // Only the requester rates; an account administrator follows the account's requests but didn't ask for them.
-        if (!TicketPortalAccess.CanSee(viewer, ticket) || ticket.GetOrCreate<TicketPart>().Requester != viewer.Party)
+        if (!await _access.CanSeeAsync(viewer, ticket, HttpContext.RequestAborted) || ticket.GetOrCreate<TicketPart>().Requester != viewer.Party)
         {
             return NotFound();
         }
 
-        await RateAsync(ticket, score, comment);
+        var error = await RateAsync(ticket, score, comment);
 
-        return RedirectToRoute(DisplayRouteName, new { number });
+        if (error is not null)
+        {
+            var model = await BuildDisplayAsync(ticket, viewer.Party, guest: false);
+            model.Error = error;
+
+            return View(nameof(Display), model);
+        }
+
+        return RedirectToRoute(DisplayRouteName, new { number, done = Done.Rated });
     }
 
     /// <summary>
-    /// The page a requester rates a ticket on, from the signed link in the rating e-mail.
+    /// The page a requester rates a ticket on, from the signed link in the rating e-mail. The token is traded for a
+    /// cookie, and the page reloads without it.
     /// </summary>
     /// <param name="id">The ticket's id.</param>
-    /// <param name="token">The signed token.</param>
+    /// <param name="token">The signed token, on the first visit.</param>
     /// <param name="score">A score chosen in the e-mail, if any.</param>
     /// <returns>The page.</returns>
     [AllowAnonymous]
     [HttpGet("requests/{id}/rate", Name = RateRouteName)]
     public async Task<IActionResult> Rate(string id, string token, int? score = null)
     {
-        if (!_access.IsRatingTokenFor(token, id) || await _tickets.GetAsync(id) is not { } ticket)
+        if (await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            if (!_access.IsRatingTokenFor(token, ticket))
+            {
+                return NotFound();
+            }
+
+            KeepToken(RatingCookieName, id, token);
+
+            return RedirectToRoute(RateRouteName, new { id, score });
+        }
+
+        if (!_access.IsRatingTokenFor(Request.Cookies[RatingCookieName], ticket))
         {
             return NotFound();
         }
@@ -383,7 +492,6 @@ public sealed class TicketPortalController : Controller
         return View(new TicketPortalRateViewModel
         {
             TicketId = id,
-            Token = token,
             Number = part.Number,
             Subject = ticket.DisplayText,
             Score = score ?? part.Satisfaction?.Score,
@@ -393,63 +501,58 @@ public sealed class TicketPortalController : Controller
     }
 
     /// <summary>
-    /// Records a rating from the signed link.
+    /// Records a rating, with the cookie the rating link was traded for.
     /// </summary>
     /// <param name="id">The ticket's id.</param>
-    /// <param name="token">The signed token.</param>
     /// <param name="score">The score.</param>
     /// <param name="comment">What they added.</param>
-    /// <returns>The rating page, saying thanks.</returns>
+    /// <returns>The rating page, saying thanks or what's wrong.</returns>
     [AllowAnonymous]
-    [HttpPost("requests/{id}/rate")]
+    [HttpPost("requests/{id}/rate", Name = "TicketPortalRatePost")]
     [ActionName(nameof(Rate))]
-    public async Task<IActionResult> RatePost(string id, string token, int score, string comment)
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalGuest)]
+    public async Task<IActionResult> RatePost(string id, int score, string comment)
     {
-        if (!_access.IsRatingTokenFor(token, id) || await _tickets.GetAsync(id) is not { } ticket)
+        if (await _tickets.GetAsync(id) is not { } ticket || !_access.IsRatingTokenFor(Request.Cookies[RatingCookieName], ticket))
         {
             return NotFound();
         }
 
-        var saved = await RateAsync(ticket, score, comment);
+        var error = await RateAsync(ticket, score, comment);
         var part = (await _tickets.GetAsync(id))?.GetOrCreate<TicketPart>() ?? ticket.GetOrCreate<TicketPart>();
 
         return View(new TicketPortalRateViewModel
         {
             TicketId = id,
-            Token = token,
             Number = part.Number,
             Subject = ticket.DisplayText,
-            Score = saved ? part.Satisfaction?.Score : score,
-            Comment = saved ? part.Satisfaction?.Comment : comment,
+            Score = error is null ? part.Satisfaction?.Score : score,
+            Comment = error is null ? part.Satisfaction?.Comment : comment,
             Rated = part.Satisfaction is not null,
-            Thanked = saved,
+            Thanked = error is null,
+            Error = error,
         });
     }
 
-    private async Task<bool> RateAsync(ContentItem ticket, int score, string comment)
+    // Why the rating wasn't saved, or null.
+    private async Task<string> RateAsync(ContentItem ticket, int score, string comment)
     {
         var result = await _tickets.RateAsync(ticket.ContentItemId, score, comment, HttpContext.RequestAborted);
 
-        foreach (var error in result.Errors)
-        {
-            await _notifier.ErrorAsync(H["{0}", error]);
-        }
-
-        if (result.Succeeded)
-        {
-            await _notifier.SuccessAsync(H["Thank you for your rating."]);
-        }
-
-        return result.Succeeded;
+        return result.Succeeded ? null : string.Join(" ", result.Errors);
     }
 
-    private async Task ReplyAsync(ContentItem ticket, string body, List<IFormFile> files, PartyRef author, string authorName)
+    // The ticket the reply went on (a follow-up of a closed one, maybe), or why it wasn't sent; nothing is kept then.
+    private async Task<(ContentItem Ticket, string Error)> ReplyAsync(ContentItem ticket, string body, List<IFormFile> files, PartyRef author, string authorName)
     {
         if (string.IsNullOrWhiteSpace(body))
         {
-            await _notifier.ErrorAsync(H["Write your reply first."]);
+            return (null, H["Write your reply first."].Value);
+        }
 
-            return;
+        if (await RecentRepliesAsync(ticket.ContentItemId) >= MaxRepliesPerHour)
+        {
+            return (null, H["You sent many replies to this request in the last hour. Please wait a little before sending another."].Value);
         }
 
         var entryId = UniqueId.GenerateId();
@@ -457,12 +560,7 @@ public sealed class TicketPortalController : Controller
 
         if (errors.Count > 0)
         {
-            foreach (var error in errors)
-            {
-                await _notifier.ErrorAsync(H["{0}", error]);
-            }
-
-            return;
+            return (null, string.Join(" ", errors));
         }
 
         var result = await _tickets.ReplyAsync(ticket.ContentItemId, new TicketReply
@@ -480,18 +578,58 @@ public sealed class TicketPortalController : Controller
         {
             await _uploads.DeleteAsync(attached);
 
-            foreach (var error in result.Errors)
-            {
-                await _notifier.ErrorAsync(H["{0}", error]);
-            }
-
-            return;
+            return (null, string.Join(" ", result.Errors));
         }
 
-        await _notifier.SuccessAsync(H["Your reply was sent."]);
+        return (result.Ticket ?? ticket, null);
     }
 
-    private async Task<TicketPortalDisplayViewModel> BuildDisplayAsync(ContentItem ticket, PartyRef viewer, string guestToken)
+    // The replies sent from the portal on a request in the last hour.
+    private async Task<int> RecentRepliesAsync(string ticketId)
+    {
+        var since = HttpContext.RequestServices.GetRequiredService<IClock>().UtcNow.AddHours(-1);
+        var page = await _timeline.ListAsync(new TimelineQuery
+        {
+            Subject = new RecordRef(TicketsConstants.RecordKind, ticketId),
+            Kinds = [TicketsConstants.EntryKinds.Reply],
+            Take = MaxRepliesPerHour * 2,
+        }, HttpContext.RequestAborted);
+
+        return page.Entries.Count(entry => entry.CreatedUtc >= since && entry.Channel == TicketsConstants.Channels.Portal);
+    }
+
+    private void KeepToken(string cookieName, string ticketId, string token)
+        => Response.Cookies.Append(cookieName, token, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = Request.IsHttps,
+            SameSite = SameSiteMode.Lax,
+            IsEssential = true,
+            Path = Request.PathBase.Add("/requests/" + ticketId).Value,
+            MaxAge = TimeSpan.FromHours(12),
+        });
+
+    private static string Draft(string body)
+        => string.IsNullOrEmpty(body) ? null : body.Length > TimelineConstants.MaxBodyLength ? body[..TimelineConstants.MaxBodyLength] : body;
+
+    private string DoneMessage(string done)
+        => done switch
+        {
+            Done.Created => H["We received your request."].Value,
+            Done.Sent => H["Your reply was sent."].Value,
+            Done.Rated => H["Thank you for your rating."].Value,
+            _ => null,
+        };
+
+    // What a page was sent back after, so it says so itself: the site's theme may not show notifications.
+    private static class Done
+    {
+        public const string Created = "created";
+        public const string Sent = "sent";
+        public const string Rated = "rated";
+    }
+
+    private async Task<TicketPortalDisplayViewModel> BuildDisplayAsync(ContentItem ticket, PartyRef viewer, bool guest)
     {
         var part = ticket.GetOrCreate<TicketPart>();
         var statuses = (await _statuses.GetAllAsync()).ToDictionary(status => status.ItemId, StringComparer.Ordinal);
@@ -506,32 +644,48 @@ public sealed class TicketPortalController : Controller
             // A merged request continues on the one it was merged into; there is nothing to answer here.
             CanReply = string.IsNullOrEmpty(part.MergedIntoId),
             CanAttach = _uploads.CanAttach,
-            GuestToken = guestToken,
+            IsGuest = guest,
 
             // The requester rates a solved request on its page; a guest rates from the link in the rating e-mail.
-            CanRate = string.IsNullOrEmpty(guestToken) && !viewer.IsEmpty && part.Requester == viewer && part.StatusCategory is TicketStatusCategory.Solved or TicketStatusCategory.Closed,
+            CanRate = !guest && !viewer.IsEmpty && part.Requester == viewer && part.StatusCategory is TicketStatusCategory.Solved or TicketStatusCategory.Closed,
             Score = part.Satisfaction?.Score,
             RatingComment = part.Satisfaction?.Comment,
         };
 
-        // Only public replies: internal notes and the record of changes are the business's own.
-        var page = await _timeline.ListAsync(new TimelineQuery
+        // Only public replies: internal notes and the record of changes are the business's own. The latest ones, and the
+        // original request, which a long thread would otherwise drop.
+        var query = new TimelineQuery
         {
             Subject = new RecordRef(TicketsConstants.RecordKind, ticket.ContentItemId),
             Kinds = [TicketsConstants.EntryKinds.Reply],
             IncludeInternal = false,
-            Take = 200,
-        }, HttpContext.RequestAborted);
+            Take = ThreadTake,
+        };
+        var page = await _timeline.ListAsync(query, HttpContext.RequestAborted);
+        var entries = page.Entries.ToList();
+
+        if (page.Total > entries.Count)
+        {
+            query.Skip = page.Total - 1;
+            query.Take = 1;
+            entries.AddRange((await _timeline.ListAsync(query, HttpContext.RequestAborted)).Entries);
+            model.Skipped = page.Total - entries.Count;
+        }
+
         var attachments = _attachments.FirstOrDefault();
 
-        foreach (var entry in page.Entries.Where(entry => entry.Visibility == TimelineVisibility.Public && entry.RedactedUtc is null).OrderBy(entry => entry.CreatedUtc))
+        foreach (var entry in entries.Where(entry => entry.Visibility == TimelineVisibility.Public && entry.RedactedUtc is null).OrderBy(entry => entry.CreatedUtc))
         {
+            // The requester's side: their messages, a guest's (which had no author before), and a colleague's on an
+            // account's request. "You" is only what the viewer wrote.
+            var fromRequesterSide = entry.Author.IsEmpty || entry.Author == part.Requester || entry.Channel == TicketsConstants.Channels.Portal;
             var row = new TicketPortalEntry
             {
                 AuthorName = entry.AuthorName,
-
-                // The requester's own messages: theirs, or a guest's, which have no author.
-                IsRequester = entry.Author.IsEmpty ? viewer.IsEmpty || part.Requester.IsEmpty : entry.Author == part.Requester,
+                IsRequester = fromRequesterSide,
+                IsMine = guest
+                    ? fromRequesterSide
+                    : !viewer.IsEmpty && (entry.Author == viewer || (entry.Author.IsEmpty && part.Requester == viewer)),
                 When = await LocalAsync(entry.CreatedUtc),
                 Body = entry.Body,
             };
@@ -550,7 +704,7 @@ public sealed class TicketPortalController : Controller
         return model;
     }
 
-    private async Task<bool> PrepareCreateAsync(TicketPortalCreateViewModel model)
+    private async Task<bool> PrepareCreateAsync(TicketPortalCreateViewModel model, TicketPortalViewer viewer)
     {
         model.Types = await SubmittableTypesAsync();
 
@@ -569,7 +723,7 @@ public sealed class TicketPortalController : Controller
             return false;
         }
 
-        var desks = await CustomerDesksAsync();
+        var desks = await CustomerDesksAsync(viewer);
         model.Desks = [.. desks
             .Where(desk => string.IsNullOrEmpty(model.ContentType) || desk.TicketTypes.Count == 0 || desk.TicketTypes.Contains(model.ContentType, StringComparer.OrdinalIgnoreCase))
             .OrderBy(desk => desk.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -600,14 +754,8 @@ public sealed class TicketPortalController : Controller
 
     // The desks a requester may open requests on: those that serve customers and, for a member of staff (with Staff on),
     // the internal ones, such as IT and HR.
-    private async Task<List<TicketDesk>> CustomerDesksAsync()
-    {
-        var staff = HttpContext.RequestServices.GetService<global::CrestApps.OrchardCore.Staff.Services.IStaffDirectory>() is { } directory
-            && User.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } userId
-            && await directory.IsStaffAsync(userId, HttpContext.RequestAborted);
-
-        return [.. (await _desks.GetAllAsync()).Where(desk => TicketPortalAccess.Offers(desk, staff))];
-    }
+    private async Task<List<TicketDesk>> CustomerDesksAsync(TicketPortalViewer viewer)
+        => [.. (await _desks.GetAllAsync()).Where(desk => TicketPortalAccess.Offers(desk, viewer?.IsStaff == true))];
 
     private static string StatusLabel(Dictionary<string, TicketStatus> statuses, TicketPart part)
         => part.StatusId is not null && statuses.TryGetValue(part.StatusId, out var status)

@@ -209,7 +209,9 @@ public sealed class DefaultTicketService : ITicketService
         part.RequesterContact = request.RequesterContact is { HasAnyValue: true } contact
             ? contact
             : request.Requester.IsEmpty ? null : await _parties.GetContactInfoAsync(request.Requester, cancellationToken);
-        part.AccountId = string.IsNullOrEmpty(request.AccountId) ? await AccountByEmailAsync(part, cancellationToken) : request.AccountId;
+        // An address only typed in (a guest's) never files the ticket under an account: anyone could type a customer's.
+        part.RequesterUnverified = request.RequesterUnverified;
+        part.AccountId = !string.IsNullOrEmpty(request.AccountId) ? request.AccountId : request.RequesterUnverified ? null : await AccountByEmailAsync(part, cancellationToken);
         part.TeamId = FirstNonEmpty(request.TeamId, settings.DefaultTeamId, desk.DefaultTeamId);
         part.AssigneeId = string.IsNullOrEmpty(request.AssigneeId) ? null : request.AssigneeId;
         part.AssignedUtc = part.AssigneeId is null ? null : now;
@@ -636,6 +638,9 @@ public sealed class DefaultTicketService : ITicketService
             var now = _clock.UtcNow;
 
             part.MergedIntoId = intoTicketId;
+
+            // Links sent for the merged ticket stop working; the conversation continues on the other one.
+            part.AccessVersion++;
             part.StatusId = closed.ItemId;
             part.StatusCategory = closed.Category;
             part.StatusChangedUtc = now;

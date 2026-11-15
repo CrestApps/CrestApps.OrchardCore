@@ -62,6 +62,7 @@ internal sealed class TicketFormPartDisplayDriver : ContentPartDisplayDriver<Tic
             model.TicketType = part.TicketType;
             model.DeskId = part.DeskId;
             model.SuccessMessage = part.SuccessMessage;
+            model.ChallengeConfigured = _challenges.FirstOrDefault()?.IsConfigured == true;
             model.Types = [.. (await _contentDefinitionManager.ListTypeDefinitionsAsync())
                 .Where(type => type.Parts.Any(p => p.PartDefinition.Name == TicketsConstants.PartName))
                 .Select(type => new SelectListItem(type.DisplayName, type.Name, type.Name == part.TicketType))];

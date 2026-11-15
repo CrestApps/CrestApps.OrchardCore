@@ -6,7 +6,7 @@
     var title = T["{0} {1}", Model.Number, Model.Subject];
 }
 
-@if (string.IsNullOrEmpty(Model.GuestToken))
+@if (!Model.IsGuest)
 {
     <zone Name="Title">
         <breadcrumb name="TicketPortalDisplay" title="@title">

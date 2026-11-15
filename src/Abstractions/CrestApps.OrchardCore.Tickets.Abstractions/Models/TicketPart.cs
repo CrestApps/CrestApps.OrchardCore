@@ -116,6 +116,19 @@ public sealed class TicketPart : ContentPart
     public DateTime? RatingRequestedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the requester's e-mail address is unconfirmed (a guest typed it): e-mails to it carry only
+    /// fixed text and the ticket's number, never the subject, name or link the guest's words would fill, so the site
+    /// can't be used to send someone else's text to any address.
+    /// </summary>
+    public bool RequesterUnverified { get; set; }
+
+    /// <summary>
+    /// Gets or sets the version of the ticket's guest and rating links: raising it (on a merge, an erasure) makes every
+    /// link sent before stop working.
+    /// </summary>
+    public int AccessVersion { get; set; }
+
+    /// <summary>
     /// Gets or sets the ticket's approval, when its type asks for one.
     /// </summary>
     public TicketApproval Approval { get; set; }

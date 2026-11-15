@@ -201,6 +201,32 @@ public static class TicketsConstants
     }
 
     /// <summary>
+    /// The rate-limit groups of the requester-facing endpoints, held when Orchard Core's Rate Limits feature is on.
+    /// </summary>
+    public static class RateLimitGroups
+    {
+        /// <summary>
+        /// New requests in the portal, per signed-in requester.
+        /// </summary>
+        public const string PortalCreate = "tickets-portal-create";
+
+        /// <summary>
+        /// Replies and ratings in the portal, per signed-in requester.
+        /// </summary>
+        public const string PortalReply = "tickets-portal-reply";
+
+        /// <summary>
+        /// A guest's replies and ratings from their link, per visitor address.
+        /// </summary>
+        public const string PortalGuest = "tickets-portal-guest";
+
+        /// <summary>
+        /// Ticket Form widget submissions, per visitor (their user, or their address).
+        /// </summary>
+        public const string WebForm = "tickets-web-form";
+    }
+
+    /// <summary>
     /// The display types of a ticket.
     /// </summary>
     public static class DisplayTypes

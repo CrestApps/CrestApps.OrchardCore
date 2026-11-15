@@ -53,9 +53,9 @@ public sealed class TicketEmailObserver : ITicketObserver
         }
 
         var model = TicketEmailModel.From(ticket, null, await LinkAsync(ticket, cancellationToken));
-        var subject = S["We received your request: {0}", model.Subject].Value;
+        var subject = model.Subject is null ? S["We received your request {0}", model.Number].Value : S["We received your request: {0}", model.Subject].Value;
         var html = $"<p>{Encode(S["We received your request and gave it the number {0}. We'll get back to you soon.", model.Number])}</p>"
-            + $"<p><strong>{Encode(model.Subject)}</strong></p>"
+            + Strong(model.Subject)
             + ViewLink(model.Link);
 
         await SendAsync(TicketsConstants.EmailKinds.Received, to, model, null, subject, html, null, ticket.ContentItemId, cancellationToken);
@@ -74,9 +74,9 @@ public sealed class TicketEmailObserver : ITicketObserver
         var model = TicketEmailModel.From(ticket, null, await LinkAsync(ticket, cancellationToken));
         var files = await FilesAsync(entry, cancellationToken);
         var reply = new TicketEmailReply { Body = entry.Body, Html = Paragraphs(entry.Body) + files, AuthorName = entry.AuthorName };
-        var subject = $"[{model.Number}] {model.Subject}";
+        var subject = $"[{model.Number}] {model.Subject ?? S["Your request"].Value}";
         var html = reply.Html
-            + $"<hr><p>{Encode(S["Request {0}: {1}", model.Number, model.Subject])}</p>"
+            + $"<hr><p>{Encode(model.Subject is null ? S["Request {0}", model.Number] : S["Request {0}: {1}", model.Number, model.Subject])}</p>"
             + ViewLink(model.Link);
 
         await SendAsync(TicketsConstants.EmailKinds.Reply, to, model, reply, subject, html, entry.ItemId, ticket.ContentItemId, cancellationToken);
@@ -92,14 +92,17 @@ public sealed class TicketEmailObserver : ITicketObserver
         }
 
         var model = TicketEmailModel.From(ticket, current, await LinkAsync(ticket, cancellationToken));
-        var subject = S["Solved: {0}", model.Subject].Value;
+        var subject = S["Solved: {0}", model.Subject ?? model.Number].Value;
         var html = $"<p>{Encode(S["Your request {0} is solved.", model.Number])}</p>"
-            + $"<p><strong>{Encode(model.Subject)}</strong></p>"
+            + Strong(model.Subject)
             + $"<p>{Encode(S["If it isn't, contact us and give the number {0}.", model.Number])}</p>"
             + ViewLink(model.Link);
 
         await SendAsync(TicketsConstants.EmailKinds.Solved, to, model, null, subject, html, null, ticket.ContentItemId, cancellationToken);
     }
+
+    private static string Strong(string text)
+        => string.IsNullOrEmpty(text) ? null : $"<p><strong>{Encode(text)}</strong></p>";
 
     // The requester's e-mail, on a desk that e-mails requesters.
     private async Task<string> RecipientAsync(ContentItem ticket, CancellationToken cancellationToken)
@@ -227,13 +230,17 @@ public sealed class TicketEmailModel
 
         ticket.TryGet<TicketPart>(out var part);
 
+        // To an unconfirmed address (a guest typed it), nothing the guest wrote: not the subject, not the name, and no
+        // link to a page that shows them. Templates then get those empty.
+        var unverified = part?.RequesterUnverified == true;
+
         return new TicketEmailModel
         {
             Number = part?.Number,
-            Subject = ticket.DisplayText,
+            Subject = unverified ? null : ticket.DisplayText,
             Status = status is null ? null : string.IsNullOrWhiteSpace(status.CustomerLabel) ? status.Name : status.CustomerLabel,
-            RequesterName = part?.RequesterContact?.Name,
-            Link = link,
+            RequesterName = unverified ? null : part?.RequesterContact?.Name,
+            Link = unverified ? null : link,
         };
     }
 }

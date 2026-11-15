@@ -102,7 +102,27 @@ public class TicketPortalDisplayViewModel
     /// <summary>
     /// Gets or sets the guest's token, when the request is opened from a signed link.
     /// </summary>
-    public string GuestToken { get; set; }
+    public bool IsGuest { get; set; }
+
+    /// <summary>
+    /// Gets or sets what was just done, such as a reply sent.
+    /// </summary>
+    public string Message { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the last action was refused.
+    /// </summary>
+    public string Error { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reply the requester wrote, kept after a refusal.
+    /// </summary>
+    public string Draft { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many messages between the original request and the latest ones are left out.
+    /// </summary>
+    public int Skipped { get; set; }
 
     public bool CanRate { get; set; }
 
@@ -118,8 +138,6 @@ public class TicketPortalRateViewModel
 {
     public string TicketId { get; set; }
 
-    public string Token { get; set; }
-
     public string Number { get; set; }
 
     public string Subject { get; set; }
@@ -131,6 +149,11 @@ public class TicketPortalRateViewModel
     public bool Rated { get; set; }
 
     public bool Thanked { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the rating wasn't saved.
+    /// </summary>
+    public string Error { get; set; }
 }
 
 /// <summary>
@@ -141,6 +164,11 @@ public class TicketPortalEntry
     public string AuthorName { get; set; }
 
     public bool IsRequester { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the viewer wrote it.
+    /// </summary>
+    public bool IsMine { get; set; }
 
     public string When { get; set; }
 

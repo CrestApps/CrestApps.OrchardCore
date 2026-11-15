@@ -123,6 +123,9 @@ internal sealed class TicketPersonalDataContributor : IPersonalDataContributor
                 part.RequesterContact = part.RequesterContact is { } contact
                     ? contact with { Name = context.ReplaceName(contact.Name), Email = null, Phone = default, Address = null }
                     : null;
+
+                // Links already e-mailed to the person stop working.
+                part.AccessVersion++;
             });
             ticket.DisplayText = context.Scrub(ticket.DisplayText);
 

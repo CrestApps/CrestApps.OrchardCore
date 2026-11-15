@@ -58,6 +58,42 @@ public sealed class TicketEmailTests
     }
 
     [Fact]
+    public async Task AnUnconfirmedGuestAddress_GetsNoneOfTheGuestsWords()
+    {
+        // Arrange: a guest on the web form typed someone else's address, a subject and a name meant as a lure.
+        var links = new Mock<ITicketRequesterLinks>();
+        links.Setup(value => value.GetLinkAsync(It.IsAny<ContentItem>(), It.IsAny<CancellationToken>())).ReturnsAsync("https://help.example.com/requests/t1?token=x");
+        var observer = Observer(notify: true, links: links.Object);
+        var ticket = new ContentItem { ContentItemId = "t1", ContentType = TicketsConstants.DefaultContentType, DisplayText = "Your account is locked: click here" };
+        ticket.Apply(new TicketPart
+        {
+            Number = "T-1",
+            DeskId = "support",
+            RequesterUnverified = true,
+            RequesterContact = new ContactInfo { Name = "Visit evil.example now", Email = "victim@example.com" },
+        });
+
+        // Act
+        await observer.CreatedAsync(ticket, TestContext.Current.CancellationToken);
+        await observer.RepliedAsync(ticket, Entry("We're looking into it.", TimelineVisibility.Public), fromRequester: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, _sent.Count);
+        Assert.All(_sent, sent =>
+        {
+            Assert.DoesNotContain("locked", sent.Content.Subject, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("locked", sent.Content.Html, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("evil.example", sent.Content.Html, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("token=", sent.Content.Html, StringComparison.Ordinal);
+            var model = (TicketEmailModel)sent.Email.Models["Ticket"];
+            Assert.Null(model.Subject);
+            Assert.Null(model.RequesterName);
+            Assert.Null(model.Link);
+            Assert.Equal("T-1", model.Number);
+        });
+    }
+
+    [Fact]
     public async Task AReplysFiles_AreLinkedFromTheSitesAddress_AndTemplatesGetTheReplyAsHtml()
     {
         // Arrange

@@ -34,6 +34,12 @@ public class TicketFormPartViewModel
 
     public string SuccessMessage { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether guests must pass a reCAPTCHA challenge (ReCaptcha is on and set up).
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public bool ChallengeConfigured { get; set; }
+
     [BindNever]
     public List<SelectListItem> Types { get; set; } = [];
 

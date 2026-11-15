@@ -2,9 +2,19 @@
 @model TicketPortalDisplayViewModel
 
 @{
-    var routeValues = string.IsNullOrEmpty(Model.GuestToken)
-        ? new Dictionary<string, string> { ["number"] = Model.Number }
-        : new Dictionary<string, string> { ["id"] = Model.TicketId, ["token"] = Model.GuestToken };
+    var routeValues = Model.IsGuest
+        ? new Dictionary<string, string> { ["id"] = Model.TicketId }
+        : new Dictionary<string, string> { ["number"] = Model.Number };
+}
+
+@* Said here, on the page: the site's theme may not show notifications. *@
+@if (!string.IsNullOrEmpty(Model.Message))
+{
+    <div class="alert alert-success" role="status">@Model.Message</div>
+}
+@if (!string.IsNullOrEmpty(Model.Error))
+{
+    <div class="alert alert-danger" role="alert">@Model.Error</div>
 }
 
 <div class="d-flex flex-wrap gap-3 align-items-center mb-3 small text-body-secondary">
@@ -16,11 +26,16 @@
 </div>
 
 <div class="d-flex flex-column gap-3 mb-4">
-    @foreach (var entry in Model.Entries)
+    @for (var i = 0; i < Model.Entries.Count; i++)
     {
+        var entry = Model.Entries[i];
+        @if (i == 1 && Model.Skipped > 0)
+        {
+            <p class="text-center small text-body-secondary mb-0">@T["{0} earlier messages aren't shown.", Model.Skipped]</p>
+        }
         <div class="card@(entry.IsRequester ? null : " border-primary-subtle")">
             <div class="card-header d-flex justify-content-between small">
-                <span class="fw-semibold">@(entry.IsRequester ? T["You"] : (object)(entry.AuthorName ?? T["Support"].Value))</span>
+                <span class="fw-semibold">@(entry.IsMine ? T["You"] : (object)(entry.AuthorName ?? (entry.IsRequester ? T["Requester"].Value : T["Support"].Value)))</span>
                 <span class="text-body-secondary">@entry.When</span>
             </div>
             <div class="card-body">
@@ -54,10 +69,10 @@
 
 @if (Model.CanReply)
 {
-    <form method="post" asp-route="@(string.IsNullOrEmpty(Model.GuestToken) ? "TicketPortalReply" : "TicketPortalGuestReply")" asp-all-route-data="@routeValues" enctype="multipart/form-data" class="no-multisubmit">
+    <form method="post" asp-route="@(Model.IsGuest ? "TicketPortalGuestReply" : "TicketPortalReply")" asp-all-route-data="@routeValues" enctype="multipart/form-data" class="no-multisubmit">
         <div class="mb-3">
             <label for="reply-body" class="form-label">@T["Reply"]</label>
-            <textarea id="reply-body" name="body" class="form-control" rows="4" required></textarea>
+            <textarea id="reply-body" name="body" class="form-control" rows="4" required>@Model.Draft</textarea>
         </div>
         @if (Model.CanAttach)
         {
@@ -71,5 +86,5 @@
 }
 else
 {
-    <p class="text-body-secondary">@T["This request was merged into another one; we'll answer you there."]</p>
+    <p class="text-body-secondary">@T["This request was merged into another request, where our replies continue. You'll get them by e-mail."]</p>
 }

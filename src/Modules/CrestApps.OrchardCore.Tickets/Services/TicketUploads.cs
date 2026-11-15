@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Timeline;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tickets.Services;
 
@@ -15,12 +16,14 @@ namespace CrestApps.OrchardCore.Tickets.Services;
 public sealed class TicketUploads
 {
     private readonly IEnumerable<IAttachmentService> _attachments;
+    private readonly IOptions<AttachmentOptions> _options;
 
     internal readonly IStringLocalizer S;
 
-    public TicketUploads(IEnumerable<IAttachmentService> attachments, IStringLocalizer<TicketUploads> stringLocalizer)
+    public TicketUploads(IEnumerable<IAttachmentService> attachments, IOptions<AttachmentOptions> options, IStringLocalizer<TicketUploads> stringLocalizer)
     {
         _attachments = attachments;
+        _options = options;
         S = stringLocalizer;
     }
 
@@ -29,6 +32,11 @@ public sealed class TicketUploads
     /// </summary>
     public bool CanAttach
         => _attachments.Any();
+
+    /// <summary>
+    /// The largest request that carries files: the attachments' default limits (10 files of 20 MB) and the form.
+    /// </summary>
+    public const long MaxRequestBytes = 210L * 1024 * 1024;
 
     /// <summary>
     /// Stores the files as files of an entry.
@@ -50,6 +58,19 @@ public sealed class TicketUploads
         if (_attachments.FirstOrDefault() is not { } attachments)
         {
             return ([], [S["Files can't be attached here."]]);
+        }
+
+        // Refused before anything is read into memory: too many files, or one larger than allowed.
+        var limits = _options.Value;
+
+        if (uploads.Count > limits.MaxFilesPerUpload)
+        {
+            return ([], [S["Attach at most {0} files.", limits.MaxFilesPerUpload]]);
+        }
+
+        if (uploads.FirstOrDefault(file => file.Length > limits.MaxFileBytes) is { } large)
+        {
+            return ([], [S["{0} is larger than {1} MB.", large.FileName, limits.MaxFileBytes / (1024 * 1024)]]);
         }
 
         var owner = new RecordRef(TimelineConstants.AttachmentOwnerKind, entryId);

@@ -1,6 +1,13 @@
 @using CrestApps.OrchardCore.Tickets.WebForm
 @model TicketFormPartViewModel
 
+@if (!Model.ChallengeConfigured)
+{
+    <div class="alert alert-warning">
+        @T["Without a reCAPTCHA challenge, robots can send requests through this form from many addresses. Turn on ReCaptcha under Configuration > Features and set its keys under Settings > Security > reCaptcha; guests then have to pass it."]
+    </div>
+}
+
 <div class="mb-3" asp-validation-class-for="TicketType">
     <label asp-for="TicketType" class="form-label">@T["Ticket type"]</label>
     <select asp-for="TicketType" asp-items="Model.Types" class="form-select">

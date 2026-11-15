@@ -114,7 +114,7 @@ A new ticket of that type then waits. Each approver of the current step is told 
 
 ## Put a request form on a page
 
-Turn on **Ticket Web Form**, then add a **Ticket Form** widget where visitors should find it (a layer, or a page's flow). Choose the ticket type and the desk its tickets go to, and, if you like, what visitors read after sending. Visitors give a subject and their request, and their name and e-mail when they aren't signed in. Turn on **ReCaptcha** and set its keys under **Settings > Security** to add a challenge.
+Turn on **Ticket Web Form**, then add a **Ticket Form** widget where visitors should find it (a layer, or a page's flow). Choose the ticket type and the desk its tickets go to, and, if you like, what visitors read after sending. Visitors give a subject and their request, and their name and e-mail when they aren't signed in. Turn on **ReCaptcha** and set its keys under **Settings > Security** so guests have to pass a challenge; the widget warns you until you do. Turn on **Rate Limits** too, to cap how many requests one visitor can send. A guest's e-mail address isn't confirmed, so the e-mails they get only give the request's number, never what they wrote.
 
 ## Reports
 

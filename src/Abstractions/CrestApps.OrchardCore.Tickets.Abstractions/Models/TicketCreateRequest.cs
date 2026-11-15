@@ -97,4 +97,11 @@ public sealed class TicketCreateRequest
     /// created without telling any observer, so no requester is e-mailed, no workflow starts and no webhook is sent.
     /// </summary>
     public bool IsImport { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the requester's e-mail address is only what they typed, unconfirmed, such as a guest's on
+    /// a web form. Such a ticket is never filed under an account by the address's domain, and e-mails to the address
+    /// carry none of the text the requester wrote (see <see cref="TicketPart.RequesterUnverified"/>).
+    /// </summary>
+    public bool RequesterUnverified { get; set; }
 }
