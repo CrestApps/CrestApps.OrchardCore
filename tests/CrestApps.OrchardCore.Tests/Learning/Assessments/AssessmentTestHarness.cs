@@ -36,7 +36,7 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
 
     public TestClock Clock { get; }
 
-    public static async Task<AssessmentTestHarness> CreateAsync()
+    public static async Task<AssessmentTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
     {
         var clock = new TestClock { UtcNow = LearningTestHarness.Now };
         InMemoryQuestions questions = null;
@@ -49,6 +49,7 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
                 services.AddLearningAssessmentsCore();
                 services.RemoveAll<IAssessmentContentSource>();
                 services.AddSingleton<IAssessmentContentSource>(provider => questions);
+                configure?.Invoke(services);
             },
             AssessmentsIndexSchema.CreateAsync,
             AssessmentsIndexProviders.All(),

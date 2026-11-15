@@ -59,10 +59,29 @@ public sealed class EnrollmentWriteGate
     /// <param name="busy">The result when the lock is not acquired in time.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The result.</returns>
-    public async Task<T> RunAsync<T>(string enrollmentId, Func<IList<Func<Task>>, Task<T>> work, Func<T> busy, CancellationToken cancellationToken = default)
+    public Task<T> RunAsync<T>(string enrollmentId, Func<IList<Func<Task>>, Task<T>> work, Func<T> busy, CancellationToken cancellationToken = default)
+        => RunLockedAsync(Key(enrollmentId), work, busy, cancellationToken);
+
+    /// <summary>
+    /// Runs a write to another Learning record, such as an assessment attempt, under the named lock with the same
+    /// discipline: the work reads its record again inside the lock, the session is committed before the lock is let go
+    /// and the queued notifications run after the commit. A caller that takes a record lock and then writes the
+    /// enrollment takes the locks in that order, record first; enrollment writes never take a record lock.
+    /// </summary>
+    /// <typeparam name="T">The result.</typeparam>
+    /// <param name="lockKey">The name of the lock, one per record.</param>
+    /// <param name="work">The write; it adds the notifications to send after the commit.</param>
+    /// <param name="busy">The result when the lock is not acquired in time.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result of the work, or the busy result.</returns>
+    public async Task<T> RunLockedAsync<T>(string lockKey, Func<IList<Func<Task>>, Task<T>> work, Func<T> busy, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrEmpty(lockKey);
+        ArgumentNullException.ThrowIfNull(work);
+        ArgumentNullException.ThrowIfNull(busy);
+
         var notifications = new List<Func<Task>>();
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(Key(enrollmentId), _timeout, _expiration);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(lockKey, _timeout, _expiration);
 
         if (!locked)
         {

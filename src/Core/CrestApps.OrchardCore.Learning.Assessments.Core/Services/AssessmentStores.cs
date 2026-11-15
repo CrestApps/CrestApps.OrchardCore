@@ -103,6 +103,32 @@ public sealed class AssessmentAttemptStore : DocumentCatalog<AssessmentAttempt, 
     }
 
     /// <summary>
+    /// Reads an attempt again from the store, leaving out any copy the session already holds, so a write under the
+    /// attempt lock sees what the last writer committed.
+    /// </summary>
+    /// <param name="attemptId">The attempt.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The attempt, or <see langword="null"/>.</returns>
+    public async Task<AssessmentAttempt> FindFreshAsync(string attemptId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(attemptId))
+        {
+            return null;
+        }
+
+        var tracked = await FindByIdAsync(attemptId, cancellationToken);
+
+        if (tracked is null)
+        {
+            return null;
+        }
+
+        Session.Detach(tracked, CollectionName);
+
+        return await FindByIdAsync(attemptId, cancellationToken);
+    }
+
+    /// <summary>
     /// Lists the attempts in progress whose deadline passed, for the upkeep that catches any missed deadline.
     /// </summary>
     /// <param name="utcNow">The time now.</param>

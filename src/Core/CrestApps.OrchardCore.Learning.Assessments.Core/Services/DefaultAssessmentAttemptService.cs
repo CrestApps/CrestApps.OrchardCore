@@ -37,6 +37,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
     private readonly ILearnerProgressService _progressService;
     private readonly INumberSequence _numberSequence;
     private readonly IDistributedLock _distributedLock;
+    private readonly EnrollmentWriteGate _writeGate;
     private readonly ILeasedWorkQueue<AttemptDeadlineWork> _deadlines;
     private readonly IEnumerable<IQuestionScorer> _scorers;
     private readonly QuestionTypeOptions _questionTypes;
@@ -58,6 +59,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         ILearnerProgressService progressService,
         INumberSequence numberSequence,
         IDistributedLock distributedLock,
+        EnrollmentWriteGate writeGate,
         ILeasedWorkQueue<AttemptDeadlineWork> deadlines,
         IEnumerable<IQuestionScorer> scorers,
         IOptions<QuestionTypeOptions> questionTypes,
@@ -75,6 +77,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
         _progressService = progressService;
         _numberSequence = numberSequence;
         _distributedLock = distributedLock;
+        _writeGate = writeGate;
         _deadlines = deadlines;
         _scorers = scorers;
         _questionTypes = questionTypes.Value;
@@ -114,8 +117,11 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         if (!locked)
         {
-            return AttemptResult.Fail(AttemptErrors.NotInProgress);
+            return AttemptResult.Fail(AttemptErrors.Busy);
         }
+
+        var started = new List<Func<Task>>();
+        AttemptResult startResult;
 
         await using (locker)
         {
@@ -130,7 +136,16 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
                     return new AttemptResult { Attempt = open };
                 }
 
-                await SubmitCoreAsync(open, autoSubmitted: true, cancellationToken);
+                // The expired attempt is submitted under its own lock, as every attempt write is.
+                await WriteAsync(open.ItemId, async (fresh, notifications) =>
+                {
+                    if (fresh.IsOpen)
+                    {
+                        await SubmitCoreAsync(fresh, autoSubmitted: true, notifications, cancellationToken);
+                    }
+
+                    return new AttemptResult { Attempt = fresh };
+                }, cancellationToken);
             }
 
             var entry = await _overrideStore.FindLatestAsync(request.UserId, request.QuizId, cancellationToken);
@@ -211,22 +226,26 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
                 await _deadlines.EnqueueAsync(new AttemptDeadlineWork { AttemptId = attempt.ItemId, NextAttemptUtc = deadline }, cancellationToken);
             }
 
-            await NotifyAsync(observer => observer.StartedAsync(attempt, cancellationToken));
-
-            return new AttemptResult { Attempt = attempt };
+            // Commit before the lock is let go, so a second start for the same learner and quiz finds this attempt.
+            await _writeGate.CommitAsync(cancellationToken);
+            started.Add(() => NotifyAsync(observer => observer.StartedAsync(attempt, cancellationToken)));
+            startResult = new AttemptResult { Attempt = attempt };
         }
+
+        foreach (var notify in started)
+        {
+            await notify();
+        }
+
+        return startResult;
     }
 
     /// <inheritdoc />
-    public async Task<AttemptResult> SaveResponseAsync(string attemptId, string userId, int index, AttemptResponse response, CancellationToken cancellationToken = default)
+    public Task<AttemptResult> SaveResponseAsync(string attemptId, string userId, int index, AttemptResponse response, CancellationToken cancellationToken = default)
+        => WriteOwnAsync(attemptId, userId, (attempt, notifications) => SaveResponseCoreAsync(attempt, index, response, notifications, cancellationToken), cancellationToken);
+
+    private async Task<AttemptResult> SaveResponseCoreAsync(AssessmentAttempt attempt, int index, AttemptResponse response, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
-        var attempt = await FindOwnAsync(attemptId, userId, cancellationToken);
-
-        if (attempt is null)
-        {
-            return AttemptResult.Fail(AttemptErrors.NotFound);
-        }
-
         if (!attempt.IsOpen)
         {
             return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.NotInProgress };
@@ -236,7 +255,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         if (attempt.DeadlineUtc is { } deadline && now > deadline + _grace)
         {
-            await SubmitCoreAsync(attempt, autoSubmitted: true, cancellationToken);
+            await SubmitCoreAsync(attempt, autoSubmitted: true, notifications, cancellationToken);
 
             return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.DeadlinePassed };
         }
@@ -264,55 +283,39 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
     }
 
     /// <inheritdoc />
-    public async Task<AttemptResult> SubmitAsync(string attemptId, string userId, CancellationToken cancellationToken = default)
-    {
-        var attempt = await FindOwnAsync(attemptId, userId, cancellationToken);
-
-        if (attempt is null)
+    public Task<AttemptResult> SubmitAsync(string attemptId, string userId, CancellationToken cancellationToken = default)
+        => WriteOwnAsync(attemptId, userId, async (attempt, notifications) =>
         {
-            return AttemptResult.Fail(AttemptErrors.NotFound);
-        }
+            if (!attempt.IsOpen)
+            {
+                return new AttemptResult { Attempt = attempt };
+            }
 
-        if (!attempt.IsOpen)
-        {
+            var late = attempt.DeadlineUtc is { } deadline && _clock.UtcNow > deadline + _grace;
+
+            await SubmitCoreAsync(attempt, autoSubmitted: late, notifications, cancellationToken);
+
             return new AttemptResult { Attempt = attempt };
-        }
-
-        var late = attempt.DeadlineUtc is { } deadline && _clock.UtcNow > deadline + _grace;
-
-        await SubmitCoreAsync(attempt, autoSubmitted: late, cancellationToken);
-
-        return new AttemptResult { Attempt = attempt };
-    }
+        }, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<AttemptResult> SubmitAtDeadlineAsync(string attemptId, CancellationToken cancellationToken = default)
-    {
-        var attempt = string.IsNullOrEmpty(attemptId) ? null : await _attemptStore.FindByIdAsync(attemptId, cancellationToken);
-
-        if (attempt is null)
+    public Task<AttemptResult> SubmitAtDeadlineAsync(string attemptId, CancellationToken cancellationToken = default)
+        => WriteAsync(attemptId, async (attempt, notifications) =>
         {
-            return AttemptResult.Fail(AttemptErrors.NotFound);
-        }
+            if (attempt.IsOpen && attempt.DeadlineUtc is { } deadline && _clock.UtcNow >= deadline)
+            {
+                await SubmitCoreAsync(attempt, autoSubmitted: true, notifications, cancellationToken);
+            }
 
-        if (attempt.IsOpen && attempt.DeadlineUtc is { } deadline && _clock.UtcNow >= deadline)
-        {
-            await SubmitCoreAsync(attempt, autoSubmitted: true, cancellationToken);
-        }
-
-        return new AttemptResult { Attempt = attempt };
-    }
+            return new AttemptResult { Attempt = attempt };
+        }, cancellationToken);
 
     /// <inheritdoc />
-    public async Task<AttemptResult> GradeAsync(string attemptId, IDictionary<int, ManualScore> scores, string feedback, string actor, CancellationToken cancellationToken = default)
+    public Task<AttemptResult> GradeAsync(string attemptId, IDictionary<int, ManualScore> scores, string feedback, string actor, CancellationToken cancellationToken = default)
+        => WriteAsync(attemptId, (attempt, notifications) => GradeCoreAsync(attempt, scores, feedback, actor, notifications, cancellationToken), cancellationToken);
+
+    private async Task<AttemptResult> GradeCoreAsync(AssessmentAttempt attempt, IDictionary<int, ManualScore> scores, string feedback, string actor, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
-        var attempt = string.IsNullOrEmpty(attemptId) ? null : await _attemptStore.FindByIdAsync(attemptId, cancellationToken);
-
-        if (attempt is null)
-        {
-            return AttemptResult.Fail(AttemptErrors.NotFound);
-        }
-
         if (attempt.Status is not (AttemptStatus.NeedsGrading or AttemptStatus.Graded))
         {
             return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.NotInProgress };
@@ -348,27 +351,25 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         if (attempt.Status == AttemptStatus.Graded)
         {
-            await NotifyAsync(observer => wasGraded ? observer.ScoreChangedAsync(attempt, change, cancellationToken) : observer.GradedAsync(attempt, cancellationToken));
+            notifications.Add(() => NotifyAsync(observer => wasGraded ? observer.ScoreChangedAsync(attempt, change, cancellationToken) : observer.GradedAsync(attempt, cancellationToken)));
         }
 
         return new AttemptResult { Attempt = attempt };
     }
 
     /// <inheritdoc />
-    public async Task<AttemptResult> RegradeAsync(string attemptId, string actor, string reason, CancellationToken cancellationToken = default)
+    public Task<AttemptResult> RegradeAsync(string attemptId, string actor, string reason, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(reason))
         {
-            return AttemptResult.Fail(AttemptErrors.ReasonRequired);
+            return Task.FromResult(AttemptResult.Fail(AttemptErrors.ReasonRequired));
         }
 
-        var attempt = string.IsNullOrEmpty(attemptId) ? null : await _attemptStore.FindByIdAsync(attemptId, cancellationToken);
+        return WriteAsync(attemptId, (attempt, notifications) => RegradeCoreAsync(attempt, actor, reason, notifications, cancellationToken), cancellationToken);
+    }
 
-        if (attempt is null)
-        {
-            return AttemptResult.Fail(AttemptErrors.NotFound);
-        }
-
+    private async Task<AttemptResult> RegradeCoreAsync(AssessmentAttempt attempt, string actor, string reason, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    {
         if (attempt.Status is AttemptStatus.InProgress or AttemptStatus.Voided or AttemptStatus.Abandoned)
         {
             return new AttemptResult { Attempt = attempt, ErrorCode = AttemptErrors.NotInProgress };
@@ -388,48 +389,44 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         await _attemptStore.UpdateAsync(attempt, cancellationToken);
         await ReportAsync(attempt, cancellationToken);
-        await NotifyAsync(observer => observer.ScoreChangedAsync(attempt, change, cancellationToken));
+        notifications.Add(() => NotifyAsync(observer => observer.ScoreChangedAsync(attempt, change, cancellationToken)));
 
         return new AttemptResult { Attempt = attempt };
     }
 
     /// <inheritdoc />
-    public async Task<AttemptResult> VoidAsync(string attemptId, string actor, string reason, CancellationToken cancellationToken = default)
+    public Task<AttemptResult> VoidAsync(string attemptId, string actor, string reason, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(reason))
         {
-            return AttemptResult.Fail(AttemptErrors.ReasonRequired);
+            return Task.FromResult(AttemptResult.Fail(AttemptErrors.ReasonRequired));
         }
 
-        var attempt = string.IsNullOrEmpty(attemptId) ? null : await _attemptStore.FindByIdAsync(attemptId, cancellationToken);
-
-        if (attempt is null)
+        return WriteAsync(attemptId, async (attempt, notifications) =>
         {
-            return AttemptResult.Fail(AttemptErrors.NotFound);
-        }
+            if (attempt.Status == AttemptStatus.Voided)
+            {
+                return new AttemptResult { Attempt = attempt };
+            }
 
-        if (attempt.Status == AttemptStatus.Voided)
-        {
+            var change = new AttemptScoreChange { ChangedUtc = _clock.UtcNow, Actor = actor, Kind = "Voided", From = attempt.Score, To = null, Reason = reason.Trim() };
+
+            attempt.Status = AttemptStatus.Voided;
+            attempt.ScoreHistory.Add(change);
+
+            await _attemptStore.UpdateAsync(attempt, cancellationToken);
+            await ReportAsync(attempt, cancellationToken);
+            notifications.Add(() => NotifyAsync(observer => observer.ScoreChangedAsync(attempt, change, cancellationToken)));
+
             return new AttemptResult { Attempt = attempt };
-        }
-
-        var change = new AttemptScoreChange { ChangedUtc = _clock.UtcNow, Actor = actor, Kind = "Voided", From = attempt.Score, To = null, Reason = reason.Trim() };
-
-        attempt.Status = AttemptStatus.Voided;
-        attempt.ScoreHistory.Add(change);
-
-        await _attemptStore.UpdateAsync(attempt, cancellationToken);
-        await ReportAsync(attempt, cancellationToken);
-        await NotifyAsync(observer => observer.ScoreChangedAsync(attempt, change, cancellationToken));
-
-        return new AttemptResult { Attempt = attempt };
+        }, cancellationToken);
     }
 
     /// <inheritdoc />
     public bool CanReview(AssessmentAttempt attempt)
         => _reviewPolicy.CanReview(attempt);
 
-    private async Task SubmitCoreAsync(AssessmentAttempt attempt, bool autoSubmitted, CancellationToken cancellationToken)
+    private async Task SubmitCoreAsync(AssessmentAttempt attempt, bool autoSubmitted, IList<Func<Task>> notifications, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
 
@@ -446,10 +443,10 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
 
         await _attemptStore.UpdateAsync(attempt, cancellationToken);
         await ReportAsync(attempt, cancellationToken);
-        await NotifyAsync(observer => observer.SubmittedAsync(attempt, cancellationToken));
-        await NotifyAsync(observer => attempt.Status == AttemptStatus.NeedsGrading
+        notifications.Add(() => NotifyAsync(observer => observer.SubmittedAsync(attempt, cancellationToken)));
+        notifications.Add(() => NotifyAsync(observer => attempt.Status == AttemptStatus.NeedsGrading
             ? observer.NeedsGradingAsync(attempt, cancellationToken)
-            : observer.GradedAsync(attempt, cancellationToken));
+            : observer.GradedAsync(attempt, cancellationToken)));
     }
 
     private static void Total(AssessmentAttempt attempt)
@@ -599,17 +596,47 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
     private IQuestionScorer Scorer(string questionType)
         => _scorers.FirstOrDefault(scorer => string.Equals(scorer.QuestionType, questionType, StringComparison.Ordinal));
 
-    private async Task<AssessmentAttempt> FindOwnAsync(string attemptId, string userId, CancellationToken cancellationToken)
+    // Every write to an attempt runs under one lock per attempt on a fresh read; the session is committed before the
+    // lock is let go and the observers run after the commit. A write that reaches the enrollment (the quiz result) takes
+    // the enrollment lock inside this one; enrollment writes never take an attempt lock, so the order cannot deadlock.
+    private Task<AttemptResult> WriteAsync(string attemptId, Func<AssessmentAttempt, IList<Func<Task>>, Task<AttemptResult>> work, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(attemptId) || string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(attemptId))
         {
-            return null;
+            return Task.FromResult(AttemptResult.Fail(AttemptErrors.NotFound));
         }
 
-        var attempt = await _attemptStore.FindByIdAsync(attemptId, cancellationToken);
+        return _writeGate.RunLockedAsync(
+            AttemptLockKey(attemptId),
+            async notifications =>
+            {
+                var attempt = await _attemptStore.FindFreshAsync(attemptId, cancellationToken);
 
-        return attempt is not null && string.Equals(attempt.UserId, userId, StringComparison.Ordinal) ? attempt : null;
+                return attempt is null ? AttemptResult.Fail(AttemptErrors.NotFound) : await work(attempt, notifications);
+            },
+            () => AttemptResult.Fail(AttemptErrors.Busy),
+            cancellationToken);
     }
+
+    private Task<AttemptResult> WriteOwnAsync(string attemptId, string userId, Func<AssessmentAttempt, IList<Func<Task>>, Task<AttemptResult>> work, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Task.FromResult(AttemptResult.Fail(AttemptErrors.NotFound));
+        }
+
+        return WriteAsync(attemptId, (attempt, notifications) => string.Equals(attempt.UserId, userId, StringComparison.Ordinal)
+            ? work(attempt, notifications)
+            : Task.FromResult(AttemptResult.Fail(AttemptErrors.NotFound)), cancellationToken);
+    }
+
+    /// <summary>
+    /// Gets the lock key of an attempt.
+    /// </summary>
+    /// <param name="attemptId">The attempt.</param>
+    /// <returns>The key.</returns>
+    public static string AttemptLockKey(string attemptId)
+        => "Learning:AttemptWrite:" + attemptId;
 
     private async Task NotifyAsync(Func<IAttemptObserver, Task> notify)
     {

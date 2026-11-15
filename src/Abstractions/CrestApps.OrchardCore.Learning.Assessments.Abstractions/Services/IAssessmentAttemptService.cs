@@ -173,6 +173,9 @@ public static class AttemptErrors
     /// <summary>The attempt or quiz was not found, or is not the learner own.</summary>
     public const string NotFound = "NotFound";
 
+    /// <summary>Someone else was changing the attempt at that moment; try again.</summary>
+    public const string Busy = "Busy";
+
     /// <summary>The learner may not open the quiz.</summary>
     public const string NoAccess = "NoAccess";
 
