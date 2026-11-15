@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using OrchardCore;
 using CrestApps.OrchardCore.Calendars;
@@ -214,7 +215,16 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
             invoice.AmountCredited = 0m;
             invoice.AmountDue = invoice.Totals.Total;
 
-            if (invoice.Totals.Total > 0m)
+            if (!string.IsNullOrEmpty(invoice.TransactionId))
+            {
+                // A debt already on the ledger, such as an order paid on account: the invoice takes it over rather than
+                // posting a second one.
+                if (!await AdoptTransactionAsync(invoice, now, result, cancellationToken))
+                {
+                    return null;
+                }
+            }
+            else if (invoice.Totals.Total > 0m)
             {
                 invoice.TransactionId = await PostTransactionAsync(invoice, now, cancellationToken);
                 invoice.Settlement = InvoiceSettlement.Unpaid;
@@ -595,6 +605,58 @@ public sealed class DefaultInvoiceCommandService : IInvoiceCommandService
 
     // Posts what the invoice says is owed: the payer is the bill-to, a user owns it, and anyone else is reached as a guest
     // at the bill-to's e-mail. An earlier attempt that already posted it is reused, so nothing is posted twice.
+    // Takes over a transaction already on the ledger for the invoice: it must be in the invoice's currency, owe what the
+    // invoice comes to (to the cent), still be open, and not belong to another invoice. Its timeline names the invoice.
+    private async Task<bool> AdoptTransactionAsync(Invoice invoice, DateTime now, InvoiceCommandResult result, CancellationToken cancellationToken)
+    {
+        var transaction = await _transactions.FindByIdAsync(invoice.TransactionId, cancellationToken);
+
+        if (transaction is null)
+        {
+            result.Fail(S["The ledger entry this invoice takes over could not be found."]);
+
+            return false;
+        }
+
+        if (!string.Equals(transaction.Currency, invoice.Currency, StringComparison.OrdinalIgnoreCase) ||
+            Math.Abs(transaction.TotalAmount - invoice.Totals.Total) > 0.01m)
+        {
+            result.Fail(S["The invoice comes to {0} {1}, but the ledger entry it takes over is {2} {3}. Change the lines to match before issuing it.", invoice.Totals.Total.ToString("0.00", CultureInfo.CurrentCulture), invoice.Currency, transaction.TotalAmount.ToString("0.00", CultureInfo.CurrentCulture), transaction.Currency]);
+
+            return false;
+        }
+
+        if (transaction.Status is TransactionStatus.Canceled or TransactionStatus.Abandoned ||
+            await _store.FindByTransactionIdAsync(transaction.ItemId, cancellationToken) is { } other && !string.Equals(other.ItemId, invoice.ItemId, StringComparison.Ordinal))
+        {
+            result.Fail(S["The ledger entry this invoice would take over is closed or belongs to another invoice."]);
+
+            return false;
+        }
+
+        transaction.Events.Add(new TransactionEvent
+        {
+            Id = IdGenerator.GenerateId(),
+            CreatedUtc = now,
+            Type = TransactionEventType.Note,
+            Message = S["Invoiced as {0}.", invoice.Number].Value,
+            DocumentKind = InvoicingConstants.InvoiceReferenceType,
+            DocumentId = invoice.ItemId,
+            DocumentNumber = invoice.Number,
+        });
+        transaction.UpdatedUtc = now;
+
+        await _transactions.UpdateAsync(transaction, data: null, cancellationToken);
+
+        invoice.AmountPaid = transaction.AmountPaid;
+        invoice.AmountDue = transaction.OutstandingAmount;
+        invoice.Settlement = transaction.OutstandingAmount <= 0m
+            ? InvoiceSettlement.Paid
+            : transaction.AmountPaid > 0m ? InvoiceSettlement.PartiallyPaid : InvoiceSettlement.Unpaid;
+
+        return true;
+    }
+
     private async Task<string> PostTransactionAsync(Invoice invoice, DateTime now, CancellationToken cancellationToken)
     {
         var existing = await _transactions.PageAsync(1, 1, new TransactionQuery

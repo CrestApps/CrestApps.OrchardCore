@@ -137,6 +137,11 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
     public Mock<ISavedPaymentMethodStore> SavedCards { get; } = new();
 
     /// <summary>
+    /// The orders the order invoicing reads.
+    /// </summary>
+    public Mock<CrestApps.OrchardCore.Orders.Core.Services.IOrderStore> Orders { get; } = new();
+
+    /// <summary>
     /// What each charge of a saved card comes to, in order; a charge that goes through records the payment.
     /// </summary>
     public Queue<SavedPaymentMethodChargeStatus> ChargeOutcomes { get; } = new();
@@ -254,6 +259,8 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         }
         services.AddSingleton(_ => harness.Contacts.Object);
         services.AddSingleton(_ => harness.SavedCards.Object);
+        services.AddSingleton(_ => harness.Orders.Object);
+        services.AddScoped<CrestApps.OrchardCore.Invoicing.Orders.OrderInvoiceBuilder>();
         services.AddScoped<ISavedPaymentMethodChargeService>(sp =>
         {
             // The provider is played by ChargeOutcomes: a charge that goes through is recorded as the checkout records it.

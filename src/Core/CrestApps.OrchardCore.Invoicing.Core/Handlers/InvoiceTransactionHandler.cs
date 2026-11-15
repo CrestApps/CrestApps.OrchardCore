@@ -52,10 +52,7 @@ public sealed class InvoiceTransactionHandler : ITransactionPaymentHandler, ITra
     // The ledger finds a debt overdue once; the invoice that posted it is overdue with it while it is open.
     public async Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
-        if (transaction is null ||
-            !string.Equals(transaction.ReferenceType, InvoicingConstants.InvoiceReferenceType, StringComparison.Ordinal) ||
-            string.IsNullOrEmpty(transaction.ReferenceId) ||
-            await _invoices.FindByIdAsync(transaction.ReferenceId, cancellationToken) is not { Status: InvoiceStatus.Open } invoice)
+        if (await InvoiceTransactionLink.FindInvoiceAsync(_invoices, transaction, cancellationToken) is not { Status: InvoiceStatus.Open } invoice)
         {
             return;
         }
@@ -67,7 +64,8 @@ public sealed class InvoiceTransactionHandler : ITransactionPaymentHandler, ITra
 
     private Task ScheduleAsync(Transaction transaction)
     {
-        if (transaction is not null && string.Equals(transaction.ReferenceType, InvoicingConstants.InvoiceReferenceType, StringComparison.Ordinal))
+        // Any transaction: the mirror finds the invoice that posted it or took it over, and does nothing for the others.
+        if (transaction is not null)
         {
             _scheduler.Schedule(transaction.ItemId);
         }

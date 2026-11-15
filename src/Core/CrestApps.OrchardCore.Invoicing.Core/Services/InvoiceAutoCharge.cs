@@ -91,10 +91,7 @@ public sealed class InvoiceAutoCharge : IInvoiceObserver, ITransactionEventHandl
     /// <inheritdoc/>
     public async Task AutoChargeAbandonedAsync(Transaction transaction, string reason, CancellationToken cancellationToken = default)
     {
-        if (transaction is null ||
-            !string.Equals(transaction.ReferenceType, InvoicingConstants.InvoiceReferenceType, StringComparison.Ordinal) ||
-            string.IsNullOrEmpty(transaction.ReferenceId) ||
-            await _invoices.FindByIdAsync(transaction.ReferenceId, cancellationToken) is not { Status: InvoiceStatus.Open } invoice)
+        if (await InvoiceTransactionLink.FindInvoiceAsync(_invoices, transaction, cancellationToken) is not { Status: InvoiceStatus.Open } invoice)
         {
             return;
         }

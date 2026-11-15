@@ -143,6 +143,10 @@ With **Invoicing Estimates** enabled, **Commerce > Estimates** lists the quotes 
 
 To change a sent estimate, click **Revise**: you get a copy to change, sent as **EST-1001-2**, and the old one is canceled. An estimate nobody answered expires the day after **Valid until**. How long estimates are valid by default is set under **Settings > Commerce > Invoicing**.
 
+## Orders paid on account
+
+When a customer checks out on account terms (or pays later) and the whole order goes on their account, the order gets a numbered invoice automatically, with the order's lines, shipping, discounts and tax, billed to their account. It is the same debt, not a second one: paying the invoice pays the order's balance. If the invoice's total doesn't match the order's (for example because tax came out differently), it is left as a draft under **Commerce > Invoices** for you to check and issue.
+
 ## Late fees
 
 With **Invoicing Collections** enabled, **Commerce > Late fees** holds the policies that charge customers who pay late. Each late fee is a separate **debit note**, numbered like an invoice and linked to the overdue invoice; the invoice itself never changes.

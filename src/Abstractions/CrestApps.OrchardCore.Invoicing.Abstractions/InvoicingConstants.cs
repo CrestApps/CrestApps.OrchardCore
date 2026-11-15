@@ -36,6 +36,11 @@ public static class InvoicingConstants
     public const string LateFeeReferenceType = "LateFee";
 
     /// <summary>
+    /// The source type of an invoice made for an order whose balance was put on the ledger.
+    /// </summary>
+    public const string OrderReferenceType = "Order";
+
+    /// <summary>
     /// The number series of estimates.
     /// </summary>
     public const string EstimateNumberSeries = "Invoicing.Estimate";

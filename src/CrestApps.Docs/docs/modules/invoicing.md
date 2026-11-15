@@ -118,6 +118,12 @@ Also with **Invoicing Collections**, `IInvoiceStatementService` (`DefaultInvoice
 
 `BuildDocumentAsync` prints it as a business document of kind `InvoiceStatement` (with the site's business document template), and `SendAsync` e-mails it with its PDF (the `invoice-statement` e-mail kind, to the address on the customer's latest invoice unless one is given). Other currencies are named on the statement, each on one of its own. **Commerce > Statements** (`StatementsAdminController`, **View invoices**) picks the customer (any party kind), the kind, the period and the currency, shows the statement, and downloads its PDF or e-mails it.
 
+## Orders paid on account
+
+With the Orders feature on, an order whose whole balance is put on the ledger at checkout (paid on **account terms**, or **later**) gets an invoice. `OrderBalanceInvoiceHandler` hears the debt created (`ITransactionEventHandler.CreatedAsync` with the `Order` reference) and, after the request saves it, `OrderInvoiceBuilder` makes the invoice once (source `Order`, the order's id): the order's lines (each line's total over its quantity, so add-ons are kept), its shipping and its discounts, taxed by the invoice's tax providers for the order's billing and shipping addresses, billed to whoever owes the debt (the account, else the buyer), with the order number as the reference, the order's purchase order number and the debt's due date. It is issued **taking over the debt**: a draft whose `TransactionId` is already set is issued against that transaction instead of posting a second one, provided it is in the same currency, owes the same total to the cent, is still open and belongs to no other invoice; the transaction's timeline notes **Invoiced as INV-…**. When the totals differ (tax worked out differently, a discount the lines can't show), the invoice stays a draft for staff to correct and issue. A debt for part of an order (the rest paid by card) is not invoiced.
+
+The ledger mirror finds an invoice from its transaction by the invoice that posted it or, for a debt it took over, by `InvoiceIndex.TransactionId` (`InvoiceTransactionLink`), so payments, refunds, cancellations and overdue on such a debt reach the invoice like any other.
+
 ## Estimates
 
 With **Invoicing Estimates** enabled, `Estimate` (Invoicing.Abstractions) is a catalog record with the invoice's header and lines, `EstimateIndex`, and the commands of `IEstimateCommandService` (`DefaultEstimateCommandService`, each under the estimate's lock, idempotent, refusing with reasons):

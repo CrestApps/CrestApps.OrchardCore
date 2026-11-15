@@ -57,14 +57,22 @@ public sealed class InvoiceLedgerSync
     /// </summary>
     public async Task SyncAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
-        if (transaction is null ||
-            !string.Equals(transaction.ReferenceType, InvoicingConstants.InvoiceReferenceType, StringComparison.Ordinal) ||
-            string.IsNullOrEmpty(transaction.ReferenceId))
+        if (transaction is null)
         {
             return;
         }
 
-        await SyncAsync(transaction.ReferenceId, transaction, cancellationToken);
+        // The invoice that posted it, or the one that took over a debt already on the ledger (an order on account).
+        var invoiceId = InvoiceTransactionLink.IsPostedByInvoice(transaction)
+            ? transaction.ReferenceId
+            : (await _invoices.FindByTransactionIdAsync(transaction.ItemId, cancellationToken))?.ItemId;
+
+        if (string.IsNullOrEmpty(invoiceId))
+        {
+            return;
+        }
+
+        await SyncAsync(invoiceId, transaction, cancellationToken);
     }
 
     /// <summary>
