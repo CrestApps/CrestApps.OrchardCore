@@ -71,7 +71,7 @@ public sealed class TicketSettingsSqliteTests
 
         // Act
         var ticketId = (await kit.CreateAsync()).Ticket.ContentItemId;
-        var changed = await new TicketServiceLevelPolicyHandler(priorities.Object).KeyByIdAsync(policy, TestContext.Current.CancellationToken);
+        var changed = await global::CrestApps.OrchardCore.ServiceLevels.Core.Services.ServiceLevelPriorityKeys.KeyByIdAsync(policy, new TicketServiceLevelScope(priorities.Object, Doubles.RecipeRoundTrip.Localizer<TicketServiceLevelScope>()), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.All(await kit.TimersAsync(ticketId), timer => Assert.Equal(TicketKit.Normal.ItemId, timer.Priority));

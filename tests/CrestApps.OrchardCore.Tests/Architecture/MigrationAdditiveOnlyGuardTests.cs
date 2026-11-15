@@ -807,7 +807,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Modules/CrestApps.OrchardCore.Tickets/Migrations/TicketPriorityKeys.cs",
             "TicketPriorityKeys",
             "MoveToIdsAsync",
-            "bfd060e232bcd5ad",
+            "8bd90306883eb7da",
             "Not SQL text at all: a YesSql LINQ query that pages through the active service-level timers of tickets and saves each whose priority is still a name with the priority's id instead. It only reads documents and rewrites a value in them; it never creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",

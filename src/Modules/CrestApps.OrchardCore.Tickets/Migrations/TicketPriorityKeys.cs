@@ -32,14 +32,10 @@ internal static class TicketPriorityKeys
 
         if (services.GetService<IServiceLevelPolicyManager>() is { } policies)
         {
-            var handler = ActivatorUtilities.CreateInstance<TicketServiceLevelPolicyHandler>(services);
-
+            // Saving a policy keys its targets by priority id (Service Levels does it through the ticket scope).
             foreach (var policy in await policies.ListByScopeAsync(TicketsConstants.ServiceLevelScope))
             {
-                if (await handler.KeyByIdAsync(policy))
-                {
-                    await policies.UpdateAsync(policy);
-                }
+                await policies.UpdateAsync(policy);
             }
         }
 

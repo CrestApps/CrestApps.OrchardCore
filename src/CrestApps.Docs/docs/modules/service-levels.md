@@ -24,7 +24,7 @@ A `ServiceLevelPolicy` belongs to one **scope**, the kind of work it is for. The
 | Member | Meaning |
 | --- | --- |
 | `Scope` | The name of a registered `IServiceLevelScopeProvider`, such as `WorkOrders` |
-| `Targets` | `{ Metric, Priority, Minutes }`; `FindTarget(metric, priority)` returns the priority's target, else the metric's target for every priority |
+| `Targets` | `{ Metric, Priority, Minutes }`; `FindTarget(metric, priority)` returns the priority's target, else the metric's target for every priority. `Priority` is the key the scope gives (`ServiceLevelOption.Key`); a target written with a priority's name, as a recipe that can't know a site's ids writes it, is keyed by that priority when the policy is saved (`ServiceLevelPriorityKeys`), so renaming a priority keeps its targets |
 | `HoursScheduleId` | A schedule from any Business Hours source; empty counts around the clock |
 | `WarningPercent` | 1 to 99; 80 by default |
 | `Properties` | Settings other modules keep on the policy (Work Orders keeps `WorkOrderServiceLevelSettings` with its pause statuses) |

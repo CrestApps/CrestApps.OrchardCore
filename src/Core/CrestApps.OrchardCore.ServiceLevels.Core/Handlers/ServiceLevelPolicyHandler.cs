@@ -56,27 +56,29 @@ internal sealed class ServiceLevelPolicyHandler : CatalogEntryHandlerBase<Servic
         return Task.CompletedTask;
     }
 
-    public override Task CreatingAsync(CreatingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
+    public override async Task CreatingAsync(CreatingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
     {
         Tidy(context.Model);
+        await KeyPrioritiesAsync(context.Model, cancellationToken);
 
         if (context.Model.CreatedUtc == default)
         {
             context.Model.CreatedUtc = _clock.UtcNow;
         }
-
-        return Task.CompletedTask;
     }
 
-    public override Task UpdatingAsync(UpdatingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
+    public override async Task UpdatingAsync(UpdatingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
     {
         // A recipe updates the entry from its JSON; the editor has already changed it.
         CatalogDeploymentSerializer.Populate(context.Model, context.Data);
         Tidy(context.Model);
+        await KeyPrioritiesAsync(context.Model, cancellationToken);
         context.Model.ModifiedUtc = _clock.UtcNow;
-
-        return Task.CompletedTask;
     }
+
+    // Targets follow the priority's key, not its name, so renaming a priority keeps its targets.
+    private Task<bool> KeyPrioritiesAsync(ServiceLevelPolicy policy, CancellationToken cancellationToken)
+        => ServiceLevelPriorityKeys.KeyByIdAsync(policy, _scopes.FirstOrDefault(scope => string.Equals(scope.Name, policy.Scope, StringComparison.OrdinalIgnoreCase)), cancellationToken);
 
     public override async Task ValidatingAsync(ValidatingContext<ServiceLevelPolicy> context, CancellationToken cancellationToken = default)
     {
