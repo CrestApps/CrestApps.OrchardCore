@@ -9,17 +9,18 @@ public sealed class CurrencyFormatTests
     private static readonly CultureInfo _english = CultureInfo.GetCultureInfo("en-US");
     private static readonly CultureInfo _french = CultureInfo.GetCultureInfo("fr-FR");
 
+    // The amount as text: a double such as 1.2345 does not convert to exactly 1.2345m, so the midpoint would be lost.
     [Theory]
-    [InlineData(20, "EUR", "EUR 20.00")]
-    [InlineData(1234.5, "USD", "USD 1234.50")]
-    [InlineData(1500, "JPY", "JPY 1500")]
-    [InlineData(1.2345, "KWD", "KWD 1.235")]
-    [InlineData(20, null, "20.00")]
-    [InlineData(20, "", "20.00")]
-    public void WithCode_WritesTheCodeAndTheAmountAtTheCurrencyPrecision(double amount, string currency, string expected)
+    [InlineData("20", "EUR", "EUR 20.00")]
+    [InlineData("1234.5", "USD", "USD 1234.50")]
+    [InlineData("1500", "JPY", "JPY 1500")]
+    [InlineData("1.2345", "KWD", "KWD 1.235")]
+    [InlineData("20", null, "20.00")]
+    [InlineData("20", "", "20.00")]
+    public void WithCode_WritesTheCodeAndTheAmountAtTheCurrencyPrecision(string amount, string currency, string expected)
     {
         // Act
-        var text = CurrencyFormat.WithCode((decimal)amount, currency);
+        var text = CurrencyFormat.WithCode(decimal.Parse(amount, CultureInfo.InvariantCulture), currency);
 
         // Assert
         Assert.Equal(expected, text);
