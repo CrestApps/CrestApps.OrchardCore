@@ -1,7 +1,7 @@
 ---
 sidebar_label: Tickets
 title: Tickets
-description: "Answer requests from customers and employees as tickets: desks, statuses and priorities, replies and internal notes, assignment, service-level targets, saved views, merge and links, reports and the account tab."
+description: "Answer requests from customers and employees as tickets: desks, statuses and priorities, replies and internal notes, assignment, service-level targets, saved views, boards, merge and links, reports and the account tab."
 technical_manual:
   - modules/tickets
 ---
@@ -10,8 +10,8 @@ A **ticket** is a request someone made: a customer who can't sign in, an employe
 
 | | |
 | --- | --- |
-| **Menu** | **Service Desk**: Tickets, and for those who manage the service desk, Desks, Statuses, Priorities, Views and E-mails |
-| **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the settings; **View ticket reports** for the reports |
+| **Menu** | **Service Desk**: Tickets and Boards, and for those who manage the service desk, Desks, Statuses, Priorities, Views and E-mails |
+| **Permission** | A view permission on a desk, such as **View the tickets of my teams in Support**; **Manage ticket settings** for the settings; **Manage shared ticket boards** or **Manage my own ticket boards** to make boards; **View ticket reports** for the reports |
 | **Feature** | Tickets |
 
 <AskYourAdmin />
@@ -24,6 +24,29 @@ Go to **Tickets**. The list shows the tickets you may see, latest change first.
 - Search by ticket number or words of the subject.
 - Narrow the list by state, status, priority, assignee, team, desk, ticket type or service level (**Past a target**, **Due within 4 hours**), and sort it.
 - Select tickets to **Assign to me**, set a status, **Merge** them into the oldest one, or delete them. Each ticket is checked on its own: one you may not change is left as it was, with a message.
+
+## Work tickets on a board
+
+A board shows tickets as cards in columns, one column for each stage of the work, such as **New**, **Open**, **Pending** and **Solved**. Go to **Service Desk → Boards** and open a board.
+
+- **Drag a card** to another column to change the ticket's status. When the column holds several statuses and has no default, you're asked which one.
+- To move a card without dragging (with the keyboard, or on a phone), select **⋮** on the card and choose the status.
+- If the move isn't allowed, for example because the ticket is closed or waiting for approval, the card goes back and the board says why.
+- Search by number or subject, or show only **My tickets** or **Unassigned tickets**. The board keeps up by itself: when someone changes a ticket's status elsewhere, its card moves within half a minute.
+- A column's count turns red when it holds more tickets than its limit. A column shows at most 50 cards, with how many there are in all.
+
+A board shows only the tickets you may already see, whoever made it.
+
+### Make a board
+
+1. Go to **Service Desk → Boards** and select **Add board**.
+2. Enter a **Name** and, if you want, a **Description**.
+3. Choose **Who it is for**: **Only me**, **A team**, or **Everybody who works on tickets**. Sharing a board needs **Manage shared ticket boards**; with **Manage my own ticket boards** you can keep boards for yourself.
+4. Under **Which tickets it shows**, choose desks, teams and ticket types to keep the board to, say, IT; leave them empty to show everything you may see. Choose whose tickets and the order of the cards.
+5. Shape the **Columns**. A new board starts with a column per status category. Rename columns, tick the statuses each one holds (a status can be in one column only), choose what a card dropped on a column with several statuses gets (**Ask which status**, or one of them), and set a limit if you want. Add columns with **Add column**, remove them with the bin, and drag the handle or use the arrows to put them in order.
+6. Select **Save**.
+
+To change a board later, open it and select **Edit board**. A board you share can be changed by anyone with **Manage shared ticket boards**; a personal board only by you.
 
 ## Open a ticket for someone
 

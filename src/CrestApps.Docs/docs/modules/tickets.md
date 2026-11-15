@@ -1,11 +1,11 @@
 ---
 sidebar_label: Tickets
 title: Tickets
-description: "The Tickets help desk: tickets as content items of any ticket type, desks with their own permissions, statuses, priorities and saved views, replies and internal notes on the timeline, team assignment, service-level targets on business hours, e-mails, workflows, webhooks, the audit trail, data sets and reports, the JSON API, the account tab, personal data, AI tools and the recipe and deployment steps."
+description: "The Tickets help desk: tickets as content items of any ticket type, desks with their own permissions, statuses, priorities, saved views and boards, replies and internal notes on the timeline, team assignment, service-level targets on business hours, e-mails, workflows, webhooks, the audit trail, data sets and reports, the JSON API, the account tab, personal data, AI tools and the recipe and deployment steps."
 user_manual: user-manual/administration/tickets
 ---
 
-**Tickets** is a help desk. A ticket is a content item of a ticket type, filed under a desk (such as IT, HR or customer support) that decides who may see and work on it. The admin menu is **Service Desk**: **Tickets**, and for those who manage it, **Desks**, **Statuses**, **Priorities**, **Views** and **E-mails**. A ticket's page shows its **Conversation** (replies and internal notes, `Reply` and `Note` entries) apart from its **History** (every change: status, assignee, priority, links and the rest, `Event` entries), each paged on its own. Replies, internal notes and every change are kept on the ticket's [timeline](./timeline); first response and resolution targets run on [service levels](./service-levels) counted in [business hours](./business-hours); new tickets go to a team's members through [Teams](./teams).
+**Tickets** is a help desk. A ticket is a content item of a ticket type, filed under a desk (such as IT, HR or customer support) that decides who may see and work on it. The admin menu is **Service Desk**: **Tickets** and **Boards**, and for those who manage it, **Desks**, **Statuses**, **Priorities**, **Views** and **E-mails**. A ticket's page shows its **Conversation** (replies and internal notes, `Reply` and `Note` entries) apart from its **History** (every change: status, assignee, priority, links and the rest, `Event` entries), each paged on its own. Replies, internal notes and every change are kept on the ticket's [timeline](./timeline); first response and resolution targets run on [service levels](./service-levels) counted in [business hours](./business-hours); new tickets go to a team's members through [Teams](./teams).
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
@@ -18,8 +18,8 @@ user_manual: user-manual/administration/tickets
 
 | Project | Holds |
 | --- | --- |
-| `CrestApps.OrchardCore.Tickets.Abstractions` | `TicketPart`, `TicketStatus`, `TicketPriority`, `TicketDesk`, `TicketView`, `TicketBacklogDay`, the requests and results of the ticket service, `ITicketService`, `ITicketAccessService`, `ITicketObserver`, `ITicketActionSource`, `ITicketReplyTemplateSource`, `TicketsPermissions` and `TicketsConstants` |
-| `CrestApps.OrchardCore.Tickets.Core` | `TicketIndex` and `TicketBacklogIndex`, `DefaultTicketService`, `DefaultTicketAccessService`, `TicketScopeFilter`, `TicketLifecycle`, the auto closer, the backlog recorder, the e-mail observer and template source, the team load source, the timeline, record and service-level timer access, and the API models (`TicketApiModel`, `TicketApiMessages`) |
+| `CrestApps.OrchardCore.Tickets.Abstractions` | `TicketPart`, `TicketStatus`, `TicketPriority`, `TicketDesk`, `TicketView`, `TicketBoard`, `TicketBacklogDay`, the requests and results of the ticket service, `ITicketService`, `ITicketAccessService`, `ITicketBoardService`, `ITicketObserver`, `ITicketActionSource`, `ITicketReplyTemplateSource`, `TicketsPermissions` and `TicketsConstants` |
+| `CrestApps.OrchardCore.Tickets.Core` | `TicketIndex` and `TicketBacklogIndex`, `DefaultTicketService`, `DefaultTicketAccessService`, `DefaultTicketBoardService`, `TicketBoardColumns`, `TicketScopeFilter`, `TicketLifecycle`, the auto closer, the backlog recorder, the e-mail observer and template source, the team load source, the timeline, record and service-level timer access, and the API models (`TicketApiModel`, `TicketApiMessages`) |
 | `CrestApps.OrchardCore.Tickets` (module) | The pages, the display drivers, the background tasks, the workflow activities, the webhooks and audit trail, the data sets and reports, the API, the account tab, the personal data contributor, the AI tools, the migrations and the recipe and deployment steps |
 
 ## Tickets and ticket types
@@ -50,9 +50,24 @@ A desk keeps its own tickets: every ticket permission exists once over all desks
 | My teams | `ViewTeamTickets` | The tickets of the user's teams and those assigned to them |
 | Assigned | `ViewAssignedTickets` | The tickets assigned to them |
 
-The other permissions (`EditTickets`, `ReplyToTickets`, `AddTicketNotes`, `AssignTickets`, `MergeTickets`, `DeleteTickets`) apply to the tickets the user may view. `ManageTicketSettings` covers statuses, priorities, desks, shared views and the e-mails; `ViewTicketReports` opens the ticket reports. `TicketScopeFilter` is the one rule the list, the API, the data sets, the reports and the account tab apply, so a user never sees a ticket out of their scope anywhere.
+The other permissions (`EditTickets`, `ReplyToTickets`, `AddTicketNotes`, `AssignTickets`, `MergeTickets`, `DeleteTickets`) apply to the tickets the user may view. `ManageTicketSettings` covers statuses, priorities, desks, shared views and the e-mails (and implies `ManageTicketBoards`); `ViewTicketReports` opens the ticket reports. `TicketScopeFilter` is the one rule the list, the API, the data sets, the reports and the account tab apply, so a user never sees a ticket out of their scope anywhere.
 
 A desk also has its business hours schedule (used by the **Time elapsed** workflow event counted in business hours; service-level targets use their policy's schedule), service-level policy, default team, ticket types, reopen window, auto-close delay, how new tickets are assigned and whether requesters are e-mailed and assignees told.
+
+## Boards
+
+A board (`TicketBoard`, **Service Desk → Boards**, `Admin/tickets/boards`) shows tickets as cards in columns. Each column (`TicketBoardColumn`) holds one or more statuses, such as a **Pending** column for **Waiting for the requester** and **Waiting for a third party**; a status is in one column of a board only, and tickets in a status that is in no column don't show on that board. Dragging a card to another column (or choosing **Move** on the card, for the keyboard and touch screens) sets the ticket's status: to the column's only status, to its **default** when it has several, or to the one the agent picks when it has several and no default. A column can have a limit; the header turns red when the column holds more, and moves are never refused for it.
+
+A board keeps a `TicketQuery` for which tickets it shows (desks, teams, ticket types, assignee and the order of the cards; the columns decide the statuses) and is shared with everybody, with a team, or kept by its owner. Whoever opens it sees only the tickets their desk scope covers: `DefaultTicketBoardService.LoadAsync` runs one query per column through `ITicketAccessService.ApplyScopeAsync`, at most 50 cards a column with the column's total. The board page (`Admin/tickets/board/{id}`) loads its cards from `Admin/tickets/board/{id}/data` (JSON) and again every 20 seconds while it is visible, so a card moves when the ticket's status changes elsewhere; its search and **My tickets** / **Unassigned tickets** filter stay in the address.
+
+A move (`POST Admin/tickets/board/{id}/move`, antiforgery) goes through `ITicketBoardService.MoveAsync`: the user needs the Edit permission on the ticket's desk, the ticket must still be in the status the board showed (otherwise the move is refused and the board reloads), and the status is set by `ITicketService.UpdateAsync` with the reason "Moved on the board X" on the timeline, so the life cycle, approval holds, observers, e-mails and workflows apply as on the ticket page. A refusal comes back with the ticket service's reason and the card goes back; a closed ticket's card can't be dragged.
+
+| Permission | Lets a user |
+| --- | --- |
+| `ManageTicketBoards` (**Manage shared ticket boards**) | Create, arrange and delete boards shared with everybody or a team |
+| `ManageOwnTicketBoards` (**Manage my own ticket boards**) | Create, arrange and delete their own, personal boards |
+
+Opening a board needs no board permission, only the right to view tickets on some desk. Nobody arranges another user's personal board. Deleting a status doesn't touch boards: a column skips statuses that no longer exist, and its editor drops them. The feature adds a **Service desk** board, with a column per status category (closed left out), to a site that has none.
 
 ## Assignment and life cycle
 
@@ -218,6 +233,7 @@ With AI on, these tools can be picked on AI profiles (category **Tickets**). Eac
 | `TicketPriorities` | Priorities |
 | `TicketDesks` | Desks, matched by `ItemId` and then by name |
 | `TicketViews` | Saved views; a personal view carries its owner's user name (`OwnerUserName`), resolved to the user of the target site, and a view whose owner isn't a user there is refused with that name |
+| `TicketBoards` | Boards, matched by `ItemId`, with their columns (`Id`, `Name`, `StatusIds`, `DefaultStatusId`, `Limit`); a personal board carries its owner's user name as a view does. A board whose columns break the rules (no column, a status in two columns, a status that doesn't exist, a default outside its column) is refused with the reason |
 
 Each has a deployment step and schemas for CrestApps Recipes. A record whose `ItemId` isn't a valid id (26 letters and digits) is refused with its name and id rather than imported under a new id, which would cut the links other records make to it. A status's or priority's color must be a hex color or a color name, in the editor and in a recipe. Tickets themselves are content items and travel with Orchard Core's content step; their entries with the `TimelineEntries` step. The backlog snapshots are history the site records and have no step.
 
@@ -232,3 +248,4 @@ The **Help desk starter** recipe sets up weekday business hours, a `Tickets` ser
 | Offer reply templates in the composer | `ITicketReplyTemplateSource` |
 | Add a panel to the ticket page | A `ContentPartDisplayDriver<TicketPart>` or a display driver of the ticket type |
 | Read or change tickets | `ITicketService` and `ITicketAccessService`; apply `TicketScopeFilter` to your own ticket queries |
+| Read a board or move a card from code | `ITicketBoardService` (the visible boards, `LoadAsync`, `MoveAsync`); add fields to the board editor with a `DisplayDriver<TicketBoard>` |
