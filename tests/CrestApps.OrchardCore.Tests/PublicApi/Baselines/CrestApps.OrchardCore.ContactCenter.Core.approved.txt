@@ -3930,6 +3930,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class AgentPresenceAvailabilitySource : CrestApps.OrchardCore.Teams.Services.ITeamMemberAvailabilitySource
     {
         public AgentPresenceAvailabilitySource(YesSql.ISession session) { }
+        public OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public bool HonoredByDefault { get; }
+        public string Name { get; }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetUnavailableAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class AgentPresenceManagerExtensions

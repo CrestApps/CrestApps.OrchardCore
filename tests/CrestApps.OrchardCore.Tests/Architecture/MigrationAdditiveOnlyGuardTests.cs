@@ -804,6 +804,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "ac3e01a635593982",
             "Command factory for the duplicate-interaction repair whose statement arrives as a parameter. It adds nothing to the text it is given, and every caller in the same type passes a literal SELECT, UPDATE or DELETE of rows; the two deletes are authorized in the contract register, and none of the statements creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
+            "src/Modules/CrestApps.OrchardCore.Tickets/Migrations/TicketPriorityKeys.cs",
+            "TicketPriorityKeys",
+            "MoveToIdsAsync",
+            "bfd060e232bcd5ad",
+            "Not SQL text at all: a YesSql LINQ query that pages through the active service-level timers of tickets and saves each whose priority is still a name with the priority's id instead. It only reads documents and rewrites a value in them; it never creates, alters or drops a schema object."),
+        new ReviewedDynamicSqlEntry(
             "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/CatalogIndexBackfill.cs",
             "CatalogIndexBackfill",
             "ReindexAsync",
