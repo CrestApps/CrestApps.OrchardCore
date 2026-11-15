@@ -78,3 +78,14 @@ See `src/CrestApps.Docs/docs/modules/learning.md` for the full reference.
 - React to attempts with `IAttemptObserver` (`services.AddAttemptObserver<T>()`); observers run after the commit.
 - Keep any secret a learner types (a code, a key) in `LearningSecretStore` with your own kind, and check it with `LearningSecretVerifier`, which limits wrong tries.
 - Write to an attempt or an enrollment only through `IAssessmentAttemptService` / `IEnrollmentService` / `ILearnerProgressService`: they take the per-record lock, read again, commit and then notify.
+
+## Certifications
+
+- A certificate belongs to Skills. Never store one in Learning: call `ICertificateIssuer` (Skills.Abstractions) with a `Source` and a `SourceId` that names what earned it once (Learning paths use `{progressId}:{cycle}`); issuing again with the same three returns the same certificate.
+- A renewal is `RenewAsync(previousRecordId, ...)`: a new record linked both ways. Never change the dates of an issued certificate.
+- Add a requirement kind with `services.AddCertificationRequirement<T>()` (`ICertificationRequirement`: find the evidence since a time, list who met it since a time so the upkeep can catch up).
+- Observers of Learning, Assessments and Skills run after the commit and log their failures: anything that must happen once (issuing) must also be caught up by an upkeep.
+- A service that commits (the issuer, `IEnrollmentService.EnrollAsync`) makes the session forget what it read: read a document again by id before saving it after such a call, or YesSql inserts a second copy.
+- Resolve a service lazily (`IServiceProvider`) from a handler or observer that the service itself depends on through a factory registration; a cycle through a factory is not detected and recurses until the request hangs.
+- Add a card to the certification editor with a `DisplayDriver<Certification>` that overrides `BuildPrefix`: every driver of a model gets the model's name as its prefix.
+- Offer an action on an enrollment's review card with `IEnrollmentReviewActionProvider` (Learning.Abstractions).

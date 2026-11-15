@@ -871,3 +871,35 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 | Grading and Gradebook missing from course staff's menu | Each item asks for the permission the person holds, else Manage own courses. | `4a9a291f6` |
 | The quiz player shows "Due 12:00 PM" with no date | The deadline is shown with its date and time. | `d44bdfd3d` |
 | Moving a quiz's close date does not move the review of attempts already taken | `QuizCloseDateHandler` and `IAssessmentAttemptService.MoveQuizCloseAsync` move the close date attempts kept, after the commit and under each attempt's lock; an override's own date stays. | `e8334edc4` |
+
+### Phase 3: Certification (branch `ma/learning-phase-3`, stacked on `ma/learning-phase-2`)
+
+**Built.**
+
+- **PDF building block** (5.2): `Pdf.Abstractions` and `Pdf.Core`, `IPdfDocumentRenderer` over `PdfDocumentLayout` (pages, background image, positioned or wrapped and aligned text with a line limit, embedded TrueType fonts found on the host, JPEG and 8-bit PNG images, lines, rectangles, vector QR codes drawn with QRCoder 1.7.0, MIT). Reports PDF draws with the moved primitives (`PdfCanvas`, `PdfFont`, `PdfFontSet`, `PdfFontResolver`, `PdfText`, `PdfColor`).
+- **Skills issues certificates** (5.1): `ICertificateIssuer` (issue, renew as a new linked record, revoke, find by code), numbers from `INumberSequence`, a 16-character verification code (80 bits), idempotent per certification, source and source id under a lock with the commit inside it; revocation fields; `ICertificationRecordObserver` after the commit, with workflow events and webhooks; the daily check sends no reminder for a renewed certificate; the certification editor through `IDisplayManager<Certification>`; the `Skills` data source (no codes) and the personal-data contributor.
+- **Skills: Issued Certificates** feature: the Certificate Template content type (paper, font family, colors, border, background image, QR code, Liquid text blocks), the certificate PDF, the public verification page behind a rate limit and `noindex`, an admin template preview; an issued certificate is revoked, never edited or deleted.
+- **Learning Certifications** module: certification paths on the certification editor (all or any requirements, course completed and assessment passed with minimum grades, expiry from the completion date, the previous expiry or a fixed day with a shortest first period, renewal window, grace period, start on first requirement, enroll on renewal); progress with every cycle and its evidence; issue and renewal through the Skills issuer under one lock per path and person; the renewal leased queue; lapse and revocation from Skills; the hourly upkeep that opens missed renewals and issues what a lost event missed; the people on a path; My certifications; revoking from an enrollment review (`IEnrollmentReviewActionProvider` in Learning.Abstractions); notifications (issued, expiring, renewal open, lapsed); workflows (Renewal Opened, Lapsed, Start Certification Path); the Certification compliance report; the `LearningCertifications` data source; the `LearningCertificationPaths` recipe and deployment steps; the personal-data contributor; telemetry; docs.
+
+**Differences from the plan, and why.**
+
+- The certificate template is chosen on the certification (Skills), not on the path: Skills prints the certificate, also for certificates issued by other modules.
+- The template font is an installed font family rather than a media file: the media library does not accept `.ttf` files by default.
+- `SubjectName` is still copied when a certificate is issued, not resolved at read time, and certificate copies stay where they are: the protected file store (5.6) is Phase 4.
+- Requirement kinds in this phase are course completed and assessment passed; learning path, credits, evidence and sign-off come with Phases 4 and 7.
+- Notify the manager on window open waits for teams in Phase 4.
+- The certificate goes to the learner's staff record when Staff is on and the user has one, so Workforce and Dispatch (which read staff subjects) see it.
+- No Audit Trail events for certificates yet: the Skills record keeps who issued, renewed and revoked it and why, and the workflow and webhook events carry each change.
+
+**Not checked in the browser.** Revoking from an enrollment review (the lookup is unit-tested), the renewal opening on its day and the reminders and lapse on a live site (unit-tested with a moved clock), the workflow editors, the compliance report page, and a certificate template with a background image. The live site has no passed quiz that was not voided, so the live path used "any one" requirement with the course; the course-and-exam path runs in the unit tests.
+
+**Review round 2, D.** Issue is idempotent (source id = progress and cycle; the Skills issuer holds a lock per certification and source and commits inside it) and the upkeep checks again everyone who met a requirement since the last look. `CertificationPathTests.CompletionDeliveredTwice_IssuesOneCertificate` and `CompletionEventLost_TheUpkeepIssuesTheCertificate`.
+
+**Fixed while verifying.**
+
+- The certification path tests caught the YesSql commit trap: the issuer commits, which made the session forget the progress it had read, and saving it again inserted a second copy. The progress is now saved before the issuer runs and read again after it, and after each renewal enrollment.
+- A recipe run inside a migration (the certificate template type) never finished on SQLite: the recipe's own scope waits for the write lock the migration holds. The type is defined in code.
+- A factory registration made a dependency cycle that recursed until the request hung (certification manager, its handlers, the path service): the catalog handler and the observers resolve the path service when they need it.
+- Orchard gives every display driver of a model the model's name as its prefix, so the path card's "Enabled" posted over the certification's: the two added cards build their own prefix.
+- The verification page's status badge was invisible on a front-end theme with Bootstrap 5.1 (no `text-bg-*`): the front-end views use classes that exist there.
+- An issued certificate's row still linked to the hand-record editor: the link and the editor now refuse it, as the save already did.

@@ -194,6 +194,7 @@ const sidebars = {
                 'user-manual/learning/learner-pages',
                 'user-manual/learning/quizzes',
                 'user-manual/learning/grading',
+                'user-manual/learning/certifications',
             ],
         },
         {
@@ -483,6 +484,7 @@ const sidebars = {
             items: [
                 'modules/learning',
                 'modules/learning-assessments',
+                'modules/learning-certifications',
             ],
         },
         {

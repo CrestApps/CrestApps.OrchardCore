@@ -217,6 +217,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Skills` | Skills | [Skills](./modules/skills) |
+| `CrestApps.OrchardCore.Skills.IssuedCertificates` | Skills: Issued Certificates | [Skills](./modules/skills#issued-certificates) |
 | `CrestApps.OrchardCore.Teams` | Teams | [Teams](./modules/teams) |
 | `CrestApps.OrchardCore.Workforce` | Workforce | [Workforce](./modules/workforce) |
 | `CrestApps.OrchardCore.Workforce.ShiftPlanning` | Workforce Shift Planning | [Workforce](./modules/workforce#shift-planning) |
@@ -256,6 +257,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Learning.SelfEnrollment` | Self Enrollment | [Learning](./modules/learning#learner-pages) |
 | `CrestApps.OrchardCore.Learning.Assessments` | Learning Assessments | [Learning Assessments](./modules/learning-assessments) |
 | `CrestApps.OrchardCore.Learning.Assessments.Gradebook` | Learning Gradebook | [Learning Assessments](./modules/learning-assessments) |
+| `CrestApps.OrchardCore.Learning.Certifications` | Learning Certifications | [Learning Certifications](./modules/learning-certifications) |
 
 ## Data connectors
 

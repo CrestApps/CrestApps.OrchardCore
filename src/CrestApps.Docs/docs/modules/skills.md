@@ -22,6 +22,23 @@ The admin screens are described in the User Manual: [Skills and Certifications](
 
 Projects: `CrestApps.OrchardCore.Skills.Abstractions` (models and contracts), `CrestApps.OrchardCore.Skills.Core` (stores, indexes, services), `CrestApps.OrchardCore.Skills` (the module).
 
+## Issued certificates
+
+The site can issue certificates itself, numbered and provable in public, instead of only recording certificates someone else issued.
+
+- **`ICertificateIssuer`** (`IssueAsync`, `RenewAsync`, `RevokeAsync`, `FindByVerificationCodeAsync`) creates a record with `Source`, `SourceId` and an evidence summary, a number from `INumberSequence` when the certification says so (prefix and six digits, after any hand-recorded number with the same prefix), and a 16-character verification code (80 random bits, separate from the number). Issuing is idempotent: one certificate per certification, source and source id (a revoked one does not count), and one renewal per certificate, under a lock, committed inside it.
+- A **renewal** is a new record linked both ways (`PreviousRecordId`, `RenewedByRecordId`); the old one keeps its dates. The daily check sends no reminder for a renewed certificate and expires it quietly.
+- **Revocation** records the reason, who and when, without touching the notes. A certificate the site issued is withdrawn, never edited or deleted.
+- **`ICertificationRecordObserver`** (issued, renewed, revoked) runs after the commit; workflows (Certificate Issued, Renewed, Revoked events) and webhooks (`skills.certificate.issued`, `.renewed`, `.revoked`, without the code) listen.
+
+The **Skills: Issued Certificates** feature (`CrestApps.OrchardCore.Skills.IssuedCertificates`) prints and proves them:
+
+- The **Certificate Template** content type: paper (Letter or A4, landscape or portrait), an installed font family (embedded in each PDF, for letters beyond Latin), colors, a border, a background image (media field), the QR code position and size, and text blocks in Liquid (`Certificate.HolderName`, `Number`, `IssuedOn`, `ExpiresOn`, `Evidence`, `VerificationCode`, `VerificationUrl`; `Certification.Name`, `Issuer`, `Description`). A certification picks its template on its editor; without one the default design prints.
+- The certificate PDF, built with the PDF building block (`IPdfDocumentRenderer` in `CrestApps.OrchardCore.Pdf.Abstractions`): from the verification page, from **My certifications**, and for staff from the certificates list (a revoked one is marked revoked).
+- The **public verification page** `/certificates/verify` (by code, `/certificates/verify/{code}`), behind Orchard Core rate limits (30 lookups a minute per visitor when Rate Limits is on), marked `noindex`. It shows the least that proves the claim: holder, certification, issuer, number, dates and status.
+
+The certification editor renders through `IDisplayManager<Certification>`, so modules add cards to it with display drivers (Learning Certifications adds **Earned through learning**). The `Skills` data source (Certifications and Certificates data sets, never the code) and the personal-data contributor (exports skills and certificates; anonymizing keeps issued certificates without the name and evidence) come with the module.
+
 ## Storage
 
 Every record is a YesSql document in the `Skills` collection: `Skill`, `SkillAssignment`, `Certification`, `CertificationRecord`, and one `SkillsDailyCheckpoint` that remembers the last day the daily check ran. Day columns in the indexes are stored as `yyyyMMdd` numbers, so a day comparison never shifts with a time zone.
