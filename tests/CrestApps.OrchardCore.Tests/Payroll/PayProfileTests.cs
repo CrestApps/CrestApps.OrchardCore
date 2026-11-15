@@ -351,6 +351,10 @@ public sealed class PayProfileTests
         Assert.Equal("4321", profile.TaxId.Hint);
         Assert.NotNull(profile.PayScheduleId);
         Assert.Equal("US", Assert.Single(profile.Elections).Jurisdiction);
+
+        // An election written by hand has no entry time: the import stamps one, so the editor can show it.
+        Assert.NotEqual(default, profile.Elections[0].EnteredUtc);
+        Assert.Equal("Recipe", profile.Elections[0].EnteredBy);
     }
 
     [Fact]

@@ -546,7 +546,7 @@ public sealed partial class DefaultPayRunService : IPayRunService
             // A caller that waited for the lock decides on the run as it is stored now, not the copy it read before.
             run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
 
-            if (!run.IsOpen)
+            if (!run.IsOpen || (await StoredRunAsync(run.ItemId, cancellationToken)) is { IsOpen: false })
             {
                 result.Errors.Add(S["A pay run that was processed or cancelled can't be calculated again."]);
 
@@ -845,7 +845,8 @@ public sealed partial class DefaultPayRunService : IPayRunService
         {
             run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
 
-            if (!PayRunStatuses.Transitions.CanMove(run.Status, PayRunStatus.Canceled))
+            if (!PayRunStatuses.Transitions.CanMove(run.Status, PayRunStatus.Canceled)
+                || (await StoredRunAsync(run.ItemId, cancellationToken)) is { } stored && !PayRunStatuses.Transitions.CanMove(stored.Status, PayRunStatus.Canceled))
             {
                 result.Errors.Add(S["A pay run that was processed can't be cancelled: void its statements instead."]);
 

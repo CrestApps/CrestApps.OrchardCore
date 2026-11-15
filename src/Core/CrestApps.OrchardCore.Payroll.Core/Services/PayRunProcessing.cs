@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using Microsoft.Extensions.DependencyInjection;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Payroll.Core.Services;
 
@@ -55,7 +56,9 @@ public sealed partial class DefaultPayRunService
             // A second click waited for the lock: decide on the run as the first one left it.
             run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
 
-            if (run.Status is not (PayRunStatus.Approved or PayRunStatus.PartiallyPaid or PayRunStatus.Failed or PayRunStatus.Processing))
+            // This request's session may hold the copy it read before the lock: the status as stored now decides.
+            if (run.Status is not (PayRunStatus.Approved or PayRunStatus.PartiallyPaid or PayRunStatus.Failed or PayRunStatus.Processing)
+                || (await StoredRunAsync(run.ItemId, cancellationToken))?.Status is not (null or PayRunStatus.Approved or PayRunStatus.PartiallyPaid or PayRunStatus.Failed or PayRunStatus.Processing))
             {
                 result.Errors.Add(S["The pay run was processed already."]);
 
@@ -265,7 +268,8 @@ public sealed partial class DefaultPayRunService
             // A second click waited for the lock: void only what is still final.
             statement = await _statements.FindByIdAsync(statement.ItemId, cancellationToken) ?? statement;
 
-            if (statement.Status is not (PayStatementStatus.Final or PayStatementStatus.Paid) || statement.VoidOf is not null)
+            if (statement.Status is not (PayStatementStatus.Final or PayStatementStatus.Paid) || statement.VoidOf is not null
+                || (await StoredStatementAsync(statement.ItemId, cancellationToken))?.Status is not (null or PayStatementStatus.Final or PayStatementStatus.Paid))
             {
                 result.Errors.Add(S["The pay statement was voided already."]);
 
@@ -410,7 +414,8 @@ public sealed partial class DefaultPayRunService
         {
             statement = await _statements.FindByIdAsync(statement.ItemId, cancellationToken) ?? statement;
 
-            if (statement.Status is not (PayStatementStatus.Final or PayStatementStatus.Paid) || statement.VoidOf is not null || index >= statement.Payments.Count)
+            if (statement.Status is not (PayStatementStatus.Final or PayStatementStatus.Paid) || statement.VoidOf is not null || index >= statement.Payments.Count
+                || (await StoredStatementAsync(statement.ItemId, cancellationToken))?.Status is not (null or PayStatementStatus.Final or PayStatementStatus.Paid))
             {
                 result.Errors.Add(S["Only a payment of a final pay statement can be reissued."]);
 
@@ -531,6 +536,22 @@ public sealed partial class DefaultPayRunService
         await _statements.UpdateAsync(fresh, cancellationToken);
 
         return problem;
+    }
+
+    // The run as stored now, read by a session of its own: this request's session may hold a copy read before a lock.
+    private async Task<PayRun> StoredRunAsync(string runId, CancellationToken cancellationToken)
+    {
+        await using var session = _services.GetRequiredService<global::YesSql.IStore>().CreateSession();
+
+        return await session.Query<PayRun, PayRunIndex>(index => index.ItemId == runId, collection: PayrollConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    // The statement as stored now, read by a session of its own.
+    private async Task<PayStatement> StoredStatementAsync(string statementId, CancellationToken cancellationToken)
+    {
+        await using var session = _services.GetRequiredService<global::YesSql.IStore>().CreateSession();
+
+        return await session.Query<PayStatement, CrestApps.OrchardCore.Payroll.Core.Indexes.PayStatementIndex>(index => index.ItemId == statementId, collection: PayrollConstants.CollectionName).FirstOrDefaultAsync(cancellationToken);
     }
 
     // The statements of a run that count: neither voided nor reversing.

@@ -477,6 +477,32 @@ public sealed class PayrollReviewFixesTests
     }
 
     [Fact]
+    public async Task ASecondClick_WhoseSessionReadTheRunBeforeTheFirstPaidIt_IsRefusedWithoutAnError()
+    {
+        var context = new DisbursementsTestContext();
+        var origin = await context.Checks.BusinessAccountAsync();
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => PayRunProcessingTests.AddPayments(services, context, deposits: false, checks: true));
+        var setup = await PayRunTests.SetUpAsync(harness, employerSetup: employer => employer.FundingBankAccountId = origin.ItemId);
+        var clerk = CalendarTestHarness.User("clerk", PayrollPermissions.ProcessPayRuns.Name);
+
+        await PayRunProcessingTests.ApproveAsync(harness, setup);
+
+        // The second request's session loads the run (as the page and the controller do), then the first request pays it.
+        var second = await harness.RunAsync(async services =>
+        {
+            var run = await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId);
+
+            Assert.True((await harness.RunAsync(async other => await other.GetRequiredService<IPayRunService>().ProcessAsync(await other.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), clerk))).Succeeded);
+
+            return await services.GetRequiredService<IPayRunService>().ProcessAsync(run, clerk);
+        });
+
+        Assert.False(second.Succeeded);
+        Assert.Contains(second.Errors, error => error.Contains("processed already", StringComparison.Ordinal));
+        Assert.Single(context.Checks.Store.Entries);
+    }
+
+    [Fact]
     public async Task GarnishmentsDataSet_ShowsTheCaseOnlyToWhoManagesTheEmployersOrders()
     {
         await using var harness = await PayRunTests.CreateHarnessAsync(services => services.AddGarnishmentsCore());

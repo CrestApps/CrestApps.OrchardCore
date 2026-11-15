@@ -27,15 +27,18 @@ internal sealed class PayProfilesRecipeStep : NamedRecipeStepHandler
     private readonly IPayScheduleManager _schedules;
     private readonly IStaffMemberManager _staff;
 
-    public PayProfilesRecipeStep(IPayProfileManager manager, IPayProfileService service, EmployerStore employers, IPayScheduleManager schedules, IStaffMemberManager staff)
+    public PayProfilesRecipeStep(IPayProfileManager manager, IPayProfileService service, EmployerStore employers, IPayScheduleManager schedules, IStaffMemberManager staff, global::OrchardCore.Modules.IClock clock)
         : base(PayrollConstants.PayProfilesRecipeStepName)
     {
+        _clock = clock;
         _manager = manager;
         _service = service;
         _employers = employers;
         _schedules = schedules;
         _staff = staff;
     }
+
+    private readonly global::OrchardCore.Modules.IClock _clock;
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
@@ -92,6 +95,13 @@ internal sealed class PayProfilesRecipeStep : NamedRecipeStepHandler
             profile.HomeAddress = incoming.HomeAddress;
             profile.WorkSiteTeamId = incoming.WorkSiteTeamId;
             profile.Elections = incoming.Elections ?? [];
+
+            // An election written by hand in a recipe has no entry time: it was entered by the import, now.
+            foreach (var election in profile.Elections.Where(election => election.EnteredUtc == default))
+            {
+                election.EnteredUtc = _clock.UtcNow;
+                election.EnteredBy ??= "Recipe";
+            }
             profile.Distribution = incoming.Distribution ?? [];
             profile.DefaultAllocation = incoming.DefaultAllocation ?? new PayInputAllocation();
             profile.RetroPayFrom = incoming.RetroPayFrom;

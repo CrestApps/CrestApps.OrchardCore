@@ -31,7 +31,10 @@
                                 <td>@election.Jurisdiction</td>
                                 <td>@election.EffectiveFrom.ToString("d", CultureInfo.CurrentCulture)</td>
                                 <td>@string.Join(" · ", election.Values.Select(value => $"{(Model.FieldLabels.TryGetValue(value.Key, out var fieldLabel) ? fieldLabel : value.Key)}: {(value.Value switch { "true" => T["Yes"].Value, "false" => T["No"].Value, _ => value.Value })}"))</td>
-                                <td class="small text-muted">@((await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(election.EnteredUtc, DateTimeKind.Utc))).DateTime.ToString("g", CultureInfo.CurrentCulture)) @election.EnteredBy</td>
+                                <td class="small text-muted">@if (election.EnteredUtc != default)
+                                {
+                                    @((await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(election.EnteredUtc, DateTimeKind.Utc))).DateTime.ToString("g", CultureInfo.CurrentCulture))
+                                } @election.EnteredBy</td>
                             </tr>
                         }
                     </tbody>
