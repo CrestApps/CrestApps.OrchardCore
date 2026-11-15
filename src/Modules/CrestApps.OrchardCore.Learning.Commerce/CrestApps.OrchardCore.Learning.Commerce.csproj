@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Commerce Module</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Sells courses and learning paths as products: a paid order enrolls the buyer, an account buys seats its admins
+      give to members or invite people to, and a refund or a cancellation takes it all back.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Commerce Seats</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentManagement.Display" />
+    <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.DataSources.Core" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.Notifications.Abstractions" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Users.Core" />
+    <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Programs.Abstractions\CrestApps.OrchardCore.Learning.Programs.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Accounts.Core\CrestApps.OrchardCore.Accounts.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Carts.Core\CrestApps.OrchardCore.Carts.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Commerce.Core\CrestApps.OrchardCore.Learning.Commerce.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Orders.Core\CrestApps.OrchardCore.Orders.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Accounts\CrestApps.OrchardCore.Accounts.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Orders\CrestApps.OrchardCore.Orders.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Products\CrestApps.OrchardCore.Products.csproj" />
+  </ItemGroup>
+
+</Project>

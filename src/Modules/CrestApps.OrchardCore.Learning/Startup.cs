@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Learning.StructuredData;
+using CrestApps.OrchardCore.Seo;
 using CrestApps.OrchardCore.Learning.AuditTrail;
 using CrestApps.OrchardCore.Learning.Controllers;
 using CrestApps.OrchardCore.Learning.Core;
@@ -349,5 +351,19 @@ public sealed class StaffLearnerPagesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddStaffHomeLinkProvider<LearningStaffHomeLinks>();
+    }
+}
+
+/// <summary>
+/// Describes courses with schema.org when Advanced SEO is on.
+/// </summary>
+[RequireFeatures(StructuredDataConstants.Feature.Area)]
+public sealed class StructuredDataStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IStructuredDataProvider, CourseStructuredDataProvider>();
+        services.Configure<StructuredDataOptions>(options => options.SelfDescribingParts.Add(nameof(CoursePart)));
     }
 }

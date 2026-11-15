@@ -1,0 +1,84 @@
+---
+sidebar_label: Learning Commerce
+title: Learning Commerce
+description: "Sell courses and learning paths as products: a paid order enrolls the buyer, an account buys seats its admins give to members or invite people to, and a refund takes it all back."
+user_manual:
+  - user-manual/learning/selling-courses
+---
+
+**Learning Commerce** (`CrestApps.OrchardCore.Learning.Commerce`, with `Learning.Commerce.Abstractions` and `Learning.Commerce.Core`) sells [Learning](./learning) through the commerce suite. It builds on [Products](./products), [Orders](./orders), [Carts](./carts) and [Accounts](./accounts) and adds no store of its own: a course is a product, a purchase is an order line, and a business buyer is an account.
+
+| Feature | Id | Depends on |
+| --- | --- | --- |
+| Learning Commerce | `CrestApps.OrchardCore.Learning.Commerce` | Learning, Product Listing, Orders, Account Members |
+
+## Courses as products
+
+The feature's migration attaches `ProductPart` and `LearningProductPart` to the **Course** type and, when Learning Programs is on, to the **Learning Path** type, with the product page details turned on (`ProductPageSettings.ShowDetails`), so a course page shows its price and an **Add to cart** button and courses appear in the Products listing. `LearningProductPart` can also be attached to any other product type, for a bundle of courses or a pack of seats.
+
+`LearningProductPart.Grants` says what buying one unit grants:
+
+| Grant property | Meaning |
+| --- | --- |
+| `Kind` | `Course` enrolls the buyer, `LearningPath` starts the buyer on a path (needs Learning Paths), and `Seats` gives the buyer's account a licence pool. |
+| `TargetId` | The course or path. Empty means the item itself. |
+| `AccessDays` | How long the access lasts from the purchase; empty for no end. On seats, how long each seat's enrollment lasts. |
+| `Seats` | The seats per unit. A line of quantity 3 for a product with 10 seats per unit gives 30 seats. |
+
+With no grant, buying a course enrolls the buyer in it and buying a learning path starts the buyer on it.
+
+## Cart rules
+
+`LearningCartLineHandler` (an `ICartLineHandler`) refuses a learning product to a guest, because learning is for a signed-in person, and refuses a product with a seat grant to anyone who is not an admin of a business account (`AccountMemberRole.Admin` on the account's `AccountMembersPart`). The cart shows the reason on the line, and checkout stops until the line is removed.
+
+## Grants and refunds
+
+`LearningOrderEventHandler` derives from `OrderLineGrantHandlerBase<LearningProductPart>`, so it reads the product version that was bought, grants each line once however many times the order is paid, and takes back each line when the order is canceled or refunded in full. A partial refund keeps everything.
+
+| Grant | On payment | On a full refund or a cancellation |
+| --- | --- | --- |
+| Course | `IEnrollmentService.EnrollAsync` with source `Learning.Commerce` and source id `{orderId}:{lineId}`, and `AccessEndsUtc` when the grant has access days. | `RevokeGrantAsync("Learning.Commerce", "{orderId}:{lineId}")` ends the enrollment with the reason. |
+| Learning path | `ILearningPathService.StartAsync` with the same source. | Not taken back yet: the path progress stays, and its course enrollments stay with it. |
+| Seats | `ILicensePoolService.CreateAsync` for the order's account or, without one, the buyer's account. Creating a pool is idempotent per order line. | `ILicensePoolService.RevokeAsync` takes every seat back and ends every enrollment made from the pool. |
+
+Each line's grants are kept in a `LearningPurchase` record (collection `LearningCommerce`) with the enrollments, path progress and pools it made, and its `RevokedUtc` once it was taken back.
+
+## Licence pools and seats
+
+A `LicensePool` holds the seats an account bought for one course, under the course's title. Its free seats are a quantity ledger (`IQuantityLedger`, collection `LearningSeatLedger`): the purchase posts the seats, each seat given or held posts minus one, and each seat taken back posts plus one, every entry under its own key so a retry never counts twice.
+
+`ILicensePoolService`:
+
+| Method | What it does |
+| --- | --- |
+| `GiveAsync(poolId, userId, actor)` | Gives a seat to a member of the account and enrolls them with source `Learning.LicenseSeat` and the seat id. A person gets one seat per pool; someone who is not a member is refused. |
+| `InviteAsync(poolId, email, actor)` | A member with that e-mail gets the seat at once. Anyone else gets an [account invitation](./accounts#invitations) with source `Learning.LicenseSeat`, and the seat is held for them. When they accept, `LicenseSeatInvitationObserver` assigns the seat and enrolls them. |
+| `RemoveAsync(seatId, actor)` | Takes a seat back, ends its enrollment and frees the seat. |
+| `RevokeAsync(poolId, reason)` | Marks the pool revoked, takes every seat back and ends every enrollment from it. |
+| `GetRemainingAsync(pool)` | The free seats. |
+
+`ILicensePoolObserver` hears `SeatsPurchasedAsync`, `SeatGivenAsync` and `RunningLowAsync` (a tenth of the seats or fewer left); register one with `services.AddLicensePoolObserver<T>()`.
+
+## Course seats page
+
+`/account/learning-seats`, linked as **Course seats** in the storefront account menu, shows an account admin each pool with its free seats, the people holding a seat with their progress, and the invited people. The admin gives a seat to a member, invites someone by e-mail and takes a seat back. Anyone who is not an admin of the account is refused, and a pool of another account is refused.
+
+## Schema.org
+
+With [Advanced SEO](./advanced-seo) on, the Learning module describes a course as a schema.org `Course` with its summary, `courseCode`, `educationalLevel`, `timeRequired` and the site's publisher as `provider`. It runs after the product provider, so a course sold in the store keeps its `offers`.
+
+## Notifications, workflows and data
+
+| Area | What it adds |
+| --- | --- |
+| Notifications | **Course seat given** tells a person their account gave them a seat. |
+| Workflows | Events **Course Seats Purchased**, **Course Seat Given** and **Licence Pool Running Low**, and the **Give Course Seat** task. |
+| Data | The **Learning commerce** data source with the **Licence pools** and **Seat holders** data sets, behind **View learning reports**. |
+| Personal data | Exports a person's seats and deletes them when the person is erased; the account keeps its pools. |
+
+## Not in this version
+
+- A subscription that grants learning: Subscriptions has no extension point for a custom entitlement yet.
+- Taking back a purchased learning path on a refund.
+- Selling certification paths and extra quiz attempts.
+- A recipe step for licence pools: they are learner records made by orders.

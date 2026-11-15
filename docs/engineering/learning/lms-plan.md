@@ -966,3 +966,33 @@ The ten new workflow activities are listed in the workflow designer's activity l
 | --- | --- | --- |
 | Workflow hints show `{ x }` instead of `{{ x }}` (Award Education Credits, Grant Required Learning Exemption, Require Learning) | The Liquid example is an argument of the localized hint. | `c5b40693e` |
 | GET/POST route guard | The credit type, external learning, My education credits, learning path people, required learning, My required learning and Team learning pages say `HttpGet`. | `0b81e9d51` |
+
+| Workflow hints show `{ x }` instead of `{{ x }}` (Award Education Credits, Grant Required Learning Exemption, Require Learning) | The Liquid example is an argument of the localized hint. | `6c6eb87a5` |
+| GET/POST route guard | The credit type, external learning, My education credits, learning path people, required learning, My required learning and Team learning pages say `HttpGet`. | `c17b16ff0` |
+
+### Phase 5: Commerce and organizations (branch `ma/learning-phase-5`, stacked on `ma/learning-phase-4`)
+
+**Built.**
+
+- **Account invitations** (5.4) in Accounts, feature Account Members: `IAccountInvitationService` (invite, find by link token, accept, take back), invitations kept with the SHA-256 hash of the token only, accepting refused for another e-mail address, an expired or used invitation, or a person already in another account. The storefront **Members** page lets an account admin invite with a role and take an invitation back; the invitation page signs the person in and accepts. An e-mail with an absolute link and the expiry in the site's time zone, workflow events (sent, accepted) and the Invite to Account task, personal data. `Source` and `SourceId` say what an invitation is for; Learning's seats use them.
+- **Learning Commerce** module (`Learning.Commerce`, with `.Abstractions` and `.Core`): the migration makes Course and Learning Path products (`ProductPart` with the product page details on, and `LearningProductPart`); `LearningProductPart` grants an enrollment, a learning path or seats for an account, with an access length; the cart refuses learning to guests and seats to anyone but an account admin; `LearningOrderEventHandler` on `OrderLineGrantHandlerBase<LearningProductPart>` grants each line once and takes it back on a full refund or a cancellation, with a `LearningPurchase` record per line.
+- **Licence pools**: a pool per order line for an account, free seats on the quantity ledger (5.7) with one keyed entry per change, seats given to members, held for invited people and assigned when they accept, taken back, and all revoked with their enrollments and pending invitations on a refund. The storefront **Course seats** page (`/account/learning-seats`) shows an account admin the account's pools, free seats, holders with their progress and invited people. Course seat given notification, three workflow events and the Give Course Seat task, the Learning commerce data source (Licence pools, Seat holders), personal data.
+- **Schema.org `Course`** in the Learning module with Advanced SEO on, after the product provider so a sold course keeps its offer.
+
+**Differences from the plan, and why.**
+
+- Seats go to the buyer's account (the order's account, or the account the buyer signs in for); the cart does not ask who the seats are for. A person belongs to one account, so there is nothing to choose.
+- The seats page is `account/learning-seats` in the storefront account menu, not under `account/business`: the account menu is where Accounts B2B and Members put their pages.
+- The catalog is the Products listing because Learning Commerce depends on Product Listing; no `IProductSearchDocumentContributor` adds course fields to the index yet.
+- Not built in this phase: the subscription entitlement (Subscriptions has no extension point for a custom entitlement kind), selling certification paths and extra assessment attempts, taking back a purchased learning path (no revoke on path progress), free courses as `ListingOnly` products (a free course keeps self-enrollment), an account-membership audience rule, and a recipe step for licence pools (they are learner records made by orders).
+
+**Checked in the browser.** Learning Commerce enabled with Checkout and Test payments: the course editor's Product and Learning product sections, the course page with its price and Add to cart; a guest refused ("Sign in to buy"); a new user bought the course with the test provider and found it in My learning; a seats product of 50 seats per unit refused to a plain member of an account and bought by its admin; the Course seats page with 50 of 50 seats left; a seat given to a member (49 left, 0% done); two people invited (the seat held, 47 left); the invitation e-mail (SMTP pickup folder) opened, the invited person signed in, accepted, joined the account and found the course in My learning; a partial refund of the seats order kept every seat; the full refund showed the pool as Refunded and took the course from the member and the invited person; a full refund of the personal order took the course from the buyer. A member was refused the seats page.
+
+**Not checked in the browser.** Cancellation (same path as a refund in `OrderLineGrantHandlerBase`, unit-tested in Orders), the Give Course Seat task and the seat workflow events on a live workflow, the seat notification in the notification center, the data sets in a report, a learning path sold as a product, and the schema.org output on a live page (unit-tested).
+
+**Fixed while verifying.**
+
+- Course pages showed no price or Add to cart: the product page details are a type-part setting (`ProductPageSettings.ShowDetails`) of the Product Listing feature. The migration turns it on for courses and paths, and Learning Commerce depends on Product Listing.
+- The invitation e-mail carried a relative link when the site has no base URL: it now falls back to the address of the request that sent it.
+- A pool was named after the product sold (such as a team pack) rather than the course; it now takes the course's title.
+- The seats page's member picker shrank to one letter in a narrow front-end theme: the forms are stacked with labels. The storefront pages declare breadcrumbs, so their browser titles are set.

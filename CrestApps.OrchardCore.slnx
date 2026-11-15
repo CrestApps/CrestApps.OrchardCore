@@ -142,6 +142,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Assessments/CrestApps.OrchardCore.Learning.Assessments.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Certifications/CrestApps.OrchardCore.Learning.Certifications.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Programs/CrestApps.OrchardCore.Learning.Programs.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Commerce/CrestApps.OrchardCore.Learning.Commerce.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.OrTools/CrestApps.OrchardCore.OrTools.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Outreach/CrestApps.OrchardCore.Outreach.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.TimeTracker/CrestApps.OrchardCore.TimeTracker.csproj" />

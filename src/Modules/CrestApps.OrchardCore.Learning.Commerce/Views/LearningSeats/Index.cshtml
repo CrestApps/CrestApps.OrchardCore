@@ -1,0 +1,89 @@
+@model LearningSeatsViewModel
+
+<div class="container my-4">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningSeats" title="@T["Course seats"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+    <h1 class="h3 mb-1">@T["Course seats"]</h1>
+    <p class="text-muted">@Model.AccountName</p>
+
+    @if (Model.Pools.Count == 0)
+    {
+        <p class="text-muted">@T["Your account has not bought seats yet. Buy a course with seats to give them to your members."]</p>
+    }
+
+    @foreach (var pool in Model.Pools)
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between flex-wrap gap-2">
+                <span class="fw-semibold">@pool.Pool.Title</span>
+                @if (pool.Pool.State == LicensePoolState.Revoked)
+                {
+                    <span class="badge bg-secondary text-white">@T["Refunded"]</span>
+                }
+                else
+                {
+                    <span>@T["{0} of {1} seats left", pool.Remaining, pool.Pool.Seats]</span>
+                }
+            </div>
+            <div class="list-group list-group-flush">
+                @foreach (var row in pool.Seats)
+                {
+                    <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <span>
+                            @row.Name
+                            @if (row.Seat.State == LicenseSeatState.Invited)
+                            {
+                                <span class="badge bg-warning text-dark ms-1">@T["Invited"]</span>
+                            }
+                            else if (row.Enrollment is not null)
+                            {
+                                <span class="text-muted small ms-1">@T["{0}% done", row.Enrollment.ProgressPercent]</span>
+                            }
+                        </span>
+                        @if (pool.Pool.State == LicensePoolState.Active)
+                        {
+                            <form method="post" action="~/account/learning-seats/seats/@row.Seat.ItemId/remove">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="poolId" value="@pool.Pool.ItemId" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take back"]</button>
+                            </form>
+                        }
+                    </div>
+                }
+            </div>
+            @if (pool.Pool.State == LicensePoolState.Active && pool.Remaining > 0)
+            {
+                <div class="card-body">
+                    @if (pool.MembersWithoutSeat.Count > 0)
+                    {
+                        <form method="post" action="~/account/learning-seats/@pool.Pool.ItemId/give" class="mb-3">
+                            @Html.AntiForgeryToken()
+                            <label class="form-label" for="give-@pool.Pool.ItemId">@T["Give a seat to a member"]</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <select id="give-@pool.Pool.ItemId" name="userId" class="form-select w-auto flex-grow-1">
+                                    @foreach (var member in pool.MembersWithoutSeat)
+                                    {
+                                        <option value="@member.UserId">@member.UserName</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-primary text-nowrap">@T["Give a seat"]</button>
+                            </div>
+                        </form>
+                    }
+                    <form method="post" action="~/account/learning-seats/@pool.Pool.ItemId/invite">
+                        @Html.AntiForgeryToken()
+                        <label class="form-label" for="invite-@pool.Pool.ItemId">@T["Invite someone by e-mail"]</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input id="invite-@pool.Pool.ItemId" type="email" name="email" class="form-control w-auto flex-grow-1" placeholder="name@example.com" required />
+                            <button type="submit" class="btn btn-secondary text-nowrap">@T["Invite"]</button>
+                        </div>
+                        <span class="hint d-block mt-1">@T["They join your account when they accept, and the seat is held for them until then."]</span>
+                    </form>
+                </div>
+            }
+        </div>
+    }
+</div>

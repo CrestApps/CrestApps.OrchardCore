@@ -104,3 +104,9 @@ See `src/CrestApps.Docs/docs/modules/learning.md` for the full reference.
 - The `EducationCreditsPart` on a course or path lists what it awards; completed courses and paths award it through observers.
 - External learning evidence is a protected file (`IProtectedFileStore<ExternalLearningEvidence>`) opened only through its access policy.
 - A certification asks for credits with the `CreditsEarned` requirement: the target is the credit type and the minimum the number of credits in the cycle.
+
+## Commerce
+
+- Sell learning through Products, Orders and Carts: `LearningProductPart` says what a product grants, and `LearningOrderEventHandler` (an `OrderLineGrantHandlerBase<LearningProductPart>`) grants each line once and takes it back on a full refund or a cancellation. Never write a second order listener for learning.
+- Purchase enrollments use the source `Learning.Commerce` with the source id `{orderId}:{lineId}`; seat enrollments use `Learning.LicenseSeat` with the seat id. Revoke with `IEnrollmentService.RevokeGrantAsync(source, sourceId)`.
+- Seats belong to an account (`ILicensePoolService`); free seats are an `IQuantityLedger<SeatLedger>` with one keyed entry per change. Invite people through `IAccountInvitationService` (Accounts) with `Source = "Learning.LicenseSeat"`; never build a second invitation flow.

@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Commerce.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SeatsPurchasedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i> @T["Course Seats Purchased"]</h4>
+<p>@T["Starts when an account buys seats in a course. The input holds PoolId, AccountId, CourseId and Seats."]</p>
