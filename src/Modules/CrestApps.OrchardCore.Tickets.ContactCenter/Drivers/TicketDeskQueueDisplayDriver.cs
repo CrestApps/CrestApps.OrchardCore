@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Tickets.ContactCenter.Models;
 using CrestApps.OrchardCore.Tickets.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Tickets.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -17,12 +16,9 @@ internal sealed class TicketDeskQueueDisplayDriver : DisplayDriver<TicketDesk>
 {
     private readonly IActivityQueueManager _queues;
 
-    internal readonly IStringLocalizer S;
-
-    public TicketDeskQueueDisplayDriver(IActivityQueueManager queues, IStringLocalizer<TicketDeskQueueDisplayDriver> stringLocalizer)
+    public TicketDeskQueueDisplayDriver(IActivityQueueManager queues)
     {
         _queues = queues;
-        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(TicketDesk desk, BuildEditorContext context)
@@ -42,16 +38,9 @@ internal sealed class TicketDeskQueueDisplayDriver : DisplayDriver<TicketDesk>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var queueId = string.IsNullOrWhiteSpace(model.QueueId) ? null : model.QueueId;
-
-        if (queueId is not null && await _queues.FindByIdAsync(queueId) is null)
-        {
-            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.QueueId), S["Choose a queue that exists."]);
-        }
-        else
-        {
-            desk.Put(new TicketDeskQueueSettings { QueueId = queueId });
-        }
+        // A queue that is gone or turned off when a ticket comes in offers nothing (TicketQueueRouter logs it), whether
+        // it was deleted after the desk named it or a recipe named one this site doesn't have.
+        desk.Put(new TicketDeskQueueSettings { QueueId = string.IsNullOrWhiteSpace(model.QueueId) ? null : model.QueueId });
 
         return Edit(desk, context);
     }

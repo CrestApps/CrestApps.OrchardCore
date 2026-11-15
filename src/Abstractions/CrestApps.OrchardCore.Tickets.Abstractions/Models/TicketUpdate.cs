@@ -32,6 +32,13 @@ public sealed class TicketUpdate
     public string AssigneeId { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the update is refused when someone other than <see cref="AssigneeId"/> already has the
+    /// ticket, checked inside the ticket's lock: work accepted from a queue doesn't take a ticket from whoever took it
+    /// meanwhile.
+    /// </summary>
+    public bool OnlyIfUnassigned { get; set; }
+
+    /// <summary>
     /// Gets or sets the new subject.
     /// </summary>
     public string Subject { get; set; }

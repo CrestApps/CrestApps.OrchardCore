@@ -107,25 +107,73 @@ public sealed class TicketsContactCenterTests
     [InlineData(null, true)]
     [InlineData("u-agent", false)]
     [InlineData("ana", false)]
-    public async Task TheAgentWhoAcceptsTheOffer_GetsTheTicket_UnlessItIsAlreadySomeonesOrTheirs(string assignee, bool assigns)
+    public async Task TheAgentWhoAcceptsTheOffer_GetsTheTicket_OnlyIfNobodyHasIt_CheckedInTheLock(string assignee, bool assigns)
     {
         // Arrange
         var kit = new Kit();
         var ticket = Ticket();
         ticket.Alter<TicketPart>(part => part.AssigneeId = assignee);
         kit.Tickets.Setup(service => service.GetAsync("t1")).ReturnsAsync(ticket);
-        var handler = new TicketOfferAcceptedHandler(kit.Activities.Object, kit.Tickets.Object, NullLogger<TicketOfferAcceptedHandler>.Instance);
-        var accepted = new InteractionEvent { EventType = ContactCenterConstants.Events.QueueItemAssigned };
-        accepted.SetData(new OfferLifecycleEventData { ActivityItemId = "a1", UserId = "u-agent", QueueId = "q1" });
+        var handler = kit.OfferHandler();
         var other = new InteractionEvent { EventType = ContactCenterConstants.Events.QueueItemAdded };
 
         // Act
-        await handler.HandleAsync(accepted, TestContext.Current.CancellationToken);
+        await handler.HandleAsync(Accepted(), TestContext.Current.CancellationToken);
         await handler.HandleAsync(other, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEqual(ContactCenterHandlerReplaySafety.Unspecified, handler.ReplaySafety);
-        kit.Tickets.Verify(service => service.UpdateAsync("t1", It.Is<TicketUpdate>(update => update.AssigneeId == "u-agent"), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()), assigns ? Times.Once() : Times.Never());
+        kit.Tickets.Verify(service => service.UpdateAsync("t1", It.Is<TicketUpdate>(update => update.AssigneeId == "u-agent" && update.OnlyIfUnassigned), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()), assigns ? Times.Once() : Times.Never());
+    }
+
+    [Fact]
+    public async Task ATicketTakenBeforeTheOfferWasAccepted_StaysWithItsAgent_AndTheWorkIsWithdrawn()
+    {
+        // Arrange: Ana took the ticket from its page before the accept event was handled.
+        var kit = new Kit();
+        var ticket = Ticket();
+        ticket.Alter<TicketPart>(part => part.AssigneeId = "ana");
+        kit.Tickets.Setup(service => service.GetAsync("t1")).ReturnsAsync(ticket);
+
+        // Act
+        await kit.OfferHandler().HandleAsync(Accepted(), TestContext.Current.CancellationToken);
+
+        // Assert
+        kit.Tickets.Verify(service => service.UpdateAsync(It.IsAny<string>(), It.IsAny<TicketUpdate>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()), Times.Never);
+        kit.Withdrawal.Verify(service => service.WithdrawAsync("a1", It.IsAny<string>(), ContactCenterActor.System, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ATicketTakenBetweenTheReadAndTheAssignment_IsRefusedInTheLock_AndTheWorkIsWithdrawn()
+    {
+        // Arrange: the handler reads the ticket unassigned; by the time its update holds the lock, Ana has it (or the
+        // agent turns out not to be one who may work the desk), so the ticket service refuses the conditional update.
+        var kit = new Kit();
+        kit.Tickets.Setup(service => service.GetAsync("t1")).ReturnsAsync(Ticket());
+        kit.Tickets.Setup(service => service.UpdateAsync("t1", It.IsAny<TicketUpdate>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TicketResult { Errors = ["Someone else already has this ticket."] });
+
+        // Act
+        await kit.OfferHandler().HandleAsync(Accepted(), TestContext.Current.CancellationToken);
+
+        // Assert
+        kit.Withdrawal.Verify(service => service.WithdrawAsync("a1", It.Is<string>(reason => reason.Contains("Someone else already has this ticket.", StringComparison.Ordinal)), ContactCenterActor.System, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("gone")]
+    [InlineData("off")]
+    public async Task ADeskWhoseQueueIsGoneOrTurnedOff_OffersNothing(string queueId)
+    {
+        // Arrange: deleted or turned off after the desk named it, or named by a recipe from another site.
+        var kit = new Kit(queueId);
+
+        // Act
+        await kit.Router.CreatedAsync(Ticket(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(kit.Created);
+        kit.Queue.Verify(service => service.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -149,6 +197,14 @@ public sealed class TicketsContactCenterTests
     public void ATicketsPriority_IsTheQueuePriority(int rank, InteractionPriority priority)
         => Assert.Equal(priority, TicketQueueRouter.PriorityOf(rank));
 
+    private static InteractionEvent Accepted()
+    {
+        var accepted = new InteractionEvent { EventType = ContactCenterConstants.Events.QueueItemAssigned };
+        accepted.SetData(new OfferLifecycleEventData { ActivityItemId = "a1", UserId = "u-agent", QueueId = "q1" });
+
+        return accepted;
+    }
+
     private static ContentItem Ticket(string deskId = "support")
     {
         var ticket = new ContentItem { ContentItemId = "t1", ContentType = TicketsConstants.DefaultContentType, DisplayText = "Printer jams" };
@@ -159,10 +215,18 @@ public sealed class TicketsContactCenterTests
 
     private sealed class Kit
     {
-        public Kit()
+        public Kit(string queueId = "q1")
         {
             var support = new TicketDesk { ItemId = "support", Name = "Support" };
-            support.Put(new TicketDeskQueueSettings { QueueId = "q1" });
+            support.Put(new TicketDeskQueueSettings { QueueId = queueId });
+            var queues = new Mock<IActivityQueueManager>();
+            queues.Setup(value => value.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string id, CancellationToken _) => id switch
+                {
+                    "q1" => new ActivityQueue { ItemId = "q1", Name = "Help desk" },
+                    "off" => new ActivityQueue { ItemId = "off", Name = "Old", Enabled = false },
+                    _ => null,
+                });
             var desks = new Mock<ICatalog<TicketDesk>>();
             desks.Setup(value => value.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string id, CancellationToken _) => id == "support" ? support : new TicketDesk { ItemId = id, Name = id });
@@ -186,13 +250,14 @@ public sealed class TicketsContactCenterTests
 
             var clock = new Mock<IClock>();
             clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 11, 15, 12, 0, 0, DateTimeKind.Utc));
-            var services = new ServiceCollection()
+            Services = new ServiceCollection()
+                .AddSingleton(queues.Object)
                 .AddSingleton(Queue.Object)
                 .AddSingleton(Tickets.Object)
                 .AddSingleton(Withdrawal.Object)
                 .BuildServiceProvider();
 
-            Router = new TicketQueueRouter(services, Activities.Object, desks.Object, clock.Object, NullLogger<TicketQueueRouter>.Instance);
+            Router = new TicketQueueRouter(Services, Activities.Object, desks.Object, clock.Object, NullLogger<TicketQueueRouter>.Instance);
         }
 
         public Mock<IOmnichannelActivityManager> Activities { get; } = new();
@@ -206,5 +271,10 @@ public sealed class TicketsContactCenterTests
         public OmnichannelActivity Created { get; private set; }
 
         public TicketQueueRouter Router { get; }
+
+        public IServiceProvider Services { get; }
+
+        public TicketOfferAcceptedHandler OfferHandler()
+            => new(Activities.Object, Tickets.Object, Services, NullLogger<TicketOfferAcceptedHandler>.Instance);
     }
 }

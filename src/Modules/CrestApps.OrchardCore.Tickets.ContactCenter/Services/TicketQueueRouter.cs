@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.Services;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -119,12 +120,26 @@ public sealed class TicketQueueRouter : ITicketObserver
         };
 
     private async Task<string> QueueOfAsync(string deskId, CancellationToken cancellationToken)
-        => !string.IsNullOrEmpty(deskId)
-            && await _desks.FindByIdAsync(deskId, cancellationToken) is { } desk
-            && desk.TryGet<TicketDeskQueueSettings>(out var settings)
-            && !string.IsNullOrEmpty(settings.QueueId)
-                ? settings.QueueId
-                : null;
+    {
+        if (string.IsNullOrEmpty(deskId)
+            || await _desks.FindByIdAsync(deskId, cancellationToken) is not { } desk
+            || !desk.TryGet<TicketDeskQueueSettings>(out var settings)
+            || string.IsNullOrEmpty(settings.QueueId))
+        {
+            return null;
+        }
+
+        // A queue deleted or turned off after the desk named it, or one a recipe named that this site doesn't have, offers
+        // nothing: the ticket waits on its desk like any other.
+        if (await _services.GetRequiredService<IActivityQueueManager>().FindByIdAsync(settings.QueueId, cancellationToken) is not { Enabled: true })
+        {
+            _logger.LogWarning("The {Desk} desk names a Contact Center queue that doesn't exist or is turned off, so its new tickets aren't offered through it.", desk.Name.SanitizeLogValue());
+
+            return null;
+        }
+
+        return settings.QueueId;
+    }
 
     private async Task WithdrawAsync(ContentItem ticket, string reason, CancellationToken cancellationToken)
     {

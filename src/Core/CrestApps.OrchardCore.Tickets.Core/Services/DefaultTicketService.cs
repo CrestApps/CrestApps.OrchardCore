@@ -899,6 +899,14 @@ public sealed class DefaultTicketService : ITicketService
             return errors;
         }
 
+        // Read under the ticket's lock, so whoever took the ticket first keeps it.
+        if (update.OnlyIfUnassigned && !string.IsNullOrEmpty(part.AssigneeId) && part.AssigneeId != NullIfEmpty(update.AssigneeId))
+        {
+            errors.Add(S["Someone else already has this ticket."]);
+
+            return errors;
+        }
+
         // Every check comes before the first change: a refused update stages nothing (no retargeted timer, no moved
         // status) that the request's own commit could still save.
         errors.AddRange(await CheckAsync(ticket, part, update, cancellationToken));

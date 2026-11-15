@@ -7,26 +7,33 @@ using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Tickets.ContactCenter.Models;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tickets.ContactCenter.Services;
 
 /// <summary>
-/// Gives a ticket to the agent who accepted its offer from the queue. Assigning is a last-write projection keyed on the
-/// ticket and the agent, so a delivery received twice changes nothing the second time; a ticket someone else already
-/// has is left with them.
+/// Gives a ticket to the agent who accepted its offer from the queue. The assignment is conditional, checked inside the
+/// ticket's lock (<see cref="TicketUpdate.OnlyIfUnassigned"/>), so a ticket someone took meanwhile stays with them, and
+/// a delivery received twice changes nothing the second time. The ticket service checks that the agent may work the
+/// ticket's desk (a queue's members aren't necessarily the desk's people). When the agent doesn't get the ticket, its
+/// queued work is withdrawn; work the agent already took stays theirs to complete.
 /// </summary>
 public sealed class TicketOfferAcceptedHandler : IContactCenterEventHandler
 {
     private readonly IOmnichannelActivityManager _activities;
     private readonly ITicketService _tickets;
+    private readonly IServiceProvider _services;
     private readonly ILogger _logger;
 
-    public TicketOfferAcceptedHandler(IOmnichannelActivityManager activities, ITicketService tickets, ILogger<TicketOfferAcceptedHandler> logger)
+    // The withdrawal service is resolved when used: it publishes Contact Center events through the outbox, which
+    // constructs every event handler, this one among them.
+    public TicketOfferAcceptedHandler(IOmnichannelActivityManager activities, ITicketService tickets, IServiceProvider services, ILogger<TicketOfferAcceptedHandler> logger)
     {
         _activities = activities;
         _tickets = tickets;
+        _services = services;
         _logger = logger;
     }
 
@@ -66,19 +73,29 @@ public sealed class TicketOfferAcceptedHandler : IContactCenterEventHandler
 
         if (!string.IsNullOrEmpty(assignee))
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("Ticket {TicketId} was offered through Contact Center but someone already has it; it stays with them.", link.TicketId);
-            }
+            await WithdrawAsync(data.ActivityItemId, link.TicketId, "Someone else already has the ticket.", cancellationToken);
 
             return;
         }
 
-        var result = await _tickets.UpdateAsync(link.TicketId, new TicketUpdate { AssigneeId = userId, Reason = "Accepted from the Contact Center queue." }, new TicketActor { Party = new PartyRef(PartyKinds.User, userId), Name = TicketQueueRouter.OfferAcceptedActorName }, cancellationToken);
+        var result = await _tickets.UpdateAsync(link.TicketId, new TicketUpdate
+        {
+            AssigneeId = userId,
+            OnlyIfUnassigned = true,
+            Reason = "Accepted from the Contact Center queue.",
+        }, new TicketActor { Party = new PartyRef(PartyKinds.User, userId), Name = TicketQueueRouter.OfferAcceptedActorName }, cancellationToken);
 
         if (!result.Succeeded)
         {
-            _logger.LogWarning("Ticket {TicketId} couldn't be given to the agent who accepted it: {Errors}", link.TicketId, string.Join(" ", result.Errors));
+            // Taken meanwhile, or the agent can't work the ticket's desk.
+            await WithdrawAsync(data.ActivityItemId, link.TicketId, string.Join(" ", result.Errors), cancellationToken);
         }
+    }
+
+    private async Task WithdrawAsync(string activityItemId, string ticketId, string why, CancellationToken cancellationToken)
+    {
+        var outcome = await _services.GetRequiredService<IQueuedWorkWithdrawalService>().WithdrawAsync(activityItemId, "The agent who accepted it didn't get the ticket: " + why, ContactCenterActor.System, cancellationToken);
+
+        _logger.LogWarning("Ticket {TicketId} was accepted from the Contact Center queue but not given to the agent ({Why}); its queued work: {Outcome}.", ticketId, why, outcome);
     }
 }
