@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -308,13 +309,10 @@ public sealed class EnrollmentServiceTests
         var (harness, courses, _) = await LearningTestHarness.CreateAsync();
         await using var __ = harness;
         courses.AddCourse("open", part => part.EnrollmentMode = EnrollmentMode.Open);
-        courses.AddCourse("keyed", part =>
-        {
-            part.EnrollmentMode = EnrollmentMode.Key;
-            part.EnrollmentKeyHash = global::CrestApps.OrchardCore.Learning.Core.Services.EnrollmentKeys.Hash("K-123");
-        });
+        courses.AddCourse("keyed", part => part.EnrollmentMode = EnrollmentMode.Key);
         courses.AddCourse("approval", part => part.EnrollmentMode = EnrollmentMode.Approval);
         courses.AddCourse("closed", part => part.EnrollmentMode = EnrollmentMode.Closed);
+        await harness.RunAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().SetAsync("keyed", "K-123"));
 
         // Act
         Task<EnrollmentResult> Self(string course, string key = null)
@@ -333,6 +331,59 @@ public sealed class EnrollmentServiceTests
         Assert.Equal(LearningConstants.EnrollmentSources.Key, Assert.Single(rightKey.Enrollment.Grants).Source);
         Assert.Equal(EnrollmentStatus.Pending, approval.Enrollment.Status);
         Assert.Equal(EnrollmentErrors.Closed, closed.ErrorCode);
+    }
+
+    [Fact]
+    public async Task SelfEnrollment_LocksOutAfterFiveWrongKeys_ForFifteenMinutes()
+    {
+        // Arrange
+        var clock = new LearningTestClock();
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync(services =>
+        {
+            clock.Use(services);
+            services.AddDistributedMemoryCache();
+        });
+        await using var __ = harness;
+        courses.AddCourse("keyed", part => part.EnrollmentMode = EnrollmentMode.Key);
+        await harness.RunAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().SetAsync("keyed", "K-123456"));
+
+        Task<EnrollmentResult> Self(string key)
+            => harness.RunAsync(services => services.GetRequiredService<ISelfEnrollmentService>().EnrollAsync("guesser", "keyed", key));
+
+        // Act
+        var wrong = new List<string>();
+
+        for (var i = 0; i < 5; i++)
+        {
+            wrong.Add((await Self("guess-" + i)).ErrorCode);
+        }
+
+        var lockedOut = await Self("K-123456");
+        clock.UtcNow = LearningTestHarness.Now.AddMinutes(16);
+        var later = await Self("K-123456");
+
+        // Assert
+        Assert.All(wrong, code => Assert.Equal(EnrollmentErrors.InvalidKey, code));
+        Assert.Equal(EnrollmentErrors.TooManyAttempts, lockedOut.ErrorCode);
+        Assert.True(later.Succeeded, later.ErrorCode);
+    }
+
+    [Fact]
+    public async Task TheEnrollmentKey_IsKeptOutsideTheCourseContentItem()
+    {
+        // Arrange
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        var course = courses.AddCourse("keyed", part => part.EnrollmentMode = EnrollmentMode.Key);
+
+        // Act
+        await harness.RunAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().SetAsync("keyed", "K-123456"));
+        var hasKey = await harness.RunAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().HasKeyAsync("keyed"), commit: false);
+
+        // Assert
+        Assert.True(hasKey);
+        Assert.DoesNotContain("KeyHash", System.Text.Json.JsonSerializer.Serialize(course.Content), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("v1:", System.Text.Json.JsonSerializer.Serialize(course.Content), StringComparison.Ordinal);
     }
 
     [Fact]

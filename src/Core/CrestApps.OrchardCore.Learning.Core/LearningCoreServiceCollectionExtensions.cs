@@ -38,6 +38,8 @@ public static class LearningCoreServiceCollectionExtensions
         services.TryAddScoped<LearningUpkeep>();
         services.TryAddScoped<CourseSettingsPolicy>();
         services.TryAddScoped<EnrollmentWriteGate>();
+        services.TryAddScoped<CourseEnrollmentKeyStore>();
+        services.TryAddScoped<EnrollmentKeyAttempts>();
         services.AddEnrollmentObserver<LearningTelemetryObserver>();
         services.AddOptions<LearningUpkeepOptions>();
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));

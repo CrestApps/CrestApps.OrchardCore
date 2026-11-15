@@ -13,6 +13,8 @@ public sealed class DefaultSelfEnrollmentService : ISelfEnrollmentService
 {
     private readonly IEnrollmentService _enrollmentService;
     private readonly ICourseStructureService _courseStructure;
+    private readonly CourseEnrollmentKeyStore _keyStore;
+    private readonly EnrollmentKeyAttempts _attempts;
     private readonly IClock _clock;
 
     /// <summary>
@@ -20,14 +22,20 @@ public sealed class DefaultSelfEnrollmentService : ISelfEnrollmentService
     /// </summary>
     /// <param name="enrollmentService">The enrollment service.</param>
     /// <param name="courseStructure">The course structure reader.</param>
+    /// <param name="keyStore">The enrollment keys.</param>
+    /// <param name="attempts">The limit on wrong keys.</param>
     /// <param name="clock">The clock.</param>
     public DefaultSelfEnrollmentService(
         IEnrollmentService enrollmentService,
         ICourseStructureService courseStructure,
+        CourseEnrollmentKeyStore keyStore,
+        EnrollmentKeyAttempts attempts,
         IClock clock)
     {
         _enrollmentService = enrollmentService;
         _courseStructure = courseStructure;
+        _keyStore = keyStore;
+        _attempts = attempts;
         _clock = clock;
     }
 
@@ -56,10 +64,19 @@ public sealed class DefaultSelfEnrollmentService : ISelfEnrollmentService
                 break;
 
             case EnrollmentMode.Key:
-                if (!EnrollmentKeys.Verify(enrollmentKey, part.EnrollmentKeyHash))
+                if (await _attempts.IsLockedOutAsync(userId, courseId, cancellationToken))
                 {
+                    return EnrollmentResult.Fail(EnrollmentErrors.TooManyAttempts);
+                }
+
+                if (!await _keyStore.VerifyAsync(courseId, enrollmentKey, cancellationToken))
+                {
+                    await _attempts.RecordFailureAsync(userId, courseId, cancellationToken);
+
                     return EnrollmentResult.Fail(EnrollmentErrors.InvalidKey);
                 }
+
+                await _attempts.ResetAsync(userId, courseId, cancellationToken);
 
                 source = LearningConstants.EnrollmentSources.Key;
                 break;

@@ -18,7 +18,13 @@ internal sealed class LearningEnrollmentsRecipeStepSchema : IRecipeStep
             .Type(SchemaValueType.Object)
             .Properties(
                 ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(LearningConstants.EnrollmentsRecipeStep).Description("Recipe step discriminator. Must be 'LearningEnrollments'.")),
-                ("Enrollments", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(Enrollment()).Description("The enrollments to create, or update by id, with their progress.")))
+                ("Enrollments", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(Enrollment()).Description("The enrollments to create, or update by id, with their progress.")),
+                ("CourseKeys", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Object)
+                    .Properties(
+                        ("CourseId", Text("The content item id of the course.")),
+                        ("Hash", Text("The salted hash of the enrollment key, as exported. The key itself is never exported.")))
+                    .Required("CourseId", "Hash")).Description("The enrollment keys of courses, as hashes.")))
             .Required("name")
             .AdditionalProperties(true)
             .Build();

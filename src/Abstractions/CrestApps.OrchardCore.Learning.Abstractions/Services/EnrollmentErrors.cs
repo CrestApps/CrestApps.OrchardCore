@@ -54,4 +54,9 @@ public static class EnrollmentErrors
     /// Another request is changing the same enrollment; try again.
     /// </summary>
     public const string Busy = "Busy";
+
+    /// <summary>
+    /// Too many wrong enrollment keys were tried; the person waits before trying again.
+    /// </summary>
+    public const string TooManyAttempts = "TooManyAttempts";
 }

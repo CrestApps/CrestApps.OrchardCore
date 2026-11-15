@@ -12,5 +12,5 @@ public static class LearningIndexProviders
     /// </summary>
     /// <returns>The providers.</returns>
     public static IIndexProvider[] All()
-        => [new EnrollmentIndexProvider(), new EnrollmentProgressIndexProvider()];
+        => [new EnrollmentIndexProvider(), new EnrollmentProgressIndexProvider(), new CourseEnrollmentKeyIndexProvider()];
 }

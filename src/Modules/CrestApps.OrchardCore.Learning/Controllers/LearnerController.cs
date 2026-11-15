@@ -165,6 +165,7 @@ public sealed class LearnerController : Controller
             await _notifier.ErrorAsync(result.ErrorCode switch
             {
                 EnrollmentErrors.InvalidKey => H["The enrollment key is not right."],
+                EnrollmentErrors.TooManyAttempts => H["Too many wrong keys. Try again in 15 minutes."],
                 EnrollmentErrors.Closed => H["This course does not take enrollments on its page."],
                 EnrollmentErrors.PrerequisitesNotMet => H["Complete the prerequisite courses first."],
                 EnrollmentErrors.CourseNotFound => H["The course is not available."],

@@ -95,6 +95,24 @@ public static class LearningIndexSchema
     }
 
     /// <summary>
+    /// Creates the index table of enrollment keys.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateEnrollmentKeyIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<CourseEnrollmentKeyIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("CourseId", column => column.WithLength(26)),
+            collection: LearningConstants.CollectionName);
+
+        await schemaBuilder.AlterIndexTableAsync<CourseEnrollmentKeyIndex>(table =>
+            table.CreateIndex("IDX_Learning_CourseEnrollmentKeyIndex_Course", "CourseId"), collection: LearningConstants.CollectionName);
+    }
+
+    /// <summary>
     /// Creates the index table of course staff, in the default collection where content items are.
     /// </summary>
     /// <param name="schemaBuilder">The schema builder.</param>

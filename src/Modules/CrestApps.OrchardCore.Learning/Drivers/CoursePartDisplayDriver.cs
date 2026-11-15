@@ -22,6 +22,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
     private readonly CourseSettingsPolicy _settingsPolicy;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IUserSearchService _userSearchService;
+    private readonly CourseEnrollmentKeyStore _keyStore;
 
     internal readonly IStringLocalizer S;
 
@@ -30,12 +31,14 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         CourseSettingsPolicy settingsPolicy,
         IHttpContextAccessor httpContextAccessor,
         IUserSearchService userSearchService,
+        CourseEnrollmentKeyStore keyStore,
         IStringLocalizer<CoursePartDisplayDriver> stringLocalizer)
     {
         _editorOptions = editorOptions;
         _settingsPolicy = settingsPolicy;
         _httpContextAccessor = httpContextAccessor;
         _userSearchService = userSearchService;
+        _keyStore = keyStore;
         S = stringLocalizer;
     }
 
@@ -51,7 +54,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             model.Level = part.Level;
             model.EstimatedMinutes = part.EstimatedMinutes;
             model.EnrollmentMode = part.EnrollmentMode;
-            model.HasEnrollmentKey = !string.IsNullOrEmpty(part.EnrollmentKeyHash);
+            model.HasEnrollmentKey = await _keyStore.HasKeyAsync(courseId);
             model.AccessDays = part.AccessDays;
             model.PassMark = part.PassMark;
             model.MinimumGrade = ReadDecimal(part, LearningRuleNames.MinimumGrade, "Grade");
@@ -130,7 +133,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         }
 
         var keyNeeded = model.EnrollmentMode == EnrollmentMode.Key;
-        var hasKey = !string.IsNullOrEmpty(part.EnrollmentKeyHash) && !model.ClearEnrollmentKey;
+        var hasKey = await _keyStore.HasKeyAsync(part.ContentItem.ContentItemId) && !model.ClearEnrollmentKey;
 
         if (keyNeeded && !hasKey && string.IsNullOrWhiteSpace(model.NewEnrollmentKey))
         {
@@ -150,13 +153,17 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         part.AccessDays = model.AccessDays;
         part.PassMark = model.PassMark;
 
-        if (!string.IsNullOrWhiteSpace(model.NewEnrollmentKey))
+        // The key is kept in its own record, out of the content item; it changes only when the rest of the form is valid.
+        if (context.Updater.ModelState.IsValid)
         {
-            part.EnrollmentKeyHash = EnrollmentKeys.Hash(model.NewEnrollmentKey);
-        }
-        else if (model.ClearEnrollmentKey)
-        {
-            part.EnrollmentKeyHash = null;
+            if (!string.IsNullOrWhiteSpace(model.NewEnrollmentKey))
+            {
+                await _keyStore.SetAsync(part.ContentItem.ContentItemId, model.NewEnrollmentKey);
+            }
+            else if (model.ClearEnrollmentKey)
+            {
+                await _keyStore.SetHashAsync(part.ContentItem.ContentItemId, null);
+            }
         }
 
         var criteria = part.CompletionCriteria

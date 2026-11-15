@@ -31,6 +31,7 @@ public sealed class RecipeRoundTripTests
     {
         // Arrange
         var original = await _fixture.InTenantAsync(async services => await services.GetRequiredService<EnrollmentStore>().FindByIdAsync(_fixture.EnrollmentId));
+        await _fixture.InTenantAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().SetAsync(_fixture.CourseId, "ROUND-TRIP-KEY"));
         var recipe = await _fixture.InTenantAsync(async services =>
         {
             var plan = new DeploymentPlan
@@ -58,6 +59,13 @@ public sealed class RecipeRoundTripTests
         var content = recipe["steps"]!.AsArray().OfType<JsonObject>().Single(step => string.Equals(step["name"]?.GetValue<string>(), "content", StringComparison.OrdinalIgnoreCase));
         var exported = content["data"]!.AsArray().OfType<JsonObject>().ToArray();
         Assert.Contains(exported, item => item["ContentItemId"]?.GetValue<string>() == _fixture.CourseId);
+
+        // The enrollment key travels as a hash in the enrollments step, never in the course content and never in clear.
+        var exportedCourse = exported.Single(item => item["ContentItemId"]?.GetValue<string>() == _fixture.CourseId).ToJsonString();
+        Assert.DoesNotContain("KeyHash", exportedCourse, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ROUND-TRIP-KEY", recipe.ToJsonString(), StringComparison.Ordinal);
+        var exportedKey = Assert.Single(enrollments["CourseKeys"]!.AsArray().OfType<JsonObject>());
+        Assert.Equal(_fixture.CourseId, exportedKey["CourseId"]?.GetValue<string>());
         Assert.Contains(exported, item => item["ContentItemId"]?.GetValue<string>() == _fixture.PageLessonId
             && item["ContainedPart"]?["ListContentItemId"]?.GetValue<string>() == _fixture.CourseId);
 
@@ -66,6 +74,7 @@ public sealed class RecipeRoundTripTests
         {
             var store = services.GetRequiredService<EnrollmentStore>();
             await store.DeleteAsync(await store.FindByIdAsync(_fixture.EnrollmentId));
+            await services.GetRequiredService<CourseEnrollmentKeyStore>().SetHashAsync(_fixture.CourseId, null);
         });
 
         Assert.Null(await _fixture.InTenantAsync(async services => await services.GetRequiredService<EnrollmentStore>().FindByIdAsync(_fixture.EnrollmentId)));
@@ -79,6 +88,7 @@ public sealed class RecipeRoundTripTests
         Assert.Equal(original.UserId, restored.UserId);
         Assert.Equal(original.Status, restored.Status);
         Assert.Equal(EnrollmentStatus.Active, restored.Status);
+        Assert.True(await _fixture.InTenantAsync(services => services.GetRequiredService<CourseEnrollmentKeyStore>().VerifyAsync(_fixture.CourseId, "ROUND-TRIP-KEY")));
 
         var lesson = await _fixture.InTenantAsync(services => services.GetRequiredService<IContentManager>().GetAsync(_fixture.PageLessonId, VersionOptions.Published));
         Assert.NotNull(lesson);

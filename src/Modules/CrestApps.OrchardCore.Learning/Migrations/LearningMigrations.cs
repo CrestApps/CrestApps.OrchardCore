@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using OrchardCore.Autoroute.Models;
 using OrchardCore.ContentFields.Settings;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -10,6 +12,7 @@ using OrchardCore.Html.Models;
 using OrchardCore.Lists.Models;
 using OrchardCore.Media.Settings;
 using OrchardCore.Title.Models;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Learning.Migrations;
 
@@ -21,18 +24,26 @@ internal sealed class LearningMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseListSynchronizer _courseListSynchronizer;
+    private readonly global::YesSql.ISession _session;
+    private readonly CourseEnrollmentKeyStore _keyStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningMigrations"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="courseListSynchronizer">The synchronizer of course lists.</param>
+    /// <param name="session">The session.</param>
+    /// <param name="keyStore">The enrollment keys.</param>
     public LearningMigrations(
         IContentDefinitionManager contentDefinitionManager,
-        CourseListSynchronizer courseListSynchronizer)
+        CourseListSynchronizer courseListSynchronizer,
+        global::YesSql.ISession session,
+        CourseEnrollmentKeyStore keyStore)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _courseListSynchronizer = courseListSynchronizer;
+        _session = session;
+        _keyStore = keyStore;
     }
 
     /// <summary>
@@ -53,8 +64,9 @@ internal sealed class LearningMigrations : DataMigration
         await DefineCourseAsync();
         await DefineLessonsAsync();
         await _courseListSynchronizer.SynchronizeAsync();
+        await LearningIndexSchema.CreateEnrollmentKeyIndexAsync(SchemaBuilder);
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -67,6 +79,38 @@ internal sealed class LearningMigrations : DataMigration
             .WithPart(nameof(AutoroutePart), part => part.MergeSettings<AutoroutePartSettings>(settings => settings.Pattern = CoursePathPattern)));
 
         return 2;
+    }
+
+    /// <summary>
+    /// Moves the enrollment key hashes out of the course content items into their own records, so the content API and
+    /// content exports no longer carry them.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await LearningIndexSchema.CreateEnrollmentKeyIndexAsync(SchemaBuilder);
+
+        var courses = await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType == LearningConstants.ContentTypes.Course).ListAsync();
+
+        foreach (var course in courses)
+        {
+            if (course.Content[nameof(CoursePart)] is not System.Text.Json.Nodes.JsonObject part || !part.ContainsKey("EnrollmentKeyHash"))
+            {
+                continue;
+            }
+
+            var hash = part["EnrollmentKeyHash"]?.GetValue<string>();
+
+            if (!string.IsNullOrEmpty(hash) && course.Latest)
+            {
+                await _keyStore.SetHashAsync(course.ContentItemId, hash);
+            }
+
+            part.Remove("EnrollmentKeyHash");
+            await _session.SaveAsync(course);
+        }
+
+        return 3;
     }
 
     private async Task DefinePartsAsync()

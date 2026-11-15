@@ -24,20 +24,42 @@ internal sealed class LearningEnrollmentsRecipeStep : NamedRecipeStepHandler
     private readonly EnrollmentStore _enrollmentStore;
     private readonly EnrollmentProgressStore _progressStore;
     private readonly LearnerUserLookup _userLookup;
+    private readonly CourseEnrollmentKeyStore _keyStore;
 
     public LearningEnrollmentsRecipeStep(
         EnrollmentStore enrollmentStore,
         EnrollmentProgressStore progressStore,
-        LearnerUserLookup userLookup)
+        LearnerUserLookup userLookup,
+        CourseEnrollmentKeyStore keyStore)
         : base(LearningConstants.EnrollmentsRecipeStep)
     {
         _enrollmentStore = enrollmentStore;
         _progressStore = progressStore;
         _userLookup = userLookup;
+        _keyStore = keyStore;
     }
 
     protected override async Task HandleAsync(RecipeExecutionContext context)
     {
+        // The enrollment keys travel as hashes, never as the keys themselves; they are kept out of the course content.
+        if (context.Step["CourseKeys"] is JsonArray keys)
+        {
+            foreach (var key in keys.OfType<JsonObject>())
+            {
+                var courseId = key["CourseId"]?.GetValue<string>();
+                var hash = key["Hash"]?.GetValue<string>();
+
+                if (string.IsNullOrWhiteSpace(courseId) || string.IsNullOrWhiteSpace(hash))
+                {
+                    context.Errors.Add("An enrollment key has no course or no hash; it was skipped.");
+
+                    continue;
+                }
+
+                await _keyStore.SetHashAsync(courseId, hash);
+            }
+        }
+
         if (context.Step["Enrollments"] is not JsonArray rows)
         {
             return;

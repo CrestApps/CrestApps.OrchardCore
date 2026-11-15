@@ -35,12 +35,6 @@ public sealed class CoursePart : ContentPart
     public EnrollmentMode EnrollmentMode { get; set; }
 
     /// <summary>
-    /// Gets or sets the hash of the enrollment key, when <see cref="EnrollmentMode"/> is <see cref="EnrollmentMode.Key"/>.
-    /// The key itself is never stored.
-    /// </summary>
-    public string EnrollmentKeyHash { get; set; }
-
-    /// <summary>
     /// Gets or sets how many days a self enrollment gives access, or <see langword="null"/> for no end.
     /// </summary>
     public int? AccessDays { get; set; }

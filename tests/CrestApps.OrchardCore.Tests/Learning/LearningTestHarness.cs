@@ -32,6 +32,7 @@ internal static class LearningTestHarness
             services =>
             {
                 services.AddSingleton<INumberSequence, InMemoryNumberSequence>();
+                services.AddDistributedMemoryCache();
                 services.AddLearningCore();
                 services.RemoveAll<ICourseStructureService>();
                 services.AddSingleton<ICourseStructureService>(courses);
@@ -41,6 +42,7 @@ internal static class LearningTestHarness
             async schemaBuilder =>
             {
                 await LearningIndexSchema.CreateAsync(schemaBuilder);
+                await LearningIndexSchema.CreateEnrollmentKeyIndexAsync(schemaBuilder);
 
                 if (extraSchema is not null)
                 {
