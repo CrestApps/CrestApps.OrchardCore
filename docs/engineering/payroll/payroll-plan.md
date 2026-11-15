@@ -857,3 +857,60 @@ The planning session accepted F7 and F8 with three fixes. They came after the Di
 - Tests: `PayrollAIToolsTests` (2: the comparison; the tools as Lee, without the permission, not linked, as a viewer of the employer and of another employer, a first run with nothing to compare, and no run number; Lee's answer carries no tax id). Payroll 162 and the 319 architecture tests pass.
 - Browser (test site): Tools > Features lists **Payroll AI Tools**, off, depending on AI Services; turned on, a new AI profile's Capabilities tab lists **Explain my pay statement** and **What changed since the last pay run** under Payroll. A conversation was not run: the test site has no AI provider connection (owed to Mike with a provider key).
 
+### Final validation (D)
+
+Run on 2026-11-15 after C8, on the branch with every slice committed.
+
+- **Full test project.** First full run: 16,187 tests, 3 failed. All three were `ValidationOwnershipArchitectureTests`, in the `Validation` namespace, which the slices' `Architecture`-namespace runs had missed.
+  - The handlers of seven configuration entries (`ApprovalPolicy`, `CheckLayout`, `Employer`, `PaySchedule`, `GarnishmentOrder`, `TaxDeposit`, `PayrollTaxRule`) were registered in `.Core` extension methods rather than by the feature that carries their recipe step. The registrations now sit in each feature's startup next to its `Add*Core()` call, and the tests register them through a test-side `CatalogEntryHandlers` helper.
+  - Business rules lived in display drivers. Now in the handlers: a weekly kind of schedule's first day, a tax rule's first day, a garnishment's start date and a check payee's address, an employer registration rate's first day, the approval policy's due hours (already there), and the funding account. The funding account rule is the new `EmployerFundingHandler`, registered by the Payroll feature's Banking startup.
+  - What stays in the editor is only text parsing (numbers typed with a dot) and uploads (signature, MICR font). These are listed as justified editor-only inputs in the guard.
+  - `GarnishmentsController.Release` now validates through the handlers before saving.
+  - After the fixes: **16,188 tests, 0 failed, 1 skipped**. The skip is the Asterisk browser-audio end-to-end test, which needs real telephony infrastructure.
+- **Release build with `-warnaserror`.** `dotnet build CrestApps.OrchardCore.slnx -c Release -warnaserror`: 0 warnings, 0 errors. A first run after the fixes failed on two analyzer rules (CA1826, CA1829) in an updated test; that was fixed and the build rerun.
+- **Architecture guards.** 319 pass, and the `Validation` guards (122) pass.
+- **Vitest view lint, docs build, manuals check.**
+  - Vitest: 92 files and 1,483 tests pass. The root `node_modules` was missing `@telnyx/webrtc`, which is in the lockfile, so `npm ci` restored it. A new `tests/js/resources/list-management-ui.test.js` covers the bulk-action fix.
+  - ESLint and `tsc` are clean.
+  - `npm run check:manuals`: 169 User Manual and 191 Technical Manual pages pass.
+  - `docusaurus build` (with `SKIP_HTML_MINIFICATION`) succeeds. It first failed on a bare `{employer}` in `modules/payroll.md` from an earlier slice, which was reworded.
+- **Public API baselines.** None of this plan's assemblies (Payroll, Banking, Checks, Disbursements, Approvals, Pdf) is among the assemblies `PublicApiApprovalTests` governs. Its 69 tests pass, so no baseline needed updating.
+- **End to end on a fresh site** (`App_Data_PayrollE2E2`, https://localhost:5781, admin / Password1!, Blank recipe).
+  - Payroll, Tax Tables, United States, Direct Deposit, Paychecks, My Pay and Notifications were turned on, and the United States 2026 recipe was run.
+  - Set up: Contoso's funding account, the employers Contoso and Fabrikam, a two-week schedule (the editor refused an empty first day through the handler), and Lee Park as a staff member linked to user `lee`, 25.00 an hour. Lee's pay profile has a W-4 election, 500.00 by deposit to a verified account and the rest by check.
+  - The profile listed its blockers (no tax id, unverified account) until they were fixed. The tax id used was 123-45-6789, the fictitious value the unit tests use.
+  - Pay run 1 (11/8 to 11/21, paid 11/26) was created by admin with 80 REG hours. User `clerk` (role **Contoso payroll clerk**: Access admin panel plus Contoso's View/Prepare runs, View/Manage profiles and View reports) calculated it (gross 2,000.00, net 1,690.85) and submitted it.
+  - Admin approved through Approvals and processed it. The deposit first stopped with "Choose how the money is sent" because no ACH provider feature was on. After turning on **Disbursements - Bank File (ACH)**, **Pay what is left** paid the run.
+  - The deposit was batched as an ACH file for 11/26 and released once the funding account's Bank file (ACH) details were set; the release had named the missing details.
+  - The downloaded NACHA file is 94-character records blocked to 10: file header, a PPD PAYROLL batch effective 261126, one 622 credit of 500.00 to LEE PARK, and batch and file controls.
+  - Printed check (after adding a check layout): check 1001, 11/26/2026, Lee Park, **1,190.85, the amount in words, the payee's address, the memo, and two vouchers with the lines, year to date, deposit and check. There is no payer block or check line: the layout's payer name was empty, and the check line needs a MICR font.
+  - The statement page shows Paid, the deposit and check 1001, and the stub PDF.
+  - My Pay as `lee` shows the statement list with the notices "Pay statement ready" and "Where your pay goes was changed". The statement shows no account number or tax id; the stub downloads; the admin statement page and pay runs are refused (403).
+  - The clerk reaches only Contoso: the runs list and the create page offer Contoso alone. The clerk is refused on Process (403), users, features, employer setup, banking and My Pay.
+- **Bugs the fresh site found, fixed in the validation commit:**
+  - The Payroll feature now depends on Addresses: the employer editor's address service is registered only by Addresses, so the employers page failed on a site without it.
+  - Payroll reads teams only while the Teams feature is on, through `PayrollTeamsFeature`, which only the Teams-gated startup registers. Staff registers the team services regardless, and the pay profile editor failed with "no such table: Teams_Document".
+  - Root `SummaryAdmin` row views were added for `MyPayStatementRow`, `MyPayTaxFormViewModel`, `GarnishmentOrder`, `PayrollFiling`, `TaxDeposit` and `TaxLiabilityPeriod`: My Pay failed under TheAdmin once a statement existed.
+  - The shared list script ran a bulk action only for two or more checked rows even where `data-minimum-selection="1"` showed it for one, so batching a single deposit or printing a single check did nothing.
+  - Regression tests: the Payroll manifest depends on Addresses; the journal data set never touches teams without the marker.
+
+### For Mike
+
+What only you can settle before the first live pay:
+
+1. **MICR font**: upload a licensed TrueType MICR E-13B font on the check layout. Until then, checks print without the check line (blank stock needs it, pre-printed stock does not).
+2. **Tax engine vendor**: Payroll Tax Tables with the United States 2026 recipe covers the federal taxes. State and local taxes need either a vendor behind `IPayrollTaxProvider` or more recipes. Each new tax year needs a new dated recipe (Publication 15-T, the SSA wage base, the 1099-NEC threshold). Someone who runs payroll should check the 2026 numbers before the first live pay.
+3. **Stripe payout keys**: the Marketplace payouts on Disbursements (Stripe Connect) have only run against a fake provider. A Stripe test-mode payout and refusal need test keys.
+4. **SFTP server**: bank files, the payroll journal and the EFW2 file go out through Data Pipelines delivery steps. No SFTP server was available, so delivery is untested.
+5. **Bank acceptance**: the bank must accept a test NACHA file with its own immediate origin and destination and company id, and confirm prenotes or micro-deposit verification. Account verification was set by hand here.
+6. **Positive pay second run**: a second run of the positive pay pipeline against the bank, to confirm it sends only new checks.
+7. **Also owed**:
+   - an SSA AccuWage check of an EFW2 file;
+   - IRS e-filing (FIRE or IRIS) of Forms 1099-NEC is not built;
+   - a conversation with the Payroll AI Tools needs an AI provider connection;
+   - the Point of Sale shift **Tips** card and an order commission were checked only by unit tests, since Point of Sale is off on the test sites.
+8. **Follow-ups seen, not in this plan**:
+   - Disbursements says only "Choose how the money is sent" when a deposit is made with no ACH provider feature on; a clearer setup hint would help.
+   - The Staff module's pages also call the team manager without checking that Teams is on; worth the same guard.
+   - A batch's arrival date comes from the Disbursements toolbar's **Arrives** field, which defaults to today; the pay date may be the better default for payroll deposits.
+

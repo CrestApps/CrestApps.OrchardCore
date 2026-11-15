@@ -14,7 +14,7 @@ The **Payroll** module (`CrestApps.OrchardCore.Payroll`) runs payroll. Its first
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Payroll.PaySetup` | Pay Setup | none (turned on by Workforce Time Clock or Payroll) |
-| `CrestApps.OrchardCore.Payroll` | Payroll | Pay Setup, Staff, Staff Compensation, Approvals (uses Teams, Banking, Recipes, Deployment and CrestApps Recipes when they are on) |
+| `CrestApps.OrchardCore.Payroll` | Payroll | Pay Setup, Staff, Staff Compensation, Approvals, Addresses (uses Teams, Banking, Recipes, Deployment and CrestApps Recipes when they are on; reads teams only while the Teams feature is on) |
 
 Projects: `CrestApps.OrchardCore.Payroll.Abstractions` (models, managers, `IPaySetupUsage`, `AddPayCodeKind`), `CrestApps.OrchardCore.Payroll.Core` (stores, managers, handlers, index providers and schema, the pay code seeder), `CrestApps.OrchardCore.Payroll` (the module).
 
