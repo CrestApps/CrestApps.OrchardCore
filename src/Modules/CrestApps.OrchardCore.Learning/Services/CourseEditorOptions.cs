@@ -1,8 +1,7 @@
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Records;
 using OrchardCore.Lists.Indexes;
 using YesSql;
 using YesSql.Services;
@@ -18,22 +17,22 @@ public sealed class CourseEditorOptions
 
     private readonly ISession _session;
     private readonly IContentManager _contentManager;
-    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly CourseLookup _courseLookup;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CourseEditorOptions"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
     /// <param name="contentManager">The content manager.</param>
-    /// <param name="contentDefinitionManager">The content definition manager.</param>
+    /// <param name="courseLookup">The course lookup.</param>
     public CourseEditorOptions(
         ISession session,
         IContentManager contentManager,
-        IContentDefinitionManager contentDefinitionManager)
+        CourseLookup courseLookup)
     {
         _session = session;
         _contentManager = contentManager;
-        _contentDefinitionManager = contentDefinitionManager;
+        _courseLookup = courseLookup;
     }
 
     /// <summary>
@@ -100,21 +99,8 @@ public sealed class CourseEditorOptions
             return [];
         }
 
-        var courseTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            .Where(type => type.Parts.Any(part => part.PartDefinition?.Name == nameof(CoursePart)))
-            .Select(type => type.Name)
-            .ToArray();
-
-        if (courseTypes.Length == 0)
-        {
-            return [];
-        }
-
         var selected = new HashSet<string>(selectedIds ?? [], StringComparer.Ordinal);
-        var courses = await _session.Query<ContentItem, ContentItemIndex>(index => index.ContentType.IsIn(courseTypes) && index.Latest)
-            .OrderBy(index => index.DisplayText)
-            .Take(MaxCourses)
-            .ListAsync();
+        var courses = await _courseLookup.ListCoursesAsync(MaxCourses);
 
         return courses
             .Where(course => course.ContentItemId != exceptId && (onlyIds is null || onlyIds.Contains(course.ContentItemId)))
