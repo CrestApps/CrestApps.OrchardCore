@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Workforce;
 using CrestApps.OrchardCore.Workforce.Core.Services;
-using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.Extensions.DependencyInjection;
 using YesSql;
@@ -8,13 +7,14 @@ using YesSql;
 namespace CrestApps.OrchardCore.Tests.Workforce;
 
 /// <summary>
-/// The upgrade that moves time-off entries from the Workforce collection to the time-off quantity ledger: every entry
-/// keeps its id, worker, policy, kind, amount, dates and key, and balances read the same afterwards.
+/// The upgrade that copies time-off entries from the Workforce collection to the time-off quantity ledger: every entry
+/// keeps its id, worker, policy, kind, amount, dates and key, balances read the same afterwards, the originals stay for
+/// nodes of the earlier release, and copying again adds nothing twice.
 /// </summary>
 public sealed class TimeOffLedgerMoveTests
 {
     [Fact]
-    public async Task MoveLedgerEntriesAsync_MovesEveryEntryWithItsIdAndFields_AndBalancesReadThem()
+    public async Task CopyAsync_CopiesEveryEntryWithItsIdAndFields_KeepsTheOriginals_AndCopiesOnce()
     {
         // Arrange
         await using var harness = await TimeOffKit.CreateAsync();
@@ -53,7 +53,8 @@ public sealed class TimeOffLedgerMoveTests
         });
 
         // Act
-        var moved = await harness.RunAsync(services => TimeOffMigrations.MoveLedgerEntriesAsync(services.GetRequiredService<ISession>()));
+        var copied = await harness.RunAsync(services => TimeOffLedgerCopy.CopyAsync(services.GetRequiredService<ISession>()));
+        var copiedAgain = await harness.RunAsync(services => TimeOffLedgerCopy.CopyAsync(services.GetRequiredService<ISession>()));
         var (entries, grants, byKey, left) = await harness.RunAsync(async services =>
         {
             var store = services.GetRequiredService<TimeOffLedgerStore>();
@@ -67,8 +68,9 @@ public sealed class TimeOffLedgerMoveTests
         }, commit: false);
 
         // Assert
-        Assert.Equal(2, moved);
-        Assert.Empty(left);
+        Assert.Equal(2, copied);
+        Assert.Equal(0, copiedAgain);
+        Assert.Equal(2, left.Count);
         Assert.Equal(["entry-opening", "entry-grant"], entries.Select(entry => entry.ItemId));
         Assert.Equal(TimeOffLedgerKind.Opening, entries[0].Kind);
         Assert.Equal(40, entries[0].Amount);
