@@ -50,6 +50,7 @@ public sealed class KnowledgeBaseTests
                 Staff = (await search.FindAsync(CalendarTestHarness.User("staff"), "password", null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
                 Words = (await search.FindAsync(CalendarTestHarness.User("staff"), "refund password", null, 10, ct)).Select(a => a.ContentItemId).Order().ToList(),
                 Categories = await search.CategoriesAsync(CalendarTestHarness.User("dana"), ct),
+                Suggested = (await search.SuggestAsync(CalendarTestHarness.User("dana"), "Have you tried to reset your password?", 5, ct)).Select(a => a.ContentItemId).ToList(),
             };
         }, commit: false);
 
@@ -59,6 +60,7 @@ public sealed class KnowledgeBaseTests
         Assert.Equal(["a1", "a3"], found.Staff);
         Assert.Equal(["a3"], found.Words);
         Assert.Equal([("Accounts", 1), ("Billing", 1)], found.Categories);
+        Assert.Equal(["a1"], found.Suggested);
     }
 
     [Fact]

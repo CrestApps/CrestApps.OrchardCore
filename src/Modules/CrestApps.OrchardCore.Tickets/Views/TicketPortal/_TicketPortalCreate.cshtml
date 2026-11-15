@@ -56,6 +56,9 @@ else
             <span asp-validation-for="Body" class="text-danger"></span>
         </div>
 
+        @* What they write may already be answered in the help center. *@
+        <partial name="_TicketArticleSuggestions" model="(Html.IdFor(m => m.Body).ToString(), string.Empty, false)" />
+
         @if (Model.CanAttach)
         {
             <div class="mb-3">

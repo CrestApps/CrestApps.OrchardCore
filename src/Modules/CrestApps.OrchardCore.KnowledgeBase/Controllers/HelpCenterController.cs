@@ -53,12 +53,12 @@ public sealed class HelpCenterController : Controller
     [HttpGet("help/api/suggest", Name = KnowledgeBaseConstants.SuggestRouteName)]
     public async Task<IActionResult> Suggest(string q)
     {
-        if (KnowledgeArticleSearch.Words(q).FirstOrDefault() is null)
+        var found = await _search.SuggestAsync(User, q, 5, HttpContext.RequestAborted);
+
+        if (found.Count == 0)
         {
             return Json(Array.Empty<object>());
         }
-
-        var found = await _search.FindAsync(User, q, null, 5, HttpContext.RequestAborted);
         var items = await _contentManager.GetAsync(found.Select(article => article.ContentItemId), VersionOptions.Published);
         var paths = items.ToDictionary(item => item.ContentItemId, item => item.TryGet<AutoroutePart>(out var route) ? route.Path : null, StringComparer.Ordinal);
 

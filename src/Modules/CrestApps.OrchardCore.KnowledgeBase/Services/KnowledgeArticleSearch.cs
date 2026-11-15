@@ -11,6 +11,14 @@ namespace CrestApps.OrchardCore.KnowledgeBase.Services;
 /// </summary>
 public sealed class KnowledgeArticleSearch
 {
+    // Words too common to tell articles apart, left out of suggestions.
+    private static readonly HashSet<string> _commonWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "about", "also", "been", "could", "does", "from", "have", "hello", "help", "here", "into", "just", "like",
+        "more", "need", "please", "some", "than", "thank", "thanks", "that", "their", "them", "then", "there",
+        "they", "this", "tried", "want", "were", "what", "when", "where", "which", "will", "with", "would", "your",
+    };
+
     private readonly ISession _session;
     private readonly KnowledgeArticleAccess _access;
 
@@ -48,6 +56,49 @@ public sealed class KnowledgeArticleSearch
 
         return [.. await query.OrderByDescending(index => index.HelpfulCount).ThenByDescending(index => index.PublishedUtc).Take(Math.Clamp(take, 1, 100)).ListAsync(cancellationToken)];
     }
+
+    /// <summary>
+    /// Suggests articles for something being written: those with any of its longer words (four letters or more, the
+    /// last eight) in the title or the summary, the ones matching the most words first, then the most helpful.
+    /// </summary>
+    /// <param name="user">The reader.</param>
+    /// <param name="text">What is being written.</param>
+    /// <param name="take">How many to return.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The articles.</returns>
+    public async Task<IReadOnlyList<KnowledgeArticleIndex>> SuggestAsync(ClaimsPrincipal user, string text, int take, CancellationToken cancellationToken = default)
+    {
+        var words = SuggestionWords(text);
+
+        if (words.Count == 0)
+        {
+            return [];
+        }
+
+        var audiences = (await _access.GetAudiencesAsync(user)).ToArray();
+        var found = new Dictionary<long, (KnowledgeArticleIndex Article, int Hits)>();
+
+        foreach (var word in words)
+        {
+            foreach (var article in await _session.QueryIndex<KnowledgeArticleIndex>(index => index.Audience.IsIn(audiences) && (index.Title.Contains(word) || index.Summary.Contains(word))).Take(50).ListAsync(cancellationToken))
+            {
+                found[article.Id] = found.TryGetValue(article.Id, out var known) ? (known.Article, known.Hits + 1) : (article, 1);
+            }
+        }
+
+        return [.. found.Values
+            .OrderByDescending(pair => pair.Hits)
+            .ThenByDescending(pair => pair.Article.HelpfulCount)
+            .Take(Math.Clamp(take, 1, 20))
+            .Select(pair => pair.Article)];
+    }
+
+    internal static List<string> SuggestionWords(string text)
+        => [.. (text ?? string.Empty)
+            .Split([' ', '\t', '\r', '\n', ',', '.', '?', '!', ';', ':'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(word => word.Length >= 4 && !_commonWords.Contains(word))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .TakeLast(8)];
 
     /// <summary>
     /// Lists the categories a user can see articles in, with how many each holds.

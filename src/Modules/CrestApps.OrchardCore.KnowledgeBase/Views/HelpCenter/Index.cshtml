@@ -1,5 +1,9 @@
 @model HelpCenterViewModel
 
+<zone Name="Title">
+    <breadcrumb name="KnowledgeBaseHome" title="@T["Help center"]" />
+</zone>
+
 @{
     var searching = !string.IsNullOrWhiteSpace(Model.Query) || !string.IsNullOrWhiteSpace(Model.Category);
 }
