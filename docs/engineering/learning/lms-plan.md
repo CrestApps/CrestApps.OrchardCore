@@ -791,3 +791,25 @@ Build environment for this work: SDK 10.0.403 (the repository's `global.json` ro
 
 - In the browser: the video lesson player, the editors of the Learning workflow activities (the 14 activities show in the designer palette with their descriptions; the designer adds an activity by dragging, which was not done), the deployment step editor and the pipeline step in the designer, the staff profile section (no staff member on the test site), and the user menu link (the test site's theme does not render the user menu).
 - The docs site was not built.
+
+**Review rounds 1 and 2 (2026-11-14).** Every finding was fixed test first on this branch, or its reason is written down; the review files tick each one with its commit.
+
+| Finding | Fix | Commit |
+| --- | --- | --- |
+| R1-1 Lessons outside a course | Fail closed (`NotInCourse`); free preview only from the published outline; editors of a lesson may view it. | `89d37262d` |
+| R1-2 Staff from a draft | Staff read from the published course; staff, mode and key need Manage courses or an instructor with Manage own courses (`CourseSettingsPolicy`); unknown staff rejected; staff access to records needs Manage own courses. | `855d2a857` |
+| R1-3 Double completion, lost writes | `EnrollmentWriteGate`: one lock per enrollment, fresh read, commit inside the lock, observers after the commit. | `0dd01c3db` |
+| R1-4 Unbounded time and watch claims | Time bounded by the wall clock since the last access; a video share capped by the time since it opened, or marked self-reported. | `d30809f57` |
+| R1-5 Key guessing | Five wrong keys per person and course in 15 minutes lock that person out for 15 minutes. | `9303a8b66` |
+| R1-6 Key hash in the content item | Hash moved to a `CourseEnrollmentKey` record; migration step 3 moves old hashes; recipe and deployment carry hashes as `CourseKeys`. | `9303a8b66` |
+| R1-7 Read paths that do not ask | Two real leaks closed: the List part RSS feed of a course (now off) and lesson bodies in `Summary` (search results). Tests for the feed, search results of an index holding lessons and the queries API; sitemaps and Liquid documented. The integration site now runs a theme, because Orchard applies no placement without one. | `889ef27aa` |
+| R1-8 Recipe imported twice | Values copied onto the tracked enrollment and progress. | `f8c7326f3` |
+| R1-9 Staff cannot enroll | Create authorizes against the course (`LearningCourseResource`); the learner must exist; scoped course options. | `3e30c1560` |
+| R1-10 English text from services | Refusal codes (`LearningRefusals`) localized in the module (`LearningRefusalText`); no service text through `LocalizedHtmlString`; recipe errors localized. | `18c5a5ea8` |
+| R1-11, R2-A Observers before the commit; enrolling outside the lock | Enrolling commits inside its lock; grants and upkeep notices go through the gate; every observer runs after the commit. | `900a146a6` |
+| R2-B Settings guard only in the editor | `CourseSettingsGuardHandler` restores staff and mode on create, update and import by a signed-in person who fails the policy. | `85e81858f` |
+| R2-C The gate commits the session | Documented in the gate and the technical page, caller by caller. | `e47e9a641` |
+| R2-D Lost events | Phase 3 must issue idempotently and catch up in the upkeep, with two tests (plan section 12). Open until Phase 3. | `e47e9a641` |
+| R2-E Busy as a literal | Busy is a code; the player retries the opening call and the watched share. | `18c5a5ea8` |
+
+Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 of 13; the whole `CrestApps.OrchardCore.Tests` assembly 15,827 of 15,828 with one skipped, where the one failure was a Learning bug from phase 1 (the workflow event editors referenced a partial Razor could not resolve from `Views/Items`; moved to `Views/Shared`, the guard re-run green); JavaScript lint and asset suites 27 of 27. Honest notes: findings 5 and 6 first failed as a compile error (the store and the error code did not exist), not as an observed assertion; the instructor enrollment integration test (R1-9) was written with the fix, while its handler test failed first; the player's busy retry (R2-E) has no automated test. Not re-checked in the browser after the rounds: the course editor with the moved key, the player retry and the instructor's enrollment form.
