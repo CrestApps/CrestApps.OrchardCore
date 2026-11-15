@@ -88,6 +88,43 @@ public sealed class PayrollIntegrationTests
     }
 
     [Fact]
+    public async Task JournalEntries_BalanceForTheEmployersAUserMayExport_AndNoneForOthers()
+    {
+        var (harness, setup, _) = await ProcessedAsync();
+        await using var _ = harness;
+        var exporter = CalendarTestHarness.User("exporter", PayrollPermissionTemplates.For(PayrollPermissions.ExportPayrollData, setup.EmployerId).Name);
+        var viewer = CalendarTestHarness.User("viewer", PayrollPermissionTemplates.For(PayrollPermissions.ViewPayRuns, setup.EmployerId).Name);
+        var site = new global::OrchardCore.Settings.SiteSettings();
+
+        global::OrchardCore.Entities.EntityExtensions.Put(site, new PayrollJournalSettings { NetPayAccount = "2100", WageExpenseAccount = "6000", TaxLiabilityAccount = "2300", EmployerTaxExpenseAccount = "6100", DeductionLiabilityAccount = "2200" });
+
+        var siteService = new Mock<global::OrchardCore.Settings.ISiteService>();
+
+        siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(site);
+
+        var (entries, viewerRows, viewerMay) = await harness.RunAsync(async services =>
+        {
+            var reader = new PayrollReportReader(services.GetRequiredService<IPayrollScopeService>(), services.GetRequiredService<PayStatementStore>(), services.GetRequiredService<PayRunStore>(), services.GetRequiredService<EmployerStore>(), new HttpContextAccessor());
+            var dataSet = new JournalEntriesDataSet(reader, services.GetRequiredService<IPayCodeManager>(), siteService.Object, services, new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<JournalEntriesDataSet>());
+            var source = new PayrollDataSource([dataSet]);
+
+            async Task<List<Dictionary<string, object>>> ReadAsync(ClaimsPrincipal user)
+                => Rows(await ReportDesignerTestServices.ReadAsync(source, new DataSourceQuery { DataSet = "JournalEntries", Fields = new HashSet<string>(StringComparer.Ordinal), MaxRows = 1000, Context = new DataSourceContext { User = user } }, TestContext.Current.CancellationToken));
+
+            return (await ReadAsync(exporter), await ReadAsync(viewer), await dataSet.CanReadAsync(new DataSourceContext { User = viewer }, TestContext.Current.CancellationToken));
+        }, commit: false);
+
+        Assert.NotEmpty(entries);
+        Assert.Equal(entries.Sum(row => (decimal)row["Debit"]), entries.Sum(row => (decimal)row["Credit"]));
+        Assert.Equal(1600m, entries.Where(row => (string)row["Account"] == "6000").Sum(row => (decimal)row["Debit"]));
+
+        // What is left on net pay owed is the statement's net pay.
+        Assert.Equal(1500.80m, entries.Where(row => (string)row["Account"] == "2100").Sum(row => (decimal)row["Credit"] - (decimal)row["Debit"]));
+        Assert.Empty(viewerRows);
+        Assert.False(viewerMay);
+    }
+
+    [Fact]
     public async Task Reports_TotalThePayOfThePeriod_AndAnEmptyExportIsEmpty()
     {
         var (harness, setup, _) = await ProcessedAsync();

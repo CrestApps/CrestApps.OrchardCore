@@ -132,6 +132,30 @@ public class MyPayTaxFormViewModel
 }
 
 /// <summary>
+/// The journal settings card.
+/// </summary>
+public class PayrollJournalSettingsViewModel
+{
+    public string NetPayAccount { get; set; }
+
+    public string WageExpenseAccount { get; set; }
+
+    public string DeductionLiabilityAccount { get; set; }
+
+    public string TaxLiabilityAccount { get; set; }
+
+    public string EmployerTaxExpenseAccount { get; set; }
+
+    public string ContributionExpenseAccount { get; set; }
+
+    public string ContributionLiabilityAccount { get; set; }
+
+    public string ReimbursementExpenseAccount { get; set; }
+
+    public IList<PayrollJournalMapping> Mappings { get; set; } = [];
+}
+
+/// <summary>
 /// A filing row.
 /// </summary>
 public class PayrollFilingRowViewModel

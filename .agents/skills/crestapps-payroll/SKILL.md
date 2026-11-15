@@ -54,6 +54,10 @@ A contractor profile has nothing withheld except rules of the `ContractorWithhol
 
 Implement `IPayStatementPaymentMethod` (`Method`, `PayAsync`, `VoidAsync`) for a `NetPayMethod`; Direct Deposit pays through Disbursements and Paychecks through Checks, with the statement as the check's voucher (`ICheckVoucherSource`). Disbursements and checks of pay use the source kind `PayStatement` with the employer as access scope.
 
+## Payroll journal
+
+Never write a journal file or keep a ledger in Payroll: `PayrollJournal.EntriesFor` turns statement lines into debits and credits on the accounts of `PayrollJournalSettings` (per kind, or a mapping by pay code or tax code), and the **Journal entries** data set (`ExportPayrollData` scope) feeds a Data Pipeline that groups and delivers them.
+
 ## Reading payroll data
 
 The `Payroll` data source has the data sets Pay inputs, Employees, Pay runs, Pay statements, Earnings, Deductions, Taxes, Employer contributions, Payments of net pay and Year-to-date balances, each limited to the employers a user may see. Reports (Workforce & Payroll): Payroll Register, Payroll Summary, Cash Requirement, Deductions and Contributions, Labor Distribution, Year-to-date Earnings. Never read statements to rebuild these.

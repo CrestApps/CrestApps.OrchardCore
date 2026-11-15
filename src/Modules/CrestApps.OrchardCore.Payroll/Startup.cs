@@ -178,6 +178,7 @@ public sealed class PayrollStartup : StartupBase
         services.AddPermissionProvider<PayrollPermissionProvider>();
         services.AddNavigationProvider<PayrollAdminMenu>();
         services.AddSiteDisplayDriver<PayrollSettingsDisplayDriver>();
+        services.AddSiteDisplayDriver<PayrollJournalSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(PayrollConstants.SettingsGroupId, PayrollPermissions.ManagePayrollSettings);
         services.AddPartySource<EmployerPartySource>();
     }
@@ -290,6 +291,7 @@ public sealed class PayrollRecipesSchemaStartup : StartupBase
         services.AddDeploymentStepSchema<PayrollFilingsDeploymentStepSchema>();
         services.AddDeploymentStepSchema<PayHistoryDeploymentStepSchema>();
         services.AddScoped<ISiteSettingsSchemaDefinition, PayrollSettingsSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, PayrollJournalSettingsSchema>();
     }
 }
 
@@ -313,6 +315,7 @@ public sealed class PayrollDataSourcesStartup : StartupBase
         services.AddScoped<IPayrollDataSet, PayStatementPaymentsDataSet>();
         services.AddScoped<IPayrollDataSet, YearToDateBalancesDataSet>();
         services.AddScoped<IPayrollDataSet, TaxLiabilitiesDataSet>();
+        services.AddScoped<IPayrollDataSet, JournalEntriesDataSet>();
     }
 }
 

@@ -35,6 +35,9 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 - A **Payroll** card on teams (`PayrollTeamSettings`: ledger code, jurisdictions) and **Settings > Payroll**
   (`PayrollSettings`).
 - The recipe **Payroll: sample roles**.
+- The payroll journal: `PayrollJournal.EntriesFor` (debits and credits of a statement's lines), the **Journal accounts**
+  card of **Settings > Payroll** (`PayrollJournalSettings`), the **Journal entries** data set (`ExportPayrollData`) and
+  the recipe **Payroll: export the payroll journal to a CSV file**.
 
 ## Pay runs
 
