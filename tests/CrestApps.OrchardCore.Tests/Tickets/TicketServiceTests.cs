@@ -311,9 +311,9 @@ public sealed class TicketServiceTests
         // Arrange
         var requests = new List<TeamAssignmentRequest>();
         var assignment = new Mock<ITeamAssignmentService>();
-        assignment.Setup(service => service.SelectAsync(It.IsAny<TeamAssignmentRequest>(), It.IsAny<CancellationToken>()))
+        assignment.Setup(service => service.PickAsync(It.IsAny<TeamAssignmentRequest>(), It.IsAny<CancellationToken>()))
             .Callback((TeamAssignmentRequest request, CancellationToken _) => requests.Add(request))
-            .ReturnsAsync(new TeamMember { UserId = "agent-7" });
+            .ReturnsAsync(new TeamAssignmentResult(new TeamMember { UserId = "agent-7" }, TeamAssignmentOutcome.Picked));
         var services = new ServiceCollection().AddSingleton(assignment.Object).BuildServiceProvider();
 
         var pushing = Create(new TicketDesk { ItemId = "support", Name = "Support", DefaultTeamId = "tier-1", AssignmentStrategy = TeamAssignmentStrategies.RoundRobin }, services);

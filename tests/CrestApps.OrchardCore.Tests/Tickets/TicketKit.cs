@@ -69,11 +69,12 @@ internal sealed class TicketKit : IAsyncDisposable
 
     public KitObservers Observers { get; }
 
-    public static async Task<TicketKit> CreateAsync(bool withPolicy = false)
+    public static async Task<TicketKit> CreateAsync(bool withPolicy = false, Action<TicketDesk> configureDesk = null, Action<IServiceCollection> configureServices = null)
     {
         var observers = new KitObservers();
         var sender = new KitSender();
         var desk = new TicketDesk { ItemId = "support", Name = "Support", ServiceLevelPolicyId = withPolicy ? PolicyId : null, ReopenWindowDays = 7 };
+        configureDesk?.Invoke(desk);
 
         var harness = await CalendarTestHarness.CreateAsync(
             services =>
@@ -99,6 +100,7 @@ internal sealed class TicketKit : IAsyncDisposable
                 services.AddScoped<ITicketService, DefaultTicketService>();
                 services.AddSingleton<global::CrestApps.OrchardCore.Emails.ITemplatedEmailSender>(sender);
                 services.AddScoped<TicketEmailOutbox>();
+                configureServices?.Invoke(services);
             },
             async schema =>
             {

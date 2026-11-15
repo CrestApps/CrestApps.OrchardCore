@@ -106,6 +106,63 @@ public sealed class TeamAssignmentServiceTests
         Assert.Equal("ben", picked.UserId);
     }
 
+    [Fact]
+    public async Task SourcesCombine_AMemberAnySourceReportsIsUnavailable_AndAFailingSourceDoesntBlock()
+    {
+        // Arrange
+        var service = new DefaultTeamAssignmentService(
+            new Membership([.. new[] { "ana", "ben", "cy" }.Select(userId => new TeamMember { TeamId = "t1", UserId = userId })]),
+            [],
+            [new AvailabilitySource(["ana"], "Shifts"), new AvailabilitySource(["ben"], "Absences"), new AvailabilitySource(["cy"], "Broken") { Throws = true }]);
+
+        // Act
+        var picked = await service.PickAsync(Request(TeamAssignmentStrategies.LeastLoaded), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TeamAssignmentOutcome.Picked, picked.Outcome);
+        Assert.Equal("cy", picked.Member.UserId);
+    }
+
+    [Fact]
+    public async Task WhenEveryoneIsUnavailable_NobodyIsPicked_AndTheOutcomeSaysWhy()
+    {
+        // Arrange
+        var service = Create(["ana", "ben"], [], unavailable: ["ana", "ben"]);
+
+        // Act
+        var unavailable = await service.PickAsync(Request(TeamAssignmentStrategies.RoundRobin), TestContext.Current.CancellationToken);
+        var unqualified = await Create(["ana"], []).PickAsync(new TeamAssignmentRequest { TeamId = "t1", WorkKind = WorkKind, CandidateFilter = (_, _) => Task.FromResult<IReadOnlyList<TeamMember>>([]) }, TestContext.Current.CancellationToken);
+        var full = await Create(["ana"], new() { ["ana"] = Load(5) }).PickAsync(new TeamAssignmentRequest { TeamId = "t1", WorkKind = WorkKind, MaxOpen = 5 }, TestContext.Current.CancellationToken);
+        var empty = await Create([], []).PickAsync(Request(TeamAssignmentStrategies.LeastLoaded), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TeamAssignmentOutcome.NoneAvailable, unavailable.Outcome);
+        Assert.Null(unavailable.Member);
+        Assert.Equal(TeamAssignmentOutcome.NoneQualified, unqualified.Outcome);
+        Assert.Equal(TeamAssignmentOutcome.AllAtCapacity, full.Outcome);
+        Assert.Equal(TeamAssignmentOutcome.NoMembers, empty.Outcome);
+    }
+
+    [Fact]
+    public async Task ARequestHonorsOnlyTheSourcesItNames()
+    {
+        // Arrange
+        var service = new DefaultTeamAssignmentService(
+            new Membership([new TeamMember { TeamId = "t1", UserId = "ana" }]),
+            [],
+            [new AvailabilitySource(["ana"], "ContactCenterPresence")]);
+
+        // Act
+        var honoringNone = await service.PickAsync(new TeamAssignmentRequest { TeamId = "t1", WorkKind = WorkKind, AvailabilitySources = [] }, TestContext.Current.CancellationToken);
+        var honoringPresence = await service.PickAsync(new TeamAssignmentRequest { TeamId = "t1", WorkKind = WorkKind, AvailabilitySources = ["ContactCenterPresence"] }, TestContext.Current.CancellationToken);
+        var honoringAll = await service.PickAsync(new TeamAssignmentRequest { TeamId = "t1", WorkKind = WorkKind }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("ana", honoringNone.Member?.UserId);
+        Assert.Equal(TeamAssignmentOutcome.NoneAvailable, honoringPresence.Outcome);
+        Assert.Equal(TeamAssignmentOutcome.NoneAvailable, honoringAll.Outcome);
+    }
+
     private static TeamAssignmentRequest Request(string strategy)
         => new() { TeamId = "t1", WorkKind = WorkKind, Strategy = strategy };
 
@@ -156,12 +213,19 @@ public sealed class TeamAssignmentServiceTests
     {
         private readonly string[] _unavailable;
 
-        public AvailabilitySource(string[] unavailable)
+        public AvailabilitySource(string[] unavailable, string name = "Source")
         {
             _unavailable = unavailable;
+            Name = name;
         }
 
+        public string Name { get; }
+
+        public bool Throws { get; init; }
+
         public Task<IReadOnlyCollection<string>> GetUnavailableAsync(IReadOnlyCollection<string> userIds, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyCollection<string>>([.. _unavailable.Where(userIds.Contains)]);
+            => Throws
+                ? throw new InvalidOperationException("The calendar can't be read.")
+                : Task.FromResult<IReadOnlyCollection<string>>([.. _unavailable.Where(userIds.Contains)]);
     }
 }

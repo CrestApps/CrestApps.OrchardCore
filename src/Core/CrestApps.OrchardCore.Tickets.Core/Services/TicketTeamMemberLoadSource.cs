@@ -40,17 +40,13 @@ public sealed class TicketTeamMemberLoadSource : ITeamMemberLoadSource
             return loads;
         }
 
-        var open = await _session.QueryIndex<TicketIndex>(index => index.AssigneeId.IsIn(ids) && index.StatusCategory.IsIn(_open))
-            .ListAsync(cancellationToken);
-
-        foreach (var row in open)
-        {
-            loads[row.AssigneeId].Open++;
-        }
-
-        // One seek per member on (AssigneeId, AssignedUtc): a team is small, and this reads no more than one row each.
+        // Counted in the database, one count and one seek per member on (AssigneeId, ...): a team is small, and an agent
+        // with thousands of open tickets costs one row read, not thousands.
         foreach (var id in ids)
         {
+            loads[id].Open = await _session.QueryIndex<TicketIndex>(index => index.AssigneeId == id && index.StatusCategory.IsIn(_open))
+                .CountAsync(cancellationToken);
+
             var latest = await _session.QueryIndex<TicketIndex>(index => index.AssigneeId == id && index.AssignedUtc != null)
                 .OrderByDescending(index => index.AssignedUtc)
                 .FirstOrDefaultAsync(cancellationToken);

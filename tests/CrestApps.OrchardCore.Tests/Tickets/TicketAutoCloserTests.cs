@@ -27,7 +27,7 @@ public sealed class TicketAutoCloserTests
         var tickets = new Mock<ITicketService>();
         tickets.Setup(service => service.ListAsync(It.IsAny<TicketScopedQuery>(), It.IsAny<CancellationToken>()))
             .Callback((TicketScopedQuery query, CancellationToken _) => queries.Add(query))
-            .ReturnsAsync(([new ContentItem { ContentItemId = "t1" }, new ContentItem { ContentItemId = "t2" }], 2));
+            .ReturnsAsync(([Solved("t1"), Solved("t2")], 2));
         tickets.Setup(service => service.UpdateAsync(It.IsAny<string>(), It.IsAny<TicketUpdate>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()))
             .Callback((string id, TicketUpdate update, TicketActor _, CancellationToken _) => updates.Add((id, update)))
             .ReturnsAsync((string id, TicketUpdate _, TicketActor _, CancellationToken _) => id == "t2" ? new TicketResult { Errors = ["Busy"] } : new TicketResult());
@@ -73,6 +73,57 @@ public sealed class TicketAutoCloserTests
 
         // Assert
         Assert.Equal(0, closed);
+    }
+
+    [Fact]
+    public async Task ATicketThatThrows_IsSkipped_AndTheDeskKeepsClosingTheOthers()
+    {
+        // Arrange
+        var solved = new List<ContentItem> { Solved("t1"), Solved("t2"), Solved("t3") };
+        var tickets = new Mock<ITicketService>();
+        tickets.Setup(service => service.ListAsync(It.IsAny<TicketScopedQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TicketScopedQuery query, CancellationToken _) =>
+            {
+                var page = solved.Skip(query.Query.Skip).Take(query.Query.Take).ToList();
+
+                return (page, solved.Count);
+            });
+        tickets.Setup(service => service.UpdateAsync(It.IsAny<string>(), It.IsAny<TicketUpdate>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, TicketUpdate _, TicketActor _, CancellationToken _) =>
+            {
+                if (id == "t1")
+                {
+                    throw new InvalidOperationException("The ticket's type was removed.");
+                }
+
+                solved.RemoveAll(ticket => ticket.ContentItemId == id);
+
+                return new TicketResult();
+            });
+        var closer = new TicketAutoCloser(
+            tickets.Object,
+            Catalog<TicketDesk>(new TicketDesk { ItemId = "support", AutoCloseDays = 4 }),
+            Catalog<TicketStatus>(new TicketStatus { ItemId = "closed", Category = TicketStatusCategory.Closed, Order = 60 }),
+            Clock(),
+            NullLogger<TicketAutoCloser>.Instance,
+            RecipeRoundTrip.Localizer<TicketAutoCloser>());
+
+        // Act
+        var firstRun = await closer.CloseDueAsync(maxPerDesk: 2, cancellationToken: TestContext.Current.CancellationToken);
+        var secondRun = await closer.CloseDueAsync(maxPerDesk: 2, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, firstRun);
+        Assert.Equal(1, secondRun);
+        Assert.Equal(["t1"], solved.Select(ticket => ticket.ContentItemId));
+    }
+
+    private static ContentItem Solved(string id)
+    {
+        var item = new ContentItem { ContentItemId = id };
+        item.Apply(new TicketPart { DeskId = "support", StatusCategory = TicketStatusCategory.Solved, SolvedUtc = _now.AddDays(-5) });
+
+        return item;
     }
 
     private static IClock Clock()

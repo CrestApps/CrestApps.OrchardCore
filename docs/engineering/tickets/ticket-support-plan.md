@@ -242,6 +242,12 @@ Decided 2026-11-13: the recommended option in each of the four.
 
 Taken as recommended unless you say otherwise: push assignment through a new Teams assignment service with the Contact Center bridge as an option; the "my account" area moves from Commerce to Users with unchanged names; the e-mail slice waits for #817; satisfaction ratings and saved views stay private to Tickets until a second module needs them.
 
+Decided during the phase 2 review (2026-11-14):
+
+- **Availability sources per desk.** A desk chooses the team availability sources it honors (`TicketDesk.AvailabilitySources`). Default: Workforce shifts and calendar absences count, Contact Center presence doesn't (`HonoredByDefault = false`), because the plan keeps the Contact Center bridge an option and people who work tickets often never sign in to the phone. Other callers of `ITeamAssignmentService` that pass no list still honor every source.
+- **Automated replies don't count** as an agent's response: a reply a workflow adds (`TicketReply.Actor.FromWorkflow`) neither ends the first-response target nor counts toward first-contact resolution.
+- **Calendar time in the response reports.** The response and resolution report shows calendar time from creation, labeled so; business-time compliance is the service level report's job.
+
 ## 11. Progress
 
 Keep this section current: a row per slice, with what was built, what differs from the plan and what is left.
@@ -297,7 +303,8 @@ Open items left from phase 1: files attached to a timeline entry are removed whe
 | WF2, WF3, WF7-9, minors, R2 columns | 60f85587d | Time-elapsed scan reads due tickets from the index with a cursor and one marker per ticket and start; ticket times and counters on the index (migration v8, reindex step); audit trail only for desk moves, merges and deletes with ids and the real actor; bulk actions capped at 100; HTML-encoded notify values; escalation inside the lock |
 | R1-R4 | e6a9e1a31 | Reports run for `ReportContext.User` (page and widget viewer, subscription owner); ticket reports read index rows only; "calendar time" labels; first contact counts agent replies |
 | E1, E3-E5 | 95253f7bf | Requester e-mails go through an outbox (`TicketEmailOutboxItem`, migration v9, a background task every minute): tried at once, retried after 5 minutes, 15 minutes, an hour, 4 hours and 12 hours, then given up; the reply shows a "not delivered" notice (`TimelineConstants.Properties.Notice`) until sent; reply e-mails link their files with 30-day signed links from the site's Base URL; templates get `Reply.Html`; `TicketCreateRequest.IsImport` tells no observer. E2 (threading headers) waits: OC 4's `MailMessage` has no custom headers |
-| X2, X4, X5, X6 | this group | Status and priority colors must be a hex color or a name; a personal view travels with its owner's user name and is refused when the owner isn't a user of the target site; a recipe record with an invalid id is refused instead of imported under a new id; desk permissions cached by id and name, so a rename or another tenant's desk with the same id shows its own name; the ticket type's Ticket part settings have an editor; this plan corrected (policy from type then desk; section 2 rewritten without product names) |
+| X2, X4, X5, X6 | 47a99e52d | Status and priority colors must be a hex color or a name; a personal view travels with its owner's user name and is refused when the owner isn't a user of the target site; a recipe record with an invalid id is refused instead of imported under a new id; desk permissions cached by id and name, so a rename or another tenant's desk with the same id shows its own name; the ticket type's Ticket part settings have an editor; this plan corrected (policy from type then desk; section 2 rewritten without product names) |
+| Assignment 1-4 | this group | The auto-closer skips a ticket that throws or fails (logged) and pages past it, so one bad ticket never blocks its desk; team load is counted in the database (one count per member); `ITeamAssignmentService.PickAsync` returns why nobody was picked and the ticket's timeline says it; availability sources combine as "unavailable if any honored source says so", a failing source is left out, and each desk chooses its sources (Contact Center presence off by default, section 10) |
 
 ## 12. Not in this plan
 

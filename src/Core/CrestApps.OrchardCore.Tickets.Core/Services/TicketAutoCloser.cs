@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tickets.Core.Services;
@@ -72,32 +73,71 @@ public sealed class TicketAutoCloser
                 continue;
             }
 
-            var (due, _) = await _tickets.ListAsync(new TicketScopedQuery
+            // A ticket that can't be closed (a failed result or an exception) is logged and skipped: the next page starts
+            // after the tickets still solved, so one bad ticket never holds up the rest of its desk, now or in later runs.
+            var cutoff = now.AddDays(-desk.AutoCloseDays);
+            var skip = 0;
+            var budget = maxPerDesk;
+
+            while (budget > 0)
             {
-                Query = new TicketQuery
+                var requested = budget;
+                var (due, _) = await _tickets.ListAsync(new TicketScopedQuery
                 {
-                    DeskIds = [desk.ItemId],
-                    Categories = [TicketStatusCategory.Solved],
-                    SolvedBeforeUtc = now.AddDays(-desk.AutoCloseDays),
-                    Sort = TicketSort.Created,
-                    Take = maxPerDesk,
-                },
-                AllDeskIds = [desk.ItemId],
-            }, cancellationToken);
+                    Query = new TicketQuery
+                    {
+                        DeskIds = [desk.ItemId],
+                        Categories = [TicketStatusCategory.Solved],
+                        SolvedBeforeUtc = cutoff,
+                        Sort = TicketSort.Created,
+                        Skip = skip,
+                        Take = requested,
+                    },
+                    AllDeskIds = [desk.ItemId],
+                }, cancellationToken);
 
-            foreach (var ticket in due)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var result = await _tickets.UpdateAsync(ticket.ContentItemId, new TicketUpdate { StatusId = closedStatus.ItemId }, actor, cancellationToken);
-
-                if (result.Succeeded)
+                if (due.Count == 0)
                 {
-                    closed++;
+                    break;
                 }
-                else
+
+                foreach (var ticket in due)
                 {
-                    _logger.LogWarning("A solved ticket couldn't be closed on its own: {Errors}", string.Join(" ", result.Errors));
+                    cancellationToken.ThrowIfCancellationRequested();
+                    budget--;
+
+                    if (!TicketLifecycle.ShouldAutoClose(ticket.GetOrCreate<TicketPart>(), desk, now))
+                    {
+                        skip++;
+
+                        continue;
+                    }
+
+                    try
+                    {
+                        var result = await _tickets.UpdateAsync(ticket.ContentItemId, new TicketUpdate { StatusId = closedStatus.ItemId }, actor, cancellationToken);
+
+                        if (result.Succeeded)
+                        {
+                            closed++;
+                        }
+                        else
+                        {
+                            skip++;
+                            _logger.LogWarning("The solved ticket {TicketId} couldn't be closed on its own: {Errors}", ticket.ContentItemId, string.Join(" ", result.Errors));
+                        }
+                    }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        skip++;
+                        _logger.LogError(exception, "The solved ticket {TicketId} couldn't be closed on its own and was skipped.", ticket.ContentItemId);
+                    }
+                }
+
+                // A short page was the last one.
+                if (due.Count < requested)
+                {
+                    break;
                 }
             }
         }

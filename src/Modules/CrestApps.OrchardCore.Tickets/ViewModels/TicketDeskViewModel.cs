@@ -79,4 +79,9 @@ public class TicketDeskViewModel
     /// </summary>
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public IList<SelectListItem> TicketTypeOptions { get; set; } = [];
+
+    public List<string> AvailabilitySources { get; set; } = [];
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailabilitySourceOptions { get; set; } = [];
 }

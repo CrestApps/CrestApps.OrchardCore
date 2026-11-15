@@ -65,8 +65,25 @@
         <option value="LeastLoaded">@T["The team member with the fewest open tickets"]</option>
         <option value="RoundRobin">@T["Each team member in turn"]</option>
     </select>
-    <span class="hint">@T["Only members who can take work now are chosen (on shift, not away, not out of office), with the skills the ticket type asks for."]</span>
+    <span class="hint">@T["Only members who can take work now, as the checks below say, and who hold the skills the ticket type asks for are chosen. When no one can, the ticket stays unassigned and says why."]</span>
 </div>
+
+@if (Model.AvailabilitySourceOptions.Count > 0)
+{
+    <div class="mb-3">
+        <label class="form-label">@T["A team member can take tickets now when"]</label>
+        @for (var i = 0; i < Model.AvailabilitySourceOptions.Count; i++)
+        {
+            var option = Model.AvailabilitySourceOptions[i];
+            var id = Html.IdFor(m => m.AvailabilitySources) + "_" + i;
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="@id" name="@Html.NameFor(m => m.AvailabilitySources)" value="@option.Value" checked="@option.Selected" />
+                <label class="form-check-label" for="@id">@option.Text</label>
+            </div>
+        }
+        <span class="hint">@T["Leave a check off when the people of this desk don't use it, such as the Contact Center phone for people who only work tickets."]</span>
+    </div>
+}
 
 <div class="mb-3">
     <div class="form-check">

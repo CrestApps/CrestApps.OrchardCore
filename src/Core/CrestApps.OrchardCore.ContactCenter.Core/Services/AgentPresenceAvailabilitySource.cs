@@ -17,6 +17,16 @@ public sealed class AgentPresenceAvailabilitySource : ITeamMemberAvailabilitySou
 
     private readonly ISession _session;
 
+    /// <inheritdoc/>
+    public string Name => "ContactCenterPresence";
+
+    /// <inheritdoc/>
+    public global::OrchardCore.Localization.LocalizationSource DisplayName { get; } = global::OrchardCore.Localization.LocalizationSource.Create<AgentPresenceAvailabilitySource>("Signed in to Contact Center and not on a break");
+
+    /// <inheritdoc/>
+    /// <remarks>Off by default: people who work tickets but never sign in to the phone would otherwise never get any.</remarks>
+    public bool HonoredByDefault => false;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentPresenceAvailabilitySource"/> class.
     /// </summary>

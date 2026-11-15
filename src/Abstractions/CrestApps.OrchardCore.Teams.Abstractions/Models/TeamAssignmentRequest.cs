@@ -39,6 +39,12 @@ public sealed class TeamAssignmentRequest
     public bool OnlyAvailable { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the names of the availability sources honored (<see cref="Services.ITeamMemberAvailabilitySource.Name"/>),
+    /// or <see langword="null"/> for every registered source. An empty list honors none.
+    /// </summary>
+    public IReadOnlyCollection<string> AvailabilitySources { get; set; }
+
+    /// <summary>
     /// Gets or sets the users never picked, such as the person the work is being taken from.
     /// </summary>
     public IReadOnlyCollection<string> ExcludedUserIds { get; set; } = [];

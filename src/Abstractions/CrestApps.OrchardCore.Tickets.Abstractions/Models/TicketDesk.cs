@@ -34,6 +34,12 @@ public sealed class TicketDesk : CatalogItem, ITicketSettingsRecord
     public string HoursScheduleId { get; set; }
 
     /// <summary>
+    /// Gets or sets the team availability sources assignment honors on this desk (their names), or <see langword="null"/>
+    /// for the sources honored by default (shifts and absences, not Contact Center presence).
+    /// </summary>
+    public List<string> AvailabilitySources { get; set; }
+
+    /// <summary>
     /// Gets or sets the service-level policy of the desk's tickets when neither the account nor the type gives one.
     /// </summary>
     public string ServiceLevelPolicyId { get; set; }

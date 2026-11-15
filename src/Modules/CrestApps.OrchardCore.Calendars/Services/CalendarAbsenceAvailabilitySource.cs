@@ -11,6 +11,12 @@ namespace CrestApps.OrchardCore.Calendars.Services;
 /// </summary>
 internal sealed class CalendarAbsenceAvailabilitySource : ITeamMemberAvailabilitySource
 {
+    /// <inheritdoc/>
+    public string Name => "CalendarAbsences";
+
+    /// <inheritdoc/>
+    public global::OrchardCore.Localization.LocalizationSource DisplayName { get; } = global::OrchardCore.Localization.LocalizationSource.Create<CalendarAbsenceAvailabilitySource>("Not out of office or on time off in the calendar");
+
     private readonly ICalendarService _calendars;
     private readonly ICalendarQueryService _queries;
     private readonly ICalendarTypeManager _types;

@@ -304,7 +304,7 @@ public sealed class DefaultTicketService : ITicketService
         // A desk without a strategy leaves new tickets for an agent to take.
         if (string.IsNullOrEmpty(part.AssigneeId) && !string.IsNullOrEmpty(part.TeamId) && !string.IsNullOrEmpty(desk.AssignmentStrategy))
         {
-            await AssignToTeamMemberAsync(ticket, part, settings, desk.AssignmentStrategy, TicketActor.Site, cancellationToken);
+            await AssignToTeamMemberAsync(ticket, part, settings, desk, desk.AssignmentStrategy, TicketActor.Site, cancellationToken);
         }
 
         // An import tells nobody: 5,000 past tickets must not e-mail 5,000 requesters.
@@ -590,7 +590,7 @@ public sealed class DefaultTicketService : ITicketService
             var desk = await _desks.FindByIdAsync(part.DeskId, cancellationToken);
             var strategy = string.IsNullOrEmpty(desk?.AssignmentStrategy) ? TeamAssignmentStrategies.LeastLoaded : desk.AssignmentStrategy;
 
-            return await AssignToTeamMemberAsync(ticket, part, settings, strategy, actor ?? TicketActor.Site, cancellationToken)
+            return await AssignToTeamMemberAsync(ticket, part, settings, desk, strategy, actor ?? TicketActor.Site, cancellationToken)
                 ? new TicketResult { Ticket = ticket }
                 : Refuse(S["Nobody in the team can take the ticket now."], ticket);
         }, cancellationToken);
@@ -1049,7 +1049,7 @@ public sealed class DefaultTicketService : ITicketService
         }, cancellationToken);
     }
 
-    private async Task<bool> AssignToTeamMemberAsync(ContentItem ticket, TicketPart part, TicketPartSettings settings, string strategy, TicketActor actor, CancellationToken cancellationToken)
+    private async Task<bool> AssignToTeamMemberAsync(ContentItem ticket, TicketPart part, TicketPartSettings settings, TicketDesk desk, string strategy, TicketActor actor, CancellationToken cancellationToken)
     {
         if (_serviceProvider.GetService<ITeamAssignmentService>() is not { } assignment)
         {
@@ -1059,11 +1059,12 @@ public sealed class DefaultTicketService : ITicketService
         var skills = _serviceProvider.GetService<ISkillAssignmentService>();
         var required = settings?.RequiredSkills ?? [];
         var today = DateOnly.FromDateTime(_clock.UtcNow);
-        var member = await assignment.SelectAsync(new TeamAssignmentRequest
+        var picked = await assignment.PickAsync(new TeamAssignmentRequest
         {
             TeamId = part.TeamId,
             WorkKind = TicketsConstants.RecordKind,
             Strategy = strategy,
+            AvailabilitySources = HonoredSources(desk),
             ExcludedUserIds = string.IsNullOrEmpty(part.AssigneeId) ? [] : [part.AssigneeId],
             CandidateFilter = skills is null || required.Count == 0
                 ? null
@@ -1084,8 +1085,25 @@ public sealed class DefaultTicketService : ITicketService
                 },
         }, cancellationToken);
 
+        var member = picked.Member;
+
         if (string.IsNullOrEmpty(member?.UserId))
         {
+            // Left unassigned on purpose, and the ticket says why, so nobody wonders whether assignment ran.
+            string reason = picked.Outcome switch
+            {
+                TeamAssignmentOutcome.NoMembers => S["Not assigned: the team has no members who can sign in."],
+                TeamAssignmentOutcome.NoneQualified => S["Not assigned: no available team member holds the skills this ticket type needs."],
+                TeamAssignmentOutcome.AllAtCapacity => S["Not assigned: every available team member has as many open tickets as allowed."],
+                TeamAssignmentOutcome.NoTeam => null,
+                _ => S["Not assigned: no one on the team is available now (off shift, out of office or signed out)."],
+            };
+
+            if (reason is not null)
+            {
+                await AddEventAsync(ticket.ContentItemId, actor, reason, [], cancellationToken);
+            }
+
             return false;
         }
 
@@ -1102,6 +1120,11 @@ public sealed class DefaultTicketService : ITicketService
 
         return true;
     }
+
+    // The sources the desk honors; a desk that never chose honors the sources that are on by default.
+    private List<string> HonoredSources(TicketDesk desk)
+        => desk?.AvailabilitySources
+            ?? [.. _serviceProvider.GetServices<ITeamMemberAvailabilitySource>().Where(source => source.HonoredByDefault).Select(source => source.Name)];
 
     /// <inheritdoc/>
     public Task<TicketResult> DeleteAsync(string ticketId, CancellationToken cancellationToken = default)

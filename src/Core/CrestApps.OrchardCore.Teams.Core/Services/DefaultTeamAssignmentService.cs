@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.Services;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Teams.Core.Services;
 
@@ -13,6 +14,7 @@ public sealed class DefaultTeamAssignmentService : ITeamAssignmentService
     private readonly ITeamMembershipService _membershipService;
     private readonly IEnumerable<ITeamMemberLoadSource> _loadSources;
     private readonly IEnumerable<ITeamMemberAvailabilitySource> _availabilitySources;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTeamAssignmentService"/> class.
@@ -20,11 +22,14 @@ public sealed class DefaultTeamAssignmentService : ITeamAssignmentService
     /// <param name="membershipService">The team membership service.</param>
     /// <param name="loadSources">The sources of the members' load.</param>
     /// <param name="availabilitySources">The sources of the members' availability.</param>
+    /// <param name="logger">The logger.</param>
     public DefaultTeamAssignmentService(
         ITeamMembershipService membershipService,
         IEnumerable<ITeamMemberLoadSource> loadSources,
-        IEnumerable<ITeamMemberAvailabilitySource> availabilitySources)
+        IEnumerable<ITeamMemberAvailabilitySource> availabilitySources,
+        ILogger<DefaultTeamAssignmentService> logger = null)
     {
+        _logger = logger;
         _membershipService = membershipService;
         _loadSources = loadSources;
         _availabilitySources = availabilitySources;
@@ -32,12 +37,16 @@ public sealed class DefaultTeamAssignmentService : ITeamAssignmentService
 
     /// <inheritdoc/>
     public async Task<TeamMember> SelectAsync(TeamAssignmentRequest request, CancellationToken cancellationToken = default)
+        => (await PickAsync(request, cancellationToken)).Member;
+
+    /// <inheritdoc/>
+    public async Task<TeamAssignmentResult> PickAsync(TeamAssignmentRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         if (string.IsNullOrEmpty(request.TeamId))
         {
-            return null;
+            return new TeamAssignmentResult(null, TeamAssignmentOutcome.NoTeam);
         }
 
         var excluded = new HashSet<string>(request.ExcludedUserIds ?? [], StringComparer.Ordinal);
@@ -49,19 +58,29 @@ public sealed class DefaultTeamAssignmentService : ITeamAssignmentService
             .Select(group => group.First())
             .ToList();
 
-        if (candidates.Count > 0 && request.OnlyAvailable)
-        {
-            candidates = await RemoveUnavailableAsync(candidates, cancellationToken);
-        }
-
-        if (candidates.Count > 0 && request.CandidateFilter is not null)
-        {
-            candidates = await request.CandidateFilter(candidates, cancellationToken) ?? [];
-        }
-
         if (candidates.Count == 0)
         {
-            return null;
+            return new TeamAssignmentResult(null, TeamAssignmentOutcome.NoMembers);
+        }
+
+        if (request.OnlyAvailable)
+        {
+            candidates = await RemoveUnavailableAsync(candidates, request.AvailabilitySources, cancellationToken);
+
+            if (candidates.Count == 0)
+            {
+                return new TeamAssignmentResult(null, TeamAssignmentOutcome.NoneAvailable);
+            }
+        }
+
+        if (request.CandidateFilter is not null)
+        {
+            candidates = await request.CandidateFilter(candidates, cancellationToken) ?? [];
+
+            if (candidates.Count == 0)
+            {
+                return new TeamAssignmentResult(null, TeamAssignmentOutcome.NoneQualified);
+            }
         }
 
         var load = await GetLoadAsync(request.WorkKind, candidates, cancellationToken);
@@ -70,8 +89,13 @@ public sealed class DefaultTeamAssignmentService : ITeamAssignmentService
             => load.GetValueOrDefault(member.UserId) ?? new TeamMemberLoad();
 
         var eligible = request.MaxOpen is { } maxOpen
-            ? candidates.Where(member => LoadOf(member).Open < maxOpen)
+            ? candidates.Where(member => LoadOf(member).Open < maxOpen).ToList()
             : candidates;
+
+        if (eligible.Count == 0)
+        {
+            return new TeamAssignmentResult(null, TeamAssignmentOutcome.AllAtCapacity);
+        }
 
         var roundRobin = string.Equals(request.Strategy, TeamAssignmentStrategies.RoundRobin, StringComparison.OrdinalIgnoreCase);
 
@@ -85,17 +109,31 @@ public sealed class DefaultTeamAssignmentService : ITeamAssignmentService
                 .OrderBy(member => LoadOf(member).Open)
                 .ThenBy(member => LoadOf(member).LastAssignedUtc ?? DateTime.MinValue);
 
-        return ordered.ThenBy(member => member.UserId, StringComparer.Ordinal).FirstOrDefault();
+        return new TeamAssignmentResult(ordered.ThenBy(member => member.UserId, StringComparer.Ordinal).First(), TeamAssignmentOutcome.Picked);
     }
 
-    private async Task<IReadOnlyList<TeamMember>> RemoveUnavailableAsync(IReadOnlyList<TeamMember> candidates, CancellationToken cancellationToken)
+    // A member any honored source reports is unavailable. A source that fails is logged and left out, so one broken
+    // source (a calendar that can't be read) never stops work from being assigned.
+    private async Task<IReadOnlyList<TeamMember>> RemoveUnavailableAsync(IReadOnlyList<TeamMember> candidates, IReadOnlyCollection<string> honored, CancellationToken cancellationToken)
     {
         var userIds = candidates.Select(member => member.UserId).ToArray();
         var unavailable = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var source in _availabilitySources)
         {
-            unavailable.UnionWith(await source.GetUnavailableAsync(userIds, cancellationToken) ?? []);
+            if (honored is not null && !honored.Contains(source.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            try
+            {
+                unavailable.UnionWith(await source.GetUnavailableAsync(userIds, cancellationToken) ?? []);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger?.LogWarning(exception, "The team availability source {Source} failed and was left out of this assignment.", source.Name);
+            }
         }
 
         return unavailable.Count == 0 ? candidates : [.. candidates.Where(member => !unavailable.Contains(member.UserId))];

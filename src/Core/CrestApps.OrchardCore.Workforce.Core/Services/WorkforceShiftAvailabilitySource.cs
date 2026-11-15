@@ -14,6 +14,12 @@ namespace CrestApps.OrchardCore.Workforce.Core.Services;
 /// </summary>
 internal sealed class WorkforceShiftAvailabilitySource : ITeamMemberAvailabilitySource
 {
+    /// <inheritdoc/>
+    public string Name => "WorkforceShifts";
+
+    /// <inheritdoc/>
+    public global::OrchardCore.Localization.LocalizationSource DisplayName { get; } = global::OrchardCore.Localization.LocalizationSource.Create<WorkforceShiftAvailabilitySource>("On a published shift and not on a break");
+
     // How far around now a shift shows that a user works to a schedule.
     private static readonly TimeSpan _scheduledWindow = TimeSpan.FromDays(7);
 

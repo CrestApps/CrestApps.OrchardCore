@@ -1,10 +1,13 @@
 using CrestApps.OrchardCore.ServiceLevels.Services;
+using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Tickets.Drivers;
 
@@ -15,14 +18,20 @@ internal sealed class TicketDeskDisplayDriver : TicketSettingsDisplayDriverBase<
 {
     private readonly IServiceLevelPolicyManager _policies;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IEnumerable<ITeamMemberAvailabilitySource> _availabilitySources;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketDeskDisplayDriver"/> class.
     /// </summary>
     /// <param name="policies">The service-level policies.</param>
     /// <param name="contentDefinitionManager">The content definition manager, for the ticket types.</param>
-    public TicketDeskDisplayDriver(IServiceLevelPolicyManager policies, IContentDefinitionManager contentDefinitionManager)
+    /// <param name="availabilitySources">The team availability sources a desk may honor.</param>
+    /// <param name="localizerFactory">The localizer factory, for the sources' names.</param>
+    public TicketDeskDisplayDriver(IServiceLevelPolicyManager policies, IContentDefinitionManager contentDefinitionManager, IEnumerable<ITeamMemberAvailabilitySource> availabilitySources, IStringLocalizerFactory localizerFactory)
     {
+        _availabilitySources = availabilitySources;
+        _localizerFactory = localizerFactory;
         _policies = policies;
         _contentDefinitionManager = contentDefinitionManager;
     }
@@ -46,6 +55,10 @@ internal sealed class TicketDeskDisplayDriver : TicketSettingsDisplayDriverBase<
             model.AssignmentStrategy = desk.AssignmentStrategy;
             model.NotifyRequester = desk.NotifyRequester;
             model.NotifyAssignee = desk.NotifyAssignee;
+            model.AvailabilitySourceOptions = [.. _availabilitySources.Select(source => new SelectListItem(
+                source.DisplayName is null ? source.Name : _localizerFactory.Localize(source.DisplayName).Value,
+                source.Name,
+                desk.AvailabilitySources?.Contains(source.Name, StringComparer.OrdinalIgnoreCase) ?? source.HonoredByDefault))];
             model.Policies = [.. (await _policies.ListByScopeAsync(TicketsConstants.ServiceLevelScope)).Select(policy => new SelectListItem(policy.Name, policy.ItemId, policy.ItemId == desk.ServiceLevelPolicyId))];
             model.TicketTypeOptions = [.. (await _contentDefinitionManager.ListTypeDefinitionsAsync())
                 .Where(type => type.Parts.Any(part => part.PartDefinition.Name == TicketsConstants.PartName))
@@ -71,6 +84,13 @@ internal sealed class TicketDeskDisplayDriver : TicketSettingsDisplayDriverBase<
         desk.AssignmentStrategy = string.IsNullOrWhiteSpace(model.AssignmentStrategy) ? null : model.AssignmentStrategy;
         desk.NotifyRequester = model.NotifyRequester;
         desk.NotifyAssignee = model.NotifyAssignee;
+
+        // Saved only when there are sources to choose from, so a desk keeps following the defaults until someone chooses.
+        if (_availabilitySources.Any())
+        {
+            var known = _availabilitySources.Select(source => source.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            desk.AvailabilitySources = [.. (model.AvailabilitySources ?? []).Where(known.Contains).Distinct(StringComparer.OrdinalIgnoreCase)];
+        }
 
         return Edit(desk, context);
     }
