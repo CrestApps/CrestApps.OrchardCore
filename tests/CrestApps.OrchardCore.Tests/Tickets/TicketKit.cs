@@ -256,6 +256,8 @@ internal sealed class TicketKit : IAsyncDisposable
 
         public Task MergedAsync(ContentItem ticket, ContentItem into, CancellationToken cancellationToken = default) => TellAsync("Merged", ticket);
 
+        public Task RatedAsync(ContentItem ticket, TicketSatisfaction satisfaction, CancellationToken cancellationToken = default) => TellAsync("Rated:" + satisfaction?.Score, ticket);
+
         private Task TellAsync(string name, ContentItem ticket)
         {
             _observers.Events.Enqueue(name);

@@ -81,6 +81,8 @@ Turn on **Tickets Portal** under **Configuration > Features**. Then:
 
 Signed-in people now find **Requests** under **My account**: their requests, **New request**, and each request's conversation with a reply box. They see your public replies, never your internal notes. Someone without a login follows **View your request** in their e-mails to read and answer their request. An account's administrators also see the account's requests.
 
+To learn how you did, set **Ask requesters to rate a solved ticket after (hours)** on a desk. The requester of a solved ticket then gets one e-mail with a link to rate it from 1 to 5, and can also rate it on the request's page. Ratings show on the ticket's timeline and in the **Tickets** data set for reports.
+
 ## Reports
 
 Under **Reports**, with **View ticket reports**:

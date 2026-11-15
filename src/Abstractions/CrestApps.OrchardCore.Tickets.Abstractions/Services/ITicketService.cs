@@ -115,4 +115,22 @@ public interface ITicketService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A page of tickets and how many match.</returns>
     Task<(IReadOnlyList<ContentItem> Tickets, int Total)> ListAsync(TicketScopedQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records the requester's rating of a solved or closed ticket; a second rating replaces the first.
+    /// </summary>
+    /// <param name="ticketId">The ticket.</param>
+    /// <param name="score">The score, from <see cref="TicketSatisfaction.MinScore"/> to <see cref="TicketSatisfaction.MaxScore"/>.</param>
+    /// <param name="comment">What the requester added, if anything.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<TicketResult> RateAsync(string ticketId, int score, string comment, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that the requester was asked to rate the ticket, so they aren't asked again.
+    /// </summary>
+    /// <param name="ticketId">The ticket.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<TicketResult> RecordRatingRequestAsync(string ticketId, CancellationToken cancellationToken = default);
 }

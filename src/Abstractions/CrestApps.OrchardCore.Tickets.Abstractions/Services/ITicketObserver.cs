@@ -84,4 +84,13 @@ public interface ITicketObserver
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
     Task ServiceLevelAsync(ContentItem ticket, string metric, bool breached, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// Called after a requester rated a ticket.
+    /// </summary>
+    /// <param name="ticket">The ticket.</param>
+    /// <param name="satisfaction">The rating.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task RatedAsync(ContentItem ticket, Models.TicketSatisfaction satisfaction, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

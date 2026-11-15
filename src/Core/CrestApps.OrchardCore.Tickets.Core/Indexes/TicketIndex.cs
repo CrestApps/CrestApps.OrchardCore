@@ -142,4 +142,14 @@ public sealed class TicketIndex : MapIndex
     public int ReopenCount { get; set; }
 
     public int EscalationLevel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the requester's rating, once given.
+    /// </summary>
+    public int? SatisfactionScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the requester was asked to rate the ticket.
+    /// </summary>
+    public DateTime? RatingRequestedUtc { get; set; }
 }

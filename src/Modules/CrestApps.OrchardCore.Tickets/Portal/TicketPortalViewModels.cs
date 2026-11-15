@@ -103,6 +103,34 @@ public class TicketPortalDisplayViewModel
     /// Gets or sets the guest's token, when the request is opened from a signed link.
     /// </summary>
     public string GuestToken { get; set; }
+
+    public bool CanRate { get; set; }
+
+    public int? Score { get; set; }
+
+    public string RatingComment { get; set; }
+}
+
+/// <summary>
+/// The page a requester rates a ticket on.
+/// </summary>
+public class TicketPortalRateViewModel
+{
+    public string TicketId { get; set; }
+
+    public string Token { get; set; }
+
+    public string Number { get; set; }
+
+    public string Subject { get; set; }
+
+    public int? Score { get; set; }
+
+    public string Comment { get; set; }
+
+    public bool Rated { get; set; }
+
+    public bool Thanked { get; set; }
 }
 
 /// <summary>

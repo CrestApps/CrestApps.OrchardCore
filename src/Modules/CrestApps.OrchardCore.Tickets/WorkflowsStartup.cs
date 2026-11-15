@@ -47,6 +47,7 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<TicketReopenedEvent, TicketEventDisplayDriver<TicketReopenedEvent>>();
         services.AddActivity<TicketClosedEvent, TicketEventDisplayDriver<TicketClosedEvent>>();
         services.AddActivity<TicketMergedEvent, TicketEventDisplayDriver<TicketMergedEvent>>();
+        services.AddActivity<TicketRatedEvent, TicketEventDisplayDriver<TicketRatedEvent>>();
         services.AddActivity<TicketActionRequestedEvent, TicketEventDisplayDriver<TicketActionRequestedEvent>>();
         services.AddActivity<TicketTimeElapsedEvent, TicketEventDisplayDriver<TicketTimeElapsedEvent>>();
 
@@ -87,6 +88,7 @@ public sealed class WorkflowsRecipeSchemaStartup : StartupBase
             .AddWorkflowActivitySchema<TicketReopenedEventSchema>()
             .AddWorkflowActivitySchema<TicketClosedEventSchema>()
             .AddWorkflowActivitySchema<TicketMergedEventSchema>()
+            .AddWorkflowActivitySchema<TicketRatedEventSchema>()
             .AddWorkflowActivitySchema<TicketActionRequestedEventSchema>()
             .AddWorkflowActivitySchema<TicketTimeElapsedEventSchema>()
             .AddWorkflowActivitySchema<CreateTicketTaskSchema>()

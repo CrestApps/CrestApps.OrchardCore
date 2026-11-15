@@ -106,6 +106,16 @@ public sealed class TicketPart : ContentPart
     public DateTime? ClosedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the requester's rating, once given.
+    /// </summary>
+    public TicketSatisfaction Satisfaction { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the requester was asked to rate the ticket, so they are asked once.
+    /// </summary>
+    public DateTime? RatingRequestedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets when the status last changed, in UTC.
     /// </summary>
     public DateTime? StatusChangedUtc { get; set; }

@@ -63,6 +63,8 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
                     AgentReplyCount = part.AgentReplyCount,
                     ReopenCount = part.ReopenCount,
                     EscalationLevel = part.EscalationLevel,
+                    SatisfactionScore = part.Satisfaction?.Score,
+                    RatingRequestedUtc = part.RatingRequestedUtc,
                 };
             });
 

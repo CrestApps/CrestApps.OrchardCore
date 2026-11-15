@@ -157,6 +157,11 @@ public static class TicketsConstants
         /// <summary>A ticket was merged into another.</summary>
         public const string Merged = "TicketMerged";
 
+        /// <summary>
+        /// A requester rated a ticket.
+        /// </summary>
+        public const string Rated = "TicketRated";
+
         /// <summary>An agent ran a named action on a ticket.</summary>
         public const string ActionRequested = "TicketActionRequested";
 
@@ -183,6 +188,11 @@ public static class TicketsConstants
         /// The ticket was solved.
         /// </summary>
         public const string Solved = "ticket-solved";
+
+        /// <summary>
+        /// Asks the requester to rate a solved ticket.
+        /// </summary>
+        public const string Rating = "ticket-rating";
     }
 
     /// <summary>

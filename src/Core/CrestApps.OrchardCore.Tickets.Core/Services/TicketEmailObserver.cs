@@ -104,17 +104,9 @@ public sealed class TicketEmailObserver : ITicketObserver
     // The requester's e-mail, on a desk that e-mails requesters.
     private async Task<string> RecipientAsync(ContentItem ticket, CancellationToken cancellationToken)
     {
-        if (!ticket.TryGet<TicketPart>(out var part) || await _desks.FindByIdAsync(part.DeskId, cancellationToken) is not { NotifyRequester: true })
-        {
-            return null;
-        }
-
-        if (!string.IsNullOrWhiteSpace(part.RequesterContact?.Email))
-        {
-            return part.RequesterContact.Email.Trim();
-        }
-
-        return part.Requester.IsEmpty ? null : (await _parties.GetContactInfoAsync(part.Requester, cancellationToken))?.Email;
+        return ticket.TryGet<TicketPart>(out var part)
+            ? await TicketRequesterEmail.FindAsync(part, await _desks.FindByIdAsync(part.DeskId, cancellationToken), _parties, cancellationToken)
+            : null;
     }
 
     // The e-mail is kept in the outbox and tried at once; one that fails is tried again later, and the reply shows it.

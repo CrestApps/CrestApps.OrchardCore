@@ -47,7 +47,9 @@ public static class TicketIndexSchema
             .Column<int>("ReplyCount", column => column.Nullable())
             .Column<int>("AgentReplyCount", column => column.Nullable())
             .Column<int>("ReopenCount", column => column.Nullable())
-            .Column<int>("EscalationLevel", column => column.Nullable()));
+            .Column<int>("EscalationLevel", column => column.Nullable())
+            .Column<int>("SatisfactionScore", column => column.Nullable())
+            .Column<DateTime>("RatingRequestedUtc", column => column.Nullable()));
 
         await schemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
         {
@@ -60,6 +62,7 @@ public static class TicketIndexSchema
             table.CreateIndex("IDX_TicketIndex_Account", "AccountId", "CreatedUtc", "DocumentId");
             table.CreateIndex("IDX_TicketIndex_Due", "StatusCategory", "NextDueUtc", "DocumentId");
             table.CreateIndex("IDX_TicketIndex_Solved", "StatusCategory", "SolvedUtc", "DocumentId");
+            table.CreateIndex("IDX_TicketIndex_Rating", "DeskId", "RatingRequestedUtc", "SolvedUtc", "DocumentId");
         });
 
         await CreateAssignedIndexAsync(schemaBuilder);

@@ -32,4 +32,9 @@ internal sealed class TicketPortalLinks : ITicketRequesterLinks
             ? await _urls.GetUrlAsync(TicketPortalController.DisplayRouteName, new { number = part.Number })
             : await _urls.GetUrlAsync(TicketPortalController.GuestRouteName, new { id = ticket.ContentItemId, token = _access.CreateGuestToken(ticket.ContentItemId) });
     }
+
+    public Task<string> GetRatingLinkAsync(ContentItem ticket, CancellationToken cancellationToken = default)
+        => ticket is null
+            ? Task.FromResult<string>(null)
+            : _urls.GetUrlAsync(TicketPortalController.RateRouteName, new { id = ticket.ContentItemId, token = _access.CreateRatingToken(ticket.ContentItemId) });
 }

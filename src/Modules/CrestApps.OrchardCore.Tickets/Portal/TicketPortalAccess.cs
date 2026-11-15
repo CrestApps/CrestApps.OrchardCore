@@ -27,6 +27,16 @@ public sealed class TicketPortalAccess
     /// </summary>
     public static readonly TimeSpan GuestLinkLifetime = TimeSpan.FromDays(90);
 
+    /// <summary>
+    /// The purpose of a rating link.
+    /// </summary>
+    public const string RatingPurpose = "Tickets.Rating";
+
+    /// <summary>
+    /// How long a rating link works.
+    /// </summary>
+    public static readonly TimeSpan RatingLinkLifetime = TimeSpan.FromDays(30);
+
     private readonly ISession _session;
     private readonly IEnumerable<IAccountMemberService> _members;
     private readonly SignedTokenService _tokens;
@@ -121,6 +131,23 @@ public sealed class TicketPortalAccess
     /// <returns>Whether it is.</returns>
     public bool IsGuestTokenFor(string token, string ticketId)
         => !string.IsNullOrEmpty(ticketId) && string.Equals(_tokens.Unprotect(GuestPurpose, token), ticketId, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Creates the token of a link to rate a ticket.
+    /// </summary>
+    /// <param name="ticketId">The ticket.</param>
+    /// <returns>The token.</returns>
+    public string CreateRatingToken(string ticketId)
+        => _tokens.Protect(RatingPurpose, ticketId, RatingLinkLifetime);
+
+    /// <summary>
+    /// Returns whether a token is a working link to rate a ticket.
+    /// </summary>
+    /// <param name="token">The token.</param>
+    /// <param name="ticketId">The ticket.</param>
+    /// <returns>Whether it is.</returns>
+    public bool IsRatingTokenFor(string token, string ticketId)
+        => !string.IsNullOrEmpty(ticketId) && string.Equals(_tokens.Unprotect(RatingPurpose, token), ticketId, StringComparison.Ordinal);
 }
 
 /// <summary>

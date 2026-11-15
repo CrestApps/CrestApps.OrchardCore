@@ -149,6 +149,15 @@ internal sealed class TicketMergedEventSchema : TicketEventSchemaBase
     protected override string Description => $"Starts when a ticket is merged into another. {Input}, MergedIntoId";
 }
 
+internal sealed class TicketRatedEventSchema : TicketEventSchemaBase
+{
+    public override string Name => TicketsConstants.Events.Rated;
+
+    protected override string DisplayText => "Ticket Rated";
+
+    protected override string Description => $"Starts when a requester rates a solved ticket. {Input}, Score (1 to 5), Comment";
+}
+
 internal sealed class TicketActionRequestedEventSchema : TicketEventSchemaBase
 {
     public override string Name => TicketsConstants.Events.ActionRequested;

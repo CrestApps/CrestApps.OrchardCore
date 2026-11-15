@@ -205,6 +205,16 @@ public sealed class TicketClosedEvent : TicketEventActivity
     public override LocalizedString DisplayText => S["Ticket Closed"];
 }
 
+/// <summary>Starts when a requester rates a solved ticket.</summary>
+public sealed class TicketRatedEvent : TicketEventActivity
+{
+    public TicketRatedEvent(IStringLocalizer<TicketRatedEvent> stringLocalizer) : base(stringLocalizer) { }
+
+    public override string Name => TicketsConstants.Events.Rated;
+
+    public override LocalizedString DisplayText => S["Ticket Rated"];
+}
+
 /// <summary>Starts when a ticket is merged into another.</summary>
 public sealed class TicketMergedEvent : TicketEventActivity
 {

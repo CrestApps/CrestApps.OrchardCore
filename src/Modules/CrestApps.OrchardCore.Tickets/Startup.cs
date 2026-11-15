@@ -79,7 +79,8 @@ public sealed class Startup : StartupBase
         services
             .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Received, LocalizationSource.Create<Startup>("Ticket received"))
             .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Reply, LocalizationSource.Create<Startup>("Reply from an agent"), LocalizationSource.Create<Startup>("{{ Reply.Body }}, {{ Reply.AuthorName }}"))
-            .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Solved, LocalizationSource.Create<Startup>("Ticket solved"));
+            .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Solved, LocalizationSource.Create<Startup>("Ticket solved"))
+            .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Rating, LocalizationSource.Create<Startup>("Rate a solved ticket"));
         services.AddSiteDisplayDriver<TicketEmailSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(TicketEmailSettingsDisplayDriver.GroupId, TicketsPermissions.ManageTicketSettings);
 

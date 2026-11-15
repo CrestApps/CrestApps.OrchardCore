@@ -76,6 +76,12 @@ public sealed class TicketDesk : CatalogItem, ITicketSettingsRecord
     public bool NotifyAssignee { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets how many hours after a ticket is solved its requester is asked to rate it (with Tickets Portal on and
+    /// requesters e-mailed); 0 never asks.
+    /// </summary>
+    public int RatingRequestDelayHours { get; set; }
+
+    /// <summary>
     /// Gets or sets when it was created, in UTC.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

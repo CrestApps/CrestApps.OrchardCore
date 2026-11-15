@@ -1121,6 +1121,53 @@ public sealed class DefaultTicketService : ITicketService
         return true;
     }
 
+    /// <inheritdoc/>
+    public Task<TicketResult> RateAsync(string ticketId, int score, string comment, CancellationToken cancellationToken = default)
+        => WithLockAsync(ticketId, async ticket =>
+        {
+            var part = ticket.GetOrCreate<TicketPart>();
+
+            if (part.StatusCategory is not (TicketStatusCategory.Solved or TicketStatusCategory.Closed))
+            {
+                return Refuse(S["A request can be rated once it is solved."], ticket);
+            }
+
+            if (score is < TicketSatisfaction.MinScore or > TicketSatisfaction.MaxScore)
+            {
+                return Refuse(S["Choose a rating from {0} to {1}.", TicketSatisfaction.MinScore, TicketSatisfaction.MaxScore], ticket);
+            }
+
+            comment = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+
+            if (comment?.Length > TicketSatisfaction.MaxCommentLength)
+            {
+                comment = comment[..TicketSatisfaction.MaxCommentLength];
+            }
+
+            part.Satisfaction = new TicketSatisfaction { Score = score, Comment = comment, RatedUtc = _clock.UtcNow };
+            await SaveAsync(ticket, part, cancellationToken);
+
+            var actor = new TicketActor { Party = part.Requester, Name = part.RequesterContact?.Name };
+            var body = S["Rated {0} out of {1}.", score, TicketSatisfaction.MaxScore].Value + (comment is null ? null : "\n\n" + comment);
+            await AddEventAsync(ticket.ContentItemId, actor, body, [], cancellationToken);
+
+            var satisfaction = part.Satisfaction;
+            Enqueue(observer => observer.RatedAsync(ticket, satisfaction, cancellationToken));
+
+            return new TicketResult { Ticket = ticket };
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<TicketResult> RecordRatingRequestAsync(string ticketId, CancellationToken cancellationToken = default)
+        => WithLockAsync(ticketId, async ticket =>
+        {
+            var part = ticket.GetOrCreate<TicketPart>();
+            part.RatingRequestedUtc = _clock.UtcNow;
+            await SaveAsync(ticket, part, cancellationToken);
+
+            return new TicketResult { Ticket = ticket };
+        }, cancellationToken);
+
     // The sources the desk honors; a desk that never chose honors the sources that are on by default.
     private List<string> HonoredSources(TicketDesk desk)
         => desk?.AvailabilitySources

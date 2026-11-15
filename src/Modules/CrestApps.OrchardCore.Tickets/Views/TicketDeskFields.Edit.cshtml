@@ -97,3 +97,9 @@
         <span class="hint dashed">@T["When a ticket is assigned to them."]</span>
     </div>
 </div>
+
+<div class="mb-3">
+    <label asp-for="RatingRequestDelayHours" class="form-label">@T["Ask requesters to rate a solved ticket after (hours)"]</label>
+    <input asp-for="RatingRequestDelayHours" class="form-control" type="number" min="0" />
+    <span class="hint">@T["With Tickets Portal on and requesters e-mailed, the requester gets one e-mail with a link to rate how their request was handled. 0 never asks."]</span>
+</div>

@@ -76,7 +76,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 9;
+        return 10;
     }
 
     /// <summary>
@@ -196,6 +196,22 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateEmailOutboxAsync(SchemaBuilder);
 
         return 9;
+    }
+
+    /// <summary>
+    /// Adds the requester's rating and when they were asked for it to the ticket index.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom9Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
+        {
+            table.AddColumn<int>("SatisfactionScore", column => column.Nullable());
+            table.AddColumn<DateTime>("RatingRequestedUtc", column => column.Nullable());
+        });
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table.CreateIndex("IDX_TicketIndex_Rating", "DeskId", "RatingRequestedUtc", "SolvedUtc", "DocumentId"));
+
+        return 10;
     }
 
     private async Task SeedAsync()

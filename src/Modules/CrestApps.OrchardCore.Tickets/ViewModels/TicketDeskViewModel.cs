@@ -82,6 +82,8 @@ public class TicketDeskViewModel
 
     public List<string> AvailabilitySources { get; set; } = [];
 
+    public int RatingRequestDelayHours { get; set; }
+
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailabilitySourceOptions { get; set; } = [];
 }

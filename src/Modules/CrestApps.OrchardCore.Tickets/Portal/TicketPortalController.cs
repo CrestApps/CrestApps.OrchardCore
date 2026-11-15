@@ -39,6 +39,11 @@ public sealed class TicketPortalController : Controller
     /// </summary>
     public const string GuestRouteName = "TicketPortalGuest";
 
+    /// <summary>
+    /// The route of the page a requester rates a ticket on, from the signed link in the rating e-mail.
+    /// </summary>
+    public const string RateRouteName = "TicketPortalRate";
+
     private const int PageSize = 20;
 
     private static readonly TimeSpan _fileLinkLifetime = TimeSpan.FromHours(1);
@@ -330,6 +335,112 @@ public sealed class TicketPortalController : Controller
         return RedirectToRoute(GuestRouteName, new { id, token });
     }
 
+    /// <summary>
+    /// Records the signed-in requester's rating of a solved request.
+    /// </summary>
+    /// <param name="number">The request's number.</param>
+    /// <param name="score">The score.</param>
+    /// <param name="comment">What they added.</param>
+    /// <returns>The request.</returns>
+    [Authorize]
+    [HttpPost("account/requests/{number}/rate", Name = "TicketPortalRateOwn")]
+    public async Task<IActionResult> RateOwn(string number, int score, string comment)
+    {
+        var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
+        var ticket = await _tickets.FindByNumberAsync(number);
+
+        // Only the requester rates; an account administrator follows the account's requests but didn't ask for them.
+        if (!TicketPortalAccess.CanSee(viewer, ticket) || ticket.GetOrCreate<TicketPart>().Requester != viewer.Party)
+        {
+            return NotFound();
+        }
+
+        await RateAsync(ticket, score, comment);
+
+        return RedirectToRoute(DisplayRouteName, new { number });
+    }
+
+    /// <summary>
+    /// The page a requester rates a ticket on, from the signed link in the rating e-mail.
+    /// </summary>
+    /// <param name="id">The ticket's id.</param>
+    /// <param name="token">The signed token.</param>
+    /// <param name="score">A score chosen in the e-mail, if any.</param>
+    /// <returns>The page.</returns>
+    [AllowAnonymous]
+    [HttpGet("requests/{id}/rate", Name = RateRouteName)]
+    public async Task<IActionResult> Rate(string id, string token, int? score = null)
+    {
+        if (!_access.IsRatingTokenFor(token, id) || await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        var part = ticket.GetOrCreate<TicketPart>();
+
+        return View(new TicketPortalRateViewModel
+        {
+            TicketId = id,
+            Token = token,
+            Number = part.Number,
+            Subject = ticket.DisplayText,
+            Score = score ?? part.Satisfaction?.Score,
+            Comment = part.Satisfaction?.Comment,
+            Rated = part.Satisfaction is not null,
+        });
+    }
+
+    /// <summary>
+    /// Records a rating from the signed link.
+    /// </summary>
+    /// <param name="id">The ticket's id.</param>
+    /// <param name="token">The signed token.</param>
+    /// <param name="score">The score.</param>
+    /// <param name="comment">What they added.</param>
+    /// <returns>The rating page, saying thanks.</returns>
+    [AllowAnonymous]
+    [HttpPost("requests/{id}/rate")]
+    [ActionName(nameof(Rate))]
+    public async Task<IActionResult> RatePost(string id, string token, int score, string comment)
+    {
+        if (!_access.IsRatingTokenFor(token, id) || await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        var saved = await RateAsync(ticket, score, comment);
+        var part = (await _tickets.GetAsync(id))?.GetOrCreate<TicketPart>() ?? ticket.GetOrCreate<TicketPart>();
+
+        return View(new TicketPortalRateViewModel
+        {
+            TicketId = id,
+            Token = token,
+            Number = part.Number,
+            Subject = ticket.DisplayText,
+            Score = saved ? part.Satisfaction?.Score : score,
+            Comment = saved ? part.Satisfaction?.Comment : comment,
+            Rated = part.Satisfaction is not null,
+            Thanked = saved,
+        });
+    }
+
+    private async Task<bool> RateAsync(ContentItem ticket, int score, string comment)
+    {
+        var result = await _tickets.RateAsync(ticket.ContentItemId, score, comment, HttpContext.RequestAborted);
+
+        foreach (var error in result.Errors)
+        {
+            await _notifier.ErrorAsync(H["{0}", error]);
+        }
+
+        if (result.Succeeded)
+        {
+            await _notifier.SuccessAsync(H["Thank you for your rating."]);
+        }
+
+        return result.Succeeded;
+    }
+
     private async Task ReplyAsync(ContentItem ticket, string body, List<IFormFile> files, PartyRef author, string authorName)
     {
         if (string.IsNullOrWhiteSpace(body))
@@ -394,6 +505,11 @@ public sealed class TicketPortalController : Controller
             CanReply = string.IsNullOrEmpty(part.MergedIntoId),
             CanAttach = _uploads.CanAttach,
             GuestToken = guestToken,
+
+            // The requester rates a solved request on its page; a guest rates from the link in the rating e-mail.
+            CanRate = string.IsNullOrEmpty(guestToken) && !viewer.IsEmpty && part.Requester == viewer && part.StatusCategory is TicketStatusCategory.Solved or TicketStatusCategory.Closed,
+            Score = part.Satisfaction?.Score,
+            RatingComment = part.Satisfaction?.Comment,
         };
 
         // Only public replies: internal notes and the record of changes are the business's own.

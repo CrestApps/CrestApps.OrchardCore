@@ -85,6 +85,8 @@ internal sealed class TicketsReportDataSet : IndexedReportDataSet<ContentItem, T
         AddField(nameof(TicketPart.ReopenCount), S["Reopened"], DataFieldType.Integer, record => Part(record).ReopenCount, counts);
         AddField(nameof(TicketPart.ReassignmentCount), S["Reassigned"], DataFieldType.Integer, record => Part(record).ReassignmentCount, counts);
         AddField(nameof(TicketPart.EscalationLevel), S["Escalation level"], DataFieldType.Integer, record => Part(record).EscalationLevel, counts);
+        AddField("SatisfactionScore", S["Rating"], DataFieldType.Integer, record => Part(record).Satisfaction?.Score, counts).Description = S["The requester's rating from 1 to 5, once given."].Value;
+        AddField("SatisfactionComment", S["Rating comment"], DataFieldType.Text, record => Part(record).Satisfaction?.Comment, counts);
         AddField("LinkCount", S["Links"], DataFieldType.Integer, record => Part(record).Links?.Count ?? 0, counts);
         AddField("ParticipantCount", S["Participants"], DataFieldType.Integer, record => Part(record).Participants?.Count ?? 0, counts);
 

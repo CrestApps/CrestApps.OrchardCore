@@ -39,6 +39,19 @@
     }
 </div>
 
+@if (Model.CanRate)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h6">@(Model.Score is null ? T["How did we do?"] : T["Your rating: {0} out of 5", Model.Score])</h2>
+            <form method="post" asp-route="TicketPortalRateOwn" asp-route-number="@Model.Number" class="no-multisubmit">
+                <partial name="_TicketPortalRating" model="(Model.Score, Model.RatingComment)" />
+                <button type="submit" class="btn btn-outline-primary btn-sm">@(Model.Score is null ? T["Send my rating"] : T["Update my rating"])</button>
+            </form>
+        </div>
+    </div>
+}
+
 @if (Model.CanReply)
 {
     <form method="post" asp-route="@(string.IsNullOrEmpty(Model.GuestToken) ? "TicketPortalReply" : "TicketPortalGuestReply")" asp-all-route-data="@routeValues" enctype="multipart/form-data" class="no-multisubmit">

@@ -55,6 +55,7 @@ internal sealed class TicketDeskDisplayDriver : TicketSettingsDisplayDriverBase<
             model.AssignmentStrategy = desk.AssignmentStrategy;
             model.NotifyRequester = desk.NotifyRequester;
             model.NotifyAssignee = desk.NotifyAssignee;
+            model.RatingRequestDelayHours = desk.RatingRequestDelayHours;
             model.AvailabilitySourceOptions = [.. _availabilitySources.Select(source => new SelectListItem(
                 source.DisplayName is null ? source.Name : _localizerFactory.Localize(source.DisplayName).Value,
                 source.Name,
@@ -84,6 +85,7 @@ internal sealed class TicketDeskDisplayDriver : TicketSettingsDisplayDriverBase<
         desk.AssignmentStrategy = string.IsNullOrWhiteSpace(model.AssignmentStrategy) ? null : model.AssignmentStrategy;
         desk.NotifyRequester = model.NotifyRequester;
         desk.NotifyAssignee = model.NotifyAssignee;
+        desk.RatingRequestDelayHours = Math.Max(0, model.RatingRequestDelayHours);
 
         // Saved only when there are sources to choose from, so a desk keeps following the defaults until someone chooses.
         if (_availabilitySources.Any())

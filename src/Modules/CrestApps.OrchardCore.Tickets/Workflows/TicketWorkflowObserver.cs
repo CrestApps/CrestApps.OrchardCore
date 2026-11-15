@@ -63,6 +63,12 @@ public static class TicketWorkflowInput
     /// <summary>The ticket another was merged into.</summary>
     public const string MergedIntoId = "MergedIntoId";
 
+    /// <summary>The requester's score, from 1 to 5.</summary>
+    public const string Score = "Score";
+
+    /// <summary>What the requester added to their rating.</summary>
+    public const string Comment = "Comment";
+
     /// <summary>The time-elapsed activity a scan started.</summary>
     public const string ActivityId = "ActivityId";
 
@@ -173,6 +179,13 @@ internal sealed class TicketWorkflowObserver : ITicketObserver
 
     public Task MergedAsync(ContentItem ticket, ContentItem into, CancellationToken cancellationToken = default)
         => TriggerAsync(TicketsConstants.Events.Merged, ticket, input => input[TicketWorkflowInput.MergedIntoId] = into?.ContentItemId);
+
+    public Task RatedAsync(ContentItem ticket, TicketSatisfaction satisfaction, CancellationToken cancellationToken = default)
+        => TriggerAsync(TicketsConstants.Events.Rated, ticket, input =>
+        {
+            input[TicketWorkflowInput.Score] = satisfaction?.Score;
+            input[TicketWorkflowInput.Comment] = satisfaction?.Comment;
+        });
 
     public Task AssignedAsync(ContentItem ticket, string previousAssigneeId, CancellationToken cancellationToken = default)
         => TriggerAsync(TicketsConstants.Events.Assigned, ticket, input => input[TicketWorkflowInput.Previous] = previousAssigneeId);

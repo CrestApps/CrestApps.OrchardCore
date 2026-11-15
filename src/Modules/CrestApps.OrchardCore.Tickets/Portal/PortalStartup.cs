@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
@@ -19,5 +20,6 @@ public sealed class PortalStartup : StartupBase
         services.AddScoped<TicketPortalAccess>();
         services.AddScoped<ITicketRequesterLinks, TicketPortalLinks>();
         services.AddNavigationProvider<TicketsAccountMenu>();
+        services.AddSingleton<IBackgroundTask, BackgroundTasks.TicketRatingRequestBackgroundTask>();
     }
 }
