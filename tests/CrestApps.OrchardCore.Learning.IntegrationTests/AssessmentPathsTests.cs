@@ -159,6 +159,60 @@ public sealed class AssessmentPathsTests
         });
     }
 
+    [Fact]
+    public async Task NoPageShowsTheKeyBeforeSubmitting_AndAnAttemptStillReadsAfterItsQuestionIsChangedAndRemoved()
+    {
+        // Arrange
+        var setup = await SetupAsync();
+        var attemptId = await AsLearnerAsync(async (services, user, userId) =>
+        {
+            var attempts = services.GetRequiredService<IAssessmentAttemptService>();
+            var started = await attempts.StartAsync(new StartAttemptRequest { UserId = userId, User = user, QuizId = setup.QuizId, HonorConfirmed = true });
+
+            Assert.True(started.Succeeded, started.ErrorCode);
+
+            return started.Attempt.ItemId;
+        });
+
+        using var learner = await _fixture.CreateClientAsync("learner1");
+
+        // Act: the attempt page while it is open.
+        var open = await (await learner.GetAsync($"learning/attempts/{attemptId}", TestContext.Current.CancellationToken)).Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        await AsLearnerAsync(async (services, user, userId) =>
+        {
+            var attempts = services.GetRequiredService<IAssessmentAttemptService>();
+            await attempts.SaveResponseAsync(attemptId, userId, 1, new AttemptResponse { Texts = [AcceptedAnswer] });
+            await attempts.SubmitAsync(attemptId, userId);
+
+            return true;
+        });
+
+        // The question is rewritten with another key, then removed, as version pruning or a cleanup would do.
+        await _fixture.InTenantAsync(async services =>
+        {
+            var contentManager = services.GetRequiredService<IContentManager>();
+            var question = await contentManager.GetAsync(setup.ShortTextId, VersionOptions.DraftRequired);
+
+            question.Alter<QuestionPart>(part => part.Prompt = "<p>A different question.</p>");
+            question.Alter<ShortTextQuestionPart>(part => part.AcceptedAnswers = ["Something else"]);
+            await contentManager.UpdateAsync(question);
+            await contentManager.PublishAsync(question);
+            await contentManager.RemoveAsync(question);
+        });
+
+        var result = await learner.GetAsync($"learning/attempts/{attemptId}", TestContext.Current.CancellationToken);
+        var resultHtml = await result.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains("Which exit do you use?", open);
+        Assert.DoesNotContain(AcceptedAnswer, open);
+        Assert.DoesNotContain(GraderGuidance, open);
+        Assert.Equal(HttpStatusCode.OK, result.StatusCode);
+        Assert.Contains("Which exit do you use?", resultHtml);
+        Assert.DoesNotContain("A different question.", resultHtml);
+    }
+
     private async Task<Setup> SetupAsync()
     {
         await _setupLock.WaitAsync(TestContext.Current.CancellationToken);
@@ -215,7 +269,11 @@ public sealed class AssessmentPathsTests
                 var quiz = await contentManager.NewAsync(AssessmentsConstants.ContentTypes.Quiz);
                 quiz.DisplayText = "Exit quiz";
                 quiz.Alter<TitlePart>(part => part.Title = "Exit quiz");
-                quiz.Alter<QuizPart>(part => part.QuestionIds = [essay.ContentItemId, shortText.ContentItemId]);
+                quiz.Alter<QuizPart>(part =>
+                {
+                    part.QuestionIds = [essay.ContentItemId, shortText.ContentItemId];
+                    part.MaxAttempts = null;
+                });
                 quiz.Alter<ContainedPart>(part =>
                 {
                     part.ListContentItemId = course.ContentItemId;
