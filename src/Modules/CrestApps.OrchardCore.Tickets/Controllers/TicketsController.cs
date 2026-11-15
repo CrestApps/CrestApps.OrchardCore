@@ -561,6 +561,65 @@ public sealed class TicketsController : Controller
     }
 
     /// <summary>
+    /// Has the desk's AI assistant write a reply for the agent to edit and send.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <returns>The reply as <c>{ text }</c>, or <c>{ error }</c>.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/assistant/reply", "TicketsSuggestReply")]
+    public async Task<IActionResult> SuggestReply(string id)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+        var assistant = _serviceProvider.GetService<global::CrestApps.OrchardCore.Tickets.AI.TicketAssistant>();
+
+        if (assistant is null || await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        if (!await _access.CanAsync(User, ticket, TicketOperation.Reply, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var result = await assistant.SuggestReplyAsync(ticket, cancellationToken);
+
+        return Json(result.Succeeded ? new { text = result.Text, error = (string)null } : new { text = (string)null, error = result.Error });
+    }
+
+    /// <summary>
+    /// Has the desk's AI assistant triage the ticket into an internal note.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <returns>Back to the ticket.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/assistant/triage", "TicketsTriage")]
+    public async Task<IActionResult> Triage(string id)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+        var assistant = _serviceProvider.GetService<global::CrestApps.OrchardCore.Tickets.AI.TicketAssistant>();
+
+        if (assistant is null || await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        if (!await _access.CanAsync(User, ticket, TicketOperation.Edit, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        var result = await assistant.TriageAsync(ticket, cancellationToken);
+
+        if (!result.Succeeded)
+        {
+            await _notifier.ErrorAsync(H["{0}", result.Error]);
+        }
+
+        return RedirectToAction(nameof(Display), new { id });
+    }
+
+    /// <summary>
     /// Starts or stops the user's work on the ticket, with Time Tracker on.
     /// </summary>
     /// <param name="id">The ticket.</param>

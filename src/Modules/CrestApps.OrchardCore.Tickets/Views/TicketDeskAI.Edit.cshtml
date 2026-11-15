@@ -1,0 +1,15 @@
+@model TicketDeskAIViewModel
+
+<div class="mb-3">
+    <label asp-for="ProfileId" class="form-label">@T["AI assistant"]</label>
+    <select asp-for="ProfileId" asp-items="Model.Profiles" class="form-select">
+        <option value="">@T["None"]</option>
+    </select>
+    <span asp-validation-for="ProfileId" class="text-danger"></span>
+    <span class="hint">@T["A chat AI profile that suggests replies to agents and triages tickets, with its instructions, knowledge and model. It reads the ticket's conversation; agents send what it writes."]</span>
+</div>
+<div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" asp-for="ApplyPriority" />
+    <label class="form-check-label" asp-for="ApplyPriority">@T["A triage sets the priority it suggests"]</label>
+    <span class="hint dashed">@T["Otherwise the triage only notes the priority."]</span>
+</div>

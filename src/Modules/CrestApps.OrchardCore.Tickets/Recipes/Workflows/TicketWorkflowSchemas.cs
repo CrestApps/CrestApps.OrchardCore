@@ -388,6 +388,17 @@ internal sealed class CreateTicketWorkOrderTaskSchema : TicketTaskSchemaBase
     ];
 }
 
+internal sealed class TriageTicketTaskSchema : TicketTaskSchemaBase
+{
+    public override string Name => nameof(CrestApps.OrchardCore.Tickets.AI.TriageTicketTask);
+
+    protected override string DisplayText => "Triage Ticket With AI";
+
+    protected override string Description => "Adds an internal note with a summary and a priority from the ticket desk's AI assistant";
+
+    protected override IEnumerable<(string Name, string Description)> Fields => [];
+}
+
 internal sealed class NotifyTicketTaskSchema : TicketTaskSchemaBase
 {
     public override string Name => nameof(NotifyTicketTask);

@@ -97,6 +97,15 @@ Signed-in people now find **Requests** under **My account**: their requests, **N
 
 To learn how you did, set **Ask requesters to rate a solved ticket after (hours)** on a desk. The requester of a solved ticket then gets one e-mail with a link to rate it from 1 to 5, and can also rate it on the request's page. Ratings show on the ticket's timeline and in the **Tickets** data set for reports.
 
+## Let the AI assistant help
+
+With AI turned on, edit a desk and choose an **AI assistant**: a chat AI profile with the instructions and knowledge your agents should answer from. Tickets on that desk then show an **AI assistant** panel:
+
+- **Suggest a reply** writes a reply into the reply box from the conversation. Read it, change it, then send it; nothing is sent until you do.
+- **Triage** adds an internal note with a short summary and a suggested priority. Tick **A triage sets the priority it suggests** on the desk to have it change the priority too.
+
+To triage every new ticket, add the **Triage Ticket With AI** task to a workflow that starts with **Ticket Created**.
+
 ## Ask for approval before work starts
 
 Turn on **Ticket Approvals** under **Configuration > Features**. Then, under **Content Definition**, edit the ticket type's **Ticket** part and fill in **Approval**: up to three steps, each with a name (such as *Manager* or *Finance*) and its approvers, or **The requester's manager**. Choose a **Status while waiting**, such as a *Waiting for approval* status you add under **Tickets > Statuses**.

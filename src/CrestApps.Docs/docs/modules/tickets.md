@@ -130,7 +130,7 @@ With Workflows on, these events start workflows. Each can be narrowed to desks; 
 | Ticket Action Requested | An agent runs a named action from the ticket's **Actions** menu |
 | Ticket Time Elapsed | A time passes, in clock or business hours, since creation, the last customer or agent reply, or the last status change |
 
-Tasks: Create Ticket, Update Ticket, Assign Ticket, Add Ticket Reply, Add Ticket Note, Escalate Ticket, Get Ticket, Find Tickets, Check Ticket Service Level, Link Tickets and Notify about a Ticket, and, with Work Orders on, Create Work Order From Ticket. Changes a workflow makes are marked, and a chain of workflow-caused changes stops starting workflows at depth 3, so rules can't loop.
+Tasks: Create Ticket, Update Ticket, Assign Ticket, Add Ticket Reply, Add Ticket Note, Escalate Ticket, Get Ticket, Find Tickets, Check Ticket Service Level, Link Tickets and Notify about a Ticket, and, with Work Orders on, Create Work Order From Ticket and, with AI on, Triage Ticket With AI. Changes a workflow makes are marked, and a chain of workflow-caused changes stops starting workflows at depth 3, so rules can't loop.
 
 ## Webhooks and audit trail
 
@@ -195,6 +195,8 @@ With AI on, these tools can be picked on AI profiles (category **Tickets**). Eac
 | `createTicket` | Opens a ticket on a desk |
 | `addTicketReply` | Sends a public reply or adds an internal note |
 | `updateTicket` | Changes the status, priority, team or assignee |
+
+**AI assistant.** With AI on, a desk's editor has **AI assistant**: a chat AI profile (`TicketDeskAISettings.ProfileId`, in the desk's properties), whose instructions, knowledge (its data sources) and chat model the assistant uses, and **A triage sets the priority it suggests**. The ticket page of such a desk then has an **AI assistant** panel. **Suggest a reply** (`POST Admin/ticket/{id}/assistant/reply`, the Reply permission) reads the ticket's latest 30 replies and notes, internal notes marked as such, and puts a reply in the composer for the agent to edit and send; nothing goes to the requester on its own. **Triage** (`POST Admin/ticket/{id}/assistant/triage`, the Edit permission) asks for a summary and one of the site's priorities as JSON and adds them as an internal note from "AI assistant", setting the priority when the desk says so. The **Triage Ticket With AI** workflow task (with Workflows on) does the same, such as on Ticket Created, with the note in the `Triage` output. `TicketAssistant` runs with the profile's tools turned off, counts its use under the `Tickets` usage category, and answers "not available" when the profile, its model or the connection fails, without stopping the page.
 
 ## Recipes and deployment
 
