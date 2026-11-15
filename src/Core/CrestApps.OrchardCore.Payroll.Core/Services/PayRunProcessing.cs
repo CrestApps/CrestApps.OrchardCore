@@ -339,7 +339,14 @@ public sealed partial class DefaultPayRunService
     }
 
     /// <inheritdoc />
-    public async Task<PayRunResult> ReissuePaymentAsync(PayStatement statement, int index, ClaimsPrincipal user, string reason, CancellationToken cancellationToken = default)
+    public Task<PayRunResult> ReissuePaymentAsync(PayStatement statement, int index, ClaimsPrincipal user, string reason, CancellationToken cancellationToken = default)
+        => ReissueAsync(statement, index, reason, null, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<PayRunResult> ReissuePaymentAsync(PayStatement statement, int index, ClaimsPrincipal user, string reason, NetPayMethod method, CancellationToken cancellationToken = default)
+        => ReissueAsync(statement, index, reason, method, cancellationToken);
+
+    private async Task<PayRunResult> ReissueAsync(PayStatement statement, int index, string reason, NetPayMethod? method, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(statement);
 
@@ -406,6 +413,11 @@ public sealed partial class DefaultPayRunService
             stopped.Payments[index].ReferenceId = null;
             stopped.Payments[index].Reference = null;
             stopped.Payments[index].Attempt++;
+
+            if (method is { } chosen)
+            {
+                stopped.Payments[index].Method = chosen;
+            }
             stopped.Status = PayStatementStatus.Final;
             stopped.ModifiedUtc = _clock.UtcNow;
             await _statements.UpdateAsync(stopped, cancellationToken);
@@ -446,6 +458,17 @@ public sealed partial class DefaultPayRunService
         if (!methods.TryGetValue(method, out var payer) && method == NetPayMethod.BankAccount && methods.TryGetValue(NetPayMethod.Check, out payer))
         {
             method = NetPayMethod.Check;
+        }
+
+        // An account that is no longer verified (changed or failed since the run was approved) is paid by check instead,
+        // when Paychecks is on.
+        if (method == NetPayMethod.BankAccount && payer is not null && methods.TryGetValue(NetPayMethod.Check, out var checks)
+            && _services.GetService<CrestApps.OrchardCore.Banking.Services.IBankAccountManager>() is { } accounts
+            && (string.IsNullOrEmpty(payment.BankAccountId)
+                || await accounts.FindByIdAsync(payment.BankAccountId, cancellationToken) is not { Status: CrestApps.OrchardCore.Banking.Models.BankAccountStatus.Verified }))
+        {
+            method = NetPayMethod.Check;
+            payer = checks;
         }
 
         PayStatementPaymentResult outcome = null;

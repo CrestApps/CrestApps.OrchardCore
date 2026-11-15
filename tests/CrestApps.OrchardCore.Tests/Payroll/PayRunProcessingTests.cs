@@ -324,7 +324,7 @@ public sealed class PayRunProcessingTests
                 await PayRunTests.Controller(services, stranger).StatementPdf(statement.ItemId, statements, stubs),
                 await PayRunTests.Controller(services, viewer).VoidStatement(statement.ItemId, "Wrong", statements),
                 await PayRunTests.Controller(services, stranger).VoidStatement(statement.ItemId, "Wrong", statements),
-                await PayRunTests.Controller(services, stranger).ReissuePayment(statement.ItemId, 0, "Lost", statements),
+                await PayRunTests.Controller(services, stranger).ReissuePayment(statement.ItemId, 0, "Lost", false, statements),
                 await PayRunTests.Controller(services, processor).VoidStatement(statement.ItemId, "Wrong", statements));
         }, commit: false);
 
@@ -607,6 +607,73 @@ public sealed class PayRunProcessingTests
 
         Assert.Single(afterVoid, statement => statement.VoidOf == original.ItemId);
         Assert.Equal(PayStatementStatus.Voided, afterVoid.Single(statement => statement.ItemId == original.ItemId).Status);
+    }
+
+    [Fact]
+    public async Task AReturnedDeposit_IsReissued_AgainOrByCheck_AndAnAccountNoLongerVerifiedIsPaidByCheck()
+    {
+        var context = new DisbursementsTestContext();
+        var origin = await context.OriginAsync();
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => AddPayments(services, context, deposits: true, checks: true));
+        string payeeId = null;
+        var setup = await PayRunTests.SetUpAsync(
+            harness,
+            employerSetup: employer => employer.FundingBankAccountId = origin.ItemId,
+            profileSetup: async profile =>
+            {
+                var payee = await context.PayeeAsync(staffId: profile.StaffMemberId);
+
+                payeeId = payee.ItemId;
+                profile.Distribution = [new NetPayRow { Method = NetPayMethod.BankAccount, BankAccountId = payee.ItemId, Split = NetPaySplit.Remainder }];
+            });
+        var clerk = CalendarTestHarness.User("clerk", PayrollPermissions.ProcessPayRuns.Name, PayrollPermissions.VoidPayStatements.Name);
+        await ApproveAsync(harness, setup);
+        await harness.RunAsync(async services => Assert.True((await services.GetRequiredService<IPayRunService>().ProcessAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), clerk)).Succeeded));
+
+        // The bank returned the deposit (R03, no account).
+        var deposit = Assert.Single(context.Store.Entries);
+
+        deposit.Status = DisbursementStatus.Returned;
+        deposit.FailureCode = "R03";
+        await context.Store.UpdateAsync(deposit, TestContext.Current.CancellationToken);
+
+        Task<PayStatement> StatementAsync()
+            => harness.RunAsync(async services => Assert.Single(await services.GetRequiredService<IPayRunService>().ListStatementsAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId))), commit: false);
+
+        var again = await harness.RunAsync(async services => await services.GetRequiredService<IPayRunService>().ReissuePaymentAsync(await StatementAsync(), 0, clerk, "Returned R03"));
+        var afterDeposit = await StatementAsync();
+
+        Assert.True(again.Succeeded, string.Join(" ", again.Errors));
+        Assert.Equal(2, context.Store.Entries.Count);
+        Assert.Equal((1, NetPayMethod.BankAccount), (afterDeposit.Payments[0].Attempt, afterDeposit.Payments[0].Method));
+
+        // Returned again: this time by check.
+        var second = context.Store.Entries.Single(entry => entry.ItemId == afterDeposit.Payments[0].ReferenceId);
+
+        second.Status = DisbursementStatus.Returned;
+        await context.Store.UpdateAsync(second, TestContext.Current.CancellationToken);
+
+        var byCheck = await harness.RunAsync(async services => await services.GetRequiredService<IPayRunService>().ReissuePaymentAsync(await StatementAsync(), 0, clerk, "Returned again", NetPayMethod.Check));
+        var afterCheck = await StatementAsync();
+
+        Assert.True(byCheck.Succeeded, string.Join(" ", byCheck.Errors));
+        Assert.Equal(NetPayMethod.Check, afterCheck.Payments[0].Method);
+        Assert.Equal(afterCheck.Payments[0].ReferenceId, Assert.Single(context.Checks.Store.Entries).ItemId);
+
+        // An account that is no longer verified when a later reissue pays it is paid by check.
+        var account = await context.Banking.Manager.FindByIdAsync(payeeId, TestContext.Current.CancellationToken);
+
+        account.Status = CrestApps.OrchardCore.Banking.Models.BankAccountStatus.Unverified;
+        await context.Banking.Manager.UpdateAsync(account, cancellationToken: TestContext.Current.CancellationToken);
+
+        var check = context.Checks.Store.Entries.Single();
+        var lost = await harness.RunAsync(async services => await services.GetRequiredService<IPayRunService>().ReissuePaymentAsync(await StatementAsync(), 0, clerk, "Lost", NetPayMethod.BankAccount));
+        var afterLost = await StatementAsync();
+
+        Assert.True(lost.Succeeded, string.Join(" ", lost.Errors));
+        Assert.Equal(NetPayMethod.Check, afterLost.Payments[0].Method);
+        Assert.Equal(2, context.Store.Entries.Count);
+        Assert.Equal(2, context.Checks.Store.Entries.Count);
     }
 
     internal static void AddPayments(IServiceCollection services, DisbursementsTestContext context, bool deposits, bool checks)

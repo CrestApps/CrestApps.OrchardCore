@@ -493,7 +493,7 @@ public sealed class PayRunsController : Controller
     /// <returns>The statement page.</returns>
     [HttpPost]
     [Admin("payroll/pay-runs/statements/{id}/payments/{index}/reissue", "PayrollPayRunsReissuePayment")]
-    public async Task<IActionResult> ReissuePayment(string id, int index, string reason, [FromServices] PayStatementStore statements)
+    public async Task<IActionResult> ReissuePayment(string id, int index, string reason, bool byCheck, [FromServices] PayStatementStore statements)
     {
         if (string.IsNullOrEmpty(id) || await statements.FindByIdAsync(id) is not { } statement)
         {
@@ -505,7 +505,11 @@ public sealed class PayRunsController : Controller
             return Forbid();
         }
 
-        await NotifyAsync(await _service.ReissuePaymentAsync(statement, index, User, reason, HttpContext.RequestAborted), H["The payment has been reissued."]);
+        var reissued = byCheck
+            ? await _service.ReissuePaymentAsync(statement, index, User, reason, NetPayMethod.Check, HttpContext.RequestAborted)
+            : await _service.ReissuePaymentAsync(statement, index, User, reason, HttpContext.RequestAborted);
+
+        await NotifyAsync(reissued, H["The payment has been reissued."]);
 
         return RedirectToAction(nameof(Statement), new { id });
     }

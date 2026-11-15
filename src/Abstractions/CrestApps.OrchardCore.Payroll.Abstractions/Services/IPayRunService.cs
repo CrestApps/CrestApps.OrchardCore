@@ -113,6 +113,18 @@ public interface IPayRunService
     Task<PayRunResult> ReissuePaymentAsync(PayStatement statement, int index, ClaimsPrincipal user, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Stops a payment of a final statement and pays it again another way, such as a returned deposit paid by check.
+    /// </summary>
+    /// <param name="statement">The statement.</param>
+    /// <param name="index">The payment's index.</param>
+    /// <param name="user">The person reissuing.</param>
+    /// <param name="reason">Why.</param>
+    /// <param name="method">How it is paid now.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<PayRunResult> ReissuePaymentAsync(PayStatement statement, int index, ClaimsPrincipal user, string reason, NetPayMethod method, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the draft statements of a run (or its final ones, once processed).
     /// </summary>
     /// <param name="run">The run.</param>

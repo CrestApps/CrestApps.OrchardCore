@@ -110,9 +110,18 @@ public sealed class DirectDepositPaymentMethod : IPayStatementPaymentMethod
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        return !string.IsNullOrEmpty(context.Payment.ReferenceId)
-            && await _manager.FindByIdAsync(context.Payment.ReferenceId, cancellationToken) is { } disbursement
-            && await _disbursements.CancelAsync(disbursement, reason, cancellationToken);
+        if (string.IsNullOrEmpty(context.Payment.ReferenceId) || await _manager.FindByIdAsync(context.Payment.ReferenceId, cancellationToken) is not { } disbursement)
+        {
+            return false;
+        }
+
+        // A deposit the bank returned, that failed or that was cancelled is stopped already: it can be paid again.
+        if (disbursement.Status is DisbursementStatus.Returned or DisbursementStatus.Failed or DisbursementStatus.Canceled)
+        {
+            return true;
+        }
+
+        return await _disbursements.CancelAsync(disbursement, reason, cancellationToken);
     }
 }
 
