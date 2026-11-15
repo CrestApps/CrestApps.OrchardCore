@@ -42,7 +42,20 @@ internal static class InvoiceDraftEditor
         model.Taxes = invoice.Taxes ?? [];
 
         model.Lines = BuildLines(invoice.Lines);
-        model.Lines.Add(new InvoiceLineEditViewModel { Quantity = 1m });
+        AddBlankRowWhenEmpty(model.Lines);
+    }
+
+    /// <summary>
+    /// Lines are added in the browser; a document with none starts with one row to fill in.
+    /// </summary>
+    public static void AddBlankRowWhenEmpty(List<InvoiceLineEditViewModel> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+
+        if (lines.Count == 0)
+        {
+            lines.Add(new InvoiceLineEditViewModel { Quantity = 1m });
+        }
     }
 
     /// <summary>
@@ -96,7 +109,11 @@ internal static class InvoiceDraftEditor
             UnitPrice = line.HasAmount ? line.UnitPrice : null,
             DiscountPercent = line.DiscountPercent,
             TaxCategoryCode = line.TaxCategoryCode,
+            ProductId = line.ProductId,
+            Sku = line.Sku,
             Total = line.HasAmount ? line.Total : null,
+            TaxAmount = line.HasAmount ? line.TaxAmount : null,
+            TaxRate = line.HasAmount && line.Net > 0m ? Math.Round(line.TaxAmount / line.Net * 100m, 3) : null,
         })];
 
     /// <summary>
@@ -174,6 +191,8 @@ internal static class InvoiceDraftEditor
                 line.Description = Clean(row.Description);
                 line.Unit = Clean(row.Unit);
                 line.TaxCategoryCode = Clean(row.TaxCategoryCode);
+                line.ProductId = Clean(row.ProductId);
+                line.Sku = Clean(row.Sku);
             }
 
             if (line.HasAmount)

@@ -60,7 +60,7 @@
         </div>
     </div>
 
-    <partial name="_DocumentLinesEditor" model="Model" view-data='new ViewDataDictionary(ViewData) { ["LinesHint"] = T["Fill in the empty row to add a line, then click Update to work out the totals and get another empty row. Tax is worked out again when the estimate is sent."].Value }' />
+    <partial name="_DocumentLinesEditor" model='DocumentLinesEditorViewModel.For(Model, T["Amounts are worked out as you type. The tax is worked out again when you save, and when the estimate is sent."].Value, T["Total"].Value)' />
 
     <div class="card mb-3">
         <div class="card-header">@T["Offer"]</div>

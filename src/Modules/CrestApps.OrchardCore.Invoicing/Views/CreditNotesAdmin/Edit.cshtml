@@ -45,75 +45,7 @@
         </div>
     </div>
 
-    <div class="card mb-3">
-        <div class="card-header">@T["Lines credited"]</div>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th scope="col">@T["Description"]</th>
-                        <th scope="col" class="text-end">@T["Quantity"]</th>
-                        <th scope="col" class="text-end">@T["Price each"]</th>
-                        <th scope="col" class="text-end">@T["Discount %"]</th>
-                        <th scope="col" class="text-end">@T["Amount"]</th>
-                        <th scope="col" class="text-center">@T["Remove"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (var i = 0; i < Model.Lines.Count; i++)
-                    {
-                        var line = Model.Lines[i];
-
-                        <tr>
-                            <td>
-                                <input type="hidden" name="Lines[@i].Id" value="@line.Id" />
-                                <div>@line.Name</div>
-                                @if (!string.IsNullOrEmpty(line.Description))
-                                {
-                                    <div class="small text-muted">@line.Description</div>
-                                }
-                            </td>
-                            <td class="text-end">
-                                <input type="number" name="Lines[@i].Quantity" value="@line.Quantity?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="any" min="0" class="form-control form-control-sm text-end d-inline-block" style="width: 6rem;" aria-label="@T["Quantity of {0}", line.Name]" />
-                            </td>
-                            <td class="text-end">
-                                <input type="number" name="Lines[@i].UnitPrice" value="@line.UnitPrice?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="any" min="0" class="form-control form-control-sm text-end d-inline-block" style="width: 8rem;" aria-label="@T["Price each of {0}", line.Name]" />
-                            </td>
-                            <td class="text-end">
-                                <input type="number" name="Lines[@i].DiscountPercent" value="@line.DiscountPercent?.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="any" min="0" max="100" class="form-control form-control-sm text-end d-inline-block" style="width: 5rem;" aria-label="@T["Discount of {0}", line.Name]" />
-                            </td>
-                            <td class="text-end text-nowrap">@(line.Total is { } total ? Money(total) : null)</td>
-                            <td class="text-center">
-                                <input type="checkbox" name="Lines[@i].Remove" value="true" class="form-check-input" aria-label="@T["Don't credit {0}", line.Name]" />
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-                <tfoot>
-                    @foreach (var tax in Model.Taxes)
-                    {
-                        <tr>
-                            <th scope="row" colspan="4" class="text-end">
-                                @(string.IsNullOrEmpty(tax.Name) ? T["Tax"].Value : tax.Name)
-                                @if (tax.Rate > 0m)
-                                {
-                                    <span>(@tax.Rate.ToString("0.###")%)</span>
-                                }
-                            </th>
-                            <td class="text-end text-nowrap">@Money(tax.TaxAmount)</td>
-                            <td></td>
-                        </tr>
-                    }
-                    <tr>
-                        <th scope="row" colspan="4" class="text-end">@T["Total credited"]</th>
-                        <th class="text-end text-nowrap">@Money(totals.Total)</th>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        <div class="card-footer small text-muted">@T["Lower a quantity or price to credit part of a line, or tick Remove to leave a line out, then click Update. At most {0} can still be credited on this invoice.", Money(Model.Creditable)]</div>
-    </div>
+    <partial name="_DocumentLinesEditor" model='DocumentLinesEditorViewModel.For(Model, string.Format(System.Globalization.CultureInfo.CurrentCulture, T["Lower a quantity or price to credit part of a line, or remove a line to leave it out. At most {0} can still be credited on this invoice."].Value, Money(Model.Creditable)), T["Total credited"].Value)' />
 
     <div class="action-bar-bottom">
         <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>

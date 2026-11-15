@@ -10,8 +10,9 @@ using Moq;
 namespace CrestApps.OrchardCore.Tests.Invoicing;
 
 /// <summary>
-/// The draft editor posts its rows as a plain form: rows keep their ids, a removed row goes, the blank row left to fill
-/// in is ignored unless something was typed in it, and the bill-to is one value naming the party and its kind.
+/// The draft editor posts its rows as a plain form: rows keep their ids and the order they were posted in, a removed row
+/// goes, the blank row a document without lines starts with is ignored unless something was typed in it, and the bill-to
+/// is one value naming the party and its kind.
 /// </summary>
 public sealed class InvoiceDraftEditorTests
 {
@@ -49,6 +50,65 @@ public sealed class InvoiceDraftEditorTests
         Assert.False(string.IsNullOrEmpty(added.Id));
         Assert.NotEqual("line-1", added.Id);
         Assert.Equal((DocumentLineKind.Service, "Setup", "job", 25m), (added.Kind, added.Name, added.Unit, added.UnitPrice));
+    }
+
+    [Fact]
+    public void Build_OffersABlankRowOnlyWhenTheDraftHasNoLines()
+    {
+        // Arrange: lines are added in the browser now, so a draft with lines gets no empty row to fill.
+        var withLines = new Invoice { Currency = "USD" };
+        withLines.Lines.Add(new DocumentLine { Id = "line-1", Name = "Consulting", Quantity = 2m, UnitPrice = 50m });
+        var empty = new Invoice { Currency = "USD" };
+        var first = new InvoiceEditViewModel();
+        var second = new InvoiceEditViewModel();
+
+        // Act
+        InvoiceDraftEditor.Build(withLines, first);
+        InvoiceDraftEditor.Build(empty, second);
+
+        // Assert
+        Assert.Equal(["line-1"], first.Lines.Select(line => line.Id));
+        var blank = Assert.Single(second.Lines);
+        Assert.Equal((null, 1m), (blank.Id, blank.Quantity));
+    }
+
+    [Fact]
+    public void Apply_KeepsTheRowsInTheOrderPosted_WithTheProductAndTaxCategoryPicked()
+    {
+        // Arrange: the second line was moved up, and a product was picked into a new row.
+        var invoice = new Invoice { Currency = "USD" };
+        invoice.Lines.Add(new DocumentLine { Id = "line-1", Name = "Consulting", Quantity = 2m, UnitPrice = 50m });
+        invoice.Lines.Add(new DocumentLine { Id = "line-2", Name = "Travel", Quantity = 1m, UnitPrice = 80m });
+        var model = new InvoiceEditViewModel
+        {
+            Lines =
+            [
+                new InvoiceLineEditViewModel { Id = "line-2", Name = "Travel", Quantity = 1m, UnitPrice = 80m },
+                new InvoiceLineEditViewModel { Id = "line-1", Name = "Consulting", Quantity = 2m, UnitPrice = 50m },
+                new InvoiceLineEditViewModel { Name = "Field Watch", Quantity = 1m, UnitPrice = 189m, ProductId = "product-7", Sku = "WAT-7", TaxCategoryCode = "standard" },
+            ],
+        };
+
+        // Act
+        InvoiceDraftEditor.Apply(model, invoice);
+
+        // Assert
+        Assert.Equal(["line-2", "line-1"], invoice.Lines.Take(2).Select(line => line.Id));
+        var picked = invoice.Lines[2];
+        Assert.Equal(("Field Watch", "product-7", "WAT-7", "standard"), (picked.Name, picked.ProductId, picked.Sku, picked.TaxCategoryCode));
+    }
+
+    [Fact]
+    public void BuildLines_ShowsEachLinesTax_AndItsEffectiveRate()
+    {
+        // Arrange: a $100 line taxed $20, as the calculator left it.
+        var line = new DocumentLine { Id = "line-1", Name = "Consulting", Quantity = 1m, UnitPrice = 100m, Net = 100m, TaxAmount = 20m, Total = 120m };
+
+        // Act
+        var row = Assert.Single(InvoiceDraftEditor.BuildLines([line]));
+
+        // Assert
+        Assert.Equal((20m, 20m), (row.TaxAmount, row.TaxRate));
     }
 
     [Fact]
@@ -91,7 +151,7 @@ public sealed class InvoiceDraftEditorTests
     }
 
     [Fact]
-    public void Build_ShowsTheRows_AndOneBlankRowToFillIn()
+    public void Build_ShowsTheRows_AndTheBillTo()
     {
         // Arrange
         var invoice = new Invoice { Currency = "USD", BillTo = new DocumentParty { Party = new PartyRef(PartyKinds.Customer, "customer-1"), Contact = new ContactInfo { Name = "Ann" } } };
@@ -102,9 +162,8 @@ public sealed class InvoiceDraftEditorTests
         InvoiceDraftEditor.Build(invoice, model);
 
         // Assert
-        Assert.Equal(2, model.Lines.Count);
-        Assert.Equal(("line-1", 100m), (model.Lines[0].Id, model.Lines[0].Total));
-        Assert.Null(model.Lines[1].Id);
+        var row = Assert.Single(model.Lines);
+        Assert.Equal(("line-1", 100m), (row.Id, row.Total));
         Assert.Equal("Customer:customer-1", model.BillTo);
         Assert.Equal("Ann", model.ContactName);
     }

@@ -665,14 +665,8 @@ public sealed class InvoicesAdminController : Controller
 
         if (model.CanSchedule)
         {
+            // Parts are added in the browser; a row left empty is not kept.
             model.Schedule.RemoveAll(row => !row.DueDate.HasValue && !row.Amount.HasValue && !row.Percent.HasValue);
-
-            var rows = Math.Max(2, model.Schedule.Count + 1);
-
-            while (model.Schedule.Count < rows)
-            {
-                model.Schedule.Add(new InvoiceScheduleRowViewModel());
-            }
         }
 
         if (PartyRef.TryParse(model.BillTo, out var party))

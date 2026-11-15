@@ -482,7 +482,7 @@ public sealed class RecurringPlansAdminController : Controller
             Lines = InvoiceDraftEditor.BuildLines(plan.Lines),
         };
 
-        model.Lines.Add(new InvoiceLineEditViewModel { Quantity = 1m });
+        InvoiceDraftEditor.AddBlankRowWhenEmpty(model.Lines);
 
         foreach (var charge in plan.UsageCharges ?? [])
         {

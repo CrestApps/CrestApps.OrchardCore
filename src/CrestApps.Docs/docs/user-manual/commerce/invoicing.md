@@ -24,8 +24,8 @@ Go to **Commerce > Invoices**. The newest invoices come first. Search by number,
 
 1. Go to **Commerce > Invoices** and click **New invoice**.
 2. Under **Billed to**, click **Find a customer** and pick a user, customer or business account. To bill someone you only know by name, leave it empty and fill in **Name on the invoice** and **E-mail**.
-3. Under **Lines**, fill in the empty row: pick its **Kind**, type what it is for, the **Quantity**, the **Price each** and, if you give one, a **Discount %**. A **Text** line prints a note and a **Section heading** a heading between lines; neither has an amount.
-4. Click **Update**. The draft is saved, its totals are worked out, and another empty row appears for the next line. To remove a line, tick **Remove** and click **Update**.
+3. Under **Lines**, fill in the first row: pick its **Kind**, type what it is for (the details button opens a longer description), the **Quantity**, the **Unit**, the **Price**, a **Discount %** if you give one, and its **Tax category**. With **Products** on, the box button next to the description finds a product and fills the name, price and tax category. A **Text** line prints a note and a **Section heading** a heading between lines; neither has an amount.
+4. Click **Add line** for each further line, the cross at the end of a row to remove it, and the arrows to move it up or down. Each line's amount and the totals change as you type; the tax shown is an estimate from each line's last saved rate, and is worked out again when you save.
 5. Check **Payment** (currency, issue date, payment term, whether the customer may pay part of it, purchase order and reference) and **Printed text** (notes, terms, footer and an internal note only staff see). Fields left empty use the customer's details or the invoicing settings.
 6. Click **Save draft** to keep it as a draft, or **Save and issue** to issue it now.
 
@@ -75,7 +75,7 @@ Correct an issued invoice with a **credit note**, for example for goods returned
    - **Lower what is owed on the invoice**, while it is not paid in full. It can't lower the balance by more than is still owed.
    - **Refund what was paid**, through the payment provider the customer paid with.
    - **Keep it as the customer's credit**, for their next purchase or invoice (with the **Store Credit** feature).
-4. To credit part of a line, lower its **Quantity** or **Price each**; to leave a line out, tick **Remove**. Click **Update** to see the total.
+4. To credit part of a line, lower its **Quantity** or **Price**; to leave a line out, remove it with the cross at the end of its row. The total credited changes as you type.
 5. Click **Save and issue**, or **Save draft** to finish later.
 
 The credit note gets its own number, such as **CN-1001**, and the invoice shows what it credited. An invoice can never be credited by more than its total, line by line. A draft credit note can be deleted; an issued one can't.
@@ -130,7 +130,7 @@ An estimate that asked for a deposit works the same way: the deposit invoice mad
 
 ## Split an invoice into payments
 
-With **Installment Plans** enabled, an invoice can be paid in parts that fall due on their own dates. In the invoice editor, under **Payment schedule**, give each part a **Due** date and either an **Amount** or a **percent** (all parts the same way; amounts must add up to the total, percents to 100), and click **Update** for another row. When you issue the invoice, each part becomes a payment of its own: the customer can pay it from its pay link, is reminded about it, and, if you ticked **Charge the customer's saved card**, it is charged on its date. The invoice's page lists the parts and their status, the PDF prints them, and the invoice is partly paid as each part is paid. To stop the schedule, void the invoice while nothing is paid.
+With **Installment Plans** enabled, an invoice can be paid in parts that fall due on their own dates. In the invoice editor, under **Payment schedule**, choose once whether the parts are **Amounts** or **Percents of the total**, then click **Add payment** for each part and give it a **Due** date and its value; the cross removes a part. Below the parts, **Allocated** and **Left to allocate** show what is still to share out (amounts must add up to the total, percents to 100). When you issue the invoice, each part becomes a payment of its own: the customer can pay it from its pay link, is reminded about it, and, if you ticked **Charge the customer's saved card**, it is charged on its date. The invoice's page lists the parts and their status, the PDF prints them, and the invoice is partly paid as each part is paid. To stop the schedule, void the invoice while nothing is paid.
 
 ## Charge an invoice to the customer's saved card
 

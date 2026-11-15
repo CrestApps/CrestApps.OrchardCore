@@ -39,7 +39,7 @@ internal static class EstimateDraftEditor
         model.Taxes = estimate.Taxes ?? [];
 
         model.Lines = InvoiceDraftEditor.BuildLines(estimate.Lines);
-        model.Lines.Add(new InvoiceLineEditViewModel { Quantity = 1m });
+        InvoiceDraftEditor.AddBlankRowWhenEmpty(model.Lines);
     }
 
     /// <summary>

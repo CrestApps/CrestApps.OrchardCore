@@ -1,46 +1,48 @@
+using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Accounts;
+using CrestApps.OrchardCore.BusinessDocuments;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Invoicing.Core;
-using CrestApps.OrchardCore.Invoicing.Core.Services;
 using CrestApps.OrchardCore.Invoicing.Core.Indexes;
+using CrestApps.OrchardCore.Invoicing.Core.Services;
+using CrestApps.OrchardCore.Invoicing.Deployments;
 using CrestApps.OrchardCore.Invoicing.Drivers;
 using CrestApps.OrchardCore.Invoicing.Endpoints;
 using CrestApps.OrchardCore.Invoicing.Migrations;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Navigation;
 using CrestApps.OrchardCore.Invoicing.Recipes;
-using CrestApps.OrchardCore.Invoicing.Reports;
-using CrestApps.OrchardCore.Reports;
-using OrchardCore.DataSources;
-using CrestApps.OrchardCore.Invoicing.Deployments;
-using OrchardCore.Deployment;
-using OrchardCore.Recipes;
-using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Invoicing.Recipes.Workflows;
+using CrestApps.OrchardCore.Invoicing.Reports;
+using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Invoicing.Workflows;
-using CrestApps.OrchardCore.Webhooks;
-using CrestApps.OrchardCore.Commerce;
-using CrestApps.OrchardCore;
-using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.PageSections;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Taxation;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.WorkOrders;
+using CrestApps.OrchardCore.WorkOrders.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
-using CrestApps.OrchardCore.Accounts;
-using CrestApps.OrchardCore.WorkOrders;
-using CrestApps.OrchardCore.WorkOrders.Services;
-using CrestApps.OrchardCore.BusinessDocuments;
-using CrestApps.OrchardCore.PageSections;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
-using OrchardCore.Localization;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataSources;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
+using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Invoicing;
 
@@ -56,6 +58,9 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddScoped<DocumentLinesEditorContext>();
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, InvoicingResourceManagementOptionsConfiguration>();
+
         services
             .AddInvoicingCore()
             .AddRecipeExecutionStep<InvoicesStep>()
