@@ -55,6 +55,14 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
                     SolvedUtc = part.SolvedUtc,
                     AssignedUtc = part.AssignedUtc,
                     ClosedUtc = part.ClosedUtc,
+                    FirstResponseUtc = part.FirstResponseUtc,
+                    StatusChangedUtc = part.StatusChangedUtc,
+                    LastCustomerActivityUtc = part.LastCustomerActivityUtc,
+                    LastAgentActivityUtc = part.LastAgentActivityUtc,
+                    ReplyCount = part.ReplyCount,
+                    AgentReplyCount = part.AgentReplyCount,
+                    ReopenCount = part.ReopenCount,
+                    EscalationLevel = part.EscalationLevel,
                 };
             });
 

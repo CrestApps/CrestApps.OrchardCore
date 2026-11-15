@@ -907,7 +907,7 @@ public sealed class DefaultTicketService : ITicketService
             part.AssignedUtc = part.AssigneeId is null ? null : _clock.UtcNow;
         }
 
-        if (update.EscalationLevel is { } level && level != part.EscalationLevel && level >= 0)
+        if ((update.RaiseEscalation ? part.EscalationLevel + 1 : update.EscalationLevel) is { } level && level != part.EscalationLevel && level >= 0)
         {
             changes.Add(new TimelineFieldChange { Field = S["Escalation level"], Key = TicketChangeKeys.EscalationLevel, From = part.EscalationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture), To = level.ToString(System.Globalization.CultureInfo.InvariantCulture), FromValue = part.EscalationLevel.ToString(System.Globalization.CultureInfo.InvariantCulture), ToValue = level.ToString(System.Globalization.CultureInfo.InvariantCulture) });
             part.EscalationLevel = level;

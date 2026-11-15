@@ -40,4 +40,9 @@ public sealed class TicketUpdate
     /// Gets or sets the new escalation level.
     /// </summary>
     public int? EscalationLevel { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to raise the escalation level by one, read and changed inside the ticket's lock.
+    /// </summary>
+    public bool RaiseEscalation { get; set; }
 }

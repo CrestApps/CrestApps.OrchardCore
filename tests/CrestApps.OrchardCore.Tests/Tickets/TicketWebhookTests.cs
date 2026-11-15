@@ -43,4 +43,33 @@ public sealed class TicketWebhookTests
         Assert.Equal("T-1", model.Number);
         Assert.Equal("Solved", model.StatusCategory);
     }
+
+    [Fact]
+    public async Task TheAuditTrail_RecordsADeskMoveWithIdsAndTheWorkflowActor_AndNotOtherChanges()
+    {
+        // Arrange
+        var recorded = new List<global::OrchardCore.AuditTrail.Services.Models.AuditTrailContext<TicketAuditData>>();
+        var audit = new Mock<global::OrchardCore.AuditTrail.Services.IAuditTrailManager>();
+        audit.Setup(manager => manager.RecordEventAsync(It.IsAny<global::OrchardCore.AuditTrail.Services.Models.AuditTrailContext<TicketAuditData>>()))
+            .Callback((global::OrchardCore.AuditTrail.Services.Models.AuditTrailContext<TicketAuditData> context) => recorded.Add(context))
+            .Returns(Task.CompletedTask);
+        var observer = new TicketAuditTrailObserver(audit.Object, new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>().Object);
+        var ticket = new ContentItem { ContentItemId = "t1" };
+        ticket.Apply(new TicketPart { Number = "T-1", DeskId = "hr", RequesterContact = new CrestApps.OrchardCore.Addresses.Models.ContactInfo { Email = "pat@example.com" } });
+
+        // Act
+        using (CrestApps.OrchardCore.Tickets.Services.TicketEventActor.Use(new TicketActor { FromWorkflow = true, Name = "Workflow" }))
+        {
+            await observer.UpdatedAsync(ticket, [new TimelineFieldChange { Key = TicketChangeKeys.Priority, FromValue = "normal", ToValue = "urgent" }], TestContext.Current.CancellationToken);
+            await observer.UpdatedAsync(ticket, [new TimelineFieldChange { Key = TicketChangeKeys.Desk, FromValue = "support", ToValue = "hr" }], TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        var entry = Assert.Single(recorded);
+        Assert.Equal("TicketDeskChanged", entry.Name);
+        Assert.Equal("Workflow", entry.UserName);
+        Assert.True(entry.AuditTrailEventItem.FromWorkflow);
+        Assert.Equal("support → hr", entry.AuditTrailEventItem.Detail);
+        Assert.DoesNotContain("pat@example.com", System.Text.Json.JsonSerializer.Serialize(entry.AuditTrailEventItem), StringComparison.Ordinal);
+    }
 }

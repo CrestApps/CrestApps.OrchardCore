@@ -124,4 +124,22 @@ public sealed class TicketIndex : MapIndex
     /// Gets or sets when it was closed, in UTC.
     /// </summary>
     public DateTime? ClosedUtc { get; set; }
+
+    // The times and counts the time-elapsed workflows and the reports read without loading each ticket.
+
+    public DateTime? FirstResponseUtc { get; set; }
+
+    public DateTime? StatusChangedUtc { get; set; }
+
+    public DateTime? LastCustomerActivityUtc { get; set; }
+
+    public DateTime? LastAgentActivityUtc { get; set; }
+
+    public int ReplyCount { get; set; }
+
+    public int AgentReplyCount { get; set; }
+
+    public int ReopenCount { get; set; }
+
+    public int EscalationLevel { get; set; }
 }

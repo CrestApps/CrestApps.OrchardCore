@@ -1,6 +1,9 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
+using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -73,7 +76,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 7;
+        return 8;
     }
 
     /// <summary>
@@ -157,6 +160,31 @@ internal sealed class TicketsMigrations : DataMigration
         ShellScope.AddDeferredTask(scope => TicketPriorityKeys.MoveToIdsAsync(scope.ServiceProvider));
 
         return 7;
+    }
+
+    /// <summary>
+    /// Adds the ticket times and counts the time-elapsed workflows and the reports read from the index, and the
+    /// time-elapsed markers; the tickets already indexed are saved again by a resumable step to fill them.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
+        {
+            table.AddColumn<DateTime>("FirstResponseUtc", column => column.Nullable());
+            table.AddColumn<DateTime>("StatusChangedUtc", column => column.Nullable());
+            table.AddColumn<DateTime>("LastCustomerActivityUtc", column => column.Nullable());
+            table.AddColumn<DateTime>("LastAgentActivityUtc", column => column.Nullable());
+            table.AddColumn<int>("ReplyCount", column => column.Nullable());
+            table.AddColumn<int>("AgentReplyCount", column => column.Nullable());
+            table.AddColumn<int>("ReopenCount", column => column.Nullable());
+            table.AddColumn<int>("EscalationLevel", column => column.Nullable());
+        });
+        await TicketIndexSchema.CreateTimeElapsedMarksAsync(SchemaBuilder);
+
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TicketReindexStep.StepName));
+
+        return 8;
     }
 
     private async Task SeedAsync()

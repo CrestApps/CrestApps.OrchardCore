@@ -324,7 +324,7 @@ internal sealed class FindTicketsTaskSchema : TicketTaskSchemaBase
 
     protected override string Description => "Finds tickets into Workflow.Properties.TicketIds and TicketCount";
 
-    protected override IEnumerable<string> Outcomes => ["Found", "None", "Failed"];
+    protected override IEnumerable<string> Outcomes => ["Found", "None"];
 
     protected override bool NeedsTicket => false;
 

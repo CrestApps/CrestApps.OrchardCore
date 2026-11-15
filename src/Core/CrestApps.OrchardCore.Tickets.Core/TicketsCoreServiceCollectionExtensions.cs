@@ -31,6 +31,7 @@ public static class TicketsCoreServiceCollectionExtensions
         services.TryAddScoped<TicketBacklogRecorder>();
         services.TryAddScoped<TicketSettingsUsage>();
         services.AddResumableStep<TicketSettingsChangesStep>();
+        services.AddResumableStep<TicketReindexStep>();
         services.AddServiceLevelPolicyUsage<TicketSettingsUsage>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITeamMemberLoadSource, TicketTeamMemberLoadSource>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketEmailObserver>());

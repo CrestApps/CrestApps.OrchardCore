@@ -57,7 +57,8 @@ public sealed class Startup : StartupBase
 
         services.AddDataMigration<TicketsMigrations>()
             .AddIndexProvider<TicketIndexProvider>()
-            .AddIndexProvider<TicketBacklogIndexProvider>();
+            .AddIndexProvider<TicketBacklogIndexProvider>()
+            .AddIndexProvider<TicketTimeElapsedMarkIndexProvider>();
 
         services.AddTicketsCore();
         services.AddScoped<IContentHandler, TicketContentCleanup>();

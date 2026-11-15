@@ -200,10 +200,19 @@ public abstract class TicketTaskActivity : TaskActivity
         return Outcome("Failed");
     }
 
-    private async Task<string> EvaluateAsync(string expression, WorkflowExecutionContext workflowContext)
+    private async Task<string> EvaluateAsync(string expression, WorkflowExecutionContext workflowContext, System.Text.Encodings.Web.TextEncoder encoder = null)
         => string.IsNullOrWhiteSpace(expression)
             ? null
-            : (await Evaluator.EvaluateAsync(new WorkflowExpression<string>(expression), workflowContext, null))?.Trim() is { Length: > 0 } value ? value : null;
+            : (await Evaluator.EvaluateAsync(new WorkflowExpression<string>(expression), workflowContext, encoder))?.Trim() is { Length: > 0 } value ? value : null;
+
+    /// <summary>
+    /// Reads a Liquid field for HTML, the values it inserts (what a requester typed, say) HTML-encoded.
+    /// </summary>
+    /// <param name="name">The field's name.</param>
+    /// <param name="workflowContext">The workflow.</param>
+    /// <returns>The HTML, or <see langword="null"/> when empty.</returns>
+    protected Task<string> HtmlFieldAsync(string name, WorkflowExecutionContext workflowContext)
+        => EvaluateAsync(GetValue(name), workflowContext, System.Text.Encodings.Web.HtmlEncoder.Default);
 }
 
 /// <summary>Creates a ticket.</summary>
@@ -396,13 +405,13 @@ public sealed class EscalateTicketTask : TicketTaskActivity
 
     protected override async Task<ActivityExecutionResult> RunAsync(WorkflowExecutionContext workflowContext, ITicketService tickets, string ticketId)
     {
-        var ticket = await tickets.GetAsync(ticketId);
-        ticket.TryGet<TicketPart>(out var part);
-        var level = int.TryParse(await FieldAsync("Level", workflowContext), NumberStyles.Integer, CultureInfo.InvariantCulture, out var given) ? given : (part?.EscalationLevel ?? 0) + 1;
+        // With no level given the level goes up by one, counted inside the ticket's lock.
+        var level = int.TryParse(await FieldAsync("Level", workflowContext), NumberStyles.Integer, CultureInfo.InvariantCulture, out var given) ? given : (int?)null;
 
         return OutcomeOf(workflowContext, await tickets.UpdateAsync(ticketId, new TicketUpdate
         {
             EscalationLevel = level,
+            RaiseEscalation = level is null,
             TeamId = await FieldAsync("TeamId", workflowContext),
             PriorityId = await FieldAsync("PriorityId", workflowContext),
         }, Actor));
@@ -489,7 +498,7 @@ public sealed class CheckTicketServiceLevelTask : TicketTaskActivity
     public override IReadOnlyList<TicketTaskField> Fields => [];
 
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
-        => [new Outcome(S["OnTrack"]), new Outcome(S["Warning"]), new Outcome(S["Breached"]), new Outcome(S["Paused"]), new Outcome(S["None"])];
+        => [new Outcome(S["OnTrack"]), new Outcome(S["Warning"]), new Outcome(S["Breached"]), new Outcome(S["Paused"]), new Outcome(S["None"]), new Outcome(S["Failed"])];
 
     protected override async Task<ActivityExecutionResult> RunAsync(WorkflowExecutionContext workflowContext, ITicketService tickets, string ticketId)
     {
@@ -566,9 +575,10 @@ public sealed class NotifyTicketTask : TicketTaskActivity
         var ticket = await tickets.GetAsync(ticketId);
         ticket.TryGet<TicketPart>(out var part);
         var subject = await FieldAsync("Subject", workflowContext) ?? $"{part?.Number} {ticket.DisplayText}";
-        var body = await FieldAsync("Body", workflowContext) ?? string.Empty;
+        var toAssignee = GetValue("To") == Assignee;
+        var body = (toAssignee ? await FieldAsync("Body", workflowContext) : await HtmlFieldAsync("Body", workflowContext)) ?? string.Empty;
 
-        if (GetValue("To") == Assignee)
+        if (toAssignee)
         {
             if (string.IsNullOrEmpty(part?.AssigneeId)
                 || services.GetService<global::OrchardCore.Notifications.INotificationService>() is not { } notifications

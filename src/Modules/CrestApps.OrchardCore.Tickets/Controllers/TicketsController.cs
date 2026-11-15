@@ -45,6 +45,7 @@ public sealed class TicketsController : Controller
 {
     private const string DraftKey = "TicketReplyDraft";
     private const int PreviousTicketsShown = 5;
+    private const int MaxBulkTickets = 100;
 
     private readonly ITicketService _tickets;
     private readonly ITicketAccessService _access;
@@ -208,8 +209,17 @@ public sealed class TicketsController : Controller
     {
         var cancellationToken = HttpContext.RequestAborted;
         var tickets = new List<ContentItem>();
+        var chosen = itemIds?.Distinct(StringComparer.Ordinal).ToArray() ?? [];
 
-        foreach (var id in itemIds?.Distinct(StringComparer.Ordinal) ?? [])
+        // Each changed ticket runs its rules (workflows, e-mails) in this request, so one action takes a bounded number.
+        if (chosen.Length > MaxBulkTickets)
+        {
+            await _notifier.WarningAsync(H["Choose at most {0} tickets at a time.", MaxBulkTickets]);
+
+            return Back(returnUrl);
+        }
+
+        foreach (var id in chosen)
         {
             if (await _tickets.GetAsync(id) is { } ticket && await _access.CanAsync(User, ticket, TicketOperation.ViewAssigned, cancellationToken))
             {

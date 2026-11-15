@@ -39,7 +39,15 @@ public static class TicketIndexSchema
             .Column<DateTime>("DueSortUtc", column => column.Nullable())
             .Column<DateTime>("SolvedUtc", column => column.Nullable())
             .Column<DateTime>("ClosedUtc", column => column.Nullable())
-            .Column<DateTime>("AssignedUtc", column => column.Nullable()));
+            .Column<DateTime>("AssignedUtc", column => column.Nullable())
+            .Column<DateTime>("FirstResponseUtc", column => column.Nullable())
+            .Column<DateTime>("StatusChangedUtc", column => column.Nullable())
+            .Column<DateTime>("LastCustomerActivityUtc", column => column.Nullable())
+            .Column<DateTime>("LastAgentActivityUtc", column => column.Nullable())
+            .Column<int>("ReplyCount", column => column.Nullable())
+            .Column<int>("AgentReplyCount", column => column.Nullable())
+            .Column<int>("ReopenCount", column => column.Nullable())
+            .Column<int>("EscalationLevel", column => column.Nullable()));
 
         await schemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
         {
@@ -57,6 +65,29 @@ public static class TicketIndexSchema
         await CreateAssignedIndexAsync(schemaBuilder);
         await CreateRequesterEmailIndexAsync(schemaBuilder);
         await CreateDueSortIndexAsync(schemaBuilder);
+        await CreateTimeElapsedMarksAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the table of the time-elapsed markers: which workflow start has fired for which ticket and moment.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateTimeElapsedMarksAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<TicketTimeElapsedMarkIndex>(table => table
+            .Column<string>("StartKey", column => column.WithLength(64))
+            .Column<string>("TicketId", column => column.WithLength(26))
+            .Column<DateTime>("Moment")
+            .Column<DateTime>("FiredUtc"));
+
+        await schemaBuilder.AlterIndexTableAsync<TicketTimeElapsedMarkIndex>(table =>
+        {
+            table.CreateIndex("IDX_TicketTimeElapsedMark_Start", "StartKey", "TicketId");
+            table.CreateIndex("IDX_TicketTimeElapsedMark_Fired", "FiredUtc", "DocumentId");
+        });
     }
 
     /// <summary>

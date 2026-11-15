@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Tickets.Core.Api;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -78,42 +79,50 @@ internal sealed class TicketWebhookObserver : ITicketObserver
 }
 
 /// <summary>
-/// The audit trail events of tickets.
+/// The audit trail events of tickets. The audit trail records what matters for security and accountability (a ticket
+/// deleted, merged or moved to another desk, which changes who may see it); the ticket's timeline holds its history.
 /// </summary>
 internal sealed class TicketAuditTrailEvents : IConfigureOptions<AuditTrailOptions>
 {
     public const string CategoryName = "Tickets";
-    public const string Created = "TicketCreated";
-    public const string Updated = "TicketUpdated";
-    public const string Assigned = "TicketAssigned";
-    public const string StatusChanged = "TicketStatusChanged";
     public const string Merged = "TicketMerged";
     public const string Deleted = "TicketDeleted";
+    public const string DeskChanged = "TicketDeskChanged";
 
     public void Configure(AuditTrailOptions options)
     {
         options.For<TicketAuditTrailEvents>(CategoryName, S => S["Tickets"])
-            .WithEvent(Created, S => S["Ticket created"], S => S["A ticket was created."], enableByDefault: true)
-            .WithEvent(Updated, S => S["Ticket changed"], S => S["A ticket's values or fields changed."], enableByDefault: true)
-            .WithEvent(Assigned, S => S["Ticket assigned"], S => S["A ticket was given to another assignee."], enableByDefault: true)
-            .WithEvent(StatusChanged, S => S["Ticket status changed"], S => S["A ticket moved to another status."], enableByDefault: true)
+            .WithEvent(DeskChanged, S => S["Ticket moved to another desk"], S => S["A ticket was moved to another desk, which changes who may see it."], enableByDefault: true)
             .WithEvent(Merged, S => S["Ticket merged"], S => S["A ticket was merged into another."], enableByDefault: true)
             .WithEvent(Deleted, S => S["Ticket deleted"], S => S["A ticket was deleted with its replies, notes and files."], enableByDefault: true);
     }
 }
 
 /// <summary>
-/// What an audit trail event of a ticket keeps.
+/// What an audit trail event of a ticket keeps: ids, never the requester's contact details.
 /// </summary>
 public sealed class TicketAuditData
 {
-    public TicketApiModel Ticket { get; set; }
+    public string TicketId { get; set; }
 
+    public string Number { get; set; }
+
+    public string DeskId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what happened, by id: the desk moved from and to, or the ticket merged into.
+    /// </summary>
     public string Detail { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a workflow made the change.
+    /// </summary>
+    public bool FromWorkflow { get; set; }
 }
 
 /// <summary>
-/// Records ticket events in Orchard's audit trail, with who did it.
+/// Records the security-relevant ticket events in Orchard's audit trail, with who made the change: the actor the ticket
+/// service names (an agent, or a workflow), not whoever's request happened to start it.
 /// </summary>
 internal sealed class TicketAuditTrailObserver : ITicketObserver
 {
@@ -126,17 +135,10 @@ internal sealed class TicketAuditTrailObserver : ITicketObserver
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public Task CreatedAsync(ContentItem ticket, CancellationToken cancellationToken = default)
-        => RecordAsync(TicketAuditTrailEvents.Created, ticket, null);
-
     public Task UpdatedAsync(ContentItem ticket, IReadOnlyList<TimelineFieldChange> changes, CancellationToken cancellationToken = default)
-        => RecordAsync(TicketAuditTrailEvents.Updated, ticket, string.Join("; ", changes.Select(change => $"{change.Field}: {change.From} → {change.To}")));
-
-    public Task AssignedAsync(ContentItem ticket, string previousAssigneeId, CancellationToken cancellationToken = default)
-        => RecordAsync(TicketAuditTrailEvents.Assigned, ticket, previousAssigneeId);
-
-    public Task StatusChangedAsync(ContentItem ticket, TicketStatus previous, TicketStatus current, CancellationToken cancellationToken = default)
-        => RecordAsync(TicketAuditTrailEvents.StatusChanged, ticket, $"{previous?.Name} → {current?.Name}");
+        => changes.FirstOrDefault(change => change.Key == TicketChangeKeys.Desk) is { } desk
+            ? RecordAsync(TicketAuditTrailEvents.DeskChanged, ticket, $"{desk.FromValue} → {desk.ToValue}")
+            : Task.CompletedTask;
 
     public Task MergedAsync(ContentItem ticket, ContentItem into, CancellationToken cancellationToken = default)
         => RecordAsync(TicketAuditTrailEvents.Merged, ticket, into?.ContentItemId);
@@ -146,14 +148,25 @@ internal sealed class TicketAuditTrailObserver : ITicketObserver
 
     private Task RecordAsync(string name, ContentItem ticket, string detail)
     {
+        var actor = TicketEventActor.Current;
         var user = _httpContextAccessor.HttpContext?.User;
+        var userId = actor?.Party.Kind == PartyKinds.User ? actor.Party.Id : actor is null ? user?.FindFirstValue(ClaimTypes.NameIdentifier) : null;
+        var userName = actor?.Name ?? (actor is null ? user?.Identity?.Name : null);
+        ticket.TryGet<TicketPart>(out var part);
 
         return _auditTrailManager.RecordEventAsync(new AuditTrailContext<TicketAuditData>(
             name,
             TicketAuditTrailEvents.CategoryName,
             ticket.ContentItemId,
-            user?.FindFirstValue(ClaimTypes.NameIdentifier),
-            user?.Identity?.Name,
-            new TicketAuditData { Ticket = TicketApiModel.From(ticket), Detail = detail }));
+            userId,
+            userName,
+            new TicketAuditData
+            {
+                TicketId = ticket.ContentItemId,
+                Number = part?.Number,
+                DeskId = part?.DeskId,
+                Detail = detail,
+                FromWorkflow = actor?.FromWorkflow == true,
+            }));
     }
 }
