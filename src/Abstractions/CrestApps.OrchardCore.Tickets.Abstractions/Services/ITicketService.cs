@@ -133,4 +133,29 @@ public interface ITicketService
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The result.</returns>
     Task<TicketResult> RecordRatingRequestAsync(string ticketId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Makes a ticket wait for approval: the steps, in order, each decided by one of its approvers. The ticket moves to
+    /// the first waiting status while it waits.
+    /// </summary>
+    /// <param name="ticketId">The ticket.</param>
+    /// <param name="steps">The steps; a step without an approver is left out.</param>
+    /// <param name="waitingStatusId">The status the ticket waits in, or <see langword="null"/> for the first waiting status.</param>
+    /// <param name="actor">Who.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<TicketResult> StartApprovalAsync(string ticketId, IReadOnlyList<TicketApprovalStep> steps, string waitingStatusId = null, TicketActor actor = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records an approver's decision on the step a ticket waits for. An approval moves to the next step, or, after
+    /// the last, back to work; a refusal solves the ticket and tells the requester why.
+    /// </summary>
+    /// <param name="ticketId">The ticket.</param>
+    /// <param name="approverId">The user deciding, one of the step's approvers.</param>
+    /// <param name="approverName">Their name.</param>
+    /// <param name="approve">Whether they approve.</param>
+    /// <param name="comment">Their comment; a refusal needs one, which the requester reads.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The result.</returns>
+    Task<TicketResult> DecideApprovalAsync(string ticketId, string approverId, string approverName, bool approve, string comment, CancellationToken cancellationToken = default);
 }

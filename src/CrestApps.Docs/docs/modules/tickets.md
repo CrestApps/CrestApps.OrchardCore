@@ -13,6 +13,7 @@ user_manual: user-manual/administration/tickets
 | Tickets API | `CrestApps.OrchardCore.Tickets.Api` | Tickets |
 | Tickets Portal | `CrestApps.OrchardCore.Tickets.Portal` | Tickets, My Account |
 | Ticket Web Form | `CrestApps.OrchardCore.Tickets.WebForm` | Tickets |
+| Ticket Approvals | `CrestApps.OrchardCore.Tickets.Approvals` | Tickets |
 
 | Project | Holds |
 | --- | --- |
@@ -94,13 +95,21 @@ With the [messaging workspace](../omnichannel/messaging-workspace) on, each conv
 The **Tickets Portal** feature (`CrestApps.OrchardCore.Tickets.Portal`) adds a **Requests** page to the site's [My account](./users#my-account) area:
 
 - `account/requests` lists the signed-in person's requests, newest first, with the status as customers see it. An administrator of an [account](./accounts) (an account member with the Admin role) also gets a tab with the account's requests.
-- `account/requests/new` offers the ticket types whose Ticket part settings say **Customers can submit it**, with their description for customers, on the desks that serve customers; then the type's own form (its title is the subject, plus its fields), the description and files. The ticket opens with the `Portal` channel and the person as its requester.
+- `account/requests/new` offers the ticket types whose Ticket part settings say **Customers can submit it**, with their description for customers, on the desks that serve customers (and, with [Staff](./staff) on, the internal desks for a person who is a member of staff, so employees file IT and HR requests from the same catalog); then the type's own form (its title is the subject, plus its fields), the description and files. The ticket opens with the `Portal` channel and the person as its requester.
 - `account/requests/{number}` shows the public replies, oldest first, with download links for their files that work for an hour, and a reply box. Internal notes and the record of changes never show. A reply from the requester reopens a solved request as a reply on an agent's page would.
 - A requester without a login opens `requests/{id}?token=…`, the signed link in their e-mails (90 days), to read and answer that one request.
 
 **Ratings.** Once a request is solved, its requester rates it from 1 to 5 with an optional comment, on the request's page in My account or from the `ticket-rating` e-mail. A desk's **Ask requesters to rate a solved ticket after (hours)** (`TicketDesk.RatingRequestDelayHours`, 0 never asks) sends that e-mail once, through the outbox, to the requester of a ticket solved that long ago and no more than a week before (so turning it on doesn't e-mail every old ticket); its link is signed and works for 30 days (`requests/{id}/rate`), and in its template `Ticket.Link` is the rating page. `ITicketService.RateAsync` keeps one rating per ticket (a second replaces it) on `TicketPart.Satisfaction`, the index (`SatisfactionScore`), the timeline ("Rated 4 out of 5.") and tells observers (`ITicketObserver.RatedAsync`): the **Ticket Rated** workflow event (`Score`, `Comment`) and the `SatisfactionScore` and `SatisfactionComment` fields of the `Tickets` data set.
 
 Every requester e-mail then ends with **View your request**, linking to the request in My account, or to the signed link for a guest (`TicketEmailModel.Link` for templates, `ITicketRequesterLinks` for code). Links use the site's **Base URL** when it is set. Desk permissions play no part in the portal: a person sees what they asked for, and an account administrator what their account asked for.
+
+## Approvals
+
+The **Ticket Approvals** feature (`CrestApps.OrchardCore.Tickets.Approvals`) lets a ticket type ask for approval before work goes on, such as a manager's and then finance's for new equipment. On the type's **Ticket** part settings, **Approval** has up to three steps (`TicketApprovalSettings`): each a name, approvers chosen with the user picker, and **The requester's manager** (the user of the manager on the requester's staff record, with [Staff](./staff) on, through `ITicketRequesterManagerSource`); and **Status while waiting**, a waiting or on-hold status such as *Waiting for approval* (the first waiting status when none is chosen).
+
+When a ticket of that type is created, `TicketApprovalStarter` resolves each step's approvers (a step left with none is skipped) and `ITicketService.StartApprovalAsync` keeps the approval on the ticket (`TicketPart.Approval`), moves it to the waiting status and tells observers (`ITicketObserver.ApprovalRequestedAsync`). With Notifications on, each approver of the step is told, with a link to the approval page, `Admin/ticket/{id}/approval`: what was asked (subject, requester, first message) and the steps, for the approvers of its steps even when they can't see the ticket otherwise. Agents see the same steps in the ticket's **Approval** panel.
+
+One approver of the step decides it (`ITicketService.DecideApprovalAsync`; anyone else is refused). An approval moves to the next step and tells its approvers; after the last, the ticket goes back to the status it had (or the first open status when it can't go back, as from New). A refusal needs a reason: the ticket is solved and the requester gets the reason as a reply, which e-mails them like any reply. Every decision is on the timeline. Approval steps are the Tickets module's own; another module that needs approval steps extracts them first.
 
 ## Web form
 

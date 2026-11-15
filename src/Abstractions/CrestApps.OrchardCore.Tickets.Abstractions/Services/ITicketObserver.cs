@@ -93,4 +93,13 @@ public interface ITicketObserver
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>A task.</returns>
     Task RatedAsync(ContentItem ticket, Models.TicketSatisfaction satisfaction, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    /// <summary>
+    /// Called after a ticket started waiting for an approval step, so its approvers can be told.
+    /// </summary>
+    /// <param name="ticket">The ticket.</param>
+    /// <param name="step">The step waited for.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>A task.</returns>
+    Task ApprovalRequestedAsync(ContentItem ticket, Models.TicketApprovalStep step, CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

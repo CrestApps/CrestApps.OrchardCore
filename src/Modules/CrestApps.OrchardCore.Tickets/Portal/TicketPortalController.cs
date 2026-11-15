@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Attachments.Services;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
 using OrchardCore.ContentManagement.Metadata;
@@ -596,9 +598,16 @@ public sealed class TicketPortalController : Controller
                 Description = pair.part.GetSettings<TicketPartSettings>().PortalDescription,
             })];
 
-    // The desks that serve customers.
+    // The desks a requester may open requests on: those that serve customers and, for a member of staff (with Staff on),
+    // the internal ones, such as IT and HR.
     private async Task<List<TicketDesk>> CustomerDesksAsync()
-        => [.. (await _desks.GetAllAsync()).Where(desk => desk.Audience == TicketDeskAudience.Customers)];
+    {
+        var staff = HttpContext.RequestServices.GetService<global::CrestApps.OrchardCore.Staff.Services.IStaffDirectory>() is { } directory
+            && User.FindFirstValue(ClaimTypes.NameIdentifier) is { Length: > 0 } userId
+            && await directory.IsStaffAsync(userId, HttpContext.RequestAborted);
+
+        return [.. (await _desks.GetAllAsync()).Where(desk => TicketPortalAccess.Offers(desk, staff))];
+    }
 
     private static string StatusLabel(Dictionary<string, TicketStatus> statuses, TicketPart part)
         => part.StatusId is not null && statuses.TryGetValue(part.StatusId, out var status)

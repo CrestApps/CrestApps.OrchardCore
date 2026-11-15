@@ -116,6 +116,11 @@ public sealed class TicketPart : ContentPart
     public DateTime? RatingRequestedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the ticket's approval, when its type asks for one.
+    /// </summary>
+    public TicketApproval Approval { get; set; }
+
+    /// <summary>
     /// Gets or sets when the status last changed, in UTC.
     /// </summary>
     public DateTime? StatusChangedUtc { get; set; }

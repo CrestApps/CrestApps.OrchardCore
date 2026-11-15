@@ -235,5 +235,10 @@ public static class TicketsConstants
         /// The Ticket Form widget, which opens a ticket from any page.
         /// </summary>
         public const string WebForm = "CrestApps.OrchardCore.Tickets.WebForm";
+
+        /// <summary>
+        /// Approval steps on ticket types.
+        /// </summary>
+        public const string Approvals = "CrestApps.OrchardCore.Tickets.Approvals";
     }
 }

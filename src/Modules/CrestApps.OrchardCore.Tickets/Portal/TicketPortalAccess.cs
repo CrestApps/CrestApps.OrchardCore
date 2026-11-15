@@ -148,6 +148,16 @@ public sealed class TicketPortalAccess
     /// <returns>Whether it is.</returns>
     public bool IsRatingTokenFor(string token, string ticketId)
         => !string.IsNullOrEmpty(ticketId) && string.Equals(_tokens.Unprotect(RatingPurpose, token), ticketId, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Whether the portal offers a desk to a requester: a desk that serves customers to anyone, an internal desk (IT,
+    /// HR) to members of staff.
+    /// </summary>
+    /// <param name="desk">The desk.</param>
+    /// <param name="isStaff">Whether the requester is a member of staff.</param>
+    /// <returns>Whether they may open requests on it.</returns>
+    public static bool Offers(TicketDesk desk, bool isStaff)
+        => desk is not null && (desk.Audience == TicketDeskAudience.Customers || (isStaff && desk.Audience == TicketDeskAudience.Internal));
 }
 
 /// <summary>

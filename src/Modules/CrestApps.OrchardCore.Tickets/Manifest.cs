@@ -55,6 +55,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = TicketsConstants.Features.Approvals,
+    Name = "Ticket Approvals",
+    Description = "Lets a ticket type ask for approval before work goes on: steps, one after the other, each decided by one of its approvers or the requester's manager, on the ticket or a page of its own. A refusal solves the ticket and tells the requester why.",
+    Category = "Service Desk",
+    Dependencies =
+    [
+        TicketsConstants.Features.Tickets,
+    ]
+)]
+
+[assembly: Feature(
     Id = TicketsConstants.Features.Api,
     Name = "Tickets API",
     Description = "Lets other systems list, read, open, change, reply to and add notes to tickets over a JSON API, api/tickets/v1, with the caller's ticket permissions. Enable OpenAPI to document it.",

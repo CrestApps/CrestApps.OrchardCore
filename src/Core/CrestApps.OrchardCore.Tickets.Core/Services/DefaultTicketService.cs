@@ -1169,6 +1169,191 @@ public sealed class DefaultTicketService : ITicketService
             return new TicketResult { Ticket = ticket };
         }, cancellationToken);
 
+    /// <inheritdoc/>
+    public Task<TicketResult> StartApprovalAsync(string ticketId, IReadOnlyList<TicketApprovalStep> steps, string waitingStatusId = null, TicketActor actor = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(steps);
+
+        return WithLockAsync(ticketId, actor, async ticket =>
+        {
+            var part = ticket.GetOrCreate<TicketPart>();
+
+            if (TicketLifecycle.IsReadOnly(part))
+            {
+                return Refuse(S["A closed or merged ticket can't change."], ticket);
+            }
+
+            if (part.Approval?.State == TicketApprovalState.Pending)
+            {
+                return Refuse(S["The ticket is already waiting for approval."], ticket);
+            }
+
+            var kept = steps
+                .Where(step => step?.ApproverIds?.Any(id => !string.IsNullOrWhiteSpace(id)) == true)
+                .Select(step => new TicketApprovalStep
+                {
+                    Name = NullIfEmpty(step.Name?.Trim()),
+                    ApproverIds = [.. step.ApproverIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal)],
+                })
+                .ToList();
+
+            if (kept.Count == 0)
+            {
+                return Refuse(S["An approval needs a step with an approver."], ticket);
+            }
+
+            part.Approval = new TicketApproval { State = TicketApprovalState.Pending, Steps = kept, HeldStatusId = part.StatusId };
+
+            // Waiting holds the ticket in the type's waiting status, or the first waiting one, which pauses its timers
+            // when that status does.
+            var changes = new List<TimelineFieldChange>();
+            var statuses = await _statuses.GetAllAsync(cancellationToken);
+            var waiting = statuses.FirstOrDefault(status => status.ItemId == waitingStatusId && status.Category is not (TicketStatusCategory.Solved or TicketStatusCategory.Closed))
+                ?? TicketLifecycle.FirstOf(statuses, TicketStatusCategory.Pending);
+
+            if (waiting is not null && waiting.ItemId != part.StatusId)
+            {
+                var errors = await ApplyAsync(ticket, part, new TicketUpdate { StatusId = waiting.ItemId }, changes, cancellationToken);
+
+                if (errors.Count > 0)
+                {
+                    return new TicketResult { Ticket = ticket, Errors = errors };
+                }
+            }
+
+            await SaveAsync(ticket, part, cancellationToken);
+
+            var first = kept[0];
+            await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, S["Waiting for approval: {0}.", first.Name ?? S["step {0}", 1].Value], changes, cancellationToken);
+
+            if (changes.Count > 0)
+            {
+                Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+            }
+
+            Enqueue(observer => observer.ApprovalRequestedAsync(ticket, first, cancellationToken));
+
+            return new TicketResult { Ticket = ticket };
+        }, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public Task<TicketResult> DecideApprovalAsync(string ticketId, string approverId, string approverName, bool approve, string comment, CancellationToken cancellationToken = default)
+    {
+        var actor = TicketActor.User(approverId, approverName);
+
+        return WithLockAsync(ticketId, actor, async ticket =>
+        {
+            var part = ticket.GetOrCreate<TicketPart>();
+
+            if (part.Approval?.Current is not { } step)
+            {
+                return Refuse(S["The ticket isn't waiting for approval."], ticket);
+            }
+
+            if (string.IsNullOrEmpty(approverId) || !step.ApproverIds.Contains(approverId, StringComparer.Ordinal))
+            {
+                return Refuse(S["You aren't an approver of this step."], ticket);
+            }
+
+            comment = NullIfEmpty(comment?.Trim());
+
+            if (!approve && comment is null)
+            {
+                return Refuse(S["Say why the request isn't approved; the requester reads it."], ticket);
+            }
+
+            var now = _clock.UtcNow;
+            var approval = part.Approval;
+            var stepName = step.Name ?? S["step {0}", approval.CurrentStep + 1].Value;
+
+            step.Decision = approve ? TicketApprovalDecision.Approved : TicketApprovalDecision.Rejected;
+            step.DecidedById = approverId;
+            step.DecidedByName = approverName;
+            step.DecidedUtc = now;
+            step.Comment = comment;
+
+            var changes = new List<TimelineFieldChange>();
+            var statuses = await _statuses.GetAllAsync(cancellationToken);
+            TicketApprovalStep next = null;
+            string body;
+            string targetStatusId = null;
+
+            if (!approve)
+            {
+                approval.State = TicketApprovalState.Rejected;
+                body = S["Not approved ({0}): {1}", stepName, comment];
+                targetStatusId = TicketLifecycle.FirstOf(statuses, TicketStatusCategory.Solved)?.ItemId;
+            }
+            else if (approval.CurrentStep + 1 < approval.Steps.Count)
+            {
+                approval.CurrentStep++;
+                next = approval.Steps[approval.CurrentStep];
+                body = S["Approved ({0}). Waiting for approval: {1}.", stepName, next.Name ?? S["step {0}", approval.CurrentStep + 1].Value];
+            }
+            else
+            {
+                approval.State = TicketApprovalState.Approved;
+                body = S["Approved ({0}). The request can go ahead.", stepName];
+
+                // Back to the status it had, when the ticket may go there from waiting; otherwise to work.
+                var held = statuses.FirstOrDefault(status => status.ItemId == approval.HeldStatusId);
+                targetStatusId = held is not null && TicketLifecycle.Transitions.CanMove(part.StatusCategory, held.Category)
+                    ? held.ItemId
+                    : TicketLifecycle.FirstOf(statuses, TicketStatusCategory.Open)?.ItemId;
+            }
+
+            if (comment is not null && approve)
+            {
+                body += "\n\n" + comment;
+            }
+
+            if (!string.IsNullOrEmpty(targetStatusId) && targetStatusId != part.StatusId)
+            {
+                var errors = await ApplyAsync(ticket, part, new TicketUpdate { StatusId = targetStatusId }, changes, cancellationToken);
+
+                if (errors.Count > 0)
+                {
+                    return new TicketResult { Ticket = ticket, Errors = errors };
+                }
+            }
+
+            await SaveAsync(ticket, part, cancellationToken);
+            await AddEventAsync(ticket.ContentItemId, actor, body, changes, cancellationToken);
+
+            if (!approve)
+            {
+                // The requester reads why, as a reply, and is e-mailed it like any reply.
+                var added = await _timeline.AddAsync(new TimelineEntry
+                {
+                    Subject = SubjectOf(ticket.ContentItemId),
+                    Kind = TicketsConstants.EntryKinds.Reply,
+                    Visibility = TimelineVisibility.Public,
+                    Author = actor.Party,
+                    AuthorName = approverName,
+                    Body = S["Your request wasn't approved: {0}", comment],
+                }, cancellationToken);
+
+                if (added.Entry is { } entry && added.Errors.Count == 0)
+                {
+                    Enqueue(observer => observer.RepliedAsync(ticket, entry, false, cancellationToken));
+                }
+            }
+
+            if (changes.Count > 0)
+            {
+                Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
+            }
+
+            if (next is not null)
+            {
+                Enqueue(observer => observer.ApprovalRequestedAsync(ticket, next, cancellationToken));
+            }
+
+            return new TicketResult { Ticket = ticket };
+        }, cancellationToken);
+    }
+
     // With Account E-mail Domains on, a ticket without an account is filed under the account whose domain the
     // requester's e-mail is on.
     private async Task<string> AccountByEmailAsync(TicketPart part, CancellationToken cancellationToken)

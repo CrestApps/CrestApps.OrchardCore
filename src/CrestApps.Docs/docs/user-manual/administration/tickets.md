@@ -91,11 +91,17 @@ An account's page has a **Tickets** tab: its latest tickets you may see, how man
 Turn on **Tickets Portal** under **Configuration > Features**. Then:
 
 1. Under **Content Definition**, edit the ticket type's **Ticket** part and tick **Customers can submit it**. Add a **Description for customers** so they can tell types apart.
-2. Make sure a desk **Serves** customers (**Tickets > Desks**). Customers can only open requests on those desks.
+2. Make sure a desk **Serves** customers (**Tickets > Desks**). Customers can only open requests on those desks. With Staff on, members of staff also see the desks that serve people inside the organization, so employees can ask IT or HR from the same page.
 
 Signed-in people now find **Requests** under **My account**: their requests, **New request**, and each request's conversation with a reply box. They see your public replies, never your internal notes. Someone without a login follows **View your request** in their e-mails to read and answer their request. An account's administrators also see the account's requests.
 
 To learn how you did, set **Ask requesters to rate a solved ticket after (hours)** on a desk. The requester of a solved ticket then gets one e-mail with a link to rate it from 1 to 5, and can also rate it on the request's page. Ratings show on the ticket's timeline and in the **Tickets** data set for reports.
+
+## Ask for approval before work starts
+
+Turn on **Ticket Approvals** under **Configuration > Features**. Then, under **Content Definition**, edit the ticket type's **Ticket** part and fill in **Approval**: up to three steps, each with a name (such as *Manager* or *Finance*) and its approvers, or **The requester's manager**. Choose a **Status while waiting**, such as a *Waiting for approval* status you add under **Tickets > Statuses**.
+
+A new ticket of that type then waits. Each approver of the current step is told in their notifications and opens the request's approval page; agents see the steps on the ticket. One approver per step decides: **Approve** moves to the next step, and after the last the ticket goes back to work. **Refuse** needs a comment, which the requester reads; the ticket is then solved.
 
 ## Put a request form on a page
 
