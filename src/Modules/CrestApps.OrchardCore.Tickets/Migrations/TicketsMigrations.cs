@@ -60,6 +60,8 @@ internal sealed class TicketsMigrations : DataMigration
             await _contentDefinitionManager.AlterTypeDefinitionAsync(TicketsConstants.DefaultContentType, type => type
                 .WithDisplayName("Ticket")
                 .Stereotype(TicketsConstants.Stereotype)
+                .Listable(false)
+                .Creatable(false)
                 .WithPart<TitlePart>(part => part
                     .WithDisplayName("Subject")
                     .WithPosition("1")
@@ -71,7 +73,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -125,6 +127,24 @@ internal sealed class TicketsMigrations : DataMigration
         ShellScope.AddDeferredTask(scope => TicketIndexBackfill.FillDueSortAsync(scope.ServiceProvider));
 
         return 5;
+    }
+
+    /// <summary>
+    /// Takes ticket types out of Orchard Core's generic content list and new-item menu: tickets are listed, opened and
+    /// changed on the ticket pages, under the ticket permissions.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        foreach (var type in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+        {
+            if (type.Parts.Any(part => part.PartDefinition.Name == TicketsConstants.PartName))
+            {
+                await _contentDefinitionManager.AlterTypeDefinitionAsync(type.Name, builder => builder.Listable(false).Creatable(false));
+            }
+        }
+
+        return 6;
     }
 
     private async Task SeedAsync()

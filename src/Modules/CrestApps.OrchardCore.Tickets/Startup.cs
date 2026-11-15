@@ -21,6 +21,7 @@ using CrestApps.OrchardCore.Tickets.Recipes;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using CrestApps.OrchardCore.Timeline;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -87,6 +88,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<TicketView, TicketViewDisplayDriver>();
 
         services.AddPermissionProvider<TicketsPermissionsProvider>();
+        services.AddScoped<IAuthorizationHandler, TicketContentAuthorizationHandler>();
         services.AddNavigationProvider<TicketsAdminMenu>();
     }
 }
