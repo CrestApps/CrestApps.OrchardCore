@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.PersonalData.Core;
 using OrchardCore.Notifications;
 using OrchardCore.Localization;
@@ -100,6 +101,19 @@ public sealed class AssessmentsDataSourcesStartup : StartupBase
         services.AddScoped<IAssessmentsReportDataSet, LearningAttemptAnswersReportDataSet>();
         services.AddScoped<IAssessmentsReportDataSet, LearningAttemptScoreChangesReportDataSet>();
         services.AddScoped<IAssessmentsReportDataSet, LearningQuizOverridesReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Adds the quiz results and item analysis report.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class AssessmentsReportsStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddReport<QuizItemAnalysisReport>();
     }
 }
 
