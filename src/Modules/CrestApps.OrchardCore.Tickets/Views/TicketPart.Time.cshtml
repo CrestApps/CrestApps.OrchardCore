@@ -1,0 +1,45 @@
+@model TicketTimeViewModel
+
+@{
+    string Hours(int minutes) => minutes < 60
+        ? T.GetString("{0} min", minutes).Value
+        : T.GetString("{0} h {1:00} min", minutes / 60, minutes % 60).Value;
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="h6">@T["Time"]</h2>
+        @if (Model.Summary.People.Count > 0)
+        {
+            <ul class="list-unstyled small mb-2">
+                @foreach (var person in Model.Summary.People)
+                {
+                    <li class="d-flex justify-content-between"><span>@person.Name</span><span>@Hours(person.Minutes)</span></li>
+                }
+            </ul>
+            @if (Model.Summary.People.Count > 1)
+            {
+                <p class="small fw-semibold mb-2">@T["In all: {0}", Hours(Model.Summary.TotalMinutes)]</p>
+            }
+        }
+        else
+        {
+            <p class="small text-muted mb-2">@T["No time on this ticket yet."]</p>
+        }
+        @if (Model.CanWork)
+        {
+            <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="Time" asp-route-id="@Model.TicketId" method="post" class="no-multisubmit">
+                @if (Model.Summary.WorkingSinceUtc is { } since)
+                {
+                    <input type="hidden" name="stop" value="true" />
+                    <p class="small mb-2"><span class="badge text-bg-success fw-normal">@T["Working"]</span> @T["since"] @await DisplayAsync(await New.DateTime(Utc: since, Format: "t"))</p>
+                    <button type="submit" class="btn btn-sm btn-secondary">@T["Stop working on this ticket"]</button>
+                }
+                else
+                {
+                    <button type="submit" class="btn btn-sm btn-secondary">@T["Start working on this ticket"]</button>
+                }
+            </form>
+        }
+    </div>
+</div>

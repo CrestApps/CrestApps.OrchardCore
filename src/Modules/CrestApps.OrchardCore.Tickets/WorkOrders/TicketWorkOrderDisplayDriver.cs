@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tickets.WorkOrders;
 
@@ -18,6 +19,7 @@ namespace CrestApps.OrchardCore.Tickets.WorkOrders;
 /// The ticket page's <b>Work order</b> panel: an agent who may change the ticket and manage work orders creates a work
 /// order of a type from the ticket. The work orders made show in the ticket's links.
 /// </summary>
+[RequireFeatures(WorkOrdersConstants.Features.WorkOrders)]
 internal sealed class TicketWorkOrderDisplayDriver : ContentPartDisplayDriver<TicketPart>
 {
     private readonly ITicketAccessService _access;

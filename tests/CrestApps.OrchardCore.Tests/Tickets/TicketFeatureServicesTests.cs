@@ -40,6 +40,8 @@ public sealed class TicketFeatureServicesTests
             .Where(type => !type.IsAbstract && (typeof(ControllerBase).IsAssignableFrom(type) || IsDisplayDriver(type)))
             // A controller or driver of another feature of the module (the portal) is checked with that feature.
             .Where(type => type.GetCustomAttribute<StartupFeature>() is not { } feature || feature.FeatureName == typeof(TicketsController).Assembly.GetName().Name)
+            // A driver of an optional integration (Work Orders, Time Tracker) is built only with that feature on.
+            .Where(type => type.GetCustomAttribute<RequireFeaturesAttribute>() is null)
             .Concat(services.Select(descriptor => descriptor.ImplementationType).Where(type => type is not null && IsOurs(type)))
             .Distinct()
             .ToList();

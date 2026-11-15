@@ -52,6 +52,10 @@ A reply from the requester on a solved ticket reopens it within the desk's reope
 - **Merge** moves a duplicate into another ticket by its number. The duplicate becomes read only and points to the ticket it was merged into.
 - **Links** relate a ticket to another ticket or to any record, such as an order or a work order, with a relation such as **Related** or **Duplicate**.
 
+## Record your time on a ticket
+
+When your administrator has chosen a **Time on tickets** stage for the desk, the ticket has a **Time** panel. Select **Start working on this ticket** when you pick it up and **Stop working on this ticket** when you're done; your time goes back to what you were doing before. The panel shows how long each person worked on the ticket, and the time is part of your day in **My time**.
+
 ## Send someone on site
 
 When a request needs a visit, choose a type (and, if you like, a priority) under **Work order** on the ticket and select **Create a work order**. The work order gets the ticket's subject, first message, account and requester, and shows under **Links**. When the work order is completed or canceled, the ticket's conversation says so, as an internal note, so you know to answer the requester. You need the **Manage work orders** permission, and Work Orders must be on.

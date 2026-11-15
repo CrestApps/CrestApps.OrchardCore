@@ -279,6 +279,11 @@ public sealed class TimeEntryQuery
     /// Gets or sets the end of the range, in UTC.
     /// </summary>
     public DateTime? ToUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what in the source the entries stand for, such as a ticket, if one.
+    /// </summary>
+    public string SourceRef { get; set; }
 }
 
 /// <summary>

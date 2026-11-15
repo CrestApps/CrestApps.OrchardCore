@@ -97,7 +97,8 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         var now = Trim(_clock.UtcNow);
         var open = await OpenEntryAsync(userId, cancellationToken);
 
-        if (open?.StageId == stage.ItemId)
+        // The same stage for something else, such as another ticket, is a new entry.
+        if (open?.StageId == stage.ItemId && string.Equals(open.SourceRef, sourceRef, StringComparison.Ordinal))
         {
             return new TimeTrackerResult { Entry = open };
         }
@@ -318,6 +319,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (!string.IsNullOrEmpty(query.StageId))
         {
             search = search.Where(index => index.StageId == query.StageId);
+        }
+
+        if (!string.IsNullOrEmpty(query.SourceRef))
+        {
+            search = search.Where(index => index.SourceRef == query.SourceRef);
         }
 
         if (query.FromUtc is { } from)

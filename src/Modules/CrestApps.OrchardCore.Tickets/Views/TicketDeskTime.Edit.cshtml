@@ -1,0 +1,10 @@
+@model TicketDeskTimeViewModel
+
+<div class="mb-3">
+    <label asp-for="StageId" class="form-label">@T["Time on tickets"]</label>
+    <select asp-for="StageId" asp-items="Model.Stages" class="form-select">
+        <option value="">@T["Not recorded"]</option>
+    </select>
+    <span asp-validation-for="StageId" class="text-danger"></span>
+    <span class="hint">@T["The Time Tracker stage agents' work on this desk's tickets is recorded in. Agents start and stop working on a ticket from its page, and the ticket shows the time each person spent on it."]</span>
+</div>

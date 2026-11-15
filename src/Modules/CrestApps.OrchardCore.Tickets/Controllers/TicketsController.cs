@@ -561,6 +561,50 @@ public sealed class TicketsController : Controller
     }
 
     /// <summary>
+    /// Starts or stops the user's work on the ticket, with Time Tracker on.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="stop">Whether to stop.</param>
+    /// <returns>Back to the ticket.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/time", "TicketsTime")]
+    public async Task<IActionResult> Time(string id, bool stop = false)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+        var time = _serviceProvider.GetService<global::CrestApps.OrchardCore.Tickets.TimeTracker.TicketTime>();
+
+        if (time is null || await _tickets.GetAsync(id) is not { } ticket)
+        {
+            return NotFound();
+        }
+
+        if (!await _access.CanAsync(User, ticket, TicketOperation.Reply, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        // The name the user's time shows, as their own clocking in gives it.
+        var name = User.Identity?.Name;
+
+        if (HttpContext.RequestServices.GetService<global::CrestApps.OrchardCore.Users.IDisplayNameProvider>() is { } names
+            && await HttpContext.RequestServices.GetRequiredService<global::Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>().GetUserAsync(User) is { } user)
+        {
+            name = await names.GetAsync(user, cancellationToken) ?? name;
+        }
+
+        var result = stop
+            ? await time.StopAsync(id, UserId(), name, User.Identity?.Name, cancellationToken)
+            : await time.StartAsync(ticket, UserId(), name, User.Identity?.Name, cancellationToken);
+
+        if (!result.Succeeded)
+        {
+            await _notifier.ErrorAsync(H["{0}", string.Join(" ", result.Errors)]);
+        }
+
+        return RedirectToAction(nameof(Display), new { id });
+    }
+
+    /// <summary>
     /// Creates a work order from the ticket, with Work Orders on.
     /// </summary>
     /// <param name="id">The ticket.</param>
