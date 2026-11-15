@@ -952,3 +952,7 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 
 **Still open from review round 5.** A learner-record recipe step for credits (10.1), exemptions in the Audit Trail (9.1), and tests of the evidence policies, audience permissions and Team Learning scope.
 
+**Fixed after review round 6.** The time-off copy runs under a distributed lock, so nodes starting together never both copy; an integration test restarts a tenant and finds the old entry copied and the copy recorded complete.
+
+**Left for the release that drops the old time-off table (review round 6, item 3).** The copy still reads every ledger index row of the time-off collection at each start; once the old table is dropped the copy goes away. Until then a large ledger pays one index read per start.
+

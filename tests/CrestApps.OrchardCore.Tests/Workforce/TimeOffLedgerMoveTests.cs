@@ -155,6 +155,66 @@ public sealed class TimeOffLedgerMoveTests
     }
 
     [Fact]
+    public async Task TwoNodesStartingTogether_CopyEachEntryOnce()
+    {
+        // Arrange: review round 6, item 1. Three old entries.
+        await using var harness = await TimeOffKit.CreateAsync();
+        await SaveOldAsync(harness, Entry("e1", "k1"), Entry("e2", "k2"), Entry("e3", "k3"));
+
+        // Act: one node holds the copy lock while another starts; then two copies start together.
+        var whileHeld = await harness.RunAsync(async services =>
+        {
+            var locks = services.GetRequiredService<global::OrchardCore.Locking.Distributed.IDistributedLock>();
+            var (locker, locked) = await locks.TryAcquireLockAsync(TimeOffLedgerCopy.LockKey, TimeSpan.FromSeconds(1));
+
+            Assert.True(locked);
+
+            await using (locker)
+            {
+                return await harness.RunAsync(other => other.GetRequiredService<TimeOffLedgerCopy>().CopyAsync());
+            }
+        });
+        var together = await Task.WhenAll(
+            harness.RunAsync(services => services.GetRequiredService<TimeOffLedgerCopy>().CopyAsync(batchSize: 1)),
+            harness.RunAsync(services => services.GetRequiredService<TimeOffLedgerCopy>().CopyAsync(batchSize: 1)));
+        var entries = await LedgerAsync(harness);
+
+        // Assert
+        Assert.Equal(0, whileHeld);
+        Assert.Equal(3, together.Sum());
+        Assert.Equal(["e1", "e2", "e3"], entries.Select(entry => entry.ItemId).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task ACopyOutOfTime_StopsBeforeItsLockExpires_AndTheNextStartFinishes()
+    {
+        // Arrange: review round 6, item 1. A copy that may run for no time at all stops after its first batch.
+        await using var harness = await TimeOffKit.CreateAsync();
+        await SaveOldAsync(harness, Entry("e1", "k1"), Entry("e2", "k2"), Entry("e3", "k3"));
+
+        // Act
+        var first = await harness.RunAsync(async services =>
+        {
+            var copy = services.GetRequiredService<TimeOffLedgerCopy>();
+
+            copy.MaxRunTime = TimeSpan.Zero;
+
+            return await copy.CopyAsync(batchSize: 1);
+        });
+        var completeAfterFirst = await harness.RunAsync(services => services.GetRequiredService<TimeOffLedgerCopy>().IsCompleteAsync());
+        var lockFree = await harness.RunAsync(services => services.GetRequiredService<global::OrchardCore.Locking.Distributed.IDistributedLock>().IsLockAcquiredAsync(TimeOffLedgerCopy.LockKey));
+        var rest = await harness.RunAsync(services => services.GetRequiredService<TimeOffLedgerCopy>().CopyAsync(batchSize: 1));
+        var entries = await LedgerAsync(harness);
+
+        // Assert
+        Assert.Equal(1, first);
+        Assert.False(completeAfterFirst);
+        Assert.False(lockFree);
+        Assert.Equal(2, rest);
+        Assert.Equal(["e1", "e2", "e3"], entries.Select(entry => entry.ItemId).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task AnInstallWithNothingToCopy_IsComplete()
     {
         // Arrange

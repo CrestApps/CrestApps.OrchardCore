@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using CrestApps.OrchardCore.Ledgers;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.YesSql.Core.Ledgers;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -23,16 +25,30 @@ public sealed class TimeOffLedgerCopy
     /// </summary>
     public const int DefaultBatchSize = 500;
 
+    /// <summary>
+    /// The lock one copy holds at a time across the nodes of a farm.
+    /// </summary>
+    public const string LockKey = "Workforce:TimeOffLedgerCopy";
+
+    // Sized for a large ledger: a copy of hundreds of thousands of entries in batches of 500 finishes well inside it.
+    private static readonly TimeSpan _lockExpiration = TimeSpan.FromHours(2);
+
+    // A copy stops taking new batches this long after it took the lock, well before the lock expires, so a second
+    // node can never copy beside it; the next start goes on from where it stopped.
+    private static readonly TimeSpan _maxRunTime = TimeSpan.FromMinutes(90);
+
     private readonly ISession _session;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeOffLedgerCopy"/> class.
     /// </summary>
-    public TimeOffLedgerCopy(ISession session, IClock clock, ILogger<TimeOffLedgerCopy> logger)
+    public TimeOffLedgerCopy(ISession session, IDistributedLock distributedLock, IClock clock, ILogger<TimeOffLedgerCopy> logger)
     {
         _session = session;
+        _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
     }
@@ -53,6 +69,32 @@ public sealed class TimeOffLedgerCopy
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
 
+        // Nodes of a farm start together after a deployment. Without the lock each would read the ledger before the
+        // other wrote and both would copy every entry, doubling every balance for good. The node that does not get the
+        // lock skips the run: the holder, or the next start, does the work.
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey, TimeSpan.Zero, _lockExpiration);
+
+        if (!locked)
+        {
+            _logger.LogInformation("Another node is copying the time-off ledger; this start skips the copy.");
+
+            return 0;
+        }
+
+        // Released in the finally of the using block, whatever the copy does.
+        await using (locker)
+        {
+            return await CopyLockedAsync(batchSize, Stopwatch.StartNew(), cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets how long a copy may run under its lock before it stops taking batches. Tests make it short.
+    /// </summary>
+    internal TimeSpan MaxRunTime { get; set; } = _maxRunTime;
+
+    private async Task<int> CopyLockedAsync(int batchSize, Stopwatch elapsed, CancellationToken cancellationToken)
+    {
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var keys = new HashSet<string>(StringComparer.Ordinal);
 
@@ -109,6 +151,15 @@ public sealed class TimeOffLedgerCopy
             if (batch.Length < batchSize)
             {
                 break;
+            }
+
+            if (elapsed.Elapsed >= MaxRunTime)
+            {
+                // Out of time before the lock could expire: what was copied is committed, the copy is not recorded
+                // complete, and the next start goes on.
+                _logger.LogWarning("The time-off ledger copy stopped before its lock expires; the next start goes on.");
+
+                return count;
             }
         }
 
