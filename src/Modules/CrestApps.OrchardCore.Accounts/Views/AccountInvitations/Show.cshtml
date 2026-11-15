@@ -1,12 +1,17 @@
 @model CrestApps.OrchardCore.Accounts.ViewModels.AccountInvitationViewModel
 
-@{
-    ViewData["Title"] = T["Invitation"];
-}
-
 <div class="container my-4" style="max-width: 40rem">
+    <div class="product-breadcrumb">
+        <breadcrumb name="AccountInvitation" title="@T["Invitation"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
     <h1 class="h3 mb-3">@T["Invitation"]</h1>
-    @if (!Model.IsValid)
+    @if (Model.IsExpired)
+    {
+        <p class="text-muted">@T["This invitation has expired. Ask the account for a new one."]</p>
+    }
+    else if (!Model.IsValid)
     {
         <p class="text-muted">@T["This invitation is not valid any more. It was accepted, taken back, or the link is wrong. Ask the account for a new one."]</p>
     }

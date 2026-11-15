@@ -72,6 +72,12 @@ public sealed class AccountInvitation : CatalogItem
     /// Gets or sets a short message from the person who invited.
     /// </summary>
     public string Message { get; set; }
+
+    /// <summary>
+    /// Gets or sets the index row a page of invitations read this one from. Not stored.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public long PageRowId { get; set; }
 }
 
 /// <summary>
@@ -93,4 +99,9 @@ public enum AccountInvitationState
     /// Taken back by the account.
     /// </summary>
     Revoked,
+
+    /// <summary>
+    /// Its time ran out before anyone accepted it.
+    /// </summary>
+    Expired,
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
@@ -20,11 +21,13 @@ internal sealed class AccountInvitationEmailObserver : IAccountInvitationObserve
     private readonly IContentManager _contentManager;
     private readonly ILogger _logger;
     private readonly ILocalClock _localClock;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
-    public AccountInvitationEmailObserver(IEmailService emailService, ISiteService siteService, IContentManager contentManager, ILocalClock localClock, ILogger<AccountInvitationEmailObserver> logger, IStringLocalizer<AccountInvitationEmailObserver> stringLocalizer)
+    public AccountInvitationEmailObserver(IEmailService emailService, ISiteService siteService, IContentManager contentManager, ILocalClock localClock, IHttpContextAccessor httpContextAccessor, ILogger<AccountInvitationEmailObserver> logger, IStringLocalizer<AccountInvitationEmailObserver> stringLocalizer)
     {
+        _httpContextAccessor = httpContextAccessor;
         _emailService = emailService;
         _siteService = siteService;
         _contentManager = contentManager;
@@ -37,7 +40,7 @@ internal sealed class AccountInvitationEmailObserver : IAccountInvitationObserve
     {
         var site = await _siteService.GetSiteSettingsAsync();
         var account = await _contentManager.GetAsync(invitation.AccountId, VersionOptions.Published);
-        var link = $"{site.BaseUrl?.TrimEnd('/')}/account/invitations/{Uri.EscapeDataString(token)}";
+        var link = $"{GetBaseUrl(site.BaseUrl)}/account/invitations/{Uri.EscapeDataString(token)}";
         var expires = await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(invitation.ExpiresUtc, DateTimeKind.Utc)));
         var accountName = WebUtility.HtmlEncode(account?.DisplayText ?? string.Empty);
         var message = string.IsNullOrWhiteSpace(invitation.Message) ? string.Empty : $"<p>{WebUtility.HtmlEncode(invitation.Message)}</p>";
@@ -52,5 +55,19 @@ internal sealed class AccountInvitationEmailObserver : IAccountInvitationObserve
         {
             _logger.LogWarning("The e-mail of an account invitation could not be sent.");
         }
+    }
+
+    // The link is opened from a mail client, so it must be absolute: the site's configured address wins, and the
+    // address of the request that sent the invitation is the fallback.
+    private string GetBaseUrl(string configured)
+    {
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return configured.TrimEnd('/');
+        }
+
+        var request = _httpContextAccessor.HttpContext?.Request;
+
+        return request is null ? string.Empty : $"{request.Scheme}://{request.Host}{request.PathBase}";
     }
 }

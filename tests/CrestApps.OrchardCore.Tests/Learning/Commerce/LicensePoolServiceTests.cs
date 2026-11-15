@@ -137,6 +137,7 @@ public sealed class LicensePoolServiceTests
             users.Setup(manager => manager.FindByIdAsync(name)).ReturnsAsync(user);
             users.Setup(manager => manager.GetEmailAsync(user)).ReturnsAsync(name + "@example.com");
             users.Setup(manager => manager.GetUserNameAsync(user)).ReturnsAsync(name);
+            users.Setup(manager => manager.IsEmailConfirmedAsync(user)).ReturnsAsync(name != "unconfirmed");
         }
 
         return users.Object;

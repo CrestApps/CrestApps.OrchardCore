@@ -29,6 +29,13 @@ public interface IAccountInvitationService
     Task<AccountInvitation> RevokeAsync(string invitationId, string actor, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Expires the pending invitations whose time ran out, a page at a time in a stable order, telling the observers
+    /// of each.
+    /// </summary>
+    /// <returns>How many invitations expired.</returns>
+    Task<int> ExpireDueAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds an invitation.
     /// </summary>
     Task<AccountInvitation> FindByIdAsync(string invitationId, CancellationToken cancellationToken = default);
@@ -93,6 +100,11 @@ public sealed class AccountInvitationResult
     /// Gets whether it worked.
     /// </summary>
     public bool Succeeded => string.IsNullOrEmpty(Error) && Invitation is not null;
+
+    /// <summary>
+    /// Gets or sets whether accepting was refused because the person has not confirmed their e-mail address.
+    /// </summary>
+    public bool NeedsEmailConfirmation { get; set; }
 }
 
 /// <summary>
@@ -117,5 +129,11 @@ public interface IAccountInvitationObserver
     /// Called after an invitation is taken back.
     /// </summary>
     Task RevokedAsync(AccountInvitation invitation, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
+    /// A pending invitation expired: nobody accepted it in time.
+    /// </summary>
+    Task ExpiredAsync(AccountInvitation invitation, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }

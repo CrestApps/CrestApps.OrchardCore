@@ -82,6 +82,59 @@ public sealed class AccountInvitationServiceTests
         Assert.Empty(h.Members);
     }
 
+    [Fact]
+    public async Task ADoubleAccept_TellsObserversOnce_AcceptAfterRevokeIsRefused_AndAnUnconfirmedAddressIsRefused()
+    {
+        // Arrange: review round 6, findings 8 and 9.
+        await using var h = await Harness.CreateAsync();
+
+        var ana = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().InviteAsync(new AccountInvitationRequest { AccountId = "acme", Email = "ana@example.com" }));
+        var dee = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().InviteAsync(new AccountInvitationRequest { AccountId = "acme", Email = "dee@example.com" }));
+        var unconfirmed = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().InviteAsync(new AccountInvitationRequest { AccountId = "acme", Email = "unconfirmed@example.com" }));
+
+        // Act
+        var twice = await Task.WhenAll(
+            h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().AcceptAsync(ana.Token, "ana")),
+            h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().AcceptAsync(ana.Token, "ana")));
+        await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().RevokeAsync(dee.Invitation.ItemId, "boss"));
+        var afterRevoke = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().AcceptAsync(dee.Token, "dee"));
+        var notConfirmed = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().AcceptAsync(unconfirmed.Token, "unconfirmed"));
+
+        // Assert
+        Assert.All(twice, result => Assert.True(result.Succeeded, result.Error));
+        Assert.Single(h.Observer, value => value == "accepted:ana@example.com");
+        Assert.False(afterRevoke.Succeeded);
+        Assert.False(notConfirmed.Succeeded);
+        Assert.True(notConfirmed.NeedsEmailConfirmation);
+        Assert.Equal(["ana"], h.Members.Select(member => member.UserId));
+    }
+
+    [Fact]
+    public async Task ANewInvitation_ReplacesOnlyOneForTheSamePurpose_AndExpiredInvitationsAreAnnounced()
+    {
+        // Arrange: review round 6, finding 4.
+        await using var h = await Harness.CreateAsync();
+
+        var seat = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().InviteAsync(new AccountInvitationRequest { AccountId = "acme", Email = "ben@example.com", Source = "Seat", SourceId = "s1" }));
+        var plain = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().InviteAsync(new AccountInvitationRequest { AccountId = "acme", Email = "ben@example.com" }));
+        var plainAgain = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().InviteAsync(new AccountInvitationRequest { AccountId = "acme", Email = "ben@example.com", Lifetime = TimeSpan.FromDays(1) }));
+
+        // Act
+        h.Clock.UtcNow = h.Clock.UtcNow.AddDays(2);
+        var expired = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().ExpireDueAsync());
+        var stored = await h.RunAsync(services => services.GetRequiredService<IAccountInvitationService>().ListForAccountAsync("acme"));
+
+        // Assert
+        Assert.True(seat.Succeeded && plain.Succeeded && plainAgain.Succeeded);
+        Assert.Equal(AccountInvitationState.Pending, stored.Single(invitation => invitation.ItemId == seat.Invitation.ItemId).State);
+        Assert.Equal(AccountInvitationState.Revoked, stored.Single(invitation => invitation.ItemId == plain.Invitation.ItemId).State);
+        Assert.Equal(AccountInvitationState.Expired, stored.Single(invitation => invitation.ItemId == plainAgain.Invitation.ItemId).State);
+        Assert.Contains("revoked:ben@example.com:", h.Observer);
+        Assert.DoesNotContain("revoked:ben@example.com:Seat", h.Observer);
+        Assert.Equal(1, expired);
+        Assert.Single(h.Observer, value => value == "expired:ben@example.com");
+    }
+
     private sealed class Harness : IAsyncDisposable
     {
         private CalendarTestHarness _inner;
@@ -106,13 +159,14 @@ public sealed class AccountInvitationServiceTests
 
             var users = new Mock<UserManager<IUser>>(new Mock<IUserStore<IUser>>().Object, null, null, null, null, null, null, null, null);
 
-            foreach (var name in new[] { "ana", "ben", "cid", "dee", "eve" })
+            foreach (var name in new[] { "ana", "ben", "cid", "dee", "eve", "unconfirmed" })
             {
                 var user = Mock.Of<IUser>(value => value.UserName == name);
 
                 users.Setup(manager => manager.FindByIdAsync(name)).ReturnsAsync(user);
                 users.Setup(manager => manager.GetEmailAsync(user)).ReturnsAsync(name + "@example.com");
                 users.Setup(manager => manager.GetUserNameAsync(user)).ReturnsAsync(name);
+                users.Setup(manager => manager.IsEmailConfirmedAsync(user)).ReturnsAsync(name != "unconfirmed");
             }
 
             var members = new Mock<IAccountMemberService>();
@@ -124,6 +178,8 @@ public sealed class AccountInvitationServiceTests
                 {
                     services.RemoveAll<IClock>();
                     services.AddSingleton<IClock>(harness.Clock);
+                    services.RemoveAll<global::OrchardCore.Locking.Distributed.IDistributedLock>();
+                    services.AddSingleton<global::OrchardCore.Locking.Distributed.IDistributedLock, CrestApps.OrchardCore.Tests.Workforce.TimeOffKit.KeyedLock>();
                     services.AddSingleton(content.Object);
                     services.AddSingleton(users.Object);
                     services.AddSingleton(members.Object);
@@ -155,6 +211,20 @@ public sealed class AccountInvitationServiceTests
         public Task AcceptedAsync(AccountInvitation invitation, CancellationToken cancellationToken = default)
         {
             _events.Add("accepted:" + invitation.Email.ToLowerInvariant());
+
+            return Task.CompletedTask;
+        }
+
+        public Task RevokedAsync(AccountInvitation invitation, CancellationToken cancellationToken = default)
+        {
+            _events.Add("revoked:" + invitation.Email.ToLowerInvariant() + ":" + invitation.Source);
+
+            return Task.CompletedTask;
+        }
+
+        public Task ExpiredAsync(AccountInvitation invitation, CancellationToken cancellationToken = default)
+        {
+            _events.Add("expired:" + invitation.Email.ToLowerInvariant());
 
             return Task.CompletedTask;
         }

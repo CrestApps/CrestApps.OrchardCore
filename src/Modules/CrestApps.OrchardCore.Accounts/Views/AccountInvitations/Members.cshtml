@@ -1,11 +1,12 @@
 @model CrestApps.OrchardCore.Accounts.ViewModels.AccountMembersViewModel
 @using CrestApps.OrchardCore.Accounts.Models
 
-@{
-    ViewData["Title"] = T["Account members"];
-}
-
 <div class="container my-4">
+    <div class="product-breadcrumb">
+        <breadcrumb name="AccountMembers" title="@T["Account members"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
     <h1 class="h3 mb-1">@T["Account members"]</h1>
     <p class="text-muted">@Model.AccountName</p>
 

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Accounts.Core.Services;
+using CrestApps.OrchardCore.Accounts.Models;
 using CrestApps.OrchardCore.Accounts.Services;
 using CrestApps.OrchardCore.PersonalData;
 
@@ -38,7 +39,19 @@ internal sealed class AccountInvitationsPersonalDataContributor : IPersonalDataC
     {
         foreach (var invitation in await _invitations.ListForPeopleAsync(context.Subject.Emails, context.Subject.UserIds, cancellationToken))
         {
-            await _store.DeleteAsync(invitation, cancellationToken);
+            if (invitation.State == AccountInvitationState.Pending)
+            {
+                await _invitations.RevokeAsync(invitation.ItemId, "personal-data", cancellationToken);
+            }
+
+            var current = await _invitations.FindByIdAsync(invitation.ItemId, cancellationToken);
+
+            if (current is null)
+            {
+                continue;
+            }
+
+            await _store.DeleteAsync(current, cancellationToken);
             context.Result.Count(Kind);
         }
     }

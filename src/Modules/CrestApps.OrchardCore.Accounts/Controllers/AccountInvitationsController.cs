@@ -22,6 +22,7 @@ public sealed class AccountInvitationsController : Controller
     private readonly IAccountMemberService _members;
     private readonly IContentManager _contentManager;
     private readonly INotifier _notifier;
+    private readonly IClock _clock;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -31,6 +32,7 @@ public sealed class AccountInvitationsController : Controller
         IAccountMemberService members,
         IContentManager contentManager,
         INotifier notifier,
+        IClock clock,
         IHtmlLocalizer<AccountInvitationsController> htmlLocalizer,
         IStringLocalizer<AccountInvitationsController> stringLocalizer)
     {
@@ -38,6 +40,7 @@ public sealed class AccountInvitationsController : Controller
         _members = members;
         _contentManager = contentManager;
         _notifier = notifier;
+        _clock = clock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -48,6 +51,9 @@ public sealed class AccountInvitationsController : Controller
     [HttpGet("account/invitations/{token}", Name = "AccountInvitation")]
     public async Task<IActionResult> Show(string token)
     {
+        // The token is in the path: never hand it to another site in a Referer header.
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+
         var invitation = await _invitations.FindByTokenAsync(token, HttpContext.RequestAborted);
         var account = invitation is null ? null : await _contentManager.GetAsync(invitation.AccountId, VersionOptions.Published);
 
@@ -56,7 +62,8 @@ public sealed class AccountInvitationsController : Controller
             Token = token,
             Invitation = invitation,
             AccountName = account?.DisplayText,
-            IsValid = invitation is { State: AccountInvitationState.Pending } && account is not null,
+            IsValid = invitation is { State: AccountInvitationState.Pending } && account is not null && invitation.ExpiresUtc >= _clock.UtcNow,
+            IsExpired = invitation is not null && (invitation.State == AccountInvitationState.Expired || (invitation.State == AccountInvitationState.Pending && invitation.ExpiresUtc < _clock.UtcNow)),
         });
     }
 
@@ -150,8 +157,14 @@ public sealed class AccountInvitationsController : Controller
             return Forbid();
         }
 
-        await _invitations.RevokeAsync(id, User.Identity?.Name, HttpContext.RequestAborted);
-        await _notifier.SuccessAsync(H["The invitation to {0} has been taken back.", invitation.Email]);
+        if (await _invitations.RevokeAsync(id, User.Identity?.Name, HttpContext.RequestAborted) is null)
+        {
+            await _notifier.WarningAsync(H["The invitation to {0} was already accepted, taken back or expired.", invitation.Email]);
+        }
+        else
+        {
+            await _notifier.SuccessAsync(H["The invitation to {0} has been taken back.", invitation.Email]);
+        }
 
         return RedirectToAction(nameof(Members));
     }

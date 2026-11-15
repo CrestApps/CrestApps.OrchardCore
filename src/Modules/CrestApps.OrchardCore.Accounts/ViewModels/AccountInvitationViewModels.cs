@@ -11,6 +11,8 @@ public class AccountInvitationViewModel
     public string AccountName { get; set; }
 
     public bool IsValid { get; set; }
+
+    public bool IsExpired { get; set; }
 }
 
 public class AccountMembersViewModel

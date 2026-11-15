@@ -43,6 +43,27 @@ public sealed class LicensePoolStore : DocumentCatalog<LicensePool, LicensePoolI
 
     public Task<LicensePool> FindByLineAsync(string orderId, string lineId, CancellationToken cancellationToken = default)
         => Session.Query<LicensePool, LicensePoolIndex>(index => index.OrderId == orderId && index.LineId == lineId, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
+
+    public async Task<LicensePool> FindFreshByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var found = await FindByIdAsync(id, cancellationToken);
+
+        if (found is null)
+        {
+            return null;
+        }
+
+        Session.Detach(found, CollectionName);
+
+        return await FindByIdAsync(id, cancellationToken);
+    }
+
+    public async Task<LicensePool> FindFreshByLineAsync(string orderId, string lineId, CancellationToken cancellationToken = default)
+    {
+        var found = await FindByLineAsync(orderId, lineId, cancellationToken);
+
+        return found is null ? null : await FindFreshByIdAsync(found.ItemId, cancellationToken);
+    }
 }
 
 public sealed class LicenseSeatStore : DocumentCatalog<LicenseSeat, LicenseSeatIndex>
@@ -57,6 +78,20 @@ public sealed class LicenseSeatStore : DocumentCatalog<LicenseSeat, LicenseSeatI
         => (await Session.Query<LicenseSeat, LicenseSeatIndex>(index => index.PoolId == poolId, collection: CollectionName).ListAsync(cancellationToken))
             .OrderBy(seat => seat.GivenUtc)
             .ToArray();
+
+    public async Task<LicenseSeat> FindFreshByIdAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var found = await FindByIdAsync(id, cancellationToken);
+
+        if (found is null)
+        {
+            return null;
+        }
+
+        Session.Detach(found, CollectionName);
+
+        return await FindByIdAsync(id, cancellationToken);
+    }
 
     public Task<LicenseSeat> FindByInvitationAsync(string invitationId, CancellationToken cancellationToken = default)
         => Session.Query<LicenseSeat, LicenseSeatIndex>(index => index.InvitationId == invitationId, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);

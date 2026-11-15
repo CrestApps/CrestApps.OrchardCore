@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Events;
@@ -113,6 +114,7 @@ public sealed class MembersStartup : StartupBase
         services.TryAddScoped<IAccountInvitationService, DefaultAccountInvitationService>();
         services.AddNavigationProvider<AccountMembersAccountMenu>();
         services.AddPersonalDataContributor<AccountInvitationsPersonalDataContributor>();
+        services.AddSingleton<IBackgroundTask, AccountInvitationExpiryBackgroundTask>();
     }
 }
 
