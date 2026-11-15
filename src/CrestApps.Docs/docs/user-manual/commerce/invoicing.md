@@ -141,6 +141,8 @@ With **Invoicing Estimates** enabled, **Commerce > Estimates** lists the quotes 
 3. The customer opens the link, reads the estimate, and types their name to **Accept** it, or **Decline** it. If they answer by phone or e-mail, use **Mark accepted** or **Mark declined** on its page.
 4. **Make the invoice** puts the estimate on a draft invoice; **Invoice the deposit** makes a deposit invoice first. Check the draft and issue it.
 
+To bill a large job as it goes, use **Invoice in part** on the estimate's page: enter the percent of each line done (for example 30), and click **Invoice these percents**. A draft invoice bills that share; the card shows how much of each line is invoiced, and no line can be billed past 100%. Voiding one of these invoices makes its share billable again.
+
 To change a sent estimate, click **Revise**: you get a copy to change, sent as **EST-1001-2**, and the old one is canceled. An estimate nobody answered expires the day after **Valid until**. How long estimates are valid by default is set under **Settings > Commerce > Invoicing**.
 
 ## Orders paid on account

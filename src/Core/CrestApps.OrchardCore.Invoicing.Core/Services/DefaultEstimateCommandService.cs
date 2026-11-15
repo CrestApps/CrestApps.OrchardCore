@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Numbering;
@@ -340,6 +341,15 @@ public sealed class DefaultEstimateCommandService : IEstimateCommandService
                 return null;
             }
 
+            if (conversion == EstimateConversion.Full &&
+                (await GetInvoicedPercentsAsync(estimate, cancellationToken)).Values.Any(percent => percent > 0m) &&
+                !await HasFullInvoiceAsync(estimate, cancellationToken))
+            {
+                result.Fail(S["Part of this estimate was invoiced already. Invoice the rest in part, with the percent left of each line."]);
+
+                return null;
+            }
+
             var invoice = await ConvertCoreAsync(estimate, conversion, result, cancellationToken);
 
             if (invoice is null)
@@ -351,6 +361,148 @@ public sealed class DefaultEstimateCommandService : IEstimateCommandService
 
             return observer => observer.ConvertedAsync(estimate, invoice, cancellationToken);
         }, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task<EstimateCommandResult> InvoiceProgressAsync(string estimateId, IReadOnlyDictionary<string, decimal> percentByLine, CancellationToken cancellationToken = default)
+        => RunAsync(estimateId, async (estimate, result) =>
+        {
+            if (estimate.Status is not (EstimateStatus.Sent or EstimateStatus.Accepted))
+            {
+                result.Fail(S["Only a sent or accepted estimate that is not fully invoiced can be invoiced in part."]);
+
+                return null;
+            }
+
+            var chosen = (percentByLine ?? new Dictionary<string, decimal>())
+                .Where(pair => pair.Value > 0m)
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+
+            if (chosen.Count == 0)
+            {
+                result.Fail(S["Enter the percent of at least one line to invoice now."]);
+
+                return null;
+            }
+
+            var invoiced = await GetInvoicedPercentsAsync(estimate, cancellationToken);
+            var settings = await GetSettingsAsync();
+            var invoice = await _invoices.NewAsync(cancellationToken: cancellationToken);
+
+            invoice.BillTo = CopyParty(estimate.BillTo);
+            invoice.Currency = estimate.Currency;
+            invoice.PricesIncludeTax = estimate.PricesIncludeTax;
+            invoice.PurchaseOrderNumber = estimate.PurchaseOrderNumber;
+            invoice.Reference = estimate.Number;
+            invoice.SourceType = InvoicingConstants.EstimateReferenceType;
+            invoice.SourceId = estimate.ItemId;
+            invoice.PaymentTermId = settings.DefaultPaymentTermId;
+            invoice.AllowPartialPayment = settings.AllowPartialPayment;
+            invoice.Terms = estimate.Terms;
+            invoice.Footer = estimate.Footer;
+
+            foreach (var line in estimate.Lines.Where(line => line.Kind is not (DocumentLineKind.Text or DocumentLineKind.Section)))
+            {
+                if (!chosen.TryGetValue(line.Id, out var percent))
+                {
+                    continue;
+                }
+
+                var before = invoiced.GetValueOrDefault(line.Id);
+
+                if (percent > 100m || before + percent > 100m)
+                {
+                    result.Fail(S["\"{0}\" is {1}% invoiced already, so {2}% more would bill more than all of it.", line.Name, before.ToString("0.##", CultureInfo.CurrentCulture), percent.ToString("0.##", CultureInfo.CurrentCulture)]);
+
+                    continue;
+                }
+
+                var share = percent / 100m;
+                var copy = CopyLine(line, keepId: false);
+
+                copy.Quantity = Math.Round(line.Quantity * share, 6, MidpointRounding.AwayFromZero);
+                copy.DiscountAmount = line.DiscountAmount is { } discount ? Math.Round(discount * share, 2, MidpointRounding.AwayFromZero) : null;
+                copy.Name = S["{0} ({1}%)", line.Name, percent.ToString("0.##", CultureInfo.CurrentCulture)].Value;
+                invoice.Lines.Add(copy);
+            }
+
+            if (!result.Succeeded)
+            {
+                return null;
+            }
+
+            if (invoice.Lines.Count == 0)
+            {
+                result.Fail(S["None of the lines chosen can be invoiced."]);
+
+                return null;
+            }
+
+            await InvoiceCalculation.ApplyAsync(_calculator, invoice, settings, issueDate: null, cancellationToken);
+
+            var validation = await _invoices.ValidateAsync(invoice, cancellationToken);
+
+            if (!validation.Succeeded)
+            {
+                foreach (var error in validation.Errors)
+                {
+                    result.Fail(error.ErrorMessage);
+                }
+
+                return null;
+            }
+
+            await _invoices.CreateAsync(invoice, cancellationToken);
+
+            estimate.InvoiceIds.Add(invoice.ItemId);
+
+            // Fully invoiced once every billable line reaches 100%.
+            var billable = estimate.Lines.Where(line => line.Kind is not (DocumentLineKind.Text or DocumentLineKind.Section)).ToList();
+
+            if (billable.All(line => invoiced.GetValueOrDefault(line.Id) + chosen.GetValueOrDefault(line.Id) >= 100m))
+            {
+                estimate.Status = EstimateStatus.Invoiced;
+            }
+
+            AddHistory(estimate, DocumentEventKinds.Converted, S["Part of it was put on a draft invoice."].Value);
+
+            result.Invoice = invoice;
+
+            return observer => observer.ConvertedAsync(estimate, invoice, cancellationToken);
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<string, decimal>> GetInvoicedPercentsAsync(string estimateId, CancellationToken cancellationToken = default)
+    {
+        var estimate = string.IsNullOrEmpty(estimateId) ? null : await _store.FindByIdAsync(estimateId, cancellationToken);
+
+        return estimate is null ? new Dictionary<string, decimal>() : await GetInvoicedPercentsAsync(estimate, cancellationToken);
+    }
+
+    // The share of each line its invoices that are not void bill: each invoice line made from an estimate line names it,
+    // and bills its quantity over the estimate line's.
+    private async Task<IReadOnlyDictionary<string, decimal>> GetInvoicedPercentsAsync(Estimate estimate, CancellationToken cancellationToken)
+    {
+        var quantities = estimate.Lines.Where(line => line.Quantity != 0m).ToDictionary(line => line.Id, line => line.Quantity, StringComparer.Ordinal);
+        var percents = new Dictionary<string, decimal>(StringComparer.Ordinal);
+
+        foreach (var invoiceId in estimate.InvoiceIds)
+        {
+            if (await _invoices.FindByIdAsync(invoiceId, cancellationToken) is not { Kind: InvoiceKind.Standard } invoice || invoice.Status == InvoiceStatus.Void)
+            {
+                continue;
+            }
+
+            foreach (var line in invoice.Lines.Where(line => string.Equals(line.SourceType, InvoicingConstants.EstimateReferenceType, StringComparison.Ordinal) && line.SourceId is not null))
+            {
+                if (quantities.TryGetValue(line.SourceId, out var quantity))
+                {
+                    percents[line.SourceId] = percents.GetValueOrDefault(line.SourceId) + Math.Round(line.Quantity / quantity * 100m, 4);
+                }
+            }
+        }
+
+        return percents;
+    }
 
     /// <inheritdoc/>
     public async Task<int> ExpireDueAsync(DateOnly today, CancellationToken cancellationToken = default)
@@ -495,6 +647,24 @@ public sealed class DefaultEstimateCommandService : IEstimateCommandService
             : S["Put on a draft invoice."].Value);
 
         return invoice;
+    }
+
+    // Whether the whole estimate was put on an invoice that is not void (converting again returns it).
+    private async Task<bool> HasFullInvoiceAsync(Estimate estimate, CancellationToken cancellationToken)
+    {
+        foreach (var invoiceId in estimate.InvoiceIds)
+        {
+            if (await _invoices.FindByIdAsync(invoiceId, cancellationToken) is { Kind: InvoiceKind.Standard } invoice &&
+                invoice.Status != InvoiceStatus.Void &&
+                invoice.Lines.Count(line => string.Equals(line.SourceType, InvoicingConstants.EstimateReferenceType, StringComparison.Ordinal)) == estimate.Lines.Count &&
+                invoice.Lines.Where(line => string.Equals(line.SourceType, InvoicingConstants.EstimateReferenceType, StringComparison.Ordinal))
+                    .All(line => estimate.Lines.FirstOrDefault(source => source.Id == line.SourceId) is { } source && source.Quantity == line.Quantity))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task<string> NextNumberAsync(Estimate estimate, CancellationToken cancellationToken)

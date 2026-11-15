@@ -286,6 +286,7 @@ public sealed class EstimatesAdminController : Controller
             CanEmail = sender.CanSend,
             CanConvertDeposit = (estimate.DepositAmount is > 0m || estimate.DepositPercent is > 0m) && !invoices.Any(invoice => invoice.Kind == InvoiceKind.Prepayment && invoice.Status != InvoiceStatus.Void),
             Invoices = invoices,
+            InvoicedPercents = await _commands.GetInvoicedPercentsAsync(estimate.ItemId, HttpContext.RequestAborted),
         });
     }
 
@@ -426,6 +427,30 @@ public sealed class EstimatesAdminController : Controller
         }
 
         await _notifier.SuccessAsync(result.AlreadyDone ? H["This estimate was invoiced already: here is its invoice."] : H["A draft invoice was made from the estimate. Check it and issue it."]);
+
+        return RedirectToAction("Detail", "InvoicesAdmin", new { itemId = result.Invoice.ItemId });
+    }
+
+    /// <summary>
+    /// Invoices a percent of each line chosen (progress invoicing) on a draft invoice, and opens it.
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> Progress(string itemId, Dictionary<string, decimal> percents)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ManageEstimates) ||
+            !await _authorizationService.AuthorizeAsync(User, InvoicingPermissions.ManageInvoices))
+        {
+            return Forbid();
+        }
+
+        var result = await _commands.InvoiceProgressAsync(itemId, percents ?? [], HttpContext.RequestAborted);
+
+        if (!result.Succeeded || result.Invoice is null)
+        {
+            return await CompleteAsync(result, itemId, success: null);
+        }
+
+        await _notifier.SuccessAsync(H["A draft invoice was made for the part chosen. Check it and issue it."]);
 
         return RedirectToAction("Detail", "InvoicesAdmin", new { itemId = result.Invoice.ItemId });
     }

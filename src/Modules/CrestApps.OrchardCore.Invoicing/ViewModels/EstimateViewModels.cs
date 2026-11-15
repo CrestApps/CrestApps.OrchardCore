@@ -68,6 +68,8 @@ public class EstimateDetailViewModel
 
     public bool CanConvertDeposit { get; set; }
 
+    public IReadOnlyDictionary<string, decimal> InvoicedPercents { get; set; } = new Dictionary<string, decimal>();
+
     public IReadOnlyList<Invoice> Invoices { get; set; } = [];
 }
 

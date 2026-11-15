@@ -79,6 +79,25 @@ public interface IEstimateCommandService
     Task<EstimateCommandResult> ConvertAsync(string estimateId, EstimateConversion conversion, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Invoices part of a sent or accepted estimate (progress invoicing): a percent of each line chosen, on a draft
+    /// invoice whose lines bill that share of the line's quantity. A line is never invoiced past 100% across the
+    /// estimate's invoices that are not void; the estimate is <see cref="EstimateStatus.Invoiced"/> once every line is
+    /// fully invoiced.
+    /// </summary>
+    /// <param name="estimateId">The estimate.</param>
+    /// <param name="percentByLine">The percent of each line to invoice now, by the line's id; lines left out are not invoiced.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<EstimateCommandResult> InvoiceProgressAsync(string estimateId, IReadOnlyDictionary<string, decimal> percentByLine, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets how much of each line of an estimate is invoiced, in percent, by the line's id, across its invoices that are
+    /// not void.
+    /// </summary>
+    /// <param name="estimateId">The estimate.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyDictionary<string, decimal>> GetInvoicedPercentsAsync(string estimateId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Expires the sent estimates whose expiry date is before <paramref name="today"/>, and returns how many.
     /// </summary>
     Task<int> ExpireDueAsync(DateOnly today, CancellationToken cancellationToken = default);
