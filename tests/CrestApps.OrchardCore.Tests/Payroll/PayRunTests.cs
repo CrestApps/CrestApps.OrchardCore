@@ -205,7 +205,10 @@ public sealed class PayRunTests
 
             Assert.Contains(blockers, message => message.Contains("election", StringComparison.OrdinalIgnoreCase));
 
-            return (submitted, cancelled, again, found, await service.ListStatementsAsync(found));
+            // Each step commits under the run's lock: read the run as it is stored now.
+            var stored = await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId);
+
+            return (submitted, cancelled, again, stored, await service.ListStatementsAsync(stored));
         });
 
         Assert.False(submit.Succeeded);

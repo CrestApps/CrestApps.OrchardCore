@@ -556,6 +556,59 @@ public sealed class PayRunProcessingTests
         Assert.All(observer.Changes.Skip(1), change => Assert.Equal(setup.RunId, change.Run.ItemId));
     }
 
+    [Fact]
+    public async Task DoubleClicks_ProcessPaysOnce_VoidReversesOnce_AndAProcessedRunIsNotCalculatedAgain()
+    {
+        var context = new DisbursementsTestContext();
+        var origin = await context.Checks.BusinessAccountAsync();
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => AddPayments(services, context, deposits: false, checks: true));
+        var setup = await PayRunTests.SetUpAsync(harness, employerSetup: employer => employer.FundingBankAccountId = origin.ItemId);
+        var clerk = CalendarTestHarness.User("clerk", PayrollPermissions.ProcessPayRuns.Name, PayrollPermissions.VoidPayStatements.Name, PayrollPermissions.PreparePayRuns.Name);
+        await ApproveAsync(harness, setup);
+
+        // The copy a second click holds: read before the first click processed the run.
+        var stale = await harness.RunAsync(services => services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId).AsTask(), commit: false);
+
+        Assert.Equal(PayRunStatus.Approved, stale.Status);
+        await harness.RunAsync(async services => Assert.True((await services.GetRequiredService<IPayRunService>().ProcessAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), clerk)).Succeeded));
+
+        var (again, recalculated) = await harness.RunAsync(async services => (
+            await services.GetRequiredService<IPayRunService>().ProcessAsync(stale, clerk),
+            await services.GetRequiredService<IPayRunService>().CalculateAsync(stale, clerk)));
+
+        Assert.False(again.Succeeded);
+        Assert.False(recalculated.Succeeded);
+        Assert.Single(context.Checks.Store.Entries);
+
+        var (run, statements) = await harness.RunAsync(async services =>
+        {
+            var current = await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId);
+
+            return (current, await services.GetRequiredService<IPayRunService>().ListStatementsAsync(current));
+        }, commit: false);
+
+        Assert.Equal(PayRunStatus.Paid, run.Status);
+        Assert.Equal(PayStatementStatus.Paid, Assert.Single(statements).Status);
+
+        // Void twice with the copy the second click holds: one reversal.
+        var original = statements[0];
+        var (firstVoid, secondVoid) = await harness.RunAsync(async services =>
+        {
+            var service = services.GetRequiredService<IPayRunService>();
+            var first = await service.VoidStatementAsync(original, clerk, "Wrong hours");
+
+            return (first, await service.VoidStatementAsync(original, clerk, "Wrong hours"));
+        });
+
+        Assert.True(firstVoid.Succeeded, string.Join(" ", firstVoid.Errors));
+        Assert.False(secondVoid.Succeeded);
+
+        var afterVoid = await harness.RunAsync(async services => await services.GetRequiredService<IPayRunService>().ListStatementsAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId)), commit: false);
+
+        Assert.Single(afterVoid, statement => statement.VoidOf == original.ItemId);
+        Assert.Equal(PayStatementStatus.Voided, afterVoid.Single(statement => statement.ItemId == original.ItemId).Status);
+    }
+
     internal static void AddPayments(IServiceCollection services, DisbursementsTestContext context, bool deposits, bool checks)
     {
         services.AddSingleton<IDisbursementService>(context.Service);

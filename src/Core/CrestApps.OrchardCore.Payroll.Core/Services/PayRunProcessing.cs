@@ -52,6 +52,16 @@ public sealed partial class DefaultPayRunService
 
         await using (locker)
         {
+            // A second click waited for the lock: decide on the run as the first one left it.
+            run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
+
+            if (run.Status is not (PayRunStatus.Approved or PayRunStatus.PartiallyPaid or PayRunStatus.Failed or PayRunStatus.Processing))
+            {
+                result.Errors.Add(S["The pay run was processed already."]);
+
+                return result;
+            }
+
             var runId = run.ItemId;
             var employer = await _employers.FindByIdAsync(run.EmployerId, cancellationToken);
             var methods = PaymentMethods();
@@ -145,16 +155,41 @@ public sealed partial class DefaultPayRunService
                 _ => PayRunChangeKind.PartiallyPaid,
             }, user, null, cancellationToken);
 
-            foreach (var observer in _services.GetServices<IPayStatementObserver>())
-            {
-                foreach (var statementId in issued)
-                {
-                    await observer.IssuedAsync(await _statements.FindByIdAsync(statementId, cancellationToken), cancellationToken);
-                }
-            }
+            await TellIssuedAsync(runId, cancellationToken);
+            await Committer().CommitAsync(cancellationToken);
         }
 
         return result;
+    }
+
+    // Tells the statement observers of each final statement of the run that they haven't heard of yet, such as one made
+    // final by a run that stopped half-way before "Pay what is left" (garnishments remitted, notices and webhooks sent).
+    private async Task TellIssuedAsync(string runId, CancellationToken cancellationToken)
+    {
+        var observers = _services.GetServices<IPayStatementObserver>().ToList();
+        var run = await _runs.FindByIdAsync(runId, cancellationToken);
+
+        if (run is null)
+        {
+            return;
+        }
+
+        foreach (var statementId in (await OpenStatementsAsync(run, cancellationToken))
+            .Where(statement => statement.Status is PayStatementStatus.Final or PayStatementStatus.Paid && !statement.IssuedObserved)
+            .Select(statement => statement.ItemId)
+            .ToList())
+        {
+            foreach (var observer in observers)
+            {
+                await observer.IssuedAsync(await _statements.FindByIdAsync(statementId, cancellationToken), cancellationToken);
+            }
+
+            // Observers may commit: mark the statement on a fresh read.
+            var told = await _statements.FindByIdAsync(statementId, cancellationToken);
+
+            told.IssuedObserved = true;
+            await _statements.UpdateAsync(told, cancellationToken);
+        }
     }
 
     /// <inheritdoc />
@@ -192,7 +227,7 @@ public sealed partial class DefaultPayRunService
             return result;
         }
 
-        var (locker, locked) = await _locks.TryAcquireLockAsync("Payroll:PayStatement:" + statement.ItemId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _locks.TryAcquireLockAsync("Payroll:PayRun:" + statement.RunId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -203,6 +238,16 @@ public sealed partial class DefaultPayRunService
 
         await using (locker)
         {
+            // A second click waited for the lock: void only what is still final.
+            statement = await _statements.FindByIdAsync(statement.ItemId, cancellationToken) ?? statement;
+
+            if (statement.Status is not (PayStatementStatus.Final or PayStatementStatus.Paid) || statement.VoidOf is not null)
+            {
+                result.Errors.Add(S["The pay statement was voided already."]);
+
+                return result;
+            }
+
             var statementId = statement.ItemId;
             var profile = await _profiles.FindByIdAsync(statement.ProfileId, cancellationToken);
             var employer = await _employers.FindByIdAsync(statement.EmployerId, cancellationToken);
@@ -287,6 +332,7 @@ public sealed partial class DefaultPayRunService
             }
 
             result.Statement = created;
+            await Committer().CommitAsync(cancellationToken);
         }
 
         return result;
@@ -320,7 +366,7 @@ public sealed partial class DefaultPayRunService
             return result;
         }
 
-        var (locker, locked) = await _locks.TryAcquireLockAsync("Payroll:PayStatement:" + statement.ItemId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _locks.TryAcquireLockAsync("Payroll:PayRun:" + statement.RunId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -331,6 +377,15 @@ public sealed partial class DefaultPayRunService
 
         await using (locker)
         {
+            statement = await _statements.FindByIdAsync(statement.ItemId, cancellationToken) ?? statement;
+
+            if (statement.Status is not (PayStatementStatus.Final or PayStatementStatus.Paid) || statement.VoidOf is not null || index >= statement.Payments.Count)
+            {
+                result.Errors.Add(S["Only a payment of a final pay statement can be reissued."]);
+
+                return result;
+            }
+
             var statementId = statement.ItemId;
             var profile = await _profiles.FindByIdAsync(statement.ProfileId, cancellationToken);
             var employer = await _employers.FindByIdAsync(statement.EmployerId, cancellationToken);
@@ -359,6 +414,8 @@ public sealed partial class DefaultPayRunService
             {
                 result.Errors.Add(problem);
             }
+
+            await Committer().CommitAsync(cancellationToken);
         }
 
         return result;
@@ -370,7 +427,20 @@ public sealed partial class DefaultPayRunService
     private async Task<string> PayAndSaveAsync(Dictionary<NetPayMethod, IPayStatementPaymentMethod> methods, string statementId, int index, Employer employer, CancellationToken cancellationToken)
     {
         var statement = await _statements.FindByIdAsync(statementId, cancellationToken);
+
+        // A voided statement, or one that was paid in the meantime, is never paid (again).
+        if (statement is null || statement.Status is not (PayStatementStatus.Final or PayStatementStatus.Paid) || statement.VoidOf is not null)
+        {
+            return S["The pay statement isn't final any more, so nothing was paid."];
+        }
+
         var payment = statement.Payments[index];
+
+        if (!string.IsNullOrEmpty(payment.ReferenceId))
+        {
+            return null;
+        }
+
         var method = payment.Method;
 
         if (!methods.TryGetValue(method, out var payer) && method == NetPayMethod.BankAccount && methods.TryGetValue(NetPayMethod.Check, out payer))

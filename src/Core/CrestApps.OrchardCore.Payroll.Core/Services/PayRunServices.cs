@@ -182,6 +182,9 @@ public sealed class PayRunStore : DocumentCatalog<PayRun, PayRunIndex>
         CollectionName = PayrollConstants.CollectionName;
     }
 
+    // Two people working on the same run must not both write a stale copy.
+    protected override bool CheckConcurrency => true;
+
     /// <summary>
     /// Lists the runs matching a filter on the index.
     /// </summary>
@@ -536,6 +539,16 @@ public sealed partial class DefaultPayRunService : IPayRunService
 
         await using (locker)
         {
+            // A caller that waited for the lock decides on the run as it is stored now, not the copy it read before.
+            run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
+
+            if (!run.IsOpen)
+            {
+                result.Errors.Add(S["A pay run that was processed or cancelled can't be calculated again."]);
+
+                return result;
+            }
+
             // An approval is for one calculation: a run waiting for one, or approved, goes back to calculated.
             if (run.Status is PayRunStatus.PendingApproval or PayRunStatus.Approved)
             {
@@ -625,10 +638,15 @@ public sealed partial class DefaultPayRunService : IPayRunService
             run.PreparedBy = user?.Identity?.Name;
             await _runs.UpdateAsync(run, cancellationToken: cancellationToken);
             await TellAsync(run, PayRunChangeKind.Calculated, user, null, cancellationToken);
+            await Committer().CommitAsync(cancellationToken);
         }
 
         return result;
     }
+
+    // Commits while the run's lock is held.
+    private IPayrollCommitter Committer()
+        => _services.GetRequiredService<IPayrollCommitter>();
 
     // The balances a statement shows, such as time off, from every source.
     private async Task<IReadOnlyList<PayStatementBalance>> BalancesAsync(string staffMemberId, DateOnly payDate, CancellationToken cancellationToken)
@@ -772,24 +790,39 @@ public sealed partial class DefaultPayRunService : IPayRunService
 
         var result = new PayRunResult();
 
-        if (!PayRunStatuses.Transitions.CanMove(run.Status, PayRunStatus.Canceled))
+        var (locker, locked) = await _locks.TryAcquireLockAsync("Payroll:PayRun:" + run.ItemId, _lockTimeout, _lockExpiration);
+
+        if (!locked)
         {
-            result.Errors.Add(S["A pay run that was processed can't be cancelled: void its statements instead."]);
+            result.Errors.Add(S["The pay run is being worked on. Try again in a moment."]);
 
             return result;
         }
 
-        run = await CancelApprovalAsync(run, reason, cancellationToken);
-
-        foreach (var draft in (await ListStatementsAsync(run, cancellationToken)).Where(statement => statement.Status == PayStatementStatus.Draft))
+        await using (locker)
         {
-            await _statements.DeleteAsync(draft, cancellationToken);
-        }
+            run = await _runs.FindByIdAsync(run.ItemId, cancellationToken) ?? run;
 
-        run.Status = PayRunStatus.Canceled;
-        run.Totals = new PayRunTotals();
-        await _runs.UpdateAsync(run, cancellationToken: cancellationToken);
-        await TellAsync(run, PayRunChangeKind.Canceled, null, reason, cancellationToken);
+            if (!PayRunStatuses.Transitions.CanMove(run.Status, PayRunStatus.Canceled))
+            {
+                result.Errors.Add(S["A pay run that was processed can't be cancelled: void its statements instead."]);
+
+                return result;
+            }
+
+            run = await CancelApprovalAsync(run, reason, cancellationToken);
+
+            foreach (var draft in (await ListStatementsAsync(run, cancellationToken)).Where(statement => statement.Status == PayStatementStatus.Draft))
+            {
+                await _statements.DeleteAsync(draft, cancellationToken);
+            }
+
+            run.Status = PayRunStatus.Canceled;
+            run.Totals = new PayRunTotals();
+            await _runs.UpdateAsync(run, cancellationToken: cancellationToken);
+            await TellAsync(run, PayRunChangeKind.Canceled, null, reason, cancellationToken);
+            await Committer().CommitAsync(cancellationToken);
+        }
 
         return result;
     }

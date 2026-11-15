@@ -119,6 +119,13 @@ public sealed class CheckService : ICheckService
             return new CheckResult { Errors = errors };
         }
 
+        // The same request again (a retry, a double click) gets the check already issued.
+        if (!string.IsNullOrEmpty(request.IdempotencyKey) && !string.IsNullOrEmpty(request.SourceKind) && !string.IsNullOrEmpty(request.SourceId)
+            && (await _manager.ListBySourceAsync(request.SourceKind, request.SourceId, cancellationToken)).FirstOrDefault(existing => string.Equals(existing.IdempotencyKey, request.IdempotencyKey, StringComparison.Ordinal)) is { } issuedBefore)
+        {
+            return new CheckResult { Check = issuedBefore };
+        }
+
         var currency = account.Currency;
         var number = await _numbers.NextAsync(ChecksConstants.NumberSeries(account.ItemId), new NumberSequenceOptions
         {
@@ -141,6 +148,7 @@ public sealed class CheckService : ICheckService
         check.SourceKind = request.SourceKind;
         check.SourceId = request.SourceId;
         check.AccessScope = string.IsNullOrEmpty(request.SourceKind) ? null : request.AccessScope;
+        check.IdempotencyKey = string.IsNullOrEmpty(request.IdempotencyKey) ? null : request.IdempotencyKey;
         check.Status = CheckStatus.Issued;
         check.IssuedUtc = _clock.UtcNow;
 

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Payroll.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Notifications;
 using OrchardCore.Notifications.Models;
@@ -123,17 +124,44 @@ public sealed class PayStatementReviewService
             return result;
         }
 
-        statement.Review ??= new PayStatementReview();
-        statement.Review.Status = confirmed ? PayStatementReviewStatus.Confirmed : PayStatementReviewStatus.Questioned;
-        statement.Review.Note = confirmed ? null : note;
-        statement.Review.ReviewedNet = statement.Net;
-        statement.Review.UserId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
-        statement.Review.ReviewedUtc = _clock.UtcNow;
-        await _statements.UpdateAsync(statement, cancellationToken);
+        // Under the run's lock and on a fresh read, so an answer never writes over a statement calculated meanwhile.
+        var (locker, locked) = await _services.GetRequiredService<IDistributedLock>().TryAcquireLockAsync("Payroll:PayRun:" + statement.RunId, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(1));
 
-        if (!confirmed)
+        if (!locked)
         {
-            await TellPreparerAsync(run, statement, cancellationToken);
+            result.Errors.Add(S["The pay run is being worked on. Try again in a moment."]);
+
+            return result;
+        }
+
+        await using (locker)
+        {
+            var fresh = await _statements.FindByIdAsync(statement.ItemId, cancellationToken);
+
+            run = await _runs.FindByIdAsync(statement.RunId, cancellationToken);
+
+            if (fresh is null || fresh.Status != PayStatementStatus.Draft || !TakesReviews(run))
+            {
+                result.Errors.Add(S["This pay can no longer be reviewed: the run was submitted, processed or is being calculated again."]);
+
+                return result;
+            }
+
+            fresh.Review ??= new PayStatementReview();
+            fresh.Review.Status = confirmed ? PayStatementReviewStatus.Confirmed : PayStatementReviewStatus.Questioned;
+            fresh.Review.Note = confirmed ? null : note;
+            fresh.Review.ReviewedNet = fresh.Net;
+            fresh.Review.UserId = user?.FindFirstValue(ClaimTypes.NameIdentifier);
+            fresh.Review.ReviewedUtc = _clock.UtcNow;
+            await _statements.UpdateAsync(fresh, cancellationToken);
+            await _services.GetRequiredService<IPayrollCommitter>().CommitAsync(cancellationToken);
+
+            result.Statement = fresh;
+
+            if (!confirmed)
+            {
+                await TellPreparerAsync(run, fresh, cancellationToken);
+            }
         }
 
         return result;

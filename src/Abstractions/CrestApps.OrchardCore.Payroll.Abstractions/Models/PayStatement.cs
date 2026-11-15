@@ -91,6 +91,12 @@ public sealed class PayStatement : CatalogItem, IModifiedUtcAwareModel
     public PayStatementReview Review { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the statement observers were told the statement was issued, so they hear it once even when a
+    /// run is paid in several goes.
+    /// </summary>
+    public bool IssuedObserved { get; set; }
+
+    /// <summary>
     /// Gets or sets the statement this one reverses, or <see langword="null"/>.
     /// </summary>
     public string VoidOf { get; set; }

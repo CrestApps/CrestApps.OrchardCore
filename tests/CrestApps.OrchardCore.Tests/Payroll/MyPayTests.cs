@@ -361,6 +361,55 @@ public sealed class MyPayTests
     }
 
     [Fact]
+    public async Task Review_WithACopyReadBeforeARecalculation_ChangesOnlyTheReview()
+    {
+        var site = new global::OrchardCore.Settings.SiteSettings { TimeZoneId = "America/New_York" };
+        var siteService = new Mock<global::OrchardCore.Settings.ISiteService>();
+
+        global::OrchardCore.Entities.EntityExtensions.Put(site, new PayrollSettings { EmployeeReview = true });
+        siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(site);
+
+        await using var harness = await PayRunTests.CreateHarnessAsync(services => services.AddSingleton(siteService.Object));
+        var setup = await PayRunTests.SetUpAsync(harness);
+        var preparer = CalendarTestHarness.User("preparer", PayrollPermissions.PreparePayRuns.Name);
+        var lee = CalendarTestHarness.User("lee-user", PayrollPermissions.ViewOwnPay.Name);
+
+        await LinkAsync(harness, setup.StaffMemberId, "lee-user");
+
+        Task CalculateAsync()
+            => harness.RunAsync(async services => Assert.True((await services.GetRequiredService<IPayRunService>().CalculateAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId), preparer)).Succeeded));
+
+        Task<PayStatement> DraftAsync()
+            => harness.RunAsync(async services => (await services.GetRequiredService<IPayRunService>().ListStatementsAsync(await services.GetRequiredService<IPayRunManager>().FindByIdAsync(setup.RunId))).Single(), commit: false);
+
+        await CalculateAsync();
+        var stale = await DraftAsync();
+
+        // Two more hours, calculated after Lee opened the page.
+        await harness.RunAsync(async services =>
+        {
+            var inputs = services.GetRequiredService<IPayRunInputManager>();
+            var input = await inputs.NewAsync();
+
+            input.RunId = setup.RunId;
+            input.StaffMemberId = setup.StaffMemberId;
+            input.PayCodeId = (await services.GetRequiredService<IPayCodeManager>().FindByCodeAsync("REG")).ItemId;
+            input.Hours = 2;
+            await inputs.CreateAsync(input);
+        });
+        await CalculateAsync();
+
+        var recalculated = await DraftAsync();
+        var result = await harness.RunAsync(services => services.GetRequiredService<PayStatementReviewService>().ReviewAsync(stale, lee, confirmed: true, note: null));
+        var after = await DraftAsync();
+
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors));
+        Assert.NotEqual(stale.Net, recalculated.Net);
+        Assert.Equal((recalculated.Net, recalculated.Lines.Count), (after.Net, after.Lines.Count));
+        Assert.Equal((PayStatementReviewStatus.Confirmed, recalculated.Net), (after.Review.Status, after.Review.ReviewedNet));
+    }
+
+    [Fact]
     public async Task Calculation_StoresTheBalancesOfEverySource_OnTheStatement_AndTheStubPrintsThem()
     {
         var source = new Mock<IPayStatementBalanceSource>();

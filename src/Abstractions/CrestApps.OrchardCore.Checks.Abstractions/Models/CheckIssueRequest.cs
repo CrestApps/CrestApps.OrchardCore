@@ -62,4 +62,10 @@ public sealed class CheckIssueRequest
     /// Gets or sets the access scope within the source kind, such as the pay group of a paycheck.
     /// </summary>
     public string AccessScope { get; set; }
+
+    /// <summary>
+    /// Gets or sets a key that makes issuing idempotent: a check of the same source issued with the same key is returned
+    /// instead of a new one, such as the second click of a double click.
+    /// </summary>
+    public string IdempotencyKey { get; set; }
 }

@@ -170,6 +170,7 @@ public sealed class PaycheckPaymentMethod : IPayStatementPaymentMethod
             SourceKind = PayStatementSources.Kind,
             SourceId = context.Statement.ItemId,
             AccessScope = context.Statement.EmployerId,
+            IdempotencyKey = $"payroll:{context.Statement.ItemId}:{context.Index}:{context.Payment.Attempt}",
         }, cancellationToken);
 
         if (!issued.Succeeded)

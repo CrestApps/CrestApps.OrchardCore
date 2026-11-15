@@ -24,6 +24,9 @@ public sealed class PayStatementStore : DocumentCatalog<PayStatement, PayStateme
         CollectionName = PayrollConstants.CollectionName;
     }
 
+    // Processing, voiding and a review must not write over each other's statement.
+    protected override bool CheckConcurrency => true;
+
     /// <summary>
     /// Lists the statements matching a filter on the index.
     /// </summary>

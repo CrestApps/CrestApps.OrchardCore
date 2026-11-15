@@ -132,4 +132,9 @@ public sealed class CheckRecord : CatalogItem, IModifiedUtcAwareModel
     /// Gets or sets when the check was last changed.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key the check was issued with, or <see langword="null"/>.
+    /// </summary>
+    public string IdempotencyKey { get; set; }
 }

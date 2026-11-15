@@ -32,6 +32,24 @@ public sealed class CheckReviewFixesTests
     }
 
     [Fact]
+    public async Task IssueAsync_TheSameKeyForTheSameSource_ReturnsTheCheckAlreadyIssued()
+    {
+        var context = new ChecksTestContext();
+        var account = await context.BusinessAccountAsync();
+
+        CheckIssueRequest Request(string key)
+            => new() { BankAccountId = account.ItemId, PayeeName = "Pat Doe", Amount = 10, CheckDate = new DateOnly(2026, 11, 13), SourceKind = "PayStatement", SourceId = "statement1", IdempotencyKey = key };
+
+        var first = await context.Service.IssueAsync(Request("payroll:statement1:0:0"), TestContext.Current.CancellationToken);
+        var second = await context.Service.IssueAsync(Request("payroll:statement1:0:0"), TestContext.Current.CancellationToken);
+        var reissued = await context.Service.IssueAsync(Request("payroll:statement1:0:1"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(first.Check.ItemId, second.Check.ItemId);
+        Assert.NotEqual(first.Check.ItemId, reissued.Check.ItemId);
+        Assert.Equal(2, context.Store.Entries.Count);
+    }
+
+    [Fact]
     public async Task ReissueAsync_KeepsTheAccessScopeOfTheReplacedCheck()
     {
         // Arrange
