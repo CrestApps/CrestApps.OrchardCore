@@ -1,5 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Addresses.Models;
+using CrestApps.OrchardCore.Attachments.Models;
+using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.Core.Emails;
 using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.Parties.Services;
@@ -8,11 +10,14 @@ using CrestApps.OrchardCore.Tickets;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Timeline.Models;
+using CrestApps.OrchardCore.Timeline.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tests.Tickets;
@@ -50,6 +55,27 @@ public sealed class TicketEmailTests
         Assert.Contains("<p>Try the rear tray.</p><p>Then restart it.</p>", _sent[1].Content.Html);
         Assert.Equal("Try the rear tray.\n\nThen restart it.", ((TicketEmailReply)_sent[1].Email.Models["Reply"]).Body);
         Assert.Equal("Done", ((TicketEmailModel)_sent[2].Email.Models["Ticket"]).Status);
+    }
+
+    [Fact]
+    public async Task AReplysFiles_AreLinkedFromTheSitesAddress_AndTemplatesGetTheReplyAsHtml()
+    {
+        // Arrange
+        var attachments = new Mock<IAttachmentService>();
+        attachments.Setup(service => service.GetAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new Attachment { ItemId = "f1", FileName = "log <1>.txt" }]);
+        attachments.Setup(service => service.CreateSignedPath("f1", TimeSpan.FromDays(30))).Returns("/acme/attachments/f1?token=abc");
+        var observer = Observer(notify: true, attachments.Object, baseUrl: "https://help.example.com/acme");
+        var entry = Entry("See the log.", TimelineVisibility.Public);
+        entry.AttachmentIds = ["f1"];
+
+        // Act
+        await observer.RepliedAsync(Ticket(), entry, fromRequester: false, TestContext.Current.CancellationToken);
+
+        // Assert
+        var reply = (TicketEmailReply)Assert.Single(_sent).Email.Models["Reply"];
+        Assert.Equal("<p>See the log.</p><p>Files:</p><ul><li><a href=\"https://help.example.com/acme/attachments/f1?token=abc\">log &lt;1&gt;.txt</a></li></ul>", reply.Html);
+        Assert.StartsWith(reply.Html, _sent[0].Content.Html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -118,7 +144,7 @@ public sealed class TicketEmailTests
         Assert.Equal("Templates[0].Body", error.Key);
     }
 
-    private TicketEmailObserver Observer(bool notify)
+    private TicketEmailObserver Observer(bool notify, IAttachmentService attachments = null, string baseUrl = null)
     {
         var desks = new Mock<ICatalog<TicketDesk>>();
         desks.Setup(catalog => catalog.FindByIdAsync("support", It.IsAny<CancellationToken>())).ReturnsAsync(new TicketDesk { ItemId = "support", NotifyRequester = notify });
@@ -132,7 +158,25 @@ public sealed class TicketEmailTests
                 return true;
             });
 
-        return new TicketEmailObserver(desks.Object, Mock.Of<IPartyDirectory>(), sender.Object, RecipeRoundTrip.Localizer<TicketEmailObserver>());
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 11, 2, 12, 0, 0, DateTimeKind.Utc));
+        var site = new Mock<ISiteService>();
+        site.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(new SiteSettings { BaseUrl = baseUrl });
+        var services = new ServiceCollection()
+            .AddSingleton(sender.Object)
+            .AddSingleton(Mock.Of<global::YesSql.ISession>())
+            .AddSingleton(Mock.Of<ITimelineService>())
+            .AddSingleton(clock.Object)
+            .AddSingleton(site.Object)
+            .AddSingleton(RecipeRoundTrip.Localizer<TicketEmailOutbox>())
+            .AddSingleton<TicketEmailOutbox>();
+
+        if (attachments is not null)
+        {
+            services.AddSingleton(attachments);
+        }
+
+        return new TicketEmailObserver(desks.Object, Mock.Of<IPartyDirectory>(), services.BuildServiceProvider(), RecipeRoundTrip.Localizer<TicketEmailObserver>());
     }
 
     private static ContentItem Ticket()

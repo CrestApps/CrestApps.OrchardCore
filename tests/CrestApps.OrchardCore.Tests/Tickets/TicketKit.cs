@@ -53,11 +53,17 @@ internal sealed class TicketKit : IAsyncDisposable
     public static readonly TicketPriority Normal = new() { ItemId = "normal", Name = "Normal", Rank = 2 };
     public static readonly TicketPriority Urgent = new() { ItemId = "urgent", Name = "Urgent", Rank = 4 };
 
-    private TicketKit(CalendarTestHarness harness, KitObservers observers)
+    private TicketKit(CalendarTestHarness harness, KitObservers observers, KitSender sender)
     {
         Harness = harness;
         Observers = observers;
+        Sender = sender;
     }
+
+    /// <summary>
+    /// Gets the e-mail sender the outbox uses.
+    /// </summary>
+    public KitSender Sender { get; }
 
     public CalendarTestHarness Harness { get; }
 
@@ -66,6 +72,7 @@ internal sealed class TicketKit : IAsyncDisposable
     public static async Task<TicketKit> CreateAsync(bool withPolicy = false)
     {
         var observers = new KitObservers();
+        var sender = new KitSender();
         var desk = new TicketDesk { ItemId = "support", Name = "Support", ServiceLevelPolicyId = withPolicy ? PolicyId : null, ReopenWindowDays = 7 };
 
         var harness = await CalendarTestHarness.CreateAsync(
@@ -90,6 +97,8 @@ internal sealed class TicketKit : IAsyncDisposable
                 services.AddSingleton(observers);
                 services.AddScoped<ITicketObserver>(provider => new KitObserver(provider.GetRequiredService<KitObservers>(), provider));
                 services.AddScoped<ITicketService, DefaultTicketService>();
+                services.AddSingleton<global::CrestApps.OrchardCore.Emails.ITemplatedEmailSender>(sender);
+                services.AddScoped<TicketEmailOutbox>();
             },
             async schema =>
             {
@@ -97,7 +106,7 @@ internal sealed class TicketKit : IAsyncDisposable
                 await TimelineIndexSchema.CreateAsync(schema);
                 await ServiceLevelsIndexSchema.CreateAsync(schema);
             },
-            [new TicketIndexProvider(), new TicketTimeElapsedMarkIndexProvider(), new TimelineEntryIndexProvider(), new ServiceLevelPolicyIndexProvider(), new ServiceLevelTimerIndexProvider()],
+            [new TicketIndexProvider(), new TicketTimeElapsedMarkIndexProvider(), new TicketEmailOutboxIndexProvider(), new TimelineEntryIndexProvider(), new ServiceLevelPolicyIndexProvider(), new ServiceLevelTimerIndexProvider()],
             [TimelineConstants.CollectionName, ServiceLevelsConstants.CollectionName]);
 
         if (withPolicy)
@@ -119,7 +128,7 @@ internal sealed class TicketKit : IAsyncDisposable
             });
         }
 
-        return new TicketKit(harness, observers);
+        return new TicketKit(harness, observers, sender);
     }
 
     public Task<T> RunAsync<T>(Func<IServiceProvider, Task<T>> work)
@@ -190,6 +199,33 @@ internal sealed class TicketKit : IAsyncDisposable
         /// Gets or sets what an observer does when told, in the scope that raised the event, as a workflow does.
         /// </summary>
         public Func<IServiceProvider, string, ContentItem, Task> React { get; set; }
+    }
+
+    /// <summary>
+    /// An e-mail sender that records what it sent, and fails or throws when a test says so.
+    /// </summary>
+    internal sealed class KitSender : global::CrestApps.OrchardCore.Emails.ITemplatedEmailSender
+    {
+        public ConcurrentQueue<(global::CrestApps.OrchardCore.Emails.TemplatedEmail Email, global::CrestApps.OrchardCore.Emails.TemplatedEmailContent Content)> Sent { get; } = new();
+
+        /// <summary>
+        /// Gets or sets what a send does: <see langword="null"/> sends, otherwise it is thrown.
+        /// </summary>
+        public Exception Failure { get; set; }
+
+        public bool CanSend => true;
+
+        public async Task<bool> SendAsync(global::CrestApps.OrchardCore.Emails.TemplatedEmail email, Func<CancellationToken, Task<global::CrestApps.OrchardCore.Emails.TemplatedEmailContent>> build, CancellationToken cancellationToken = default)
+        {
+            if (Failure is not null)
+            {
+                throw Failure;
+            }
+
+            Sent.Enqueue((email, await build(cancellationToken)));
+
+            return true;
+        }
     }
 
     private sealed class KitObserver : ITicketObserver

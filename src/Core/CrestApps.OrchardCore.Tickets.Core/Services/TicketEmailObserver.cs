@@ -9,7 +9,9 @@ using CrestApps.OrchardCore.Timeline.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
-using OrchardCore.Environment.Shell.Scope;
+using CrestApps.OrchardCore.Attachments.Services;
+using CrestApps.OrchardCore.Tickets.Core.Indexes;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tickets.Core.Services;
 
@@ -23,7 +25,7 @@ public sealed class TicketEmailObserver : ITicketObserver
 {
     private readonly ICatalog<TicketDesk> _desks;
     private readonly IPartyDirectory _parties;
-    private readonly ITemplatedEmailSender _sender;
+    private readonly IServiceProvider _services;
 
     internal readonly IStringLocalizer S;
 
@@ -34,11 +36,11 @@ public sealed class TicketEmailObserver : ITicketObserver
     /// <param name="parties">The party directory, for a requester's e-mail.</param>
     /// <param name="sender">The templated e-mail sender, used directly when there's no shell scope to defer to.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public TicketEmailObserver(ICatalog<TicketDesk> desks, IPartyDirectory parties, ITemplatedEmailSender sender, IStringLocalizer<TicketEmailObserver> stringLocalizer)
+    public TicketEmailObserver(ICatalog<TicketDesk> desks, IPartyDirectory parties, IServiceProvider services, IStringLocalizer<TicketEmailObserver> stringLocalizer)
     {
         _desks = desks;
         _parties = parties;
-        _sender = sender;
+        _services = services;
         S = stringLocalizer;
     }
 
@@ -55,7 +57,7 @@ public sealed class TicketEmailObserver : ITicketObserver
         var html = $"<p>{Encode(S["We received your request and gave it the number {0}. We'll get back to you soon.", model.Number])}</p>"
             + $"<p><strong>{Encode(model.Subject)}</strong></p>";
 
-        await SendAsync(TicketsConstants.EmailKinds.Received, to, model, null, subject, html, cancellationToken);
+        await SendAsync(TicketsConstants.EmailKinds.Received, to, model, null, subject, html, null, ticket.ContentItemId, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -69,12 +71,13 @@ public sealed class TicketEmailObserver : ITicketObserver
         }
 
         var model = TicketEmailModel.From(ticket, null);
-        var reply = new TicketEmailReply { Body = entry.Body, AuthorName = entry.AuthorName };
+        var files = await FilesAsync(entry, cancellationToken);
+        var reply = new TicketEmailReply { Body = entry.Body, Html = Paragraphs(entry.Body) + files, AuthorName = entry.AuthorName };
         var subject = $"[{model.Number}] {model.Subject}";
-        var html = Paragraphs(entry.Body)
+        var html = reply.Html
             + $"<hr><p>{Encode(S["Request {0}: {1}", model.Number, model.Subject])}</p>";
 
-        await SendAsync(TicketsConstants.EmailKinds.Reply, to, model, reply, subject, html, cancellationToken);
+        await SendAsync(TicketsConstants.EmailKinds.Reply, to, model, reply, subject, html, entry.ItemId, ticket.ContentItemId, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -92,7 +95,7 @@ public sealed class TicketEmailObserver : ITicketObserver
             + $"<p><strong>{Encode(model.Subject)}</strong></p>"
             + $"<p>{Encode(S["If it isn't, contact us and give the number {0}.", model.Number])}</p>";
 
-        await SendAsync(TicketsConstants.EmailKinds.Solved, to, model, null, subject, html, cancellationToken);
+        await SendAsync(TicketsConstants.EmailKinds.Solved, to, model, null, subject, html, null, ticket.ContentItemId, cancellationToken);
     }
 
     // The requester's e-mail, on a desk that e-mails requesters.
@@ -111,27 +114,54 @@ public sealed class TicketEmailObserver : ITicketObserver
         return part.Requester.IsEmpty ? null : (await _parties.GetContactInfoAsync(part.Requester, cancellationToken))?.Email;
     }
 
-    private async Task SendAsync(string kind, string to, TicketEmailModel model, TicketEmailReply reply, string subject, string html, CancellationToken cancellationToken)
+    // The e-mail is kept in the outbox and tried at once; one that fails is tried again later, and the reply shows it.
+    private async Task SendAsync(string kind, string to, TicketEmailModel model, TicketEmailReply reply, string subject, string html, string entryId, string ticketId, CancellationToken cancellationToken)
+        => await _services.GetRequiredService<TicketEmailOutbox>().SendAsync(new TicketEmailOutboxItem
+        {
+            TicketId = ticketId,
+            EntryId = entryId,
+            Kind = kind,
+            To = to,
+            Reference = model.Number,
+            Subject = subject,
+            Html = html,
+            TicketNumber = model.Number,
+            TicketSubject = model.Subject,
+            TicketStatus = model.Status,
+            RequesterName = model.RequesterName,
+            ReplyBody = reply?.Body,
+            ReplyHtml = reply?.Html,
+            ReplyAuthorName = reply?.AuthorName,
+        }, cancellationToken);
+
+    // Files of a public reply reach the requester as download links that work for 30 days, from the site's own address.
+    private async Task<string> FilesAsync(TimelineEntry entry, CancellationToken cancellationToken)
     {
-        var models = new Dictionary<string, object>(StringComparer.Ordinal) { ["Ticket"] = model };
-
-        if (reply is not null)
+        if (entry.AttachmentIds is not { Count: > 0 } || _services.GetService<IAttachmentService>() is not { } attachments)
         {
-            models["Reply"] = reply;
+            return string.Empty;
         }
 
-        var email = new TemplatedEmail { Kind = kind, To = to, Models = models, Reference = model.Number };
-        var content = new TemplatedEmailContent { Subject = subject, Html = html };
+        var files = await attachments.GetAsync(entry.AttachmentIds, cancellationToken);
+        var baseUrl = (await _services.GetRequiredService<ISiteService>().GetSiteSettingsAsync()).BaseUrl?.TrimEnd('/');
+        var html = new StringBuilder("<p>").Append(Encode(S["Files:"])).Append("</p><ul>");
 
-        if (ShellScope.Current is null)
+        foreach (var file in files)
         {
-            await _sender.SendAsync(email, _ => Task.FromResult(content), cancellationToken);
+            var path = attachments.CreateSignedPath(file.ItemId, TimeSpan.FromDays(30));
 
-            return;
+            // Without the site's address the link can't be opened from an e-mail; the file is named instead.
+            html.Append("<li>").Append(string.IsNullOrEmpty(baseUrl)
+                ? Encode(S["{0} (open the request to download it)", file.FileName])
+                : $"<a href=\"{Encode(OriginOf(baseUrl) + path)}\">{Encode(file.FileName)}</a>").Append("</li>");
         }
 
-        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ITemplatedEmailSender>().SendAsync(email, _ => Task.FromResult(content)));
+        return html.Append("</ul>").ToString();
     }
+
+    // The signed path already carries the tenant's prefix, so only the site address's scheme and host are added.
+    private static string OriginOf(string baseUrl)
+        => Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ? uri.GetLeftPart(UriPartial.Authority) : baseUrl;
 
     private static string Encode(string text)
         => WebUtility.HtmlEncode(text ?? string.Empty);
@@ -202,6 +232,12 @@ public sealed class TicketEmailModel
 /// </summary>
 public sealed class TicketEmailReply
 {
+    /// <summary>
+    /// Gets the reply as HTML, already encoded, with its paragraphs and line breaks and links to its files. Write it raw
+    /// in a template: <c>{{ Reply.Html | raw }}</c>. <c>Reply.Body</c> is the plain text, encoded where it is written.
+    /// </summary>
+    public string Html { get; init; }
+
     /// <summary>
     /// Gets the reply's text.
     /// </summary>

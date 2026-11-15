@@ -6,6 +6,18 @@ namespace CrestApps.OrchardCore.Timeline;
 public static class TimelineConstants
 {
     /// <summary>
+    /// The entry properties the timeline card reads.
+    /// </summary>
+    public static class Properties
+    {
+        /// <summary>
+        /// A short warning shown beside the entry, such as that an e-mail with it couldn't be delivered. A module sets
+        /// it with <c>ITimelineService.UpdateAsync</c> and removes it when it no longer applies.
+        /// </summary>
+        public const string Notice = "Notice";
+    }
+
+    /// <summary>
     /// The YesSql collection that holds timeline entries.
     /// </summary>
     public const string CollectionName = "Timeline";

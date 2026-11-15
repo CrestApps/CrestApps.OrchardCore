@@ -307,6 +307,12 @@ public sealed class DefaultTicketService : ITicketService
             await AssignToTeamMemberAsync(ticket, part, settings, desk.AssignmentStrategy, TicketActor.Site, cancellationToken);
         }
 
+        // An import tells nobody: 5,000 past tickets must not e-mail 5,000 requesters.
+        if (request.IsImport)
+        {
+            _pending.Clear();
+        }
+
         // Committed before anyone is told, so a Ticket Created workflow reads the saved ticket and its changes aren't
         // overwritten by this method.
         await _session.SaveChangesAsync(cancellationToken);

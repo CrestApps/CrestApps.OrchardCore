@@ -30,6 +30,7 @@ public static class TicketsCoreServiceCollectionExtensions
         services.TryAddScoped<TicketAutoCloser>();
         services.TryAddScoped<TicketBacklogRecorder>();
         services.TryAddScoped<TicketSettingsUsage>();
+        services.TryAddScoped<TicketEmailOutbox>();
         services.AddResumableStep<TicketSettingsChangesStep>();
         services.AddResumableStep<TicketReindexStep>();
         services.AddServiceLevelPolicyUsage<TicketSettingsUsage>();

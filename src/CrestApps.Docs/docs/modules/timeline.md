@@ -52,7 +52,7 @@ await timelineService.AddAsync(new TimelineEntry
 Other paths:
 
 - **`ImportAsync`** brings in history that happened elsewhere, such as notes an older version kept on a record. It checks and stamps an entry like `AddAsync` but keeps a long body whole and tells no handler, so nothing is announced. An entry whose id is already stored is left as it is: give the entry an id made from where it came from with `TimelineEntryIds.FromSource(...)`, and importing again adds nothing.
-- **`UpdateAsync(entryId, change)`** saves a change that doesn't rewrite what an entry says: the `change` callback gets a `TimelineEntryChanges` with only the entry's properties (a delivery status a channel keeps), its channel and the `ExternalId` it was sent under; `FindByExternalIdAsync` finds the entry again. Entries read through `FindAsync`, `FindByExternalIdAsync` and `ListAsync` are copies, so changing one never reaches the stored entry.
+- **`UpdateAsync(entryId, change)`** saves a change that doesn't rewrite what an entry says: the `change` callback gets a `TimelineEntryChanges` with only the entry's properties (a delivery status a channel keeps), its channel and the `ExternalId` it was sent under; `FindByExternalIdAsync` finds the entry again. A `Notice` property (`TimelineConstants.Properties.Notice`) is shown as a warning badge beside the entry, such as that an e-mail with it wasn't delivered; remove it when it no longer applies. Entries read through `FindAsync`, `FindByExternalIdAsync` and `ListAsync` are copies, so changing one never reaches the stored entry.
 - **`DeleteAllAsync(subject)`** removes a deleted record's timeline and tells the handlers of each entry, so its files go too. A content item's timeline is deleted when the item is removed for good.
 
 ## Access

@@ -76,7 +76,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 8;
+        return 9;
     }
 
     /// <summary>
@@ -185,6 +185,17 @@ internal sealed class TicketsMigrations : DataMigration
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TicketReindexStep.StepName));
 
         return 8;
+    }
+
+    /// <summary>
+    /// Adds the outbox of the requester e-mails.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await TicketIndexSchema.CreateEmailOutboxAsync(SchemaBuilder);
+
+        return 9;
     }
 
     private async Task SeedAsync()

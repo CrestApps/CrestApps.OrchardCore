@@ -53,6 +53,10 @@
                             {
                                 <span class="badge ta-badge fw-normal" title="@T["The channel it came in or went out on"]">@entry.Channel</span>
                             }
+                            @if (entry.Properties is not null && entry.Properties.TryGetValue(TimelineConstants.Properties.Notice, out var notice) && notice?.ToString() is { Length: > 0 } noticeText)
+                            {
+                                <span class="badge text-bg-warning fw-normal"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@noticeText</span>
+                            }
                             @if (Model.CanRedact && entry.RedactedUtc is null && (!string.IsNullOrEmpty(entry.Body) || item.Attachments.Count > 0))
                             {
                                 <form asp-area="CrestApps.OrchardCore.Timeline" asp-controller="Timeline" asp-action="Redact" asp-route-id="@entry.ItemId" method="post" class="ms-auto">

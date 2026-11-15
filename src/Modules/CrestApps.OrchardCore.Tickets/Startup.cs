@@ -58,7 +58,8 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<TicketsMigrations>()
             .AddIndexProvider<TicketIndexProvider>()
             .AddIndexProvider<TicketBacklogIndexProvider>()
-            .AddIndexProvider<TicketTimeElapsedMarkIndexProvider>();
+            .AddIndexProvider<TicketTimeElapsedMarkIndexProvider>()
+            .AddIndexProvider<TicketEmailOutboxIndexProvider>();
 
         services.AddTicketsCore();
         services.AddScoped<IContentHandler, TicketContentCleanup>();
@@ -70,6 +71,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<TicketRow, TicketRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, TicketAutoCloseBackgroundTask>();
         services.AddSingleton<IBackgroundTask, TicketBacklogBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, TicketEmailOutboxBackgroundTask>();
 
         services
             .AddTemplatedEmailKind(TicketsConstants.EmailGroup, TicketsConstants.EmailKinds.Received, LocalizationSource.Create<Startup>("Ticket received"))

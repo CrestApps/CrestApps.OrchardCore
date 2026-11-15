@@ -66,6 +66,28 @@ public static class TicketIndexSchema
         await CreateRequesterEmailIndexAsync(schemaBuilder);
         await CreateDueSortIndexAsync(schemaBuilder);
         await CreateTimeElapsedMarksAsync(schemaBuilder);
+        await CreateEmailOutboxAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the table of the requester e-mails' outbox.
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateEmailOutboxAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<TicketEmailOutboxIndex>(table => table
+            .Column<string>("TicketId", column => column.WithLength(26))
+            .Column<int>("Status")
+            .Column<DateTime>("NextAttemptUtc", column => column.Nullable()));
+
+        await schemaBuilder.AlterIndexTableAsync<TicketEmailOutboxIndex>(table =>
+        {
+            table.CreateIndex("IDX_TicketEmailOutbox_Due", "Status", "NextAttemptUtc", "DocumentId");
+            table.CreateIndex("IDX_TicketEmailOutbox_Ticket", "TicketId");
+        });
     }
 
     /// <summary>

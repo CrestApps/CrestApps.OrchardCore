@@ -91,4 +91,10 @@ public sealed class TicketCreateRequest
     /// Gets or sets the closed ticket this one follows up.
     /// </summary>
     public string FollowUpOfId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the ticket is brought in from elsewhere (a migration, a bulk import of past tickets): it is
+    /// created without telling any observer, so no requester is e-mailed, no workflow starts and no webhook is sent.
+    /// </summary>
+    public bool IsImport { get; set; }
 }
