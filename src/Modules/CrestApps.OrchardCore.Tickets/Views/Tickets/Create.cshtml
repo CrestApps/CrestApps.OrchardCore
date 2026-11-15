@@ -52,6 +52,8 @@
     </div>
 
     @* The ticket type's own editor: its title (the subject) and its fields. *@
+    @* The page has its own action bar; the content editor's would sit on top of it. *@
+    @{ Model.Editor.Properties.Remove("Actions"); }
     @await DisplayAsync(Model.Editor)
 
     <div class="mb-3">

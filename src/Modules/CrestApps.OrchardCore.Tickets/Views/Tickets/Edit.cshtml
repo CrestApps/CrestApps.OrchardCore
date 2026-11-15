@@ -14,6 +14,8 @@
 
 <form method="post" asp-action="Edit" asp-route-id="@ticket.ContentItemId" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
+    @* The page has its own action bar; the content editor's would sit on top of it. *@
+    @{ Model.Properties.Remove("Actions"); }
     @await DisplayAsync(Model)
 
     <div class="action-bar-bottom">

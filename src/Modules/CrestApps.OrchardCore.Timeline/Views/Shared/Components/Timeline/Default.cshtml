@@ -55,7 +55,7 @@
                             }
                             @if (entry.Properties is not null && entry.Properties.TryGetValue(TimelineConstants.Properties.Notice, out var notice) && notice?.ToString() is { Length: > 0 } noticeText)
                             {
-                                <span class="badge text-bg-warning fw-normal"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@noticeText</span>
+                                <span class="badge text-bg-warning fw-normal text-wrap text-start"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@noticeText</span>
                             }
                             @if (Model.CanRedact && entry.RedactedUtc is null && (!string.IsNullOrEmpty(entry.Body) || item.Attachments.Count > 0))
                             {
