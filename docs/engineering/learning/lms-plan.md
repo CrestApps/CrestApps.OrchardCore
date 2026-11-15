@@ -939,7 +939,9 @@ Suites after the rounds: `Learning` unit tests 124 of 124; integration tests 13 
 
 Team Learning was checked with a manager whose role holds View team learning and a report linked on the report's staff record: the manager sees the report's required path, state and due date.
 
-**Not checked in the browser.** The workflow editors of the new activities, the deployment steps, reminders and escalation on a live clock (unit-tested with a moved clock), the Record external learning step in a live pipeline (the row logic is unit-tested), and the time-off ledger copy on a live site with time-off data.
+The ten new workflow activities are listed in the workflow designer's activity library.
+
+**Not checked in the browser.** The editors of the new workflow activities (their views compile at build), the deployment steps, reminders and escalation on a live clock (unit-tested with a moved clock), the Record external learning step in a live pipeline (the row logic is unit-tested), and the time-off ledger copy on a live site with time-off data.
 
 **Fixed while verifying.**
 
