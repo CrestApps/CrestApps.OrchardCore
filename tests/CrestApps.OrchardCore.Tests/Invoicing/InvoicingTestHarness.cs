@@ -263,6 +263,7 @@ internal sealed class InvoicingTestHarness : IAsyncDisposable
         services.AddSingleton(_ => harness.SavedCards.Object);
         services.AddSingleton(_ => harness.Orders.Object);
         services.AddScoped<CrestApps.OrchardCore.Invoicing.Orders.OrderInvoiceBuilder>();
+        services.AddScoped<CrestApps.OrchardCore.Invoicing.Renewals.RenewalInvoiceBuilder>();
         services.AddScoped<ISavedPaymentMethodChargeService>(sp =>
         {
             // The provider is played by ChargeOutcomes: a charge that goes through is recorded as the checkout records it.

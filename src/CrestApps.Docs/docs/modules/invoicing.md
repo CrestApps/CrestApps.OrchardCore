@@ -143,6 +143,10 @@ With the Orders feature on, an order whose whole balance is put on the ledger at
 
 The ledger mirror finds an invoice from its transaction by the invoice that posted it or, for a debt it took over, by `InvoiceIndex.TransactionId` (`InvoiceTransactionLink`), so payments, refunds, cancellations and overdue on such a debt reach the invoice like any other.
 
+## Subscription renewals
+
+A renewal produces an invoice. An agreement no gateway bills (a subscription paid with **Pay Later**) has its next cycle's debt written on the ledger by its provider when the period ends: a transaction with a `Recurrence` whose `CycleNumber` is above 1. `RenewalDebtInvoiceHandler` hears that debt created and, after the request saves it, `RenewalInvoiceBuilder` makes its invoice once (source `Renewal`, the transaction's id): one service line named after the agreement at the cycle's amount, over the period it covers in the site's time zone (the last day being the day before the next period starts), billed to whoever owes the debt (the payer, else the user, with a guest's name and e-mail), due when the debt is. It is issued taking the debt over, as an order's invoice is, so the customer owes once; when the invoice does not come to the debt (tax worked out differently), it stays a draft for staff to correct and issue. The first cycle is billed with what was bought (the order's invoice), and `OrderInvoiceBuilder` never invoices a renewal's debt as its order. A cycle a gateway collects is not invoiced: the gateway's receipt stands.
+
 ## Estimates
 
 With **Invoicing Estimates** enabled, `Estimate` (Invoicing.Abstractions) is a catalog record with the invoice's header and lines, `EstimateIndex`, and the commands of `IEstimateCommandService` (`DefaultEstimateCommandService`, each under the estimate's lock, idempotent, refusing with reasons):

@@ -58,7 +58,9 @@ internal sealed class OrderBalanceInvoiceHandler : ITransactionEventHandler
 
     public Task CreatedAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
+        // A renewal's debt still points at the order that started the agreement; it gets an invoice of its own.
         if (transaction is null ||
+            transaction.Recurrence is { CycleNumber: > 1 } ||
             !string.Equals(transaction.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) ||
             string.IsNullOrEmpty(transaction.ReferenceId))
         {
@@ -136,7 +138,9 @@ public sealed class OrderInvoiceBuilder
     {
         var transaction = string.IsNullOrEmpty(transactionId) ? null : await _transactions.FindByIdAsync(transactionId, cancellationToken);
 
+        // A renewal's debt still points at the order that started the agreement; it gets an invoice of its own.
         if (transaction is null ||
+            transaction.Recurrence is { CycleNumber: > 1 } ||
             !string.Equals(transaction.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal) ||
             await _orders.FindByIdAsync(transaction.ReferenceId, cancellationToken) is not { } order)
         {

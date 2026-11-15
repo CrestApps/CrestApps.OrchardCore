@@ -149,6 +149,8 @@ To change a sent estimate, click **Revise**: you get a copy to change, sent as *
 
 When a customer checks out on account terms (or pays later) and the whole order goes on their account, the order gets a numbered invoice automatically, with the order's lines, shipping, discounts and tax, billed to their account. It is the same debt, not a second one: paying the invoice pays the order's balance. If the invoice's total doesn't match the order's (for example because tax came out differently), it is left as a draft under **Commerce > Invoices** for you to check and issue.
 
+A subscription paid with **Pay Later** is invoiced again at each renewal: when a period ends and the next one's balance is recorded, an invoice for that period is issued automatically for the same balance, so paying the invoice pays the renewal. The first period is on the order's invoice.
+
 ## Bill expenses and time
 
 With **Invoicing Billing** enabled:

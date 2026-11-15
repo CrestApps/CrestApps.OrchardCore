@@ -46,6 +46,11 @@ public static class InvoicingConstants
     public const string OrderReferenceType = "Order";
 
     /// <summary>
+    /// The source type of an invoice made for a renewal cycle's debt on the ledger; its source id is the transaction's.
+    /// </summary>
+    public const string RenewalReferenceType = "Renewal";
+
+    /// <summary>
     /// The number series of estimates.
     /// </summary>
     public const string EstimateNumberSeries = "Invoicing.Estimate";
