@@ -197,6 +197,11 @@ public sealed class CertificationRecordsController : Controller
             return NotFound();
         }
 
+        if (!string.IsNullOrEmpty(record.VerificationCode))
+        {
+            return await IssuedRecordRefusal();
+        }
+
         if (record.SubjectKind == SkillSubjectKind.User)
         {
             var user = string.IsNullOrWhiteSpace(model.UserId) ? null : await _userManager.FindByIdAsync(model.UserId);
@@ -321,6 +326,11 @@ public sealed class CertificationRecordsController : Controller
             return Forbid();
         }
 
+        if ((await _recordService.FindByIdAsync(id, HttpContext.RequestAborted))?.VerificationCode is { Length: > 0 })
+        {
+            return await IssuedRecordRefusal();
+        }
+
         if (await _recordService.DeleteAsync(id, HttpContext.RequestAborted))
         {
             await _notifier.SuccessAsync(H["The certificate has been deleted."]);
@@ -359,5 +369,14 @@ public sealed class CertificationRecordsController : Controller
         var zone = _clock.GetTimeZone(site.TimeZoneId);
 
         return DateOnly.FromDateTime(_clock.ConvertToTimeZone(_clock.UtcNow, zone).DateTime);
+    }
+
+    // A certificate the site issued is proved on its verification page and may be relied on elsewhere: it is revoked,
+    // never edited or deleted.
+    private async Task<IActionResult> IssuedRecordRefusal()
+    {
+        await _notifier.WarningAsync(H["A certificate the site issued cannot be edited or deleted. Withdraw it instead."]);
+
+        return RedirectToAction(nameof(Index));
     }
 }

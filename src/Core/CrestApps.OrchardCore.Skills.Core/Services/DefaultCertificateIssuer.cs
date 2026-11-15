@@ -210,7 +210,7 @@ internal sealed class DefaultCertificateIssuer : ICertificateIssuer
 
     public Task<CertificationRecord> FindByVerificationCodeAsync(string code, CancellationToken cancellationToken = default)
     {
-        var normalized = NormalizeCode(code);
+        var normalized = CertificateVerificationCodes.Normalize(code);
 
         return normalized is null
             ? Task.FromResult<CertificationRecord>(null)
@@ -225,25 +225,6 @@ internal sealed class DefaultCertificateIssuer : ICertificateIssuer
         }
 
         return _store.FindIssuedAsync(certificationId, source, sourceId, cancellationToken);
-    }
-
-    /// <summary>
-    /// Turns a code as a person types it into the stored form: the letters and digits of the code alphabet, upper case.
-    /// </summary>
-    /// <param name="code">The typed code.</param>
-    /// <returns>The code, or <see langword="null"/> when it cannot be one.</returns>
-    internal static string NormalizeCode(string code)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-        {
-            return null;
-        }
-
-        var characters = code.Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray();
-
-        return characters.Length == SkillsConstants.VerificationCodeLength && characters.All(character => ReadableCodes.Alphabet.Contains(character))
-            ? new string(characters)
-            : null;
     }
 
     private async Task<Certification> ValidateAsync(CertificateIssueRequest request, CertificateIssueResult result, CancellationToken cancellationToken)

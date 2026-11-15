@@ -3,6 +3,10 @@ using CrestApps.OrchardCore.Skills.BackgroundTasks;
 using CrestApps.OrchardCore.Skills.Core;
 using CrestApps.OrchardCore.Skills.Core.Indexes;
 using CrestApps.OrchardCore.Skills.Drivers;
+using CrestApps.OrchardCore.Skills.IssuedCertificates.Drivers;
+using CrestApps.OrchardCore.Skills.IssuedCertificates.Migrations;
+using CrestApps.OrchardCore.Skills.IssuedCertificates.Models;
+using CrestApps.OrchardCore.Skills.IssuedCertificates.Services;
 using CrestApps.OrchardCore.Skills.Migrations;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Navigation;
@@ -12,11 +16,14 @@ using CrestApps.OrchardCore.Skills.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.RateLimits;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Models;
 
@@ -78,5 +85,49 @@ public sealed class SkillsDataSourcesStartup : StartupBase
         services.AddDataSource<SkillsReportDataSource>();
         services.AddScoped<ISkillsReportDataSet, CertificationsReportDataSet>();
         services.AddScoped<ISkillsReportDataSet, CertificatesReportDataSet>();
+    }
+}
+
+/// <summary>
+/// Prints issued certificates from templates and proves them on the public verification page.
+/// </summary>
+[Feature(SkillsConstants.Features.IssuedCertificates)]
+public sealed class IssuedCertificatesStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddPdfDocumentRenderer();
+        services.AddScoped<CertificateDocumentBuilder>();
+        services.AddDataMigration<CertificateTemplateMigrations>();
+        services.AddContentPart<CertificateTemplatePart>()
+            .UseDisplayDriver<CertificateTemplatePartDisplayDriver>();
+        services.AddDisplayDriver<Certification, IssuedCertificateSettingsDisplayDriver>();
+        services.AddDisplayDriver<CertificationRecord, IssuedCertificateRecordDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Holds each visitor to a number of verification lookups a minute when Orchard Core's Rate Limits feature is on.
+/// A code has 80 random bits, so guessing one is hopeless; the limit keeps the page from being used to probe.
+/// </summary>
+[Feature(SkillsConstants.Features.IssuedCertificates)]
+[RequireFeatures(OrchardCoreFeatureIds.RateLimits)]
+public sealed class IssuedCertificatesRateLimitsStartup : StartupBase
+{
+    /// <summary>
+    /// How many verification pages a visitor may open a minute.
+    /// </summary>
+    public const int RequestsPerMinute = 30;
+
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<RateLimitsOptions>(options => options.AddGroupRateLimit(
+            SkillsConstants.VerificationRateLimitGroup,
+            RateLimitPartitionHelpers.CreateFixedWindowPerIpPolicy(
+                policyName: SkillsConstants.VerificationRateLimitGroup,
+                permitLimit: RequestsPerMinute,
+                window: TimeSpan.FromMinutes(1))));
     }
 }

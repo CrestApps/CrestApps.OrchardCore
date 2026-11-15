@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
 using UglyToad.PdfPig.Writer;
 
@@ -16,6 +17,7 @@ public sealed class PdfFontSet
     public const string DefaultFamily = "Arial";
 
     private static readonly Lazy<PdfFontSet> _installed = new(FindInstalled);
+    private static readonly ConcurrentDictionary<string, Lazy<PdfFontSet>> _families = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PdfFontSet"/> class. A file PdfPig cannot write with is not
@@ -75,15 +77,36 @@ public sealed class PdfFontSet
             : PdfFont.FromTrueType(builder, Regular, simulatesBold: true);
     }
 
+    /// <summary>
+    /// Finds the regular and bold faces of a font family installed on this machine, such as <c>Noto Sans</c>, once per
+    /// family and process; the default family stands in for a family that is not installed.
+    /// </summary>
+    /// <param name="family">The family name.</param>
+    /// <returns>The fonts.</returns>
+    public static PdfFontSet FromInstalledFamily(string family)
+    {
+        if (string.IsNullOrWhiteSpace(family) || string.Equals(family.Trim(), DefaultFamily, StringComparison.OrdinalIgnoreCase))
+        {
+            return Installed;
+        }
+
+        return _families.GetOrAdd(family.Trim(), name => new Lazy<PdfFontSet>(() => Find(name))).Value;
+    }
+
     private static PdfFontSet FindInstalled()
+    {
+        return Find(DefaultFamily);
+    }
+
+    private static PdfFontSet Find(string family)
     {
         if (!PdfFontResolver.TryCreate(out var resolver))
         {
             return new PdfFontSet(null, null);
         }
 
-        var regular = resolver.Resolve(DefaultFamily, isBold: false);
-        var bold = resolver.Resolve(DefaultFamily, isBold: true);
+        var regular = resolver.Resolve(family, isBold: false);
+        var bold = resolver.Resolve(family, isBold: true);
 
         return new PdfFontSet(Read(regular.Path), bold.SimulateBold ? null : Read(bold.Path));
     }
