@@ -140,6 +140,8 @@ public static class OrchardCoreFeatureIds
 
     public const string Roles = "OrchardCore.Roles";
 
+    public const string Rules = "OrchardCore.Rules";
+
     public const string Search = "OrchardCore.Search";
 
     public const string Secrets = "OrchardCore.Secrets";

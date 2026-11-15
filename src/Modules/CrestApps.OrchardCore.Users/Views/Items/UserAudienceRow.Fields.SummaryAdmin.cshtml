@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model ShapeViewModel<UserAudienceRow>
+
+@if (Model.Value.IsDefined)
+{
+    <a asp-controller="UserAudiences" asp-action="Edit" asp-route-name="@Model.Value.Name" class="fw-semibold">@Model.Value.DisplayName</a>
+}
+else
+{
+    <span class="fw-semibold">@Model.Value.DisplayName</span>
+}
+<span class="text-muted small ms-1">@Model.Value.Name</span>
+@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+{
+    <div class="text-muted small">@Model.Value.Description</div>
+}

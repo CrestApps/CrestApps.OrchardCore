@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model ShapeViewModel<UserAudienceRow>
+
+<a asp-controller="UserAudiences" asp-action="Members" asp-route-name="@Model.Value.Name" class="btn btn-secondary btn-sm">@T["People"]</a>
+@if (Model.Value.IsDefined)
+{
+    <a asp-controller="UserAudiences" asp-action="Edit" asp-route-name="@Model.Value.Name" class="btn btn-primary btn-sm">@T["Edit"]</a>
+}

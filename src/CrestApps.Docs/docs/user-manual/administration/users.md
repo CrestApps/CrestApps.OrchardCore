@@ -95,6 +95,24 @@ Open **Settings > User Avatars** to set how avatars work, then click **Save**.
 
 To give someone a picture, edit the user and use the **Avatar** box to pick or upload an image from the media library. Only image files are accepted. The box is shown only to people who have the **Manage Media** permission. The avatar appears next to the person's name in places that show who a user is.
 
+## Audiences
+
+An audience is a group of people chosen by rules, such as "everyone in the Field team hired more than 30 days ago". Other features target an audience, so the people in it change as your teams, staff records and roles change. Turn on the **User Audiences** feature, then open **Access Control > User Audiences**.
+
+The list shows the audiences you define and the ones features define (marked **Defined by a feature**, which you can't edit). Click **People** on any of them to see who is in it today.
+
+To add one, click **Add audience** and fill in:
+
+| Field | What it does |
+| --- | --- |
+| **Name** | The name people see. |
+| **Technical name** | The name other features keep to find the audience. It can't change after you save. |
+| **Description** | What the audience is for. |
+| **Who is in it** | **People who match every rule**, or **People who match any rule**. |
+| **Rules** | Pick a rule, then the values it matches; within one rule a person matches any value chosen. Click **Add rule** for another, or the bin to remove one. |
+
+The rules you can pick depend on the features that are on: **In a role**, **Member of a team or its sub-teams**, **Hired at least some days ago**, **Employment type**, **Holds a skill**, **Holds a valid certification** and **Enrolled in a course**. Click **Save**, then **People** to check the audience holds who you expect.
+
 ## Sign in with an email code
 
 <YouTube video="users-roles" title="Video of the sign-in page that offers an emailed code" start={295} end={320} />

@@ -341,6 +341,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Users` | Users Core Components (dependency only) | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.Avatars` | User Avatar | [Users](./modules/users) |
+| `CrestApps.OrchardCore.Users.Audiences` | User Audiences | [Users](./modules/users#user-audiences) |
 
 ## Multi-Tenancy
 

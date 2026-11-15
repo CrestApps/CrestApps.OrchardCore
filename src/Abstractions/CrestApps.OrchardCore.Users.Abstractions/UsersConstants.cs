@@ -22,5 +22,12 @@ public static class UsersConstants
         public const string EmailCodeSignIn = "CrestApps.OrchardCore.Users.EmailCodeSignIn";
 
         public const string Avatars = "CrestApps.OrchardCore.Users.Avatars";
+
+        public const string Audiences = "CrestApps.OrchardCore.Users.Audiences";
     }
+
+    /// <summary>
+    /// The name of the recipe and deployment step of the audiences administrators define.
+    /// </summary>
+    public const string AudiencesRecipeStepName = "UserAudiences";
 }

@@ -67,6 +67,50 @@ For example, the [Messaging Workspace](../omnichannel/messaging-workspace) uses 
 
 Grants are kept on the user's account (`UserRoleGrants`), so no table is added. A module that granted roles before grants were recorded registers an `IRoleGrantSource`, which reports those grants the first time the service touches a user. Memberships and Subscriptions use it.
 
+## User Audiences
+
+The **User Audiences** feature (`CrestApps.OrchardCore.Users.Audiences`) lets administrators define audiences, groups of people chosen by rules, that other features target, such as required learning. **Access Control > User Audiences** lists them beside the audiences modules register in code (`IUserAudienceProvider`, such as `Staff`), shows the people in each one, and edits the ones administrators define. Its permission is `ManageUserAudiences`.
+
+An audience has a technical name that never changes, a name, a description, a join (a person matches every rule, or any one) and rules. A rule is a rule source with the values chosen (a person matches any of them) and, for some sources, a number.
+
+| Rule source | Registered by | Matches |
+| --- | --- | --- |
+| `Role` | Users | Users in any of the roles |
+| `Team` | Teams | Members of the teams today, with their sub-teams |
+| `StaffHireDate` | Staff | Active staff linked to a user, hired at least the number of days ago (on the site's day) |
+| `StaffEmploymentType` | Staff | Active staff linked to a user, with any of the employment types |
+| `SkillHolder` | Skills | People who hold the skills today, themselves or through their staff record |
+| `CertificationHolder` | Skills | People with a valid record of the certifications |
+| `CourseLearner` | Learning | People enrolled in the courses, active or completed |
+
+Code reads audiences through `IUserAudienceService` (`CrestApps.OrchardCore.Users.Abstractions`), registered by the feature with `services.AddUserAudiences()`:
+
+- `ListAsync()` lists every audience, the module ones and the defined ones.
+- `GetMembersAsync(name, skip, take)` pages the user ids of the members, with their count.
+- `IsMemberAsync(name, userId)` checks one person without listing the others.
+- `FindDefinitionAsync`, `SaveDefinitionAsync` (which returns the reasons a definition is refused) and `DeleteDefinitionAsync` manage the defined ones.
+
+A module adds a kind of rule by implementing `IUserAudienceRuleSource` (`Name`, `DisplayName`, an optional `NumberLabel`, `GetOptionsAsync`, `ResolveUserIdsAsync` and, when it can check one person faster, `IsMatchAsync`) and registering it with `services.AddUserAudienceRuleSource<T>()`. Registering it costs nothing when the feature is off. Membership is worked out when it is read, so it is always current; a feature that reacts to people joining or leaving an audience reconciles on a schedule.
+
+The `UserAudiences` recipe step creates or updates defined audiences by name, and the **User audiences** deployment step exports them:
+
+```json
+{
+  "name": "UserAudiences",
+  "Audiences": [
+    {
+      "name": "field-veterans",
+      "displayName": "Field veterans",
+      "join": "All",
+      "rules": [
+        { "source": "Team", "values": ["<team id>"] },
+        { "source": "StaffHireDate", "number": 30 }
+      ]
+    }
+  ]
+}
+```
+
 ## User Display Name
 
 | | |

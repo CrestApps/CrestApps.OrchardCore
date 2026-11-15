@@ -37,6 +37,8 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddUserAudienceRuleSource<SkillHolderAudienceRuleSource>();
+        services.AddUserAudienceRuleSource<CertificationHolderAudienceRuleSource>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(SkillsConstants.CollectionName));
         services.AddDataMigration<SkillsMigrations>()
             .AddIndexProvider<SkillIndexProvider>()

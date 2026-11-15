@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Users;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -38,6 +38,19 @@ using OrchardCore.Modules.Manifest;
     [
         OrchardCoreFeatureIds.Users,
         OrchardCoreFeatureIds.Email,
+        UsersConstants.Feature.Area,
+    ]
+)]
+
+[assembly: Feature(
+    Name = "User Audiences",
+    Category = "Users",
+    Description = "Lets administrators define audiences, groups of people chosen by rules such as their roles, their team, their hire date or the skills they hold, that other features target, such as required learning.",
+    Id = UsersConstants.Feature.Audiences,
+    Dependencies =
+    [
+        OrchardCoreFeatureIds.Users,
+        OrchardCoreFeatureIds.Roles,
         UsersConstants.Feature.Area,
     ]
 )]
