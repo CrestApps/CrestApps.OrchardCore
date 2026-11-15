@@ -46,6 +46,25 @@ public sealed class TicketSatisfactionTests
     }
 
     [Fact]
+    public async Task ASecondRating_ReplacesTheFirst_AndALongCommentIsCut()
+    {
+        // Arrange
+        await using var kit = await TicketKit.CreateAsync();
+        var ticketId = (await kit.CreateAsync()).Ticket.ContentItemId;
+        await kit.RunAsync(services => services.GetRequiredService<ITicketService>().UpdateAsync(ticketId, new TicketUpdate { StatusId = TicketKit.Solved.ItemId }, cancellationToken: TestContext.Current.CancellationToken));
+
+        // Act
+        await RateAsync(kit, ticketId, 2, "Slow.");
+        var again = await RateAsync(kit, ticketId, 5, new string('x', TicketSatisfaction.MaxCommentLength + 50));
+
+        // Assert
+        Assert.True(again.Succeeded);
+        var satisfaction = (await kit.GetAsync(ticketId)).GetOrCreate<TicketPart>().Satisfaction;
+        Assert.Equal(5, satisfaction.Score);
+        Assert.Equal(TicketSatisfaction.MaxCommentLength, satisfaction.Comment.Length);
+    }
+
+    [Fact]
     public async Task ARecentlySolvedTicketsRequester_IsAskedOnce_AndAnOldOneIsntAsked()
     {
         // Arrange

@@ -222,6 +222,7 @@ public sealed class TicketEmailTests
             .AddSingleton(clock.Object)
             .AddSingleton(site.Object)
             .AddSingleton(RecipeRoundTrip.Localizer<TicketEmailOutbox>())
+            .AddLogging()
             .AddSingleton<TicketEmailOutbox>();
 
         if (attachments is not null)

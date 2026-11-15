@@ -55,7 +55,6 @@ internal sealed class TicketContentAuthorizationHandler : AuthorizationHandler<P
     {
         if (context.Resource is not ContentItem item
             || !item.TryGet<TicketPart>(out var part)
-            || string.IsNullOrEmpty(part.DeskId)
             || requirement.Permission?.Name is not { } name)
         {
             return;
@@ -63,6 +62,18 @@ internal sealed class TicketContentAuthorizationHandler : AuthorizationHandler<P
 
         // A content type's own permission, such as EditContent_Ticket, counts as the general one.
         var general = name.Split('_', 2)[0];
+
+        // A saved item with the Ticket part but no desk (the part attached to another type, say) is nobody's: no one
+        // reads or changes it through the content pages. One not saved yet is being created and goes its usual way.
+        if (string.IsNullOrEmpty(part.DeskId))
+        {
+            if (item.Id != 0 && (_view.Contains(general) || _change.Contains(general)))
+            {
+                context.Fail();
+            }
+
+            return;
+        }
 
         if (_change.Contains(general))
         {

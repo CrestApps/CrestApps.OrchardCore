@@ -70,6 +70,23 @@ public sealed class TicketContentAuthorizationTests
         Assert.False(await authorization.AuthorizeAsync(agent, new Permission("EditContent_Ticket", global::OrchardCore.Localization.LocalizationSource.Create<TicketContentAuthorizationTests>("Edit Ticket"), [CommonPermissions.EditContent]), ticket));
     }
 
+    [Fact]
+    public async Task ASavedItemWithTheTicketPartButNoDesk_IsNobodys()
+    {
+        // Arrange: an editor holding every content permission.
+        var authorization = Create();
+        var editor = CalendarTestHarness.User("editor", CommonPermissions.ViewContent.Name, CommonPermissions.EditContent.Name, CommonPermissions.DeleteContent.Name);
+        var deskless = new ContentItem { Id = 7, ContentItemId = "x1", ContentType = "Article", Owner = "editor" };
+        deskless.Apply(new TicketPart { Number = "T-9" });
+        var unsaved = new ContentItem { ContentItemId = "x2", ContentType = TicketsConstants.DefaultContentType, Owner = "editor" };
+        unsaved.Apply(new TicketPart());
+
+        // Act and assert
+        Assert.False(await authorization.AuthorizeAsync(editor, CommonPermissions.ViewContent, deskless));
+        Assert.False(await authorization.AuthorizeAsync(editor, CommonPermissions.EditContent, deskless));
+        Assert.True(await authorization.AuthorizeAsync(editor, CommonPermissions.EditContent, unsaved));
+    }
+
     private static IAuthorizationService Create()
     {
         var desks = new Mock<ICatalog<TicketDesk>>();

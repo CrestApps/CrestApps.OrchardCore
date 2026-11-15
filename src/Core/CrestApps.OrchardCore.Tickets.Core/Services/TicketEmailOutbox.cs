@@ -1,8 +1,10 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Emails;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Timeline;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -27,14 +29,16 @@ public sealed class TicketEmailOutbox
     private readonly ITemplatedEmailSender _sender;
     private readonly ITimelineService _timeline;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketEmailOutbox"/> class.
     /// </summary>
-    public TicketEmailOutbox(ISession session, ITemplatedEmailSender sender, ITimelineService timeline, IClock clock, IStringLocalizer<TicketEmailOutbox> stringLocalizer)
+    public TicketEmailOutbox(ISession session, ITemplatedEmailSender sender, ITimelineService timeline, IClock clock, ILogger<TicketEmailOutbox> logger, IStringLocalizer<TicketEmailOutbox> stringLocalizer)
     {
+        _logger = logger;
         _session = session;
         _sender = sender;
         _timeline = timeline;
@@ -111,6 +115,9 @@ public sealed class TicketEmailOutbox
         {
             item.Status = TicketEmailOutboxStatus.Abandoned;
             item.NextAttemptUtc = null;
+
+            // Shown on the reply as "not delivered", and here for whoever watches the logs.
+            _logger.LogWarning("The {Kind} e-mail of ticket {Number} wasn't delivered after {Attempts} attempts: {Error}", item.Kind, item.TicketNumber.SanitizeLogValue(), item.Attempts, item.LastError.SanitizeLogValue());
         }
         else
         {

@@ -171,6 +171,7 @@ Each row is one concept built more than once. "Canonical" is where the concept s
 | Leased durable work items | `ContactCenterOutboxMessage`, `ProviderWebhookInboxMessage`, `ProviderCommand`, both ingest jobs, Messaging outbound state: each re-implements leasing | Leased work queue (P5) | |
 | Carrier credentials | `TelnyxSettings` and `TelnyxSmsSettings` (one account, two keys, two read paths); Twilio Lookup vs Orchard `TwilioSettings` | One credential set per carrier, later connections (P10) | |
 | Outbound SMS | Automation calls `ISmsProviderRouter` directly; the workspace uses `ISmsDispatcher` (outbox, delivery IDs, MMS) | `ISmsDispatcher` | |
+| Durable e-mail sending | Tickets keeps its requester e-mails in `TicketEmailOutbox` (bounded retries with backoff, a "not delivered" mark, a log line when it gives up); Commerce's order e-mails go through the same `ITemplatedEmailSender` with no retry | A "send durably" option on `ITemplatedEmailSender` | Candidate: extract when Commerce (the likely second user) needs retries |
 | AI conversation wrap-up | Conclusion and summary prompts in `SmsOmnichannelEventHandler.cs:754,1118` and in both voice engines | Shared conversation services | |
 | Encrypted files and signed links | `LocalEncryptedMessagingAttachmentStore`, `LocalEncryptedRecordingMediaStore`; `CallRecordingLinks`, `MessagingAttachmentLinks`, `SignedTokenService` | `EncryptedFileStore` (P2) + `SignedTokenService` | |
 
