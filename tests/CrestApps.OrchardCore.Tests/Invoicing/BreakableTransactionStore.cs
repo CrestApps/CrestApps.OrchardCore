@@ -52,6 +52,9 @@ internal sealed class BreakableTransactionStore : ITransactionStore
     public Task<IReadOnlyList<Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, CancellationToken cancellationToken = default)
         => _inner.GetByParentReferenceAsync(parentReferenceType, parentReferenceId, cancellationToken);
 
+    public Task<IReadOnlyList<Transaction>> GetByCheckoutSessionAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+        => _inner.GetByCheckoutSessionAsync(checkoutSessionId, cancellationToken);
+
     public Task<IReadOnlyList<Transaction>> GetOutstandingDueAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
         => _inner.GetOutstandingDueAsync(asOfUtc, cancellationToken);
 

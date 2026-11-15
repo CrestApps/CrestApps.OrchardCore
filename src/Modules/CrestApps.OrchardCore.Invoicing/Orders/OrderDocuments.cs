@@ -348,6 +348,13 @@ public sealed class OrderDocumentBridge
             await IssueCheckoutDifferenceAsync(order, invoice, confirmed - owed, cancellationToken) is { TransactionId: { Length: > 0 } debitTransactionId } &&
             await _transactions.FindByIdAsync(debitTransactionId, cancellationToken) is { } debitTransaction)
         {
+            // Paid through the same checkout, so a refund of the order finds it as well and takes back its share.
+            debitTransaction.CheckoutSessionId = order.CheckoutSessionId;
+
+            await _transactions.UpdateAsync(debitTransaction, data: null, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+
+            debitTransaction = await _transactions.FindByIdAsync(debitTransactionId, cancellationToken);
             await settlement.ApplyShareAsync(debitTransaction, paid[0], confirmed - owed, order.CheckoutSessionId, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
@@ -453,28 +460,63 @@ public sealed class OrderDocumentBridge
     }
 
     /// <summary>
-    /// Records money the order gave back on its invoice with a credit note, once the invoice is issued. The refund itself
-    /// was made through the order's checkout and is already on the invoice's transaction, so the credit note moves nothing.
+    /// Records money the order gave back with credit notes of its invoice and of the debit notes for what its checkout
+    /// added. The refund itself was made through the order's checkout and is already on their transactions, each its share,
+    /// so the credit notes move nothing.
     /// </summary>
     public async Task CreditRefundAsync(string orderId, decimal amount, string reason, CancellationToken cancellationToken = default)
     {
         if (amount <= 0m ||
-            await _orders.FindByIdAsync(orderId, cancellationToken) is not { } order ||
-            await FindInvoiceAsync(order.ItemId, cancellationToken) is not { Status: InvoiceStatus.Open } invoice)
+            await _orders.FindByIdAsync(orderId, cancellationToken) is not { } order)
         {
             return;
         }
 
+        // The order's invoice first, then the debit notes for what its checkout added, each up to what it can still be
+        // credited: a refund of the whole order credits all of them.
+        var made = await _invoices.PageAsync(1, 20, new InvoiceQuery { SourceType = InvoicingConstants.OrderReferenceType, SourceId = order.ItemId }, cancellationToken);
+        var documents = made.Entries
+            .Where(document => document.Status == InvoiceStatus.Open)
+            .OrderBy(document => document.Kind == InvoiceKind.DebitNote ? 1 : 0)
+            .ThenBy(document => document.CreatedUtc)
+            .ToArray();
+        var left = amount;
+
+        foreach (var document in documents)
+        {
+            var creditable = (document.Totals?.Total ?? 0m) - document.AmountCredited;
+            var portion = Math.Min(left, creditable);
+
+            if (portion <= 0.005m)
+            {
+                continue;
+            }
+
+            if (await CreditAsync(order, document, portion, reason, cancellationToken))
+            {
+                left -= portion;
+            }
+
+            if (left <= 0.005m)
+            {
+                break;
+            }
+        }
+    }
+
+    // A credit note of the document for the refund, which the order already gave back (nothing more moves).
+    private async Task<bool> CreditAsync(Order order, Invoice document, decimal amount, string reason, CancellationToken cancellationToken)
+    {
         await using var scope = _serviceProvider.CreateAsyncScope();
 
         var commands = scope.ServiceProvider.GetRequiredService<ICreditNoteCommandService>();
-        var draft = await commands.CreateDraftAsync(invoice.ItemId, cancellationToken);
+        var draft = await commands.CreateDraftAsync(document.ItemId, cancellationToken);
 
         if (!draft.Succeeded || draft.CreditNote is not { } creditNote)
         {
-            _logger.LogWarning("No credit note was drafted for the refund of order '{OrderNumber}': {Errors}", order.OrderNumber, string.Join(" ", draft.Errors));
+            _logger.LogWarning("No credit note was drafted for the refund of order '{OrderNumber}' on {Number}: {Errors}", order.OrderNumber, document.Number, string.Join(" ", draft.Errors));
 
-            return;
+            return false;
         }
 
         creditNote.Disposition = CreditNoteDisposition.RefundedElsewhere;
@@ -482,8 +524,8 @@ public sealed class OrderDocumentBridge
             ? S["Refund of order {0}", order.OrderNumber].Value
             : S["Refund of order {0}: {1}", order.OrderNumber, reason].Value;
 
-        // A part refund is credited as one amount, outside tax: the order's refund was an amount, not lines.
-        if (Math.Abs((invoice.Totals?.Total ?? 0m) - amount) > 0.01m)
+        // A part of the document is credited as one amount, outside tax: the order's refund was an amount, not lines.
+        if (document.AmountCredited > 0m || Math.Abs((document.Totals?.Total ?? 0m) - amount) > 0.01m)
         {
             creditNote.Lines.Clear();
             creditNote.Lines.Add(new DocumentLine
@@ -498,17 +540,17 @@ public sealed class OrderDocumentBridge
             });
         }
 
-        var store = scope.ServiceProvider.GetRequiredService<ICreditNoteStore>();
-
-        await store.UpdateAsync(creditNote, cancellationToken);
+        await scope.ServiceProvider.GetRequiredService<ICreditNoteStore>().UpdateAsync(creditNote, cancellationToken);
         await scope.ServiceProvider.GetRequiredService<ISession>().SaveChangesAsync(cancellationToken);
 
         var issued = await commands.IssueAsync(creditNote.ItemId, cancellationToken);
 
         if (!issued.Succeeded)
         {
-            _logger.LogWarning("The credit note for the refund of order '{OrderNumber}' was left as a draft: {Errors}", order.OrderNumber, string.Join(" ", issued.Errors));
+            _logger.LogWarning("The credit note for the refund of order '{OrderNumber}' on {Number} was left as a draft: {Errors}", order.OrderNumber, document.Number, string.Join(" ", issued.Errors));
         }
+
+        return issued.Succeeded;
     }
 
     /// <summary>

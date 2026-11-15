@@ -126,17 +126,22 @@ public sealed class AccountOrdersController : Controller
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
 
         if (order is null ||
-            order.Status is OrderStatus.Draft or OrderStatus.Canceled ||
+            order.Status is OrderStatus.Canceled ||
             !string.Equals(order.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
             !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
         {
             return NotFound();
         }
 
-        // Invoiced by another module (Invoicing): its invoice is the order's invoice.
+        // Invoiced by another module (Invoicing): its invoice is the order's invoice, a sent draft order's included.
         if (await OrderDocumentLinks.GetInvoiceUrlAsync(HttpContext.RequestServices.GetServices<IOrderDocumentSender>(), order, forStaff: false, HttpContext.RequestAborted) is { } invoiceUrl)
         {
             return Redirect(invoiceUrl);
+        }
+
+        if (order.Status is OrderStatus.Draft)
+        {
+            return NotFound();
         }
 
         var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);

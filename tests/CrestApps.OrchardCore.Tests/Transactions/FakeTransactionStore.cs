@@ -95,6 +95,9 @@ internal sealed class FakeTransactionStore : ITransactionStore
             string.Equals(t.CheckoutSessionId, checkoutSessionId, StringComparison.Ordinal) &&
             string.Equals(t.ObligationId, obligationId, StringComparison.Ordinal)));
 
+    public Task<IReadOnlyList<Transaction>> GetByCheckoutSessionAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<Transaction>>([.. _transactions.Values.Where(t => string.Equals(t.CheckoutSessionId, checkoutSessionId, StringComparison.Ordinal)).OrderBy(t => t.CreatedUtc)]);
+
     public Task<IReadOnlyList<Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, CancellationToken cancellationToken = default)
     {
         var results = _transactions.Values

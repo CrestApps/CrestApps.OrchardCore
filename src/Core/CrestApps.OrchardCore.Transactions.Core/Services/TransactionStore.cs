@@ -155,6 +155,22 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Transaction>> GetByCheckoutSessionAsync(string checkoutSessionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(checkoutSessionId);
+
+        // One checkout pays a handful of debts at most.
+        var records = await Session.Query<Transaction, TransactionIndex>(
+            x => x.CheckoutSessionId == checkoutSessionId,
+            collection: CollectionName)
+            .OrderBy(x => x.CreatedUtc)
+            .Take(50)
+            .ListAsync(cancellationToken);
+
+        return [.. records];
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(parentReferenceType);

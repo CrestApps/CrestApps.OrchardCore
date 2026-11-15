@@ -65,22 +65,52 @@ public sealed class TransactionRefundHandler : IPaymentRefundHandler
 
         if (SharedPaymentAttempts.PaysSeveralTransactions(attempt))
         {
-            await SplitAsync(refund, attempt, cancellationToken);
+            await SplitAsync(refund, attempt, await SharedPaymentAttempts.GetTransactionIdsAsync(_serviceProvider, attempt, cancellationToken), cancellationToken);
 
             return;
         }
 
-        await RecordAsync(await FindTransactionAsync(refund, attempt, cancellationToken), refund, refund.RefundGrossAmount, cancellationToken);
+        var transaction = await FindTransactionAsync(refund, attempt, cancellationToken);
+
+        // The checkout's payment also paid other debts of the same checkout (an invoice's debit note for the shipping its
+        // order's checkout added): the refund is split over them, this one first, each up to its share. Without this the
+        // whole refund went on this one, more than it was paid, and the others kept saying paid.
+        if (await GetSharedWithAsync(transaction, refund, attempt, cancellationToken) is { Count: > 1 } shared)
+        {
+            await SplitAsync(refund, attempt, shared, cancellationToken);
+
+            return;
+        }
+
+        await RecordAsync(transaction, refund, refund.RefundGrossAmount, cancellationToken);
     }
 
-    // A refund of a payment that settled several transactions, made for none of them in particular (from the payments
-    // page or the gateway's dashboard): it is split back over them in the order the checkout listed them, each up to
-    // what it still has of the payment.
-    private async Task SplitAsync(PaymentRefund refund, PaymentAttempt attempt, CancellationToken cancellationToken)
+    // The transaction first, then the other transactions of the checkout that recorded a share of the same payment.
+    private async Task<IReadOnlyList<string>> GetSharedWithAsync(Transaction transaction, PaymentRefund refund, PaymentAttempt attempt, CancellationToken cancellationToken)
+    {
+        if (transaction is null ||
+            attempt is null ||
+            string.IsNullOrEmpty(refund.SessionId) ||
+            SharedPaymentAttempts.GetAppliedAmount(transaction, attempt.ItemId) <= 0m ||
+            _serviceProvider.GetService<ITransactionStore>() is not { } store)
+        {
+            return [];
+        }
+
+        var others = await store.GetByCheckoutSessionAsync(refund.SessionId, cancellationToken);
+
+        return [transaction.ItemId, .. others
+            .Where(other => !string.Equals(other.ItemId, transaction.ItemId, StringComparison.Ordinal) && SharedPaymentAttempts.GetAppliedAmount(other, attempt.ItemId) > 0m)
+            .Select(other => other.ItemId)];
+    }
+
+    // A refund of a payment that settled several transactions: it is split back over them in the order given (the order
+    // the checkout listed them, or the one the refund was made for first), each up to what it still has of the payment.
+    private async Task SplitAsync(PaymentRefund refund, PaymentAttempt attempt, IReadOnlyList<string> transactionIds, CancellationToken cancellationToken)
     {
         var left = refund.RefundGrossAmount;
 
-        foreach (var transactionId in await SharedPaymentAttempts.GetTransactionIdsAsync(_serviceProvider, attempt, cancellationToken))
+        foreach (var transactionId in transactionIds)
         {
             if (left <= 0m)
             {

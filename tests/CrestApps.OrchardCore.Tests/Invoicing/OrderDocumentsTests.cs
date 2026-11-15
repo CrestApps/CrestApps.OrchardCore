@@ -80,6 +80,58 @@ public sealed class OrderDocumentsTests
     }
 
     [Fact]
+    public async Task RefundingAnOrderWhoseCheckoutAddedShipping_CreditsTheInvoiceAndItsDebitNote_AndNothingIsOwedAgain()
+    {
+        // Arrange: a $100 invoice and its $12 debit note, both paid by the order checkout's one $112 payment.
+        await using var harness = await CreateHarnessAsync();
+        var order = NewDraftOrder();
+        harness.Orders.Setup(store => store.FindByIdAsync(order.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(order);
+        await OnBridgeAsync(harness, bridge => bridge.SendInvoiceAsync(order, TestContext.Current.CancellationToken));
+        order.Shipping = new OrderShipping { Name = "Ground", Amount = 12m };
+        await PayOrderAsync(harness, order, 112m);
+
+        // Act: the store refunds everything from the order's page. The ledger records the refund; the order's refunded
+        // event runs after the request saves, as its handler defers it.
+        await harness.InScopeAsync(async services =>
+        {
+            var ledger = new TransactionRefundHandler(services.GetRequiredService<ITransactionManager>(), services, services.GetRequiredService<IClock>(), NullLogger<TransactionRefundHandler>.Instance, new PassThroughStringLocalizer<TransactionRefundHandler>());
+
+            await ledger.RefundSucceededAsync(new PaymentRefund
+            {
+                ItemId = "refund-1",
+                SessionId = order.CheckoutSessionId,
+                ObligationId = "obligation-" + order.ItemId,
+                OriginalAttemptId = "attempt-" + order.ItemId,
+                ProviderKey = "test",
+                Currency = "USD",
+                RefundGrossAmount = 112m,
+                Status = RefundStatus.Succeeded,
+            }, TestContext.Current.CancellationToken);
+
+            return true;
+        });
+
+        await harness.InScopeAsync(async services =>
+        {
+            foreach (var handler in services.GetServices<IOrderEventHandler>())
+            {
+                await handler.RefundedAsync(new OrderRefundedContext(order, new OrderRefund { Amount = 112m }), TestContext.Current.CancellationToken);
+            }
+
+            return true;
+        });
+
+        // Assert: each debt took back its own share of the payment, and each document is settled by a credit note, so
+        // neither is owed again.
+        var debts = await DebtsAsync(harness);
+        Assert.Equal([(12m, 12m), (100m, 100m)], debts.Select(debt => (debt.AmountPaid, debt.AmountRefunded)).Order());
+
+        var documents = await harness.InScopeAsync(services => services.GetRequiredService<IInvoiceManager>().PageAsync(1, 10, new InvoiceQuery { SourceType = InvoicingConstants.OrderReferenceType, SourceId = order.ItemId }, TestContext.Current.CancellationToken));
+        Assert.Equal(2, documents.Entries.Count);
+        Assert.All(documents.Entries, document => Assert.Equal((InvoiceSettlement.Paid, document.Totals.Total, 0m), (document.Settlement, document.AmountCredited, document.AmountDue)));
+    }
+
+    [Fact]
     public async Task SendingTheOrderAgain_SendsTheSameInvoice_WithoutASecondOne()
     {
         // Arrange
@@ -240,6 +292,7 @@ public sealed class OrderDocumentsTests
                 ReferenceId = order.ItemId,
                 ProviderKey = "test",
                 ProviderReference = "pi_" + order.ItemId,
+                ObligationId = "obligation-" + order.ItemId,
                 Currency = "USD",
                 ConfirmedAmount = amount,
                 State = PaymentAttemptState.Succeeded,
