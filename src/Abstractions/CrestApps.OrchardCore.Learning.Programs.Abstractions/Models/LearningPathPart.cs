@@ -13,6 +13,11 @@ public sealed class LearningPathPart : ContentPart
     /// Gets or sets the course sets, in order.
     /// </summary>
     public List<LearningPathCourseSet> Sets { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether a signed-in person can start the path from its page.
+    /// </summary>
+    public bool AllowSelfStart { get; set; }
 }
 
 /// <summary>

@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Programs.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<RequiredLearningDueSoonEvent>
+
+<header><h4><i class="fa-solid fa-bell" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Required Learning Due Soon"])</h4></header>

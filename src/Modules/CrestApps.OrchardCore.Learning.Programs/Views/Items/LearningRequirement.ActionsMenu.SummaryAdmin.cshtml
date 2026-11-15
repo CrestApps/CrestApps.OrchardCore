@@ -1,0 +1,5 @@
+@model LearningRequirementRowViewModel
+
+<a asp-controller="RequiredLearning" asp-action="Preview" asp-route-id="@Model.Requirement.ItemId" class="dropdown-item">@T["Who it covers"]</a>
+<a asp-controller="RequiredLearning" asp-action="Run" asp-route-id="@Model.Requirement.ItemId" class="dropdown-item" data-title="@T["Run now"]" data-message="@T["Apply the rule now? People who joined the audience are enrolled, and people who left it are no longer required."]" data-ok-text="@T["Run now"]" data-url-af="UnsafeUrl">@T["Run now"]</a>
+<a asp-controller="RequiredLearning" asp-action="Delete" asp-route-id="@Model.Requirement.ItemId" class="dropdown-item text-danger" data-title="@T["Delete"]" data-message="@T["Delete this rule and the states of its people? The enrollments it made stay."]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

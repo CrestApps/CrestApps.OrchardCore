@@ -1,0 +1,11 @@
+@model LearningPathProgressRowViewModel
+
+@if (Model.Progress.State == LearningPathState.Completed)
+{
+    <span class="badge bg-success text-white fw-normal">@T["Completed"]</span>
+}
+else
+{
+    <span class="badge bg-primary text-white fw-normal">@T["In progress"]</span>
+}
+<span class="text-muted small ms-1">@T.Plural(Model.Progress.CompletedCourseIds.Count, "1 course done", "{0} courses done")</span>

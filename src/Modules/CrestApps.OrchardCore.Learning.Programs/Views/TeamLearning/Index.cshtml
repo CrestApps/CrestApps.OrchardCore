@@ -1,0 +1,18 @@
+@model TeamLearningViewModel
+
+<zone Name="Title">
+    <breadcrumb name="TeamLearning" title="@T["Team Learning"]" />
+</zone>
+
+@if (!Model.IsManager)
+{
+    <div class="alert alert-info">@T["Team learning shows the people who report to you on their staff records. Your user has no staff record."]</div>
+}
+
+<admin-list name="TeamLearning" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Nobody reports to you yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Person"]" />
+        <admin-list-column name="Learning" position="30" title="@T["Required learning"]" />
+    </admin-list-grid>
+</admin-list>

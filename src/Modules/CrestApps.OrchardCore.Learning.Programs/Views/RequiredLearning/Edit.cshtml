@@ -1,0 +1,147 @@
+@model RequiredLearningEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="RequiredLearningEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["New Required Learning"] : T["Edit '{0}' Required Learning", Model.Name ?? string.Empty])">
+        <breadcrumb-item id="RequiredLearning" action="Index" controller="RequiredLearning" area="CrestApps.OrchardCore.Learning.Programs">@T["Required Learning"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="no-multisubmit" id="required-learning-form">
+    <input type="hidden" asp-for="Id" />
+    @Html.ValidationSummary()
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="Name">
+        <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-limited">
+            <input asp-for="Name" class="form-control" maxlength="200" autofocus required />
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label asp-for="TargetKind" class="ocat-label">@T["What is required"]</label>
+        <div class="ocat-limited">
+            <select asp-for="TargetKind" class="form-select" data-target-kind>
+                @foreach (var target in Model.Targets)
+                {
+                    <option value="@target.Kind" selected="@(target.Kind == Model.TargetKind)">@target.DisplayName</option>
+                }
+            </select>
+            @foreach (var target in Model.Targets)
+            {
+                <select name="TargetId" class="form-select mt-2" data-target-for="@target.Kind" aria-label="@target.DisplayName">
+                    <option value="">@T["Choose one"]</option>
+                    @foreach (var option in target.Options)
+                    {
+                        <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+                    }
+                </select>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label asp-for="AudienceName" class="ocat-label">@T["Audience"]</label>
+        <div class="ocat-limited">
+            <select asp-for="AudienceName" asp-items="Model.Audiences" class="form-select">
+                <option value="">@T["No audience"]</option>
+            </select>
+            <span class="hint">@T["Everyone in the audience is required to complete it; people who join it later too. Audiences are under Access Control > User Audiences."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="UserNames">
+        <label asp-for="UserNames" class="ocat-label">@T["People"]</label>
+        <div class="ocat-limited">
+            <input asp-for="UserNames" class="form-control" />
+            <span class="hint">@T["User names, separated by commas, required besides the audience."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label asp-for="DueRule" class="ocat-label">@T["Due"]</label>
+        <div class="ocat-limited">
+            <select asp-for="DueRule" class="form-select" data-due-rule>
+                <option value="@RequiredLearningDueRule.None">@T["No due date"]</option>
+                <option value="@RequiredLearningDueRule.FixedDate">@T["On a date"]</option>
+                <option value="@RequiredLearningDueRule.DaysAfterRequired">@T["Some days after it is required"]</option>
+                <option value="@RequiredLearningDueRule.DaysAfterHire">@T["Some days after the hire date"]</option>
+            </select>
+            <input asp-for="DueDate" type="date" class="form-control mt-2" data-due-for="FixedDate" aria-label="@T["Due date"]" />
+            <div class="input-group mt-2" data-due-for="DaysAfterRequired DaysAfterHire">
+                <input asp-for="DueDays" type="number" min="0" class="form-control" aria-label="@T["Days"]" />
+                <span class="input-group-text">@T["days"]</span>
+            </div>
+            <span class="hint">@T["Due at the end of the day in the site's time zone. Without a hire date, days count from when it is required."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="ReminderDays">
+        <label asp-for="ReminderDays" class="ocat-label">@T["Reminders"]</label>
+        <div class="ocat-limited">
+            <input asp-for="ReminderDays" class="form-control" />
+            <span class="hint">@T["Days before the due date to remind the person, separated by commas, such as 14, 7, 1."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label asp-for="EscalateAfterDays" class="ocat-label">@T["Tell the manager"]</label>
+        <div class="ocat-limited">
+            <div class="input-group">
+                <input asp-for="EscalateAfterDays" type="number" min="0" class="form-control" />
+                <span class="input-group-text">@T["days after the due date"]</span>
+            </div>
+            <span class="hint">@T["Empty never tells the manager. The manager is the person's manager on their staff record."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="Enabled" class="form-check-input" />
+                <label asp-for="Enabled" class="form-check-label">@T["On"]</label>
+                <span class="hint dashed">@T["When off, the rule requires nobody new and the states it made stay."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit" name="submit" value="save">@T["Save"]</button>
+        <button class="btn btn-success" type="submit" name="submit" value="run">@T["Save and run now"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script at="Foot">
+    (function () {
+        const form = document.getElementById('required-learning-form');
+        const kind = form.querySelector('[data-target-kind]');
+        const due = form.querySelector('[data-due-rule]');
+
+        function syncTarget() {
+            form.querySelectorAll('[data-target-for]').forEach(function (select) {
+                const active = select.getAttribute('data-target-for') === kind.value;
+
+                select.hidden = !active;
+                select.disabled = !active;
+            });
+        }
+
+        function syncDue() {
+            form.querySelectorAll('[data-due-for]').forEach(function (part) {
+                const active = part.getAttribute('data-due-for').split(' ').indexOf(due.value) >= 0;
+
+                part.hidden = !active;
+                part.querySelectorAll('input').forEach(function (input) { input.disabled = !active; });
+
+                if (part.tagName === 'INPUT') {
+                    part.disabled = !active;
+                }
+            });
+        }
+
+        kind.addEventListener('change', syncTarget);
+        due.addEventListener('change', syncDue);
+        syncTarget();
+        syncDue();
+    })();
+</script>

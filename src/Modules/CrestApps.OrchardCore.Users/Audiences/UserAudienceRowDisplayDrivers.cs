@@ -10,7 +10,9 @@ namespace CrestApps.OrchardCore.Users.Audiences;
 internal sealed class UserAudienceRowDisplayDriver : DisplayDriver<UserAudienceRow>
 {
     public override Task<IDisplayResult> DisplayAsync(UserAudienceRow row, BuildDisplayContext context)
-        => CombineAsync(
+    {
+        var results = new List<IDisplayResult>
+        {
             View("UserAudienceRow_Fields_SummaryAdmin", row)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
@@ -18,7 +20,16 @@ internal sealed class UserAudienceRowDisplayDriver : DisplayDriver<UserAudienceR
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"),
             View("UserAudienceRow_Buttons_SummaryAdmin", row).Location("Actions:5"),
-            View("UserAudienceRow_ActionsMenu_SummaryAdmin", row).Location("ActionsMenu:10"));
+        };
+
+        // An audience a feature defines has nothing to delete, so it gets no menu.
+        if (row.IsDefined)
+        {
+            results.Add(View("UserAudienceRow_ActionsMenu_SummaryAdmin", row).Location("ActionsMenu:10"));
+        }
+
+        return CombineAsync(results);
+    }
 }
 
 /// <summary>

@@ -1,0 +1,84 @@
+@model LearningPathPartEditViewModel
+
+@{
+    var prefix = Html.NameFor(m => m.Sets).ToString();
+    var sets = Model.Sets.ToList();
+
+    if (sets.Count == 0)
+    {
+        sets.Add(new LearningPathSetEditViewModel());
+    }
+}
+
+<div class="mb-3" id="@Html.IdFor(m => m.Sets)-editor">
+    <label class="form-label">@T["Course sets"]</label>
+    <span class="hint d-block mb-2">@T["Sets joined by Then open one after another. Sets joined by And are open together and both count; sets joined by Or are alternatives. And binds tighter than Or."]</span>
+    <div data-path-sets>
+        @for (var i = 0; i < sets.Count; i++)
+        {
+            <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), IsFirst = i == 0, Set = sets[i], Courses = Model.Courses })" />
+        }
+    </div>
+    <template data-path-set-template>
+        <partial name="LearningPathSetRow" model="@(new LearningPathSetRowModel { Prefix = prefix, Index = "__index__", Set = new LearningPathSetEditViewModel(), Courses = Model.Courses })" />
+    </template>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-path-add-set><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a set"]</button>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="AllowSelfStart" class="form-check-input" />
+        <label asp-for="AllowSelfStart" class="form-check-label">@T["People can start the path themselves"]</label>
+        <span class="hint dashed">@T["Signed-in people who can see the path get a Start button on its page. Otherwise staff or required learning start them."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const editor = document.getElementById('@Html.IdFor(m => m.Sets)-editor');
+        const rows = editor.querySelector('[data-path-sets]');
+        const template = editor.querySelector('[data-path-set-template]');
+        const prefix = '@prefix';
+
+        function sync(row, index) {
+            row.querySelector('[data-path-connector]').hidden = index === 0;
+            const join = row.querySelector('[data-path-join]').value;
+            row.querySelector('[data-path-minimum]').hidden = join !== 'AtLeast';
+        }
+
+        function renumber() {
+            rows.querySelectorAll('[data-path-set]').forEach(function (row, index) {
+                row.querySelectorAll('[name]').forEach(function (input) {
+                    const start = input.name.indexOf(prefix + '[');
+
+                    if (start === 0) {
+                        input.name = input.name.replace(/^([^\[]+)\[[^\]]*\]/, '$1[' + index + ']');
+                    }
+                });
+                sync(row, index);
+            });
+        }
+
+        rows.addEventListener('change', function (event) {
+            if (event.target.matches('[data-path-join]')) {
+                renumber();
+            }
+        });
+
+        rows.addEventListener('click', function (event) {
+            const remove = event.target.closest('[data-path-remove]');
+
+            if (remove) {
+                remove.closest('[data-path-set]').remove();
+                renumber();
+            }
+        });
+
+        editor.querySelector('[data-path-add-set]').addEventListener('click', function () {
+            rows.appendChild(template.content.cloneNode(true));
+            renumber();
+        });
+
+        renumber();
+    })();
+</script>

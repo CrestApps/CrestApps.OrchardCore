@@ -1,0 +1,33 @@
+@model RequiredLearningExemptViewModel
+
+<zone Name="Title">
+    <breadcrumb name="RequiredLearningExempt" title="@T["Exempt {0}", Model.UserName ?? string.Empty]">
+        <breadcrumb-item id="RequiredLearning" action="Index" controller="RequiredLearning" area="CrestApps.OrchardCore.Learning.Programs">@T["Required Learning"]</breadcrumb-item>
+        <breadcrumb-item id="RequiredLearningPeople" action="People" controller="RequiredLearning" area="CrestApps.OrchardCore.Learning.Programs" route-id="@Model.RequirementId">@Model.RequirementName</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Exempt" asp-route-id="@Model.AssignmentId" method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="Reason">
+        <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+        <div class="ocat-limited">
+            <textarea asp-for="Reason" class="form-control" rows="3" required></textarea>
+            <span class="hint">@T["Such as prior learning or a certificate from elsewhere. It is kept with the exemption."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper">
+        <label for="evidence" class="ocat-label">@T["Evidence"]</label>
+        <div class="ocat-limited">
+            <input type="file" id="evidence" name="evidence" class="form-control" />
+            <span class="hint">@T["Optional, up to 10 MB. It is kept privately: only the person and people who can exempt can open it."]</span>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Exempt"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="People" asp-route-id="@Model.RequirementId">@T["Cancel"]</a>
+    </div>
+</form>

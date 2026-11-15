@@ -1,0 +1,7 @@
+@model LearningPathProgressRowViewModel
+
+<span class="fw-semibold">@Model.UserName</span>
+@if (Model.StageCount > 0 && Model.Progress.State == LearningPathState.InProgress)
+{
+    <span class="text-muted small ms-1">@T["Stage {0} of {1}", Model.Progress.OpenedStage + 1, Model.StageCount]</span>
+}
