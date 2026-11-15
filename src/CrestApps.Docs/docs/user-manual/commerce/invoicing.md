@@ -151,6 +151,10 @@ When a customer checks out on account terms (or pays later) and the whole order 
 
 A subscription paid with **Pay Later** is invoiced again at each renewal: when a period ends and the next one's balance is recorded, an invoice for that period is issued automatically for the same balance, so paying the invoice pays the renewal. The first period is on the order's invoice.
 
+## Ask the AI assistant about invoices
+
+With AI on, tick the **Invoicing** tools on an AI profile's **Capabilities** tab. The assistant can then find invoices (for example *which invoices are overdue?*), sum up what customers owe and how late it is, draft an invoice for you to check and issue, and e-mail an open invoice to its customer again. It acts as you, with your permissions, and never issues an invoice itself.
+
 ## Approve large invoices
 
 To have large invoices approved before they go out, set **Approve invoices from** under **Settings > Commerce > Invoicing** (for example 1000; 0 means every invoice). Such an invoice is not issued when you click **Issue**: click **Submit for approval** on its page instead. Someone with the **Approve invoices** permission, other than you, then opens it and clicks **Approve and issue**, or enters a reason and clicks **Reject**, which makes it a draft again with the reason shown.

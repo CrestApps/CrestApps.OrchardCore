@@ -205,6 +205,17 @@ With **Invoicing API**, invoices are on the commerce JSON API (`api/commerce/v1`
 
 A refused command answers `409` with the code `invalid-state` and the reasons; a draft that doesn't validate answers `400` with the fields.
 
+## AI tools
+
+With the AI feature on, `InvoicingAIToolsStartup` registers four tools in the **Invoicing** group, which administrators tick on an AI profile's Capabilities tab (they are not safe for anonymous visitors). Each acts as the signed-in user and answers *not allowed* without a signed-in user holding the permission:
+
+| Tool | Permission | What it does |
+| --- | --- | --- |
+| `findInvoices` | View invoices | Invoices by state (draft, open, overdue, paid, void, uncollectible, pendingApproval) and part of the number, customer or reference, newest first (up to 25): number, customer, total, still due, dates, overdue. |
+| `summarizeReceivables` | View invoices | What open invoices still owe per currency: total, overdue, aging (not due, 1–30, 31–60, 61–90, over 90 days) and the five customers who owe most, from up to 1,000 open invoices (`partial` says when there were more). |
+| `draftInvoice` | Create invoices and change drafts | A draft from a customer (a party, or a name and e-mail), currency, reference and lines of description, quantity and unit price, worked out like any draft; it never issues, and returns the draft's id, total and admin link. |
+| `sendInvoiceReminder` | Create invoices and change drafts | E-mails an open invoice that still owes something to its customer again, with its PDF and pay link (`IInvoiceSender`), found by number or id. |
+
 ## Workflows and webhooks
 
 `IInvoiceObserver` hears what happens to an invoice once it is saved: a draft created (`InvoiceHandler`), issued, voided, written off and reinstated (the commands), sent (`IInvoiceSender`), opened by the customer for the first time (`InvoiceViewTracker`), a payment reaching it and its being paid in full (`InvoiceLedgerSync`, when the mirror raises `AmountPaid` or settles it), overdue (when the ledger finds its transaction overdue and the invoice is still open) and credited (`ICreditNoteCommandService`). Every member has a default that does nothing. `InvoiceObserverNotifier` calls them, logging an observer that fails; a change queued in the session (created, payment, paid, overdue) is told after the request saves it, through `DeferredWork` (`invoicing_observers`), with the invoice read again. A credit is not a payment: crediting an invoice in full raises Credit Note Issued, not Paid.
