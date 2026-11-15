@@ -28,6 +28,12 @@ public sealed class TaxBreakdownRequest
     public string ExemptionReason { get; set; }
 
     /// <summary>
+    /// Gets or sets the level tax is rounded at: the site's (<see cref="TaxCalculationSettings"/>), the same the checkout
+    /// rounds at.
+    /// </summary>
+    public TaxRoundingLevel RoundingLevel { get; set; } = TaxRoundingLevel.Rate;
+
+    /// <summary>
     /// Gets or sets the step the total is rounded to for payment in cash, such as 0.05, or <see langword="null"/>.
     /// </summary>
     public decimal? CashRoundingIncrement { get; set; }

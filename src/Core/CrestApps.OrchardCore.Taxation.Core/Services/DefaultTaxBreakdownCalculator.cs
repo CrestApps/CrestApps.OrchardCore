@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
@@ -20,9 +21,26 @@ namespace CrestApps.OrchardCore.Taxation.Core.Services;
 /// their taxes is split once into net and tax. When no tax applies to an item whose price includes tax, there is nothing
 /// to take out of it, so the whole price is the net.
 /// </para>
+/// <para>
+/// That is rounding per tax and rate (<see cref="TaxRoundingLevel.Rate"/>). At any other level of
+/// <see cref="TaxBreakdownRequest.RoundingLevel"/>, each item's taxes are worked out and rounded as the checkout's tax
+/// service does it (<see cref="TaxLineRounding"/>), so a cart and an invoice with the same lines come to the same tax.
+/// </para>
 /// </remarks>
 public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
 {
+    private readonly ITaxRoundingStrategy _roundingStrategy;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultTaxBreakdownCalculator"/> class.
+    /// </summary>
+    /// <param name="roundingStrategy">The site's tax rounding strategy, the one the checkout's tax service rounds with;
+    /// without one, amounts are rounded to their currency's precision.</param>
+    public DefaultTaxBreakdownCalculator(ITaxRoundingStrategy roundingStrategy = null)
+    {
+        _roundingStrategy = roundingStrategy;
+    }
+
     /// <inheritdoc/>
     public TaxBreakdownResult Calculate(TaxBreakdownRequest request)
     {
@@ -33,9 +51,13 @@ public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
             .Select(item => new Entry(item, Treat(item, request)))
             .ToList();
 
-        var rows = request.PricesIncludeTax
-            ? CalculateInclusive(items, currency)
-            : CalculateExclusive(items, currency);
+        // Per tax and rate on the summed net (EN 16931); at any other level, each item's tax is worked out and rounded as
+        // the checkout's tax service rounds it, so a cart and an invoice with the same lines come to the same tax.
+        var rows = request.RoundingLevel != TaxRoundingLevel.Rate
+            ? CalculateByLevel(items, request)
+            : request.PricesIncludeTax
+                ? CalculateInclusive(items, currency)
+                : CalculateExclusive(items, currency);
 
         // Every item charged no tax, by its treatment and reason: zero rated, exempt, reverse charged, out of scope, or
         // taxable with no tax on it. EN 16931 needs a breakdown row for each.
@@ -91,8 +113,111 @@ public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
         return result;
     }
 
+    // Each item's taxes worked out unrounded in the order the rules gave them (a compound tax on the net plus the taxes
+    // before it, a price that includes tax divided by one plus its other rates), then rounded at the level through
+    // TaxLineRounding, as the checkout's tax service does.
+    private List<TaxBreakdownRow> CalculateByLevel(List<Entry> items, TaxBreakdownRequest request)
+    {
+        var currency = request.Currency;
+        var lines = new List<TaxLine>();
+        var owners = new List<(Entry Entry, TaxBreakdownRate Tax)>();
+
+        for (var index = 0; index < items.Count; index++)
+        {
+            var entry = items[index];
+            var gross = entry.Item.Amount;
+            var net = request.PricesIncludeTax && entry.Taxes.Count > 0
+                ? gross / (1m + (entry.Taxes.Where(tax => !tax.IsCompound).Sum(tax => tax.Rate) / 100m))
+                : gross;
+            var prior = 0m;
+
+            entry.RawNet = net;
+
+            foreach (var tax in entry.Taxes)
+            {
+                var basis = tax.IsCompound ? net + prior : net;
+                var amount = basis * tax.Rate / 100m;
+
+                lines.Add(new TaxLine
+                {
+                    ItemId = index.ToString(CultureInfo.InvariantCulture),
+                    TaxCode = tax.Code,
+                    TaxName = tax.Name,
+                    TaxType = tax.TaxType,
+                    JurisdictionId = tax.JurisdictionId,
+                    Rate = tax.Rate,
+                    IsCompound = tax.IsCompound,
+                    TaxableAmount = basis,
+                    TaxAmount = amount,
+                });
+                owners.Add((entry, tax));
+                prior += amount;
+            }
+        }
+
+        TaxLineRounding.Apply(lines, request.RoundingLevel, currency, Round);
+
+        for (var i = 0; i < owners.Count; i++)
+        {
+            owners[i].Entry.TaxAmount += lines[i].TaxAmount;
+        }
+
+        foreach (var entry in items)
+        {
+            if (request.PricesIncludeTax)
+            {
+                entry.Net = entry.Item.Amount - entry.TaxAmount;
+
+                // A line's discounts at the net, in the share its net is of its gross; a charge takes none.
+                var ratio = entry.Item.Amount == 0m ? 1m : entry.RawNet / entry.Item.Amount;
+
+                entry.BaseNet = entry.Item.IsCharge
+                    ? entry.Net
+                    : entry.Net + Round((entry.Item.BaseAmount - entry.Item.Amount) * ratio, currency);
+            }
+            else
+            {
+                entry.Net = entry.Item.Amount;
+                entry.BaseNet = entry.Item.BaseAmount;
+            }
+        }
+
+        // Each tax's taxable amount from the rounded figures: the item's net, plus its taxes before a compound one, so the
+        // rows add up to the document's net and tax.
+        var rows = new Dictionary<TaxKey, TaxBreakdownRow>();
+
+        foreach (var entry in items)
+        {
+            var prior = 0m;
+
+            for (var i = 0; i < owners.Count; i++)
+            {
+                if (owners[i].Entry != entry)
+                {
+                    continue;
+                }
+
+                var key = TaxKey.From(owners[i].Tax);
+
+                if (!rows.TryGetValue(key, out var row))
+                {
+                    rows[key] = row = Row(key, 0m, 0m);
+                }
+
+                row.TaxableAmount += key.IsCompound ? entry.Net + prior : entry.Net;
+                row.TaxAmount += lines[i].TaxAmount;
+                prior += lines[i].TaxAmount;
+            }
+        }
+
+        return [.. rows.Values.OrderBy(row => row.IsCompound).ThenBy(row => row.Code, StringComparer.Ordinal).ThenBy(row => row.Rate)];
+    }
+
+    private decimal Round(decimal amount, string currency)
+        => _roundingStrategy?.Round(amount, currency) ?? CurrencyScale.Round(amount, currency);
+
     // Net prices: tax per tax and rate on the summed net, then the compound taxes on the net plus the other taxes.
-    private static List<TaxBreakdownRow> CalculateExclusive(List<Entry> items, string currency)
+    private List<TaxBreakdownRow> CalculateExclusive(List<Entry> items, string currency)
     {
         foreach (var entry in items)
         {
@@ -113,7 +238,7 @@ public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
                 var members = group.Select(pair => pair.Entry).ToList();
                 var bases = members.Select(entry => compound ? entry.Net + entry.NonCompoundTax : entry.Net).ToArray();
                 var taxableAmount = bases.Sum();
-                var taxAmount = CurrencyScale.Round(taxableAmount * group.Key.Rate / 100m, currency);
+                var taxAmount = Round(taxableAmount * group.Key.Rate / 100m, currency);
                 var shares = MoneyAllocation.Allocate(taxAmount, bases, currency);
 
                 for (var i = 0; i < members.Count; i++)
@@ -134,7 +259,7 @@ public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
     }
 
     // Prices that include tax: the gross of each group of items that share their taxes is split once into net and tax.
-    private static List<TaxBreakdownRow> CalculateInclusive(List<Entry> items, string currency)
+    private List<TaxBreakdownRow> CalculateInclusive(List<Entry> items, string currency)
     {
         var rows = new Dictionary<TaxKey, TaxBreakdownRow>();
 
@@ -181,7 +306,7 @@ public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
             {
                 if (!taxes[i].IsCompound)
                 {
-                    amounts[i] = CurrencyScale.Round(netSum * taxes[i].Rate / 100m, currency);
+                    amounts[i] = Round(netSum * taxes[i].Rate / 100m, currency);
                     nonCompoundAmount += amounts[i];
                 }
             }
@@ -190,7 +315,7 @@ public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
             {
                 if (taxes[i].IsCompound)
                 {
-                    amounts[i] = CurrencyScale.Round((netSum + nonCompoundAmount) * taxes[i].Rate / 100m, currency);
+                    amounts[i] = Round((netSum + nonCompoundAmount) * taxes[i].Rate / 100m, currency);
                 }
             }
 
@@ -215,10 +340,10 @@ public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
         return [.. rows.Values.OrderBy(row => row.IsCompound).ThenBy(row => row.Code, StringComparer.Ordinal).ThenBy(row => row.Rate)];
     }
 
-    private static void Split(List<Entry> members, decimal factor, Func<Entry, decimal> gross, string currency, Action<Entry, decimal> assign)
+    private void Split(List<Entry> members, decimal factor, Func<Entry, decimal> gross, string currency, Action<Entry, decimal> assign)
     {
         var grossValues = members.Select(gross).ToArray();
-        var netSum = CurrencyScale.Round(grossValues.Sum() / factor, currency);
+        var netSum = Round(grossValues.Sum() / factor, currency);
         var shares = MoneyAllocation.Allocate(netSum, grossValues, currency);
 
         for (var i = 0; i < members.Count; i++)
@@ -285,6 +410,9 @@ public sealed class DefaultTaxBreakdownCalculator : ITaxBreakdownCalculator
         public decimal Net { get; set; }
 
         public decimal BaseNet { get; set; }
+
+        // The net before rounding, for rounding at a level other than per rate.
+        public decimal RawNet { get; set; }
 
         public decimal NonCompoundTax { get; set; }
 

@@ -48,6 +48,11 @@ internal sealed class TaxationAdminMenu : AdminNavigationProvider
                         .LocalNav())))
             .Add(S["Settings"], settings => settings
                 .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+                    .Add(S["Tax calculation"], S["Tax calculation"].PrefixPosition(), calculation => calculation
+                        .Id("taxationCalculation")
+                        .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", TaxCalculationSettingsDisplayDriver.GroupId } })
+                        .Permission(TaxationPermissions.ManageTaxation)
+                        .LocalNav())
                     .Add(S["Tax origin"], S["Tax origin"].PrefixPosition(), origin => origin
                         .Id("taxationOrigin")
                         .Action("Index", "Admin", new RouteValueDictionary { { "area", "OrchardCore.Settings" }, { "groupId", TaxOriginSettingsDisplayDriver.GroupId } })

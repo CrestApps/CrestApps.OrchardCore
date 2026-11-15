@@ -29,6 +29,7 @@ public sealed class RecipesSchemaStartup : StartupBase
 
         services.AddScoped<IContentSchemaDefinition, TaxationPartSchemaDefinition>();
         services.AddScoped<ISiteSettingsSchemaDefinition, TaxOriginSettingsSchema>();
+        services.AddScoped<ISiteSettingsSchemaDefinition, TaxCalculationSettingsSchema>();
     }
 }
 

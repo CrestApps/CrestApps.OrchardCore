@@ -49,6 +49,7 @@ internal sealed class TaxationDocumentTaxProvider : IDocumentTaxProvider
             TransactionDateUtc = (context.IssueDate ?? DateOnly.FromDateTime(_clock.UtcNow)).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
             Currency = context.Currency,
             DefaultPriceType = context.PricesIncludeTax ? TaxPriceType.Inclusive : TaxPriceType.Exclusive,
+            RoundingLevel = context.RoundingLevel,
         };
 
         foreach (var line in lines)
@@ -85,6 +86,8 @@ internal sealed class TaxationDocumentTaxProvider : IDocumentTaxProvider
                 // Taxation keeps a rate as a fraction; a document keeps it in percent.
                 Rate = tax.Rate * 100m,
                 IsCompound = tax.IsCompound,
+                TaxType = tax.TaxType,
+                JurisdictionId = tax.JurisdictionId,
             })];
         }
 

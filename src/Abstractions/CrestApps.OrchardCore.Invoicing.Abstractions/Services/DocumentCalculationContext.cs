@@ -67,4 +67,10 @@ public sealed class DocumentCalculationContext
     /// payment's tax snapshot), never what today's rules would give.
     /// </summary>
     public bool KeepTypedTaxes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the level tax is rounded at, or <see langword="null"/> for the site's (the Taxation setting the
+    /// checkout reads too).
+    /// </summary>
+    public TaxRoundingLevel? RoundingLevel { get; set; }
 }

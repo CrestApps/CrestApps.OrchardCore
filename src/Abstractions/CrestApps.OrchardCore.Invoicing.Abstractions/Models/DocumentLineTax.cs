@@ -41,4 +41,14 @@ public sealed class DocumentLineTax
     /// alone.
     /// </summary>
     public bool IsCompound { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of tax the rules gave, such as VAT or a state's sales tax, for rounding per tax.
+    /// </summary>
+    public string TaxType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jurisdiction that levies the tax, for rounding per jurisdiction.
+    /// </summary>
+    public string JurisdictionId { get; set; }
 }

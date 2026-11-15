@@ -6,9 +6,9 @@ namespace CrestApps.OrchardCore.Taxation.Services;
 /// Works out a document's tax from the taxes the rules found for its items, with EN 16931 arithmetic: tax per tax and
 /// rate on the summed net, spread back over the items largest remainder first; a compound tax on the net plus the other
 /// taxes; prices that include tax split once per group of items that share their taxes; each item's own treatment and
-/// reason, else the document's; and cash rounding as an explicit amount. Invoices and credit notes use it; the
-/// checkout's tax service rounds per rate the same way (<see cref="TaxRoundingLevel.Rate"/>), so a cart and an invoice
-/// with the same lines come to the same tax.
+/// reason, else the document's; and cash rounding as an explicit amount. Invoices and credit notes use it. It rounds at
+/// <see cref="TaxBreakdownRequest.RoundingLevel"/>, the site's level (<see cref="TaxCalculationSettings"/>) that the
+/// checkout's tax service rounds at too, so a cart and an invoice with the same lines come to the same tax.
 /// </summary>
 public interface ITaxBreakdownCalculator
 {

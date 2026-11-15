@@ -23,10 +23,11 @@ public sealed class TaxationOptions
     public MidpointRounding MidpointRounding { get; set; } = MidpointRounding.AwayFromZero;
 
     /// <summary>
-    /// Gets or sets the level at which tax amounts are rounded. Defaults to <see cref="TaxRoundingLevel.Rate"/>, the
-    /// rule invoices follow, so a cart and an invoice with the same lines come to the same tax.
+    /// Gets or sets the level at which tax amounts are rounded when no site setting gives one (a host without the
+    /// Taxation module's settings, such as a test). A site rounds at its <see cref="TaxCalculationSettings"/> level, which
+    /// the checkout and invoices both read. Defaults to <see cref="TaxRoundingLevel.Line"/>.
     /// </summary>
-    public TaxRoundingLevel RoundingLevel { get; set; } = TaxRoundingLevel.Rate;
+    public TaxRoundingLevel RoundingLevel { get; set; } = TaxRoundingLevel.Line;
 
     /// <summary>
     /// Gets or sets a per-currency override of the number of decimal places, keyed by currency code.

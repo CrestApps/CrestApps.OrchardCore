@@ -20,24 +20,36 @@ public sealed class DocumentCalculator : IDocumentCalculator
 {
     private readonly IEnumerable<IDocumentTaxProvider> _taxProviders;
     private readonly ITaxBreakdownCalculator _breakdown;
+    private readonly ITaxRoundingLevelProvider _roundingLevelProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DocumentCalculator"/> class.
     /// </summary>
     /// <param name="taxProviders">The providers that set the taxes of the lines from the tax rules.</param>
     /// <param name="breakdown">The Taxation module's breakdown calculator.</param>
-    public DocumentCalculator(IEnumerable<IDocumentTaxProvider> taxProviders, ITaxBreakdownCalculator breakdown)
+    /// <param name="roundingLevelProvider">The level the site rounds tax at, the Taxation setting the checkout reads too;
+    /// without one, a document rounds per tax and rate.</param>
+    public DocumentCalculator(
+        IEnumerable<IDocumentTaxProvider> taxProviders,
+        ITaxBreakdownCalculator breakdown,
+        ITaxRoundingLevelProvider roundingLevelProvider = null)
     {
         ArgumentNullException.ThrowIfNull(breakdown);
 
         _taxProviders = taxProviders ?? [];
         _breakdown = breakdown;
+        _roundingLevelProvider = roundingLevelProvider;
     }
 
     /// <inheritdoc/>
     public async Task<DocumentCalculationResult> CalculateAsync(DocumentCalculationContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
+
+        if (context.RoundingLevel is null && _roundingLevelProvider is not null)
+        {
+            context.RoundingLevel = await _roundingLevelProvider.GetRoundingLevelAsync(cancellationToken);
+        }
 
         if (context.AutomaticTax)
         {
@@ -119,6 +131,7 @@ public sealed class DocumentCalculator : IDocumentCalculator
             Treatment = context.TaxTreatment,
             ExemptionReason = context.ExemptionReason,
             CashRoundingIncrement = context.CashRoundingIncrement,
+            RoundingLevel = context.RoundingLevel ?? TaxRoundingLevel.Rate,
         };
 
         foreach (var entry in lineItems)
@@ -216,6 +229,8 @@ public sealed class DocumentCalculator : IDocumentCalculator
                 Name = tax.Name,
                 Rate = tax.Rate,
                 IsCompound = tax.IsCompound,
+                TaxType = tax.TaxType,
+                JurisdictionId = tax.JurisdictionId,
             });
         }
 

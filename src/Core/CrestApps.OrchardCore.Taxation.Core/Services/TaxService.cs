@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CrestApps.OrchardCore.Addresses.Models;
-using CrestApps.OrchardCore.Currencies;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.OrchardCore.Taxation.Core.Telemetry;
@@ -37,6 +36,7 @@ public sealed class TaxService : ITaxService
     private readonly TaxationOptions _options;
     private readonly IStringLocalizer S;
     private readonly ILogger _logger;
+    private readonly ITaxRoundingLevelProvider _roundingLevelProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TaxService"/> class.
@@ -54,6 +54,8 @@ public sealed class TaxService : ITaxService
     /// <param name="options">The taxation options.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="roundingLevelProvider">The site's rounding level (the Taxation setting invoices read too), or
+    /// <see langword="null"/> to use <see cref="TaxationOptions.RoundingLevel"/>.</param>
     public TaxService(
         IEnumerable<ITaxDeterminationProvider> determinationProviders,
         ITaxableBaseCalculator taxableBaseCalculator,
@@ -67,7 +69,8 @@ public sealed class TaxService : ITaxService
         ITaxRoundingStrategy roundingStrategy,
         IOptions<TaxationOptions> options,
         IStringLocalizer<TaxService> stringLocalizer,
-        ILogger<TaxService> logger)
+        ILogger<TaxService> logger,
+        ITaxRoundingLevelProvider roundingLevelProvider = null)
     {
         _determinationProviders = determinationProviders.OrderBy(provider => provider.Order).ToArray();
         _taxableBaseCalculator = taxableBaseCalculator;
@@ -82,6 +85,7 @@ public sealed class TaxService : ITaxService
         _options = options.Value;
         S = stringLocalizer;
         _logger = logger;
+        _roundingLevelProvider = roundingLevelProvider;
     }
 
     /// <inheritdoc />
@@ -133,7 +137,9 @@ public sealed class TaxService : ITaxService
             Currency = context.Currency,
         };
 
-        var roundingLevel = context.RoundingLevel ?? _options.RoundingLevel;
+        // The site's level (the Taxation setting invoices read too), else the host's.
+        var roundingLevel = context.RoundingLevel
+            ?? (_roundingLevelProvider is null ? _options.RoundingLevel : await _roundingLevelProvider.GetRoundingLevelAsync(cancellationToken));
 
         decimal sumNominal = 0m;
         decimal sumNet = 0m;
@@ -444,87 +450,7 @@ public sealed class TaxService : ITaxService
     }
 
     private decimal ApplyRounding(IList<TaxLine> lines, TaxRoundingLevel level, string currency)
-    {
-        if (lines.Count == 0)
-        {
-            return 0m;
-        }
-
-        if (level == TaxRoundingLevel.Rate)
-        {
-            return RoundPerRate(lines, currency);
-        }
-
-        if (level == TaxRoundingLevel.Line)
-        {
-            decimal total = 0m;
-
-            foreach (var line in lines)
-            {
-                line.TaxAmount = _roundingStrategy.Round(line.TaxAmount, currency);
-                total += line.TaxAmount;
-            }
-
-            return total;
-        }
-
-        var buckets = level switch
-        {
-            TaxRoundingLevel.Tax => lines.GroupBy(line => line.TaxType ?? string.Empty, StringComparer.OrdinalIgnoreCase),
-            TaxRoundingLevel.Jurisdiction => lines.GroupBy(line => line.JurisdictionId ?? string.Empty, StringComparer.OrdinalIgnoreCase),
-            _ => lines.GroupBy(_ => string.Empty),
-        };
-
-        decimal grandTotal = 0m;
-
-        foreach (var bucket in buckets)
-        {
-            var bucketLines = bucket.ToArray();
-            var roundedBucketTotal = _roundingStrategy.Round(bucketLines.Sum(line => line.TaxAmount), currency);
-
-            decimal roundedLineSum = 0m;
-
-            foreach (var line in bucketLines)
-            {
-                line.TaxAmount = _roundingStrategy.Round(line.TaxAmount, currency);
-                roundedLineSum += line.TaxAmount;
-            }
-
-            var residual = roundedBucketTotal - roundedLineSum;
-
-            if (residual != 0m)
-            {
-                bucketLines[bucketLines.Length - 1].TaxAmount += residual;
-            }
-
-            grandTotal += roundedBucketTotal;
-        }
-
-        return grandTotal;
-    }
-
-    // Each tax and rate is rounded once on what its lines add up to, and spread back over them largest remainder first,
-    // as an invoice's breakdown is (ITaxBreakdownCalculator).
-    private decimal RoundPerRate(IList<TaxLine> lines, string currency)
-    {
-        decimal total = 0m;
-
-        foreach (var group in lines.GroupBy(line => (line.TaxCode ?? string.Empty, line.TaxName ?? string.Empty, line.Rate, line.IsCompound)))
-        {
-            var members = group.ToArray();
-            var rounded = _roundingStrategy.Round(members.Sum(line => line.TaxAmount), currency);
-            var shares = MoneyAllocation.Allocate(rounded, [.. members.Select(line => line.TaxAmount)], currency);
-
-            for (var i = 0; i < members.Length; i++)
-            {
-                members[i].TaxAmount = shares[i];
-            }
-
-            total += rounded;
-        }
-
-        return total;
-    }
+        => TaxLineRounding.Apply(lines, level, currency, _roundingStrategy.Round);
 
     private readonly struct ItemTaxState
     {

@@ -34,4 +34,14 @@ public sealed class TaxBreakdownRate
     /// Gets or sets whether the tax is charged on the amount plus the item's other taxes.
     /// </summary>
     public bool IsCompound { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of tax, such as VAT or a state's sales tax, which rounding per tax groups by.
+    /// </summary>
+    public string TaxType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jurisdiction that levies the tax, which rounding per jurisdiction groups by.
+    /// </summary>
+    public string JurisdictionId { get; set; }
 }

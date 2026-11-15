@@ -116,10 +116,23 @@ public sealed class TaxBreakdownCalculatorTests
         Assert.Equal(132m, result.Total);
     }
 
+    // Decimals, not doubles: a double such as 10.02 does not convert to exactly 10.02m.
+    public static TheoryData<decimal, decimal, decimal> CashRoundings => new()
+    {
+        { 10.02m, -0.02m, 10.00m },
+        { 10.03m, 0.02m, 10.05m },
+        { 10.05m, 0m, 10.05m },
+    };
+
+    public static TheoryData<TaxRoundingLevel, decimal, decimal> Levels => new()
+    {
+        { TaxRoundingLevel.Rate, 1.51m, 0.76m },
+        { TaxRoundingLevel.Line, 1.50m, 0.75m },
+        { TaxRoundingLevel.Transaction, 1.51m, 0.75m },
+    };
+
     [Theory]
-    [InlineData(10.02, -0.02, 10.00)]
-    [InlineData(10.03, 0.02, 10.05)]
-    [InlineData(10.05, 0, 10.05)]
+    [MemberData(nameof(CashRoundings))]
     public void Calculate_AddsCashRoundingAsAnExplicitAmount(decimal price, decimal rounding, decimal total)
     {
         // Arrange
@@ -295,6 +308,80 @@ public sealed class TaxBreakdownCalculatorTests
         // Assert
         Assert.Equal((90m, 100m), (result.Items[0].Net, result.Items[0].BaseNet));
         Assert.Equal((10m, 10m), (result.Items[1].Net, result.Items[1].BaseNet));
+    }
+
+    [Theory]
+    [MemberData(nameof(Levels))]
+    public void Calculate_RoundsAtTheRequestsLevel(TaxRoundingLevel level, decimal tax, decimal firstItemTax)
+    {
+        // Arrange: two items of 10.05 at 7.5%: 0.75375 each.
+        var request = Request("USD", Item(10.05m, Vat(7.5m)), Item(10.05m, Vat(7.5m)));
+        request.RoundingLevel = level;
+
+        // Act
+        var result = _calculator.Calculate(request);
+
+        // Assert
+        var row = Assert.Single(result.Rows);
+        Assert.Equal((20.10m, tax), (row.TaxableAmount, row.TaxAmount));
+        Assert.Equal(firstItemTax, result.Items[0].TaxAmount);
+        Assert.Equal(tax, result.Items.Sum(item => item.TaxAmount));
+        AssertRowsAddUp(result);
+    }
+
+    [Fact]
+    public void Calculate_AtLineLevel_WithPricesThatIncludeTax_TakesEachLinesTaxOutOfIt()
+    {
+        // Arrange: 10.75 and 10.75 including 7.5%: each holds 0.75 of tax on a net of 10.00.
+        var request = Request("USD", Item(10.75m, Vat(7.5m)), Item(10.75m, Vat(7.5m)));
+        request.PricesIncludeTax = true;
+        request.RoundingLevel = TaxRoundingLevel.Line;
+
+        // Act
+        var result = _calculator.Calculate(request);
+
+        // Assert
+        Assert.All(result.Items, item => Assert.Equal((10m, 10m, 0.75m), (item.Net, item.BaseNet, item.TaxAmount)));
+        Assert.Equal(21.50m, result.Total);
+        AssertRowsAddUp(result);
+    }
+
+    [Fact]
+    public void Calculate_AtLineLevel_ChargesACompoundTaxOnTheNetPlusTheRoundedOtherTaxes()
+    {
+        // Arrange
+        var request = Request("CAD", Item(100m, Vat(5m, "GST"), Vat(10m, "PST", compound: true)));
+        request.RoundingLevel = TaxRoundingLevel.Line;
+
+        // Act
+        var result = _calculator.Calculate(request);
+
+        // Assert
+        var compound = result.Rows.Single(row => row.Code == "PST");
+        Assert.Equal((105m, 10.5m), (compound.TaxableAmount, compound.TaxAmount));
+        Assert.Equal(115.5m, result.Total);
+        AssertRowsAddUp(result);
+    }
+
+    [Fact]
+    public void Calculate_AtJurisdictionLevel_RoundsWhatEachJurisdictionLevies()
+    {
+        // Arrange: a state and a county tax of 8.25% on 10.10 (0.83325 each), one jurisdiction each, and a second state
+        // line. Per jurisdiction: the state's 1.6665 rounds to 1.67, the county's 0.83325 to 0.83.
+        var state = Vat(8.25m, "STATE");
+        state.JurisdictionId = "ca";
+        var county = Vat(8.25m, "COUNTY");
+        county.JurisdictionId = "la";
+        var request = Request("USD", Item(10.10m, state, county), Item(10.10m, state));
+        request.RoundingLevel = TaxRoundingLevel.Jurisdiction;
+
+        // Act
+        var result = _calculator.Calculate(request);
+
+        // Assert
+        Assert.Equal(1.67m, result.Rows.Single(row => row.Code == "STATE").TaxAmount);
+        Assert.Equal(0.83m, result.Rows.Single(row => row.Code == "COUNTY").TaxAmount);
+        Assert.Equal(2.50m, result.TaxTotal);
     }
 
     // Every item is in exactly one non-compound row, so those rows add up to the net of the document, and all rows add up

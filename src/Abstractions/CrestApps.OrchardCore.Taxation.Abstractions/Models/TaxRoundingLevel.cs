@@ -27,8 +27,7 @@ public enum TaxRoundingLevel
 
     /// <summary>
     /// Round the accumulated amount of each tax and rate (its code, name, rate and compound flag) once, and spread it back
-    /// over the lines largest remainder first: the EN 16931 rule invoices follow, so a cart and an invoice with the same
-    /// lines come to the same tax.
+    /// over the lines largest remainder first: the rule EN 16931 asks invoices to follow, and the default of a new site.
     /// </summary>
     Rate,
 }

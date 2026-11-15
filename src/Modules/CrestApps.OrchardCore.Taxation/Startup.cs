@@ -55,6 +55,7 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<TaxType>, TaxTypeHandler>();
 
         services.AddDataMigration<TaxTypeMigrations>();
+        services.AddDataMigration<TaxCalculationSettingsMigrations>();
 
         services
             .AddDisplayDriver<TaxJurisdiction, TaxJurisdictionDisplayDriver>()
@@ -74,6 +75,8 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<TaxationAdminMenu>();
         services.AddSiteDisplayDriver<TaxOriginSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(TaxOriginSettingsDisplayDriver.GroupId, TaxationPermissions.ManageTaxation);
+        services.AddSiteDisplayDriver<TaxCalculationSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(TaxCalculationSettingsDisplayDriver.GroupId, TaxationPermissions.ManageTaxation);
         services.AddPermissionProvider<TaxationPermissionsProvider>();
     }
 }
