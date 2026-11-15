@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Learning.Certifications.Drivers;
 using CrestApps.OrchardCore.Learning.Certifications.Handlers;
 using CrestApps.OrchardCore.Learning.Certifications.Migrations;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
+using CrestApps.OrchardCore.Learning.Certifications.Pipelines;
 using CrestApps.OrchardCore.Learning.Certifications.Recipes;
 using CrestApps.OrchardCore.Learning.Certifications.Reports;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
@@ -28,6 +29,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataPipelines.Models;
 using OrchardCore.DataSources;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -127,6 +129,10 @@ public sealed class DataSourcesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<CertificationProgressReportDataSet>();
+        services.AddScoped<EducationCreditReportDataSet>();
+        services.AddScoped<ExternalLearningReportDataSet>();
+        services.AddDataPipelineStepType<RecordExternalLearningStep>();
+        services.AddDisplayDriver<DataPipelineStep, RecordExternalLearningStepDisplayDriver>();
         services.AddDataSource<LearningCertificationsDataSource>();
     }
 }
@@ -141,6 +147,7 @@ public sealed class RecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<LearningCertificationPathsRecipeStep>();
+        services.AddRecipeExecutionStep<LearningCreditTypesRecipeStep>();
     }
 }
 
@@ -154,6 +161,7 @@ public sealed class DeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<LearningCertificationPathsDeploymentSource, LearningCertificationPathsDeploymentStep, LearningCertificationPathsDeploymentStepDisplayDriver>();
+        services.AddDeployment<LearningCreditTypesDeploymentSource, LearningCreditTypesDeploymentStep, LearningCreditTypesDeploymentStepDisplayDriver>();
     }
 }
 
@@ -167,7 +175,9 @@ public sealed class RecipesSchemaStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IRecipeStep, LearningCertificationPathsRecipeStepSchema>();
+        services.AddScoped<IRecipeStep, LearningCreditTypesRecipeStepSchema>();
         services.AddDeploymentStepSchema<LearningCertificationPathsDeploymentStepSchema>();
+        services.AddDeploymentStepSchema<LearningCreditTypesDeploymentStepSchema>();
     }
 }
 
@@ -197,6 +207,10 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<CertificationRenewalOpenedEvent, CertificationPathEventDisplayDriver<CertificationRenewalOpenedEvent>>();
         services.AddActivity<CertificationLapsedEvent, CertificationPathEventDisplayDriver<CertificationLapsedEvent>>();
         services.AddActivity<StartCertificationPathTask, StartCertificationPathTaskDisplayDriver>();
+        services.AddEducationCreditObserver<CreditsWorkflowObserver>();
+        services.AddActivity<EducationCreditsAwardedEvent, EducationCreditsAwardedEventDisplayDriver>();
+        services.AddActivity<ExternalLearningSubmittedEvent, ExternalLearningSubmittedEventDisplayDriver>();
+        services.AddActivity<AwardEducationCreditsTask, AwardEducationCreditsTaskDisplayDriver>();
     }
 }
 
@@ -212,6 +226,9 @@ public sealed class WorkflowsSchemaStartup : StartupBase
         services
             .AddWorkflowActivitySchema<CertificationRenewalOpenedEventSchema>()
             .AddWorkflowActivitySchema<CertificationLapsedEventSchema>()
-            .AddWorkflowActivitySchema<StartCertificationPathTaskSchema>();
+            .AddWorkflowActivitySchema<StartCertificationPathTaskSchema>()
+            .AddWorkflowActivitySchema<EducationCreditsAwardedEventSchema>()
+            .AddWorkflowActivitySchema<ExternalLearningSubmittedEventSchema>()
+            .AddWorkflowActivitySchema<AwardEducationCreditsTaskSchema>();
     }
 }

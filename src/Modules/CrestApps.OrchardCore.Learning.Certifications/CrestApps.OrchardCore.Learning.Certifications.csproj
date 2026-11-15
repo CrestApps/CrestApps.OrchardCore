@@ -36,6 +36,8 @@
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.DataSources.Core" />
+    <PackageReference Include="OrchardCore.DataPipelines.Core" />
+    <PackageReference Include="OrchardCore.DataPipelines.Abstractions" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Abstractions" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />

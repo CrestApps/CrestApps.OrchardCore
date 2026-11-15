@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.Learning.Certifications.Recipes;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
 using CrestApps.OrchardCore.PersonalData;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using OrchardCore.Recipes.Models;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Certifications;
@@ -94,10 +96,24 @@ public sealed class CertificationModuleTests
     public async Task PersonalData_ExportsTheProgressWithItsCycles_AndAnonymizingDeletesIt()
     {
         // Arrange
-        await using var h = await CertificationHarness.CreateAsync(configure: services => services.AddScoped<CertificationsPersonalDataContributor>());
+        var evidence = new Mock<IProtectedFileStore<ExternalLearningEvidence>>();
+
+        await using var h = await CertificationHarness.CreateAsync(configure: services =>
+        {
+            services.AddScoped<CertificationsPersonalDataContributor>();
+            services.AddSingleton(evidence.Object);
+        });
         var path = await h.AddPathAsync(join: RequirementJoin.Any);
 
         await h.CompleteCourseAsync("ana", "safety");
+
+        var cpd = new EducationCreditType { Name = "CPD hours" };
+        var submission = new ExternalLearningSubmission { UserId = "ana", Title = "Seminar", CompletedOn = CertificationHarness.Today, Amount = 2, EvidenceFileId = "file-1", EvidenceFileName = "seminar.pdf" };
+
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SaveTypeAsync(cpd));
+        submission.CreditTypeId = cpd.ItemId;
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SubmitExternalAsync(submission));
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().AcceptExternalAsync(submission.ItemId, "reviewer", null));
 
         // Act
         var export = await h.RunAsync(async services =>
@@ -119,9 +135,17 @@ public sealed class CertificationModuleTests
         });
 
         var after = await h.ProgressAsync(path.ItemId, "ana");
+        var creditsAfter = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ListEntriesAsync("ana"));
+        var externalAfter = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ListExternalForUserAsync("ana"));
 
         // Assert
-        var record = Assert.Single(export.Records);
+        var record = Assert.Single(export.Records, item => item.Kind == "LearningCertificationProgress");
+
+        Assert.Equal("2", Assert.Single(export.Records, item => item.Kind == "LearningEducationCredit").Fields["Amount"]);
+        Assert.Equal("seminar.pdf", Assert.Single(export.Records, item => item.Kind == "LearningExternalLearning").Fields["Evidence"]);
+        Assert.Empty(creditsAfter);
+        Assert.Empty(externalAfter);
+        evidence.Verify(store => store.DeleteAsync("file-1", It.IsAny<CancellationToken>()), Times.Once());
 
         Assert.Equal("Certified", record.Fields["State"]);
         Assert.Contains("1:", record.Fields["Cycles"]);

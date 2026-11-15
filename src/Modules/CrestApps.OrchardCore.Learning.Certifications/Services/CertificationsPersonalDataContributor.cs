@@ -1,5 +1,7 @@
 using System.Globalization;
+using CrestApps.OrchardCore.FileStorage;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
+using CrestApps.OrchardCore.Ledgers;
 using CrestApps.OrchardCore.PersonalData;
 
 namespace CrestApps.OrchardCore.Learning.Certifications.Services;
@@ -12,11 +14,24 @@ internal sealed class CertificationsPersonalDataContributor : IPersonalDataContr
 {
     private const string Kind = "LearningCertificationProgress";
 
-    private readonly CertificationPathProgressStore _progress;
+    private const string CreditKind = "LearningEducationCredit";
+    private const string ExternalKind = "LearningExternalLearning";
 
-    public CertificationsPersonalDataContributor(CertificationPathProgressStore progress)
+    private readonly CertificationPathProgressStore _progress;
+    private readonly IQuantityLedger<EducationCreditLedger> _credits;
+    private readonly ExternalLearningSubmissionStore _external;
+    private readonly IProtectedFileStore<ExternalLearningEvidence> _evidence;
+
+    public CertificationsPersonalDataContributor(
+        CertificationPathProgressStore progress,
+        IQuantityLedger<EducationCreditLedger> credits,
+        ExternalLearningSubmissionStore external,
+        IProtectedFileStore<ExternalLearningEvidence> evidence)
     {
         _progress = progress;
+        _credits = credits;
+        _external = external;
+        _evidence = evidence;
     }
 
     public async Task ExportAsync(PersonalDataExportContext context, CancellationToken cancellationToken = default)
@@ -34,6 +49,30 @@ internal sealed class CertificationsPersonalDataContributor : IPersonalDataContr
                 record.Fields["Cycles"] = string.Join(" | ", progress.Cycles.Select(cycle =>
                     $"{cycle.Number}: {string.Join(", ", cycle.Evidence.Select(evidence => evidence.Title ?? evidence.TargetId))}{(cycle.RecordId is null ? string.Empty : " -> " + cycle.RecordId)}"));
             }
+
+            foreach (var entry in await _credits.ListForAccountAsync(userId, cancellationToken))
+            {
+                var record = context.Add(CreditKind, entry.ItemId, entry.Note ?? entry.Bucket, entry.CreatedUtc);
+
+                record.Fields["CreditType"] = entry.Bucket;
+                record.Fields["Amount"] = entry.Amount.ToString(CultureInfo.InvariantCulture);
+                record.Fields["EarnedOn"] = entry.EffectiveDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                record.Fields["ExpiresOn"] = entry.ExpiresOn?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                record.Fields["Source"] = entry.Kind;
+            }
+
+            foreach (var submission in await _external.ListByUserAsync(userId, cancellationToken))
+            {
+                var record = context.Add(ExternalKind, submission.ItemId, submission.Title, submission.SubmittedUtc);
+
+                record.Fields["Title"] = submission.Title;
+                record.Fields["Provider"] = submission.Provider;
+                record.Fields["CompletedOn"] = submission.CompletedOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                record.Fields["CreditType"] = submission.CreditTypeId;
+                record.Fields["Amount"] = submission.Amount.ToString(CultureInfo.InvariantCulture);
+                record.Fields["State"] = submission.State.ToString();
+                record.Fields["Evidence"] = submission.EvidenceFileName;
+            }
         }
     }
 
@@ -45,6 +84,22 @@ internal sealed class CertificationsPersonalDataContributor : IPersonalDataContr
             {
                 await _progress.DeleteAsync(progress, cancellationToken);
                 context.Result.Count(Kind);
+            }
+
+            for (var deleted = await _credits.DeleteAccountAsync(userId, cancellationToken); deleted > 0; deleted--)
+            {
+                context.Result.Count(CreditKind);
+            }
+
+            foreach (var submission in await _external.ListByUserAsync(userId, cancellationToken))
+            {
+                if (!string.IsNullOrEmpty(submission.EvidenceFileId))
+                {
+                    await _evidence.DeleteAsync(submission.EvidenceFileId, cancellationToken);
+                }
+
+                await _external.DeleteAsync(submission, cancellationToken);
+                context.Result.Count(ExternalKind);
             }
         }
     }

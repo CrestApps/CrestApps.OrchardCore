@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Learning.Certifications;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Requirements;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
+using CrestApps.OrchardCore.Learning.Certifications.Pipelines;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -144,5 +145,40 @@ public sealed class EducationCreditTests
         Assert.Equal(1.5m, entry.Amount);
         Assert.Equal(CertificationHarness.Today.AddDays(-2), entry.EffectiveDate);
         Assert.Equal("Safety conference", entry.Note);
+    }
+
+    [Fact]
+    public async Task RecordExternalLearningRow_RejectsUnknownPeopleTypesAndAmounts_AndRecordsAcceptedCredits()
+    {
+        // Arrange
+        var h = await CertificationHarness.CreateAsync();
+        var cpd = new EducationCreditType { Name = "CPD hours" };
+
+        await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().SaveTypeAsync(cpd));
+
+        var known = new HashSet<string>(["dee"], StringComparer.Ordinal);
+        var day = new DateTime(2026, 10, 20);
+
+        // Act
+        var (unknownUser, unknownType, badAmount, recorded) = await h.RunAsync(async services =>
+        {
+            var credits = services.GetRequiredService<IEducationCreditService>();
+
+            return (
+                await RecordExternalLearningStep.RecordRowAsync(credits, known, cpd, "zoe", "Course", null, 1m, day, "pipeline", TestContext.Current.CancellationToken),
+                await RecordExternalLearningStep.RecordRowAsync(credits, known, null, "dee", "Course", null, 1m, day, "pipeline", TestContext.Current.CancellationToken),
+                await RecordExternalLearningStep.RecordRowAsync(credits, known, cpd, "dee", "Course", null, 0m, day, "pipeline", TestContext.Current.CancellationToken),
+                await RecordExternalLearningStep.RecordRowAsync(credits, known, cpd, "dee", "First aid", "Red Cross", 4m, day, "pipeline", TestContext.Current.CancellationToken));
+        });
+        var entries = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ListEntriesAsync("dee"));
+        var external = await h.RunAsync(services => services.GetRequiredService<IEducationCreditService>().ListExternalForUserAsync("dee"));
+
+        // Assert
+        Assert.NotNull(unknownUser);
+        Assert.NotNull(unknownType);
+        Assert.NotNull(badAmount);
+        Assert.Null(recorded);
+        Assert.Equal(4m, Assert.Single(entries).Amount);
+        Assert.Equal(ExternalLearningState.Accepted, Assert.Single(external).State);
     }
 }

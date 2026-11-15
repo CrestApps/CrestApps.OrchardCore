@@ -47,6 +47,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions\CrestApps.OrchardCore.FileStorage.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.FileStorage.Core\CrestApps.OrchardCore.FileStorage.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Certifications.Core\CrestApps.OrchardCore.Learning.Certifications.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Programs.Core\CrestApps.OrchardCore.Learning.Programs.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />

@@ -86,6 +86,7 @@ public sealed class CertificationTargetStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRequiredLearningCertificationTarget();
+        services.AddLearningPathObserver<LearningPathCreditsObserver>();
     }
 }
 

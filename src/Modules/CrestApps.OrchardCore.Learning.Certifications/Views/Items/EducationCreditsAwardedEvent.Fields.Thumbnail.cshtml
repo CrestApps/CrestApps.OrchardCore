@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Certifications.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<EducationCreditsAwardedEvent>
+
+<h4 class="card-title"><i class="fa-solid fa-award" aria-hidden="true"></i> @T["Education Credits Awarded"]</h4>
+<p>@T["Starts when education credits are awarded. The workflow input holds EntryId, UserId, CreditTypeId, Amount, Source, SourceId and EarnedOn."]</p>
