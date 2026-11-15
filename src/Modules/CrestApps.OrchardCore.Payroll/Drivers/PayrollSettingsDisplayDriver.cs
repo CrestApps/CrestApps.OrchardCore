@@ -55,6 +55,8 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
             model.DefaultCurrency = settings.DefaultCurrency;
             model.TaxProvider = settings.TaxProvider;
             model.MinimumNetPay = settings.MinimumNetPay == 0 ? null : settings.MinimumNetPay.ToString("0.##", CultureInfo.InvariantCulture);
+            model.MinimumHourlyWage = settings.MinimumHourlyWage?.ToString("0.####", CultureInfo.InvariantCulture);
+            model.MaximumTipCredit = settings.MaximumTipCredit?.ToString("0.####", CultureInfo.InvariantCulture);
             model.TaxProviders = [.. _taxProviders.Select(provider => new SelectListItem(_localizerFactory.Localize(provider.DisplayName).Value, provider.Name, provider.Name == settings.TaxProvider))];
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
@@ -95,6 +97,26 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.MinimumNetPay), S["The least net pay is an amount of zero or more, with a dot for decimals."]);
         }
 
+        settings.MinimumHourlyWage = Amount(model.MinimumHourlyWage, nameof(model.MinimumHourlyWage), context);
+        settings.MaximumTipCredit = Amount(model.MaximumTipCredit, nameof(model.MaximumTipCredit), context);
+
         return Edit(site, settings, context);
+    }
+
+    private decimal? Amount(string text, string field, UpdateEditorContext context)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        if (decimal.TryParse(text.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value))
+        {
+            return value;
+        }
+
+        context.Updater.ModelState.AddModelError(Prefix, field, S["Type an amount of zero or more, with a dot for decimals."]);
+
+        return null;
     }
 }

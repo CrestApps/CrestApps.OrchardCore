@@ -35,6 +35,7 @@ internal sealed class PaySchedulesRecipeStepSchema : IRecipeStep
                             ("SecondPayDay", Integer("Day of the month the second period is paid, for fixed days; 0 is the last day.")),
                             ("NonBusinessDayShift", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Before", "After", "None").Description("Where a pay date on a day off moves.")),
                             ("ApprovalLeadDays", Integer("Days before the pay date a run must be approved.")),
+                            ("ExtraPayPeriod", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Standard", "DivideByPayDates").Description("How a salary is paid in a year with one more pay date than usual.")),
                             ("Enabled", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the schedule is in use.")))
                         .Required("Name")
                         .AdditionalProperties(true))

@@ -49,7 +49,7 @@ public sealed class PayCalculator : IPayCalculator
         {
             await RunAsync(context, cancellationToken);
 
-            var difference = grossUp.TargetNet - context.Net;
+            var difference = grossUp.TargetNet - Measure(context, grossUp);
 
             if (Math.Abs(difference) < 0.01m)
             {
@@ -61,6 +61,10 @@ public sealed class PayCalculator : IPayCalculator
 
         context.Warnings.Add(S["The gross-up did not reach the target net pay of {0}; it stopped at {1}.", grossUp.TargetNet, context.Net]);
     }
+
+    // Net pay, or net pay before garnishments.
+    private static decimal Measure(PayCalculationContext context, PayGrossUp grossUp)
+        => context.Net + (grossUp.BeforeGarnishments ? context.Lines.Where(line => !string.IsNullOrEmpty(line.GarnishmentOrderId)).Sum(line => line.Amount) : 0);
 
     private async Task RunAsync(PayCalculationContext context, CancellationToken cancellationToken)
     {

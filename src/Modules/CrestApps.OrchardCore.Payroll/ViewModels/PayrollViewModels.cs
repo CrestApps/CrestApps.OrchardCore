@@ -106,6 +106,10 @@ public class PayrollSettingsViewModel
 
     public string MinimumNetPay { get; set; }
 
+    public string MinimumHourlyWage { get; set; }
+
+    public string MaximumTipCredit { get; set; }
+
     [BindNever]
     public IList<SelectListItem> TaxProviders { get; set; } = [];
 }
@@ -175,6 +179,8 @@ public class PayProfileViewModel
     public string WorkerType { get; set; }
 
     public string OvertimeStatus { get; set; }
+
+    public bool Tipped { get; set; }
 
     public string Status { get; set; }
 
@@ -612,6 +618,12 @@ public class PayRunInputViewModel
     public DateOnly? Date { get; set; }
 
     public string Note { get; set; }
+
+    public bool IsNet { get; set; }
+
+    public DateOnly? EarnedFrom { get; set; }
+
+    public DateOnly? EarnedTo { get; set; }
 }
 
 /// <summary>

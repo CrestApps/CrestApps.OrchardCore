@@ -77,6 +77,17 @@ public sealed class PayInput
     public decimal? Rate { get; set; }
 
     /// <summary>
+    /// Gets or sets the first day of the weeks a bonus or commission was earned in, when they are before the period:
+    /// the overtime of those weeks is paid again on the regular rate the amount raises.
+    /// </summary>
+    public DateOnly? EarnedFrom { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last day of the weeks the amount was earned in.
+    /// </summary>
+    public DateOnly? EarnedTo { get; set; }
+
+    /// <summary>
     /// Gets or sets where the cost goes: the department and site teams, the activity and the job.
     /// </summary>
     public PayInputAllocation Allocation { get; set; } = new();

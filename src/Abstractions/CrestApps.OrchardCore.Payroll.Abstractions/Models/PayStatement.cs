@@ -201,6 +201,11 @@ public sealed class PayStatementLine
     public string GarnishmentOrderId { get; set; }
 
     /// <summary>
+    /// Gets or sets the earlier statement a retro pay line makes up the difference of, or <see langword="null"/>.
+    /// </summary>
+    public string RetroFor { get; set; }
+
+    /// <summary>
     /// Gets or sets where the cost goes.
     /// </summary>
     public PayInputAllocation Allocation { get; set; }

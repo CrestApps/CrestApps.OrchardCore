@@ -64,6 +64,7 @@ internal sealed class PayScheduleDisplayDriver : DisplayDriver<PaySchedule>
             model.SecondPayDay = schedule.SecondPayDay;
             model.NonBusinessDayShift = schedule.NonBusinessDayShift.ToString();
             model.ApprovalLeadDays = schedule.ApprovalLeadDays;
+            model.ExtraPayPeriod = schedule.ExtraPayPeriod.ToString();
             model.Enabled = schedule.Enabled;
 
             // The next periods from today in the site's time zone, so the schedule can be checked before saving.
@@ -98,6 +99,7 @@ internal sealed class PayScheduleDisplayDriver : DisplayDriver<PaySchedule>
         schedule.SecondPayDay = model.SecondPayDay;
         schedule.NonBusinessDayShift = Enum.TryParse<PayDateShift>(model.NonBusinessDayShift, out var shift) ? shift : PayDateShift.Before;
         schedule.ApprovalLeadDays = model.ApprovalLeadDays;
+        schedule.ExtraPayPeriod = Enum.TryParse<ExtraPayPeriodRule>(model.ExtraPayPeriod, out var extra) ? extra : ExtraPayPeriodRule.Standard;
         schedule.Enabled = model.Enabled;
 
         if (model.AnchorDate is { } anchor)

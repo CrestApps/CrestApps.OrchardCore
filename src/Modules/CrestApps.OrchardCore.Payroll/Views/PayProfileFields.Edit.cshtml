@@ -80,6 +80,15 @@ else if (!Model.IsNew)
             </div>
         </div>
         <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="Tipped" type="checkbox" class="form-check-input" />
+                    <label asp-for="Tipped" class="form-check-label">@T["Paid a tipped wage"]</label>
+                    <span class="hint dashed">@T["A cash wage below the minimum wage, with tips making up the rest: a week whose wage and tips fall short of the minimum wage in Settings > Payroll is made up."]</span>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
             <label asp-for="Status" class="ocat-label">@T["Status"]</label>
             <div class="ocat-end">
                 <select asp-for="Status" class="form-select" style="max-width: 16rem">

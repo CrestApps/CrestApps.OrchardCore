@@ -173,6 +173,31 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
                 <div class="col-12 col-md-1">
                     <button type="submit" class="btn btn-secondary w-100">@T["Add"]</button>
                 </div>
+                <div class="col-12">
+                    <details>
+                        <summary class="small">@T["A take-home amount, or an amount earned in earlier weeks"]</summary>
+                        <div class="row g-2 align-items-end mt-1">
+                            <div class="col-12 col-md-4">
+                                <div class="form-check">
+                                    <input asp-for="NewInput.IsNet" type="checkbox" class="form-check-input" />
+                                    <label asp-for="NewInput.IsNet" class="form-check-label">@T["The amount is what the person takes home"]</label>
+                                    <span class="hint dashed">@T["The gross is worked out so the taxes on it are paid too (a gross-up). One a person a run."]</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label asp-for="NewInput.EarnedFrom" class="form-label">@T["Earned from"]</label>
+                                <input asp-for="NewInput.EarnedFrom" type="date" class="form-control" />
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label asp-for="NewInput.EarnedTo" class="form-label">@T["Earned to"]</label>
+                                <input asp-for="NewInput.EarnedTo" type="date" class="form-control" />
+                            </div>
+                            <div class="col-12">
+                                <span class="hint">@T["For a bonus or commission earned in weeks already paid: the overtime of those weeks is paid again on the regular rate it raises."]</span>
+                            </div>
+                        </div>
+                    </details>
+                </div>
             </form>
         }
     </div>

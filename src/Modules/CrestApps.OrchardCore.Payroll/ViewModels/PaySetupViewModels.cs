@@ -30,6 +30,8 @@ public class PayScheduleViewModel
 
     public int ApprovalLeadDays { get; set; } = 2;
 
+    public string ExtraPayPeriod { get; set; }
+
     public bool Enabled { get; set; } = true;
 
     [BindNever]

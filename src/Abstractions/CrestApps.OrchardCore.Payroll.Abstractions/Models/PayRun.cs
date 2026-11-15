@@ -268,6 +268,22 @@ public sealed class PayRunInput : CatalogItem, IModifiedUtcAwareModel
     /// <summary>Gets or sets a note.</summary>
     public string Note { get; set; }
 
+    /// <summary>
+    /// Gets or sets the first day of the weeks an amount was earned in, before the period, so their overtime is re-priced.
+    /// </summary>
+    public DateOnly? EarnedFrom { get; set; }
+
+    /// <summary>
+    /// Gets or sets the last day of the weeks the amount was earned in.
+    /// </summary>
+    public DateOnly? EarnedTo { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the amount is what the person takes home: the gross is worked out so the taxes on it are
+    /// paid too (a gross-up).
+    /// </summary>
+    public bool IsNet { get; set; }
+
     /// <summary>Gets or sets where it came from, such as the run's page or a pipeline run.</summary>
     public string Origin { get; set; }
 

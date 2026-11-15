@@ -146,6 +146,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
         profile.PayScheduleId = string.IsNullOrEmpty(model.PayScheduleId) ? null : model.PayScheduleId;
         profile.WorkerType = Enum.TryParse<PayWorkerType>(model.WorkerType, out var workerType) ? workerType : PayWorkerType.Employee;
         profile.OvertimeStatus = Enum.TryParse<OvertimeStatus>(model.OvertimeStatus, out var overtime) ? overtime : OvertimeStatus.NonExempt;
+        profile.Tipped = model.Tipped;
         profile.Status = Enum.TryParse<PayProfileStatus>(model.Status, out var status) ? status : PayProfileStatus.Active;
         profile.LegalName = model.LegalName;
         profile.WorkSiteTeamId = string.IsNullOrEmpty(model.WorkSiteTeamId) ? null : model.WorkSiteTeamId;
@@ -378,6 +379,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             model.PayScheduleId = profile.PayScheduleId;
             model.WorkerType = profile.WorkerType.ToString();
             model.OvertimeStatus = profile.OvertimeStatus.ToString();
+            model.Tipped = profile.Tipped;
             model.Status = profile.Status.ToString();
             model.LegalName = profile.LegalName;
             model.WorkSiteTeamId = profile.WorkSiteTeamId;

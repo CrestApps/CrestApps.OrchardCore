@@ -57,6 +57,14 @@ A final statement never changes. On its page, someone who voids pay statements f
 - **Reissue** a payment, such as a lost check: say why, and the old check is voided (or the deposit cancelled if it was not sent to the bank yet) and a new one is made;
 - **Void** the statement: say why, and a reversing statement with the opposite amounts cancels it in the year's totals, its pay items go back, its time clock hours can be paid again and its checks and deposits are stopped where they have not gone out. Pay what is owed in a new run.
 
+## Take-home amounts, earlier weeks and retro pay
+
+- To pay a bonus as a take-home amount, open **A take-home amount, or an amount earned in earlier weeks** under the inputs, check **The amount is what the person takes home** and enter the amount: the run works out the gross so the taxes are paid on top. One such amount a person a run.
+- For a bonus or commission earned in weeks already paid, enter **Earned from** and **Earned to**: the run also pays the overtime of those weeks again on the higher regular rate the amount gives.
+- When a pay rate or salary is raised back to a day already paid, the next regular run pays the difference for each earlier statement of the year as **retro pay**, once.
+- For a person marked **Paid a tipped wage** on their pay profile, a week whose cash wage and tips fall short of the minimum wage set under **Settings > Payroll** is made up with a **Tip credit make-up** line. Cash tips the person kept are entered on the **CTIPS** pay code: they are taxed but not paid.
+- A pay schedule says how a salary is paid in a year with an extra pay date (27 every two weeks): the usual amount each time, or the year's salary divided by that year's pay dates.
+
 ## Reports, automation and history
 
 - **Reports > Workforce & Payroll** has the Payroll Register, Payroll Summary, Cash Requirement, Deductions and Contributions, Labor Distribution and Year-to-date Earnings reports; export them or e-mail them on a schedule. The Payroll Cash Requirement and Payroll Summary widgets can go on the dashboard.

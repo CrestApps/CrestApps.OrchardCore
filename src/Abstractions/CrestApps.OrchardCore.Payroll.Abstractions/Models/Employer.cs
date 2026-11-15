@@ -226,4 +226,16 @@ public sealed class PayrollSettings
     /// Gets or sets the least net pay a statement may have; deductions taken after tax are cut below it.
     /// </summary>
     public decimal MinimumNetPay { get; set; }
+
+    /// <summary>
+    /// Gets or sets the least an hour a tipped person must earn with their tips, or <see langword="null"/> for no tip
+    /// credit check (7.25 under the federal law of the United States, more in many states).
+    /// </summary>
+    public decimal? MinimumHourlyWage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most an hour of tips counts toward the minimum wage (5.12 under the federal law of the United
+    /// States: 7.25 less the 2.13 cash wage).
+    /// </summary>
+    public decimal? MaximumTipCredit { get; set; }
 }

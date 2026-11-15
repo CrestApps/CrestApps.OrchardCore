@@ -174,7 +174,7 @@ public sealed class PayCodeRulesTests
         var second = await harness.RunAsync(services => services.GetRequiredService<PayrollPayCodeSeeder>().SeedAsync());
         var codes = await harness.RunAsync(async services => (await services.GetRequiredService<IPayCodeManager>().GetAllAsync()).ToDictionary(code => code.Code), commit: false);
 
-        Assert.Equal(["SAL", "COMM", "TIPS", "REIMB", "LOAN"], first);
+        Assert.Equal(["SAL", "COMM", "TIPS", "CTIPS", "TIPMU", "REIMB", "LOAN"], first);
         Assert.Empty(second);
         Assert.Equal("Our own bonus", codes["BONUS"].Name);
         Assert.False(codes["BONUS"].TryGet<PayrollPayCodeSettings>(out _));

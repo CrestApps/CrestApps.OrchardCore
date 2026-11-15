@@ -44,6 +44,22 @@
                 <span class="hint">@T["Deductions taken after tax are cut, the largest priority number first, so net pay is never below it."]</span>
             </div>
         </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MinimumHourlyWage">
+            <label asp-for="MinimumHourlyWage" class="ocat-label">@T["Minimum wage of tipped people"]</label>
+            <div class="ocat-end">
+                <input asp-for="MinimumHourlyWage" class="form-control" inputmode="decimal" style="max-width: 8rem" />
+                <span asp-validation-for="MinimumHourlyWage" class="text-danger"></span>
+                <span class="hint">@T["The least an hour a person paid a tipped wage must earn with their tips (7.25 under the federal law of the United States, more in many states). Empty for no check."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="MaximumTipCredit">
+            <label asp-for="MaximumTipCredit" class="ocat-label">@T["Most tips count an hour"]</label>
+            <div class="ocat-end">
+                <input asp-for="MaximumTipCredit" class="form-control" inputmode="decimal" style="max-width: 8rem" />
+                <span asp-validation-for="MaximumTipCredit" class="text-danger"></span>
+                <span class="hint">@T["The most an hour of tips counts toward the minimum wage (5.12 federally: 7.25 less a 2.13 cash wage). Empty counts every tip."]</span>
+            </div>
+        </div>
     </div>
 </div>
 

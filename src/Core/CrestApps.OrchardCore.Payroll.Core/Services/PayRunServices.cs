@@ -545,18 +545,7 @@ public sealed partial class DefaultPayRunService : IPayRunService
 
             foreach (var profile in profiles.Where(profile => only is null || only.Contains(profile.StaffMemberId)))
             {
-                var context = await _contexts.CreateAsync(profile, new PayCalculationRequest
-                {
-                    PeriodStart = run.PeriodStart,
-                    PeriodEnd = run.PeriodEnd,
-                    PayDate = run.PayDate,
-                    Regular = run.IsRegular,
-                    IncludeSourceInputs = run.IsRegular,
-                    SupplementalMethod = run.SupplementalMethod,
-                    ExtraInputs = [.. inputs[profile.StaffMemberId].Select(input => ToPayInput(run, input))],
-                }, cancellationToken);
-
-                await _calculator.CalculateAsync(context, cancellationToken);
+                var context = await CalculateOneAsync(run, profile, [.. inputs[profile.StaffMemberId]], cancellationToken);
 
                 var statement = drafts.FirstOrDefault(draft => draft.ProfileId == profile.ItemId) ?? new PayStatement { ItemId = UniqueId.GenerateId(), CreatedUtc = _clock.UtcNow };
                 var staffMember = names.GetValueOrDefault(profile.StaffMemberId);
@@ -884,6 +873,51 @@ public sealed partial class DefaultPayRunService : IPayRunService
         return run;
     }
 
+    // Calculates one person's pay. An amount entered as what the person takes home is grossed up: the pay is worked out
+    // without it, then again with the earning raised until net pay is that much more.
+    private async Task<PayCalculationContext> CalculateOneAsync(PayRun run, EmployeePayProfile profile, IReadOnlyList<PayRunInput> inputs, CancellationToken cancellationToken)
+    {
+        var nets = inputs.Where(input => input.IsNet && input.Amount is > 0).ToList();
+        var net = nets.FirstOrDefault();
+        var others = inputs.Where(input => !input.IsNet).ToList();
+
+        PayCalculationRequest Request(IEnumerable<PayRunInput> extra)
+            => new()
+            {
+                PeriodStart = run.PeriodStart,
+                PeriodEnd = run.PeriodEnd,
+                PayDate = run.PayDate,
+                Regular = run.IsRegular,
+                IncludeSourceInputs = run.IsRegular,
+                SupplementalMethod = run.SupplementalMethod,
+                ExtraInputs = [.. extra.Select(input => ToPayInput(run, input))],
+            };
+
+        var context = await _contexts.CreateAsync(profile, Request(others), cancellationToken);
+
+        await _calculator.CalculateAsync(context, cancellationToken);
+
+        if (net is null)
+        {
+            return context;
+        }
+
+        var grossed = await _contexts.CreateAsync(profile, Request(others), cancellationToken);
+
+        // The gross-up pays the taxes; garnishments are taken from the pay as from any other.
+        var garnished = context.Lines.Where(line => !string.IsNullOrEmpty(line.GarnishmentOrderId)).Sum(line => line.Amount);
+
+        grossed.GrossUp = new PayGrossUp { PayCodeId = net.PayCodeId, TargetNet = context.Round(context.Net + garnished) + net.Amount.Value, BeforeGarnishments = true };
+        await _calculator.CalculateAsync(grossed, cancellationToken);
+
+        foreach (var extra in nets.Skip(1))
+        {
+            grossed.Warnings.Add(S["Only one amount a pay can be grossed up: {0} was left out.", extra.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)]);
+        }
+
+        return grossed;
+    }
+
     private static PayInput ToPayInput(PayRun run, PayRunInput input)
         => new()
         {
@@ -895,6 +929,8 @@ public sealed partial class DefaultPayRunService : IPayRunService
             Hours = input.Hours,
             Rate = input.Rate,
             Amount = input.Amount,
+            EarnedFrom = input.EarnedFrom,
+            EarnedTo = input.EarnedTo,
             PeriodStart = run.PeriodStart,
             PeriodEnd = run.PeriodEnd,
         };

@@ -68,6 +68,12 @@ public sealed class PayrollPayCodeSeeder
         new("BONUS", "Bonus", PayCodeClass.Earning, PayCodeKinds.Bonus, null),
         new("COMM", "Commission", PayCodeClass.Earning, PayCodeKinds.Commission, null),
         new("TIPS", "Tips", PayCodeClass.Earning, PayCodeKinds.Tips, null),
+        new("CTIPS", "Cash tips reported", PayCodeClass.ImputedIncome, PayCodeKinds.Tips, null),
+        new("TIPMU", "Tip credit make-up", PayCodeClass.Earning, PayCodeKinds.MinimumWageMakeup, settings =>
+        {
+            settings.CountsInRegularRate = true;
+            settings.CountsAsHoursWorked = false;
+        }),
         new("REIMB", "Expense reimbursement", PayCodeClass.Reimbursement, PayCodeKinds.Reimbursement, settings => settings.InRetroPay = false),
         new("LOAN", "Loan repayment", PayCodeClass.Deduction, PayCodeKinds.Loan, settings =>
         {

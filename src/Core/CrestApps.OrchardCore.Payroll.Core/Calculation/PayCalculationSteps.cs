@@ -226,7 +226,7 @@ public sealed class EarningsPayCalculationStep : IPayCalculationStep
             return;
         }
 
-        var periods = PayCalculator.PeriodsPerYear(context.Schedule?.Frequency ?? PayFrequency.Biweekly);
+        var periods = context.SalaryPeriods ?? PayCalculator.PeriodsPerYear(context.Schedule?.Frequency ?? PayFrequency.Biweekly);
         var proration = code.GetPayrollSettings().Proration;
         var first = context.HireDate is { } hired && hired > context.PeriodStart ? hired : context.PeriodStart;
         var last = context.TerminationDate is { } left && left < context.PeriodEnd ? left : context.PeriodEnd;

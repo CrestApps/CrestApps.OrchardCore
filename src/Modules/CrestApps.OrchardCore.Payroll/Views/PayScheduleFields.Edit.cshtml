@@ -101,6 +101,16 @@
             </div>
         </div>
         <div class="ocat-wrapper">
+            <label asp-for="ExtraPayPeriod" class="ocat-label">@T["A year with an extra pay date"]</label>
+            <div class="ocat-end">
+                <select asp-for="ExtraPayPeriod" class="form-select" style="max-width: 28rem">
+                    <option value="Standard">@T["Pay the usual salary each time (the year pays one pay more)"]</option>
+                    <option value="DivideByPayDates">@T["Divide the year's salary by that year's pay dates"]</option>
+                </select>
+                <span class="hint">@T["Some years have 27 pay dates every two weeks, or 53 every week. Hourly pay is not affected."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input asp-for="Enabled" type="checkbox" class="form-check-input" />

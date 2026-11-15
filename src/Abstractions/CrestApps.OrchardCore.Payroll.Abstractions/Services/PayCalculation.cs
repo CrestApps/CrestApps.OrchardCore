@@ -57,6 +57,24 @@ public sealed class PayCalculationContext
     /// <summary>Gets or sets the person's garnishment orders (with the Garnishments feature).</summary>
     public IList<GarnishmentOrder> Garnishments { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the person's final statements with the employer from the start of the year (or of the earliest
+    /// weeks an amount was earned in), for retro pay and for re-pricing the overtime of earlier weeks.
+    /// </summary>
+    public IList<PayStatement> History { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the number a year's salary is divided by for one pay, or <see langword="null"/> for the usual
+    /// number of the frequency.
+    /// </summary>
+    public int? SalaryPeriods { get; set; }
+
+    /// <summary>Gets or sets the least an hour a tipped person must earn with tips, or <see langword="null"/>.</summary>
+    public decimal? MinimumHourlyWage { get; set; }
+
+    /// <summary>Gets or sets the most an hour of tips counts toward the minimum wage.</summary>
+    public decimal? MaximumTipCredit { get; set; }
+
     /// <summary>Gets or sets what was paid and taken before, from final statements.</summary>
     public PayAccumulators Accumulators { get; set; } = new();
 
@@ -146,6 +164,12 @@ public sealed class PayGrossUp
 
     /// <summary>Gets or sets the gross of the earning found; set by the calculator.</summary>
     public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the target is net pay before garnishments: the gross-up pays the taxes, and garnishments are
+    /// taken from the pay as from any other.
+    /// </summary>
+    public bool BeforeGarnishments { get; set; }
 }
 
 /// <summary>
@@ -206,6 +230,15 @@ public static class PayCalculationOrder
 
     /// <summary>Cuts deductions when net pay is too small.</summary>
     public const int NetCheck = 800;
+
+    /// <summary>Retro pay: the difference earlier statements owe since a rate went up.</summary>
+    public const int RetroPay = 110;
+
+    /// <summary>The make-up of a tipped person's week to the minimum wage.</summary>
+    public const int TipCredit = 120;
+
+    /// <summary>The overtime of earlier weeks re-priced by a bonus earned in them.</summary>
+    public const int EarnedRegularRate = 210;
 
     /// <summary>Employer contributions and reimbursements.</summary>
     public const int Contributions = 900;

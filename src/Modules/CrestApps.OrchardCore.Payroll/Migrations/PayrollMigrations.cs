@@ -25,7 +25,7 @@ internal sealed class PayrollMigrations : DataMigration
         await _seeder.SeedAsync();
         await _policySeeder.SeedAsync();
 
-        return 5;
+        return 6;
     }
 
     // Pay profiles and pay items.
@@ -59,5 +59,13 @@ internal sealed class PayrollMigrations : DataMigration
         await _policySeeder.SeedAsync();
 
         return 5;
+    }
+
+    // Cash tips reported and the tip credit make-up; codes already there are left alone.
+    public async Task<int> UpdateFrom5Async()
+    {
+        await _seeder.SeedAsync();
+
+        return 6;
     }
 }

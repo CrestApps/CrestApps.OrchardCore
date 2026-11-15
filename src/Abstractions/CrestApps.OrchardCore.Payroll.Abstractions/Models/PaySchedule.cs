@@ -77,6 +77,12 @@ public sealed class PaySchedule : CatalogItem, INameAwareModel, IModifiedUtcAwar
     public bool Enabled { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets how a salary is paid in a year with one more pay date than usual (27 every two weeks, 53 every
+    /// week): each pay is the year's salary divided by the usual number, or by the pay dates there are.
+    /// </summary>
+    public ExtraPayPeriodRule ExtraPayPeriod { get; set; }
+
+    /// <summary>
     /// Gets or sets when it was added.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
@@ -188,3 +194,16 @@ public sealed class PaySchedule : CatalogItem, INameAwareModel, IModifiedUtcAwar
         return day <= 0 || day >= monthEnd.Day ? monthEnd : new DateOnly(periodEnd.Year, periodEnd.Month, day);
     }
 }
+
+/// <summary>
+/// How a salary is paid in a year with one more pay date than usual.
+/// </summary>
+public enum ExtraPayPeriodRule
+{
+    /// <summary>Each pay is the year's salary divided by the usual number of pay dates: the year pays one pay more.</summary>
+    Standard,
+
+    /// <summary>Each pay is the year's salary divided by the pay dates of the year: the year pays the salary exactly.</summary>
+    DivideByPayDates,
+}
+

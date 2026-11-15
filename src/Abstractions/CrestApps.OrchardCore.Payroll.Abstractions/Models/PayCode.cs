@@ -161,6 +161,9 @@ public static class PayCodeKinds
     /// <summary>Pay withheld for a garnishment order.</summary>
     public const string Garnishment = "Garnishment";
 
+    /// <summary>Pay that brings a tipped person's week up to the minimum wage.</summary>
+    public const string MinimumWageMakeup = "MinimumWageMakeup";
+
     /// <summary>
     /// The kinds Workforce's pay codes had, in their stored order, to read records written before.
     /// </summary>

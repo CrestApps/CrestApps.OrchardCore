@@ -322,6 +322,23 @@ public sealed class PayRunsController : Controller
         input.Hours = hours;
         input.Amount = amount;
         input.Rate = rate;
+        input.IsNet = model?.IsNet == true;
+        input.EarnedFrom = model?.EarnedFrom;
+        input.EarnedTo = model?.EarnedTo;
+
+        if ((input.EarnedFrom is null) != (input.EarnedTo is null) || input.EarnedTo < input.EarnedFrom || input.EarnedTo >= run.PeriodStart)
+        {
+            await _notifier.ErrorAsync(H["Give both days of the weeks the amount was earned in, before the run's period, or neither."]);
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        if (input.IsNet && input.Amount is not > 0)
+        {
+            await _notifier.ErrorAsync(H["A take-home amount is an amount: the gross is worked out from it."]);
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
 
         var validation = await _inputs.ValidateAsync(input);
 

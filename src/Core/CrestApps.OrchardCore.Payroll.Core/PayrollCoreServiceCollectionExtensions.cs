@@ -73,7 +73,10 @@ public static class PayrollCoreServiceCollectionExtensions
         services.AddSourceAccess<PayStatementSourceAccess>();
         services.TryAddScoped<PayRunInputImporter>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, EarningsPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, RetroPayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, TipCreditPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, RegularRatePayCalculationStep>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, EarnedRegularRatePayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, PreTaxDeductionsPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, TaxesPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, PostTaxDeductionsPayCalculationStep>());

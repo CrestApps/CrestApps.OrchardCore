@@ -38,6 +38,12 @@ public sealed class EmployeePayProfile : CatalogItem, IModifiedUtcAwareModel
     public OvertimeStatus OvertimeStatus { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the person is paid a cash wage below the minimum wage and the tips they receive make up the
+    /// rest (a tip credit): a week whose cash wage and tips fall short is made up to the minimum.
+    /// </summary>
+    public bool Tipped { get; set; }
+
+    /// <summary>
     /// Gets or sets the person's tax id, protected; only its last characters show.
     /// </summary>
     public ProtectedValue TaxId { get; set; }
