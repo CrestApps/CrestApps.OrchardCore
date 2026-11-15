@@ -25,4 +25,6 @@ public class EnrollmentDetailViewModel
     public bool CanManage { get; set; }
 
     public bool NeedsStaffApproval { get; set; }
+
+    public List<EnrollmentReviewAction> ReviewActions { get; set; } = [];
 }

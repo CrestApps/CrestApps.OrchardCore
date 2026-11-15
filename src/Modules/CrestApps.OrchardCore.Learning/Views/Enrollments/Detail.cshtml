@@ -98,6 +98,16 @@
                     </div>
                     <span class="hint">@T["The enrollment stays completed. Clearing the review records your decision."]</span>
                 </form>
+                @foreach (var action in Model.ReviewActions)
+                {
+                    <form action="@action.Url" method="post" class="mt-3" asp-antiforgery="true">
+                        <button type="submit" class="btn btn-outline-danger" data-title="@action.Text" data-message="@action.Confirmation" data-ok-text="@T["Yes"]">@action.Text</button>
+                        @if (!string.IsNullOrEmpty(action.Hint))
+                        {
+                            <span class="hint">@action.Hint</span>
+                        }
+                    </form>
+                }
             }
         </div>
     </div>

@@ -249,7 +249,7 @@ public sealed class EnrollmentsController : Controller
     /// <returns>The page.</returns>
     [HttpGet]
     [Admin("learning/enrollments/{id}", "LearningEnrollmentsDetail")]
-    public async Task<IActionResult> Detail(string id)
+    public async Task<IActionResult> Detail(string id, [FromServices] IEnumerable<IEnrollmentReviewActionProvider> reviewActionProviders)
     {
         var enrollment = await _enrollmentStore.FindByIdAsync(id);
 
@@ -282,6 +282,14 @@ public sealed class EnrollmentsController : Controller
             && course.TryGet<CoursePart>(out var part)
             && part.CompletionCriteria.Any(rule => rule.Name == LearningRuleNames.StaffApproval)
             && !enrollment.Properties.ContainsKey(LearningRuleNames.StaffApprovalProperty);
+
+        if (enrollment.NeedsReview && model.CanManage)
+        {
+            foreach (var provider in reviewActionProviders)
+            {
+                model.ReviewActions.AddRange(await provider.GetActionsAsync(enrollment, HttpContext.RequestAborted));
+            }
+        }
 
         return View(model);
     }
