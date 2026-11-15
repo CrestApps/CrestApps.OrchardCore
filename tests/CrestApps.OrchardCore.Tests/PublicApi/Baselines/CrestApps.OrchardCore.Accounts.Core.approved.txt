@@ -1,6 +1,22 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Accounts.Indexes
 {
+    public sealed class AccountEmailDomainIndex : YesSql.Indexes.MapIndex
+    {
+        public AccountEmailDomainIndex() { }
+        public string AccountContentItemId { get; set; }
+        public string Domain { get; set; }
+    }
+    public sealed class AccountEmailDomainIndexProvider : YesSql.Indexes.IndexProvider<OrchardCore.ContentManagement.ContentItem>
+    {
+        public AccountEmailDomainIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<OrchardCore.ContentManagement.ContentItem> context) { }
+    }
+    public static class AccountEmailDomainsNormalizer
+    {
+        public const int MaxLength = 253;
+        public static string Normalize(string value) { }
+    }
     public sealed class AccountMemberIndex : YesSql.Indexes.MapIndex
     {
         public AccountMemberIndex() { }
@@ -25,6 +41,11 @@ namespace CrestApps.OrchardCore.Accounts.Services
         public System.Threading.Tasks.Task<bool> IsAccountChildTypeAsync(string contentType) { }
         public System.Threading.Tasks.Task<bool> IsAccountTypeAsync(string contentType) { }
         public bool IsExcludedFromAccounts(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition) { }
+    }
+    public sealed class AccountEmailDomains : CrestApps.OrchardCore.Accounts.Services.IAccountEmailDomains
+    {
+        public AccountEmailDomains(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<string> FindAccountIdAsync(string email, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AccountListSynchronizer
     {

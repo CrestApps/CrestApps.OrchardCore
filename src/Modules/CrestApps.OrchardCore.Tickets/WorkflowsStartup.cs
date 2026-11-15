@@ -13,7 +13,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.Data.Migration;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Helpers;
@@ -161,6 +163,9 @@ public sealed class AccountsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContentDisplayDriver, AccountTicketsTabDisplayDriver>();
+        services.AddContentPart<Models.TicketAccountPart>()
+            .UseDisplayDriver<Drivers.TicketAccountPartDisplayDriver>();
+        services.AddDataMigration<Migrations.TicketAccountMigrations>();
         services.AddPageSection(AccountPageTabs.PageName, AccountPageTabs.Tickets, LocalizationSource.Create<AccountsStartup>("Tickets"), "fa-solid fa-ticket", AccountPageTabs.GetPosition(AccountPageTabs.Tickets));
     }
 }

@@ -209,7 +209,7 @@ public sealed class DefaultTicketService : ITicketService
         part.RequesterContact = request.RequesterContact is { HasAnyValue: true } contact
             ? contact
             : request.Requester.IsEmpty ? null : await _parties.GetContactInfoAsync(request.Requester, cancellationToken);
-        part.AccountId = request.AccountId;
+        part.AccountId = string.IsNullOrEmpty(request.AccountId) ? await AccountByEmailAsync(part, cancellationToken) : request.AccountId;
         part.TeamId = FirstNonEmpty(request.TeamId, settings.DefaultTeamId, desk.DefaultTeamId);
         part.AssigneeId = string.IsNullOrEmpty(request.AssigneeId) ? null : request.AssigneeId;
         part.AssignedUtc = part.AssigneeId is null ? null : now;
@@ -268,7 +268,8 @@ public sealed class DefaultTicketService : ITicketService
             await AddEventAsync(ticket.ContentItemId, TicketActor.Site, S["Follow-up of a closed ticket."], [], cancellationToken);
         }
 
-        var policyId = FirstNonEmpty(settings.ServiceLevelPolicyId, desk.ServiceLevelPolicyId);
+        // The account's entitlement first, then the ticket type's, then the desk's.
+        var policyId = FirstNonEmpty(await AccountPolicyAsync(part.AccountId), settings.ServiceLevelPolicyId, desk.ServiceLevelPolicyId);
 
         if (!string.IsNullOrEmpty(policyId))
         {
@@ -1167,6 +1168,21 @@ public sealed class DefaultTicketService : ITicketService
 
             return new TicketResult { Ticket = ticket };
         }, cancellationToken);
+
+    // With Account E-mail Domains on, a ticket without an account is filed under the account whose domain the
+    // requester's e-mail is on.
+    private async Task<string> AccountByEmailAsync(TicketPart part, CancellationToken cancellationToken)
+        => _serviceProvider.GetService<Accounts.Services.IAccountEmailDomains>() is { } domains && !string.IsNullOrWhiteSpace(part.RequesterContact?.Email)
+            ? await domains.FindAccountIdAsync(part.RequesterContact.Email, cancellationToken)
+            : null;
+
+    // The service-level policy the account is entitled to, if it names one.
+    private async Task<string> AccountPolicyAsync(string accountId)
+        => string.IsNullOrEmpty(accountId)
+            ? null
+            : (await _contentManager.GetAsync(accountId, VersionOptions.Published))?.TryGet<TicketAccountPart>(out var entitlement) == true
+                ? entitlement.ServiceLevelPolicyId
+                : null;
 
     // The sources the desk honors; a desk that never chose honors the sources that are on by default.
     private List<string> HonoredSources(TicketDesk desk)

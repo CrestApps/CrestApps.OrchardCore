@@ -8,7 +8,7 @@ user_manual: user-manual/accounts
 
 | | |
 | --- | --- |
-| **Features** | Accounts (`CrestApps.OrchardCore.Accounts`), Account Members (`CrestApps.OrchardCore.Accounts.Members`), Account Locations (`CrestApps.OrchardCore.Accounts.Locations`) |
+| **Features** | Accounts (`CrestApps.OrchardCore.Accounts`), Account Members (`CrestApps.OrchardCore.Accounts.Members`), Account Locations (`CrestApps.OrchardCore.Accounts.Locations`), Account E-mail Domains (`CrestApps.OrchardCore.Accounts.EmailDomains`) |
 | **Core** | `CrestApps.OrchardCore.Accounts.Core` |
 | **Abstractions** | `CrestApps.OrchardCore.Accounts.Abstractions` |
 | **Category** | Content Management |
@@ -212,6 +212,10 @@ adds it to the `Account` type at position 5.
 
 `AccountLocationsPart.FindLocation(locationId)` finds one. Accounts B2B offers them as shipping addresses at checkout;
 a field service module offers them as service addresses.
+
+## Account e-mail domains
+
+The **Account E-mail Domains** feature keeps the domains an account's people write from. Its migration defines `AccountEmailDomainsPart` (`Domains`, lower case, without the `@`) and gives it to the `Account` type; the editor takes one domain per line. Published accounts' domains are indexed in `AccountEmailDomainIndex`, and `IAccountEmailDomains.FindAccountIdAsync(email)` answers the one account that lists the address's domain, or nothing when none or several do. [Tickets](./tickets) files a request without an account under the account of its requester's e-mail this way.
 
 ## Removing an account
 

@@ -326,6 +326,7 @@ Open items left from phase 1: files attached to a timeline entry are removed whe
 | Slice | State | Notes |
 | --- | --- | --- |
 | Problem and incident links | Done, unit and SQLite tested | `TicketLinkKinds.Problem`; `TicketLinkIndex` (one row per ticket-to-ticket link, Tickets migration v11 with a background reindex) so a ticket finds the tickets linking to it; the problem's links panel lists its incidents; `TicketProblemObserver` solves open incidents with the problem's status when the problem is solved |
+| Account e-mail domains and service-level entitlements | Done, unit and SQLite tested | In the owner: Accounts gets an **Account E-mail Domains** feature (`AccountEmailDomainsPart` on the Account type, `AccountEmailDomainIndex`, `IAccountEmailDomains.FindAccountIdAsync`, the one account listing the domain or none). Tickets files a ticket without an account by its requester's e-mail, and `TicketAccountPart` (Tickets, on the Account type, with Accounts on) names the account's policy, used before the type's and the desk's (the policy order plan section 5.5 first described) |
 
 ## 12. Not in this plan
 

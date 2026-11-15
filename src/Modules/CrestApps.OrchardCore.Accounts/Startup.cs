@@ -152,6 +152,22 @@ public sealed class TeamRecipesSchemaStartup : StartupBase
 /// <summary>
 /// Registers the locations part and its editor.
 /// </summary>
+/// <summary>
+/// Registers the accounts' e-mail domains.
+/// </summary>
+[Feature(AccountsConstants.EmailDomainsFeature)]
+public sealed class EmailDomainsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<AccountEmailDomainsPart>()
+            .UseDisplayDriver<AccountEmailDomainsPartDisplayDriver>();
+        services.AddIndexProvider<AccountEmailDomainIndexProvider>();
+        services.AddDataMigration<AccountEmailDomainsMigrations>();
+        services.AddScoped<IAccountEmailDomains, AccountEmailDomains>();
+    }
+}
+
 [Feature(AccountsConstants.LocationsFeature)]
 public sealed class LocationsStartup : StartupBase
 {

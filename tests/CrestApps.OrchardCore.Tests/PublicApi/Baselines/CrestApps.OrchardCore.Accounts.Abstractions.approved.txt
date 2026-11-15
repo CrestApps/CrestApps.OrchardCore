@@ -28,6 +28,7 @@ namespace CrestApps.OrchardCore.Accounts
     }
     public static class AccountsConstants
     {
+        public const string EmailDomainsFeature = "CrestApps.OrchardCore.Accounts.EmailDomains";
         public const string Feature = "CrestApps.OrchardCore.Accounts";
         public const string LocationsFeature = "CrestApps.OrchardCore.Accounts.Locations";
         public const string MembersFeature = "CrestApps.OrchardCore.Accounts.Members";
@@ -35,6 +36,7 @@ namespace CrestApps.OrchardCore.Accounts
         public static class ContentParts
         {
             public const string Account = "AccountPart";
+            public const string EmailDomains = "AccountEmailDomainsPart";
             public const string List = "ListPart";
             public const string Locations = "AccountLocationsPart";
             public const string Members = "AccountMembersPart";
@@ -56,6 +58,11 @@ namespace CrestApps.OrchardCore.Accounts
 }
 namespace CrestApps.OrchardCore.Accounts.Models
 {
+    public sealed class AccountEmailDomainsPart : OrchardCore.ContentManagement.ContentPart
+    {
+        public AccountEmailDomainsPart() { }
+        public System.Collections.Generic.List<string> Domains { get; set; }
+    }
     public sealed class AccountLocation
     {
         public AccountLocation() { }
@@ -128,6 +135,10 @@ namespace CrestApps.OrchardCore.Accounts.Services
         System.Threading.Tasks.Task<bool> IsAccountChildTypeAsync(string contentType);
         System.Threading.Tasks.Task<bool> IsAccountTypeAsync(string contentType);
         bool IsExcludedFromAccounts(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition);
+    }
+    public interface IAccountEmailDomains
+    {
+        System.Threading.Tasks.Task<string> FindAccountIdAsync(string email, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAccountMemberService
     {

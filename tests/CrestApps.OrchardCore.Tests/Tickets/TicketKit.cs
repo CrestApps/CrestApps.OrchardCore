@@ -338,7 +338,10 @@ internal sealed class TicketKit : IAsyncDisposable
                 return true;
             });
         contents.Setup(manager => manager.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
-            .Returns((string id, VersionOptions _) => session.Query<ContentItem, TicketIndex>(index => index.ContentItemId == id).FirstOrDefaultAsync());
+            .Returns(async (string id, VersionOptions _) => await session.Query<ContentItem, TicketIndex>(index => index.ContentItemId == id).FirstOrDefaultAsync()
+
+                // Another content item (such as an account) has no ticket index row.
+                ?? (await session.Query<ContentItem>().ListAsync()).FirstOrDefault(item => item.ContentItemId == id));
         contents.Setup(manager => manager.RemoveAsync(It.IsAny<ContentItem>()))
             .Returns((ContentItem item) =>
             {
