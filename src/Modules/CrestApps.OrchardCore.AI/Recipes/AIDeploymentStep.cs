@@ -75,15 +75,11 @@ internal sealed class AIDeploymentStep : CatalogRecipeStepBase<AIDeployment>
         return CatalogRecipeLookup<AIDeployment>.Found(await _manager.GetAsync(name, source));
     }
 
-    protected override async ValueTask UpdateAsync(AIDeployment entry, JsonObject token)
+    protected override ValueTask UpdateAsync(AIDeployment entry, JsonObject token)
     {
         // A recipe that leaves a secret out keeps the stored one; when it also changes where the entry sends it, the
         // kept secret is dropped, as the editor drops it.
-        var before = RecipeSecretDestinations.Snapshot(entry);
-
-        await _manager.UpdateAsync(entry, token);
-
-        RecipeSecretDestinations.DropKeptSecrets(entry, before);
+        return RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
     }
 
     protected override async ValueTask<AIDeployment> NewAsync(JsonObject token, RecipeExecutionContext context)

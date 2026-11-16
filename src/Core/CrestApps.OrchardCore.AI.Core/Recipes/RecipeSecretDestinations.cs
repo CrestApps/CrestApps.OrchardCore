@@ -36,6 +36,30 @@ public static class RecipeSecretDestinations
     }
 
     /// <summary>
+    /// Updates an entry from JSON, as a recipe step or an API endpoint does, and drops the secrets the update kept when
+    /// it also changed where the entry sends them. When one is dropped the entry is saved again, so the store keeps the
+    /// entry without it even when the first save already wrote the entry.
+    /// </summary>
+    /// <param name="entry">The stored entry.</param>
+    /// <param name="data">The JSON to apply.</param>
+    /// <param name="update">Applies JSON to the entry and saves it, such as the entry's catalog manager update; called
+    /// with <see langword="null"/> to save the entry again as it is.</param>
+    public static async ValueTask UpdateAsync(ExtensibleEntity entry, JsonNode data, Func<JsonNode, ValueTask> update)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentNullException.ThrowIfNull(update);
+
+        var before = Snapshot(entry);
+
+        await update(data);
+
+        if (DropKeptSecrets(entry, before))
+        {
+            await update(null);
+        }
+    }
+
+    /// <summary>
     /// Drops the secrets a recipe kept from before when it changed where the entry sends them.
     /// </summary>
     /// <param name="entry">The entry, after the recipe applied its JSON.</param>

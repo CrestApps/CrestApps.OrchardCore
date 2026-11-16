@@ -62,15 +62,11 @@ internal sealed class AIToolInstanceStep : CatalogRecipeStepBase<AIToolInstance>
         return CatalogRecipeLookup<AIToolInstance>.Found(string.IsNullOrEmpty(name) ? null : await _instancesCatalog.FindByNameAsync(name));
     }
 
-    protected override async ValueTask UpdateAsync(AIToolInstance entry, JsonObject token)
+    protected override ValueTask UpdateAsync(AIToolInstance entry, JsonObject token)
     {
         // A recipe that leaves a secret out keeps the stored one; when it also changes where the entry sends it, the
         // kept secret is dropped, as the editor drops it.
-        var before = RecipeSecretDestinations.Snapshot(entry);
-
-        await _manager.UpdateAsync(entry, token);
-
-        RecipeSecretDestinations.DropKeptSecrets(entry, before);
+        return RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
     }
 
     protected override async ValueTask<AIToolInstance> NewAsync(JsonObject token, RecipeExecutionContext context)

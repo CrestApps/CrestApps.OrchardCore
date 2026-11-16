@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Recipes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -104,41 +105,8 @@ public static class AISourceCatalogApi
             .ProducesValidationProblem()
             .WithSummary($"Creates a {displayName} from the JSON its recipe step takes, with its Source.");
 
-        group.MapPut("{id}", async Task<Results<Ok<T>, ValidationProblem, ProblemHttpResult>> (string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager) =>
-        {
-            if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
-            {
-                return Forbidden();
-            }
-
-            var item = await manager.FindByIdAsync(id, httpContext.RequestAborted);
-
-            if (item is null)
-            {
-                return NotFound();
-            }
-
-            // The body is bound without regard to case, while the record's own JSON is not: its keys take the record's
-            // spelling first, so the copy that is validated and the update that is saved read the same values.
-            var current = JsonSerializer.SerializeToNode(item) as JsonObject ?? [];
-            var changes = NormalizeKeys(body, current);
-            changes.Remove(nameof(CatalogItem.ItemId));
-            changes.Remove("Source");
-
-            // Validate a copy first: the manager saves as it updates.
-            var copy = await manager.NewAsync(item.Source, Merge(current, changes), httpContext.RequestAborted);
-            copy.ItemId = item.ItemId;
-            var validation = await manager.ValidateAsync(copy, httpContext.RequestAborted);
-
-            if (!validation.Succeeded)
-            {
-                return Invalid(validation);
-            }
-
-            await manager.UpdateAsync(item, changes, httpContext.RequestAborted);
-
-            return TypedResults.Ok(item);
-        })
+        group.MapPut("{id}", (string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager)
+            => UpdateAsync(id, body, httpContext, authorizationService, manager, permission))
             .WithName($"Update{entityName}")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -169,6 +137,61 @@ public static class AISourceCatalogApi
             .WithSummary($"Deletes a {displayName}.");
 
         return routes;
+    }
+
+    /// <summary>
+    /// Updates a record with the given settings, leaving the rest as they are. A stored secret, such as a data source's
+    /// API key, is kept when the body leaves it out or sends back the protected value a read returned; when the update
+    /// also moves the record to another address or way of signing in, that kept secret is dropped, as the record's editor
+    /// and recipe step drop it, so it must be given again.
+    /// </summary>
+    /// <typeparam name="T">The record type.</typeparam>
+    /// <param name="id">The record's id.</param>
+    /// <param name="body">The settings to change, in the shape the record's recipe step takes.</param>
+    /// <param name="httpContext">The request.</param>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="manager">The records' manager.</param>
+    /// <param name="permission">The permission to manage the records.</param>
+    /// <returns>The updated record, or why it was not updated.</returns>
+    internal static async Task<Results<Ok<T>, ValidationProblem, ProblemHttpResult>> UpdateAsync<T>(string id, JsonObject body, HttpContext httpContext, IAuthorizationService authorizationService, ISourceCatalogManager<T> manager, Permission permission)
+        where T : CatalogItem, ISourceAwareModel
+    {
+        if (!await AIApiKeys.AuthorizeAsync(authorizationService, httpContext, AIApiKeys.Scopes.Knowledge, permission))
+        {
+            return Forbidden();
+        }
+
+        var item = await manager.FindByIdAsync(id, httpContext.RequestAborted);
+
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        var before = RecipeSecretDestinations.Snapshot(item);
+
+        // The body is bound without regard to case, while the record's own JSON is not: its keys take the record's
+        // spelling first, so the copy that is validated and the update that is saved read the same values.
+        var current = JsonSerializer.SerializeToNode(item) as JsonObject ?? [];
+        var changes = NormalizeKeys(body, current);
+        changes.Remove(nameof(CatalogItem.ItemId));
+        changes.Remove("Source");
+
+        // Validate a copy first: the manager saves as it updates. The copy drops the secrets the update would drop, so a
+        // required one that must be given again is reported.
+        var copy = await manager.NewAsync(item.Source, Merge(current, changes), httpContext.RequestAborted);
+        copy.ItemId = item.ItemId;
+        RecipeSecretDestinations.DropKeptSecrets(copy, before);
+        var validation = await manager.ValidateAsync(copy, httpContext.RequestAborted);
+
+        if (!validation.Succeeded)
+        {
+            return Invalid(validation);
+        }
+
+        await RecipeSecretDestinations.UpdateAsync(item, changes, data => manager.UpdateAsync(item, data, httpContext.RequestAborted));
+
+        return TypedResults.Ok(item);
     }
 
     /// <summary>

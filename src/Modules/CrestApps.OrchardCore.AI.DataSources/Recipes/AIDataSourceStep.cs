@@ -56,15 +56,11 @@ internal sealed class AIDataSourceStep : CatalogRecipeStepBase<AIDataSource>
     protected override ValueTask<AIDataSource> FindByIdAsync(string id)
         => _dataManager.FindByIdAsync(id);
 
-    protected override async ValueTask UpdateAsync(AIDataSource entry, JsonObject token)
+    protected override ValueTask UpdateAsync(AIDataSource entry, JsonObject token)
     {
         // A recipe that leaves a secret out keeps the stored one; when it also changes where the entry sends it, the
         // kept secret is dropped, as the editor drops it.
-        var before = RecipeSecretDestinations.Snapshot(entry);
-
-        await _dataManager.UpdateAsync(entry, token);
-
-        RecipeSecretDestinations.DropKeptSecrets(entry, before);
+        return RecipeSecretDestinations.UpdateAsync(entry, token, data => _dataManager.UpdateAsync(entry, data));
     }
 
     protected override ValueTask<AIDataSource> NewAsync(JsonObject token, RecipeExecutionContext context)

@@ -37,15 +37,11 @@ internal sealed class A2AConnectionStep : CatalogRecipeStepBase<A2AConnection>
     protected override ValueTask<A2AConnection> FindByIdAsync(string id)
         => _manager.FindByIdAsync(id);
 
-    protected override async ValueTask UpdateAsync(A2AConnection entry, JsonObject token)
+    protected override ValueTask UpdateAsync(A2AConnection entry, JsonObject token)
     {
         // A recipe that leaves a secret out keeps the stored one; when it also changes where the entry sends it, the
         // kept secret is dropped, as the editor drops it.
-        var before = RecipeSecretDestinations.Snapshot(entry);
-
-        await _manager.UpdateAsync(entry, token);
-
-        RecipeSecretDestinations.DropKeptSecrets(entry, before);
+        return RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
     }
 
     protected override ValueTask<A2AConnection> NewAsync(JsonObject token, RecipeExecutionContext context)
