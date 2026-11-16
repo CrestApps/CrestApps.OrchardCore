@@ -45,7 +45,7 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
 ## Pay runs
 
 - `PayRun` (`IPayRunManager`) with its `PayRunInput`s, statuses on `PayRunStatuses.Transitions`; `IPayRunService`
-  calculates draft statements, submits to Approvals' `PayRunApproval` policy and cancels; `PayRunApprovalSubjectHandler`
+  calculates draft statements, submits to Approvals' `PayRunApproval` policy and cancels; `PayRunApprovalTypeHandler` (the Pay run approval type)
   and `PayRunSourceAccess`. **Payroll > Pay Runs**; the **Save pay inputs** pipeline step on `PayRunInputImporter`.
 - Processing: `IPayRunService.ProcessAsync`, `VoidStatementAsync` and `ReissuePaymentAsync`; payment methods
   (`IPayStatementPaymentMethod`): deposits light up with Banking's **Direct Deposit** feature and checks with Banking's
