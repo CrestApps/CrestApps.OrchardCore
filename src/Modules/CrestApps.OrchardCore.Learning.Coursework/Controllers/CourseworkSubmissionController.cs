@@ -141,6 +141,8 @@ public sealed class CourseworkSubmissionController : Controller
         {
             SubmissionErrors.NotEnrolled => H["You need an active enrollment in the course to hand in work."],
             SubmissionErrors.NotCoursework => H["This is not coursework of your course."],
+            SubmissionErrors.AccessEnded => H["Your access to this course has ended, so work can no longer be handed in."],
+            SubmissionErrors.NotAvailableYet => H["This coursework is not open to you yet."],
             SubmissionErrors.Empty => H["Type your answer or choose a file to hand in."],
             SubmissionErrors.TextRequired => H["Type your answer to hand in."],
             SubmissionErrors.FilesRequired => H["Choose a file to hand in."],

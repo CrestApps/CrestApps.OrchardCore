@@ -9,7 +9,8 @@ namespace CrestApps.OrchardCore.Learning.Coursework.Services;
 public interface ISubmissionService
 {
     /// <summary>
-    /// Hands in coursework for a learner under their own active enrollment in the course of the item. The files are
+    /// Hands in coursework for a learner under their own active enrollment in the course of the item, within the
+    /// enrollment's access dates and once the item's release rules open it, as for any other item. The files are
     /// kept in the protected store before the record is saved, and removed again when anything fails. Past the
     /// coursework's close date only work a grader returned is taken.
     /// </summary>
@@ -253,4 +254,10 @@ public static class SubmissionErrors
 
     /// <summary>Learning refused the result for another reason, such as an item no longer in the course; nothing was changed.</summary>
     public const string NotRecorded = "NotRecorded";
+
+    /// <summary>The learner's access to the course ended.</summary>
+    public const string AccessEnded = "AccessEnded";
+
+    /// <summary>The coursework is not open to the learner yet: a release rule, such as an earlier item or a date, keeps it locked.</summary>
+    public const string NotAvailableYet = "NotAvailableYet";
 }

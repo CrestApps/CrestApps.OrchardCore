@@ -36,6 +36,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
     private readonly SubmissionStore _store;
     private readonly ICourseworkContentSource _contentSource;
     private readonly ICourseStructureService _courseStructure;
+    private readonly CourseReleaseEvaluator _release;
     private readonly IEnrollmentStore _enrollments;
     private readonly ILearnerProgressService _progress;
     private readonly IProtectedFileStore<CourseworkFiles> _files;
@@ -49,6 +50,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         SubmissionStore store,
         ICourseworkContentSource contentSource,
         ICourseStructureService courseStructure,
+        CourseReleaseEvaluator release,
         IEnrollmentStore enrollments,
         ILearnerProgressService progress,
         IProtectedFileStore<CourseworkFiles> files,
@@ -61,6 +63,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         _store = store;
         _contentSource = contentSource;
         _courseStructure = courseStructure;
+        _release = release;
         _enrollments = enrollments;
         _progress = progress;
         _files = files;
@@ -99,7 +102,19 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             return SubmissionResult.Fail(SubmissionErrors.NotEnrolled);
         }
 
-        var text = string.IsNullOrWhiteSpace(request.Text) ? null : request.Text.Trim();
+        // As for any other item of the course: within the learner's access dates, once the release rules open it. The
+        // service has no signed-in user to ask the course access service with, so the enrollment rules are checked here.
+        if (!EnrollmentAccess.HasAccess(enrollment, _clock.UtcNow))
+        {
+            return SubmissionResult.Fail(SubmissionErrors.AccessEnded);
+        }
+
+        if (!(await _release.EvaluateAsync(coursework.Entry, enrollment, await _progress.GetAsync(enrollment.ItemId, cancellationToken))).IsReleased)
+        {
+            return SubmissionResult.Fail(SubmissionErrors.NotAvailableYet);
+        }
+
+        var text =string.IsNullOrWhiteSpace(request.Text) ? null : request.Text.Trim();
         var uploads = (request.Files ?? []).Where(upload => upload is not null).ToList();
         var refused = Validate(coursework.Part, ref text, uploads);
 
@@ -531,7 +546,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
 
         var outlineItem = entry.Item ?? item;
 
-        return new CourseworkTarget(outlineItem, courseId, outlineItem.FindPart<CourseworkPart>() ?? item.FindPart<CourseworkPart>());
+        return new CourseworkTarget(outlineItem, courseId, outlineItem.FindPart<CourseworkPart>() ?? item.FindPart<CourseworkPart>(), entry);
     }
 
     private async Task<GradeScore> ScoreAsync(CourseworkPart part, GradeSubmissionRequest request)
@@ -696,7 +711,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
     private static bool IsOwn(Submission submission, string actor)
         => !string.IsNullOrEmpty(actor) && string.Equals(submission.UserId, actor, StringComparison.Ordinal);
 
-    private sealed record CourseworkTarget(ContentItem Item, string CourseId, CourseworkPart Part);
+    private sealed record CourseworkTarget(ContentItem Item, string CourseId, CourseworkPart Part, CourseOutlineEntry Entry);
 
     private sealed record GradeScore(decimal Points, decimal MaxPoints, decimal Percent, string RubricId, Dictionary<string, string> Choices);
 }
