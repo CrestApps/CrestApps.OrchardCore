@@ -25,7 +25,7 @@
 }
 
 @{
-    var supportedFormats = Model.FileFormats?.Select(format => format.Value).ToList() ?? [];
+    var supportedFormats = Model.ImportFormats?.Distinct(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
     var maxUploadChunkSize = ContentImportOptions.Value.MaxUploadChunkSize;
     var maxUploadFileSize = ContentImportOptions.Value.MaxUploadFileSize;
     var maxUploadFileSizeDisplay = FormatBytes(maxUploadFileSize);

@@ -59,6 +59,11 @@ public static class AssessmentsConstants
         /// Grade items, grade scales and the course gradebook.
         /// </summary>
         public const string Gradebook = "CrestApps.OrchardCore.Learning.Assessments.Gradebook";
+
+        /// <summary>
+        /// Imports QTI 3.0 and QTI 2.1 assessment items as questions, as a ContentTransfer file format.
+        /// </summary>
+        public const string QtiImport = "CrestApps.OrchardCore.Learning.Assessments.QtiImport";
     }
 
     /// <summary>

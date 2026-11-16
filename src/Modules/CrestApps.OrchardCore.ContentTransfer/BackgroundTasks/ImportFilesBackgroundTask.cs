@@ -515,11 +515,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         {
             await using var fileStream = await fileStore.OpenSeekableReadStreamAsync(fileInfo, cancellationToken);
 
-            var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
-                .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            var formatProvider = formatProviders.FirstOrDefault(provider => provider.CanHandle(entry.StoredFileName))
+            // Two formats may share an extension when they import different content types, such as a package of
+            // questions and another system's export, so the format is the one that imports this content type.
+            var formatProvider = ContentImportRowTypes.ResolveImportFormat(serviceProvider.GetServices<IContentTransferFileFormatProvider>(), entry.StoredFileName, entry.ContentType)
                 ?? throw new InvalidOperationException(localizer["Unsupported file format: {0}", Path.GetExtension(entry.StoredFileName)]);
 
             var filterInitContext = new ContentImportRowFilterInitContext()
@@ -1037,6 +1035,40 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             return false;
         }
 
+        // An import may create items of several related content types, each row naming its own.
+        var rowContentTypes = entry.GetOrCreate<ImportContentOptionsPart>().RowContentTypes ?? [];
+        var definitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.Ordinal)
+        {
+            [contentTypeDefinition.Name] = contentTypeDefinition,
+        };
+
+        async Task<ContentTypeDefinition> RowDefinitionAsync(int rowIndex, DataRow row)
+        {
+            var type = ContentImportRowTypes.Resolve(row, entry.ContentType, rowContentTypes, out var named);
+
+            if (type is null)
+            {
+                AddRowError(progressPart, rowIndex, localizer["The row names the content type '{0}', which this import does not create.", named], localizer["Unknown content type"]);
+                runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
+
+                return null;
+            }
+
+            if (!definitions.TryGetValue(type, out var definition))
+            {
+                definition = await serviceProvider.GetRequiredService<IContentDefinitionManager>().GetTypeDefinitionAsync(type);
+                definitions[type] = definition;
+            }
+
+            if (definition is null)
+            {
+                AddRowError(progressPart, rowIndex, localizer["The content type '{0}' no longer exists.", type], localizer["Unknown content type"]);
+                runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
+            }
+
+            return definition;
+        }
+
         if (existingRows.Count > 0)
         {
             var existingContentItems = (await contentManager.GetAsync(existingRows.Keys, VersionOptions.DraftRequired))
@@ -1048,12 +1080,27 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
                 try
                 {
+                    var rowDefinition = await RowDefinitionAsync(existingRow.Value.Key, existingRow.Value.Value);
+
+                    if (rowDefinition is null)
+                    {
+                        continue;
+                    }
+
                     var isNew = false;
 
                     if (!existingContentItems.TryGetValue(existingRow.Key, out var contentItem))
                     {
-                        contentItem = await contentManager.NewAsync(entry.ContentType);
+                        contentItem = await contentManager.NewAsync(rowDefinition.Name);
                         isNew = true;
+                    }
+                    else if (!string.Equals(contentItem.ContentType, rowDefinition.Name, StringComparison.Ordinal))
+                    {
+                        // The handlers of one type would write their parts onto an item of another.
+                        AddRowError(progressPart, existingRow.Value.Key, localizer["The content item '{0}' is a '{1}', not a '{2}'.", existingRow.Key, contentItem.ContentType, rowDefinition.Name], localizer["Did not pass validation"]);
+                        runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
+
+                        continue;
                     }
 
                     await ProcessRowAsync(
@@ -1062,7 +1109,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         existingRow.Value.Key,
                         existingRow.Value.Value,
                         dataTable.Columns,
-                        contentTypeDefinition,
+                        rowDefinition,
                         contentManager,
                         contentImportManager,
                         progressPart,
@@ -1083,13 +1130,20 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             try
             {
+                var rowDefinition = await RowDefinitionAsync(record.Key, record.Value);
+
+                if (rowDefinition is null)
+                {
+                    continue;
+                }
+
                 await ProcessRowAsync(
                     entry,
-                    await contentManager.NewAsync(entry.ContentType),
+                    await contentManager.NewAsync(rowDefinition.Name),
                     record.Key,
                     record.Value,
                     dataTable.Columns,
-                    contentTypeDefinition,
+                    rowDefinition,
                     contentManager,
                     contentImportManager,
                     progressPart,
@@ -1256,7 +1310,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             ? dataRow[indexOfKeyColumn]?.ToString()?.Trim()
             : null;
 
-    private static async Task ProcessRowAsync(
+    internal static async Task ProcessRowAsync(
         ContentTransferEntry entry,
         ContentItem contentItem,
         int rowIndex,
@@ -1283,6 +1337,15 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             };
 
             await contentImportManager.ImportAsync(mapContext);
+
+            // A handler that cannot import the row says why, and nothing is saved.
+            if (mapContext.Errors.Count > 0)
+            {
+                AddRowError(progressPart, rowIndex, string.Join(" ", mapContext.Errors), mapContext.ErrorCategory ?? localizer["Could not be imported"]);
+                runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
+
+                return;
+            }
 
             var validationResult = await contentManager.ValidateAsync(mapContext.ContentItem);
 

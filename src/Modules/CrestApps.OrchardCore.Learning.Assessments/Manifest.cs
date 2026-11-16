@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Assessments;
 using OrchardCore.Modules.Manifest;
@@ -29,5 +30,18 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AssessmentsConstants.Features.Assessments,
+    ]
+)]
+
+[assembly: Feature(
+    Id = AssessmentsConstants.Features.QtiImport,
+    Name = "Learning QTI Import",
+    Description = "Imports QTI 3.0 and QTI 2.1 assessment items (a content package or a single item file) as questions through Bulk Import, into a question bank you choose, with their images in the media library.",
+    Category = "Learning",
+    Dependencies =
+    [
+        AssessmentsConstants.Features.Assessments,
+        ContentTransferConstants.Feature.ModuleId,
+        OrchardCoreFeatureIds.Media,
     ]
 )]

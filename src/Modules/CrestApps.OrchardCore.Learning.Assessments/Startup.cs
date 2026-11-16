@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer;
+using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Qti;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.PersonalData.Core;
@@ -265,5 +266,19 @@ public sealed class AssessmentsContentTransferStartup : StartupBase
         services.AddContentPartImportHandler<ShortTextQuestionPart, ShortTextQuestionPartImportHandler>();
         services.AddContentPartImportHandler<NumericQuestionPart, NumericQuestionPartImportHandler>();
         services.AddContentPartImportHandler<EssayQuestionPart, EssayQuestionPartImportHandler>();
+    }
+}
+
+/// <summary>
+/// Reads QTI 3.0 and QTI 2.1 packages and item files as questions through ContentTransfer.
+/// </summary>
+[Feature(AssessmentsConstants.Features.QtiImport)]
+public sealed class QtiImportStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSingleton<IContentTransferFileFormatProvider, QtiPackageFileFormatProvider>();
+        services.AddSingleton<IContentTransferFileFormatProvider, QtiItemFileFormatProvider>();
     }
 }

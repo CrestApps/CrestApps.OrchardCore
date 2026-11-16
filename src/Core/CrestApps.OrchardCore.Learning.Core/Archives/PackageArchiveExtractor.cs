@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace CrestApps.OrchardCore.Learning.Packages.Core.Services;
+namespace CrestApps.OrchardCore.Learning.Core.Archives;
 
 /// <summary>
 /// The limits an uploaded package must stay within.
@@ -103,45 +103,19 @@ public static class PackageArchiveExtractor
 
         using (zip)
         {
-            var entries = zip.Entries;
+            // Every entry is checked before the first byte is written, by the rules the archive reader also applies.
+            var refusal = PackageArchiveReader.Check(zip, limits, out var plan);
 
-            if (entries.Count > limits.MaxEntries)
+            if (refusal is not null)
             {
-                return PackageArchiveResult.Fail(PackageArchiveErrors.TooManyEntries);
+                return refusal;
             }
 
             var root = Path.GetFullPath(targetDirectory);
             var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
 
-            // Every entry is checked before the first byte is written.
-            var plan = new List<(ZipArchiveEntry Entry, string Path)>();
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var entry in entries)
+            foreach (var (entry, path) in plan)
             {
-                if (IsSymbolicLink(entry))
-                {
-                    return PackageArchiveResult.Fail(PackageArchiveErrors.SymbolicLink, entry.FullName);
-                }
-
-                // A folder entry writes nothing; its files carry their own paths.
-                if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
-                {
-                    if (entry.Length > 0)
-                    {
-                        return PackageArchiveResult.Fail(PackageArchiveErrors.UnsafePath, entry.FullName);
-                    }
-
-                    continue;
-                }
-
-                var path = PackagePath.Normalize(entry.FullName);
-
-                if (path is null)
-                {
-                    return PackageArchiveResult.Fail(PackageArchiveErrors.UnsafePath, entry.FullName);
-                }
-
                 var fullPath = Path.GetFullPath(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)));
 
                 // A second guard that does not depend on the path rule: the file must land inside the folder.
@@ -149,18 +123,6 @@ public static class PackageArchiveExtractor
                 {
                     return PackageArchiveResult.Fail(PackageArchiveErrors.UnsafePath, entry.FullName);
                 }
-
-                if (!seen.Add(path))
-                {
-                    return PackageArchiveResult.Fail(PackageArchiveErrors.DuplicateEntry, entry.FullName);
-                }
-
-                plan.Add((entry, path));
-            }
-
-            if (plan.Count == 0)
-            {
-                return PackageArchiveResult.Fail(PackageArchiveErrors.Empty);
             }
 
             long written = 0;
@@ -208,14 +170,5 @@ public static class PackageArchiveExtractor
                 ExpandedSize = written,
             };
         }
-    }
-
-    private static bool IsSymbolicLink(ZipArchiveEntry entry)
-    {
-        // An archive made on Unix keeps the file mode in the high word of the external attributes.
-        const int fileTypeMask = 0xF000;
-        const int symbolicLink = 0xA000;
-
-        return ((entry.ExternalAttributes >> 16) & fileTypeMask) == symbolicLink;
     }
 }

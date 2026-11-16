@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Learning.Packages.Core.Services;
+using CrestApps.OrchardCore.Learning.Core.Archives;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Scorm;
 
