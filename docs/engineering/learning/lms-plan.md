@@ -1069,3 +1069,34 @@ The ten new workflow activities are listed in the workflow designer's activity l
 | Data sets show raw ids (Submissions) | The course and coursework ids reference their content items, as the learner and grader already referenced the users. | `88746a66e` |
 | Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `aae9c295d` |
 | GET/POST route guard | The coursework grading pages say `HttpGet`. | `ed10335cb` |
+
+| "Grade again" leads a grader to a 403 | The grading form and **Return for resubmission** show on graded work only to someone with Override grades. | `1bc1ae005` |
+| Data sets show raw ids (Submissions) | The course and coursework ids reference their content items, as the learner and grader already referenced the users. | `d108faca0` |
+| Workflow hint shows `{ x }` (Return Coursework For Resubmission) | The Liquid example is an argument of the localized hint. | `381d36df7` |
+| GET/POST route guard | The coursework grading pages say `HttpGet`. | `f67bb7271` |
+
+### Phase 8, slice 1: SCORM 1.2 (branch `ma/learning-phase-8`, stacked on `ma/learning-phase-7`)
+
+**Built.**
+
+- **Learning Packages** (`Learning.Packages`, with `.Abstractions` and `.Core`), feature **Learning SCORM Packages** (`CrestApps.OrchardCore.Learning.Packages.Scorm`, depends on Learning). The **Learning package** course item kind (`LearningPackage` type, `LearningPackagePart`), completion modes PackageReported (default), Passed and MarkedDone; the `ImportLearningPackages` permission.
+- **Import**: an admin page imports a .zip into a draft of the item. The upload is copied to an `ITempDirectoryProvider` folder and extracted with every entry checked first (absolute paths, drive letters, UNC shares, `..`, colons, control characters, device names, trailing dots, symbolic links, duplicates ignoring case), at most 10,000 entries and 1 GB counted as written. `imsmanifest.xml` is read per the SCORM 1.2 CAM (default organization or the first, items depth first, `adlcp:scormtype` sco against asset, `href` under three levels of `xml:base`, item `parameters`, `adlcp:masteryscore` and the other adlcp item values; DTDs refused; SCORM 2004, cmi5 and external launch URLs refused). The first SCO is launched. A clean archive of the checked files goes to the protected file store (no access policy, so no signed link opens it).
+- **Sandbox**: package files are served only at `/learning/packages/run/{token}/{path}` with `Content-Security-Policy: sandbox allow-scripts allow-forms allow-popups` (no `allow-same-origin`), nosniff, no-referrer and `Access-Control-Allow-Origin: *` (the opaque origin needs it for the package's own scripts, fonts and data; the token, not a cookie, opens them). The launch token is Data Protection with its own purpose, bound to the launch, enrollment, package item, package file and learner, 8 hours by the site clock. The player embeds `<iframe sandbox="allow-scripts allow-forms allow-popups">`.
+- **API shim**: every HTML page of the package starts with the learner's data and `Runtime/scorm12-api.js`, which defines `window.API` (the eight SCORM 1.2 functions, the same data model table as the server) and talks to the player only through `postMessage`; the player takes messages only from its own frame, origin `"null"`, with the protocol and launch id, and relays them with the session's antiforgery token.
+- **Server runtime state**: `PackageRuntimeState` (collection `LearningPackageRuntime`) per enrollment and item; every value is replayed through `Scorm12DataModel`/`Scorm12Api` (access, vocabularies, CMIDecimal 0 to 100, CMITimespan, CMITime, CMIString255/4096, CMIIdentifier, keywords, arrays, errors 101 to 405); entry, total time, the mastery score; one lock per enrollment and item; an older launch is refused.
+- **Progress**: a commit or finish reports through `RecordResultAsync` on the learner path, marked self-reported (`CourseItemResult.SelfReported` existed, so Learning did not change). `CourseItemLearnerResolver` was added to Learning.Core.
+- The `LearningPackageRuntimeStates` recipe and deployment steps with schemas; a personal-data contributor (erasure deletes a runtime state unless its enrollment is completed).
+
+**Differences from the plan, and why.**
+
+- The package frame runs on an opaque origin (CSP and iframe sandbox) on the site's host, not on a separate host name: no second origin to configure, and the frame still cannot reach the learner's session.
+- The package file does not travel with a recipe or deployment, as for coursework files.
+- Not built: navigation between SCOs, a staff view of a learner's runtime state, a data source, workflow events, notifications, audit events.
+- Follow-up, not built: the Certifications "course completed" requirement does not look at self-reported items, so a course completed only through a package can issue a certificate today. `CourseItemPart.AllowSelfReported` and the completion snapshot's `SelfReported` exist for it. The plan says no browser-reported score issues a certificate by default.
+- Coursework and Classes keep their own learner resolvers; they can move onto `CourseItemLearnerResolver`.
+
+**Conformance.** Not run: the ADL SCORM 1.2 Conformance Test Suite needs an external download; the docs say how to run it.
+
+**Checked in the browser.** The feature enabled (one feature row, no extra module feature); a Learning package item created in Forklift Safety from the course's list; its editor shows the Import a package link and the three completion modes; the import page renders with its breadcrumb and action bar; a package imported from the page's form (posted by script, because the browser pane cannot pick a file) went into the draft and returned to the editor.
+
+**Not checked in the browser.** Running a package in the frame (the sandbox, `window.API` found by a SCO, the postMessage path, the progress shown): the browser pane stopped taking actions before the item was published and added to the outline. Covered by the integration tests (headers, injected script, runtime endpoint) and the vitest tests of the shim.
