@@ -255,6 +255,12 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             ? CallOutcome.Missed
             : ResolveOutcome(session?.State, call.State, interaction.Direction);
 
+        // The customer's address is chosen by whoever placed the call, and the agent's recent calls render it, so it is
+        // cleaned as everywhere else a call address is stored.
+        var isExtensionCall = CallerNumbers.IsExtensionCall(call);
+        var from = CallerNumbers.SanitizeAddress(call.From, isExtensionCall || existing?.IsExtension == true);
+        var to = CallerNumbers.SanitizeAddress(call.To, isExtensionCall || existing?.IsExtension == true);
+
         if (existing is null)
         {
             existing = new TelephonyInteraction
@@ -264,8 +270,8 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
                 ProviderName = call.ProviderName,
                 UserId = agent.UserId,
                 UserName = agent.UserName ?? agent.DisplayName,
-                From = call.From,
-                To = call.To,
+                From = from,
+                To = to,
                 Direction = call.Direction,
                 StartedUtc = startedUtc,
                 Outcome = outcome,
@@ -283,8 +289,8 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
         existing.UserName = string.IsNullOrEmpty(existing.UserName)
             ? agent.UserName ?? agent.DisplayName
             : existing.UserName;
-        existing.From = string.IsNullOrEmpty(call.From) ? existing.From : call.From;
-        existing.To = string.IsNullOrEmpty(call.To) ? existing.To : call.To;
+        existing.From = from ?? existing.From;
+        existing.To = to ?? existing.To;
         existing.Direction = call.Direction;
         existing.StartedUtc = existing.StartedUtc == default ? startedUtc : existing.StartedUtc;
         existing.Outcome = outcome;
