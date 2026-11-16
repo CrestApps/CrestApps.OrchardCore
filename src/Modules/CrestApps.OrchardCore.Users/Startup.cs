@@ -223,6 +223,7 @@ public sealed class EmailCodeSignInStartup : StartupBase
     {
         services.AddScoped<EmailSignInCodes>();
         services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
+        services.AddScoped<EmailOwnershipProof>();
         services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
         services.Configure<EmailSignInOptions>(_shellConfiguration.GetSection(EmailSignInOptions.SectionName));
 

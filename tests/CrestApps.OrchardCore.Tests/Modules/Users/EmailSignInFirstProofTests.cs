@@ -226,7 +226,7 @@ public sealed class EmailSignInFirstProofTests : IAsyncLifetime
             Mock.Of<IEmailSignInCodeSender>(),
             siteService.Object,
             loginFormEvents,
-            clock.Object,
+            new EmailOwnershipProof(manager, requestServices.GetRequiredService<ISession>(), clock.Object, NullLogger<EmailOwnershipProof>.Instance),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
             Options.Create(new EmailSignInOptions()),
             NullLogger<EmailSignInController>.Instance,

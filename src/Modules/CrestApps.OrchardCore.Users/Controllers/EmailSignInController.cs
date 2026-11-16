@@ -34,7 +34,7 @@ public sealed class EmailSignInController : Controller
     private readonly IEmailSignInCodeSender _codeSender;
     private readonly ISiteService _siteService;
     private readonly IEnumerable<ILoginFormEvent> _loginFormEvents;
-    private readonly IClock _clock;
+    private readonly EmailOwnershipProof _proof;
     private readonly INotifier _notifier;
     private readonly EmailSignInOptions _options;
     private readonly ILogger _logger;
@@ -49,7 +49,7 @@ public sealed class EmailSignInController : Controller
         IEmailSignInCodeSender codeSender,
         ISiteService siteService,
         IEnumerable<ILoginFormEvent> loginFormEvents,
-        IClock clock,
+        EmailOwnershipProof proof,
         INotifier notifier,
         IOptions<EmailSignInOptions> options,
         ILogger<EmailSignInController> logger,
@@ -57,7 +57,7 @@ public sealed class EmailSignInController : Controller
         IHtmlLocalizer<EmailSignInController> htmlLocalizer)
     {
         _loginFormEvents = loginFormEvents;
-        _clock = clock;
+        _proof = proof;
         _notifier = notifier;
         _options = options.Value;
         _userManager = userManager;
@@ -184,14 +184,14 @@ public sealed class EmailSignInController : Controller
         // It is recorded before the login is validated, so Orchard's check that the email is confirmed sees it confirmed.
         if (user is User account && (!account.EmailConfirmed || !UserEmailOwnership.IsVerified(account.Properties, account.Email)))
         {
-            var proof = await RecordProofAsync(account);
+            var proof = await _proof.RecordAsync(account, HttpContext.RequestAborted);
 
-            if (proof == EmailProof.Failed)
+            if (proof == EmailProofResult.Failed)
             {
                 return CodeRefused(model);
             }
 
-            if (proof == EmailProof.CredentialsRemoved)
+            if (proof == EmailProofResult.CredentialsRemoved)
             {
                 await _notifier.InformationAsync(H["Your email address is confirmed. The password and other sign-ins this account had before were removed. Sign in with a code again, or set a new password with \"Forgot your password?\"."]);
             }
@@ -214,61 +214,6 @@ public sealed class EmailSignInController : Controller
         return !string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl)
             ? LocalRedirect(model.ReturnUrl)
             : LocalRedirect(Url.Content("~/"));
-    }
-
-    // The code is the account's first proof of its address. Whatever could sign in to it before, a password, an external
-    // login or a session, was set before anyone proved the address, and may be somebody else's: whoever registered with
-    // it, or changed their email to it. It is removed, and the security stamp rotated so other sessions end, before the
-    // address is recorded as proved, which is what hands over what belongs to it (the guest orders placed with it).
-    private async Task<EmailProof> RecordProofAsync(User account)
-    {
-        var removed = false;
-
-        if (!UserEmailOwnership.IsVerified(account.Properties, account.Email))
-        {
-            if (await _userManager.HasPasswordAsync(account))
-            {
-                if (!(await _userManager.RemovePasswordAsync(account)).Succeeded)
-                {
-                    return EmailProof.Failed;
-                }
-
-                removed = true;
-            }
-
-            // A copy: Orchard Core's user store hands back the account's own list, which each removal changes.
-            foreach (var login in (await _userManager.GetLoginsAsync(account)).ToList())
-            {
-                if (!(await _userManager.RemoveLoginAsync(account, login.LoginProvider, login.ProviderKey)).Succeeded)
-                {
-                    return EmailProof.Failed;
-                }
-
-                removed = true;
-            }
-
-            if (!(await _userManager.UpdateSecurityStampAsync(account)).Succeeded)
-            {
-                return EmailProof.Failed;
-            }
-        }
-
-        account.EmailConfirmed = true;
-        UserEmailOwnership.MarkVerified(account.Properties, account.Email, _clock.UtcNow);
-
-        if (!(await _userManager.UpdateAsync(account)).Succeeded)
-        {
-            return EmailProof.Failed;
-        }
-
-        return removed ? EmailProof.CredentialsRemoved : EmailProof.Recorded;
-    }
-
-    private enum EmailProof
-    {
-        Failed,
-        Recorded,
-        CredentialsRemoved,
     }
 
     // An account a code can sign in to, with its id and its own address.

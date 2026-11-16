@@ -146,7 +146,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             Sender,
             siteService.Object,
             loginFormEvents ?? [],
-            CreateClock(),
+            new EmailOwnershipProof(manager, requestServices.GetRequiredService<ISession>(), CreateClock(), NullLogger<EmailOwnershipProof>.Instance),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
             Options.Create(new EmailSignInOptions()),
             NullLogger<EmailSignInController>.Instance,
