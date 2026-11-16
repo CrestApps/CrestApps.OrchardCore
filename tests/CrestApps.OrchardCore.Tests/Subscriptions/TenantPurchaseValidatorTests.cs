@@ -271,6 +271,9 @@ public sealed class TenantPurchaseValidatorTests
     [InlineData("github.io")]
     [InlineData("azurewebsites.net")]
     [InlineData("com.au")]
+    [InlineData("foo.ck")]
+    [InlineData("ec2.compute.amazonaws.com")]
+    [InlineData("xn--55qx5d.cn")]
     public void Validate_APublicSuffix_IsRefused(string domain)
     {
         var errors = TenantPurchaseValidator.Validate(Request(domains: [domain.ToLowerInvariant()]), Rules(allowCustomDomains: true), _tenants);
@@ -281,6 +284,8 @@ public sealed class TenantPurchaseValidatorTests
     [Theory]
     [InlineData("myshop.co.uk")]
     [InlineData("myshop.github.io")]
+    [InlineData("shop.foo.ck")]
+    [InlineData("www.ck")]
     public void Validate_ANameUnderAPublicSuffixBesideAnotherTenants_IsAllowed(string domain)
     {
         ShellSettings[] tenants = [.. _tenants, new ShellSettings { Name = "Other", RequestUrlHost = "other.co.uk,other.github.io" }];

@@ -379,7 +379,7 @@ public static partial class TenantPurchaseValidator
             // address is not a domain anybody can own, and a site on one answers every request addressed to the server by
             // address, health probes included. Nor is a public suffix (co.uk, github.io), and since a site's domain holds
             // the names under it, one purchase naming one would hold every later buyer's.
-            if (!HostRegex().IsMatch(domain) || domain.Length > 253 || IsIpAddress(domain) || PublicSuffixes.Contains(domain))
+            if (!HostRegex().IsMatch(domain) || domain.Length > 253 || IsIpAddress(domain) || PublicSuffixList.IsPublicSuffix(domain))
             {
                 errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.InvalidHost, domain));
 
