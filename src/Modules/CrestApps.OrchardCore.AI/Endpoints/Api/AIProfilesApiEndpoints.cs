@@ -23,6 +23,8 @@ internal static class AIProfilesApiEndpoints
 {
     public const string Tag = "AI Profiles";
 
+    private static readonly JsonNodeOptions _caseInsensitive = new() { PropertyNameCaseInsensitive = true };
+
     public static IEndpointRouteBuilder MapAIProfilesApi(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup(AIConversationsApiEndpoints.RoutePrefix)
@@ -138,7 +140,7 @@ internal static class AIProfilesApiEndpoints
 
         var profile = await profileManager.NewAsync(body, httpContext.RequestAborted);
 
-        if (await RefuseUnauthorizedToolsAsync(profile, existing: null, httpContext, toolAccessEvaluator) is { } toolsRefused)
+        if (await RefuseUnauthorizedToolsAsync(AsStored(profile), existing: null, httpContext, toolAccessEvaluator) is { } toolsRefused)
         {
             return toolsRefused;
         }
@@ -182,8 +184,9 @@ internal static class AIProfilesApiEndpoints
 
         // The body is bound without regard to case, while the profile's own JSON is not: its keys take the profile's
         // spelling first, so the copy whose tools are checked and the update that is saved read the same values. A
-        // lower-case "settings" or "properties" key slipped new tools past the check that way.
-        var current = JsonSerializer.SerializeToNode(profile) as JsonObject ?? [];
+        // lower-case "settings" or "properties" key slipped new tools past the check that way. Both objects match keys
+        // without regard to case, as the bound body did, so a flat key such as "systemMessage" still reaches the handler.
+        var current = JsonNode.Parse(JsonSerializer.Serialize(profile), _caseInsensitive) as JsonObject ?? [];
         var changes = AISourceCatalogApi.NormalizeKeys(body, current);
 
         // The id and the name are what links and tools point to, so they stay.
@@ -195,7 +198,7 @@ internal static class AIProfilesApiEndpoints
         copy.ItemId = profile.ItemId;
         copy.Name = profile.Name;
 
-        if (await RefuseUnauthorizedToolsAsync(copy, profile, httpContext, toolAccessEvaluator) is { } toolsRefused)
+        if (await RefuseUnauthorizedToolsAsync(AsStored(copy), profile, httpContext, toolAccessEvaluator) is { } toolsRefused)
         {
             return toolsRefused;
         }
@@ -275,6 +278,12 @@ internal static class AIProfilesApiEndpoints
             profile.Type.ToString(),
             profile.TryGet<AIProfileVersionMetadata>(out var version) ? version.Version : null,
             profile.CreatedUtc);
+
+    // The package's handler builds Properties and Settings as case-sensitive dictionaries, while the store reads the saved
+    // document back without regard to case. The tools are checked on the profile as the store will read it, so an inner key
+    // in another case, such as "functioninvocationmetadata", cannot hide a tool from the check and run later.
+    private static AIProfile AsStored(AIProfile profile)
+        => JsonSerializer.Deserialize<AIProfile>(JsonSerializer.Serialize(profile)) ?? profile;
 
     private static ProblemHttpResult Forbidden()
         => TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Forbidden");
