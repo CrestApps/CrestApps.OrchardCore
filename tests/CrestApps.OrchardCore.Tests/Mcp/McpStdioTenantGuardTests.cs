@@ -197,20 +197,53 @@ public sealed class McpStdioTenantGuardTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetAsync(connection));
     }
 
-    [Fact]
-    public async Task GetAsync_WithAnAllowlist_KeepsAnOrdinaryVariable()
+    [Theory]
+    [InlineData("GITHUB_TOKEN")]
+    [InlineData("github_token")]
+    [InlineData("GITHUB_HOST")]
+    public async Task GetAsync_WithAnAllowlist_KeepsAVariableTheHostLists(string variable)
     {
-        var provider = CreateProvider(ShellSettings.DefaultShellName, allowedCommands: ["npx"]);
+        var provider = CreateProvider(ShellSettings.DefaultShellName, allowedCommands: ["npx"], allowedVariables: ["GITHUB_TOKEN", "GITHUB_*"]);
         var connection = CreateConnection("npx");
-        connection.Put(new StdioMcpConnectionMetadata { Command = "npx", Arguments = [], EnvironmentVariables = new() { ["GITHUB_TOKEN"] = "x" } });
+        connection.Put(new StdioMcpConnectionMetadata { Command = "npx", Arguments = [], EnvironmentVariables = new() { [variable] = "x" } });
 
         Assert.NotNull(await provider.GetAsync(connection));
     }
 
-    private static GuardedStdioClientTransportProvider CreateProvider(string tenantName, string[] allowedCommands = null)
+    [Theory]
+    [InlineData("CORECLR_PROFILER_PATH")]
+    [InlineData("DOTNET_ROOT")]
+    [InlineData("JDK_JAVA_OPTIONS")]
+    [InlineData("CLASSPATH")]
+    [InlineData("npm_config_cache")]
+    [InlineData("PIP_CONFIG_FILE")]
+    [InlineData("HOME")]
+    [InlineData("APPDATA")]
+    [InlineData("GIT_SSH_COMMAND")]
+    public async Task GetAsync_WithAnAllowlist_RefusesAVariableTheHostDoesNotList(string variable)
+    {
+        // AI Mild: the list of refused variables could never be complete; only the variables the host lists are set.
+        var provider = CreateProvider(ShellSettings.DefaultShellName, allowedCommands: ["npx"], allowedVariables: ["GITHUB_TOKEN"]);
+        var connection = CreateConnection("npx");
+        connection.Put(new StdioMcpConnectionMetadata { Command = "npx", Arguments = [], EnvironmentVariables = new() { [variable] = "x" } });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetAsync(connection));
+    }
+
+    [Fact]
+    public async Task GetAsync_WithAnAllowlist_APrefixEntryNeverAllowsAVariableThatChangesWhichProgramRuns()
+    {
+        var provider = CreateProvider(ShellSettings.DefaultShellName, allowedCommands: ["npx"], allowedVariables: ["NPM_CONFIG_*", "NODE_*"]);
+        var connection = CreateConnection("npx");
+        connection.Put(new StdioMcpConnectionMetadata { Command = "npx", Arguments = [], EnvironmentVariables = new() { ["NODE_OPTIONS"] = "x" } });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetAsync(connection));
+    }
+
+    private static GuardedStdioClientTransportProvider CreateProvider(string tenantName, string[] allowedCommands = null, string[] allowedVariables = null)
         => new(
             new ShellSettings { Name = tenantName },
-            Options.Create(new McpStdioOptions { AllowedCommands = allowedCommands ?? [] }),
+            Options.Create(new McpStdioOptions { AllowedCommands = allowedCommands ?? [], AllowedEnvironmentVariables = allowedVariables ?? [] }),
             NullLogger<GuardedStdioClientTransportProvider>.Instance);
 
     private static McpConnection CreateConnection(string command)
