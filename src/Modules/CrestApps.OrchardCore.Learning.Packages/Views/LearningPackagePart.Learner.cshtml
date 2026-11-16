@@ -2,14 +2,16 @@
 
 @{
     var state = Model.State;
-    var cmi = state?.Cmi;
-    var status = cmi?.LessonStatus;
+    var summary = Model.Summary;
+
+    // SCORM 2004 reports "unknown" until the package says more; a launched package is in progress.
+    var status = summary?.Status;
     var statusText = status switch
     {
         "passed" => T["Passed"],
         "completed" => T["Completed"],
         "failed" => T["Failed"],
-        "incomplete" => T["In progress"],
+        "incomplete" or "unknown" => T["In progress"],
         "browsed" => T["Browsed"],
         _ => T["Not started"],
     };
@@ -17,7 +19,7 @@
     {
         "passed" or "completed" => "text-bg-success",
         "failed" => "text-bg-danger",
-        "incomplete" or "browsed" => "text-bg-info",
+        "incomplete" or "unknown" or "browsed" => "text-bg-info",
         _ => "text-bg-secondary",
     };
 }
@@ -51,9 +53,9 @@
                 {
                     <li class="list-inline-item"><i class="fa-solid fa-star-half-stroke me-1" aria-hidden="true"></i>@T["Score: {0}%", score.ToString("0.##")]</li>
                 }
-                @if (cmi is not null && cmi.TotalTime != "0000:00:00.00")
+                @if (summary?.TotalTime is { } totalTime)
                 {
-                    <li class="list-inline-item"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Time: {0}", cmi.TotalTime]</li>
+                    <li class="list-inline-item"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i>@T["Time: {0}", totalTime]</li>
                 }
                 @if (state?.LastLaunchedUtc is { } lastLaunched)
                 {

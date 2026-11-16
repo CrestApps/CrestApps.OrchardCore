@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.Learning.Packages.Core.Services;
 /// <summary>
 /// Launches packages and keeps their runtime state. A launch checks the learner's own enrollment, access window and
 /// the item's release rules, starts a session and returns a signed launch token. A runtime call (sent by the player page
-/// with the learner's session) must carry the token of the latest launch; every value is replayed through the SCORM 1.2
+/// with the learner's session) must carry the token of the latest launch; every value is replayed through the SCORM 1.2 or SCORM 2004
 /// data model on the server, so a value the browser accepted is never trusted. Writes to one runtime state run under
 /// one lock per enrollment and package item.
 /// </summary>
@@ -136,6 +136,8 @@ public sealed class PackageRuntimeService
         {
             var state = await _store.FindFreshAsync(enrollment.ItemId, launch.PackageItemId, cancellationToken);
             var isNew = state is null;
+            var standard = string.IsNullOrEmpty(part.Standard) ? PackagesConstants.Standards.Scorm12 : part.Standard;
+            var scorm2004 = PackagesConstants.Standards.IsScorm2004(standard);
 
             state ??= new PackageRuntimeState
             {
@@ -144,27 +146,39 @@ public sealed class PackageRuntimeService
                 UserId = userId,
                 CourseId = enrollment.CourseId,
                 PackageItemId = launch.PackageItemId,
+                Standard = standard,
+                Cmi = scorm2004 ? null : new Scorm12Cmi(),
             };
 
-            var cmi = state.Cmi ??= new Scorm12Cmi();
+            // A package of the other standard was published into the item: the data of the old one cannot carry over,
+            // so the learner starts afresh on the new one. A state written before SCORM 2004 has no standard: SCORM 1.2.
+            var switched = !isNew && PackagesConstants.Standards.IsScorm2004(state.Standard) != scorm2004;
+
+            if (switched)
+            {
+                state.Cmi = scorm2004 ? null : new Scorm12Cmi();
+                state.Cmi2004 = null;
+            }
+
+            state.Standard = standard;
+
+            var firstSession = state.Sessions == 0 || switched;
+
+            if (scorm2004)
+            {
+                StartScorm2004(state, part, standard, userId, studentName, review, firstSession);
+            }
+            else
+            {
+                StartScorm12(state, part, userId, studentName, review, firstSession);
+            }
 
             if (!review)
             {
-                Scorm12Rules.BeginSession(cmi, firstSession: state.Sessions == 0);
                 state.Sessions++;
                 state.FirstLaunchedUtc ??= now;
                 state.LastLaunchedUtc = now;
             }
-
-            // The read-only values come from the server at every launch.
-            cmi.StudentId = userId;
-            cmi.StudentName = Truncate(studentName ?? string.Empty, 255);
-            cmi.Credit = review ? "no-credit" : "credit";
-            cmi.LessonMode = review ? "review" : "normal";
-            cmi.MasteryScore = part.MasteryScore?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
-            cmi.MaxTimeAllowed = part.MaxTimeAllowed ?? string.Empty;
-            cmi.TimeLimitAction = part.TimeLimitAction ?? string.Empty;
-            cmi.LaunchData = Truncate(part.LaunchData ?? string.Empty, 4096);
 
             state.CurrentLaunchId = launch.LaunchId;
             state.PackageFileId = part.PackageFileId;
@@ -246,13 +260,17 @@ public sealed class PackageRuntimeService
                 return PackageRuntimeErrors.Superseded;
             }
 
-            var cmi = state.Cmi ??= new Scorm12Cmi();
-            var review = string.Equals(cmi.LessonMode, "review", StringComparison.Ordinal);
+            var scorm2004 = PackagesConstants.Standards.IsScorm2004(state.Standard);
+            var cmi = scorm2004 ? null : state.Cmi ??= new Scorm12Cmi();
+            var cmi2004 = scorm2004 ? state.Cmi2004 ??= new Scorm2004Cmi() : null;
+            var review = scorm2004
+                ? string.Equals(cmi2004.Mode, "review", StringComparison.Ordinal)
+                : string.Equals(cmi.LessonMode, "review", StringComparison.Ordinal);
 
             if (review)
             {
                 // A review keeps nothing: the values are checked on a copy, so the frame still gets its errors.
-                result = new PackageRuntimeResult { Refused = Replay(Copy(cmi), changes), State = state, Review = true };
+                result = new PackageRuntimeResult { Refused = scorm2004 ? Replay(Copy(cmi2004), changes) : Replay(Copy(cmi), changes), State = state, Review = true };
 
                 return null;
             }
@@ -265,17 +283,27 @@ public sealed class PackageRuntimeService
                 return enrollment.Status == EnrollmentStatus.Active ? PackageRuntimeErrors.AccessEnded : PackageRuntimeErrors.NotActive;
             }
 
-            var refused = Replay(cmi, changes);
+            var refused = scorm2004 ? Replay(cmi2004, changes) : Replay(cmi, changes);
 
             if (request.Finish)
             {
-                Scorm12Rules.FinishSession(cmi);
+                // Terminate (LMSFinish): the session time joins the total time. SCORM 2004 evaluates its statuses on
+                // every read, so it has nothing like the SCORM 1.2 mastery score to apply.
+                if (scorm2004)
+                {
+                    Scorm2004Rules.FinishSession(cmi2004);
+                }
+                else
+                {
+                    Scorm12Rules.FinishSession(cmi);
+                }
+
                 state.LastFinishedUtc = now;
 
                 // A finished session takes no more values; the next launch starts a new one.
                 state.CurrentLaunchId = null;
             }
-            else if (request.Commit)
+            else if (request.Commit && !scorm2004)
             {
                 Scorm12Rules.ApplyMasteryScore(cmi);
             }
@@ -295,7 +323,11 @@ public sealed class PackageRuntimeService
             // first and the enrollment lock inside it, the order every Learning record write takes.
             if (request.Commit || request.Finish)
             {
-                result.Progress = await _progress.RecordWithRetryAsync(enrollment, PackageResultMapper.Map(cmi, launch.PackageItemId, state.Sessions), cancellationToken);
+                var itemResult = scorm2004
+                    ? PackageResultMapper.Map(cmi2004, launch.PackageItemId, state.Attempts)
+                    : PackageResultMapper.Map(cmi, launch.PackageItemId, state.Sessions);
+
+                result.Progress = await _progress.RecordWithRetryAsync(enrollment, itemResult, cancellationToken);
 
                 if (result.Progress?.RefusedReason is not null && _logger.IsEnabled(LogLevel.Information))
                 {
@@ -389,6 +421,7 @@ public sealed class PackageRuntimeService
         return new PackageFileResult(entry.Open(), contentType, entry.FullName, new ArchiveOwner(archive))
         {
             Launch = launch,
+            Standard = part.Standard,
             State = state,
         };
     }
@@ -449,6 +482,70 @@ public sealed class PackageRuntimeService
         return (await _release.EvaluateAsync(entry, enrollment, progress)).IsReleased ? null : PackageRuntimeErrors.NotAvailableYet;
     }
 
+    // A SCORM 1.2 session: the entry from the last exit, and the read-only values from the server at every launch.
+    private static void StartScorm12(PackageRuntimeState state, LearningPackagePart part, string userId, string studentName, bool review, bool firstSession)
+    {
+        var cmi = state.Cmi ??= new Scorm12Cmi();
+
+        if (!review)
+        {
+            Scorm12Rules.BeginSession(cmi, firstSession);
+        }
+
+        cmi.StudentId = userId;
+        cmi.StudentName = Truncate(studentName ?? string.Empty, 255);
+        cmi.Credit = review ? "no-credit" : "credit";
+        cmi.LessonMode = review ? "review" : "normal";
+        cmi.MasteryScore = part.MasteryScore?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        cmi.MaxTimeAllowed = part.MaxTimeAllowed ?? string.Empty;
+        cmi.TimeLimitAction = part.TimeLimitAction ?? string.Empty;
+        cmi.LaunchData = Truncate(part.LaunchData ?? string.Empty, 4096);
+    }
+
+    // A SCORM 2004 session: the attempt resumes after a suspend and otherwise starts anew (RTE 4.2.8), and the read-only
+    // values come from the server at every launch. A review keeps the attempt as it is.
+    private static void StartScorm2004(PackageRuntimeState state, LearningPackagePart part, string standard, string userId, string learnerName, bool review, bool firstSession)
+    {
+        var cmi = state.Cmi2004 ??= new Scorm2004Cmi();
+
+        cmi.Edition = standard == PackagesConstants.Standards.Scorm2004FourthEdition ? 4 : 3;
+
+        if (!review && Scorm2004Rules.BeginSession(cmi, firstSession, part.ObjectiveIds ?? []))
+        {
+            state.Attempts++;
+        }
+
+        cmi.LearnerId = userId;
+        cmi.LearnerName = Truncate(learnerName ?? string.Empty, 250);
+        cmi.Credit = review ? "no-credit" : "credit";
+        cmi.Mode = review ? "review" : "normal";
+        cmi.LaunchData = string.IsNullOrEmpty(part.LaunchData) ? null : Truncate(part.LaunchData, 4000);
+        cmi.CompletionThreshold = part.CompletionThreshold?.ToString(CultureInfo.InvariantCulture);
+        cmi.ScaledPassingScore = part.ScaledPassingScore?.ToString(CultureInfo.InvariantCulture);
+        cmi.MaxTimeAllowed = string.IsNullOrEmpty(part.MaxTimeAllowed) ? null : part.MaxTimeAllowed;
+        cmi.TimeLimitAction = string.IsNullOrEmpty(part.TimeLimitAction) ? "continue,no message" : part.TimeLimitAction;
+    }
+
+    private static List<PackageRuntimeRefusal> Replay(Scorm2004Cmi cmi, IList<PackageRuntimeChange> changes)
+    {
+        var api = new Scorm2004Api(cmi);
+        var refused = new List<PackageRuntimeRefusal>();
+
+        api.Initialize(string.Empty);
+
+        for (var index = 0; index < changes.Count; index++)
+        {
+            var change = changes[index];
+
+            if (change is null || api.SetValue(change.Element, change.Value) != "true")
+            {
+                refused.Add(new PackageRuntimeRefusal(index, change?.Element, change is null ? Scorm2004Errors.GeneralArgumentError : api.GetLastError()));
+            }
+        }
+
+        return refused;
+    }
+
     private static List<PackageRuntimeRefusal> Replay(Scorm12Cmi cmi, IList<PackageRuntimeChange> changes)
     {
         var api = new Scorm12Api(cmi);
@@ -469,8 +566,8 @@ public sealed class PackageRuntimeService
         return refused;
     }
 
-    private static Scorm12Cmi Copy(Scorm12Cmi cmi)
-        => JsonSerializer.Deserialize<Scorm12Cmi>(JsonSerializer.Serialize(cmi));
+    private static T Copy<T>(T cmi)
+        => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(cmi));
 
     private static string Truncate(string value, int length)
         => value.Length <= length ? value : value[..length];

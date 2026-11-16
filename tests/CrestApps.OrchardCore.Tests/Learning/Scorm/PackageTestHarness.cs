@@ -26,6 +26,7 @@ internal sealed class PackageTestHarness : IAsyncDisposable
 {
     public const string Course = "course1";
     public const string Package = "package1";
+    public const string Package2004 = "package2004";
 
     private PackageTestHarness(CalendarTestHarness inner, InMemoryCourses courses, InMemoryPackageFiles files, TestClock clock)
     {
@@ -97,6 +98,33 @@ internal sealed class PackageTestHarness : IAsyncDisposable
             part.LaunchPath = "index.html";
             part.MasteryScore = masteryScore;
             part.LaunchData = "level=2";
+        });
+
+        return item;
+    }
+
+    /// <summary>
+    /// Adds a SCORM 2004 package item: a completion threshold of 0.8, a scaled passing score of 0.6, two objectives,
+    /// launch data, a time limit and sequencing in its manifest.
+    /// </summary>
+    public async Task<ContentItem> AddScorm2004PackageAsync(string id = Package2004, string standard = PackagesConstants.Standards.Scorm2004FourthEdition, decimal? completionThreshold = 0.8m, decimal? scaledPassingScore = 0.6m, string completionMode = CompletionModes.PackageReported, Action<CourseItemPart> configureItem = null)
+    {
+        using var zip = PackageZip.SingleScoPackage();
+        var file = await Files.SaveAsync("package2004.zip", zip);
+        var item = Courses.AddItem(Course, id, kind: PackagesConstants.PackageKind, completionMode: completionMode, configure: configureItem);
+
+        item.Alter<LearningPackagePart>(part =>
+        {
+            part.PackageFileId = file.FileId;
+            part.Standard = standard;
+            part.LaunchPath = "index.html";
+            part.CompletionThreshold = completionThreshold;
+            part.ScaledPassingScore = scaledPassingScore;
+            part.ObjectiveIds = ["PRIMARY", "obj-2"];
+            part.LaunchData = "chapter=1";
+            part.MaxTimeAllowed = "PT30M";
+            part.TimeLimitAction = "exit,message";
+            part.HasSequencing = true;
         });
 
         return item;

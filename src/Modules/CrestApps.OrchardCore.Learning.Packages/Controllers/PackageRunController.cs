@@ -91,7 +91,7 @@ public sealed class PackageRunController : Controller
         }
 
         var playerOrigin = $"{Request.Scheme}://{Request.Host}";
-        var page = PackageHtmlInjector.Inject(buffer.ToArray(), PackageShimScript.Build(file.Launch, file.State, playerOrigin));
+        var page = PackageHtmlInjector.Inject(buffer.ToArray(), PackageShimScript.Build(file.Launch, file.State, playerOrigin, file.Standard));
 
         return File(page, file.ContentType);
     }
@@ -136,6 +136,7 @@ public sealed class PackageRunController : Controller
             launched = true,
             token = result.Token,
             launchId = result.Launch.LaunchId,
+            protocol = PackageShimScript.ProtocolFor(result.Part.Standard),
             launchUrl,
             runtimeUrl = Url.RouteUrl("LearningPackageRuntime", new { enrollmentId = result.Launch.EnrollmentId, itemId = result.Launch.PackageItemId }),
             review = result.Review,
@@ -186,7 +187,7 @@ public sealed class PackageRunController : Controller
             message = result.Succeeded ? null : ErrorText(result.Error),
             refused = result.Refused.Select(refusal => new { index = refusal.Index, element = refusal.Element, code = refusal.Code }),
             review = result.Review,
-            status = result.State?.Cmi?.LessonStatus,
+            status = PackageStateSummary.Of(result.State).Status,
             itemCompleted = result.Progress?.ItemCompleted ?? false,
             courseCompleted = result.Progress?.CourseCompleted ?? false,
         });

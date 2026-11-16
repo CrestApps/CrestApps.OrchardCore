@@ -3,8 +3,9 @@ using CrestApps.Core.Models;
 namespace CrestApps.OrchardCore.Learning.Packages.Models;
 
 /// <summary>
-/// A learner's runtime state on a learning package under one enrollment: the SCORM 1.2 data the content keeps, the
-/// sessions, and the launch that may write to it now. One per enrollment and package item.
+/// A learner's runtime state on a learning package under one enrollment: the SCORM 1.2 or SCORM 2004 data the content
+/// keeps, the sessions and attempts, and the launch that may write to it now. One per enrollment and package item. A
+/// state written before SCORM 2004 was supported has no <see cref="Standard"/> and is SCORM 1.2.
 /// </summary>
 public sealed class PackageRuntimeState : CatalogItem
 {
@@ -26,11 +27,27 @@ public sealed class PackageRuntimeState : CatalogItem
     /// <summary>Gets or sets the package file the last launch ran.</summary>
     public string PackageFileId { get; set; }
 
-    /// <summary>Gets or sets the SCORM 1.2 data.</summary>
+    /// <summary>
+    /// Gets or sets the standard of the package at the last launch, one of <see cref="PackagesConstants.Standards"/>;
+    /// <see langword="null"/> for a state written before SCORM 2004 was supported, which is SCORM 1.2.
+    /// </summary>
+    public string Standard { get; set; }
+
+    /// <summary>Gets or sets the SCORM 1.2 data. A SCORM 2004 state stores none and never reads it (it reads back as new
+    /// SCORM 1.2 data); the <see cref="Standard"/> says which data a state uses.</summary>
     public Scorm12Cmi Cmi { get; set; } = new();
+
+    /// <summary>Gets or sets the SCORM 2004 data; <see langword="null"/> for a SCORM 1.2 state.</summary>
+    public Scorm2004Cmi Cmi2004 { get; set; }
 
     /// <summary>Gets or sets how many times the learner launched the package.</summary>
     public int Sessions { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many attempts a SCORM 2004 learner started: the first launch and every launch after an exit
+    /// other than <c>suspend</c> start one. SCORM 1.2 counts sessions only.
+    /// </summary>
+    public int Attempts { get; set; }
 
     /// <summary>Gets or sets the launch that may write now; an older launch, such as another tab, is refused.</summary>
     public string CurrentLaunchId { get; set; }

@@ -1,4 +1,5 @@
 using CrestApps.Core.Data.YesSql.Indexes;
+using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using YesSql.Indexes;
 using YesSql.Sql;
@@ -22,7 +23,8 @@ public sealed class PackageRuntimeStateIndex : CatalogItemIndex
     /// <summary>Gets or sets the package item.</summary>
     public string PackageItemId { get; set; }
 
-    /// <summary>Gets or sets <c>cmi.core.lesson_status</c>.</summary>
+    /// <summary>Gets or sets the status: <c>cmi.core.lesson_status</c> for SCORM 1.2, the evaluated success or completion
+    /// status for SCORM 2004 (<see cref="PackageStateSummary"/>).</summary>
     public string LessonStatus { get; set; }
 
     /// <summary>Gets or sets when the package was last launched, in UTC.</summary>
@@ -52,7 +54,7 @@ public sealed class PackageRuntimeStateIndexProvider : IndexProvider<PackageRunt
                 UserId = state.UserId,
                 CourseId = state.CourseId,
                 PackageItemId = state.PackageItemId,
-                LessonStatus = state.Cmi?.LessonStatus,
+                LessonStatus = PackageStateSummary.Of(state).Status,
                 LastLaunchedUtc = state.LastLaunchedUtc,
             });
 }

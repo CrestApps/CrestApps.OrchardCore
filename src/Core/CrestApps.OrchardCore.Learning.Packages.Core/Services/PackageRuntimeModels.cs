@@ -104,7 +104,7 @@ public sealed class PackageRuntimeRequest
 }
 
 /// <summary>
-/// A value the server refused, with the SCORM 1.2 error code.
+/// A value the server refused, with the error code of the package's standard (SCORM 1.2 or SCORM 2004).
 /// </summary>
 /// <param name="Index">The position of the change in the request.</param>
 /// <param name="Element">The element.</param>
@@ -167,6 +167,9 @@ public sealed class PackageFileResult : IAsyncDisposable
 
     /// <summary>Gets or sets the launch.</summary>
     public PackageLaunch Launch { get; init; }
+
+    /// <summary>Gets or sets the standard of the package, which picks the run-time API script of a page.</summary>
+    public string Standard { get; init; }
 
     /// <summary>Gets or sets the runtime state of the launch, for the data an HTML page starts with.</summary>
     public PackageRuntimeState State { get; init; }

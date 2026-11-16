@@ -4,7 +4,7 @@
 */
 (function() {
 	//#region src/Modules/CrestApps.OrchardCore.Learning.Packages/Assets/js/learning-package-player.js
-	var protocol = "crestapps-scorm12";
+	var defaultProtocol = "crestapps-scorm12";
 	var frameName = "crestapps-package-frame";
 	var flushSeconds = 30;
 	function antiforgery(root) {
@@ -65,7 +65,7 @@
 			const frame = host.querySelector("iframe");
 			if (!session || !frame || event.source !== frame.contentWindow || event.origin !== "null") return;
 			const data = event.data;
-			if (!data || data.protocol !== protocol || data.launchId !== session.launchId) return;
+			if (!data || data.protocol !== session.protocol || data.launchId !== session.launchId) return;
 			switch (data.type) {
 				case "set":
 					if (typeof data.element === "string" && typeof data.value === "string") session.pending.push([data.element, data.value]);
@@ -109,6 +109,7 @@
 				session = {
 					token: result.token,
 					launchId: result.launchId,
+					protocol: result.protocol || defaultProtocol,
 					runtimeUrl: result.runtimeUrl,
 					pending: [],
 					finished: false

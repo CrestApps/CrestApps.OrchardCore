@@ -15,7 +15,7 @@ using OrchardCore.Title.Models;
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
 /// <summary>
-/// SCORM 1.2 packages on a running site: the package files are served only under a launch token, with a sandbox
+/// SCORM 1.2 and SCORM 2004 packages on a running site: the package files are served only under a launch token, with a sandbox
 /// Content-Security-Policy that has no allow-same-origin, nosniff and their content types; pages get the run-time API;
 /// the runtime endpoint takes values only from the token's learner with the session's antiforgery token; the import page
 /// imports a package into a draft.
@@ -133,6 +133,57 @@ public sealed class LearningPackagesTests
     }
 
     [Fact]
+    public async Task Scorm2004Package_ImportsAndLaunchesWithThe2004Api_Sandboxed()
+    {
+        // Arrange
+        var (courseId, itemId) = await CreatePackageCourseAsync(Scorm2004Package(), "hazcom.zip", "learner1");
+        using var learner = await _fixture.CreateClientAsync("learner1");
+        var player = await learner.GetStringAsync($"learning/courses/{courseId}/play/{itemId}", TestContext.Current.CancellationToken);
+        var launch = await LaunchAsync(learner, itemId, player);
+        var launchUrl = launch["launchUrl"]!.GetValue<string>();
+        var runtimeUrl = launch["runtimeUrl"]!.GetValue<string>().TrimStart('/');
+        var token = launch["token"]!.GetValue<string>();
+
+        using var admin = await _fixture.CreateClientAsync("admin");
+
+        // Act
+        var page = await learner.GetAsync(launchUrl.TrimStart('/'), TestContext.Current.CancellationToken);
+        var pageHtml = await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        var runtime = await PostRuntimeAsync(learner, runtimeUrl, LearningSiteFixture.Token(player), token, """{"changes":[["cmi.location","slide-3"],["cmi.learner_id","x"],["cmi.completion_status","passed"],["cmi.score.scaled","1.5"],["cmi.progress_measure","0.9"]],"commit":true,"finish":false}""");
+        var editor = await admin.GetStringAsync($"Admin/Contents/ContentItems/{itemId}/Edit", TestContext.Current.CancellationToken);
+
+        var state = await _fixture.InTenantAsync(async services =>
+        {
+            var enrollment = (await services.GetRequiredService<IEnrollmentStore>().ListByCourseForUserAsync(_fixture.EnrolledUserId, courseId)).Single();
+
+            return await services.GetRequiredService<PackageRuntimeStore>().FindAsync(enrollment.ItemId, itemId);
+        });
+
+        // Assert: the 2004 protocol, the 2004 API first in the page, the sandbox headers.
+        Assert.Equal("crestapps-scorm2004", launch["protocol"]!.GetValue<string>());
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        AssertSandboxed(page);
+        Assert.Equal("no-store", page.Headers.CacheControl?.ToString());
+        Assert.Contains("window.CrestAppsScorm2004Launch=", pageHtml);
+        Assert.Contains("root.API_1484_11 = createApi", pageHtml);
+        Assert.DoesNotContain("CrestAppsScorm12Launch", pageHtml);
+        Assert.True(pageHtml.IndexOf("CrestAppsScorm2004Launch", StringComparison.Ordinal) < pageHtml.IndexOf("<title>Hazcom</title>", StringComparison.Ordinal));
+        Assert.Contains("\"LearnerName\":\"learner1\"", pageHtml);
+        Assert.Contains("\"CompletionThreshold\":\"0.8\"", pageHtml);
+
+        // The server checks every value against the SCORM 2004 data model and reports the evaluated status.
+        Assert.True(runtime["accepted"]!.GetValue<bool>());
+        Assert.Equal(["404", "406", "407"], runtime["refused"]!.AsArray().Select(refusal => refusal!["code"]!.GetValue<string>()));
+        Assert.Equal("completed", runtime["status"]!.GetValue<string>());
+        Assert.Equal(PackagesConstants.Standards.Scorm2004ThirdEdition, state.Standard);
+        Assert.Equal("slide-3", state.Cmi2004.Location);
+        Assert.Equal(_fixture.EnrolledUserId, state.Cmi2004.LearnerId);
+
+        // The editor shows the version the manifest declares.
+        Assert.Contains("data-package-standard>SCORM 2004 3rd Edition<", editor);
+    }
+
+    [Fact]
     public async Task ImportPage_ImportsAPackageIntoADraft_AndIsRefusedToALearner()
     {
         // Arrange
@@ -245,6 +296,38 @@ public sealed class LearningPackagesTests
         return stream.ToArray();
     }
 
+    private static byte[] Scorm2004Package()
+    {
+        using var stream = new MemoryStream();
+
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            Add(archive, "imsmanifest.xml", Scorm2004Manifest.TrimStart());
+            Add(archive, "hazcom/index.html", "<!DOCTYPE html><html><head><title>Hazcom</title></head><body>Hazard communication</body></html>");
+        }
+
+        return stream.ToArray();
+    }
+
+    private const string Scorm2004Manifest = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <manifest identifier="it.package.2004" version="1" xmlns="http://www.imsglobal.org/xsd/imscp_v1p1" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_v1p3" xmlns:imsss="http://www.imsglobal.org/xsd/imsss">
+          <metadata><schema>ADL SCORM</schema><schemaversion>2004 3rd Edition</schemaversion></metadata>
+          <organizations default="O">
+            <organization identifier="O">
+              <title>Hazard Communication Package</title>
+              <item identifier="I1" identifierref="R1">
+                <title>Hazcom lesson</title>
+                <adlcp:completionThreshold>0.8</adlcp:completionThreshold>
+              </item>
+            </organization>
+          </organizations>
+          <resources>
+            <resource identifier="R1" type="webcontent" adlcp:scormType="sco" xml:base="hazcom/" href="index.html"><file href="index.html"/></resource>
+          </resources>
+        </manifest>
+        """;
+
     private static void Add(ZipArchive archive, string name, string content)
     {
         using var writer = archive.CreateEntry(name).Open();
@@ -252,7 +335,10 @@ public sealed class LearningPackagesTests
     }
 
     // A course of its own with one package item, so the shared course of the fixture keeps its outline.
-    private async Task<(string CourseId, string ItemId)> CreatePackageCourseAsync(params string[] learners)
+    private Task<(string CourseId, string ItemId)> CreatePackageCourseAsync(params string[] learners)
+        => CreatePackageCourseAsync(Package(), "ladder.zip", learners);
+
+    private async Task<(string CourseId, string ItemId)> CreatePackageCourseAsync(byte[] package, string fileName, params string[] learners)
     {
         var userIds = new List<string>();
 
@@ -272,8 +358,8 @@ public sealed class LearningPackagesTests
             course.Alter<CoursePart>(part => part.EnrollmentMode = EnrollmentMode.Open);
             await contentManager.CreateAsync(course, VersionOptions.Draft);
 
-            using var zip = new MemoryStream(Package());
-            var imported = await services.GetRequiredService<LearningPackageImporter>().ImportAsync("ladder.zip", zip);
+            using var zip = new MemoryStream(package);
+            var imported = await services.GetRequiredService<LearningPackageImporter>().ImportAsync(fileName, zip);
 
             Assert.True(imported.Succeeded, imported.Error);
 
@@ -281,7 +367,7 @@ public sealed class LearningPackagesTests
 
             item.DisplayText = "Ladder package";
             item.Alter<TitlePart>(part => part.Title = "Ladder package");
-            item.Alter<LearningPackagePart>(part => imported.ApplyTo(part, "ladder.zip", "admin", DateTime.UtcNow));
+            item.Alter<LearningPackagePart>(part => imported.ApplyTo(part, fileName, "admin", DateTime.UtcNow));
 
             // Written back so the kind and completion mode the type gives a new item are kept, as the editor does.
             item.Alter<CourseItemPart>(part => part.CompletionMode = CompletionModes.PackageReported);
