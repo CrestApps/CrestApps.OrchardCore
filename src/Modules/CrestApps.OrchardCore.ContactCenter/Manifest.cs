@@ -63,7 +63,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.BusinessHours,
     Name = "Contact Center Business Hours",
-    Description = "Gates work distribution, entry points, the dialer and automated Omnichannel sends by business hours. The hours are Business Hours schedules, edited under Settings > Business Hours. Enabled on its own or pulled in by any feature that needs it.",
+    Description = "Gates work distribution, entry points, the dialer and automated Omnichannel sends by business hours. The hours are Business Hours schedules, edited under Tools > Business Hours. Enabled on its own or pulled in by any feature that needs it.",
     Category = "Contact Center",
     Dependencies =
     [

@@ -1,14 +1,6 @@
-using CrestApps.OrchardCore.BusinessHours;
-using CrestApps.OrchardCore.ContactCenter.Core;
+using System.Diagnostics.CodeAnalysis;
 using CrestApps.OrchardCore.ContactCenter.Legacy;
-using CrestApps.OrchardCore.Core.Security;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OrchardCore.BackgroundJobs;
 using OrchardCore.Data.Migration;
-using YesSql.Indexes;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -23,39 +15,29 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </remarks>
 internal sealed class BusinessHoursCalendarIndexMigrations : DataMigration
 {
-    /// <summary>
-    /// The permission that let a role edit the calendars, which no longer exists.
-    /// </summary>
-    internal const string LegacyManagePermissionName = "ManageContactCenterBusinessHours";
+    private readonly IBusinessHoursCalendarUpgrade _upgrade;
 
-    private readonly BusinessHoursCalendarMove _move;
-
-    public BusinessHoursCalendarIndexMigrations(BusinessHoursCalendarMove move)
+    public BusinessHoursCalendarIndexMigrations(IBusinessHoursCalendarUpgrade upgrade)
     {
-        _move = move;
+        _upgrade = upgrade;
     }
 
     /// <summary>
     /// A new site keeps its hours in the Business Hours module from the start, so there is nothing to create.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public static int Create()
-        => 3;
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Orchard Core looks the create step up as a public instance method.")]
+    public Task<int> CreateAsync()
+        => Task.FromResult(3);
 
     /// <summary>
-    /// Adds the index a calendar was found by when it was read by its own identifier.
+    /// Used to add an index to the calendars' table for reading a calendar by its identifier. Nothing reads that table
+    /// any more, so the step only moves the version on.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom1Async()
-    {
-        await IndexTableIndexCreation.CreateIfMissingAsync<BusinessHoursCalendarIndex>(
-            SchemaBuilder,
-            "IDX_BusinessHoursCalendarIndex_ItemId",
-            ContactCenterStorage.CollectionName,
-            "ItemId", "DocumentId");
-
-        return 2;
-    }
+    [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Orchard Core looks update steps up as public instance methods.")]
+    public Task<int> UpdateFrom1Async()
+        => Task.FromResult(2);
 
     /// <summary>
     /// Copies every calendar to a Business Hours schedule with the same id, so the queues, entry points, dialing
@@ -65,24 +47,9 @@ internal sealed class BusinessHoursCalendarIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await _move.MoveAsync();
-
-        // The roles are documents; they are written after the request that runs this step, once its transaction has
-        // committed. Granting is idempotent, so a later run changes nothing more.
-        await HttpBackgroundJob.ExecuteAfterEndOfRequestAsync("grant-business-hours-schedules", static scope => RolePermissionMigrations.GrantAsync(
-            scope.ServiceProvider,
-            new Dictionary<string, string[]>
-            {
-                [LegacyManagePermissionName] = [BusinessHoursPermissions.ManageBusinessHoursSchedules.Name],
-                [ContactCenterPermissions.ManageContactCenter.Name] = [BusinessHoursPermissions.ManageBusinessHoursSchedules.Name],
-            },
-            scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger<BusinessHoursCalendarIndexMigrations>()));
+        await _upgrade.MoveCalendarsAsync();
+        await _upgrade.GrantSchedulePermissionsAfterCommitAsync();
 
         return 3;
-    }
-
-    // The index table the calendars had, named after this type. Nothing writes through it.
-    private sealed class BusinessHoursCalendarIndex : MapIndex
-    {
     }
 }

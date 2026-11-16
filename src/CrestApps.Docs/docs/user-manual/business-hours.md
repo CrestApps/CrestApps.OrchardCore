@@ -2,14 +2,14 @@
 sidebar_label: Business Hours
 sidebar_position: 23
 title: Business Hours in the Contact Center
-description: Pick a business hours schedule on queues, entry points, the dialer's calling window, and automated SMS follow-ups. The hours themselves are kept under Settings > Business Hours.
+description: Pick a business hours schedule on queues, entry points, the dialer's calling window, and automated SMS follow-ups. The hours themselves are kept under Tools > Business Hours.
 technical_manual:
   - contact-center/agents-queues-dialer
   - contact-center/voice-routing
   - modules/business-hours
 ---
 
-The Contact Center uses your **business hours schedules** to know when you are open. A schedule is kept once, under **Settings > Business Hours**, and the same schedule can be used by:
+The Contact Center uses your **business hours schedules** to know when you are open. A schedule is kept once, under **Tools > Business Hours**, and the same schedule can be used by:
 
 - a **queue**, to hold or overflow callers while closed;
 - an **inbound entry point**, to pick the closed action (voicemail, overflow, reject);
@@ -19,7 +19,7 @@ The Contact Center uses your **business hours schedules** to know when you are o
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Business Hours |
+| **Menu** | Tools > Business Hours |
 | **Permission** | Manage business hours schedules |
 | **Feature** | Business Hours, enabled automatically with Contact Center Business Hours |
 
@@ -27,7 +27,7 @@ The Contact Center uses your **business hours schedules** to know when you are o
 
 ## Create the hours
 
-Create a schedule under **Settings > Business Hours**: a name, a time zone, the hours of each day (with a lunch break if you need one), and holidays or days with special hours. See [Business Hours Schedules](administration/business-hours-schedules.md) for every field.
+Create a schedule under **Tools > Business Hours**: a name, a time zone, the hours of each day (with a lunch break if you need one), and holidays or days with special hours. See [Business Hours Schedules](administration/business-hours-schedules.md) for every field.
 
 ## Use the hours
 

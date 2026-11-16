@@ -41,6 +41,7 @@ public sealed class BusinessHoursStartup : StartupBase
         // Moves the calendars this feature kept to Business Hours schedules with the same ids.
         services
             .AddScoped<BusinessHoursCalendarMove>()
+            .AddScoped<IBusinessHoursCalendarUpgrade, BusinessHoursCalendarUpgrade>()
             .AddDataMigration<BusinessHoursCalendarIndexMigrations>();
     }
 }
