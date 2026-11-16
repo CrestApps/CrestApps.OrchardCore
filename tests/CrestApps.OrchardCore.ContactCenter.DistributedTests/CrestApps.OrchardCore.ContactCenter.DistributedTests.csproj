@@ -23,9 +23,9 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.WebSockets/CrestApps.OrchardCore.WebSockets.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContactCenter/CrestApps.OrchardCore.ContactCenter.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.WebSockets/CrestApps.OrchardCore.WebSockets.csproj" PrivateAssets="none" />
   </ItemGroup>
 
   <ItemGroup>

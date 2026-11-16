@@ -528,6 +528,21 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
 
                 throw;
             }
+            catch (ConcurrencyException ex)
+            {
+                // Another process saved the same record first, most often the interaction a call event and a provider
+                // webhook update together. The handler's unit was rolled back whole and the event is retried, so this
+                // is expected contention rather than an error.
+                ContactCenterDiagnostics.RecordOutboxHandler(handlerId, Stopwatch.GetElapsedTime(handlerStarted), ex);
+                handlerFailed = true;
+                firstError ??= ex.Message;
+
+                _logger.LogWarning(
+                    "Handler '{Handler}' lost a concurrent update while handling the Contact Center event '{EventType}' for interaction '{InteractionId}'; the event will be retried.",
+                    handlerId,
+                    interactionEvent.EventType,
+                    interactionEvent.InteractionId.SanitizeLogValue());
+            }
             catch (Exception ex)
             {
                 ContactCenterDiagnostics.RecordOutboxHandler(handlerId, Stopwatch.GetElapsedTime(handlerStarted), ex);

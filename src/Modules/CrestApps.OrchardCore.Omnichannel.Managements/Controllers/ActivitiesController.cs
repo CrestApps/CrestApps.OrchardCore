@@ -1209,6 +1209,14 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
+        // The record was finished without the agent: the dialer dispositioned a call that was not answered, busy or not
+        // in service, or gave up after the last attempt. It was not lost to another agent, so the agent is told it is
+        // done, and nothing went wrong to warn about.
+        if (activity.Status.IsTerminal())
+        {
+            return await AlreadyFinishedAsync(returnUrl);
+        }
+
         HttpContext.RequestServices.GetService<ILogger<ActivitiesController>>()?.LogWarning(
             "User '{UserId}' could not complete dialer activity '{ActivityItemId}' because it is no longer reserved for them; its offer ran out or went to another agent.",
             User.FindFirstValue(ClaimTypes.NameIdentifier)?.SanitizeLogValue(),
