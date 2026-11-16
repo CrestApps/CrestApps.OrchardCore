@@ -27,6 +27,8 @@ using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
+using YesSql.Indexes;
+using YesSql.Sql;
 using ServiceLevelsDataSourcesStartup = CrestApps.OrchardCore.ServiceLevels.DataSourcesStartup;
 using TicketsDataSourcesStartup = CrestApps.OrchardCore.Tickets.DataSourcesStartup;
 
@@ -304,7 +306,11 @@ public sealed class TicketReportDataSourceTests
         }
     }
 
-    internal static Task<CalendarTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
+    internal static Task<CalendarTestHarness> CreateAsync(
+        Action<IServiceCollection> configure = null,
+        Func<ISchemaBuilder, Task> moreSchema = null,
+        IIndexProvider[] moreIndexProviders = null,
+        string[] moreCollections = null)
         => CalendarTestHarness.CreateAsync(
             services =>
             {
@@ -329,9 +335,14 @@ public sealed class TicketReportDataSourceTests
                 await TicketIndexSchema.CreateBacklogIndexAsync(schema);
                 await TimelineIndexSchema.CreateAsync(schema);
                 await ServiceLevelsIndexSchema.CreateAsync(schema);
+
+                if (moreSchema is not null)
+                {
+                    await moreSchema(schema);
+                }
             },
-            [new TicketIndexProvider(), new TicketBacklogIndexProvider(), new TimelineEntryIndexProvider(), new ServiceLevelTimerIndexProvider()],
-            [TimelineConstants.CollectionName, ServiceLevelsConstants.CollectionName]);
+            [new TicketIndexProvider(), new TicketBacklogIndexProvider(), new TimelineEntryIndexProvider(), new ServiceLevelTimerIndexProvider(), .. moreIndexProviders ?? []],
+            [TimelineConstants.CollectionName, ServiceLevelsConstants.CollectionName, .. moreCollections ?? []]);
 
     internal static Task SeedAsync(CalendarTestHarness harness)
         => harness.RunAsync(async services =>

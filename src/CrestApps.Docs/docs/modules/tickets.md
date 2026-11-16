@@ -118,6 +118,8 @@ The **Tickets for Contact Center** module (`CrestApps.OrchardCore.Tickets.Contac
 
 With Time Tracker on, a desk's editor has **Time on tickets**: the Time Tracker stage its agents' ticket work is recorded in (`TicketDeskTimeSettings.StageId`, in the desk's properties). The ticket page then has a **Time** panel. **Start working on this ticket** switches the agent's time to that stage for the ticket (`ITimeTrackerService.SwitchAsync` with `Source` `Ticket` and `SourceRef` `Ticket:{id}`), so time on tickets is part of the person's day, with no second ledger; starting another ticket ends the first entry. **Stop working on this ticket** goes back to the stage the agent was in before they started on tickets, or clocks them out if they started on the ticket. The panel adds up each person's time on the ticket from the entries for it (`TicketTime.SummarizeAsync`, open entries up to now); people whose time another clock keeps can't start from a ticket, as with any switch. Time entries are corrected in Time Tracker. This is an integration of the Tickets feature (`[RequireFeatures]`), not a feature of its own.
 
+**Log time** on the panel records time spent after the fact (`TicketTime.LogAsync` with a `TicketTimeLog`): the time spent as people write it (`30`, `45m`, `1h 30m`, `1:30`, `1.5h`, read by `TicketTimeDuration.ParseMinutes`, up to 24 hours), when it started in the agent's time zone (empty when the work just ended), a note and whether it is billable. The entry goes through `ITimeTrackerService.InsertAsync`, so it takes its place in the agent's day: the time it covers, such as their Work, is cut around it and their total doesn't change. Another ticket's time and time another clock keeps are never cut; logging over them is refused. A desk may also name **Time not billed to the customer** (`TicketDeskTimeSettings.NotBilledStageId`), a second stage for time logged as not billable; give each stage the time categories it counts toward (Billable only on the first), so Time Tracker's own reports agree with the ticket reports. The panel lists the ticket's entries with their notes and what wasn't billed, and links users with **Edit anyone's time** to the time entries page, where entries are corrected or removed.
+
 ## Service levels
 
 With [Accounts](./accounts) on, an account's **Ticket service level** (`TicketAccountPart`, on the `Account` type) names the policy its tickets run on, before the ticket type's and the desk's, for a premium support plan, say. With **Account E-mail Domains** on, a new ticket without an account is filed under the account whose domain its requester's e-mail is on, unless the address is unconfirmed (a guest's on the web form), since anyone could type a customer's address.
@@ -203,6 +205,13 @@ The building blocks add their own: `TimelineEntries` (Timeline source) and `Serv
 ## Reports
 
 With Reports on, five reports under **Reports** need **View ticket reports** and count only the reader's tickets: **Ticket Volume and Backlog**, **Ticket Response and Resolution Times**, **Ticket Service Level Compliance**, **Ticket Agent and Team Performance** and **Ticket Distribution**. Days are counted in the reader's time zone.
+
+With Time Tracker on too, two more reports read the time logged on tickets (`TicketTimeReportsStartup`):
+
+- **Ticket Time**: the time logged in the period, in all, billable and not billed, by person, account, desk and ticket type, and the tickets with the most time. Each entry counts only its part inside the period (a timer still running counts up to now).
+- **Ticket Resolution and Work Time**: for the tickets solved in the period, resolution time (calendar time from creation to solved) against work time (how long anyone was working on it, time two people worked at once counted once) and effort (every person's time added up), the people on each ticket and the touch ratio (work time as a share of resolution time), by desk, priority, ticket type and assignee, and the tickets that took the most effort. Only tickets someone logged time on are measured.
+
+A ticket entry counts as not billed when its stage is any desk's **Time not billed to the customer** stage.
 
 ## API
 

@@ -10,4 +10,11 @@ public sealed class TicketDeskTimeSettings
     /// when the desk's tickets don't record time.
     /// </summary>
     public string StageId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stage that work not billed to the customer is recorded in, or <see langword="null"/> when all
+    /// the desk's ticket time is recorded in <see cref="StageId"/>. The categories of each stage decide what the time
+    /// counts toward.
+    /// </summary>
+    public string NotBilledStageId { get; set; }
 }

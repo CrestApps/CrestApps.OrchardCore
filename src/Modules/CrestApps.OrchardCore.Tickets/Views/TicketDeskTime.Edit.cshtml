@@ -6,5 +6,13 @@
         <option value="">@T["Not recorded"]</option>
     </select>
     <span asp-validation-for="StageId" class="text-danger"></span>
-    <span class="hint">@T["The Time Tracker stage agents' work on this desk's tickets is recorded in. Agents start and stop working on a ticket from its page, and the ticket shows the time each person spent on it."]</span>
+    <span class="hint">@T["The Time Tracker stage agents' work on this desk's tickets is recorded in. Agents start and stop working on a ticket from its page, or log time they spent, and the ticket shows the time each person spent on it."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="NotBilledStageId" class="form-label">@T["Time not billed to the customer"]</label>
+    <select asp-for="NotBilledStageId" asp-items="Model.Stages" class="form-select">
+        <option value="">@T["All ticket time is billable"]</option>
+    </select>
+    <span asp-validation-for="NotBilledStageId" class="text-danger"></span>
+    <span class="hint">@T["A second stage, for time agents log as not billable. Give each stage the time categories it counts toward (Billable only on the first one), so the time reports agree."]</span>
 </div>

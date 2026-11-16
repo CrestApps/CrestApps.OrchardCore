@@ -216,6 +216,149 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
     }
 
     /// <inheritdoc/>
+    public async Task<TimeTrackerResult> InsertAsync(TimeEntry entry, string actor, string reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (string.IsNullOrEmpty(entry.UserId))
+        {
+            return TimeTrackerResult.Fail(S["Choose whose time it is."]);
+        }
+
+        if (entry.EndUtc is null)
+        {
+            return TimeTrackerResult.Fail(S["An added entry needs its end; to start one now, switch stage."]);
+        }
+
+        if (await ExternalClockAsync(entry.UserId, cancellationToken) is { } keeper)
+        {
+            return TimeTrackerResult.Fail(S["Your time is kept by {0}.", keeper.Name]);
+        }
+
+        await using var locker = await LockAsync(entry.UserId);
+
+        if (locker is null)
+        {
+            return TimeTrackerResult.Fail(S["Someone else is changing this time. Try again."]);
+        }
+
+        var now = _clock.UtcNow;
+
+        entry.ItemId ??= CrestApps.Core.UniqueId.GenerateId();
+        entry.StartUtc = Trim(entry.StartUtc);
+        entry.EndUtc = Trim(entry.EndUtc.Value);
+        entry.Source ??= TimeTrackerConstants.Sources.Manager;
+        entry.CreatedBy ??= actor;
+        entry.CreatedUtc = now;
+
+        var errors = new List<string>();
+
+        if (await FindStageAsync(entry.StageId, cancellationToken) is null)
+        {
+            errors.Add(S["Choose a stage that is in use."]);
+        }
+
+        if (entry.EndUtc <= entry.StartUtc)
+        {
+            errors.Add(S["The entry must end after it starts."]);
+        }
+        else if (entry.EndUtc > now.AddMinutes(1))
+        {
+            errors.Add(S["Time can't be recorded in the future."]);
+        }
+
+        if (errors.Count > 0)
+        {
+            return new TimeTrackerResult { Entry = entry, Errors = errors };
+        }
+
+        var start = entry.StartUtc;
+        var end = entry.EndUtc.Value;
+        var covered = (await _session.Query<TimeEntry, TimeEntryIndex>(index => index.UserId == entry.UserId && index.StartUtc < end && index.EndUtc > start, collection: TimeTrackerConstants.CollectionName)
+            .ListAsync(cancellationToken)).ToList();
+
+        // Time another clock keeps is corrected there, and time of the same source (another record's) is never moved.
+        if (covered.FirstOrDefault(other => other.ManagedBy is not null) is { } kept)
+        {
+            return await KeptElsewhereAsync(kept, cancellationToken);
+        }
+
+        if (covered.FirstOrDefault(other => string.Equals(other.Source, entry.Source, StringComparison.Ordinal)) is { } same)
+        {
+            return TimeTrackerResult.Fail(S["It overlaps other time from {0} to {1}.", await LocalAsync(same.StartUtc), same.IsOpen ? S["now"].Value : await LocalAsync(same.EndUtc.Value)]);
+        }
+
+        var open = TimeTrackerIndexProvider.OpenEnd;
+        var edited = new List<(TimeEntry Entry, string Before)>();
+        var created = new List<TimeEntry>();
+        var deleted = new List<TimeEntry>();
+
+        foreach (var other in covered)
+        {
+            var pieces = Subtract(other.StartUtc, other.EndUtc ?? open, [(start, end)]).ToList();
+
+            if (pieces.Count == 0)
+            {
+                await _entries.DeleteAsync(other, cancellationToken);
+                deleted.Add(other);
+
+                continue;
+            }
+
+            var before = await DescribeAsync(other, cancellationToken);
+
+            other.StartUtc = pieces[0].Start;
+            other.EndUtc = pieces[0].End == open ? null : pieces[0].End;
+            other.Changes.Add(new TimeEntryChange { Utc = now, By = actor, Reason = reason, Before = before });
+            await _entries.UpdateAsync(other, cancellationToken);
+            edited.Add((other, before));
+
+            if (pieces.Count > 1)
+            {
+                var rest = new TimeEntry
+                {
+                    ItemId = CrestApps.Core.UniqueId.GenerateId(),
+                    UserId = other.UserId,
+                    UserName = other.UserName,
+                    StageId = other.StageId,
+                    StartUtc = pieces[1].Start,
+                    EndUtc = pieces[1].End == open ? null : pieces[1].End,
+                    Source = other.Source,
+                    SourceRef = other.SourceRef,
+                    Note = other.Note,
+                    CreatedBy = actor,
+                    CreatedUtc = now,
+                };
+
+                await _entries.CreateAsync(rest, cancellationToken);
+                created.Add(rest);
+            }
+        }
+
+        await _entries.CreateAsync(entry, cancellationToken);
+        await _session.SaveChangesAsync(cancellationToken);
+
+        foreach (var (changed, before) in edited)
+        {
+            await NotifyAsync(TimeEntryChangeKind.Edited, changed, before, actor, reason, cancellationToken);
+        }
+
+        foreach (var removed in deleted)
+        {
+            await NotifyAsync(TimeEntryChangeKind.Deleted, removed, null, actor, reason, cancellationToken);
+        }
+
+        foreach (var rest in created)
+        {
+            await NotifyAsync(TimeEntryChangeKind.Created, rest, null, actor, reason, cancellationToken);
+        }
+
+        await NotifyAsync(TimeEntryChangeKind.Created, entry, null, actor, reason, cancellationToken);
+
+        return new TimeTrackerResult { Entry = entry };
+    }
+
+    /// <inheritdoc/>
     public async Task<TimeTrackerResult> UpdateAsync(string entryId, string stageId, DateTime startUtc, DateTime? endUtc, string note, string actor, string reason, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(reason))
@@ -324,6 +467,11 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
         if (!string.IsNullOrEmpty(query.SourceRef))
         {
             search = search.Where(index => index.SourceRef == query.SourceRef);
+        }
+
+        if (!string.IsNullOrEmpty(query.Source))
+        {
+            search = search.Where(index => index.Source == query.Source);
         }
 
         if (query.FromUtc is { } from)

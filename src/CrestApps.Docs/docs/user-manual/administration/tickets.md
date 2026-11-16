@@ -85,6 +85,8 @@ Turn on **Tickets for Contact Center**, then edit a desk and choose its **Contac
 
 When your administrator has chosen a **Time on tickets** stage for the desk, the ticket has a **Time** panel. Select **Start working on this ticket** when you pick it up and **Stop working on this ticket** when you're done; your time goes back to what you were doing before. The panel shows how long each person worked on the ticket, and the time is part of your day in **My time**.
 
+Forgot the timer? Select **Log time**, enter the **Time spent** (`30`, `45m`, `1h 30m` or `1:30`), when you **Started** (leave it empty if you just finished) and a **Note** on what you did, then select **Log time**. If you were clocked in, the time moves from what you were doing to the ticket, so your day still adds up. When the desk also has a stage for **Time not billed to the customer**, clear **Billable** for time the customer isn't charged for. **Entries** lists every entry on the ticket with its note. To correct or remove an entry, ask someone who may edit everyone's time; they use **Time entries** in Time Tracker.
+
 ## Send someone on site
 
 When a request needs a visit, choose a type (and, if you like, a priority) under **Work order** on the ticket and select **Create a work order**. The work order gets the ticket's subject, first message, account and requester, and shows under **Links**. When the work order is completed or canceled, the ticket's conversation says so, as an internal note, so you know to answer the requester. You need the **Manage work orders** permission, and Work Orders must be on.
@@ -179,6 +181,8 @@ Under **Reports**, with **View ticket reports**:
 | **Ticket Service Level Compliance** | For each target, how many ended in the period, met or missed, and how many running now are already late |
 | **Ticket Agent and Team Performance** | For each assignee and team: tickets solved, the time they took, how often they were reopened or escalated, and open tickets now |
 | **Ticket Distribution** | Tickets by channel, desk, ticket type, priority and where they stand now |
+| **Ticket Time** | With Time Tracker: the time logged on tickets, billable and not billed, by person, account, desk and ticket type, and the tickets with the most time |
+| **Ticket Resolution and Work Time** | With Time Tracker: for solved tickets, how long they took against how long people worked on them (work time) and everyone's time added up (effort), people per ticket and the touch ratio |
 
 Each report counts only the tickets you may see. To build your own, use the **Tickets** data source in the [Report Builder](../report-builder/index.md).
 

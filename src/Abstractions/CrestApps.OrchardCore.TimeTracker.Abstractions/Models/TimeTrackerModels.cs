@@ -284,6 +284,11 @@ public sealed class TimeEntryQuery
     /// Gets or sets what in the source the entries stand for, such as a ticket, if one.
     /// </summary>
     public string SourceRef { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the entries come from, one of <see cref="TimeTrackerConstants.Sources"/>, if one.
+    /// </summary>
+    public string Source { get; set; }
 }
 
 /// <summary>

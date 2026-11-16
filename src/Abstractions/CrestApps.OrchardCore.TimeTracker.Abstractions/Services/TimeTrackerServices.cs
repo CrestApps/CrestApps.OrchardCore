@@ -50,6 +50,19 @@ public interface ITimeTrackerService
     Task<TimeTrackerResult> AddAsync(TimeEntry entry, string actor, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records an entry that has already ended over the person's other time kept here, such as work logged on a record
+    /// after the fact: the time it covers is cut around it (an entry it falls inside becomes two), so the person keeps
+    /// one entry at a time and their total doesn't change. Time from the entry's own source and time another clock
+    /// keeps are never cut; an entry overlapping them is refused. Each cut entry keeps what it was and the reason.
+    /// </summary>
+    /// <param name="entry">The entry, with its stage, start and end.</param>
+    /// <param name="actor">Who records it.</param>
+    /// <param name="reason">Why, kept with the entries it cuts.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The outcome, with the new entry.</returns>
+    Task<TimeTrackerResult> InsertAsync(TimeEntry entry, string actor, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Changes an entry's stage, times or note; the change and the reason are kept with it.
     /// </summary>
     /// <param name="entryId">The entry.</param>
