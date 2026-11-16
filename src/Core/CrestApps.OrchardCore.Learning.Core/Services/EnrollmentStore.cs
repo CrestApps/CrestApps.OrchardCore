@@ -132,6 +132,21 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
             search = search.Where(index => index.Status == status);
         }
 
+        if (query.DueBeforeUtc is { } dueBefore)
+        {
+            search = search.Where(index => index.DueUtc != null && index.DueUtc < dueBefore);
+        }
+
+        if (query.AccessEndsAfterUtc is { } endsAfter)
+        {
+            search = search.Where(index => index.AccessEndsUtc != null && index.AccessEndsUtc > endsAfter);
+        }
+
+        if (query.AccessEndsBeforeUtc is { } endsBefore)
+        {
+            search = search.Where(index => index.AccessEndsUtc != null && index.AccessEndsUtc <= endsBefore);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Number))
         {
             var number = query.Number.Trim();
@@ -140,9 +155,13 @@ public sealed class EnrollmentStore : DocumentCatalog<Enrollment, EnrollmentInde
         }
 
         var count = await search.CountAsync(cancellationToken);
-        var items = await search
-            .OrderByDescending(index => index.CreatedUtc)
-            .ThenByDescending(index => index.Id)
+        var ordered = query.Order switch
+        {
+            EnrollmentOrder.DueSoonest => search.OrderBy(index => index.DueUtc).ThenBy(index => index.Id),
+            EnrollmentOrder.AccessEndsSoonest => search.OrderBy(index => index.AccessEndsUtc).ThenBy(index => index.Id),
+            _ => search.OrderByDescending(index => index.CreatedUtc).ThenByDescending(index => index.Id),
+        };
+        var items = await ordered
             .Skip(Math.Max(0, page - 1) * pageSize)
             .Take(pageSize)
             .ListAsync(cancellationToken);

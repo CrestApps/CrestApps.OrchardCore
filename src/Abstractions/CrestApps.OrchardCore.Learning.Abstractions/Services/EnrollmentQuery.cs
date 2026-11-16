@@ -42,4 +42,25 @@ public sealed class EnrollmentQuery
     /// one (<see langword="false"/>), or <see langword="null"/> for both.
     /// </summary>
     public bool? NeedsReview { get; set; }
+
+    /// <summary>
+    /// Gets or sets a time the due date must be before, in UTC, to list overdue enrollments; enrollments without a due
+    /// date are left out.
+    /// </summary>
+    public DateTime? DueBeforeUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a time access must end after, in UTC; enrollments without an end are left out.
+    /// </summary>
+    public DateTime? AccessEndsAfterUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a time access must end by, in UTC; enrollments without an end are left out.
+    /// </summary>
+    public DateTime? AccessEndsBeforeUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the order of the page. The default is the newest first.
+    /// </summary>
+    public EnrollmentOrder Order { get; set; }
 }

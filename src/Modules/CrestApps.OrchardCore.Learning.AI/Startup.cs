@@ -16,5 +16,7 @@ public sealed class Startup : StartupBase
         services.AddOptions<LearningAIOptions>();
         services.AddScoped<LearningTutorProfiles>();
         services.AddAIDataSourceResultFilter<LearningRetrievalFilter>();
+        services.AddScoped<LearnerLearningReader>();
+        services.AddScoped<LearnerRecordsLister>();
     }
 }
