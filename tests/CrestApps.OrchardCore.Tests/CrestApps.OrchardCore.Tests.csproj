@@ -38,6 +38,7 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Packages.Core/CrestApps.OrchardCore.Learning.Packages.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Lti.Core/CrestApps.OrchardCore.Learning.Lti.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Xapi.Core/CrestApps.OrchardCore.Learning.Xapi.Core.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Credentials.Core/CrestApps.OrchardCore.Learning.Credentials.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.SigningKeys.Core/CrestApps.OrchardCore.SigningKeys.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Programs.Core/CrestApps.OrchardCore.Learning.Programs.Core.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Learning.Commerce.Core/CrestApps.OrchardCore.Learning.Commerce.Core.csproj" />
@@ -50,6 +51,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Coursework/CrestApps.OrchardCore.Learning.Coursework.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Packages/CrestApps.OrchardCore.Learning.Packages.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Xapi/CrestApps.OrchardCore.Learning.Xapi.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Credentials/CrestApps.OrchardCore.Learning.Credentials.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Lti/CrestApps.OrchardCore.Learning.Lti.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Programs/CrestApps.OrchardCore.Learning.Programs.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Commerce/CrestApps.OrchardCore.Learning.Commerce.csproj" />
