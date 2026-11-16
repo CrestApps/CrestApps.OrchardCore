@@ -19,7 +19,7 @@
     {
         <textarea id="@formId-body" name="body" rows="3" class="form-control mb-2" maxlength="@TimelineConstants.MaxBodyLength" placeholder="@T["Write a note"]">@timeline.Draft</textarea>
         <label class="form-label visually-hidden" for="@formId-files">@T["Files"]</label>
-        <input id="@formId-files" name="files" type="file" multiple class="form-control form-control-sm mb-2" title="@T["Attach files"]" />
+        @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: formId + "-files", Compact: true, Target: "form", CssClass: "mb-2"))
     }
     else
     {

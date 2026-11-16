@@ -149,14 +149,13 @@ else if (Model.IsReadOnly)
                         <label for="ticket-reply-body" class="visually-hidden">@T["Message"]</label>
                         <textarea id="ticket-reply-body" name="body" class="form-control mb-2" rows="5" placeholder="@T["Write a reply or a note"]">@Model.Draft</textarea>
                         <partial name="_TicketArticleSuggestions" model='("ticket-reply-body", "ticket-reply-body", true, part.Requester.Kind == CrestApps.OrchardCore.Parties.Models.PartyKinds.User ? "signedin" : "public")' />
-                        <div class="row gx-2 gy-2 align-items-center">
-                            @if (Model.CanAttach)
-                            {
-                                <div class="col-12 col-md">
-                                    <label for="ticket-reply-files" class="visually-hidden">@T["Files"]</label>
-                                    <input id="ticket-reply-files" type="file" name="files" class="form-control form-control-sm" multiple />
-                                </div>
-                            }
+                        @if (Model.CanAttach)
+                        {
+                            @* Files dropped or pasted anywhere on the reply are attached, as in the AI chat. *@
+                            <label for="ticket-reply-files" class="visually-hidden">@T["Files"]</label>
+                            @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "ticket-reply-files", Compact: true, Target: "form", CssClass: "mb-2"))
+                        }
+                        <div class="row gx-2 gy-2 align-items-center justify-content-end">
                             @if (Model.CanSetStatus)
                             {
                                 <div class="col-auto">

@@ -81,7 +81,7 @@
         {
             <div class="mb-3">
                 <label for="reply-files" class="form-label">@T["Files"]</label>
-                <input id="reply-files" type="file" name="files" class="form-control" multiple />
+                @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "reply-files", Compact: true, Target: "form"))
             </div>
         }
         <button type="submit" class="btn btn-primary">@T["Send"]</button>

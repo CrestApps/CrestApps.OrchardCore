@@ -1,0 +1,54 @@
+@{
+    // A file input that takes dropped, pasted and picked files, which add up and are listed with a button to remove
+    // each (file-drop.js). The files post with the form under InputName, as with a plain file input; without the script
+    // the plain input shows.
+    //
+    // InputName (required), InputId, Multiple (default true), Accept (the input's accept attribute), Compact (one line,
+    // for composers), Target (a CSS selector of the area around the input that also takes drops and pastes, such as
+    // "form"), Text (the zone's text), Hint, CssClass, Disabled.
+    var inputName = (string)Model.InputName;
+    var inputId = (string)Model.InputId ?? inputName?.Replace('.', '_');
+    var multiple = Model.Multiple is not false;
+    var accept = (string)Model.Accept;
+    var compact = Model.Compact is true;
+    var target = (string)Model.Target;
+    var hint = (string)Model.Hint;
+    var cssClass = (string)Model.CssClass;
+    var disabled = Model.Disabled is true;
+    var text = (string)Model.Text;
+}
+
+<style asp-name="file-drop" at="Head"></style>
+<script asp-name="file-drop" at="Foot"></script>
+
+<div class="file-drop@(compact ? " file-drop-compact" : null)@(string.IsNullOrEmpty(cssClass) ? null : " " + cssClass)"
+     data-file-drop
+     data-file-drop-target="@target"
+     data-remove-text="@T["Remove {0}", "{0}"]"
+     data-rejected-text="@T["Not attached, this kind of file isn't accepted here: {0}", "{0}"]">
+    <input type="file" id="@inputId" name="@inputName" class="form-control@(compact ? " form-control-sm" : null)" multiple="@multiple" accept="@accept" disabled="@disabled" />
+    <div class="file-drop-zone d-none" data-file-drop-zone role="button" tabindex="@(disabled ? "-1" : "0")" aria-controls="@inputId" aria-disabled="@(disabled ? "true" : null)">
+        <i class="fa-solid fa-cloud-arrow-up file-drop-icon" aria-hidden="true"></i>
+        <span class="file-drop-text">
+            @if (!string.IsNullOrEmpty(text))
+            {
+                @text
+            }
+            else if (multiple)
+            {
+                @T["Drag and drop files here, paste them, or"] <span class="file-drop-browse">@T["browse"]</span>
+            }
+            else
+            {
+                @T["Drag and drop a file here, or"] <span class="file-drop-browse">@T["browse"]</span>
+            }
+        </span>
+        <span class="file-drop-active-text">@(multiple ? T["Drop the files to attach them"] : T["Drop the file to attach it"])</span>
+    </div>
+    <ul class="file-drop-list d-none" data-file-drop-list aria-live="polite"></ul>
+    <div class="small text-danger mt-1 d-none" data-file-drop-message role="alert"></div>
+    @if (!string.IsNullOrEmpty(hint))
+    {
+        <span class="hint">@hint</span>
+    }
+</div>

@@ -72,7 +72,7 @@ else
         {
             <div class="mb-3">
                 <label for="request-files" class="form-label">@T["Files"]</label>
-                <input id="request-files" type="file" name="files" class="form-control" multiple />
+                @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "request-files", Target: "form"))
             </div>
         }
 

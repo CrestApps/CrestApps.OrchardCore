@@ -98,7 +98,7 @@
         <div class="ocat-wrapper">
             <label for="ticket-files" class="ocat-label">@T["Files"]</label>
             <div class="ocat-end">
-                <input id="ticket-files" type="file" name="files" class="form-control" multiple />
+                @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "ticket-files", Target: "form"))
             </div>
         </div>
     }

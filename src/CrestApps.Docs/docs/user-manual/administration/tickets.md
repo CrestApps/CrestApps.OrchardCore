@@ -52,7 +52,7 @@ To change a board later, open it and select **Edit board**. A board you share ca
 
 1. Select **New ticket**, or **New ticket** on an account's **Tickets** tab.
 2. Choose who it is **for**, or enter a guest's name and e-mail.
-3. Enter the **Subject** and the first message, and attach files if you need to.
+3. Enter the **Subject** and the first message, and attach files if you need to: drag them onto the form, paste them, or select **browse**. Files you add later join the ones already there, and the × next to a file removes it. The reply box takes files the same way.
 4. Choose the **Desk** and, if you want, a **Priority**.
 5. Select **Publish**.
 
