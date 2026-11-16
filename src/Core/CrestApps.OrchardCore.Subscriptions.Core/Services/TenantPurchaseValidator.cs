@@ -34,6 +34,12 @@ public sealed class TenantPurchaseRequest
     /// Gets or sets the feature profile that limits which features the tenant may enable.
     /// </summary>
     public string FeatureProfile { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user who buys the site, when known. A name under or above the host of another site of the same
+    /// buyer is theirs to take.
+    /// </summary>
+    public string OwnerId { get; set; }
 }
 
 /// <summary>
@@ -182,6 +188,7 @@ public static partial class TenantPurchaseValidator
             Domains = domains,
             RecipeName = request.RecipeName,
             FeatureProfile = request.FeatureProfile,
+            OwnerId = request.OwnerId,
         };
     }
 
@@ -193,12 +200,15 @@ public static partial class TenantPurchaseValidator
     /// <param name="tenants">The settings of every tenant on the host.</param>
     /// <param name="ignoreTenant">A tenant to leave out of the uniqueness checks: the one being set up, which setup
     /// registers before it creates anything.</param>
+    /// <param name="ownedTenants">The names of the tenants the buyer already owns. A name under or above one of their
+    /// hosts is theirs to take; the exact host is still taken.</param>
     /// <returns>The errors.</returns>
     public static IReadOnlyList<TenantPurchaseError> Validate(
         TenantPurchaseRequest request,
         TenantPurchaseRules rules,
         IEnumerable<ShellSettings> tenants,
-        string ignoreTenant = null)
+        string ignoreTenant = null,
+        IReadOnlyCollection<string> ownedTenants = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(rules);
@@ -210,7 +220,7 @@ public static partial class TenantPurchaseValidator
 
         ValidateName(request.TenantName, others, errors);
         ValidatePrefix(request, rules, others, errors);
-        ValidateDomains(request, rules, others, errors);
+        ValidateDomains(request, rules, others, ownedTenants ?? [], errors);
 
         if (!string.Equals(request.RecipeName, rules.PlanRecipeName, StringComparison.Ordinal) || string.IsNullOrEmpty(rules.PlanRecipeName))
         {
@@ -311,7 +321,12 @@ public static partial class TenantPurchaseValidator
         }
     }
 
-    private static void ValidateDomains(TenantPurchaseRequest request, TenantPurchaseRules rules, List<ShellSettings> tenants, List<TenantPurchaseError> errors)
+    private static void ValidateDomains(
+        TenantPurchaseRequest request,
+        TenantPurchaseRules rules,
+        List<ShellSettings> tenants,
+        IReadOnlyCollection<string> ownedTenants,
+        List<TenantPurchaseError> errors)
     {
         const string field = nameof(TenantPurchaseRequest.Domains);
         var domains = request.Domains ?? [];
@@ -340,7 +355,8 @@ public static partial class TenantPurchaseValidator
             return;
         }
 
-        var reserved = new HashSet<string>((rules.ReservedHosts ?? []).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => host.Trim().Trim('.')), StringComparer.OrdinalIgnoreCase)
+        // A reserved host is reserved with every name under it, so a wildcard one reserves the domain it covers.
+        var reserved = new HashSet<string>((rules.ReservedHosts ?? []).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => Bare(host.Trim().Trim('.'))), StringComparer.OrdinalIgnoreCase)
         {
             "localhost",
         };
@@ -349,12 +365,21 @@ public static partial class TenantPurchaseValidator
             tenants.SelectMany(tenant => (tenant.RequestUrlHosts ?? [])).Where(host => !string.IsNullOrWhiteSpace(host)).Select(host => host.Trim()),
             StringComparer.OrdinalIgnoreCase);
 
+        // The hosts of the buyer's own sites hold the exact name only: the names around them are the buyer's to take.
+        var nearbyHosts = tenants
+            .Where(tenant => !ownedTenants.Contains(tenant.Name, StringComparer.OrdinalIgnoreCase))
+            .SelectMany(tenant => tenant.RequestUrlHosts ?? [])
+            .Where(host => !string.IsNullOrWhiteSpace(host))
+            .Select(host => host.Trim())
+            .ToArray();
+
         foreach (var domain in domains)
         {
             // A wildcard would claim every subdomain, the operator's included; a port or a path is not a host name. An IP
             // address is not a domain anybody can own, and a site on one answers every request addressed to the server by
-            // address, health probes included.
-            if (!HostRegex().IsMatch(domain) || domain.Length > 253 || IsIpAddress(domain))
+            // address, health probes included. Nor is a public suffix (co.uk, github.io), and since a site's domain holds
+            // the names under it, one purchase naming one would hold every later buyer's.
+            if (!HostRegex().IsMatch(domain) || domain.Length > 253 || IsIpAddress(domain) || PublicSuffixes.Contains(domain))
             {
                 errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.InvalidHost, domain));
 
@@ -362,11 +387,14 @@ public static partial class TenantPurchaseValidator
             }
 
             // The operator's domains are reserved with every name under them, so a buyer who checks out through one alias
-            // can't take another; the host derived from the base domain is the one name under it a buyer is given. With a
-            // base domain the name is a host label, so it is held to the reserved prefixes too (admin.{base domain}).
-            var isReserved = reserved.Contains(domain) || (derived
-                ? IsReservedPrefix(request.TenantName, rules) || string.Equals(request.TenantName, "www", StringComparison.OrdinalIgnoreCase)
-                : reserved.Any(host => domain.EndsWith("." + host, StringComparison.OrdinalIgnoreCase)));
+            // can't take another, and with every name above them, which the operator's own name lives under; the host
+            // derived from the base domain is the one name under it a buyer is given. With a base domain the name is a host
+            // label, so it is held to the reserved prefixes too (admin.{base domain}).
+            var isReserved = reserved.Contains(domain) ||
+                reserved.Any(host => host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase)) ||
+                (derived
+                    ? IsReservedPrefix(request.TenantName, rules) || string.Equals(request.TenantName, "www", StringComparison.OrdinalIgnoreCase)
+                    : reserved.Any(host => domain.EndsWith("." + host, StringComparison.OrdinalIgnoreCase)));
 
             if (isReserved)
             {
@@ -375,9 +403,11 @@ public static partial class TenantPurchaseValidator
                 continue;
             }
 
-            // A name under another tenant's host, or a parent of one, belongs with that host: its owner points the names
-            // around it at the platform too (www.v.com next to v.com), and a buyer who could claim them would serve them.
-            if (takenHosts.Contains(domain) || (!derived && takenHosts.Any(host => IsUnderOrAbove(domain, host))))
+            // A name under another buyer's host, or a parent of one, belongs with that host: its owner points the names
+            // around it at the platform too (www.v.com next to v.com), and a buyer who could claim them would serve them. A
+            // wildcard host (*.v.com) answers every name under v.com. The names under the base domain are the operator's
+            // to hand out, so a derived host is held to the exact names only.
+            if (takenHosts.Contains(domain) || (!derived && nearbyHosts.Any(host => IsUnderOrAbove(domain, host))))
             {
                 errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.HostTaken, domain));
             }
@@ -385,8 +415,17 @@ public static partial class TenantPurchaseValidator
     }
 
     private static bool IsUnderOrAbove(string domain, string host)
-        => domain.EndsWith("." + host, StringComparison.OrdinalIgnoreCase) ||
-            host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
+    {
+        var bare = Bare(host);
+
+        return string.Equals(domain, bare, StringComparison.OrdinalIgnoreCase) ||
+            domain.EndsWith("." + bare, StringComparison.OrdinalIgnoreCase) ||
+            bare.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // A wildcard host (*.v.com) stands for the names under its domain.
+    private static string Bare(string host)
+        => host.StartsWith("*.", StringComparison.Ordinal) ? host[2..] : host;
 
     // The host pattern accepts dotted digits, so 203.0.113.10 passes it. No top-level domain is all digits.
     private static bool IsIpAddress(string domain)

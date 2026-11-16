@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -31,7 +33,9 @@ public interface ITenantPurchaseRulesProvider
 
     /// <summary>
     /// Returns every reason the purchase is refused: <see cref="TenantPurchaseValidator.Validate"/>, and a prefix whose
-    /// URLs this store already serves itself (the first segment of one of its routes or of one of its pages' paths).
+    /// URLs this store already serves itself (the first segment of one of its routes or of one of its pages' paths, a
+    /// module's or theme's id, or a top-level entry of the web root). The sites the request's buyer already owns don't
+    /// hold the names around their hosts against them.
     /// </summary>
     /// <param name="request">The normalized request.</param>
     /// <param name="rules">The rules.</param>
@@ -60,6 +64,7 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
     private readonly ITenantFeatureProfileCatalog _featureProfiles;
     private readonly ICheckoutSessionStore _sessionStore;
     private readonly StoreRouteSegments _storeRoutes;
+    private readonly ITenantProvisioningJobStore _jobStore;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantPurchaseRulesProvider"/> class.
@@ -71,6 +76,7 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
     /// <param name="featureProfiles">The feature profiles a sold site may be given.</param>
     /// <param name="sessionStore">The checkouts, which record the plan's recipe.</param>
     /// <param name="storeRoutes">The URLs this store serves itself.</param>
+    /// <param name="jobStore">The provisioning jobs, which tell which sites a buyer owns.</param>
     public TenantPurchaseRulesProvider(
         ISiteService siteService,
         IShellHost shellHost,
@@ -78,7 +84,8 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
         IOptions<AdminOptions> adminOptions,
         ITenantFeatureProfileCatalog featureProfiles,
         ICheckoutSessionStore sessionStore,
-        StoreRouteSegments storeRoutes)
+        StoreRouteSegments storeRoutes,
+        ITenantProvisioningJobStore jobStore)
     {
         _siteService = siteService;
         _shellHost = shellHost;
@@ -87,6 +94,7 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
         _featureProfiles = featureProfiles;
         _sessionStore = sessionStore;
         _storeRoutes = storeRoutes;
+        _jobStore = jobStore;
     }
 
     /// <inheritdoc/>
@@ -97,7 +105,9 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
         string ignoreTenant = null,
         CancellationToken cancellationToken = default)
     {
-        var errors = TenantPurchaseValidator.Validate(request, rules, tenants, ignoreTenant).ToList();
+        var all = tenants?.ToList() ?? [];
+        var owned = await GetOwnedTenantsAsync(request?.OwnerId, all, cancellationToken);
+        var errors = TenantPurchaseValidator.Validate(request, rules, all, ignoreTenant, owned).ToList();
         var prefix = request.Prefix?.Trim().Trim('/');
 
         // A site on a prefix of the store's own address takes every URL under it. The reserved list can't name every route
@@ -111,6 +121,35 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
         }
 
         return errors;
+    }
+
+    // The sites the buyer owns: a tenant whose newest successful job is theirs. A name sold again after a site was removed
+    // belongs to the newest buyer, so an older job for it doesn't count.
+    private async Task<IReadOnlyCollection<string>> GetOwnedTenantsAsync(string ownerId, List<ShellSettings> tenants, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(ownerId))
+        {
+            return [];
+        }
+
+        var names = (await _jobStore.GetByOwnerAsync(ownerId, cancellationToken))
+            .Where(job => job.Status == TenantProvisioningStatus.Succeeded && !string.IsNullOrEmpty(job.TenantName))
+            .Select(job => job.TenantName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var owned = new List<string>();
+
+        foreach (var tenant in tenants)
+        {
+            if (names.Contains(tenant.Name) &&
+                await _jobStore.GetByTenantNameAsync(tenant.Name, cancellationToken) is { } newest &&
+                string.Equals(newest.OwnerId, ownerId, StringComparison.Ordinal))
+            {
+                owned.Add(tenant.Name);
+            }
+        }
+
+        return owned;
     }
 
     /// <inheritdoc/>

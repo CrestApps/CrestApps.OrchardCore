@@ -138,7 +138,8 @@ public sealed class TenantProvisioningPaymentGateTests
             Options.Create(new AdminOptions()),
             catalog.Object,
             Mock.Of<ICheckoutSessionStore>(),
-            StoreRoutes.Create(storeRoutes ?? ["account/addresses", "cart"]));
+            StoreRoutes.Create(storeRoutes ?? ["account/addresses", "cart"]),
+            new CrestApps.OrchardCore.Tests.Subscriptions.Fakes.InMemoryTenantProvisioningJobStore());
 
         var localizer = new Mock<IStringLocalizer<TenantProvisioningPaymentGate>>();
         localizer.Setup(l => l[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));
