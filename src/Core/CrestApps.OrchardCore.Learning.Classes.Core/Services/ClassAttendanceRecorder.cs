@@ -10,7 +10,8 @@ namespace CrestApps.OrchardCore.Learning.Classes.Core.Services;
 /// <summary>
 /// Brings an enrollment's class item in line with the attendance of its registration: attendance that counts completes
 /// the item on the manual path, as a staff record, so the learner's access window and the release rules do not stop
-/// it. A refusal that can pass (a busy enrollment, an enrollment that is suspended for now) is retried.
+/// it; attendance changed to absent, or to too little, takes that completion back (or flags a completed enrollment for
+/// review). A refusal that can pass (a busy enrollment, an enrollment that is suspended for now) is retried.
 /// </summary>
 internal sealed class ClassAttendanceRecorder
 {
@@ -49,14 +50,29 @@ internal sealed class ClassAttendanceRecorder
         var item = course is null ? null : (await _courses.GetOutlineAsync(course)).Find(classItemId)?.Item;
         var part = item is not null && item.TryGet<ClassPart>(out var found) ? found : null;
 
-        if (appointment.Status != AppointmentStatus.Completed || !ClassAttendance.Counts(appointment, part))
+        if (appointment.Status == AppointmentStatus.Completed && ClassAttendance.Counts(appointment, part))
+        {
+            var update = await _progress.CompleteItemAsync(enrollment, classItemId, actor ?? ClassesConstants.RegistrationSource, CompletionReason, cancellationToken);
+
+            return Settle(update, enrollment);
+        }
+
+        if (appointment.Status is not (AppointmentStatus.NoShow or AppointmentStatus.Completed))
         {
             return ClassFollowUpOutcome.Done;
         }
 
-        var update = await _progress.CompleteItemAsync(enrollment, classItemId, actor ?? ClassesConstants.RegistrationSource, CompletionReason, cancellationToken);
+        // Attendance changed to absent, or to too little: the completion that attendance made is taken back (a
+        // completed enrollment is flagged for review). An item a person completed by hand for another reason stays.
+        var current = (await _progress.GetAsync(enrollment.ItemId, cancellationToken)).Find(classItemId);
 
-        return Settle(update, enrollment);
+        if (current?.State != CourseItemState.Completed ||
+            (!string.IsNullOrEmpty(current.CompletedBy) && current.CompletionReason != CompletionReason))
+        {
+            return ClassFollowUpOutcome.Done;
+        }
+
+        return Settle(await _progress.ReopenItemAsync(enrollment, classItemId, cancellationToken), enrollment);
     }
 
     private static ClassFollowUpOutcome Settle(ProgressUpdate update, Enrollment enrollment)

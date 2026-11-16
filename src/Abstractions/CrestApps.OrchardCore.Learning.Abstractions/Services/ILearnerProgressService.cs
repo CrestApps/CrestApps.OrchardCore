@@ -75,6 +75,17 @@ public interface ILearnerProgressService
     Task<ProgressUpdate> CompleteItemAsync(Enrollment enrollment, string itemId, string actor, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Takes back the completion of a course item, such as attendance that was marked by mistake. On an active
+    /// enrollment the item is in progress again and the progress and grade are worked out again; a completed enrollment
+    /// is a record, so it stays completed and is flagged for review instead. An item that is not completed is left as it is.
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <param name="itemId">The content item id of the course item.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>What changed.</returns>
+    Task<ProgressUpdate> ReopenItemAsync(Enrollment enrollment, string itemId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Records that a member of the course staff approves the learner's completion, for a course whose completion
     /// criteria include staff approval, and completes the course when every other criterion is met.
     /// </summary>

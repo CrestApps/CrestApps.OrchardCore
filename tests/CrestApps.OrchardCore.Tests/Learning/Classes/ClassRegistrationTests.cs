@@ -304,6 +304,36 @@ public sealed class ClassRegistrationTests
         Assert.Equal(CourseItemState.Completed, after.Items.SingleOrDefault(item => item.ContentItemId == "class1")?.State);
     }
 
+    [Fact]
+    public async Task AttendedChangedToAbsent_ReopensTheClassItem_OrFlagsACompletedEnrollmentForReview()
+    {
+        // Arrange: both attended; Ben's enrollment was completed since.
+        var (h, session) = await CreateAsync();
+        await using var _ = h;
+        var ana = await EnrollAsync(h, "ana");
+        var ben = await EnrollAsync(h, "ben");
+        var anaPlace = await RegisterAsync(h, ana, session);
+        var benPlace = await RegisterAsync(h, ben, session);
+
+        await MarkAsync(h, session, anaPlace.Registration.Appointment.ItemId, AppointmentAttendance.Attended);
+        await MarkAsync(h, session, benPlace.Registration.Appointment.ItemId, AppointmentAttendance.Attended);
+        await h.RunAsync(services => services.GetRequiredService<IEnrollmentService>().ChangeStatusAsync(ben.ItemId, EnrollmentStatus.Completed, "admin", "Done"));
+
+        // Act: the attendance was marked by mistake.
+        await MarkAsync(h, session, anaPlace.Registration.Appointment.ItemId, AppointmentAttendance.Absent);
+        await MarkAsync(h, session, benPlace.Registration.Appointment.ItemId, AppointmentAttendance.Absent);
+        var anaProgress = await h.RunAsync(services => services.GetRequiredService<ILearnerProgressService>().GetAsync(ana.ItemId));
+        var anaEnrollment = await h.RunAsync(services => services.GetRequiredService<IEnrollmentStore>().FindByIdAsync(ana.ItemId));
+        var benEnrollment = await h.RunAsync(services => services.GetRequiredService<IEnrollmentStore>().FindByIdAsync(ben.ItemId));
+
+        // Assert
+        Assert.Equal(CourseItemState.InProgress, anaProgress.Items.Single(item => item.ContentItemId == "class1").State);
+        Assert.Equal(EnrollmentStatus.Active, anaEnrollment.Status);
+        Assert.Equal(EnrollmentStatus.Completed, benEnrollment.Status);
+        Assert.True(benEnrollment.NeedsReview);
+        Assert.Equal("class1", benEnrollment.Review.ItemId);
+    }
+
     private static IClassRegistrationService Registrations(IServiceProvider services)
         => services.GetRequiredService<IClassRegistrationService>();
 

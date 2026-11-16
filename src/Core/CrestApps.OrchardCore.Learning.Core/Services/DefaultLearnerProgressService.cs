@@ -251,6 +251,93 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
     }
 
     /// <inheritdoc />
+    public Task<ProgressUpdate> ReopenItemAsync(Enrollment enrollment, string itemId, CancellationToken cancellationToken = default)
+    {
+        if (enrollment is null || string.IsNullOrEmpty(itemId))
+        {
+            return Task.FromResult(new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.ItemNotFound });
+        }
+
+        return _writeGate.RunAsync(
+            enrollment.ItemId,
+            notifications => ReopenItemCoreAsync(enrollment, itemId, notifications, cancellationToken),
+            () => new ProgressUpdate { Enrollment = enrollment, RefusedReason = LearningRefusals.Busy },
+            cancellationToken);
+    }
+
+    private async Task<ProgressUpdate> ReopenItemCoreAsync(Enrollment enrollment, string itemId, IList<Func<Task>> notifications, CancellationToken cancellationToken)
+    {
+        enrollment = await _enrollmentStore.FindFreshAsync(enrollment.ItemId, cancellationToken) ?? enrollment;
+
+        var now = _clock.UtcNow;
+        var progress = await _progressStore.FindFreshByEnrollmentAsync(enrollment.ItemId, cancellationToken);
+        var item = progress?.Find(itemId);
+
+        if (item?.State != CourseItemState.Completed)
+        {
+            return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = item };
+        }
+
+        // A completed enrollment is a record: what its completion rests on was taken back, so a person reviews it.
+        if (enrollment.Status == EnrollmentStatus.Completed)
+        {
+            if (!enrollment.NeedsReview)
+            {
+                enrollment.Review = new EnrollmentReview
+                {
+                    Reason = LearningReviewReasons.ItemReopenedAfterCompletion,
+                    ItemId = itemId,
+                    PreviousScore = item.Score,
+                    NewScore = item.Score,
+                    FlaggedUtc = now,
+                };
+                enrollment.ModifiedUtc = now;
+
+                await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+                notifications.Add(() => NotifyAsync(observer => observer.ReviewNeededAsync(enrollment, cancellationToken)));
+            }
+
+            return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = item };
+        }
+
+        if (enrollment.Status != EnrollmentStatus.Active)
+        {
+            return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = item, RefusedReason = LearningRefusals.NoAccess };
+        }
+
+        var course = await _courseStructure.GetCourseAsync(enrollment.CourseId);
+
+        if (course is null)
+        {
+            return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = item, RefusedReason = LearningRefusals.CourseUnavailable };
+        }
+
+        var outline = await _courseStructure.GetOutlineAsync(course);
+
+        item.State = CourseItemState.InProgress;
+        item.CompletedUtc = null;
+        item.CompletedBy = null;
+        item.CompletionReason = null;
+        progress.ModifiedUtc = now;
+        await _progressStore.SaveAsync(progress, cancellationToken);
+
+        var percent = CourseCompletionEvaluator.ComputePercent(outline, progress);
+        var grade = CourseGradeCalculator.Compute(outline, progress);
+        var passed = CourseGradeCalculator.IsPassed(grade, course.Get<CoursePart>(nameof(CoursePart))?.PassMark);
+
+        if (percent != enrollment.ProgressPercent || grade != enrollment.Grade || passed != enrollment.Passed)
+        {
+            enrollment.ProgressPercent = percent;
+            enrollment.Grade = grade;
+            enrollment.Passed = passed;
+            enrollment.ModifiedUtc = now;
+            await _enrollmentStore.SaveAsync(enrollment, cancellationToken);
+        }
+
+        return new ProgressUpdate { Enrollment = enrollment, Progress = progress, Item = item };
+    }
+
+    /// <inheritdoc />
     public Task<ProgressUpdate> ApproveCompletionAsync(Enrollment enrollment, string actor, CancellationToken cancellationToken = default)
     {
         if (enrollment is null)

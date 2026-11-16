@@ -10,9 +10,9 @@ namespace CrestApps.OrchardCore.Learning.Classes.Core.Services;
 
 /// <summary>
 /// Completes a class item when its learner attended: attended, or partly attended for at least the class's minimum
-/// minutes (see <see cref="ClassAttendanceRecorder"/>). Attendance that cannot be recorded now (a busy or suspended
-/// enrollment, a failure) is queued and recorded again later. Recording the same attendance again changes nothing,
-/// because a completed item stays completed.
+/// minutes, and takes that back when the attendance is changed to absent or too little (see
+/// <see cref="ClassAttendanceRecorder"/>). Attendance that cannot be recorded now (a busy or suspended enrollment, a
+/// failure) is queued and recorded again later. Recording the same attendance again changes nothing.
 /// </summary>
 internal sealed class ClassAttendanceObserver : IAppointmentObserver
 {
@@ -27,7 +27,7 @@ internal sealed class ClassAttendanceObserver : IAppointmentObserver
 
     public async Task OnChangedAsync(AppointmentChange change, CancellationToken cancellationToken = default)
     {
-        if (change?.Kind != AppointmentChangeKind.Completed ||
+        if (change?.Kind is not (AppointmentChangeKind.Completed or AppointmentChangeKind.NoShow) ||
             change.Appointment is not { Source: ClassesConstants.RegistrationSource } appointment ||
             !ClassesConstants.TryReadRegistrationSourceId(appointment.SourceId, out _, out _))
         {
