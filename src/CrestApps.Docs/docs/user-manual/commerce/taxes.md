@@ -10,7 +10,7 @@ The **Taxation** screens decide which taxes your site charges and how much. You 
 
 | | |
 | --- | --- |
-| **Menu** | Commerce > Taxation > Categories, Types and Rules; Taxes > Jurisdictions and Tables |
+| **Menu** | Commerce > Taxation > Categories, Types, Jurisdictions, Rules and Tables |
 | **Permission** | Manage taxation |
 | **Feature** | Taxation |
 
@@ -50,7 +50,7 @@ Your site starts with a list of common types: *SalesTax*, *VAT*, *GST*, *HST*, *
 
 A **jurisdiction** is a place that taxes, such as a country, a state or a city.
 
-1. Open **Taxes > Jurisdictions** and click **Add Tax Jurisdiction**.
+1. Open **Commerce > Taxation > Jurisdictions** and click **Add Tax Jurisdiction**.
 2. Fill in the fields and click **Save**.
 
 | Field | What it does |
@@ -69,7 +69,7 @@ A **jurisdiction** is a place that taxes, such as a country, a state or a city.
 
 A **tax table** is a list of amount ranges, each with its own rate. You need one only for the **Tax table lookup**, **Progressive** and **Threshold** rules. Skip this step if all your taxes are a simple percentage or a fixed amount.
 
-1. Open **Taxes > Tables** and click **Add Tax Table**.
+1. Open **Commerce > Taxation > Tables** and click **Add Tax Table**.
 2. Enter a **Name** and, optionally, **Effective from** and **Effective to** dates. A rule only uses the table on dates inside that window.
 3. Click **Add row** for each range and fill it in. Use the trash button to remove a row.
 4. Click **Save**. Rows are sorted by their minimum when saved.

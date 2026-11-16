@@ -28,7 +28,7 @@ snapshot rather than re-rating with today's rules.
 - **Income Tax** (`CrestApps.OrchardCore.Taxation.IncomeTax`) — income tax rules for any jurisdiction of any
   country (a rate, a fixed amount, a table, progressive brackets or a country's withholding method, paid by the
   earner or the payer, with wage bases, yearly exemptions and maximums, and the payer's own registration rate), the
-  built-in `IIncomeTaxProvider`, and **Taxes > Income tax rules**, behind the Administrator-only
+  built-in `IIncomeTaxProvider`, and **Commerce > Taxation > Income tax rules**, behind the Administrator-only
   `ManageIncomeTaxRules` permission (security critical: the rules decide every payer's withholding).
 - **United States Income Tax** — Form W-4 withholding (Publication 15-T) and the 2026 federal rules as a recipe.
 - **Canada Income Tax** — the CRA's T4127 federal and provincial formulas and Revenu Québec's TP-1015.F, with

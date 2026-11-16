@@ -27,6 +27,8 @@ public sealed class PaySetupAdminMenu : AdminNavigationProvider
         builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll => payroll
             .Id("payroll")
             .AddClass("payroll")
+            .AddClass("icon-class-fa-solid")
+            .AddClass("icon-class-fa-money-check-dollar")
             .Add(S["Setup"], S["Setup"].PrefixPosition("90"), setup => setup
                 .Id("payrollSetup")
                 .Add(S["Pay Schedules"], S["Pay Schedules"].PrefixPosition("10"), schedules => schedules
@@ -75,7 +77,7 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
         {
             builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll =>
             {
-                payroll.Id("payroll");
+                payroll.Id("payroll").AddClass("payroll").AddClass("icon-class-fa-solid").AddClass("icon-class-fa-money-check-dollar");
 
                 if (runs)
                 {
@@ -169,6 +171,9 @@ public sealed class GarnishmentsAdminMenu : AdminNavigationProvider
 
         builder.Add(S["Payroll"], S["Payroll"].PrefixPosition("6"), payroll => payroll
             .Id("payroll")
+            .AddClass("payroll")
+            .AddClass("icon-class-fa-solid")
+            .AddClass("icon-class-fa-money-check-dollar")
             .Add(S["Garnishments"], S["Garnishments"].PrefixPosition("30"), item => item
                 .Id("payrollGarnishments")
                 .Action("Index", "Garnishments", PayrollConstants.Features.Payroll)

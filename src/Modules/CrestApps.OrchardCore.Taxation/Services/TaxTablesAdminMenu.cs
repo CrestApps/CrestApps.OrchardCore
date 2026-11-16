@@ -18,9 +18,9 @@ internal sealed class TaxTablesAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Taxes"], S["Taxes"].PrefixPosition(), taxes => taxes
-                .Id("taxes")
-                .AddClass("taxes")
+            .Add(S["Commerce"], commerce => commerce
+                .Add(S["Taxation"], S["Taxation"].PrefixPosition(), taxation => taxation
+                .Id("taxation")
                 .Add(S["Jurisdictions"], S["Jurisdictions"].PrefixPosition(), jurisdictions => jurisdictions
                     .Id("taxationJurisdictions")
                     .Action("Index", "TaxJurisdictions", "CrestApps.OrchardCore.Taxation")
@@ -30,7 +30,7 @@ internal sealed class TaxTablesAdminMenu : AdminNavigationProvider
                     .Id("taxationTables")
                     .Action("Index", "TaxTables", "CrestApps.OrchardCore.Taxation")
                     .Permission(TaxationPermissions.ManageTaxation)
-                    .LocalNav()));
+                    .LocalNav())));
 
         return ValueTask.CompletedTask;
     }

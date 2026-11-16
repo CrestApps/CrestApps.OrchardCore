@@ -25,6 +25,8 @@ public sealed class ApprovalsAdminMenu : AdminNavigationProvider
         builder.Add(S["Approvals"], S["Approvals"].PrefixPosition("7"), approvals => approvals
             .Id("approvals")
             .AddClass("approvals")
+            .AddClass("icon-class-fa-solid")
+            .AddClass("icon-class-fa-stamp")
             .Add(S["Requests"], S["Requests"].PrefixPosition("10"), requests => requests
                 .Id("approvalRequests")
                 .Action("Index", "ApprovalRequests", ApprovalsConstants.Features.Approvals)
