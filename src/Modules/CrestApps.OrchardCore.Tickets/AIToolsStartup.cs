@@ -8,6 +8,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Tickets;
@@ -40,6 +41,10 @@ public sealed class AIToolsStartup : StartupBase
         services.AddCoreAITool<AddTicketReplyTool>(AddTicketReplyTool.TheName).WithTitle(S["Add ticket reply"]).WithDescription(S["Sends a public reply or adds an internal note to a ticket."]).WithCategory(S["Tickets"]).Selectable();
         services.AddScoped<TicketAssistant>();
         services.AddDisplayDriver<Models.TicketDesk, TicketDeskAIDisplayDriver>();
+
+        // Settings > Service Desk: the profile every desk that names none uses.
+        services.AddSiteDisplayDriver<TicketAISettingsDisplayDriver>();
+        services.AddNavigationProvider<TicketAISettingsAdminMenu>();
         services.AddContentPart<Models.TicketPart>()
             .UseDisplayDriver<TicketAssistantDisplayDriver>();
         services.AddCoreAITool<UpdateTicketTool>(UpdateTicketTool.TheName).WithTitle(S["Update ticket"]).WithDescription(S["Changes a ticket's status, priority, team or assignee."]).WithCategory(S["Tickets"]).Selectable();

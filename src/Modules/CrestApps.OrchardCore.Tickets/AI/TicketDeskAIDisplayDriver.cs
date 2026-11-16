@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tickets.AI;
 
@@ -19,12 +21,14 @@ namespace CrestApps.OrchardCore.Tickets.AI;
 internal sealed class TicketDeskAIDisplayDriver : DisplayDriver<TicketDesk>
 {
     private readonly IAIProfileManager _profiles;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
-    public TicketDeskAIDisplayDriver(IAIProfileManager profiles, IStringLocalizer<TicketDeskAIDisplayDriver> stringLocalizer)
+    public TicketDeskAIDisplayDriver(IAIProfileManager profiles, ISiteService siteService, IStringLocalizer<TicketDeskAIDisplayDriver> stringLocalizer)
     {
         _profiles = profiles;
+        _siteService = siteService;
         S = stringLocalizer;
     }
 
@@ -33,11 +37,15 @@ internal sealed class TicketDeskAIDisplayDriver : DisplayDriver<TicketDesk>
         {
             var settings = desk.TryGet<TicketDeskAISettings>(out var current) ? current : new TicketDeskAISettings();
 
-            model.ProfileId = settings.ProfileId;
+            var profiles = await _profiles.GetAsync(AIProfileType.Chat);
+            var siteProfileId = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<TicketAISettings>().ReplyProfileId;
+
+            model.ProfileId = settings.Disabled ? TicketDeskAIViewModel.Off : settings.ProfileId;
             model.ApplyPriority = settings.ApplyPriority;
-            model.Profiles = [.. (await _profiles.GetAsync(AIProfileType.Chat))
+            model.SiteProfileName = profiles.FirstOrDefault(profile => profile.ItemId == siteProfileId) is { } site ? site.DisplayText ?? site.Name : null;
+            model.Profiles = [.. profiles
                 .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, profile.ItemId == settings.ProfileId))];
+                .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId, profile.ItemId == settings.ProfileId && !settings.Disabled))];
         }).Location("Content:6");
 
     public override async Task<IDisplayResult> UpdateAsync(TicketDesk desk, UpdateEditorContext context)
@@ -46,7 +54,8 @@ internal sealed class TicketDeskAIDisplayDriver : DisplayDriver<TicketDesk>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var profileId = string.IsNullOrWhiteSpace(model.ProfileId) ? null : model.ProfileId;
+        var disabled = string.Equals(model.ProfileId, TicketDeskAIViewModel.Off, StringComparison.Ordinal);
+        var profileId = disabled || string.IsNullOrWhiteSpace(model.ProfileId) ? null : model.ProfileId;
 
         if (profileId is not null && await _profiles.FindByIdAsync(profileId) is null)
         {
@@ -54,7 +63,7 @@ internal sealed class TicketDeskAIDisplayDriver : DisplayDriver<TicketDesk>
         }
         else
         {
-            desk.Put(new TicketDeskAISettings { ProfileId = profileId, ApplyPriority = profileId is not null && model.ApplyPriority });
+            desk.Put(new TicketDeskAISettings { ProfileId = profileId, Disabled = disabled, ApplyPriority = !disabled && model.ApplyPriority });
         }
 
         return Edit(desk, context);

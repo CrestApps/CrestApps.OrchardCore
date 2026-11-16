@@ -1,0 +1,17 @@
+@model TicketAISettingsViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["AI assistant"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <label asp-for="ReplyProfileId" class="ocat-label">@T["AI profile for replies"]</label>
+            <div class="ocat-end">
+                <select asp-for="ReplyProfileId" asp-items="Model.Profiles" class="form-select">
+                    <option value="">@T["None"]</option>
+                </select>
+                <span asp-validation-for="ReplyProfileId" class="text-danger"></span>
+                <span class="hint">@T["The chat AI profile that writes suggested replies for agents and triages tickets, on every desk that names no profile of its own (a desk can name another or turn the assistant off). It sends the ticket's conversation, internal notes and the requester's name included, to the profile's AI provider; agents check and send what it writes."]</span>
+            </div>
+        </div>
+    </div>
+</div>

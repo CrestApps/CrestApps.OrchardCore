@@ -20,6 +20,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.Entities;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tickets.AI;
 
@@ -84,12 +86,29 @@ public sealed class TicketAssistant
     {
         var deskId = ticket?.GetOrCreate<TicketPart>().DeskId;
 
-        return !string.IsNullOrEmpty(deskId)
-            && await _desks.FindByIdAsync(deskId) is { } desk
-            && desk.TryGet<TicketDeskAISettings>(out var settings)
-            && !string.IsNullOrEmpty(settings.ProfileId)
-                ? settings
-                : null;
+        if (string.IsNullOrEmpty(deskId) || await _desks.FindByIdAsync(deskId) is not { } desk)
+        {
+            return null;
+        }
+
+        var settings = desk.TryGet<TicketDeskAISettings>(out var current) ? current : new TicketDeskAISettings();
+
+        if (settings.Disabled)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrEmpty(settings.ProfileId))
+        {
+            return settings;
+        }
+
+        // A desk that names no profile uses the one of Settings > Service Desk, if any.
+        var siteProfileId = _services.GetService<ISiteService>() is { } sites
+            ? (await sites.GetSiteSettingsAsync()).GetOrCreate<TicketAISettings>().ReplyProfileId
+            : null;
+
+        return string.IsNullOrEmpty(siteProfileId) ? null : new TicketDeskAISettings { ProfileId = siteProfileId, ApplyPriority = settings.ApplyPriority };
     }
 
     /// <summary>

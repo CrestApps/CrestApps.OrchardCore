@@ -139,6 +139,24 @@ public sealed class TicketAssistantTests
         kit.Tickets.Verify(service => service.ReplyAsync(It.IsAny<string>(), It.IsAny<TicketReply>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task ADeskWithoutAProfileOfItsOwn_UsesTheSitesProfile_AndADeskTurnedOffHasNoAssistant()
+    {
+        // Arrange: Settings > Service Desk names the profile; Sales names none, IT turned the assistant off.
+        var kit = new Kit("We're on it.", siteProfileId: "profile-1");
+
+        // Act
+        var sales = await kit.Assistant.SuggestReplyAsync(Ticket(deskId: "sales"), TestContext.Current.CancellationToken);
+        var it = await kit.Assistant.SuggestReplyAsync(Ticket(deskId: "it"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(sales.Succeeded, sales.Error);
+        Assert.Equal("We're on it.", sales.Text);
+        Assert.False(it.Succeeded);
+        Assert.Null(await kit.Assistant.SettingsAsync(Ticket(deskId: "it")));
+        Assert.Equal("profile-1", (await kit.Assistant.SettingsAsync(Ticket(deskId: "sales"))).ProfileId);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -181,15 +199,21 @@ public sealed class TicketAssistantTests
 
     private sealed class Kit
     {
-        public Kit(string answer, bool applyPriority = false)
+        public Kit(string answer, bool applyPriority = false, string siteProfileId = null)
         {
             var support = new TicketDesk { ItemId = "support", Name = "Support" };
             support.Put(new TicketDeskAISettings { ProfileId = "profile-1", ApplyPriority = applyPriority });
             var sales = new TicketDesk { ItemId = "sales", Name = "Sales" };
+            var it = new TicketDesk { ItemId = "it", Name = "IT" };
+            it.Put(new TicketDeskAISettings { Disabled = true });
 
             var desks = new Mock<ICatalog<TicketDesk>>();
             desks.Setup(value => value.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((string id, CancellationToken _) => id == "support" ? support : id == "sales" ? sales : null);
+                .ReturnsAsync((string id, CancellationToken _) => id switch { "support" => support, "sales" => sales, "it" => it, _ => null });
+            var site = new global::OrchardCore.Settings.SiteSettings();
+            site.Properties[nameof(TicketAISettings)] = System.Text.Json.JsonSerializer.SerializeToNode(new TicketAISettings { ReplyProfileId = siteProfileId });
+            var siteService = new Mock<global::OrchardCore.Settings.ISiteService>();
+            siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site);
             var priorities = new Mock<ICatalog<TicketPriority>>();
             priorities.Setup(value => value.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([_normal, _urgent]);
             var timeline = new Mock<ITimelineService>();
@@ -215,6 +239,7 @@ public sealed class TicketAssistantTests
             Tickets.Setup(service => service.UpdateAsync(It.IsAny<string>(), It.IsAny<TicketUpdate>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>())).ReturnsAsync(new TicketResult());
 
             var services = new ServiceCollection()
+                .AddSingleton(siteService.Object)
                 .AddSingleton(Tickets.Object)
                 .AddSingleton(profiles.Object)
                 .AddSingleton(contexts.Object)

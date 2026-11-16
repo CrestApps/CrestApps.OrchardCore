@@ -9,9 +9,20 @@ namespace CrestApps.OrchardCore.Tickets.ViewModels;
 public class TicketDeskAIViewModel
 {
     /// <summary>
-    /// Gets or sets the chat AI profile, or <see langword="null"/> for none.
+    /// The value of the choice that turns the assistant off for the desk.
+    /// </summary>
+    public const string Off = "off";
+
+    /// <summary>
+    /// Gets or sets the chat AI profile, <see langword="null"/> for the site's, or <see cref="Off"/>.
     /// </summary>
     public string ProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the site's profile (Settings &gt; Service Desk), if any.
+    /// </summary>
+    [BindNever]
+    public string SiteProfileName { get; set; }
 
     /// <summary>
     /// Gets or sets whether a triage sets the priority it suggests.

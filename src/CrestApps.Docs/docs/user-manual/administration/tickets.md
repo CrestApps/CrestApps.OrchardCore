@@ -182,7 +182,7 @@ To learn how you did, set **Ask requesters to rate a solved ticket after (hours)
 
 ## Let the AI assistant help
 
-With AI turned on, edit a desk and choose an **AI assistant**: a chat AI profile with the instructions and knowledge your agents should answer from. Tickets on that desk then show an **AI assistant** panel:
+With AI turned on, go to **Settings > Service Desk** and choose the **AI profile for replies**: a chat AI profile with the instructions and knowledge your agents should answer from. Every desk uses it, unless you edit a desk and choose another profile under **AI assistant**, or **No AI assistant on this desk**. Tickets on a desk with a profile then show an **AI assistant** panel:
 
 - **Suggest a reply** writes a reply into the reply box from the conversation. Read it, change it, then send it; nothing is sent until you do, and it stays a public reply or an internal note as you had chosen.
 - **Triage** adds an internal note with a short summary and a suggested priority. Tick **A triage sets the priority it suggests** on the desk to have it change the priority too. It may lower the priority, or raise it at most one step above the ticket type's default; anything higher is only noted for an agent, so a requester can't talk their way to the top.
