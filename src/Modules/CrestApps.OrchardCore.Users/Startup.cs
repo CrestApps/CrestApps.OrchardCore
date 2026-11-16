@@ -223,6 +223,7 @@ public sealed class EmailCodeSignInStartup : StartupBase
     {
         services.AddScoped<EmailSignInCodes>();
         services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
+        services.AddScoped<EmailSignInEligibility>();
         services.AddScoped<EmailOwnershipProof>();
 
         // A confirmation link proves the address as a code does, with or without the Customers feature.

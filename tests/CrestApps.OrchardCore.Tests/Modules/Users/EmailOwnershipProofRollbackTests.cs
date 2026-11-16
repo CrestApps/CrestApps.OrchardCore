@@ -13,8 +13,9 @@ namespace CrestApps.OrchardCore.Tests.Modules.Users;
 /// MD1 (fix-verification review): the first proof of an address removed the password, then the external logins, then
 /// rotated the stamp, each in an update of its own, and recorded the proof last. When that last update failed, the
 /// user was told the code was wrong, the code was spent, and the earlier updates were committed with the request: the
-/// password was gone without the notice. These run over Orchard Core's user store on SQLite, whose session commits
-/// at the end of the request, with a user event handler that refuses the update recording the proof.
+/// password was gone without the notice. These run the confirmation step, where a proof removes what was set before it,
+/// over Orchard Core's user store on SQLite, whose session commits at the end of the request, with a user event handler
+/// that refuses the update recording the proof.
 /// </summary>
 public sealed class EmailOwnershipProofRollbackTests : IAsyncLifetime
 {
@@ -35,10 +36,12 @@ public sealed class EmailOwnershipProofRollbackTests : IAsyncLifetime
     public async Task WhenTheProofCantBeSaved_TheAccountKeepsEverythingItHad()
     {
         // Arrange: an account whose address was never proved, with a password and an external login.
-        var stampBefore = await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, IsEnabled = true });
+        var stampBefore = await _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "pat", Email = Email, EmailConfirmed = true, IsEnabled = true });
 
-        // Act: the right code, in one request that commits at its end.
-        var result = await SignInWithCodeAsync();
+        // Act: the owner confirms with the right code, in one request that commits at its end.
+        await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").Confirm(new EmailSignInViewModel()));
+        var code = Assert.Single(_harness.Sender.Sent).Code;
+        var result = await _harness.InRequestAsync(services => _harness.CreateConfirmController(services, "user-1").ConfirmCode(new EmailSignInViewModel { Code = code }));
 
         // Assert: refused, and nothing of the attempt was kept.
         Assert.IsType<ViewResult>(result);
@@ -55,14 +58,6 @@ public sealed class EmailOwnershipProofRollbackTests : IAsyncLifetime
 
             return true;
         });
-    }
-
-    private async Task<IActionResult> SignInWithCodeAsync()
-    {
-        await _harness.InRequestAsync(services => _harness.CreateController(services).Index(new EmailSignInViewModel { Email = Email }));
-        var code = Assert.Single(_harness.Sender.Sent).Code;
-
-        return await _harness.InRequestAsync(services => _harness.CreateController(services).Code(new EmailSignInViewModel { Email = Email, Code = code }));
     }
 
     // Refuses the update that records the address as proved, as any user event handler may refuse an update.

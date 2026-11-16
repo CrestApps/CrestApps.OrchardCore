@@ -1,0 +1,22 @@
+@model CrestApps.OrchardCore.Users.Controllers.EmailSignInViewModel
+
+<zone Name="Title">
+    <breadcrumb name="EmailSignInConfirm" title="@T["Confirm it's you"]" />
+</zone>
+
+<div class="container my-5" style="max-width: 480px">
+    <h1 class="h3 mb-2">@T["Confirm it's you"]</h1>
+    <p class="text-muted">@T["Confirming that {0} is yours links what was placed with it before you had an account, such as guest orders. We'll email a six-digit code to it.", Model.Email]</p>
+    <p class="text-muted">@T["Confirming also removes the password and the other sign-ins this account had before its email was confirmed, and signs out its other sessions, because they may not be yours. Afterwards, sign in with a code, or set a new password with \"Forgot your password?\"."]</p>
+
+    <form action="@Url.RouteUrl("EmailSignInConfirm")" method="post" class="card">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+        <div class="card-body">
+            <span asp-validation-for="Email" class="text-danger small"></span>
+        </div>
+        <div class="card-footer d-grid">
+            <button type="submit" class="btn btn-primary">@T["Email me a code"]</button>
+        </div>
+    </form>
+</div>

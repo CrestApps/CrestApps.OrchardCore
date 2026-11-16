@@ -327,7 +327,7 @@ public sealed class EmailSignInControllerTests
             _loginFormEvents,
             new EmailOwnershipProof(_userManager.Object, Mock.Of<global::YesSql.ISession>(), clock.Object, NullLogger<EmailOwnershipProof>.Instance),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
-            Options.Create(new EmailSignInOptions()),
+            new EmailSignInEligibility(_userManager.Object, Options.Create(new EmailSignInOptions())),
             NullLogger<EmailSignInController>.Instance,
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>(),
             Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailSignInController>>());

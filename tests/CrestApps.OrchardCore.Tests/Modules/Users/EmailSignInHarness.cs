@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Claims;
 using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Tests.Utilities;
 using CrestApps.OrchardCore.Throttling;
@@ -145,29 +146,83 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
     {
         var manager = requestServices.GetRequiredService<UserManager<IUser>>();
 
-        var site = new SiteSettings { SiteName = "Test site" };
-        var siteService = new Mock<ISiteService>();
-        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site);
-
-        var signInManager = new Mock<SignInManager<IUser>>(manager, Mock.Of<IHttpContextAccessor>(), Mock.Of<IUserClaimsPrincipalFactory<IUser>>(), null, null, null, null);
-        signInManager.Setup(s => s.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>())).Returns(Task.CompletedTask);
-
         var controller = new EmailSignInController(
             manager,
-            signInManager.Object,
+            CreateSignInManager(manager),
             CreateCodes(),
             Sender,
-            siteService.Object,
+            CreateSiteService(),
             loginFormEvents ?? [],
-            new EmailOwnershipProof(manager, requestServices.GetRequiredService<ISession>(), CreateClock(), NullLogger<EmailOwnershipProof>.Instance),
+            CreateProof(requestServices),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
-            Options.Create(new EmailSignInOptions()),
+            new EmailSignInEligibility(manager, Options.Create(new EmailSignInOptions())),
             NullLogger<EmailSignInController>.Instance,
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailSignInController>(),
             Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailSignInController>>());
 
+        return Prepare(controller, requestServices, signedInUserId: null);
+    }
+
+    /// <summary>
+    /// The confirmation pages, for a request signed in as <paramref name="userId"/>.
+    /// </summary>
+    public EmailOwnershipController CreateConfirmController(IServiceProvider requestServices, string userId, IEnumerable<ILoginFormEvent> loginFormEvents = null)
+    {
+        var manager = requestServices.GetRequiredService<UserManager<IUser>>();
+
+        var controller = new EmailOwnershipController(
+            manager,
+            CreateSignInManager(manager),
+            CreateCodes(),
+            Sender,
+            CreateProof(requestServices),
+            new EmailSignInEligibility(manager, Options.Create(new EmailSignInOptions())),
+            CreateSiteService(),
+            loginFormEvents ?? [],
+            Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
+            NullLogger<EmailOwnershipController>.Instance,
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<EmailOwnershipController>(),
+            Mock.Of<Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<EmailOwnershipController>>());
+
+        return Prepare(controller, requestServices, userId);
+    }
+
+    /// <summary>
+    /// The proof service a request uses.
+    /// </summary>
+    public EmailOwnershipProof CreateProof(IServiceProvider requestServices)
+        => new(
+            requestServices.GetRequiredService<UserManager<IUser>>(),
+            requestServices.GetRequiredService<ISession>(),
+            CreateClock(),
+            NullLogger<EmailOwnershipProof>.Instance);
+
+    private static SignInManager<IUser> CreateSignInManager(UserManager<IUser> manager)
+    {
+        var signInManager = new Mock<SignInManager<IUser>>(manager, Mock.Of<IHttpContextAccessor>(), Mock.Of<IUserClaimsPrincipalFactory<IUser>>(), null, null, null, null);
+        signInManager.Setup(s => s.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>())).Returns(Task.CompletedTask);
+
+        return signInManager.Object;
+    }
+
+    private static ISiteService CreateSiteService()
+    {
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(new SiteSettings { SiteName = "Test site" });
+
+        return siteService.Object;
+    }
+
+    private static T Prepare<T>(T controller, IServiceProvider requestServices, string signedInUserId)
+        where T : Controller
+    {
         var httpContext = new DefaultHttpContext { RequestServices = requestServices };
         httpContext.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.7");
+
+        if (signedInUserId is not null)
+        {
+            httpContext.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, signedInUserId)], "Identity.Application"));
+        }
 
         var url = new Mock<IUrlHelper>();
         url.Setup(u => u.IsLocalUrl(It.IsAny<string>())).Returns(true);
