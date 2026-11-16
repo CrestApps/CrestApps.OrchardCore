@@ -10,6 +10,14 @@ public static class TicketChangeKeys
 
     public const string Desk = "Desk";
 
+    public const string Impact = "Impact";
+
+    public const string Urgency = "Urgency";
+
+    public const string Estimate = "Estimate";
+
+    public const string BillingType = "BillingType";
+
     public const string Status = "Status";
 
     public const string Priority = "Priority";

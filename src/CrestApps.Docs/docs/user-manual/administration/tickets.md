@@ -44,6 +44,7 @@ The **Conversation** shows what people wrote: replies and internal notes. Every 
 - Pick a **Reply template** to start from a saved answer; it can also set a status, priority or team.
 - Change the status, priority, desk, team or assignee in the ticket's values, or select **Assign to me**.
 - Use **Actions** to run an action your administrator set up, such as **Escalate to tier 2**.
+- Under **Planning**, set the **Impact** (how much of the business it touches) and **Urgency** (how soon it must be dealt with), when work should start and how long it should take, and the **Billing type**: billable, covered by the agreement, no charge or not billable. When the desk has a priority matrix, impact and urgency set the priority. Once solved, the panel says who solved it.
 
 While you have a ticket open, a note above it says who else has it open and who is writing on it, so two people don't answer the same ticket. When someone changes the ticket while you have it open, the note says so; select **Reload** to see the change before you answer.
 
@@ -85,6 +86,7 @@ Under the **Service Desk** menu:
 | **Desks** | Each desk's name, audience (customers or internal), business hours, service-level policy, default team, ticket types, reopen window, how many days after solving a ticket closes, how new tickets are assigned (nobody, the member with the fewest open tickets, or each member in turn) and who is e-mailed or told |
 | **Statuses** | The statuses, each in a category (New, Open, Pending, On hold, Solved, Closed), with the label requesters see, a color and whether it pauses the service-level clock |
 | **Priorities** | The priorities and their order |
+| **Priority matrix** (on a desk) | The priority a ticket gets for each impact and urgency |
 | **Views** | Shared saved views of the list |
 | **E-mails** | The e-mails requesters get when a ticket is received, answered and solved |
 

@@ -143,6 +143,21 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
             {
                 context.Result.Fail(new ValidationResult(S["Choose how new tickets are assigned."], [nameof(TicketDesk.AssignmentStrategy)]));
             }
+
+            if (desk.PriorityMatrix is { Count: > 0 } matrix)
+            {
+                var priorities = (await _services.GetRequiredService<ICatalog<TicketPriority>>().GetAllAsync(cancellationToken)).Select(priority => priority.ItemId).ToHashSet(StringComparer.Ordinal);
+
+                if (matrix.Any(rule => !Enum.IsDefined(rule.Impact) || !Enum.IsDefined(rule.Urgency) || string.IsNullOrEmpty(rule.PriorityId) || !priorities.Contains(rule.PriorityId)))
+                {
+                    context.Result.Fail(new ValidationResult(S["Each cell of the priority matrix needs an impact, an urgency and a priority that exists."], [nameof(TicketDesk.PriorityMatrix)]));
+                }
+
+                if (matrix.GroupBy(rule => (rule.Impact, rule.Urgency)).Any(group => group.Count() > 1))
+                {
+                    context.Result.Fail(new ValidationResult(S["The priority matrix names an impact and urgency twice."], [nameof(TicketDesk.PriorityMatrix)]));
+                }
+            }
         }
 
         // A badge color is written into a style attribute, so only a hex color or a color name is kept, from the editor

@@ -87,6 +87,23 @@ public sealed class TicketDesk : CatalogItem, ITicketSettingsRecord
     public DateTime CreatedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the priority of a ticket for each impact and urgency; a pair it doesn't name leaves the priority as
+    /// it is.
+    /// </summary>
+    public List<TicketPriorityRule> PriorityMatrix { get; set; } = [];
+
+    /// <summary>
+    /// Finds the priority the matrix gives an impact and an urgency.
+    /// </summary>
+    /// <param name="impact">The impact.</param>
+    /// <param name="urgency">The urgency.</param>
+    /// <returns>The priority, or <see langword="null"/> when either is unknown or the matrix doesn't name the pair.</returns>
+    public string PriorityFor(TicketLevel? impact, TicketLevel? urgency)
+        => impact is { } i && urgency is { } u
+            ? PriorityMatrix?.FirstOrDefault(rule => rule.Impact == i && rule.Urgency == u && !string.IsNullOrEmpty(rule.PriorityId))?.PriorityId
+            : null;
+
+    /// <summary>
     /// Gets or sets when it last changed, in UTC.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }

@@ -69,7 +69,8 @@ public sealed class Startup : StartupBase
         services.AddRecordSource<TicketRecordSource>();
         services.AddPersonalDataContributor<TicketPersonalDataContributor>();
         services.AddContentPart<TicketPart>()
-            .UseDisplayDriver<TicketPartDisplayDriver>();
+            .UseDisplayDriver<TicketPartDisplayDriver>()
+            .UseDisplayDriver<TicketPlanningDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, TicketPartSettingsDisplayDriver>();
         services.AddScoped<TicketUploads>();
         services.AddScoped<TicketPresence>();
@@ -96,6 +97,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<TicketStatus, TicketStatusDisplayDriver>();
         services.AddDisplayDriver<TicketPriority, TicketPriorityDisplayDriver>();
         services.AddDisplayDriver<TicketDesk, TicketDeskDisplayDriver>();
+        services.AddDisplayDriver<TicketDesk, TicketDeskPriorityMatrixDisplayDriver>();
         services.AddDisplayDriver<TicketView, TicketViewDisplayDriver>();
 
         services.AddPermissionProvider<TicketsPermissionsProvider>();

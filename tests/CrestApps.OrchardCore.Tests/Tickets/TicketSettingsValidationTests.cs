@@ -119,6 +119,33 @@ public sealed class TicketSettingsValidationTests
     }
 
     [Fact]
+    public async Task ADesksPriorityMatrix_NamesPrioritiesThatExist_AndEachCellOnce()
+    {
+        // Arrange
+        var priorities = new Mock<ICatalog<TicketPriority>>();
+        priorities.Setup(catalog => catalog.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([new TicketPriority { ItemId = "urgent", Name = "Urgent" }]);
+        var services = new ServiceCollection().AddSingleton(priorities.Object).BuildServiceProvider();
+
+        TicketDesk Desk(params (TicketLevel Impact, TicketLevel Urgency, string PriorityId)[] cells)
+            => new() { ItemId = "d1", Name = "Support", PriorityMatrix = [.. cells.Select(cell => new TicketPriorityRule { Impact = cell.Impact, Urgency = cell.Urgency, PriorityId = cell.PriorityId })] };
+
+        var good = new ValidatingContext<TicketDesk>(Desk((TicketLevel.High, TicketLevel.High, "urgent")));
+        var unknown = new ValidatingContext<TicketDesk>(Desk((TicketLevel.High, TicketLevel.High, "gone")));
+        var twice = new ValidatingContext<TicketDesk>(Desk((TicketLevel.High, TicketLevel.High, "urgent"), (TicketLevel.High, TicketLevel.High, "urgent")));
+
+        // Act
+        foreach (var context in new[] { good, unknown, twice })
+        {
+            await Handler<TicketDesk>(services).ValidatingAsync(context, TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.True(good.Result.Succeeded);
+        Assert.False(unknown.Result.Succeeded);
+        Assert.False(twice.Result.Succeeded);
+    }
+
+    [Fact]
     public void ADesksPermission_FollowsItsName_EvenWhenAnotherTenantHasADeskWithTheSameId()
     {
         // Arrange

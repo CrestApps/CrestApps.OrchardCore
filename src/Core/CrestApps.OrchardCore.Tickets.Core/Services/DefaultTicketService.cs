@@ -32,7 +32,7 @@ namespace CrestApps.OrchardCore.Tickets.Core.Services;
 /// <summary>
 /// The default <see cref="ITicketService"/>.
 /// </summary>
-public sealed class DefaultTicketService : ITicketService
+public sealed partial class DefaultTicketService : ITicketService
 {
     /// <summary>
     /// The number series of tickets.
@@ -182,7 +182,7 @@ public sealed class DefaultTicketService : ITicketService
             errors.Add(S["Add a ticket status in the New category first."]);
         }
 
-        var priority = await ResolvePriorityAsync(FirstNonEmpty(request.PriorityId, settings.DefaultPriorityId), cancellationToken);
+        var priority = await ResolvePriorityAsync(FirstNonEmpty(request.PriorityId, desk?.PriorityFor(request.Impact, request.Urgency), settings.DefaultPriorityId), cancellationToken);
 
         if (priority is null)
         {
@@ -218,6 +218,7 @@ public sealed class DefaultTicketService : ITicketService
         part.Channel = request.Channel;
         part.FollowUpOfId = request.FollowUpOfId;
         part.LastCustomerActivityUtc = now;
+        ApplyPlanning(part, request);
 
         ticket.DisplayText = subject;
         SetTitle(ticket, subject);
@@ -366,6 +367,7 @@ public sealed class DefaultTicketService : ITicketService
             }
 
             var changes = new List<TimelineFieldChange>();
+            var solvedBefore = part.SolvedUtc;
             var errors = await ApplyAsync(ticket, part, update, changes, cancellationToken);
 
             if (errors.Count > 0)
@@ -378,6 +380,7 @@ public sealed class DefaultTicketService : ITicketService
                 return new TicketResult { Ticket = ticket };
             }
 
+            KeepSolver(part, solvedBefore, actor);
             await SaveAsync(ticket, part, cancellationToken);
             await AddEventAsync(ticket.ContentItemId, actor ?? TicketActor.Site, NullIfEmpty(update.Reason?.Trim()), changes, cancellationToken);
             Enqueue(observer => observer.UpdatedAsync(ticket, changes, cancellationToken));
@@ -528,7 +531,9 @@ public sealed class DefaultTicketService : ITicketService
             if (!string.IsNullOrEmpty(statusId) && statusId != part.StatusId)
             {
                 // Checked above, so it can't be refused now.
+                var solvedBefore = part.SolvedUtc;
                 await ApplyAsync(ticket, part, new TicketUpdate { StatusId = statusId }, changes, cancellationToken);
+                KeepSolver(part, solvedBefore, ActorOf(reply));
             }
 
             await SaveAsync(ticket, part, cancellationToken);
@@ -885,6 +890,8 @@ public sealed class DefaultTicketService : ITicketService
             }
         }
 
+        CheckPlanning(update, errors);
+
         return errors;
     }
 
@@ -965,19 +972,11 @@ public sealed class DefaultTicketService : ITicketService
             }
             else
             {
-                var from = await _priorities.FindByIdAsync(part.PriorityId, cancellationToken);
-                changes.Add(new TimelineFieldChange { Field = S["Priority"], Key = TicketChangeKeys.Priority, From = from?.Name, To = priority.Name, FromValue = part.PriorityId, ToValue = priority.ItemId });
-                part.PriorityId = priority.ItemId;
-                part.PriorityRank = priority.Rank;
-
-                foreach (var timer in await _serviceLevels.GetTimersAsync(subject, activeOnly: true, cancellationToken))
-                {
-                    await _serviceLevels.RetargetAsync(subject, timer.PolicyId, priority.ItemId, cancellationToken);
-
-                    break;
-                }
+                await SetPriorityAsync(ticket, part, priority, changes, cancellationToken);
             }
         }
+
+        await ApplyPlanningAsync(ticket, part, update, changes, cancellationToken);
 
         if (update.TeamId is not null && NullIfEmpty(update.TeamId) is { } newTeam && newTeam != part.TeamId
             && _serviceProvider.GetService<ITeamManager>() is { } teamManager && await teamManager.FindByIdAsync(newTeam, cancellationToken) is null)

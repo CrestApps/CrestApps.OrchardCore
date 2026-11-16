@@ -60,6 +60,18 @@ public sealed class TicketApiModel
 
     public DateTime? NextDueUtc { get; init; }
 
+    public string SolvedById { get; init; }
+
+    public string Impact { get; init; }
+
+    public string Urgency { get; init; }
+
+    public DateTime? EstimatedStartUtc { get; init; }
+
+    public int? EstimatedMinutes { get; init; }
+
+    public string BillingType { get; init; }
+
     public IReadOnlyList<TicketApiLink> Links { get; init; } = [];
 
     /// <summary>
@@ -102,6 +114,12 @@ public sealed class TicketApiModel
             SolvedUtc = part.SolvedUtc,
             ClosedUtc = part.ClosedUtc,
             NextDueUtc = part.NextDueUtc,
+            SolvedById = part.SolvedById,
+            Impact = part.Impact?.ToString(),
+            Urgency = part.Urgency?.ToString(),
+            EstimatedStartUtc = part.EstimatedStartUtc,
+            EstimatedMinutes = part.EstimatedMinutes,
+            BillingType = part.BillingType?.ToString(),
             Links = [.. part.Links.Select(link => new TicketApiLink { Record = link.Record.ToString(), Kind = link.Kind })],
         };
     }

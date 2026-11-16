@@ -116,6 +116,11 @@ public sealed class TicketIndex : MapIndex
     public DateTime? SolvedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the user who last solved the ticket.
+    /// </summary>
+    public string SolvedById { get; set; }
+
+    /// <summary>
     /// Gets or sets when the ticket was last given to its assignee.
     /// </summary>
     public DateTime? AssignedUtc { get; set; }

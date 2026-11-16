@@ -76,7 +76,7 @@ internal sealed class TicketsMigrations : DataMigration
         await TicketIndexSchema.CreateBacklogIndexAsync(SchemaBuilder);
         await SeedAsync();
 
-        return 11;
+        return 12;
     }
 
     /// <summary>
@@ -225,6 +225,17 @@ internal sealed class TicketsMigrations : DataMigration
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TicketReindexStep.StepName));
 
         return 11;
+    }
+
+    /// <summary>
+    /// Adds who solved a ticket to the ticket index.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom11Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table.AddColumn<string>("SolvedById", column => column.Nullable().WithLength(26)));
+
+        return 12;
     }
 
     private async Task SeedAsync()

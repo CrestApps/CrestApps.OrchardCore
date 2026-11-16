@@ -53,6 +53,32 @@ public sealed class TicketCreateRequest
     public string PriorityId { get; set; }
 
     /// <summary>
+    /// Gets or sets how much of the business the ticket touches. With <see cref="Urgency"/>, it picks the priority from
+    /// the desk's priority matrix when the request names no priority.
+    /// </summary>
+    public TicketLevel? Impact { get; set; }
+
+    /// <summary>
+    /// Gets or sets how soon it must be dealt with.
+    /// </summary>
+    public TicketLevel? Urgency { get; set; }
+
+    /// <summary>
+    /// Gets or sets when work is planned to start, in UTC.
+    /// </summary>
+    public DateTime? EstimatedStartUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the work is expected to take, in minutes.
+    /// </summary>
+    public int? EstimatedMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the work is charged.
+    /// </summary>
+    public TicketBillingType? BillingType { get; set; }
+
+    /// <summary>
     /// Gets or sets who asked.
     /// </summary>
     public PartyRef Requester { get; set; }

@@ -182,4 +182,34 @@ public sealed class TicketPart : ContentPart
     /// Gets or sets when the ticket was last given to its assignee, so team assignment can take turns.
     /// </summary>
     public DateTime? AssignedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user who last solved the ticket, when a person did.
+    /// </summary>
+    public string SolvedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets how much of the business the ticket touches.
+    /// </summary>
+    public TicketLevel? Impact { get; set; }
+
+    /// <summary>
+    /// Gets or sets how soon it must be dealt with.
+    /// </summary>
+    public TicketLevel? Urgency { get; set; }
+
+    /// <summary>
+    /// Gets or sets when work on it is planned to start, in UTC.
+    /// </summary>
+    public DateTime? EstimatedStartUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the work is expected to take, in minutes.
+    /// </summary>
+    public int? EstimatedMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the work is charged.
+    /// </summary>
+    public TicketBillingType? BillingType { get; set; }
 }
