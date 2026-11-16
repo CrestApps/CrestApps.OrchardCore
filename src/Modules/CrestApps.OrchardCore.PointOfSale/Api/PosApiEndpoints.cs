@@ -422,22 +422,25 @@ internal static class PosApiEndpoints
 
         var result = await operations.RefundAsync(order, request.Amount, request.Reason ?? "Returned at the till", request.Restock != false, PosShiftService.GetName(httpContext.User), asStoreCredit: false, httpContext.RequestAborted);
 
-        if (!result.Succeeded)
-        {
-            return ApiProblems.Conflict(ApiProblems.Codes.NotAvailable, string.Join(" ", result.Errors));
-        }
-
         // What this refund put back on the sale's cash goes back in cash, out of this register's drawer. The card is refunded
         // first, so this is only what the card didn't cover. It is what the refund measured under the order's lock, not what
         // the sale held before it: another return of the same sale may have given that cash back in between.
         var cashBack = result.ReturnedToBalances.GetValueOrDefault(PosConstants.CashTenderKey);
 
+        // The drawer movement is recorded whenever cash went back, even when another part of the refund failed, and not
+        // with the request's token: the refund doesn't stop for an aborted request, so neither does the record of its cash.
         if (cashBack > 0m)
         {
-            await shifts.MoveCashAsync(shift, -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, httpContext.RequestAborted);
+            await shifts.MoveCashAsync(shift, -cashBack, $"Refund of order {order.OrderNumber}", httpContext.User, CancellationToken.None);
         }
 
-        return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), result.Messages));
+        if (!result.Succeeded && cashBack <= 0m)
+        {
+            return ApiProblems.Conflict(ApiProblems.Codes.NotAvailable, string.Join(" ", result.Errors));
+        }
+
+        // A return that gave cash back is answered with it, so the clerk pays it out, and what failed besides is told first.
+        return TypedResults.Ok(new ApiPosReturn(order.ItemId, order.OrderNumber, ApiMoney.From(result.Refunded, order.Currency), ApiMoney.From(cashBack, order.Currency), [.. result.Errors, .. result.Messages]));
     }
 
     // A counter sale belongs to the store its register is in.

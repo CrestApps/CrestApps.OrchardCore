@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.Tests.PointOfSale;
 /// SEC-C15: refunding a sale at the till, and paying cash back out of the drawer, takes its own permission, and a
 /// cashier returns only sales of their own store unless they manage orders.
 /// </summary>
-public sealed class PosReturnAuthorizationTests
+public sealed class PosReturnAuthorizationTests : IDisposable
 {
     private readonly Mock<IOrderOperationsService> _operations = new();
     private readonly HashSet<string> _granted = new(StringComparer.Ordinal) { "SellAtRegister" };
@@ -30,6 +30,8 @@ public sealed class PosReturnAuthorizationTests
     private readonly Register _register = new() { ItemId = "register-a", Name = "Till 1", LocationId = "store-a", IsEnabled = true };
     private readonly RegisterShift _shift = new() { ItemId = "shift-1", RegisterId = "register-a", Status = RegisterShiftStatus.Open };
     private readonly Mock<ICheckoutTenderLedger> _ledger = new();
+    private readonly Mock<IRegisterShiftStore> _shiftStore = new();
+    private readonly CancellationTokenSource _requestAborted = new();
 
     public PosReturnAuthorizationTests()
     {
@@ -40,6 +42,9 @@ public sealed class PosReturnAuthorizationTests
             .Setup(service => service.RefundAsync(It.IsAny<Order>(), It.IsAny<decimal?>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
     }
+
+    public void Dispose()
+        => _requestAborted.Dispose();
 
     [Fact]
     public async Task Return_SellerWithoutTheRefundPermission_IsForbidden()
@@ -171,6 +176,68 @@ public sealed class PosReturnAuthorizationTests
         Assert.Equal(-20m, Assert.Single(_shift.CashMovements).Amount);
     }
 
+    /// <summary>
+    /// The till return's Mild (fix verification): when the card part of a mixed return failed, the endpoint answered 409
+    /// before it read the cash the refund did put back, so that cash went back to the buyer with no drawer movement.
+    /// </summary>
+    [Fact]
+    public async Task Return_WhenTheCardPartFails_StillRecordsTheCashThatWentBack()
+    {
+        // Arrange
+        _granted.Add("RefundAtRegister");
+        var order = CreateOrder(locationId: "store-a");
+        var refunded = new OrderOperationResult { Refunded = 20m };
+
+        refunded.ReturnedToBalances[PosConstants.CashTenderKey] = 20m;
+        refunded.Errors.Add("The refund of $30.00 failed: card_declined");
+        _operations
+            .Setup(service => service.RefundAsync(It.IsAny<Order>(), It.IsAny<decimal?>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(refunded);
+
+        // Act
+        var result = await ReturnAsync(order);
+
+        // Assert: the cash is paid out and counted, and the clerk is told what failed.
+        var ok = Assert.IsType<Ok<ApiPosReturn>>(result);
+        Assert.Equal(20m, ok.Value.CashBack.Amount);
+        Assert.Contains(ok.Value.Messages, message => message.Contains("card_declined", StringComparison.Ordinal));
+        Assert.Equal(-20m, Assert.Single(_shift.CashMovements).Amount);
+    }
+
+    /// <summary>
+    /// The till return's Mild (fix verification): the refund ignores the request's token, but the drawer movement after
+    /// it took it, so a return aborted after the cash went back left the drawer without the movement.
+    /// </summary>
+    [Fact]
+    public async Task Return_AbortedAfterTheRefund_StillRecordsTheDrawerMovement()
+    {
+        // Arrange: the request is aborted while the refund runs; a real store refuses a canceled token.
+        _granted.Add("RefundAtRegister");
+        var order = CreateOrder(locationId: "store-a");
+        var refunded = new OrderOperationResult { Refunded = 20m };
+
+        refunded.ReturnedToBalances[PosConstants.CashTenderKey] = 20m;
+        _operations
+            .Setup(service => service.RefundAsync(It.IsAny<Order>(), It.IsAny<decimal?>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .Callback(_requestAborted.Cancel)
+            .ReturnsAsync(refunded);
+        _shiftStore
+            .Setup(store => store.UpdateAsync(It.IsAny<RegisterShift>(), It.IsAny<CancellationToken>()))
+            .Returns((RegisterShift _, CancellationToken cancellationToken) =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                return ValueTask.CompletedTask;
+            });
+
+        // Act
+        var result = await ReturnAsync(order);
+
+        // Assert
+        Assert.IsType<Ok<ApiPosReturn>>(result);
+        _shiftStore.Verify(store => store.UpdateAsync(_shift, It.Is<CancellationToken>(token => !token.IsCancellationRequested)), Times.Once);
+    }
+
     private void AssertNotRefunded()
         => _operations.Verify(
             service => service.RefundAsync(It.IsAny<Order>(), It.IsAny<decimal?>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
@@ -197,7 +264,7 @@ public sealed class PosReturnAuthorizationTests
     {
         var orders = new Mock<IOrderStore>();
         var registers = new Mock<IRegisterStore>();
-        var shiftStore = new Mock<IRegisterShiftStore>();
+        var shiftStore = _shiftStore;
         var authorization = new Mock<IAuthorizationService>();
 
         orders.Setup(store => store.FindByIdAsync(order.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(order);
@@ -228,6 +295,7 @@ public sealed class PosReturnAuthorizationTests
         var httpContext = new DefaultHttpContext
         {
             RequestServices = services,
+            RequestAborted = _requestAborted.Token,
             User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "cashier")], "test")),
         };
         var request = new ApiPosReturnRequest { OrderId = order.ItemId, RegisterId = _register.ItemId };
