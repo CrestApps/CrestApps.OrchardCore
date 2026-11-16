@@ -44,6 +44,7 @@ public sealed class AIToolsStartup : StartupBase
 
         // Settings > Service Desk: the profile every desk that names none uses.
         services.AddSiteDisplayDriver<TicketAISettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(TicketAISettingsDisplayDriver.GroupId, TicketsPermissions.ManageTicketSettings);
         services.AddNavigationProvider<TicketAISettingsAdminMenu>();
         services.AddContentPart<Models.TicketPart>()
             .UseDisplayDriver<TicketAssistantDisplayDriver>();

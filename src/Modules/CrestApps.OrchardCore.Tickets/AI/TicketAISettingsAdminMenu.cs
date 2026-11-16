@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Tickets.AI;
@@ -7,6 +9,7 @@ namespace CrestApps.OrchardCore.Tickets.AI;
 /// <summary>
 /// Adds Settings &gt; Service Desk, with the service desk's AI settings. Registered only with AI on.
 /// </summary>
+[RequireFeatures(AIConstants.Feature.Area)]
 internal sealed class TicketAISettingsAdminMenu : AdminNavigationProvider
 {
     private static readonly RouteValueDictionary _routeValues = new()

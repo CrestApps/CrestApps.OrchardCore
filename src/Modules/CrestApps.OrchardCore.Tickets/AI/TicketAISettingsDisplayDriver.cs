@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Tickets.AI;
@@ -16,6 +18,7 @@ namespace CrestApps.OrchardCore.Tickets.AI;
 /// The AI card of Settings &gt; Service Desk: the profile that writes suggested replies and triages tickets on every desk
 /// that names none. Registered only with AI on.
 /// </summary>
+[RequireFeatures(AIConstants.Feature.Area)]
 internal sealed class TicketAISettingsDisplayDriver : SiteDisplayDriver<TicketAISettings>
 {
     /// <summary>
