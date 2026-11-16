@@ -527,6 +527,15 @@ public sealed class TicketsController : Controller
             return Forbid();
         }
 
+        return View(await BuildPageAsync(ticket));
+    }
+
+    // The ticket page's model. The Details card is the type's editor (title and fields) for who may edit, the posted one
+    // when a save failed; for who may only view, the empty fields that apply are listed as not set.
+    private async Task<TicketPageViewModel> BuildPageAsync(ContentItem ticket, IShape editor = null)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+        var id = ticket.ContentItemId;
         var part = ticket.GetOrCreate<TicketPart>();
         var statuses = await _statuses.GetAllAsync(cancellationToken);
         var readOnly = TicketLifecycle.IsReadOnly(part);
@@ -574,7 +583,17 @@ public sealed class TicketsController : Controller
             model.DraftStatusId = model.CanSetStatus ? draft.StatusId : null;
         }
 
-        return View(model);
+        if (model.CanEdit)
+        {
+            model.Editor = editor ?? await _contentItemDisplayManager.BuildEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: false);
+        }
+        else if (_serviceProvider.GetService<global::CrestApps.OrchardCore.ContentFields.Conditions.IContentFieldStateService>() is { } fieldStates
+            && await _contentDefinitionManager.GetTypeDefinitionAsync(ticket.ContentType) is { } type)
+        {
+            model.EmptyFields = [.. (await fieldStates.GetStatesAsync(ticket, type)).Where(field => field.IsEmpty && !field.IsHidden && field.PartName != TicketsConstants.PartName)];
+        }
+
+        return model;
     }
 
     /// <summary>
@@ -1031,35 +1050,11 @@ public sealed class TicketsController : Controller
     }
 
     /// <summary>
-    /// Shows the editor of the ticket type's fields.
+    /// Saves the ticket type's fields from the Details card of the ticket page.
     /// </summary>
     /// <param name="id">The ticket.</param>
-    /// <returns>The page.</returns>
-    [Admin("ticket/{id}/edit", "TicketsEdit")]
-    public async Task<IActionResult> Edit(string id)
-    {
-        if (await _tickets.GetAsync(id) is not { } ticket)
-        {
-            return NotFound();
-        }
-
-        if (!await _access.CanAsync(User, ticket, TicketOperation.Edit, HttpContext.RequestAborted))
-        {
-            return Forbid();
-        }
-
-        ViewData["Ticket"] = ticket;
-
-        return View(await _contentItemDisplayManager.BuildEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: false));
-    }
-
-    /// <summary>
-    /// Saves the ticket type's fields.
-    /// </summary>
-    /// <param name="id">The ticket.</param>
-    /// <returns>The ticket page, or the editor with what's wrong.</returns>
+    /// <returns>The ticket page, with what's wrong in the Details card when the save failed.</returns>
     [HttpPost]
-    [ActionName(nameof(Edit))]
     [Admin("ticket/{id}/edit", "TicketsEdit")]
     public async Task<IActionResult> EditPost(string id)
     {
@@ -1090,9 +1085,8 @@ public sealed class TicketsController : Controller
                 ModelState.AddModelError(string.Empty, error);
             }
 
-            ViewData["Ticket"] = result.Ticket ?? ticket;
-
-            return View(editor ?? await _contentItemDisplayManager.BuildEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: false));
+            // The ticket page again, its Details card showing what was posted and what's wrong.
+            return View(nameof(Display), await BuildPageAsync(result.Ticket ?? ticket, editor));
         }
 
         await _notifier.SuccessAsync(H["The ticket was saved."]);

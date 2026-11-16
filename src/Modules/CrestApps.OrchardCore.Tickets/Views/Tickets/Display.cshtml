@@ -57,10 +57,6 @@
                         </div>
                     </div>
                 }
-                @if (Model.CanEdit)
-                {
-                    <a asp-action="Edit" asp-route-id="@ticketId" class="btn btn-secondary">@T["Edit fields"]</a>
-                }
                 @if (Model.CanMerge)
                 {
                     <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#ticket-merge">@T["Merge"]</button>
@@ -105,13 +101,41 @@ else if (Model.IsReadOnly)
 
 <div class="row g-3">
     <div class="col-12 col-lg-8">
-        @{
-            var fields = await DisplayAsync(display.Content);
-        }
-        @if (!string.IsNullOrWhiteSpace(fields?.ToString()))
-        {
-            <div class="card mb-3"><div class="card-body">@fields</div></div>
-        }
+        @* Details: what the ticket's type asks for, always shown. Who may edit changes it here; who may only view reads it. *@
+        <div class="card mb-3" id="ticket-details">
+            <div class="card-header">@T["Details"]</div>
+            <div class="card-body">
+                @if (Model.Editor is not null)
+                {
+                    <form asp-action="EditPost" asp-route-id="@ticketId" method="post" enctype="multipart/form-data" class="no-multisubmit">
+                        @Html.ValidationSummary()
+                        @* The card has its own Save button; the content editor's would sit on top of it. *@
+                        @{ Model.Editor.Properties.Remove("Actions"); }
+                        @await DisplayAsync(Model.Editor)
+                        <button type="submit" class="btn btn-primary btn-sm">@T["Save"]</button>
+                    </form>
+                }
+                else
+                {
+                    var fields = await DisplayAsync(display.Content);
+                    @fields
+                    @if (Model.EmptyFields.Count > 0)
+                    {
+                        <dl class="row mb-0">
+                            @foreach (var field in Model.EmptyFields)
+                            {
+                                <dt class="col-sm-4 fw-normal text-muted">@field.DisplayName</dt>
+                                <dd class="col-sm-8 text-muted fst-italic">@T["Not set"]</dd>
+                            }
+                        </dl>
+                    }
+                    else if (string.IsNullOrWhiteSpace(fields?.ToString()))
+                    {
+                        <p class="text-muted mb-0">@T["This ticket type asks for nothing more."]</p>
+                    }
+                }
+            </div>
+        </div>
 
         @if (canWrite)
         {

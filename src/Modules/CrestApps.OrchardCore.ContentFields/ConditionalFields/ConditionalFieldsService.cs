@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContentFields.Conditions;
 using CrestApps.OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentManagement.Metadata.Settings;
 
 namespace CrestApps.OrchardCore.ContentFields.ConditionalFields;
 
@@ -12,7 +13,7 @@ namespace CrestApps.OrchardCore.ContentFields.ConditionalFields;
 /// a field under a hidden one, and those an <see cref="IContentFieldVisibilityProvider"/> hides. Fields are keyed
 /// <c>{TypePartName}.{FieldName}</c>.
 /// </summary>
-internal sealed class ConditionalFieldsService
+internal sealed class ConditionalFieldsService : IContentFieldStateService
 {
     private readonly Dictionary<string, IContentFieldValueReader> _readers;
     private readonly IEnumerable<IContentConditionSource> _sources;
@@ -155,6 +156,29 @@ internal sealed class ConditionalFieldsService
         }
 
         return descriptors;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<ContentFieldState>> GetStatesAsync(ContentItem contentItem, ContentTypeDefinition type)
+    {
+        ArgumentNullException.ThrowIfNull(contentItem);
+
+        var hidden = await GetHiddenAsync(contentItem, type);
+        var states = new List<ContentFieldState>();
+
+        foreach (var (key, part, field) in GetFields(type))
+        {
+            // A field no reader knows is never reported empty: there's no telling.
+            var value = await ReadSourceAsync(contentItem, type, key);
+            var isEmpty = value is { IsWithheld: false } && value.Values.All(string.IsNullOrWhiteSpace);
+
+            // The field's own name when it has no display name (the definition's would name the field type).
+            var displayName = field.GetSettings<ContentPartFieldSettings>().DisplayName;
+
+            states.Add(new ContentFieldState(key, part.Name, field.Name, string.IsNullOrWhiteSpace(displayName) ? field.Name : displayName, hidden.Contains(key), isEmpty));
+        }
+
+        return states;
     }
 
     /// <summary>

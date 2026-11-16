@@ -349,6 +349,16 @@ public sealed class TicketCreateViewModel
 public sealed class TicketPageViewModel
 {
     /// <summary>
+    /// Gets or sets the Details card's editor (the ticket type's title and fields), for a user who may edit the ticket.
+    /// </summary>
+    public IShape Editor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the fields that apply to the ticket and hold no value, shown as not set to a user who may only view.
+    /// </summary>
+    public IReadOnlyList<global::CrestApps.OrchardCore.ContentFields.Conditions.ContentFieldState> EmptyFields { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the ticket.
     /// </summary>
     public ContentItem Ticket { get; set; }

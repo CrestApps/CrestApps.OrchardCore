@@ -193,6 +193,23 @@ public sealed class ConditionalFieldsTests
         Assert.Empty(JsonFieldValueReader.ToStrings(null));
     }
 
+    [Fact]
+    public async Task TheFieldStates_SayWhichFieldsAreHidden_AndWhichAreEmpty()
+    {
+        // Arrange: no outage, so "Who else is affected?" doesn't apply; nobody gave the model.
+        var kit = new Kit();
+        var item = Kit.NewItem();
+        Post(item, outage: false, affected: null);
+
+        // Act
+        var states = await ((IContentFieldStateService)kit.Service).GetStatesAsync(item, kit.Type);
+
+        // Assert: a page that lists the item's fields shows "Not set" only for Model.
+        Assert.Equal(
+            [("Request.Outage", "Outage", false, false), ("Request.Affected", "Affected", true, true), ("Request.Model", "Model", false, true)],
+            states.Select(state => (state.Key, state.DisplayName, state.IsHidden, state.IsEmpty)));
+    }
+
     private static void Post(ContentItem item, bool outage, string affected)
     {
         var part = (JsonObject)((JsonObject)item.Content)["Request"];
@@ -239,6 +256,7 @@ public sealed class ConditionalFieldsTests
             var definitions = new Mock<IContentDefinitionManager>();
             definitions.Setup(manager => manager.GetTypeDefinitionAsync("Request")).ReturnsAsync(type);
 
+            Type = type;
             Service = new ConditionalFieldsService(
                 [new JsonFieldValueReader("BooleanField", "Value"), new JsonFieldValueReader("TextField", "Text")],
                 [],
@@ -247,6 +265,8 @@ public sealed class ConditionalFieldsTests
         }
 
         public ConditionalFieldsService Service { get; }
+
+        public ContentTypeDefinition Type { get; }
 
         public ConditionalFieldsSnapshots Snapshots { get; } = new();
 

@@ -164,6 +164,41 @@ public sealed class TicketsControllerTests
         Assert.Equal("Ticket", Assert.IsType<TicketCreateViewModel>(view.Model).ContentType);
     }
 
+    [Fact]
+    public async Task TheTicketPage_HasTheTypesEditor_ForWhoMayEdit_AndTheEmptyFieldsThatApply_ForWhoMayOnlyView()
+    {
+        // Arrange: Ben may edit; Dana may only view. Model applies and is empty; Affected doesn't apply.
+        var editor = new ControllerKit(TicketOperation.ViewAssigned, TicketOperation.Edit);
+        var viewer = new ControllerKit(TicketOperation.ViewAssigned);
+
+        // Act
+        var editing = Assert.IsType<TicketPageViewModel>(Assert.IsType<ViewResult>(await editor.Controller.Display("t1")).Model);
+        var viewing = Assert.IsType<TicketPageViewModel>(Assert.IsType<ViewResult>(await viewer.Controller.Display("t1")).Model);
+
+        // Assert
+        Assert.NotNull(editing.Editor);
+        Assert.Null(viewing.Editor);
+        Assert.Equal(["Model"], viewing.EmptyFields.Select(field => field.DisplayName));
+    }
+
+    [Fact]
+    public async Task ASaveOfTheFieldsThatFails_ComesBackOnTheTicketPage_WithItsErrors()
+    {
+        // Arrange
+        var kit = new ControllerKit(TicketOperation.ViewAssigned, TicketOperation.Edit);
+        kit.Tickets.Setup(service => service.EditAsync("t1", It.IsAny<Func<ContentItem, Task<bool>>>(), It.IsAny<TicketActor>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TicketResult { Errors = ["Title is required."] });
+
+        // Act
+        var result = await kit.Controller.EditPost("t1");
+
+        // Assert: the ticket page, with the editor as posted and the error, instead of another page.
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Equal(nameof(TicketsController.Display), view.ViewName);
+        Assert.NotNull(Assert.IsType<TicketPageViewModel>(view.Model).Editor);
+        Assert.Contains(kit.Controller.ModelState[string.Empty].Errors, error => error.ErrorMessage == "Title is required.");
+    }
+
     private static ContentItem Ticket(string id, string deskId, string statusId = "open", string assigneeId = "ben")
     {
         var item = new ContentItem { ContentItemId = id, ContentType = TicketsConstants.DefaultContentType, DisplayText = id };
@@ -206,7 +241,15 @@ public sealed class TicketsControllerTests
             htmlLocalizer.Setup(value => value[It.IsAny<string>()]).Returns((string name) => new LocalizedHtmlString(name, name));
             htmlLocalizer.Setup(value => value[It.IsAny<string>(), It.IsAny<object[]>()]).Returns((string name, object[] _) => new LocalizedHtmlString(name, name));
 
+            var fieldStates = new Mock<global::CrestApps.OrchardCore.ContentFields.Conditions.IContentFieldStateService>();
+            fieldStates.Setup(service => service.GetStatesAsync(It.IsAny<ContentItem>(), It.IsAny<ContentTypeDefinition>()))
+                .ReturnsAsync([
+                    new global::CrestApps.OrchardCore.ContentFields.Conditions.ContentFieldState("Request.Model", "Request", "Model", "Model", false, true),
+                    new global::CrestApps.OrchardCore.ContentFields.Conditions.ContentFieldState("Request.Affected", "Request", "Affected", "Affected", true, true),
+                    new global::CrestApps.OrchardCore.ContentFields.Conditions.ContentFieldState("Request.Outage", "Request", "Outage", "Outage", false, false),
+                ]);
             var services = new ServiceCollection()
+                .AddSingleton(fieldStates.Object)
                 .AddSingleton(new global::CrestApps.OrchardCore.Tickets.Services.TicketUploads([], Microsoft.Extensions.Options.Options.Create(new global::CrestApps.OrchardCore.Attachments.Models.AttachmentOptions()), Doubles.RecipeRoundTrip.Localizer<global::CrestApps.OrchardCore.Tickets.Services.TicketUploads>()))
                 .BuildServiceProvider();
             var httpContext = new DefaultHttpContext { User = CalendarTestHarness.User("ben"), RequestServices = services };
@@ -214,13 +257,13 @@ public sealed class TicketsControllerTests
             Controller = new TicketsController(
                 Tickets.Object,
                 Access.Object,
-                new Mock<ICatalog<TicketStatus>>().Object,
+                Statuses().Object,
                 Priorities().Object,
                 deskCatalog.Object,
                 new Mock<ICatalog<TicketView>>().Object,
                 new Mock<IContentManager>().Object,
                 Definitions(types).Object,
-                new Mock<IContentItemDisplayManager>().Object,
+                DisplayManager().Object,
                 new Mock<IUpdateModelAccessor>().Object,
                 new Mock<IPartyDirectory>().Object,
                 new Mock<IShapeFactory>().Object,
@@ -249,6 +292,23 @@ public sealed class TicketsControllerTests
         public void Grant(Permission permission)
             => _granted.Add(permission.Name);
 
+        private static Mock<IContentItemDisplayManager> DisplayManager()
+        {
+            var display = new Mock<IContentItemDisplayManager>();
+            display.Setup(value => value.BuildEditorAsync(It.IsAny<ContentItem>(), It.IsAny<IUpdateModel>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(Mock.Of<IShape>());
+
+            return display;
+        }
+
+        private static Mock<ICatalog<TicketStatus>> Statuses()
+        {
+            var statuses = new Mock<ICatalog<TicketStatus>>();
+            statuses.Setup(catalog => catalog.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+            return statuses;
+        }
+
         private static Mock<ICatalog<TicketPriority>> Priorities()
         {
             var priorities = new Mock<ICatalog<TicketPriority>>();
@@ -262,7 +322,7 @@ public sealed class TicketsControllerTests
         {
             var definitions = new Mock<IContentDefinitionManager>();
             var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["Ticket"] = "Ticket", ["ITRequest"] = "IT request", ["HRRequest"] = "HR request" };
-            var list = (types ?? []).Select(name => new ContentTypeDefinition(name, names.GetValueOrDefault(name, name),
+            var list = (types ?? [TicketsConstants.DefaultContentType]).Select(name => new ContentTypeDefinition(name, names.GetValueOrDefault(name, name),
                 [new ContentTypePartDefinition(TicketsConstants.PartName, new ContentPartDefinition(TicketsConstants.PartName, [], []), [])], [])).ToList();
             definitions.Setup(value => value.ListTypeDefinitionsAsync()).ReturnsAsync(list);
             definitions.Setup(value => value.GetTypeDefinitionAsync(It.IsAny<string>())).ReturnsAsync((string name) => list.FirstOrDefault(type => type.Name == name));

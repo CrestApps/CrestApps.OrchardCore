@@ -20,6 +20,7 @@ public sealed class ConditionalFieldsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ConditionalFieldsService>();
+        services.AddScoped<IContentFieldStateService>(serviceProvider => serviceProvider.GetRequiredService<ConditionalFieldsService>());
         services.AddScoped<ConditionalFieldsSnapshots>();
 
         // The driver runs before the field editors read the post; the handler, registered after Orchard Core's display

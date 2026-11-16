@@ -43,6 +43,8 @@ Every change goes through `ITicketService` under a lock per ticket: create, upda
 
 **New ticket** is one ticket type's form (`Admin/tickets/new/{contentType}`), built by that type's editor; the type is chosen before it and can't change on it. Opened without a type (from an account, a messaging conversation or a link), it shows **What kind of ticket?** with the types a desk the agent may reply on takes, each with its **Description for customers**, and carries the account, requester and conversation to the form; with only one such type it opens that type's form at once.
 
+The ticket page's **Details** card is the ticket type's editor (title and fields, show-when rules included) for a user who may edit the ticket; it posts to `POST Admin/ticket/{id}/edit`, and a save that fails shows the ticket page again with the posted values and the errors in the card. A user who may only view sees the fields' display, and **Not set** for each empty field that applies, from `IContentFieldStateService` (Conditional Fields).
+
 ## Categories and the questions that follow them
 
 A ticket type can take its **categories** from an Orchard Core taxonomy (Hardware > Laptop > Battery): the Ticket part's settings name the taxonomy (`TicketPartSettings.CategoryTaxonomyId`), whether a category is required on the forms (`CategoryRequired`, agents' page, portal, web form; never for the API, workflows or e-mail) and whether only a category without sub-categories may be chosen (`CategoryLeavesOnly`). Several types may share a taxonomy. The Tickets feature defines a `TicketCategory` term type with the `TicketCategoryPart`; any taxonomy whose terms carry the part works.

@@ -78,6 +78,8 @@ While you have a ticket open, a note above it says who else has it open and who 
 
 A reply from the requester on a solved ticket reopens it within the desk's reopen window. A closed ticket is read only; a reply after it opens a follow-up ticket.
 
+The **Details** card on the ticket's page holds what its type asks for: its subject and the type's own fields, such as the laptop model or whether others can't work either. If you may edit the ticket, change them there and select **Save**; a value that isn't right is pointed out in the card. Questions that depend on the category or another answer show only when they apply, as on the new ticket form. If you may only read the ticket, you see the values, and **Not set** for a question nobody answered.
+
 ## Merge and link tickets
 
 - **Merge** moves a duplicate into another ticket by its number. The duplicate becomes read only and points to the ticket it was merged into.

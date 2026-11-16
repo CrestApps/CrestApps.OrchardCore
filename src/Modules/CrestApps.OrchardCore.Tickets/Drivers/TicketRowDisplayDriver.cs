@@ -40,7 +40,6 @@ internal sealed class TicketRowDisplayDriver : DisplayDriver<TicketRow>
             View("TicketRow_Due_SummaryAdmin", item)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:10")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Due:5"),
-            View("TicketRow_Buttons_SummaryAdmin", item).Location("Actions:5"),
-            View("TicketRow_ActionsMenu_SummaryAdmin", item).Location("ActionsMenu:5"));
+            View("TicketRow_Buttons_SummaryAdmin", item).Location("Actions:5"));
     }
 }
