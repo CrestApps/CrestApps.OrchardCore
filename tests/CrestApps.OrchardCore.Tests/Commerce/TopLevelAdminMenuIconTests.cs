@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Tests.Commerce;
 
 /// <summary>
 /// Every top-level admin menu item has an icon: Subscriptions through the template keyed on its id, whichever of the
-/// module's features adds it, and Commerce through the Commerce feature each module adding to it depends on.
+/// module's features adds it, and Commerce through the Commerce Foundation feature each module adding to it depends on.
 /// </summary>
 public sealed class TopLevelAdminMenuIconTests
 {
@@ -38,7 +38,7 @@ public sealed class TopLevelAdminMenuIconTests
     }
 
     [Fact]
-    public void ExchangeRates_AddingToTheCommerceMenu_DependsOnTheCommerceFeatureThatDrawsItsIcon()
+    public void ExchangeRates_AddingToTheCommerceMenu_DependsOnTheCommerceFoundationThatDrawsItsIcon()
     {
         // Arrange
         var feature = typeof(ExchangeRatesAdminMenu).Assembly
@@ -46,7 +46,7 @@ public sealed class TopLevelAdminMenuIconTests
             .Single(attribute => attribute.GetType() == typeof(FeatureAttribute) && attribute.Id == CrestApps.OrchardCore.ExchangeRates.ExchangeRatesConstants.Features.Area);
 
         // Assert
-        Assert.Contains(CommerceConstants.Features.Area, feature.Dependencies);
+        Assert.Contains(CommerceConstants.Features.Foundation, feature.Dependencies);
     }
 
     private static INavigationProvider Create(Type providerType)

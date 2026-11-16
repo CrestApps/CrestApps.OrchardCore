@@ -12,7 +12,19 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Name = "Commerce",
     Id = CommerceConstants.Features.Area,
-    Description = "Registers the shared Commerce admin menu and its icon for commerce-related modules.",
+    Description = "The store layer: the store's setup guide under Commerce > Set up your store, and the roles it adds for a store's staff.",
+    Category = "Commerce",
+    EnabledByDependencyOnly = true,
+    Dependencies =
+    [
+        CommerceConstants.Features.Foundation,
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Commerce Foundation",
+    Id = CommerceConstants.Features.Foundation,
+    Description = "What billing and the store share: the Commerce admin menu and its icon, the customer account, the commerce admin list helpers, customers' access to their own admin pages, and the export and anonymization of a person's commerce data.",
     Category = "Commerce",
     EnabledByDependencyOnly = true
 )]

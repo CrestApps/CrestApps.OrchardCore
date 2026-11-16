@@ -58,22 +58,26 @@ The payment modules aren't tied to subscriptions or installment plans. Any modul
 
 Subscriptions and Installment Plans are built exactly this way, so they are working examples of both.
 
-## The Commerce feature
+## The Commerce Foundation and Commerce features
 
-| | |
-| --- | --- |
-| **Feature Name** | Commerce |
-| **Feature ID** | `CrestApps.OrchardCore.Commerce` |
-| **Category** | Commerce |
-| **Enabled** | By dependency only |
+The Commerce module has two features. Neither is enabled directly: each is enabled when a module that depends on it is enabled.
 
-The **Commerce** feature has no screens of its own. You do not enable it directly: it is enabled when a module that depends on it is enabled, such as Checkout, Transactions or Taxation.
+| | Commerce Foundation | Commerce |
+| --- | --- | --- |
+| **Feature ID** | `CrestApps.OrchardCore.Commerce.Foundation` (`CommerceConstants.Features.Foundation`) | `CrestApps.OrchardCore.Commerce` (`CommerceConstants.Features.Area`) |
+| **Category** | Commerce | Commerce |
+| **Enabled** | By dependency only | By dependency only |
+| **Depends on** | Nothing | Commerce Foundation |
+| **What it gives** | What billing and the store share: the **Commerce** admin menu and its icon, the storefront account (**My account**), the shared admin list UI, customers' access to their own admin pages, and personal data requests | The store layer: **Commerce › Set up your store** (the store's setup guide), its **Set up the store** permission and the roles it adds for a store's staff |
+| **Turned on by** | Transactions, Taxation, Exchange Rates, Customers, so Invoicing and the rest of billing | The store modules: Products, Carts, Checkout, Orders, Shipping, Inventory and the others that sell |
+
+So a site that only bills, with Invoicing and its features, has the Commerce menu and the account without the store's setup guide. A store has both. A site that had Commerce before keeps it, and Commerce Foundation is loaded with it as its dependency.
 
 ### Contributing to the Commerce menu
 
-The feature owns the top-level **Commerce** admin menu node, its identifier (`commerce`) and its icon, so the menu renders consistently whenever any commerce module is enabled. To add screens under it from another module:
+Commerce Foundation owns the top-level **Commerce** admin menu node, its identifier (`commerce`) and its icon, so the menu renders consistently whenever any commerce module is enabled. To add screens under it from another module:
 
-1. Add a dependency on the `CrestApps.OrchardCore.Commerce` feature in the module manifest.
+1. Add a dependency on the `CrestApps.OrchardCore.Commerce.Foundation` feature in the module manifest, or on `CrestApps.OrchardCore.Commerce` if the module is part of a store.
 
    ```csharp
    [assembly: Feature(
@@ -81,7 +85,7 @@ The feature owns the top-level **Commerce** admin menu node, its identifier (`co
        Category = "Commerce",
        Dependencies =
        [
-           CommerceConstants.Features.Area,
+           CommerceConstants.Features.Foundation,
        ]
    )]
    ```
@@ -103,11 +107,11 @@ The feature owns the top-level **Commerce** admin menu node, its identifier (`co
 
 Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to that identifier, and a node without it would not merge with the others.
 
-`CommerceConstants.Features.Area` is exposed by `CrestApps.OrchardCore.Abstractions`, which commerce modules already reference.
+`CommerceConstants.Features.Foundation` and `CommerceConstants.Features.Area` are exposed by `CrestApps.OrchardCore.Abstractions`, which commerce modules already reference.
 
 ### Storefront account
 
-The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
+Commerce Foundation serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with a `NamedNavigationProvider` created for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
 
 ```csharp
 public sealed class MyAccountMenu : INavigationProvider
@@ -147,7 +151,7 @@ A theme overrides `CommerceAccountPage.cshtml` to change the frame of every acco
 
 ### The shared admin list UI
 
-The commerce lists (installment plans, subscriptions, transactions, payments, refunds, coupons and others) share one layout: search in the action bar, filters in the list header, each row's details as badges, and Orchard Core's pager with a page size selector. A module's list can reuse the Commerce feature's **`commerce-admin-list` script**: a `<select>` with the `data-commerce-list-filter` attribute submits its filter form when it changes, so header filters work without a button. Header selects use the HTML `form` attribute to post with the filter form outside the list. Require it with `<script asp-name="commerce-admin-list" at="Foot"></script>`.
+The commerce lists (installment plans, subscriptions, transactions, payments, refunds, coupons and others) share one layout: search in the action bar, filters in the list header, each row's details as badges, and Orchard Core's pager with a page size selector. A module's list can reuse Commerce Foundation's **`commerce-admin-list` script**: a `<select>` with the `data-commerce-list-filter` attribute submits its filter form when it changes, so header filters work without a button. Header selects use the HTML `form` attribute to post with the filter form outside the list. Require it with `<script asp-name="commerce-admin-list" at="Foot"></script>`.
 
 The page size selector is Orchard Core's own `Pager_PageSizeSelector` shape. It appears when **Allow users to change the page size** is on in the pager settings.
 
@@ -157,7 +161,7 @@ Build the pager with `new Pager(pagerParameters, pagerOptions.Value)` and carry 
 
 Some admin pages are for customers rather than staff: **My Plans**, **My Sites**, **My Transactions** and the printable invoices and receipts they link to. Customers who buy through the checkout have no admin access, so Orchard Core's admin filter would answer 403 on those pages.
 
-A controller (or action) marked with `[CustomerAdminPage]` (`CrestApps.OrchardCore.Commerce.CustomerAdminPageAttribute`, in `CrestApps.OrchardCore.Abstractions`) can be opened by any signed-in user. The Commerce feature's `CustomerAdminPageAuthorizationHandler` grants `AdminPermissions.AccessAdminPanel` for the request, but only while the endpoint carries the marker. The dashboard and every other admin page keep requiring the permission, and anonymous visitors are still sent to sign in.
+A controller (or action) marked with `[CustomerAdminPage]` (`CrestApps.OrchardCore.Commerce.CustomerAdminPageAttribute`, in `CrestApps.OrchardCore.Abstractions`) can be opened by any signed-in user. Commerce Foundation's `CustomerAdminPageAuthorizationHandler` grants `AdminPermissions.AccessAdminPanel` for the request, but only while the endpoint carries the marker. The dashboard and every other admin page keep requiring the permission, and anonymous visitors are still sent to sign in.
 
 The marker opens the page, not the data. Every marked action must check the customer's own permission, such as `ViewOwnTransactions` or `ManageOwnSubscriptions`, and return only that customer's records:
 
@@ -188,7 +192,7 @@ Before this release an `IFinancialDocumentPolicy` seam with a receipts-only defa
 
 ### Personal data requests
 
-Access and erasure requests (GDPR, CCPA) need everything commerce keeps about one person, from every module that keeps some. The Commerce feature registers **`ICommercePersonalDataService`** (`CrestApps.OrchardCore.Customers.Abstractions`, namespace `CrestApps.OrchardCore.Customers.PersonalData`), which composes what the enabled modules contribute:
+Access and erasure requests (GDPR, CCPA) need everything commerce keeps about one person, from every module that keeps some. Commerce Foundation registers **`ICommercePersonalDataService`** (`CrestApps.OrchardCore.Customers.Abstractions`, namespace `CrestApps.OrchardCore.Customers.PersonalData`), which composes what the enabled modules contribute:
 
 ```csharp
 public interface ICommercePersonalDataService
@@ -204,7 +208,7 @@ The person is named by their owner (`CustomerOwner.ForUser(userId)`, or `Custome
 - **`ExportAsync`** returns a `CommercePersonalDataExport` with typed records: `Transactions` (with the invoice number and the receipt numbers of their payments), `Payments`, `Refunds`, `InstallmentPlans`, `Subscriptions`, `CheckoutSessions` (with the contact, IP address, user agent and saved steps), `CouponRedemptions` and `ProviderCustomers`, plus `Warnings` for anything that could not be read.
 - **`AnonymizeAsync`** removes names, emails, phone numbers, addresses (all but the billing country and region), IP addresses, user agents, saved checkout steps, internal plan notes and card descriptions, and replaces the person's emails and names wherever they appear in titles, history messages and failure or refund reasons. A removed name becomes `replacementText`, or is cleared when it is `null`. Amounts, dates, statuses, invoice and receipt numbers and the payment provider's references stay, because the business must keep them, so ledger totals do not change and an open plan or subscription can still be collected. It returns a `CommercePersonalDataAnonymizeResult` with how many records of each kind changed and any `Warnings`.
 
-The Commerce feature also registers `CommercePersonalDataContributor`, which brings this service into the site-wide [personal-data service](personal-data) (`IPersonalDataService`), so a privacy request reaches commerce together with the CRM, Workforce, Scheduling and the other modules. The Customers feature uses that service from its own privacy actions: `PersonalDataCustomerPrivacyHandler` is an `ICustomerPrivacyHandler`, so erasing a customer anonymizes their data in every module and exporting a customer adds a `personalData` section to the download. See [Customers: Privacy](customers#privacy).
+Commerce Foundation also registers `CommercePersonalDataContributor`, which brings this service into the site-wide [personal-data service](personal-data) (`IPersonalDataService`), so a privacy request reaches commerce together with the CRM, Workforce, Scheduling and the other modules. The Customers feature uses that service from its own privacy actions: `PersonalDataCustomerPrivacyHandler` is an `ICustomerPrivacyHandler`, so erasing a customer anonymizes their data in every module and exporting a customer adds a `personalData` section to the download. See [Customers: Privacy](customers#privacy).
 
 #### How a request finds the person
 

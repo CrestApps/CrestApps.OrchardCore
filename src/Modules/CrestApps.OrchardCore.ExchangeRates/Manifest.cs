@@ -18,9 +18,9 @@ using OrchardCore.Modules.Manifest;
     Description = "Dated exchange rates to the store's reporting currency: entered by hand or fetched daily by a provider, and copied onto invoices and the ledger when they are issued.",
     Category = "Commerce",
 
-    // Its pages are under the Commerce menu, which the Commerce feature draws with its icon.
+    // Its pages are under the Commerce menu, which the Commerce Foundation feature draws with its icon.
     Dependencies =
     [
-        CommerceConstants.Features.Area,
+        CommerceConstants.Features.Foundation,
     ]
 )]

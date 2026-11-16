@@ -19,7 +19,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Commerce",
     Dependencies =
     [
-        CommerceConstants.Features.Area,
+        CommerceConstants.Features.Foundation,
 
         // Registers the display-name provider the transaction list and the ledger commands use to name people.
         UsersConstants.Feature.Area,

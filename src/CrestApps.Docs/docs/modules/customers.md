@@ -13,7 +13,7 @@ user_manual:
 | **Features** | `CrestApps.OrchardCore.Customers`, `CrestApps.OrchardCore.Customers.CheckoutDetails` (Checkout details), `CrestApps.OrchardCore.Customers.StoreCredit` (Store Credit), `CrestApps.OrchardCore.Customers.Loyalty` (Loyalty Points), `CrestApps.OrchardCore.Customers.Referrals` (Referrals), `CrestApps.OrchardCore.Customers.Api` (Customers API) |
 | **Core** | `CrestApps.OrchardCore.Customers.Core` |
 | **Category** | Commerce |
-| **Depends on** | Commerce, `OrchardCore.Users` |
+| **Depends on** | [Commerce Foundation](commerce#the-commerce-foundation-and-commerce-features), `OrchardCore.Users` |
 
 The **Customers** feature keeps a record of everyone who buys from the store: a person or a business, with an account or as a guest. Orders, transactions and subscriptions can point at one customer, whatever later happens to the account.
 

@@ -17,7 +17,7 @@ user_manual:
 | **Abstractions** | `CrestApps.OrchardCore.Transactions.Abstractions` |
 | **Core** | `CrestApps.OrchardCore.Transactions.Core` |
 | **Category** | Commerce |
-| **Depends on** | [Commerce](commerce) |
+| **Depends on** | [Commerce Foundation](commerce#the-commerce-foundation-and-commerce-features) |
 
 The **Transactions** module is a provider-agnostic ledger of *money owed*. It answers a single question for the whole tenant — **"what has not been paid yet?"** — no matter which payment provider or purchase flow created the obligation. A transaction is created whenever a purchase is committed without being settled immediately (for example an offline [Pay Later](pay-later) commitment), and it is updated as reminders are sent and payments are recorded until it reaches a terminal state.
 
@@ -738,7 +738,7 @@ Add the package to your Orchard Core project:
 dotnet add package CrestApps.OrchardCore.Transactions
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Transactions**. Enabling it also enables the **[Commerce](commerce)** feature it depends on, which owns the shared Commerce admin menu and icon.
+Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Transactions**. Enabling it also enables the **[Commerce Foundation](commerce#the-commerce-foundation-and-commerce-features)** feature it depends on, which owns the shared Commerce admin menu and icon; it does not turn on the store's setup guide.
 
 Enable **[Checkout](checkout)** as well if you want customers to settle outstanding balances online. To send manual and scheduled payment reminders, enable the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`); it depends on the OrchardCore **[Notifications](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)** feature, which is enabled automatically as a dependency.
 
