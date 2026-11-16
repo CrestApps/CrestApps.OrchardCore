@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
@@ -35,6 +36,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
     private readonly AppointmentChangeQueue _changes;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
+    private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -63,6 +65,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
         AppointmentChangeQueue changes,
         IDistributedLock distributedLock,
         IClock clock,
+        IServiceProvider serviceProvider,
         IStringLocalizer<DefaultAppointmentService> stringLocalizer)
     {
         _typeStore = typeStore;
@@ -75,6 +78,7 @@ public sealed class DefaultAppointmentService : IAppointmentService
         _changes = changes;
         _distributedLock = distributedLock;
         _clock = clock;
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
 
@@ -236,6 +240,25 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return result;
         }
 
+        // A place in a dated session: an offered place is accepted by the session, under its lock; a requested one is
+        // confirmed without touching the session's single calendar event.
+        if (!string.IsNullOrEmpty(appointment.SessionId))
+        {
+            if (appointment.Status == AppointmentStatus.Held)
+            {
+                return FromSession(await Sessions.AcceptOfferAsync(appointment.ItemId, actor, cancellationToken), appointment);
+            }
+
+            var sessionType = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
+
+            appointment.Status = AppointmentStatus.Confirmed;
+            appointment.ModifiedUtc = _clock.UtcNow;
+            await _appointmentStore.UpdateAsync(appointment, cancellationToken);
+            Enqueue(AppointmentChangeKind.Confirmed, appointment, sessionType, actor);
+
+            return result;
+        }
+
         var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
         appointment.Status = AppointmentStatus.Confirmed;
@@ -255,6 +278,14 @@ public sealed class DefaultAppointmentService : IAppointmentService
         ArgumentNullException.ThrowIfNull(appointment);
 
         var result = new AppointmentResult { Appointment = appointment };
+
+        if (!string.IsNullOrEmpty(appointment.SessionId))
+        {
+            result.Errors.Add(S["A place in a dated session moves with the session. Register the person in another session instead."]);
+
+            return result;
+        }
+
         var type = await _typeStore.FindByIdAsync(appointment.AppointmentTypeId, cancellationToken);
 
         if (type is null || appointment.Status is not (AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed))
@@ -377,6 +408,13 @@ public sealed class DefaultAppointmentService : IAppointmentService
             return result;
         }
 
+        // A place in a dated session is given up through the session, under its lock, so its calendar attendee goes and
+        // the place is offered to the session's waitlist.
+        if (!string.IsNullOrEmpty(appointment.SessionId))
+        {
+            return FromSession(await Sessions.CancelRegistrationAsync(appointment.ItemId, reason, actor, cancellationToken), appointment);
+        }
+
         await RemoveEventAsync(appointment, type, actor);
 
         appointment.Status = AppointmentStatus.Cancelled;
@@ -413,6 +451,14 @@ public sealed class DefaultAppointmentService : IAppointmentService
         // Marking it the same way again, such as a retried request, changes nothing and raises no second event.
         if (appointment.Status == status)
         {
+            return result;
+        }
+
+        // A place in a dated session is attendance on the session's roster.
+        if (!string.IsNullOrEmpty(appointment.SessionId))
+        {
+            await Sessions.RecordAttendanceAsync(appointment.SessionId, [new SessionAttendanceMark(appointment.ItemId, noShow ? AppointmentAttendance.Absent : AppointmentAttendance.Attended)], actor, cancellationToken);
+
             return result;
         }
 
@@ -675,6 +721,21 @@ public sealed class DefaultAppointmentService : IAppointmentService
         }
 
         return chosen;
+    }
+
+    // Resolved when used: the session service and this service are both scoped Scheduling services.
+    private ISchedulingSessionService Sessions => _serviceProvider.GetRequiredService<ISchedulingSessionService>();
+
+    private static AppointmentResult FromSession(SessionRegistrationResult session, Appointment appointment)
+    {
+        var result = new AppointmentResult { Appointment = session.Appointment ?? appointment };
+
+        if (!session.Succeeded)
+        {
+            result.Errors.Add(session.Error);
+        }
+
+        return result;
     }
 
     private async Task OfferToWaitlistAsync(AppointmentType type, DateTime freedStartUtc, string actor)
