@@ -28,6 +28,8 @@
         }
         else
         {
+            @* A link to an entry (such as from a record's files) lands on it, below the sticky header, and shows which one. *@
+            <style>.timeline-entry { scroll-margin-top: 6rem; } .timeline-entry:target { background-color: var(--bs-warning-bg-subtle); border-radius: var(--bs-border-radius); }</style>
             <ul class="list-unstyled mb-0">
                 @foreach (var item in Model.Entries)
                 {
@@ -39,7 +41,7 @@
                         _ => "fa-regular fa-note-sticky",
                     };
 
-                    <li class="border-top pt-2 mt-2">
+                    <li class="border-top pt-2 mt-2 timeline-entry" id="@CrestApps.OrchardCore.Timeline.Controllers.TimelineController.EntryAnchor(entry.ItemId)">
                         <div class="small text-muted d-flex flex-wrap align-items-center gap-1">
                             <i class="@icon" aria-hidden="true"></i>
                             @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(entry.CreatedUtc, DateTimeKind.Utc), Format: "g"))

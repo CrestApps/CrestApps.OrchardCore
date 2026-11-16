@@ -49,6 +49,10 @@ await timelineService.AddAsync(new TimelineEntry
 
 `AddAsync` refuses an entry without a record, a kind, or a body, change or attachment, one whose body is longer than 20,000 characters, and one whose record, kind, channel or author is longer than the 64 characters the index holds. `ITimelineEntryHandler`s (`AddTimelineEntryHandler<T>()`) may refuse an entry in `AddingAsync` and act on it in `AddedAsync`, `RedactedAsync`, `UpdatedAsync` and `DeletedAsync`. `ListAsync(TimelineQuery)` pages a record's entries newest first (entries of the same time in a fixed order), with or without internal entries and for some kinds only.
 
+The files of entries are indexed too, one row per file (`TimelineAttachmentIndex`: the attachment, the entry, its record, kind, visibility, author name, time and whether it was redacted), so a record lists all its files without reading its entries. `ITimelineFileService.ListAsync(TimelineFileQuery)` pages them newest first for one or more records (such as a ticket and the tickets merged into it), with the internal entries' files only of the records in `InternalSubjects` and never those of redacted entries; the caller decides, through `ITimelineAccessService`, which records' internal files the reader may see. Tickets' **Files** card is built on it. When the index was added, the `Timeline.IndexFiles` resumable step saved the existing entries with files again to index them.
+
+`Admin/timeline/entry/{id}?kinds=` opens an entry's record at the page of its timeline that shows the entry (counting the newer entries of the kinds the timeline shows that the reader may read) and jumps to it: each entry on the card has the element id `timeline-entry-{id}` and is highlighted when it is the page's target.
+
 Other paths:
 
 - **`ImportAsync`** brings in history that happened elsewhere, such as notes an older version kept on a record. It checks and stamps an entry like `AddAsync` but keeps a long body whole and tells no handler, so nothing is announced. An entry whose id is already stored is left as it is: give the entry an id made from where it came from with `TimelineEntryIds.FromSource(...)`, and importing again adds nothing.

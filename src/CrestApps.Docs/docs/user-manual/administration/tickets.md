@@ -64,6 +64,8 @@ Open a ticket from the list. Its thread is on the left, newest first; its values
 - Choose **Then set the status to** to send and move the ticket in one step, such as **Waiting for the requester**.
 
 The **Conversation** shows what people wrote: replies and internal notes. Every change to the ticket, such as its status, assignee or priority, is listed under **History** below it.
+
+**Files**, between the two, lists every file on the ticket in one place, newest first: those of the requester's messages, your replies and notes, files that came by e-mail, the API or the web form, and those of the tickets merged into it. Each shows a preview for a picture (or the kind of file), its size, who added it and when. Select the name to download it, or **In a message** / **In an internal note** to jump to the message it came with. Files of internal notes carry the **Internal** label and never show to the requester; a redacted message's files don't show at all. A ticket with many files shows the newest 12: select **Show all** to see the rest. Requesters see the files of their request's public messages the same way on the request's page in their account.
 - Pick a **Reply template** to start from a saved answer; it can also set a status, priority or team.
 - Change the status, priority, desk, team or assignee in the ticket's values, or select **Assign to me**.
 - Use **Actions** to run an action your administrator set up, such as **Escalate to tier 2**.

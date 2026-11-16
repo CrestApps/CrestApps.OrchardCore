@@ -33,7 +33,7 @@
         {
             <p class="text-center small text-body-secondary mb-0">@T["{0} earlier messages aren't shown.", Model.Skipped]</p>
         }
-        <div class="card@(entry.IsRequester ? null : " border-primary-subtle")">
+        <div class="card@(entry.IsRequester ? null : " border-primary-subtle")" id="@CrestApps.OrchardCore.Tickets.Portal.TicketPortalController.EntryAnchor(entry.Id)" style="scroll-margin-top: 6rem;">
             <div class="card-header d-flex justify-content-between small">
                 <span class="fw-semibold">@(entry.IsMine ? T["You"] : (object)(entry.AuthorName ?? (entry.IsRequester ? T["Requester"].Value : T["Support"].Value)))</span>
                 <span class="text-body-secondary">@entry.When</span>
@@ -53,6 +53,9 @@
         </div>
     }
 </div>
+
+@* The request's files in one place: those of its public messages only. *@
+@await Component.InvokeAsync("TicketFiles", new { ticketId = Model.TicketId, forRequester = true })
 
 @if (Model.CanRate)
 {

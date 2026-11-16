@@ -62,6 +62,14 @@ public sealed class TicketPortalController : Controller
 
     private static readonly TimeSpan _fileLinkLifetime = TimeSpan.FromHours(1);
 
+    /// <summary>
+    /// The id of a message's element on a request's page, which the request's files link to.
+    /// </summary>
+    /// <param name="entryId">The entry.</param>
+    /// <returns>The element id.</returns>
+    internal static string EntryAnchor(string entryId)
+        => "request-entry-" + entryId;
+
     private readonly TicketPortalAccess _access;
     private readonly ITicketService _tickets;
     private readonly ITimelineService _timeline;
@@ -704,6 +712,7 @@ public sealed class TicketPortalController : Controller
             var fromRequesterSide = entry.Author.IsEmpty || entry.Author == part.Requester || entry.Channel == TicketsConstants.Channels.Portal;
             var row = new TicketPortalEntry
             {
+                Id = entry.ItemId,
                 AuthorName = entry.AuthorName,
                 IsRequester = fromRequesterSide,
                 IsMine = guest

@@ -1,5 +1,9 @@
 using CrestApps.OrchardCore.Timeline.Core.Indexes;
+using CrestApps.OrchardCore.Timeline.Core.Services;
+using CrestApps.OrchardCore.YesSql.Core.Upgrades;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Shell.Scope;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Timeline.Migrations;
@@ -17,7 +21,7 @@ internal sealed class TimelineMigrations : DataMigration
     {
         await TimelineIndexSchema.CreateAsync(SchemaBuilder);
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -33,5 +37,19 @@ internal sealed class TimelineMigrations : DataMigration
         }, collection: TimelineConstants.CollectionName);
 
         return 2;
+    }
+
+    /// <summary>
+    /// Indexes the files attached to entries, so a record lists all its files in one place; the entries made before are
+    /// indexed by a resumable step.
+    /// </summary>
+    /// <returns>The migration version.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await TimelineIndexSchema.CreateAttachmentIndexAsync(SchemaBuilder);
+
+        ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<ResumableSteps>().RequestAsync(TimelineFileIndexStep.StepName));
+
+        return 3;
     }
 }

@@ -169,6 +169,11 @@ public class TicketPortalRateViewModel
 /// </summary>
 public class TicketPortalEntry
 {
+    /// <summary>
+    /// Gets or sets the entry, which the request's files link to.
+    /// </summary>
+    public string Id { get; set; }
+
     public string AuthorName { get; set; }
 
     public bool IsRequester { get; set; }

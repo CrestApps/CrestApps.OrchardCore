@@ -183,6 +183,8 @@ else if (Model.IsReadOnly)
 
         @* The conversation is what people wrote; every change to the ticket (status, assignee, links...) is in its history. *@
         @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["Conversation"].Value, kinds = $"{TicketsConstants.EntryKinds.Reply},{TicketsConstants.EntryKinds.Note}" })
+        @* Every file of the ticket in one place: its replies' and notes' and those of the tickets merged into it. *@
+        @await Component.InvokeAsync("TicketFiles", new { ticket = Model.Ticket })
         @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["History"].Value, kinds = TicketsConstants.EntryKinds.Event })
     </div>
     <div class="col-12 col-lg-4">

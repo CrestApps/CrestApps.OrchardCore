@@ -15,6 +15,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Timeline.Controllers;
 
@@ -170,6 +172,64 @@ public sealed class TimelineController : Controller
     /// <param name="id">The entry's id.</param>
     /// <param name="returnUrl">The page to go back to.</param>
     /// <returns>A redirect to the page.</returns>
+    /// <summary>
+    /// Opens the record of an entry at the page of its timeline that shows the entry, such as from a ticket's files.
+    /// </summary>
+    /// <param name="id">The entry.</param>
+    /// <param name="kinds">The kinds the timeline shows, when it shows only some, as its view component is given them.</param>
+    /// <returns>A redirect to the record's page, at the entry.</returns>
+    [HttpGet]
+    [Admin("timeline/entry/{id}", "TimelineEntry")]
+    public async Task<IActionResult> Entry(string id, string kinds)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+
+        if (await _timelineService.FindAsync(id, cancellationToken) is not { } entry
+            || !await _accessService.CanViewAsync(User, entry.Subject, entry.Visibility, cancellationToken)
+            || HttpContext.RequestServices.GetService<IRecordDirectory>() is not { } records
+            || await records.GetSummaryAsync(entry.Subject, cancellationToken) is not { AdminUrl.Length: > 0 } record
+            || !Url.IsLocalUrl(record.AdminUrl))
+        {
+            return NotFound();
+        }
+
+        // The timeline lists the newest first, a page at a time: the entry is on the page after the entries newer than it.
+        var shown = (kinds ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var includeInternal = await _accessService.CanViewAsync(User, entry.Subject, TimelineVisibility.Internal, cancellationToken);
+        var newer = HttpContext.RequestServices.GetRequiredService<global::YesSql.ISession>()
+            .QueryIndex<Core.Indexes.TimelineEntryIndex>(
+                index => index.SubjectKind == entry.Subject.Kind && index.SubjectId == entry.Subject.Id && index.CreatedUtc > entry.CreatedUtc,
+                collection: TimelineConstants.CollectionName);
+
+        if (shown.Length > 0)
+        {
+            newer = newer.Where(index => index.Kind.IsIn(shown));
+        }
+
+        if (!includeInternal)
+        {
+            newer = newer.Where(index => index.Visibility == TimelineVisibility.Public);
+        }
+
+        var page = (await newer.CountAsync(cancellationToken) / ViewComponents.TimelineViewComponent.PageSize) + 1;
+        var url = record.AdminUrl;
+
+        if (page > 1)
+        {
+            url += (url.Contains('?', StringComparison.Ordinal) ? "&" : "?") + ViewComponents.TimelineViewComponent.PageKey(entry.Subject, kinds) + "=" + page.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        return LocalRedirect(url + "#" + EntryAnchor(entry.ItemId));
+    }
+
+    /// <summary>
+    /// The id of an entry's element on the page, which a link jumps to.
+    /// </summary>
+    /// <param name="entryId">The entry.</param>
+    /// <returns>The element id.</returns>
+    internal static string EntryAnchor(string entryId)
+        => "timeline-entry-" + entryId;
+
     [HttpPost]
     [Admin("timeline/redact/{id}", "TimelineRedact")]
     public async Task<IActionResult> Redact(string id, string returnUrl)
