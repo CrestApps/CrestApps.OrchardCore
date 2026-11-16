@@ -4,7 +4,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.BusinessHours.Navigation;
 
 /// <summary>
-/// Adds Business Hours to the Configuration menu.
+/// Adds Business Hours to the Content menu.
 /// </summary>
 public sealed class BusinessHoursAdminMenu : AdminNavigationProvider
 {
@@ -22,10 +22,9 @@ public sealed class BusinessHoursAdminMenu : AdminNavigationProvider
     /// <inheritdoc />
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        // Schedules are shared by queues, service levels and automations, so they sit under Configuration rather than
-        // under any one of the modules that read them.
-        // Schedules serve several modules (service levels, tickets, contact center); Settings is for site settings.
-        builder.Add(S["Tools"], tools => tools
+        // Schedules are records shared by queues, service levels, tickets and automations, so they sit under Content
+        // (like Teams) rather than under any one of the modules that read them; Settings is for site settings.
+        builder.Add(S["Content"], content => content
             .Add(S["Business Hours"], S["Business Hours"].PrefixPosition(), hours => hours
                 .Id("businessHoursSchedules")
                 .Action("Index", "Schedules", BusinessHoursConstants.Features.BusinessHours)

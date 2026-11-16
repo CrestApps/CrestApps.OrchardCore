@@ -4,7 +4,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Agreements.Navigation;
 
 /// <summary>
-/// Adds Agreements to the admin menu.
+/// Adds Agreements to the Content menu.
 /// </summary>
 public sealed class AgreementsAdminMenu : AdminNavigationProvider
 {
@@ -22,12 +22,14 @@ public sealed class AgreementsAdminMenu : AdminNavigationProvider
     /// <inheritdoc/>
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        builder.Add(S["Agreements"], S["Agreements"].PrefixPosition("40"), agreements => agreements
-            .AddClass("agreements")
-            .Id("agreements")
-            .Action("Index", "Agreements", AgreementsConstants.Features.Agreements)
-            .Permission(AgreementsPermissions.ViewAgreements)
-            .LocalNav());
+        // Agreements are records about accounts that several modules use (tickets, field service), so they sit under
+        // Content, like Teams, rather than at the top of the menu or under one of the modules that read them.
+        builder.Add(S["Content"], content => content
+            .Add(S["Agreements"], S["Agreements"].PrefixPosition(), agreements => agreements
+                .Id("agreements")
+                .Action("Index", "Agreements", AgreementsConstants.Features.Agreements)
+                .Permission(AgreementsPermissions.ViewAgreements)
+                .LocalNav()));
 
         return ValueTask.CompletedTask;
     }

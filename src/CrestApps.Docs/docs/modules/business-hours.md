@@ -23,7 +23,7 @@ Schedules come from every registered source. The Business Hours feature keeps th
 | --- | --- | --- |
 | Business Hours | `CrestApps.OrchardCore.BusinessHours` | nothing |
 
-It adds **Tools > Business Hours**, a list of schedules (on the shared admin list, so the List and Grid layouts and the Buttons and Menu row actions apply) and an editor with three cards: **General** (name, description, time zone, enabled), **Weekly hours** (each day open or closed, with up to two windows so a lunch break can be entered) and **Holidays and special days** (one date per line: `2026-12-25 Christmas Day` is closed all day, `2026-12-24 09:00-13:00 Christmas Eve` has special hours). The editor is built through `IDisplayManager<BusinessHoursSchedule>`, so another module adds a card with its own display driver.
+It adds **Content > Business Hours**, a list of schedules (on the shared admin list, so the List and Grid layouts and the Buttons and Menu row actions apply) and an editor with three cards: **General** (name, description, time zone, enabled), **Weekly hours** (each day open or closed, with up to two windows so a lunch break can be entered) and **Holidays and special days** (one date per line: `2026-12-25 Christmas Day` is closed all day, `2026-12-24 09:00-13:00 Christmas Eve` has special hours). The editor is built through `IDisplayManager<BusinessHoursSchedule>`, so another module adds a card with its own display driver.
 
 A disabled schedule is unknown to `IOpenHoursService`: `IsOpenAsync` returns `null` and the time arithmetic counts around the clock. A new schedule takes the site's time zone.
 
