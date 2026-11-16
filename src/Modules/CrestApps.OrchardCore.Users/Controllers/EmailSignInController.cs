@@ -72,7 +72,7 @@ public sealed class EmailSignInController : Controller
     [HttpGet("sign-in/email", Name = "EmailSignIn")]
     public async Task<IActionResult> Index(string returnUrl = null)
     {
-        if (await IsLocalLoginDisabledAsync())
+        if (!await EmailSignInAvailability.IsAvailableAsync(_siteService))
         {
             return NotFound();
         }
@@ -85,7 +85,7 @@ public sealed class EmailSignInController : Controller
     [RateLimitGroup(EmailSignInCodes.RateLimitGroup)]
     public async Task<IActionResult> Index(EmailSignInViewModel model)
     {
-        if (await IsLocalLoginDisabledAsync())
+        if (!await EmailSignInAvailability.IsAvailableAsync(_siteService))
         {
             return NotFound();
         }
@@ -128,7 +128,7 @@ public sealed class EmailSignInController : Controller
     [RateLimitGroup(EmailSignInCodes.RateLimitGroup)]
     public async Task<IActionResult> Code(EmailSignInViewModel model)
     {
-        if (await IsLocalLoginDisabledAsync())
+        if (!await EmailSignInAvailability.IsAvailableAsync(_siteService))
         {
             return NotFound();
         }
@@ -239,10 +239,6 @@ public sealed class EmailSignInController : Controller
 
         return View(model);
     }
-
-    // A code is a local sign-in: a site that turned those off, to sign in only through an external provider, has none.
-    private async Task<bool> IsLocalLoginDisabledAsync()
-        => (await _siteService.GetSettingsAsync<LoginSettings>()).DisableLocalLogin;
 
     // An account that can sign in with a code (see EmailSignInEligibility). The typed address must be the account's own: a database that compares text loosely (SQL Server's default
     // collation treats AE as Æ, TH as Þ and SS as ß) answers a look-alike address with another account.

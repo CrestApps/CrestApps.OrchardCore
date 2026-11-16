@@ -4,15 +4,18 @@ using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Controllers;
+using CrestApps.OrchardCore.Users.Drivers;
 using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking;
@@ -284,6 +287,29 @@ public sealed class EmailSignInControllerTests
         _signInManager.Verify(manager => manager.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
     }
 
+    /// <summary>
+    /// Review (low): the login form's "e-mail me a sign-in code" link showed on a site that turned off local sign-in,
+    /// where the page it leads to is not there (404). The link shows exactly when the page is there.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TheLoginFormsCodeLink_ShowsExactlyWhenTheCodePageIsThere(bool disableLocalLogin)
+    {
+        // Arrange
+        _loginSettings.DisableLocalLogin = disableLocalLogin;
+        using var services = new ServiceCollection().AddSingleton(CreateSiteService()).BuildServiceProvider();
+        var driver = ActivatorUtilities.CreateInstance<EmailCodeLoginFormDisplayDriver>(services);
+
+        // Act
+        var page = await CreateController().Index(returnUrl: null);
+        var link = await driver.EditAsync(new LoginForm(), (BuildEditorContext)null);
+
+        // Assert
+        Assert.Equal(disableLocalLogin, page is NotFoundResult);
+        Assert.Equal(disableLocalLogin, link is null);
+    }
+
     [Fact]
     public void TheController_IsPartOfTheEmailCodeSignInFeature_SoItsRoutesAreGoneWhenTheFeatureIsOff()
     {
@@ -307,23 +333,27 @@ public sealed class EmailSignInControllerTests
         return new EmailSignInCodes(_cache, limiter, new ShellSettings { Name = "Default" }, clock.Object, _lock);
     }
 
-    private EmailSignInController CreateController(IEmailSignInCodeSender codeSender = null)
+    private ISiteService CreateSiteService()
     {
-        var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(() => _now);
-
         var site = new SiteSettings { SiteName = "Test site" };
         site.Put(_loginSettings);
         var siteService = new Mock<ISiteService>();
         siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site);
 
+        return siteService.Object;
+    }
+
+    private EmailSignInController CreateController(IEmailSignInCodeSender codeSender = null)
+    {
+        var clock = new Mock<IClock>();
+        clock.Setup(c => c.UtcNow).Returns(() => _now);
 
         var controller = new EmailSignInController(
             _userManager.Object,
             _signInManager.Object,
             CreateCodes(),
             codeSender ?? Mock.Of<IEmailSignInCodeSender>(),
-            siteService.Object,
+            CreateSiteService(),
             _loginFormEvents,
             new EmailOwnershipProof(_userManager.Object, Mock.Of<global::YesSql.ISession>(), new UserCredentialsResets(_cache, new ShellSettings { Name = "Default" }, Options.Create(new SecurityStampValidatorOptions())), [], clock.Object, NullLogger<EmailOwnershipProof>.Instance),
             Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),

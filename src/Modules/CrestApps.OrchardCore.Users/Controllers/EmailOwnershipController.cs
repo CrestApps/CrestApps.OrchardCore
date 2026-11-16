@@ -210,7 +210,7 @@ public sealed class EmailOwnershipController : Controller
     // allows local sign-in.
     private async Task<User> FindAccountAsync()
     {
-        if ((await _siteService.GetSettingsAsync<LoginSettings>()).DisableLocalLogin ||
+        if (!await EmailSignInAvailability.IsAvailableAsync(_siteService) ||
             await _userManager.GetUserAsync(User) is not User account ||
             string.IsNullOrWhiteSpace(account.Email) ||
             !await _eligibility.AllowsAsync(account))
