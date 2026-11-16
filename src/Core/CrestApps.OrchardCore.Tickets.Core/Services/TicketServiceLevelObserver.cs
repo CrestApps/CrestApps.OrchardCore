@@ -54,16 +54,27 @@ public sealed class TicketServiceLevelObserver : IServiceLevelObserver
             return;
         }
 
-        // The ticket's history says why its target now counts around the clock. The timeline service is resolved here:
-        // it reaches the record sources, which lead back to the ticket service that constructs this observer's tracker.
+        // The ticket's history says why its target now counts around the clock, naming the target: a ticket has one timer
+        // per target, so two identical notes would read as the same thing said twice. The timeline service is resolved
+        // here: it reaches the record sources, which lead back to the ticket service that constructs this observer's
+        // tracker.
         await _services.GetRequiredService<ITimelineService>().AddAsync(new TimelineEntry
         {
             Subject = timer.Subject,
             Kind = TicketsConstants.EntryKinds.Event,
             Visibility = TimelineVisibility.Internal,
-            Body = S["The business hours of the service level are never open now, so its target counts around the clock until they open again."],
+            Body = S["The business hours of the {0} target are never open now, so it counts around the clock until they open again.", MetricName(timer.Metric)],
         }, cancellationToken);
     }
+
+    private string MetricName(string metric)
+        => metric switch
+        {
+            ServiceLevelMetrics.FirstResponse => S["first response"],
+            ServiceLevelMetrics.NextResponse => S["next response"],
+            ServiceLevelMetrics.Resolution => S["resolution"],
+            _ => metric,
+        };
 
     /// <inheritdoc/>
     public Task WarningAsync(ServiceLevelTimer timer, CancellationToken cancellationToken = default)

@@ -171,11 +171,12 @@ public sealed class TicketPhaseOneOpenItemsTests
         var observer = new TicketServiceLevelObserver(Mock.Of<IContentManager>(), [], NullLogger<TicketServiceLevelObserver>.Instance, services, new PassThroughStringLocalizer<TicketServiceLevelObserver>());
 
         // Act
-        await observer.NoBusinessHoursAsync(new ServiceLevelTimer { Subject = new RecordRef(TicketsConstants.RecordKind, "t1"), NoBusinessHours = true }, TestContext.Current.CancellationToken);
+        await observer.NoBusinessHoursAsync(new ServiceLevelTimer { Subject = new RecordRef(TicketsConstants.RecordKind, "t1"), Metric = ServiceLevelMetrics.FirstResponse, NoBusinessHours = true }, TestContext.Current.CancellationToken);
         await observer.NoBusinessHoursAsync(new ServiceLevelTimer { Subject = new RecordRef("WorkOrder", "w1"), NoBusinessHours = true }, TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert: the note names its target, since a ticket's other targets get their own note.
         Assert.Equal((new RecordRef(TicketsConstants.RecordKind, "t1"), TicketsConstants.EntryKinds.Event, TimelineVisibility.Internal), (added.Subject, added.Kind, added.Visibility));
+        Assert.Contains("first response target", added.Body, StringComparison.Ordinal);
         timeline.Verify(service => service.AddAsync(It.IsAny<TimelineEntry>(), It.IsAny<CancellationToken>()), Times.Once());
     }
 
