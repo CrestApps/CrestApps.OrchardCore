@@ -25,7 +25,8 @@ public sealed class DataSourcesStartup : StartupBase
             .AddScoped<TicketEntriesReportDataSet>()
             .AddScoped<TicketChangesReportDataSet>()
             .AddScoped<TicketLinksReportDataSet>()
-            .AddScoped<TicketBacklogReportDataSet>();
+            .AddScoped<TicketBacklogReportDataSet>()
+            .AddScoped<TicketCategoriesReportDataSet>();
     }
 }
 

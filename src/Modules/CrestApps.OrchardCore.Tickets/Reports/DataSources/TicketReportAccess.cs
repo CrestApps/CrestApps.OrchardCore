@@ -178,6 +178,11 @@ internal sealed class TicketReportNames
     /// </summary>
     public TicketCategory Category(string id) => string.IsNullOrEmpty(id) ? null : _categories.GetValueOrDefault(id);
 
+    /// <summary>
+    /// Gets every category of every ticket type, each once, in tree order.
+    /// </summary>
+    public IEnumerable<TicketCategory> Categories => _categories.Values;
+
     public string Desk(string id) => Name(_desks, id);
 
     public string Status(string id) => Name(_statuses, id);

@@ -31,6 +31,8 @@ public sealed class TicketEmailOutboxItem
 
     public string TicketSubject { get; set; }
 
+    public string TicketCategory { get; set; }
+
     public string TicketStatus { get; set; }
 
     public string RequesterName { get; set; }

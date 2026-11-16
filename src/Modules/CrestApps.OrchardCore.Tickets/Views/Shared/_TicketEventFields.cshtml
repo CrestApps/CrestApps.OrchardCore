@@ -8,6 +8,24 @@
     <span class="hint">@T["Leave none selected to start for every desk."]</span>
 </div>
 
+@if (Model.TicketTypeOptions.Count > 1)
+{
+    <div class="mb-3">
+        <label asp-for="TicketTypes" class="form-label">@T["Ticket types"]</label>
+        <select asp-for="TicketTypes" asp-items="Model.TicketTypeOptions" class="form-select" multiple size="4"></select>
+        <span class="hint">@T["Leave none selected to start for every ticket type."]</span>
+    </div>
+}
+
+@if (Model.CategoryOptions.Count > 0)
+{
+    <div class="mb-3">
+        <label asp-for="CategoryIds" class="form-label">@T["Ticket categories"]</label>
+        <select asp-for="CategoryIds" asp-items="Model.CategoryOptions" class="form-select" multiple size="6"></select>
+        <span class="hint">@T["A category takes the categories below it along. Leave none selected to start for any ticket, with a category or without."]</span>
+    </div>
+}
+
 @if (Model.ShowActionName)
 {
     <div class="mb-3">
@@ -31,6 +49,7 @@
                 (TicketChangeKeys.Team, T["Team"]),
                 (TicketChangeKeys.Assignee, T["Assignee"]),
                 (TicketChangeKeys.Subject, T["Subject"]),
+                (TicketChangeKeys.Category, T["Category"]),
                 (TicketChangeKeys.EscalationLevel, T["Escalation level"]),
                 (TicketChangeKeys.Link, T["Links"]),
             })

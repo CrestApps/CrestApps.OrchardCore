@@ -59,6 +59,9 @@ internal sealed class TicketBacklogReportDataSet : IndexedReportDataSet<TicketBa
         AddField(nameof(TicketBacklogGroup.AssigneeId), S["Assignee"], DataFieldType.Text, row => row.Child.AssigneeId, group).Identifier(ReportDataReferences.User());
         AddField("TicketType", S["Ticket type"], DataFieldType.Text, row => row.Child.ContentType, group);
         AddField(nameof(TicketBacklogGroup.Channel), S["Channel"], DataFieldType.Text, row => row.Child.Channel, group);
+        AddField(nameof(TicketBacklogGroup.CategoryId), S["Category ID"], DataFieldType.Text, row => row.Child.CategoryId, group).Identifier(TicketReportDataSets.Category()).Description = S["Empty on days recorded before the backlog was broken down by category."].Value;
+        AddField("Category", S["Category"], DataFieldType.Text, row => _names?.Category(row.Child.CategoryId)?.Name ?? row.Child.CategoryId, group);
+        AddField("CategoryPathText", S["Category path"], DataFieldType.Text, row => _names?.Category(row.Child.CategoryId)?.PathText, group);
         AddField(nameof(TicketBacklogGroup.Count), S["Open tickets"], DataFieldType.Integer, row => row.Child.Count, group);
         AddField(nameof(TicketBacklogGroup.Overdue), S["Overdue"], DataFieldType.Integer, row => row.Child.Overdue, group).Description = S["How many were past their next service-level target."].Value;
         AddField("AverageAgeHours", S["Average age (hours)"], DataFieldType.Decimal, row => row.Child.Count > 0 ? Math.Round(row.Child.TotalAgeHours / row.Child.Count, 1) : 0, group);

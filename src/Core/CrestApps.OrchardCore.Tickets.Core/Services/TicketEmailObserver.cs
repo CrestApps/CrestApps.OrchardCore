@@ -52,7 +52,7 @@ public sealed class TicketEmailObserver : ITicketObserver
             return;
         }
 
-        var model = TicketEmailModel.From(ticket, null, await LinkAsync(ticket, cancellationToken));
+        var model = TicketEmailModel.From(ticket, null, await LinkAsync(ticket, cancellationToken), await TicketEmailModel.CategoryAsync(ticket, _services.GetService<ITicketCategoryService>(), cancellationToken));
         var subject = model.Subject is null ? S["We received your request {0}", model.Number].Value : S["We received your request: {0}", model.Subject].Value;
         var html = $"<p>{Encode(S["We received your request and gave it the number {0}. We'll get back to you soon.", model.Number])}</p>"
             + Strong(model.Subject)
@@ -71,7 +71,7 @@ public sealed class TicketEmailObserver : ITicketObserver
             return;
         }
 
-        var model = TicketEmailModel.From(ticket, null, await LinkAsync(ticket, cancellationToken));
+        var model = TicketEmailModel.From(ticket, null, await LinkAsync(ticket, cancellationToken), await TicketEmailModel.CategoryAsync(ticket, _services.GetService<ITicketCategoryService>(), cancellationToken));
         var files = await FilesAsync(entry, cancellationToken);
         var reply = new TicketEmailReply { Body = entry.Body, Html = Paragraphs(entry.Body) + files, AuthorName = entry.AuthorName };
         var subject = $"[{model.Number}] {model.Subject ?? S["Your request"].Value}";
@@ -91,7 +91,7 @@ public sealed class TicketEmailObserver : ITicketObserver
             return;
         }
 
-        var model = TicketEmailModel.From(ticket, current, await LinkAsync(ticket, cancellationToken));
+        var model = TicketEmailModel.From(ticket, current, await LinkAsync(ticket, cancellationToken), await TicketEmailModel.CategoryAsync(ticket, _services.GetService<ITicketCategoryService>(), cancellationToken));
         var subject = S["Solved: {0}", model.Subject ?? model.Number].Value;
         var html = $"<p>{Encode(S["Your request {0} is solved.", model.Number])}</p>"
             + Strong(model.Subject)
@@ -125,6 +125,7 @@ public sealed class TicketEmailObserver : ITicketObserver
             Html = html,
             TicketNumber = model.Number,
             TicketSubject = model.Subject,
+            TicketCategory = model.Category,
             TicketStatus = model.Status,
             RequesterName = model.RequesterName,
             ReplyBody = reply?.Body,
@@ -187,7 +188,8 @@ public sealed class TicketEmailObserver : ITicketObserver
 
 /// <summary>
 /// A ticket as an e-mail template reads it: <c>{{ Ticket.Number }}</c>, <c>{{ Ticket.Subject }}</c>,
-/// <c>{{ Ticket.Status }}</c> (the status's label for customers), <c>{{ Ticket.RequesterName }}</c>.
+/// <c>{{ Ticket.Status }}</c> (the status's label for customers), <c>{{ Ticket.RequesterName }}</c>,
+/// <c>{{ Ticket.Category }}</c> (the category with those above it, such as "Hardware > Laptop").
 /// </summary>
 public sealed class TicketEmailModel
 {
@@ -212,6 +214,11 @@ public sealed class TicketEmailModel
     public string RequesterName { get; init; }
 
     /// <summary>
+    /// Gets the ticket's category with the categories above it, such as "Hardware > Laptop", if it has one.
+    /// </summary>
+    public string Category { get; init; }
+
+    /// <summary>
     /// Gets the link to the request on the site (their account page, or a signed link for a guest), when the Tickets
     /// Portal feature is on and the site has an address.
     /// </summary>
@@ -224,7 +231,8 @@ public sealed class TicketEmailModel
     /// <param name="status">Its status, if known.</param>
     /// <returns>The model.</returns>
     /// <param name="link">The link to the request on the site, if any.</param>
-    public static TicketEmailModel From(ContentItem ticket, TicketStatus status, string link = null)
+    /// <param name="category">The ticket's category path, by names, if any (<see cref="CategoryAsync"/>).</param>
+    public static TicketEmailModel From(ContentItem ticket, TicketStatus status, string link = null, string category = null)
     {
         ArgumentNullException.ThrowIfNull(ticket);
 
@@ -241,7 +249,31 @@ public sealed class TicketEmailModel
             Status = status is null ? null : string.IsNullOrWhiteSpace(status.CustomerLabel) ? status.Name : status.CustomerLabel,
             RequesterName = unverified ? null : part?.RequesterContact?.Name,
             Link = unverified ? null : link,
+
+            // The site's own words (a category of its taxonomy), so a guest's ticket shows it too.
+            Category = category,
         };
+    }
+
+    /// <summary>
+    /// Finds a ticket's category with the categories above it, such as "Hardware > Laptop", for its e-mails.
+    /// </summary>
+    /// <param name="ticket">The ticket.</param>
+    /// <param name="categories">The category service, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The category's path by names, or <see langword="null"/>.</returns>
+    public static async Task<string> CategoryAsync(ContentItem ticket, ITicketCategoryService categories, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ticket);
+
+        if (!ticket.TryGet<TicketPart>(out var part)
+            || string.IsNullOrEmpty(part.CategoryId)
+            || categories is null)
+        {
+            return null;
+        }
+
+        return (await categories.FindAsync(ticket.ContentType, part.CategoryId, cancellationToken))?.PathText;
     }
 }
 

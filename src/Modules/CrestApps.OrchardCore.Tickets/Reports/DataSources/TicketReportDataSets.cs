@@ -19,6 +19,19 @@ public static class TicketReportDataSets
 
     public const string TicketBacklog = "TicketBacklog";
 
+    /// <summary>The ticket categories data set.</summary>
+    public const string TicketCategories = "TicketCategories";
+
+    /// <summary>The field of a category's id, which tickets and the backlog join on.</summary>
+    public const string CategoryIdField = "CategoryId";
+
+    /// <summary>
+    /// A reference to a ticket category.
+    /// </summary>
+    /// <returns>The reference.</returns>
+    public static DataFieldReference Category()
+        => new(Source, TicketCategories, CategoryIdField);
+
     /// <summary>
     /// The field that holds a ticket's content item id in every data set.
     /// </summary>

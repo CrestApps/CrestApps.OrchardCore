@@ -36,6 +36,7 @@ public sealed class TicketRatingRequests
     private readonly TicketEmailOutbox _outbox;
     private readonly IEnumerable<ITicketRequesterLinks> _links;
     private readonly IClock _clock;
+    private readonly ITicketCategoryService _categories;
 
     internal readonly IStringLocalizer S;
 
@@ -50,6 +51,7 @@ public sealed class TicketRatingRequests
         TicketEmailOutbox outbox,
         IEnumerable<ITicketRequesterLinks> links,
         IClock clock,
+        IEnumerable<ITicketCategoryService> categories,
         IStringLocalizer<TicketRatingRequests> stringLocalizer)
     {
         _session = session;
@@ -59,6 +61,7 @@ public sealed class TicketRatingRequests
         _outbox = outbox;
         _links = links;
         _clock = clock;
+        _categories = categories.FirstOrDefault();
         S = stringLocalizer;
     }
 
@@ -114,7 +117,7 @@ public sealed class TicketRatingRequests
                 }
 
                 // In a rating request, Ticket.Link is the rating page.
-                var model = TicketEmailModel.From(ticket, null, link);
+                var model = TicketEmailModel.From(ticket, null, link, await TicketEmailModel.CategoryAsync(ticket, _categories, cancellationToken));
                 var encoder = HtmlEncoder.Default;
                 var html = $"<p>{encoder.Encode(S["How did we do with your request {0}?", model.Number].Value)}</p>"
                     + $"<p><strong>{encoder.Encode(model.Subject ?? string.Empty)}</strong></p>"
@@ -130,6 +133,7 @@ public sealed class TicketRatingRequests
                     Html = html,
                     TicketNumber = model.Number,
                     TicketSubject = model.Subject,
+                    TicketCategory = model.Category,
                     RequesterName = model.RequesterName,
                     TicketLink = link,
                 }, cancellationToken);

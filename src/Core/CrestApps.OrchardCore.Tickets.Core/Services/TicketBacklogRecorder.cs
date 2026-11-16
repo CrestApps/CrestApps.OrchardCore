@@ -106,7 +106,7 @@ public sealed class TicketBacklogRecorder
     /// <returns>The snapshot, without its day.</returns>
     public async Task<TicketBacklogDay> TakeAsync(string deskId, DateTime utcNow, CancellationToken cancellationToken = default)
     {
-        var groups = new Dictionary<(string, TicketStatusCategory, string, string, string, string, string), TicketBacklogGroup>();
+        var groups = new Dictionary<(string, TicketStatusCategory, string, string, string, string, string, string), TicketBacklogGroup>();
         var lastId = 0L;
 
         while (true)
@@ -124,7 +124,7 @@ public sealed class TicketBacklogRecorder
                 count++;
                 lastId = ticket.Id;
 
-                var key = (ticket.StatusId, ticket.StatusCategory, ticket.PriorityId, ticket.TeamId, ticket.AssigneeId, ticket.ContentType, ticket.Channel);
+                var key = (ticket.StatusId, ticket.StatusCategory, ticket.PriorityId, ticket.TeamId, ticket.AssigneeId, ticket.ContentType, ticket.Channel, ticket.CategoryId);
 
                 if (!groups.TryGetValue(key, out var group))
                 {
@@ -137,6 +137,7 @@ public sealed class TicketBacklogRecorder
                         AssigneeId = ticket.AssigneeId,
                         ContentType = ticket.ContentType,
                         Channel = ticket.Channel,
+                        CategoryId = ticket.CategoryId,
                         OldestCreatedUtc = ticket.CreatedUtc,
                     };
                 }

@@ -15,6 +15,8 @@ internal abstract class TicketEventSchemaBase : WorkflowActivitySchemaDefinition
     protected override IEnumerable<(string Name, JsonSchemaBuilder Schema)> GetPropertyDefinitions(WorkflowActivitySchemaContext context)
     {
         yield return (nameof(TicketEventActivity.DeskIds), WorkflowActivitySchemaBuilders.StringArray("The ids of the desks the event starts for; empty for every desk."));
+        yield return (nameof(TicketEventActivity.TicketTypes), WorkflowActivitySchemaBuilders.StringArray("The ticket types (content types) the event starts for; empty for every type."));
+        yield return (nameof(TicketEventActivity.CategoryIds), WorkflowActivitySchemaBuilders.StringArray("The ids of the ticket categories the event starts for, each with the categories below it; empty for any ticket."));
 
         foreach (var property in GetOwnProperties())
         {

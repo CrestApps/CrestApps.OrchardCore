@@ -1,9 +1,11 @@
 using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -20,12 +22,20 @@ public sealed class TicketEventDisplayDriver<TActivity> : ActivityDisplayDriver<
     where TActivity : TicketEventActivity
 {
     private readonly ICatalog<TicketDesk> _desks;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly ITicketCategoryService _categories;
 
     internal readonly IStringLocalizer S;
 
-    public TicketEventDisplayDriver(ICatalog<TicketDesk> desks, IStringLocalizer<TicketEventViewModel> stringLocalizer)
+    public TicketEventDisplayDriver(
+        ICatalog<TicketDesk> desks,
+        IContentDefinitionManager contentDefinitionManager,
+        ITicketCategoryService categories,
+        IStringLocalizer<TicketEventViewModel> stringLocalizer)
     {
         _desks = desks;
+        _contentDefinitionManager = contentDefinitionManager;
+        _categories = categories;
         S = stringLocalizer;
     }
 
@@ -33,6 +43,28 @@ public sealed class TicketEventDisplayDriver<TActivity> : ActivityDisplayDriver<
     {
         model.DeskIds = [.. activity.DeskIds];
         model.DeskOptions = [.. (await _desks.GetAllAsync()).OrderBy(desk => desk.Name, StringComparer.CurrentCultureIgnoreCase).Select(desk => new SelectListItem(desk.Name, desk.ItemId, model.DeskIds.Contains(desk.ItemId)))];
+        model.TicketTypes = [.. activity.TicketTypes];
+        model.CategoryIds = [.. activity.CategoryIds];
+
+        var types = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
+            .Where(type => type.Parts.Any(part => part.PartDefinition.Name == TicketsConstants.PartName))
+            .OrderBy(type => type.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        model.TicketTypeOptions = [.. types.Select(type => new SelectListItem(type.DisplayName, type.Name, model.TicketTypes.Contains(type.Name)))];
+
+        // The categories of every ticket type, each once, in tree order, by their path's names.
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var type in types)
+        {
+            foreach (var category in await _categories.ListAsync(type.Name))
+            {
+                if (seen.Add(category.Id))
+                {
+                    model.CategoryOptions.Add(new SelectListItem(category.PathText ?? category.Name, category.Id, model.CategoryIds.Contains(category.Id)));
+                }
+            }
+        }
 
         switch (activity)
         {
@@ -66,6 +98,8 @@ public sealed class TicketEventDisplayDriver<TActivity> : ActivityDisplayDriver<
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         activity.DeskIds = Clean(model.DeskIds);
+        activity.TicketTypes = Clean(model.TicketTypes);
+        activity.CategoryIds = Clean(model.CategoryIds);
 
         switch (activity)
         {
@@ -112,6 +146,14 @@ public sealed class TicketEventDisplayDriver<TActivity> : ActivityDisplayDriver<
 public class TicketEventViewModel
 {
     public IList<string> DeskIds { get; set; } = [];
+
+    public IList<string> TicketTypes { get; set; } = [];
+
+    public IList<string> CategoryIds { get; set; } = [];
+
+    public IList<SelectListItem> TicketTypeOptions { get; set; } = [];
+
+    public IList<SelectListItem> CategoryOptions { get; set; } = [];
 
     public IList<string> ChangedFields { get; set; } = [];
 

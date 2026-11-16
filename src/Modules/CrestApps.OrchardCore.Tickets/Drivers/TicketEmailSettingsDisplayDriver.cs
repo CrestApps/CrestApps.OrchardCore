@@ -49,7 +49,7 @@ internal sealed class TicketEmailSettingsDisplayDriver : SiteDisplayDriver<Ticke
         => Initialize<TemplatedEmailTemplatesEditorViewModel>(TemplatedEmailTemplatesEditor.ShapeType, model =>
         {
             TemplatedEmailTemplatesEditor.Build(model, _emailOptions.GetKinds(TicketsConstants.EmailGroup), settings.Templates, settings.Layout, _localizerFactory);
-            model.Introduction = S["Write the e-mails requesters get. In each, {{ Content }} is the e-mail as Tickets would send it and {{ Subject }} its subject; {{ Ticket.Number }}, {{ Ticket.Subject }}, {{ Ticket.Status }} and {{ Ticket.RequesterName }} describe the ticket. Dates show in the site's time zone. An e-mail whose template can't render is sent as built."];
+            model.Introduction = S["Write the e-mails requesters get. In each, {{ Content }} is the e-mail as Tickets would send it and {{ Subject }} its subject; {{ Ticket.Number }}, {{ Ticket.Subject }}, {{ Ticket.Status }}, {{ Ticket.RequesterName }} and {{ Ticket.Category }} describe the ticket. Dates show in the site's time zone. An e-mail whose template can't render is sent as built."];
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TicketsPermissions.ManageTicketSettings))
         .OnGroup(SettingsGroupId);

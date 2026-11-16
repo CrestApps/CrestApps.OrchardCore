@@ -7,8 +7,8 @@ using OrchardCore.Workflows.Models;
 namespace CrestApps.OrchardCore.Tickets.Workflows;
 
 /// <summary>
-/// A workflow event about a ticket. It can be narrowed to some desks; its input names the ticket
-/// (<see cref="TicketWorkflowInput"/>).
+/// A workflow event about a ticket. It can be narrowed to some desks, ticket types and categories (a category takes its
+/// sub-categories along); its input names the ticket (<see cref="TicketWorkflowInput"/>).
 /// </summary>
 public abstract class TicketEventActivity : EventActivity
 {
@@ -31,14 +31,61 @@ public abstract class TicketEventActivity : EventActivity
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets the ticket types the event starts for; empty for every type.
+    /// </summary>
+    public IList<string> TicketTypes
+    {
+        get => GetProperty<IList<string>>(() => []);
+        set => SetProperty(value);
+    }
+
+    /// <summary>
+    /// Gets or sets the categories the event starts for, each with the categories below it; empty for any ticket, with a
+    /// category or without.
+    /// </summary>
+    public IList<string> CategoryIds
+    {
+        get => GetProperty<IList<string>>(() => []);
+        set => SetProperty(value);
+    }
+
     /// <inheritdoc/>
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
         => [new Outcome(S["Done"])];
 
     /// <inheritdoc/>
     public override bool CanExecute(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
-        => (DeskIds.Count == 0 || (workflowContext.Input.TryGetValue(TicketWorkflowInput.DeskId, out var deskId) && deskId is string id && DeskIds.Contains(id, StringComparer.Ordinal)))
+    {
+        ArgumentNullException.ThrowIfNull(workflowContext);
+
+        return AllowedBy(DeskIds, workflowContext.Input, TicketWorkflowInput.DeskId)
+            && AllowedBy(TicketTypes, workflowContext.Input, TicketWorkflowInput.ContentType)
+            && InCategories(CategoryIds, workflowContext.Input)
             && Matches(workflowContext);
+    }
+
+    /// <summary>
+    /// Whether a ticket is in one of some categories or below one: its category path holds one of them. Pure.
+    /// </summary>
+    /// <param name="categoryIds">The categories; empty for any ticket.</param>
+    /// <param name="input">The event's input.</param>
+    /// <returns><see langword="true"/> when the ticket is in or below one of them, or none is set.</returns>
+    public static bool InCategories(IList<string> categoryIds, IDictionary<string, object> input)
+    {
+        if (categoryIds is not { Count: > 0 })
+        {
+            return true;
+        }
+
+        var path = input?.TryGetValue(TicketWorkflowInput.CategoryPath, out var value) == true ? value as string : null;
+
+        return !string.IsNullOrEmpty(path) && categoryIds.Any(id => path.Contains("/" + id + "/", StringComparison.Ordinal));
+    }
+
+    private static bool AllowedBy(IList<string> allowed, IDictionary<string, object> input, string key)
+        => allowed is not { Count: > 0 }
+            || (input?.TryGetValue(key, out var value) == true && value is string text && allowed.Contains(text, StringComparer.Ordinal));
 
     /// <summary>
     /// Whether the event's own settings let it start for this input.

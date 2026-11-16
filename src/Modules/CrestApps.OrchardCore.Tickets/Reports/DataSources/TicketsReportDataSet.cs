@@ -58,7 +58,7 @@ internal sealed class TicketsReportDataSet : IndexedReportDataSet<ContentItem, T
         AddField(nameof(TicketPart.StatusCategory), S["Status category"], DataFieldType.Text, record => Part(record).StatusCategory.ToString(), ticket).Description = S["New, Open, Pending, OnHold, Solved or Closed."].Value;
         AddField(nameof(TicketPart.PriorityId), S["Priority ID"], DataFieldType.Text, record => Part(record).PriorityId, ticket);
         AddField("Priority", S["Priority"], DataFieldType.Text, record => _names?.Priority(Part(record).PriorityId), ticket);
-        AddField(nameof(TicketPart.CategoryId), S["Category ID"], DataFieldType.Text, record => Part(record).CategoryId, ticket);
+        AddField(nameof(TicketPart.CategoryId), S["Category ID"], DataFieldType.Text, record => Part(record).CategoryId, ticket).Identifier(TicketReportDataSets.Category());
         AddField("Category", S["Category"], DataFieldType.Text, record => _names?.Category(Part(record).CategoryId)?.Name ?? Part(record).CategoryId, ticket).Description = S["The category's own name, such as Laptop."].Value;
         AddField("CategoryPathText", S["Category path"], DataFieldType.Text, record => _names?.Category(Part(record).CategoryId)?.PathText, ticket).Description = S["The category with those above it, such as Hardware > Laptop."].Value;
         AddField("CategoryLevel1", S["Top category"], DataFieldType.Text, record => CategoryAt(Part(record).CategoryPath, 0), ticket).Description = S["The top category, to group by, such as Hardware."].Value;

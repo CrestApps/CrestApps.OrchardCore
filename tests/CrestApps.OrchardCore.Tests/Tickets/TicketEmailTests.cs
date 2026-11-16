@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tickets;
 using CrestApps.OrchardCore.Tickets.Core.Services;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -115,6 +116,25 @@ public sealed class TicketEmailTests
     }
 
     [Fact]
+    public async Task TemplatesGetTheTicketsCategory_WithTheCategoriesAboveIt()
+    {
+        // Arrange
+        var categories = new Mock<ITicketCategoryService>();
+        categories.Setup(service => service.FindAsync(TicketsConstants.DefaultContentType, "laptop", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TicketCategory { Id = "laptop", Name = "Laptop", PathText = "Hardware > Laptop" });
+        var observer = Observer(notify: true, categories: categories.Object);
+        var ticket = Ticket();
+        ticket.Alter<TicketPart>(part => part.CategoryId = "laptop");
+
+        // Act
+        await observer.CreatedAsync(ticket, TestContext.Current.CancellationToken);
+        await observer.CreatedAsync(Ticket(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["Hardware > Laptop", null], _sent.Select(sent => ((TicketEmailModel)sent.Email.Models["Ticket"]).Category));
+    }
+
+    [Fact]
     public async Task WithThePortal_EachEmailLinksToTheRequest()
     {
         // Arrange
@@ -197,7 +217,7 @@ public sealed class TicketEmailTests
         Assert.Equal("Templates[0].Body", error.Key);
     }
 
-    private TicketEmailObserver Observer(bool notify, IAttachmentService attachments = null, string baseUrl = null, ITicketRequesterLinks links = null)
+    private TicketEmailObserver Observer(bool notify, IAttachmentService attachments = null, string baseUrl = null, ITicketRequesterLinks links = null, ITicketCategoryService categories = null)
     {
         var desks = new Mock<ICatalog<TicketDesk>>();
         desks.Setup(catalog => catalog.FindByIdAsync("support", It.IsAny<CancellationToken>())).ReturnsAsync(new TicketDesk { ItemId = "support", NotifyRequester = notify });
@@ -233,6 +253,11 @@ public sealed class TicketEmailTests
         if (links is not null)
         {
             services.AddSingleton(links);
+        }
+
+        if (categories is not null)
+        {
+            services.AddSingleton(categories);
         }
 
         return new TicketEmailObserver(desks.Object, Mock.Of<IPartyDirectory>(), services.BuildServiceProvider(), RecipeRoundTrip.Localizer<TicketEmailObserver>());

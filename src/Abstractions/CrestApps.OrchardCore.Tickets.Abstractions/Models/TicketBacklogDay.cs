@@ -33,7 +33,7 @@ public sealed class TicketBacklogDay
 }
 
 /// <summary>
-/// The open tickets of a desk that share a status, priority, team, assignee, ticket type and channel.
+/// The open tickets of a desk that share a status, priority, team, assignee, ticket type, channel and category.
 /// </summary>
 public sealed class TicketBacklogGroup
 {
@@ -46,6 +46,11 @@ public sealed class TicketBacklogGroup
     public string TeamId { get; set; }
 
     public string AssigneeId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the category, for the days recorded since the backlog was broken down by category.
+    /// </summary>
+    public string CategoryId { get; set; }
 
     public string ContentType { get; set; }
 
