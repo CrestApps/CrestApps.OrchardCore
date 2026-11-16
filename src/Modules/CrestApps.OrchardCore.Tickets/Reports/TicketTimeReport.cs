@@ -75,7 +75,7 @@ internal sealed class TicketTimeReport : IReport
         var people = work
             .GroupBy(item => item.Entry.UserId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Select(item => item.Entry.UserName).LastOrDefault(name => !string.IsNullOrEmpty(name)) ?? group.Key, StringComparer.Ordinal);
-        var accounts = await _time.GetAccountNamesAsync(work.Select(item => item.Ticket.AccountId), cancellationToken);
+        var accounts = await _data.GetAccountNamesAsync(work.Select(item => item.Ticket.AccountId), cancellationToken);
         var names = await _data.GetNamesAsync(cancellationToken);
         var types = await _time.GetTypeNamesAsync();
 

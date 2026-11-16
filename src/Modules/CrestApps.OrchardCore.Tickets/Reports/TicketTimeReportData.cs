@@ -6,10 +6,7 @@ using CrestApps.OrchardCore.Tickets.TimeTracker;
 using CrestApps.OrchardCore.TimeTracker;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
-using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tickets.Reports;
 
@@ -19,7 +16,7 @@ namespace CrestApps.OrchardCore.Tickets.Reports;
 /// </summary>
 internal sealed class TicketTimeReportData
 {
-    // How many tickets are read by id at a time.
+    // How many tickets' entries are read at a time.
     private const int IdBatchSize = 500;
 
     private static readonly string _sourceRefPrefix = TicketTime.SourceRefOf(string.Empty);
@@ -28,20 +25,17 @@ internal sealed class TicketTimeReportData
     private readonly ITimeTrackerService _tracker;
     private readonly ICatalog<TicketDesk> _desks;
     private readonly IContentDefinitionManager _contentDefinitionManager;
-    private readonly IServiceProvider _services;
 
     public TicketTimeReportData(
         TicketReportData data,
         ITimeTrackerService tracker,
         ICatalog<TicketDesk> desks,
-        IContentDefinitionManager contentDefinitionManager,
-        IServiceProvider services)
+        IContentDefinitionManager contentDefinitionManager)
     {
         _data = data;
         _tracker = tracker;
         _desks = desks;
         _contentDefinitionManager = contentDefinitionManager;
-        _services = services;
     }
 
     /// <summary>
@@ -58,7 +52,7 @@ internal sealed class TicketTimeReportData
     public async Task<List<TicketWork>> ReadWorkAsync(TicketScopedQuery scope, DateTime? fromUtc, DateTime? toUtc, CancellationToken cancellationToken)
     {
         var entries = await _tracker.ListAsync(new TimeEntryQuery { Source = TimeTrackerConstants.Sources.Ticket, FromUtc = fromUtc, ToUtc = toUtc }, cancellationToken);
-        var tickets = await ReadTicketsAsync(scope, entries.Select(TicketIdOf), cancellationToken);
+        var tickets = await _data.ReadByIdsAsync(scope, entries.Select(TicketIdOf), cancellationToken);
         var notBilled = await NotBilledStagesAsync(cancellationToken);
         var now = _data.UtcNow;
         var work = new List<TicketWork>();
@@ -88,45 +82,23 @@ internal sealed class TicketTimeReportData
     }
 
     /// <summary>
-    /// Every entry on the given tickets, by ticket, whenever it was logged from a start on.
+    /// Every entry on the given tickets, by ticket, whenever it was logged (time logged before a ticket was opened
+    /// counts too), a batch of tickets at a time.
     /// </summary>
-    public async Task<ILookup<string, TimeEntry>> ReadEntriesAsync(IReadOnlyCollection<string> ticketIds, DateTime fromUtc, CancellationToken cancellationToken)
+    public async Task<ILookup<string, TimeEntry>> ReadEntriesAsync(IReadOnlyCollection<string> ticketIds, CancellationToken cancellationToken)
     {
-        if (ticketIds.Count == 0)
+        var entries = new List<TimeEntry>();
+
+        foreach (var batch in ticketIds.Distinct(StringComparer.Ordinal).Chunk(IdBatchSize))
         {
-            return Array.Empty<TimeEntry>().ToLookup(entry => string.Empty, StringComparer.Ordinal);
-        }
-
-        var wanted = new HashSet<string>(ticketIds, StringComparer.Ordinal);
-        var entries = await _tracker.ListAsync(new TimeEntryQuery { Source = TimeTrackerConstants.Sources.Ticket, FromUtc = fromUtc }, cancellationToken);
-
-        return entries
-            .Where(entry => TicketIdOf(entry) is { } id && wanted.Contains(id))
-            .ToLookup(entry => TicketIdOf(entry), StringComparer.Ordinal);
-    }
-
-    /// <summary>
-    /// The names of accounts by id; an account that can't be read keeps its id.
-    /// </summary>
-    public async Task<IReadOnlyDictionary<string, string>> GetAccountNamesAsync(IEnumerable<string> accountIds, CancellationToken cancellationToken)
-    {
-        var ids = accountIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
-        var names = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        if (ids.Count == 0 || _services.GetService<IContentManager>() is not { } contentManager)
-        {
-            return names;
-        }
-
-        foreach (var account in await contentManager.GetAsync(ids, VersionOptions.Latest))
-        {
-            if (!string.IsNullOrWhiteSpace(account?.DisplayText))
+            entries.AddRange(await _tracker.ListAsync(new TimeEntryQuery
             {
-                names[account.ContentItemId] = account.DisplayText;
-            }
+                Source = TimeTrackerConstants.Sources.Ticket,
+                SourceRefs = [.. batch.Select(TicketTime.SourceRefOf)],
+            }, cancellationToken));
         }
 
-        return names;
+        return entries.ToLookup(entry => TicketIdOf(entry) ?? string.Empty, StringComparer.Ordinal);
     }
 
     /// <summary>
@@ -164,21 +136,6 @@ internal sealed class TicketTimeReportData
         }
 
         return start is { } last ? total + (end - last).TotalMinutes : total;
-    }
-
-    private async Task<Dictionary<string, TicketFacts>> ReadTicketsAsync(TicketScopedQuery scope, IEnumerable<string> ticketIds, CancellationToken cancellationToken)
-    {
-        var tickets = new Dictionary<string, TicketFacts>(StringComparer.Ordinal);
-
-        foreach (var batch in ticketIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Chunk(IdBatchSize))
-        {
-            foreach (var ticket in await _data.ReadAsync(scope, index => index.ContentItemId.IsIn(batch), index => index.CreatedUtc, cancellationToken))
-            {
-                tickets[ticket.Id] = ticket;
-            }
-        }
-
-        return tickets;
     }
 
     private async Task<HashSet<string>> NotBilledStagesAsync(CancellationToken cancellationToken)

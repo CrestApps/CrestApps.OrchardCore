@@ -16,8 +16,8 @@ using ISession = YesSql.ISession;
 namespace CrestApps.OrchardCore.Tickets.Reports;
 
 /// <summary>
-/// How the service-level targets of the reader's tickets went: for each metric, the targets that ended in the period,
-/// how many were met and breached, and the ones running now that are already breached.
+/// How the service-level targets of the reader's tickets went: for each metric and for each account, the targets that
+/// ended in the period, how many were met and breached, and the ones running now that are already breached.
 /// </summary>
 internal sealed class TicketServiceLevelReport : IReport
 {
@@ -118,8 +118,62 @@ internal sealed class TicketServiceLevelReport : IReport
             rows);
         table.Description = S["A target counts in the period it ended. Business time is counted on the desk's business hours."].Value;
         table.EmptyMessage = S["No service-level targets ended in these days."].Value;
+        document.Add(table);
 
-        return document.Add(table);
+        return document.Add(await ByAccountAsync(scope, ended, running, from, to, cancellationToken));
+    }
+
+    // Each account's targets: the ones that ended in the period, met or breached, and the ones running late now.
+    private async Task<ReportSection> ByAccountAsync(TicketScopedQuery scope, List<ServiceLevelTimer> ended, List<ServiceLevelTimer> running, DateTime from, DateTime to, CancellationToken cancellationToken)
+    {
+        var timers = ended.Concat(running).DistinctBy(timer => timer.ItemId, StringComparer.Ordinal).ToList();
+        var tickets = await _data.ReadByIdsAsync(scope, timers.Select(timer => timer.Subject.Id), cancellationToken);
+        var accounts = await _data.GetAccountNamesAsync(tickets.Values.Select(ticket => ticket.AccountId), cancellationToken);
+        string AccountOf(ServiceLevelTimer timer) => tickets.TryGetValue(timer.Subject.Id ?? string.Empty, out var ticket) ? ticket.AccountId ?? string.Empty : string.Empty;
+
+        var rows = timers
+            .GroupBy(AccountOf, StringComparer.Ordinal)
+            .Select(group =>
+            {
+                var done = group.Where(timer => timer.EndedUtc is { } end && end >= from && end <= to).ToList();
+                var doneMet = done.Count(timer => !timer.IsBreached);
+
+                return (
+                    Name: string.IsNullOrEmpty(group.Key) ? S["No account"].Value : accounts.GetValueOrDefault(group.Key) ?? group.Key,
+                    Tickets: group.Select(timer => timer.Subject.Id).Distinct(StringComparer.Ordinal).Count(),
+                    Done: done.Count,
+                    Met: doneMet,
+                    Late: group.Count(timer => timer.IsActive && timer.IsBreached));
+            })
+            .OrderByDescending(row => row.Done - row.Met + row.Late)
+            .ThenBy(row => row.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(row => new ReportRow(
+            [
+                row.Name,
+                ReportFormat.Number(row.Tickets),
+                ReportFormat.Number(row.Done),
+                ReportFormat.Number(row.Met),
+                ReportFormat.Number(row.Done - row.Met),
+                TicketReportData.Rate(row.Met, row.Done),
+                ReportFormat.Number(row.Late),
+            ]))
+            .ToList();
+
+        var section = ReportSection.ForTable(S["By account"].Value,
+            [
+                new ReportColumn(S["Account"].Value),
+                new ReportColumn(S["Tickets"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Ended"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Met"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Breached"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Compliance"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Running, breached"].Value, ReportColumnAlign.End),
+            ],
+            rows);
+        section.Description = S["How each account's targets went, the accounts with the most missed targets first."].Value;
+        section.EmptyMessage = S["No service-level targets ended or ran in these days."].Value;
+
+        return section;
     }
 
     private async Task<List<ServiceLevelTimer>> ReadAsync(TicketScopedQuery scope, Func<IQueryIndex<ServiceLevelTimerIndex>, IQueryIndex<ServiceLevelTimerIndex>> filter, CancellationToken cancellationToken)

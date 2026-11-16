@@ -474,6 +474,13 @@ public sealed class DefaultTimeTrackerService : ITimeTrackerService
             search = search.Where(index => index.Source == query.Source);
         }
 
+        if (query.SourceRefs is { } sourceRefs)
+        {
+            var refs = sourceRefs.ToArray();
+
+            search = search.Where(index => index.SourceRef.IsIn(refs));
+        }
+
         if (query.FromUtc is { } from)
         {
             search = search.Where(index => index.EndUtc > from);

@@ -135,7 +135,7 @@ Under **Reports**, with **View ticket reports**:
 | --- | --- |
 | **Ticket Volume and Backlog** | Tickets created and solved each day, the open, overdue and unassigned tickets now, how old the open ones are, and the backlog at the start of each day |
 | **Ticket Response and Resolution Times** | How soon tickets got a first response and how long they took to solve, by priority, and how many were solved on first contact |
-| **Ticket Service Level Compliance** | For each target, how many ended in the period, met or missed, and how many running now are already late |
+| **Ticket Service Level Compliance** | For each target and for each account, how many ended in the period, met or missed, and how many running now are already late |
 | **Ticket Agent and Team Performance** | For each assignee and team: tickets solved, the time they took, how often they were reopened or escalated, and open tickets now |
 | **Ticket Distribution** | Tickets by channel, desk, ticket type, priority and where they stand now |
 | **Ticket Time** | With Time Tracker: the time logged on tickets, billable and not billed, by person, account, desk and ticket type, and the tickets with the most time |

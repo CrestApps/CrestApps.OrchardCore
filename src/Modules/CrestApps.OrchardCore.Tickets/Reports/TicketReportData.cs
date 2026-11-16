@@ -73,6 +73,9 @@ internal sealed class TicketReportData
     // How many index rows are read at a time.
     private const int BatchSize = 1000;
 
+    // How many tickets are read by id at a time.
+    private const int IdBatchSize = 500;
+
     private readonly ISession _session;
     private readonly TicketReportAccess _access;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -161,6 +164,48 @@ internal sealed class TicketReportData
 
             lastId = rows[^1].Id;
         }
+    }
+
+    /// <summary>
+    /// Reads the tickets in the scope with the given ids, by id, a batch of ids at a time. Merged tickets are left out.
+    /// </summary>
+    public async Task<Dictionary<string, TicketFacts>> ReadByIdsAsync(TicketScopedQuery scope, IEnumerable<string> ticketIds, CancellationToken cancellationToken)
+    {
+        var tickets = new Dictionary<string, TicketFacts>(StringComparer.Ordinal);
+
+        foreach (var batch in ticketIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Chunk(IdBatchSize))
+        {
+            foreach (var ticket in await ReadAsync(scope, index => index.ContentItemId.IsIn(batch), index => index.CreatedUtc, cancellationToken))
+            {
+                tickets[ticket.Id] = ticket;
+            }
+        }
+
+        return tickets;
+    }
+
+    /// <summary>
+    /// Gets the names of accounts by id; an account that can't be read is left out.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, string>> GetAccountNamesAsync(IEnumerable<string> accountIds, CancellationToken cancellationToken)
+    {
+        var ids = accountIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (ids.Count == 0 || _services.GetService<IContentManager>() is not { } contentManager)
+        {
+            return names;
+        }
+
+        foreach (var account in await contentManager.GetAsync(ids, VersionOptions.Latest))
+        {
+            if (!string.IsNullOrWhiteSpace(account?.DisplayText))
+            {
+                names[account.ContentItemId] = account.DisplayText;
+            }
+        }
+
+        return names;
     }
 
     /// <summary>
