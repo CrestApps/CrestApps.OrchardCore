@@ -87,6 +87,7 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         CrestApps.OrchardCore.AI.Core.AIConstants.Feature.Area,
         CrestApps.OrchardCore.AI.Core.AIConstants.Feature.DataSources,
         CrestApps.OrchardCore.Learning.AI.LearningAIConstants.Features.Assistant,
+        CrestApps.OrchardCore.Learning.AI.LearningAIConstants.Features.Authoring,
     ];
 
     private WebApplication _application;
