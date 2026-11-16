@@ -6,10 +6,14 @@
 
 @if (!Model.RequiresChoice)
 {
-    <a asp-route="SubscriptionSignup"
-       asp-route-contentItemId="@Model.ContentItemId"
-       asp-route-priceId="@Model.DefaultPrice?.PriceId"
-       class="btn btn-primary">@T["Sign up"]</a>
+    @* A post, not a link: link scanners and crawlers follow links, and each sign-up starts a checkout. *@
+    <form method="post" asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.ContentItemId" class="d-inline">
+        @if (!string.IsNullOrEmpty(Model.DefaultPrice?.PriceId))
+        {
+            <input type="hidden" name="priceId" value="@Model.DefaultPrice.PriceId" />
+        }
+        <button type="submit" class="btn btn-primary">@T["Sign up"]</button>
+    </form>
 
     return;
 }
@@ -19,7 +23,7 @@
     var formId = "signup-" + Model.ContentItemId;
 }
 
-<form method="get" asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.ContentItemId" class="w-100" id="@formId">
+<form method="post" asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.ContentItemId" class="w-100" id="@formId">
     @if (Model.Prices.Count > 1)
     {
         <div class="mb-2">

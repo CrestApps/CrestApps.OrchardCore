@@ -84,7 +84,7 @@ their purchase completed by a provider notification with no browser involved, an
 charged the terms they chose.
 
 
-A plan is bought through the shared [Checkout](checkout), started from the **Sign up** link on any published plan (`Subscription/Signup/{contentItemId}`). The checkout resolves the plan, records what is being bought, and hands the customer to the ordinary checkout experience.
+A plan is bought through the shared [Checkout](checkout), started from the **Sign up** button on any published plan. The button posts to `Subscription/Signup/{contentItemId}` with the antiforgery token, and only that post starts a checkout; each post counts against the same per-network limit as an order's pay link (`checkout-start-network`). Opening `Subscription/Signup/{contentItemId}` as a link, from an e-mail, a bookmark or a link scanner, starts nothing: it shows the plan and its price with a **Continue to checkout** button, so a sign-up link sent before buttons were posts still works. The checkout resolves the plan, records what is being bought, and hands the customer to the ordinary checkout experience.
 
 The plan itself contributes the charges: the recurring price and, when configured, a one-time setup fee. Those sit on a step that is never drawn — the customer already chose the plan, so there is nothing to ask them — but the charges are still billed. Other handlers contribute the steps that do ask for something:
 

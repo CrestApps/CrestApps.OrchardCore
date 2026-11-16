@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Downloads;
-using CrestApps.OrchardCore.Subscriptions.Core;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using OrchardCore.RateLimits;
@@ -48,7 +47,7 @@ public sealed partial class EndpointRateLimitGroupArchitectureTests
     private static readonly string[] _moneyMvcRoutes =
     [
         CartConstants.RouteNames.Checkout,
-        SubscriptionConstants.RouteName.Signup,
+        "SubscriptionsController.SignupPost",
         DownloadsConstants.RouteNames.Download,
         CheckoutConstants.RouteNames.DiscountLink,
         "CheckoutController.Display",
