@@ -4,7 +4,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.ServiceLevels.Navigation;
 
 /// <summary>
-/// Adds Service Levels to the Configuration menu.
+/// Adds Service Levels to the Content menu.
 /// </summary>
 public sealed class ServiceLevelsAdminMenu : AdminNavigationProvider
 {
@@ -22,9 +22,9 @@ public sealed class ServiceLevelsAdminMenu : AdminNavigationProvider
     /// <inheritdoc />
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        // Policies serve several kinds of work (work orders, tickets), so they sit under Tools rather than under any one of
-        // the modules that use them; Settings is for site settings.
-        builder.Add(S["Tools"], tools => tools
+        // Policies are records several kinds of work use (work orders, tickets), so they sit under Content, like Business
+        // Hours and Agreements, in one place rather than under any one of the modules that use them.
+        builder.Add(S["Content"], content => content
             .Add(S["Service Levels"], S["Service Levels"].PrefixPosition(), levels => levels
                 .Id("serviceLevelPolicies")
                 .Action("Index", "Policies", ServiceLevelsConstants.Features.ServiceLevels)

@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Tests.Tickets;
 
 /// <summary>
 /// The help desk has one Service Desk menu (the ticket list and its own setup). The records other modules share sit
-/// under Content, like Teams: business hours schedules and agreements; service level policies sit under Tools.
+/// under Content, like Teams: business hours schedules, agreements and service level policies, each in one place.
 /// Settings is for site settings, and Orchard Core 4 has no Configuration menu.
 /// </summary>
 public sealed class TicketsAdminMenuTests
@@ -75,7 +75,7 @@ public sealed class TicketsAdminMenuTests
     }
 
     [Fact]
-    public async Task BusinessHoursAndAgreements_AreUnderContent_AndServiceLevelsUnderTools()
+    public async Task BusinessHoursAgreementsAndServiceLevels_AreUnderContent()
     {
         // Arrange
         var builder = new NavigationBuilder();
@@ -88,7 +88,7 @@ public sealed class TicketsAdminMenuTests
         // Assert: each provider adds its parent node (Orchard Core merges nodes of the same name into one menu), and
         // none adds a top-level item of its own.
         var items = builder.Build().SelectMany(root => root.Items.Select(item => (Root: root.Text.Value, item.Id))).Order().ToList();
-        Assert.Equal([("Content", "agreements"), ("Content", "businessHoursSchedules"), ("Tools", "serviceLevelPolicies")], items);
+        Assert.Equal([("Content", "agreements"), ("Content", "businessHoursSchedules"), ("Content", "serviceLevelPolicies")], items);
     }
 
     private sealed class PassThroughLocalizer<T> : IStringLocalizer<T>
