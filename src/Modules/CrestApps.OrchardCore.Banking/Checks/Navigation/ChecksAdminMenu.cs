@@ -27,12 +27,12 @@ public sealed class ChecksAdminMenu : AdminNavigationProvider
             .Id(BankingConstants.AdminMenuId)
             .Add(S["Checks"], S["Checks"].PrefixPosition("20"), checks => checks
                 .Id("checks")
-                .Action("Index", "Checks", ChecksConstants.Features.Checks)
+                .Action("Index", "Checks", BankingConstants.Features.Banking)
                 .Permission(ChecksPermissions.ViewCheckRegister)
                 .LocalNav())
             .Add(S["Check Layouts"], S["Check Layouts"].PrefixPosition("30"), layouts => layouts
                 .Id("checkLayouts")
-                .Action("Index", "CheckLayouts", ChecksConstants.Features.Checks)
+                .Action("Index", "CheckLayouts", BankingConstants.Features.Banking)
                 .Permission(ChecksPermissions.ManageCheckLayouts)
                 .LocalNav()));
 

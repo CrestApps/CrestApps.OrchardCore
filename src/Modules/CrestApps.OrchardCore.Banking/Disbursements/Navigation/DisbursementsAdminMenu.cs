@@ -27,12 +27,12 @@ public sealed class DisbursementsAdminMenu : AdminNavigationProvider
             .Id(BankingConstants.AdminMenuId)
             .Add(S["Disbursements"], S["Disbursements"].PrefixPosition("40"), disbursements => disbursements
                 .Id("disbursements")
-                .Action("Index", "Disbursements", DisbursementsConstants.Features.Disbursements)
+                .Action("Index", "Disbursements", BankingConstants.Features.Banking)
                 .Permission(DisbursementsPermissions.ViewDisbursements)
                 .LocalNav())
             .Add(S["Disbursement Batches"], S["Disbursement Batches"].PrefixPosition("50"), batches => batches
                 .Id("disbursementBatches")
-                .Action("Index", "DisbursementBatches", DisbursementsConstants.Features.Disbursements)
+                .Action("Index", "DisbursementBatches", BankingConstants.Features.Banking)
                 .Permission(DisbursementsPermissions.ManageDisbursements)
                 .LocalNav()));
 
