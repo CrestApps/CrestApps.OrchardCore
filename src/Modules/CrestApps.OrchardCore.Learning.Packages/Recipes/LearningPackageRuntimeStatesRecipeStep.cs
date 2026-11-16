@@ -81,7 +81,14 @@ internal sealed class LearningPackageRuntimeStatesRecipeStep : NamedRecipeStepHa
             }
 
             incoming.UserId = userId;
-            incoming.Cmi ??= new Scorm12Cmi();
+            if (PackagesConstants.Standards.IsScorm2004(incoming.Standard))
+            {
+                incoming.Cmi2004 ??= new Scorm2004Cmi();
+            }
+            else
+            {
+                incoming.Cmi ??= new Scorm12Cmi();
+            }
 
             // An imported state never carries a launch: the next launch on this site starts a session.
             incoming.CurrentLaunchId = null;
@@ -139,7 +146,10 @@ internal sealed class LearningPackageRuntimeStatesRecipeStepSchema : IRecipeStep
                         ("PackageItemId", Text("The content item id of the learning package.")),
                         ("PackageTitle", Text("The title of the package at the last launch.")),
                         ("PackageFileId", Text("The package file of the last launch, in the protected store of the site it came from.")),
+                        ("Standard", Text("The standard of the package: SCORM 1.2, SCORM 2004 3rd Edition or SCORM 2004 4th Edition. Without one the state is SCORM 1.2.")),
                         ("Cmi", new JsonSchemaBuilder().Type(SchemaValueType.Object).Description("The SCORM 1.2 data: LessonStatus, ScoreRaw, ScoreMin, ScoreMax, TotalTime, LessonLocation, SuspendData, Exit, Entry, Comments, the student preferences, Objectives and Interactions.")),
+                        ("Cmi2004", new JsonSchemaBuilder().Type(SchemaValueType.Object).Description("The SCORM 2004 data: Edition, CompletionStatus, SuccessStatus, ProgressMeasure, ScoreScaled, ScoreRaw, ScoreMin, ScoreMax, TotalTime, Location, SuspendData, Exit, Entry, NavRequest, the learner preferences, Objectives, Interactions and CommentsFromLearner.")),
+                        ("Attempts", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("How many SCORM 2004 attempts the learner started.")),
                         ("Sessions", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("How many times the learner launched the package.")),
                         ("FirstLaunchedUtc", Text("When the package was first launched, in UTC.")),
                         ("LastLaunchedUtc", Text("When the package was last launched, in UTC.")),

@@ -6,8 +6,9 @@
     <Description>
       $(CrestAppsDescription)
 
-      Learning packages for the Learning module: a learning package course item that runs an imported SCORM 1.2 package
-      in a sandboxed frame on an opaque origin, with a signed launch token, the SCORM 1.2 run-time API in the frame, the
+      Learning packages for the Learning module: a learning package course item that runs an imported SCORM 1.2 or SCORM
+      2004 (3rd and 4th Edition) package
+      in a sandboxed frame on an opaque origin, with a signed launch token, the SCORM run-time API in the frame, the
       runtime state kept and checked on the server, and the result reported to the learner's progress, marked
       self-reported.
     </Description>

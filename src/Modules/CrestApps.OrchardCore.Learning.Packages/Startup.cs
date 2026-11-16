@@ -21,7 +21,7 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Learning.Packages;
 
 /// <summary>
-/// Registers SCORM 1.2 learning packages: the learning package course item with its part, the import page, the package
+/// Registers SCORM 1.2 and SCORM 2004 learning packages: the learning package course item with its part, the import page, the package
 /// panel of the learner player, the sandboxed file endpoint and the runtime endpoint, the permission and personal data.
 /// </summary>
 [Feature(PackagesConstants.Features.Scorm)]

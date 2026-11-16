@@ -17,6 +17,9 @@ namespace CrestApps.OrchardCore.Learning.Packages.Migrations;
 /// </summary>
 internal sealed class PackagesMigrations : DataMigration
 {
+    private const string PartDescription = "Makes a course item a learning package: the imported SCORM 1.2 or SCORM 2004 package and the SCO it launches.";
+    private const string TypeDescription = "A SCORM 1.2 or SCORM 2004 package learners run in the course player.";
+
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseListSynchronizer _courseListSynchronizer;
 
@@ -33,11 +36,11 @@ internal sealed class PackagesMigrations : DataMigration
         await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(LearningPackagePart), part => part
             .Attachable(false)
             .WithDisplayName("Learning package")
-            .WithDescription("Makes a course item a learning package: the imported SCORM 1.2 package and the SCO it launches."));
+            .WithDescription(PartDescription));
 
         await _contentDefinitionManager.AlterTypeDefinitionAsync(PackagesConstants.ContentTypes.Package, type => type
             .WithDisplayName("Learning package")
-            .WithDescription("A SCORM 1.2 package learners run in the course player.")
+            .WithDescription(TypeDescription)
             .Creatable()
             .Listable()
             .Draftable()
@@ -56,6 +59,18 @@ internal sealed class PackagesMigrations : DataMigration
 
         await _courseListSynchronizer.SynchronizeAsync();
 
-        return 1;
+        return 2;
+    }
+
+    // SCORM 2004 packages: the descriptions of the part and the type name both standards. No index changed.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await _contentDefinitionManager.AlterPartDefinitionAsync(nameof(LearningPackagePart), part => part
+            .WithDescription(PartDescription));
+
+        await _contentDefinitionManager.AlterTypeDefinitionAsync(PackagesConstants.ContentTypes.Package, type => type
+            .WithDescription(TypeDescription));
+
+        return 2;
     }
 }

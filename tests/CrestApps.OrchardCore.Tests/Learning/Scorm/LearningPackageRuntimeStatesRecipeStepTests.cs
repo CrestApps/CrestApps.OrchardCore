@@ -66,6 +66,49 @@ public sealed class LearningPackageRuntimeStatesRecipeStepTests
         Assert.Equal("enrollment-ana", state.EnrollmentId);
     }
 
+    [Fact]
+    public async Task Scorm2004State_IsImportedWithItsStandardAndData()
+    {
+        await using var h = await PackageTestHarness.CreateAsync();
+        var context = new RecipeExecutionContext
+        {
+            Name = PackagesConstants.RuntimeStatesRecipeStep,
+            Step = new JsonObject
+            {
+                ["name"] = PackagesConstants.RuntimeStatesRecipeStep,
+                ["States"] = new JsonArray(new JsonObject
+                {
+                    ["UserName"] = "ana",
+                    ["EnrollmentId"] = "enrollment-ana",
+                    ["CourseId"] = PackageTestHarness.Course,
+                    ["PackageItemId"] = PackageTestHarness.Package2004,
+                    ["Standard"] = PackagesConstants.Standards.Scorm2004ThirdEdition,
+                    ["Sessions"] = 3,
+                    ["Attempts"] = 2,
+                    ["Cmi2004"] = new JsonObject { ["Edition"] = 3, ["CompletionStatus"] = "completed", ["ScoreScaled"] = "0.7", ["Location"] = "p3", ["TotalTime"] = "PT1H0M0S" },
+                }),
+            },
+        };
+
+        await h.RunAsync(async services =>
+        {
+            await ActivatorUtilities.CreateInstance<LearningPackageRuntimeStatesRecipeStep>(services, new KnownUserLookup()).ExecuteAsync(context);
+
+            return true;
+        });
+
+        var state = Assert.Single(await h.RunAsync(services => services.GetRequiredService<PackageRuntimeStore>().ListByUserAsync("user-ana")));
+
+        Assert.Empty(context.Errors);
+        Assert.Equal(PackagesConstants.Standards.Scorm2004ThirdEdition, state.Standard);
+        Assert.Equal(2, state.Attempts);
+        Assert.Equal("completed", state.Cmi2004.CompletionStatus);
+        Assert.Equal("0.7", state.Cmi2004.ScoreScaled);
+        Assert.Equal("p3", state.Cmi2004.Location);
+        Assert.Equal(3, state.Cmi2004.Edition);
+        Assert.Null(state.CurrentLaunchId);
+    }
+
     private sealed class KnownUserLookup : LearnerUserLookup
     {
         public KnownUserLookup()

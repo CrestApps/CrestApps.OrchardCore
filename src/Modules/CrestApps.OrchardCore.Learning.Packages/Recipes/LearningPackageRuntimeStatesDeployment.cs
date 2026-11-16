@@ -99,6 +99,12 @@ internal sealed class LearningPackageRuntimeStatesDeploymentSource : DeploymentS
                 var node = JsonSerializer.SerializeToNode(state, LearningPackageRuntimeStatesRecipeStep.JsonOptions).AsObject();
 
                 node.Remove("userId");
+
+                // A SCORM 2004 state carries its 2004 data only.
+                if (PackagesConstants.Standards.IsScorm2004(state.Standard))
+                {
+                    node.Remove("cmi");
+                }
                 node["UserName"] = !string.IsNullOrEmpty(state.UserId) && names.TryGetValue(state.UserId, out var name) ? name : null;
                 rows.Add(node);
             }
