@@ -112,7 +112,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
 
         if (profile.EnforceCallingWindow && string.IsNullOrWhiteSpace(profile.CallingCalendarId))
         {
-            context.Result.Fail(new ValidationResult(S["Select an outbound calling calendar when calling-window enforcement is enabled."], [nameof(DialerProfile.CallingCalendarId)]));
+            context.Result.Fail(new ValidationResult(S["Select the outbound calling hours when calling-window enforcement is enabled."], [nameof(DialerProfile.CallingCalendarId)]));
         }
 
         if (profile.MaxAbandonmentRatePercent is < 0 or > 100)

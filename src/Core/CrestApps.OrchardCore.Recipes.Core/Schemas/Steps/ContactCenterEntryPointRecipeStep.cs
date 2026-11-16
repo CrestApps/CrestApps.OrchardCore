@@ -48,7 +48,7 @@ public sealed class ContactCenterEntryPointRecipeStep : IRecipeStep
                             ("IvrFlow", IvrFlow()),
                             ("TargetQueueId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the queue calls route to while the entry point is open.")),
                             ("Priority", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Lowest", "Low", "Normal", "High", "Highest").Description("Priority assigned to calls entering through this entry point.")),
-                            ("BusinessHoursCalendarId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the business-hours calendar that gates when the entry point is open. When empty, the entry point is always open.")),
+                            ("BusinessHoursCalendarId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the Business Hours schedule that gates when the entry point is open. When empty, the entry point is always open.")),
                             ("ClosedAction", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("HoldInQueue", "Voicemail", "Overflow", "Reject").Description("Action taken for calls while the entry point is closed.")),
                             ("OverflowQueueId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Identifier of the queue used when 'ClosedAction' is 'Overflow'.")),
                             ("WelcomeMessage", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Message spoken once to a caller while the entry point is open, before the IVR menu or the target.")),

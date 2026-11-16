@@ -38,13 +38,15 @@ Each configurable entity has its own deployment step and a matching recipe step,
 | --- | --- | --- | --- |
 | Skill | Contact Center Skills | `ContactCenterSkill` | `Skills` |
 | Queue group | Contact Center Queue Groups | `ContactCenterQueueGroup` | `QueueGroups` |
-| Business hours calendar | Contact Center Business Hours Calendars | `ContactCenterBusinessHoursCalendar` | `Calendars` |
+| Business hours schedule | Business hours schedules (category **Configuration**, from the Business Hours module) | `BusinessHoursSchedules` | `Schedules` |
 | Queue | Contact Center Queues | `ContactCenterQueue` | `Queues` |
 | Entry point | Contact Center Entry Points | `ContactCenterEntryPoint` | `EntryPoints` |
 | Dialer profile | Contact Center Dialer Profiles | `ContactCenterDialerProfile` | `DialerProfiles` |
 | Agent state reason code | Contact Center Agent State Reason Codes | `AgentStateReasonCode` | `ReasonCodes` |
 | Agent entitlements | Contact Center Agent Entitlements | `ContactCenterAgentEntitlement` | `Agents` |
 | Voice media clip | Contact Center Voice Media Library | `ContactCenterVoiceMedia` | `VoiceMedia` |
+
+Queues, entry points and dialer profiles name their business hours by schedule id. The `ContactCenterBusinessHoursCalendar` step of older recipes is still read: each calendar is imported as a Business Hours schedule, keeping its id when it is a valid id, so the queues and entry points of the same recipe keep their hours. Plans no longer offer that step; export the hours with the **Business hours schedules** step.
 
 The CRM configuration a contact centre routes and reports on travels the same way. Those steps are described in [Omnichannel management](../omnichannel/management.md#exporting-and-importing-configuration).
 
@@ -110,7 +112,7 @@ Because identifiers are preserved, cross-references keep working after the impor
 
 A recipe runs its steps in file order, and a reference is checked when the entry that carries it is stored. Order a plan's Contact Center steps as follows:
 
-1. Voice media clips, skills, queue groups, and business hours calendars.
+1. Voice media clips, skills, queue groups, and business hours schedules.
 2. Queues.
 3. Entry points.
 4. Dialer profiles.

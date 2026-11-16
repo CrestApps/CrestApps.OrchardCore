@@ -16,7 +16,7 @@ The Business Hours building block has three layers:
 - `CrestApps.OrchardCore.BusinessHours.Core`: `DefaultOpenHoursService`, `AddOpenHours()`, `AddBusinessHoursSchedules()`, the schedule rules and the editor helpers (`WeeklyHoursRows`, `HoursDateExceptionText`).
 - This module: the admin pages, the picker, the recipe and deployment steps and the workflow task.
 
-Every schedule kept here is an `IHoursScheduleSource`, so the open-hours service answers for it. Other sources keep working beside it: the Contact Center business hours calendars are one.
+Every schedule kept here is an `IHoursScheduleSource`, so the open-hours service answers for it. Other sources keep working beside it. The Contact Center reads these schedules for its queues, entry points and dialer; before version 3.0 it kept its own calendars, which an upgrade copies here with the same ids.
 
 ## Using it from another module
 

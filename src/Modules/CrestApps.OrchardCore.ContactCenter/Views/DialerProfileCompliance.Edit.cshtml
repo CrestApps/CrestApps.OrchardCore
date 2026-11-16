@@ -24,12 +24,12 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="CallingCalendarId">
-    <label asp-for="CallingCalendarId" class="ocat-label">@T["Outbound calling calendar"]</label>
+    <label asp-for="CallingCalendarId" class="ocat-label">@T["Outbound calling hours"]</label>
     <div class="ocat-end">
-        <select asp-for="CallingCalendarId" asp-items="Model.CallingCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an outbound calling calendar"]" title="@T["Select an outbound calling calendar"]">
-            <option value="">@T["Select an outbound calling calendar"]</option>
+        <select asp-for="CallingCalendarId" asp-items="Model.CallingCalendarOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select the outbound calling hours"]" title="@T["Select the outbound calling hours"]">
+            <option value="">@T["Select the outbound calling hours"]</option>
         </select>
         <span asp-validation-for="CallingCalendarId" class="text-danger"></span>
-        <span class="hint">@T["The calendar supplies minute-precision weekday, overnight, holiday, and default time-zone rules. Required when a calling window is enforced."]</span>
+        <span class="hint">@T["The Business Hours schedule (Settings > Business Hours) that supplies the weekday, overnight, holiday and default time-zone rules. Required when a calling window is enforced."]</span>
     </div>
 </div>

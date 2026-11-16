@@ -21,7 +21,7 @@ public sealed class ManualDialingComplianceOptions
     public bool EnforceCallingWindow { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the business-hours calendar that defines the permitted manual calling
+    /// Gets or sets the identifier of the Business Hours schedule that defines the permitted manual calling
     /// window. Only used when <see cref="EnforceCallingWindow"/> is enabled.
     /// </summary>
     public string CallingCalendarId { get; set; }
