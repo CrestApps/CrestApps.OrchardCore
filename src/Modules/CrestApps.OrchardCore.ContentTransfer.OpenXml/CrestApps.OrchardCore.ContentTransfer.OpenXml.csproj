@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CrestApps.OrchardCore.ContentTransfer\CrestApps.OrchardCore.ContentTransfer.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.ContentTransfer\CrestApps.OrchardCore.ContentTransfer.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

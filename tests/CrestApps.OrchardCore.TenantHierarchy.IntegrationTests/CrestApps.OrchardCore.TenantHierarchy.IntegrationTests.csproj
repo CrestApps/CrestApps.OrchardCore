@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.TenantHierarchy/CrestApps.OrchardCore.TenantHierarchy.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.TenantHierarchy/CrestApps.OrchardCore.TenantHierarchy.csproj" PrivateAssets="none" />
   </ItemGroup>
 
   <ItemGroup>

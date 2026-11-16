@@ -44,7 +44,7 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Reports.Core\CrestApps.OrchardCore.Reports.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Workforce.Core\CrestApps.OrchardCore.Workforce.Core.csproj" />
-    <ProjectReference Include="..\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Workforce\CrestApps.OrchardCore.Workforce.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>
