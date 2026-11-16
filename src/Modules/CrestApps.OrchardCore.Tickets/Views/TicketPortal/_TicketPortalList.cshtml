@@ -30,6 +30,10 @@ else
                 <span>
                     <span class="text-body-secondary me-2">@item.Number</span>
                     <span class="fw-semibold">@item.Subject</span>
+                    @if (item.HasProtectedInformation)
+                    {
+                        <i class="fa-solid fa-lock text-warning ms-1" title="@T["Contains protected information"]" aria-label="@T["Contains protected information"]"></i>
+                    }
                     @if (Model.Organization && !string.IsNullOrEmpty(item.RequesterName))
                     {
                         <span class="text-body-secondary small ms-2">@item.RequesterName</span>

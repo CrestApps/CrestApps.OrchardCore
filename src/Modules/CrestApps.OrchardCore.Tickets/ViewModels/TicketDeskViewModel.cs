@@ -54,6 +54,11 @@ public class TicketDeskViewModel
     public int AutoCloseDays { get; set; }
 
     /// <summary>
+    /// Gets or sets how many days after a ticket is closed its protected information is deleted; 0 keeps it.
+    /// </summary>
+    public int DeleteProtectedInformationDays { get; set; }
+
+    /// <summary>
     /// Gets or sets how new tickets are given to a team member; empty leaves them for an agent to take.
     /// </summary>
     public string AssignmentStrategy { get; set; }

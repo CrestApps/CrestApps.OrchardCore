@@ -76,6 +76,8 @@ else
             </div>
         }
 
+        <partial name="_TicketProtectedInputs" />
+
         <button type="submit" class="btn btn-primary">@T["Send request"]</button>
         <a class="btn btn-link" href="@Url.RouteUrl("TicketPortal")">@T["Cancel"]</a>
     </form>

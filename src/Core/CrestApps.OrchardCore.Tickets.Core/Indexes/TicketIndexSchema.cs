@@ -76,6 +76,24 @@ public static class TicketIndexSchema
         await CreateEmailOutboxAsync(schemaBuilder);
         await CreateLinkIndexAsync(schemaBuilder);
         await CreateCategoryIndexAsync(schemaBuilder);
+        await CreateProtectedItemIndexAsync(schemaBuilder);
+    }
+
+    /// <summary>
+    /// Creates the index of tickets' protected items (ids only).
+    /// </summary>
+    /// <param name="schemaBuilder">The schema builder.</param>
+    /// <returns>A task.</returns>
+    public static async Task CreateProtectedItemIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(schemaBuilder);
+
+        await schemaBuilder.CreateMapIndexTableAsync<TicketProtectedItemIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("TicketId", column => column.WithLength(26)));
+
+        await schemaBuilder.AlterIndexTableAsync<TicketProtectedItemIndex>(table => table
+            .CreateIndex("IDX_TicketProtectedItem_Ticket", "TicketId", "ItemId"));
     }
 
     /// <summary>

@@ -199,6 +199,81 @@ public sealed class TicketsControllerTests
         Assert.Contains(kit.Controller.ModelState[string.Empty].Errors, error => error.ErrorMessage == "Title is required.");
     }
 
+    [Fact]
+    public async Task ShowingProtectedInformation_NeedsThePermissionOnTheDesk()
+    {
+        // Arrange: Ben may work the ticket but not see its protected information.
+        var (kit, information, _) = ProtectedKit(TicketPasswordCheck.Confirmed, TicketOperation.ViewAssigned, TicketOperation.Edit);
+
+        // Act
+        var result = await kit.Controller.ShowProtected("t1", "right");
+        var page = Assert.IsType<TicketPageViewModel>(Assert.IsType<ViewResult>(await kit.Controller.Display("t1")).Model);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
+        Assert.False(page.CanViewProtected);
+        Assert.Null(page.ProtectedValues);
+        information.Verify(service => service.ReadValuesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never());
+    }
+
+    [Theory]
+    [InlineData(TicketPasswordCheck.Wrong, true)]
+    [InlineData(TicketPasswordCheck.LockedOut, true)]
+    [InlineData(TicketPasswordCheck.NoLocalPassword, false)]
+    public async Task APasswordThatIsntConfirmed_ShowsNothing_AndAWrongOneIsNoted(TicketPasswordCheck check, bool noted)
+    {
+        // Arrange
+        var (kit, information, reveals) = ProtectedKit(check, TicketOperation.ViewAssigned, TicketOperation.ViewProtected);
+
+        // Act
+        await kit.Controller.ShowProtected("t1", "typed");
+        var page = Assert.IsType<TicketPageViewModel>(Assert.IsType<ViewResult>(await kit.Controller.Display("t1")).Model);
+
+        // Assert: still masked; a wrong password (or one tried too often) is on the timeline, a user with no password on
+        // this site is refused with a message and nothing is noted.
+        Assert.False(await reveals.IsGrantedAsync("ben", "t1", TestContext.Current.CancellationToken));
+        Assert.Null(page.ProtectedValues);
+        information.Verify(service => service.RecordRevealAsync("t1", It.IsAny<TicketActor>(), false, It.IsAny<CancellationToken>()), noted ? Times.Once() : Times.Never());
+    }
+
+    [Fact]
+    public async Task TheRightPassword_ShowsTheValues_ToThatAgentForThatTicket_UntilHidden()
+    {
+        // Arrange
+        var (kit, information, reveals) = ProtectedKit(TicketPasswordCheck.Confirmed, TicketOperation.ViewAssigned, TicketOperation.ViewProtected);
+
+        // Act
+        await kit.Controller.ShowProtected("t1", "right");
+        var shown = Assert.IsType<TicketPageViewModel>(Assert.IsType<ViewResult>(await kit.Controller.Display("t1")).Model);
+        await kit.Controller.HideProtected("t1");
+        var hidden = Assert.IsType<TicketPageViewModel>(Assert.IsType<ViewResult>(await kit.Controller.Display("t1")).Model);
+
+        // Assert
+        information.Verify(service => service.RecordRevealAsync("t1", It.IsAny<TicketActor>(), true, It.IsAny<CancellationToken>()), Times.Once());
+        Assert.Equal("S3cret!", Assert.Single(shown.ProtectedValues).Value);
+        Assert.Null(hidden.ProtectedValues);
+        Assert.False(await reveals.IsGrantedAsync("ben", "t2", TestContext.Current.CancellationToken));
+    }
+
+    // A ticket with one protected item, and a password check that answers as asked.
+    private static (ControllerKit Kit, Mock<ITicketProtectedInformation> Information, TicketProtectedReveals Reveals) ProtectedKit(TicketPasswordCheck check, params TicketOperation[] allowed)
+    {
+        var information = new Mock<ITicketProtectedInformation>();
+        information.Setup(service => service.ListAsync("t1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new TicketProtectedItem("p1", "t1", "VPN login", CalendarTestHarness.Now, "Dana", true)]);
+        information.Setup(service => service.ReadValuesAsync("t1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new TicketProtectedValue("p1", "VPN login", "S3cret!")]);
+        var password = new Mock<ITicketPasswordConfirmation>();
+        password.Setup(service => service.CheckAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<string>())).ReturnsAsync(check);
+        var reveals = new TicketProtectedReveals(new Microsoft.Extensions.Caching.Distributed.MemoryDistributedCache(Options.Create(new Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions())), new global::OrchardCore.Environment.Shell.ShellSettings { Name = "Default" });
+        var kit = new ControllerKit(null, null, services => services
+            .AddSingleton(information.Object)
+            .AddSingleton(password.Object)
+            .AddSingleton(reveals), allowed);
+
+        return (kit, information, reveals);
+    }
+
     private static ContentItem Ticket(string id, string deskId, string statusId = "open", string assigneeId = "ben")
     {
         var item = new ContentItem { ContentItemId = id, ContentType = TicketsConstants.DefaultContentType, DisplayText = id };
@@ -212,11 +287,16 @@ public sealed class TicketsControllerTests
         private readonly HashSet<string> _granted = new(StringComparer.Ordinal);
 
         public ControllerKit(params TicketOperation[] allowed)
-            : this(null, null, allowed)
+            : this(null, null, null, allowed)
         {
         }
 
         public ControllerKit(string[] types, TicketDesk[] desks, params TicketOperation[] allowed)
+            : this(types, desks, null, allowed)
+        {
+        }
+
+        public ControllerKit(string[] types, TicketDesk[] desks, Action<IServiceCollection> configure, params TicketOperation[] allowed)
         {
             desks ??= [_support, _hr];
 
@@ -248,7 +328,9 @@ public sealed class TicketsControllerTests
                     new global::CrestApps.OrchardCore.ContentFields.Conditions.ContentFieldState("Request.Affected", "Request", "Affected", "Affected", true, true),
                     new global::CrestApps.OrchardCore.ContentFields.Conditions.ContentFieldState("Request.Outage", "Request", "Outage", "Outage", false, false),
                 ]);
-            var services = new ServiceCollection()
+            var serviceCollection = new ServiceCollection();
+            configure?.Invoke(serviceCollection);
+            var services = serviceCollection
                 .AddSingleton(fieldStates.Object)
                 .AddSingleton(new global::CrestApps.OrchardCore.Tickets.Services.TicketUploads([], Microsoft.Extensions.Options.Options.Create(new global::CrestApps.OrchardCore.Attachments.Models.AttachmentOptions()), Doubles.RecipeRoundTrip.Localizer<global::CrestApps.OrchardCore.Tickets.Services.TicketUploads>()))
                 .BuildServiceProvider();

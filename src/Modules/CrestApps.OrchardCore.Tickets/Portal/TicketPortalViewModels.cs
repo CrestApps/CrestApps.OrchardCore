@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tickets.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement;
@@ -29,6 +30,8 @@ public class TicketPortalListViewModel
 /// </summary>
 public class TicketPortalRow
 {
+    public bool HasProtectedInformation { get; set; }
+
     public string Number { get; set; }
 
     public string Subject { get; set; }
@@ -60,6 +63,10 @@ public class TicketPortalCreateViewModel
     public string DeskId { get; set; }
 
     public string Body { get; set; }
+
+    public string ProtectedLabel { get; set; }
+
+    public string ProtectedValue { get; set; }
 
     [BindNever]
     public List<TicketPortalType> Types { get; set; } = [];
@@ -111,6 +118,14 @@ public class TicketPortalDisplayViewModel
     /// Gets or sets the guest's token, when the request is opened from a signed link.
     /// </summary>
     public bool IsGuest { get; set; }
+
+    public IReadOnlyList<TicketProtectedItem> ProtectedItems { get; set; } = [];
+
+    public IReadOnlyList<TicketProtectedValue> ProtectedValues { get; set; }
+
+    public bool CanShowProtected { get; set; }
+
+    public bool CanRemoveProtected { get; set; }
 
     /// <summary>
     /// Gets or sets what was just done, such as a reply sent.

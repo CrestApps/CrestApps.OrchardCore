@@ -23,7 +23,13 @@
         <span class="badge text-bg-primary">@Model.Status</span>
     }
     <span>@T["Opened {0}", Model.Created]</span>
+    @if (Model.ProtectedItems.Count > 0)
+    {
+        <a href="#request-protected" class="badge text-bg-warning text-decoration-none"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Contains protected information"]</a>
+    }
 </div>
+
+<partial name="_TicketPortalProtected" model="Model" />
 
 <div class="d-flex flex-column gap-3 mb-4">
     @for (var i = 0; i < Model.Entries.Count; i++)
@@ -84,6 +90,7 @@
                 @await DisplayAsync(await New.FileDropInput(InputName: "files", InputId: "reply-files", Compact: true, Target: "form"))
             </div>
         }
+        <partial name="_TicketProtectedInputs" />
         <button type="submit" class="btn btn-primary">@T["Send"]</button>
     </form>
 }

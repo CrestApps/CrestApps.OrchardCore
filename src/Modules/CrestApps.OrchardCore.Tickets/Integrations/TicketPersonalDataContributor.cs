@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
 using CrestApps.OrchardCore.Attachments.Services;
@@ -116,6 +117,12 @@ internal sealed class TicketPersonalDataContributor : IPersonalDataContributor
             foreach (var email in await _session.Query<TicketEmailOutboxItem, TicketEmailOutboxIndex>(index => index.TicketId == ticket.ContentItemId).ListAsync(cancellationToken))
             {
                 _session.Delete(email);
+            }
+
+            // What the requester shared under protection (their logins) goes too.
+            if (_services.GetService<ITicketProtectedInformation>() is { } protectedInformation)
+            {
+                await protectedInformation.DeleteAllAsync(ticket.ContentItemId, cancellationToken);
             }
 
             ticket.Alter<TicketPart>(part =>

@@ -71,6 +71,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<TicketBacklogIndexProvider>()
             .AddIndexProvider<TicketTimeElapsedMarkIndexProvider>()
             .AddIndexProvider<TicketEmailOutboxIndexProvider>()
+            .AddIndexProvider<TicketProtectedItemIndexProvider>()
             .AddIndexProvider<TicketLinkIndexProvider>();
 
         services.AddTicketsCore();
@@ -126,6 +127,8 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<TicketsPermissionsProvider>();
         services.AddScoped<IAuthorizationHandler, TicketContentAuthorizationHandler>();
         services.TryAddScoped<ITicketBoardPins, UserTicketBoardPins>();
+        services.TryAddScoped<ITicketPasswordConfirmation, TicketPasswordConfirmation>();
+        services.TryAddScoped<TicketProtectedReveals>();
         services.AddNavigationProvider<TicketsAdminMenu>();
     }
 }

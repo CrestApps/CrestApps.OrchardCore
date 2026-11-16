@@ -93,6 +93,23 @@
         </div>
     }
 
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Protected information"]</span>
+        <div class="ocat-end">
+            <div class="row g-2">
+                <div class="col-12 col-md-5">
+                    <label for="ProtectedLabel" class="form-label visually-hidden">@T["Label"]</label>
+                    <input id="ProtectedLabel" name="ProtectedLabel" value="@Model.ProtectedLabel" class="form-control" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxLabelLength" placeholder="@T["Label, such as VPN login"]" autocomplete="off" />
+                </div>
+                <div class="col-12 col-md-7">
+                    <label for="ProtectedValue" class="form-label visually-hidden">@T["Value"]</label>
+                    <input id="ProtectedValue" name="ProtectedValue" type="password" class="form-control" maxlength="@CrestApps.OrchardCore.Tickets.Services.ITicketProtectedInformation.MaxValueLength" placeholder="@T["Value"]" autocomplete="new-password" />
+                </div>
+            </div>
+            <span class="hint">@T["Optional. A login or other secret the requester gave: kept encrypted, apart from the ticket, and shown only to agents allowed to, after they confirm their password. More can be added on the ticket."]</span>
+        </div>
+    </div>
+
     <div class="action-bar-bottom">
         <button type="submit" class="btn btn-primary">@T["Create"]</button>
         <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>

@@ -164,6 +164,10 @@ public sealed class TicketPortalController : Controller
             PageSize = PageSize,
         };
 
+        var withProtected = HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is { } protectedList
+            ? await protectedList.FindTicketsWithItemsAsync(tickets.Select(ticket => ticket.ContentItemId), HttpContext.RequestAborted)
+            : new HashSet<string>(StringComparer.Ordinal);
+
         foreach (var ticket in tickets)
         {
             var part = ticket.GetOrCreate<TicketPart>();
@@ -176,6 +180,7 @@ public sealed class TicketPortalController : Controller
                 IsOpen = part.StatusCategory is not (TicketStatusCategory.Solved or TicketStatusCategory.Closed),
                 Created = await LocalAsync(ticket.CreatedUtc),
                 RequesterName = part.RequesterContact?.Name,
+                HasProtectedInformation = withProtected.Contains(ticket.ContentItemId),
             });
         }
 
@@ -305,6 +310,8 @@ public sealed class TicketPortalController : Controller
             return View(model);
         }
 
+        await AddProtectedAsync(result.Ticket.ContentItemId, model.ProtectedLabel, model.ProtectedValue, viewer.Party, viewer.UserName);
+
         return RedirectToRoute(DisplayRouteName, new { number = result.Ticket.GetOrCreate<TicketPart>().Number, done = Done.Created });
     }
 
@@ -344,7 +351,7 @@ public sealed class TicketPortalController : Controller
     [RequestSizeLimit(TicketUploads.MaxRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = TicketUploads.MaxRequestBytes)]
     [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalReply)]
-    public async Task<IActionResult> Reply(string number, string body, List<IFormFile> files)
+    public async Task<IActionResult> Reply(string number, string body, List<IFormFile> files, string protectedLabel = null, string protectedValue = null)
     {
         var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
         var ticket = await _tickets.FindByNumberAsync(number);
@@ -354,7 +361,7 @@ public sealed class TicketPortalController : Controller
             return NotFound();
         }
 
-        var (sent, error) = await ReplyAsync(ticket, body, files, viewer.Party, viewer.UserName);
+        var (sent, error) = await ReplyAsync(ticket, body, files, viewer.Party, viewer.UserName, protectedLabel, protectedValue);
 
         if (error is not null)
         {
@@ -421,7 +428,7 @@ public sealed class TicketPortalController : Controller
     [RequestSizeLimit(TicketUploads.MaxRequestBytes)]
     [RequestFormLimits(MultipartBodyLengthLimit = TicketUploads.MaxRequestBytes)]
     [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalGuest)]
-    public async Task<IActionResult> GuestReply(string id, string body, List<IFormFile> files)
+    public async Task<IActionResult> GuestReply(string id, string body, List<IFormFile> files, string protectedLabel = null, string protectedValue = null)
     {
         if (await _tickets.GetAsync(id) is not { } ticket || !_access.IsGuestTokenFor(Request.Cookies[GuestCookieName], ticket))
         {
@@ -430,7 +437,7 @@ public sealed class TicketPortalController : Controller
 
         // The cookie proves who it is: the requester.
         var part = ticket.GetOrCreate<TicketPart>();
-        var (sent, error) = await ReplyAsync(ticket, body, files, part.Requester, part.RequesterContact?.Name ?? part.RequesterContact?.Email);
+        var (sent, error) = await ReplyAsync(ticket, body, files, part.Requester, part.RequesterContact?.Name ?? part.RequesterContact?.Email, protectedLabel, protectedValue);
 
         if (error is not null)
         {
@@ -574,7 +581,7 @@ public sealed class TicketPortalController : Controller
     }
 
     // The ticket the reply went on (a follow-up of a closed one, maybe), or why it wasn't sent; nothing is kept then.
-    private async Task<(ContentItem Ticket, string Error)> ReplyAsync(ContentItem ticket, string body, List<IFormFile> files, PartyRef author, string authorName)
+    private async Task<(ContentItem Ticket, string Error)> ReplyAsync(ContentItem ticket, string body, List<IFormFile> files, PartyRef author, string authorName, string protectedLabel = null, string protectedValue = null)
     {
         if (string.IsNullOrWhiteSpace(body))
         {
@@ -612,7 +619,134 @@ public sealed class TicketPortalController : Controller
             return (null, string.Join(" ", result.Errors));
         }
 
-        return (result.Ticket ?? ticket, null);
+        var sent = result.Ticket ?? ticket;
+
+        await AddProtectedAsync(sent.ContentItemId, protectedLabel, protectedValue, author, authorName);
+
+        return (sent, null);
+    }
+
+    // A protected item the requester gave with their request or reply, kept encrypted, apart from the message.
+    private async Task AddProtectedAsync(string ticketId, string label, string value, PartyRef author, string authorName)
+    {
+        if (!string.IsNullOrWhiteSpace(value) && HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is { } protectedInformation)
+        {
+            await protectedInformation.AddAsync(ticketId, string.IsNullOrWhiteSpace(label) ? H["Shared by the requester"].Value : label, value, new TicketActor { Party = author, Name = authorName }, fromRequester: true, HttpContext.RequestAborted);
+        }
+    }
+
+    /// <summary>
+    /// Shows the signed-in requester their request's protected information, once they confirm their password.
+    /// </summary>
+    /// <param name="number">The request's number.</param>
+    /// <param name="password">Their password.</param>
+    /// <returns>The request.</returns>
+    [Authorize]
+    [HttpPost("account/requests/{number}/protected/show", Name = "TicketPortalShowProtected")]
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalReply)]
+    public async Task<IActionResult> ShowProtected(string number, string password)
+    {
+        var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
+        var ticket = await _tickets.FindByNumberAsync(number);
+
+        if (!await _access.CanSeeAsync(viewer, ticket, HttpContext.RequestAborted) || ticket.GetOrCreate<TicketPart>().Requester != viewer.Party
+            || HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is not { } protectedInformation)
+        {
+            return NotFound();
+        }
+
+        var actor = new TicketActor { Party = viewer.Party, Name = viewer.UserName };
+        var check = await HttpContext.RequestServices.GetRequiredService<ITicketPasswordConfirmation>().CheckAsync(User, password);
+
+        if (check == TicketPasswordCheck.Confirmed)
+        {
+            await protectedInformation.RecordRevealAsync(ticket.ContentItemId, actor, succeeded: true, HttpContext.RequestAborted);
+            await HttpContext.RequestServices.GetRequiredService<TicketProtectedReveals>().GrantAsync(viewer.UserId, ticket.ContentItemId, HttpContext.RequestAborted);
+
+            return Redirect(Url.RouteUrl(DisplayRouteName, new { number }) + "#request-protected");
+        }
+
+        if (check is TicketPasswordCheck.Wrong or TicketPasswordCheck.LockedOut)
+        {
+            await protectedInformation.RecordRevealAsync(ticket.ContentItemId, actor, succeeded: false, HttpContext.RequestAborted);
+        }
+
+        var model = await BuildDisplayAsync(ticket, viewer.Party, guest: false);
+        model.Error = check switch
+        {
+            TicketPasswordCheck.LockedOut => H["Too many wrong passwords: your account is locked for a while."].Value,
+            TicketPasswordCheck.NoLocalPassword => H["You sign in to this site without a password, so it can't be confirmed. Contact us if you need what you shared."].Value,
+            _ => H["That password isn't right."].Value,
+        };
+
+        return View(nameof(Display), model);
+    }
+
+    /// <summary>
+    /// Masks the request's protected information again.
+    /// </summary>
+    /// <param name="number">The request's number.</param>
+    /// <returns>The request.</returns>
+    [Authorize]
+    [HttpPost("account/requests/{number}/protected/hide", Name = "TicketPortalHideProtected")]
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalReply)]
+    public async Task<IActionResult> HideProtected(string number)
+    {
+        var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
+
+        if (await _tickets.FindByNumberAsync(number) is { } ticket && viewer is not null)
+        {
+            await HttpContext.RequestServices.GetRequiredService<TicketProtectedReveals>().RevokeAsync(viewer.UserId, ticket.ContentItemId, HttpContext.RequestAborted);
+        }
+
+        return Redirect(Url.RouteUrl(DisplayRouteName, new { number }) + "#request-protected");
+    }
+
+    /// <summary>
+    /// Removes an item the signed-in requester shared on their request.
+    /// </summary>
+    /// <param name="number">The request's number.</param>
+    /// <param name="itemId">The item.</param>
+    /// <returns>The request.</returns>
+    [Authorize]
+    [HttpPost("account/requests/{number}/protected/remove", Name = "TicketPortalRemoveProtected")]
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalReply)]
+    public async Task<IActionResult> RemoveProtected(string number, string itemId)
+    {
+        var viewer = await _access.GetViewerAsync(User, HttpContext.RequestAborted);
+        var ticket = await _tickets.FindByNumberAsync(number);
+
+        if (!await _access.CanSeeAsync(viewer, ticket, HttpContext.RequestAborted) || ticket.GetOrCreate<TicketPart>().Requester != viewer.Party
+            || HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is not { } protectedInformation)
+        {
+            return NotFound();
+        }
+
+        await protectedInformation.RemoveAsync(ticket.ContentItemId, itemId, new TicketActor { Party = viewer.Party, Name = viewer.UserName }, HttpContext.RequestAborted);
+
+        return Redirect(Url.RouteUrl(DisplayRouteName, new { number }) + "#request-protected");
+    }
+
+    /// <summary>
+    /// Removes an item a guest requester shared, through their request's link.
+    /// </summary>
+    /// <param name="id">The request.</param>
+    /// <param name="itemId">The item.</param>
+    /// <returns>The request.</returns>
+    [HttpPost("requests/{id}/protected/remove", Name = "TicketPortalGuestRemoveProtected")]
+    [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.PortalGuest)]
+    public async Task<IActionResult> GuestRemoveProtected(string id, string itemId)
+    {
+        if (await _tickets.GetAsync(id) is not { } ticket || !_access.IsGuestTokenFor(Request.Cookies[GuestCookieName], ticket)
+            || HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is not { } protectedInformation)
+        {
+            return NotFound();
+        }
+
+        var part = ticket.GetOrCreate<TicketPart>();
+        await protectedInformation.RemoveAsync(ticket.ContentItemId, itemId, new TicketActor { Party = part.Requester, Name = part.RequesterContact?.Name ?? part.RequesterContact?.Email }, HttpContext.RequestAborted);
+
+        return Redirect(Url.RouteUrl(GuestRouteName, new { id }) + "#request-protected");
     }
 
     // The replies sent from the portal on a request in the last hour.
@@ -682,6 +816,23 @@ public sealed class TicketPortalController : Controller
             Score = part.Satisfaction?.Score,
             RatingComment = part.Satisfaction?.Comment,
         };
+
+        // What the requester shared under protection: its labels; its values for the signed-in requester who confirmed
+        // their password a few minutes ago. A guest can't confirm a password, so sees the labels and may remove them.
+        if (HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is { } protectedInformation)
+        {
+            var isRequester = !guest && !viewer.IsEmpty && part.Requester == viewer;
+
+            model.ProtectedItems = await protectedInformation.ListAsync(ticket.ContentItemId, HttpContext.RequestAborted);
+            model.CanShowProtected = isRequester && viewer.Kind == PartyKinds.User;
+            model.CanRemoveProtected = isRequester || guest;
+
+            if (model.CanShowProtected && model.ProtectedItems.Count > 0
+                && await HttpContext.RequestServices.GetRequiredService<TicketProtectedReveals>().IsGrantedAsync(viewer.Id, ticket.ContentItemId, HttpContext.RequestAborted))
+            {
+                model.ProtectedValues = await protectedInformation.ReadValuesAsync(ticket.ContentItemId, HttpContext.RequestAborted);
+            }
+        }
 
         // Only public replies: internal notes and the record of changes are the business's own. The latest ones, and the
         // original request, which a long thread would otherwise drop.

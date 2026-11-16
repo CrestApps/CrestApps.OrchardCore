@@ -80,6 +80,18 @@ A reply from the requester on a solved ticket reopens it within the desk's reope
 
 The **Details** card on the ticket's page holds what its type asks for: its subject and the type's own fields, such as the laptop model or whether others can't work either. If you may edit the ticket, change them there and select **Save**; a value that isn't right is pointed out in the card. Questions that depend on the category or another answer show only when they apply, as on the new ticket form. If you may only read the ticket, you see the values, and **Not set** for a question nobody answered.
 
+## Protected information
+
+Requesters sometimes need to give a login or another secret. Instead of writing it in a message, they (or you) add it as **protected information**: a label, such as "VPN login", and the secret. It's kept encrypted, apart from the ticket and its messages, and it never shows in the ticket list, searches, reports, exports, e-mails or notifications, or to the AI assistant.
+
+- A ticket that holds some shows **Contains protected information** at the top, and a **Protected** badge in the ticket list.
+- The **Protected information** card on the ticket lists the labels; the secrets stay hidden. To see them, type your own password and select **Show**. They show for 5 minutes, or until you select **Hide**, and then they're hidden again.
+- Only people with **View protected information** on the ticket's desk get **Show**, and the remove buttons. Administrators have it on a new site; on a site that existed before, give it to the roles that need it under **Users > Roles**.
+- If you sign in to the site without a password of your own (only through an outside sign-in), you can't show protected information: ask an administrator to set a password on your account.
+- Each time someone shows the secrets, gives a wrong password, adds or removes one, it's noted in the ticket's **History**, with who and when but never the secret. Too many wrong passwords lock the account for a while, as at sign-in.
+- Add protected information yourself with **Add protected information** on the ticket, or in **Protected information** on the new ticket form. Requesters can add it when they send a request or a reply from the site, or with the request form on a page.
+- When a ticket is merged, its protected information moves to the ticket it's merged into. A desk can delete it a number of days after a ticket closes: set **Delete protected information after (days)** on the desk (0 keeps it).
+
 ## Merge and link tickets
 
 - **Merge** moves a duplicate into another ticket by its number. The duplicate becomes read only and points to the ticket it was merged into.
@@ -184,6 +196,8 @@ Turn on **Tickets Portal** under **Configuration > Features**. Then:
 Signed-in people now find **Requests** under **My account**: their requests, **New request**, and each request's conversation with a reply box. They see your public replies, never your internal notes. Someone without a login follows **View your request** in their e-mails to read and answer their request. An account's administrators also see the account's requests.
 
 To learn how you did, set **Ask requesters to rate a solved ticket after (hours)** on a desk. The requester of a solved ticket then gets one e-mail with a link to rate it from 1 to 5, and can also rate it on the request's page. Ratings show on the ticket's timeline and in the **Tickets** data set for reports.
+
+When customers send a request or a reply, they can open **Share a login or other secret** and give it there rather than in their message. On their request's page they see **What you shared under protection** with the labels; if they're signed in, they can show the secrets with their own password, and they can remove them.
 
 ## Let the AI assistant help
 

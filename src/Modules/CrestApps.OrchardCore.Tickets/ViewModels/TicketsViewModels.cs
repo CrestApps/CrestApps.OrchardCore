@@ -166,6 +166,11 @@ public sealed class TicketRow
     public bool CanEdit { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the ticket holds protected information (its lock badge).
+    /// </summary>
+    public bool HasProtectedInformation { get; set; }
+
+    /// <summary>
     /// Gets or sets the ticket's part.
     /// </summary>
     public TicketPart Part { get; set; }
@@ -283,6 +288,16 @@ public sealed class TicketCreateViewModel
     public string Body { get; set; }
 
     /// <summary>
+    /// Gets or sets the label of a protected item given with the ticket, if any.
+    /// </summary>
+    public string ProtectedLabel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the secret of a protected item given with the ticket. It is never sent back to the form.
+    /// </summary>
+    public string ProtectedValue { get; set; }
+
+    /// <summary>
     /// Gets or sets the desk.
     /// </summary>
     public string DeskId { get; set; }
@@ -348,6 +363,26 @@ public sealed class TicketCreateViewModel
 /// </summary>
 public sealed class TicketPageViewModel
 {
+    /// <summary>
+    /// Gets or sets the ticket's protected items, without their values.
+    /// </summary>
+    public IReadOnlyList<TicketProtectedItem> ProtectedItems { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the user may add protected information.
+    /// </summary>
+    public bool CanAddProtected { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the user may show (after their password) and remove protected information.
+    /// </summary>
+    public bool CanViewProtected { get; set; }
+
+    /// <summary>
+    /// Gets or sets the protected values, while the user's confirmed password lets them see them; otherwise <see langword="null"/>.
+    /// </summary>
+    public IReadOnlyList<TicketProtectedValue> ProtectedValues { get; set; }
+
     /// <summary>
     /// Gets or sets the Details card's editor (the ticket type's title and fields), for a user who may edit the ticket.
     /// </summary>

@@ -27,3 +27,7 @@
 {
     <span class="badge ta-badge fw-normal" title="@T["Desk"]"><i class="fa-solid fa-inbox me-1" aria-hidden="true"></i>@row.DeskName</span>
 }
+@if (row.HasProtectedInformation)
+{
+    <span class="badge text-bg-warning fw-normal" title="@T["Contains protected information"]"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Protected"]</span>
+}

@@ -115,6 +115,14 @@ public static class TicketsPermissions
         isSecurityCritical: true);
 
     /// <summary>
+    /// Show the protected information of tickets the user may view, after giving their password, and remove it.
+    /// </summary>
+    public static readonly Permission ViewProtectedTicketInformation = new(
+        "ViewProtectedTicketInformation",
+        LocalizationSource.Create("View protected ticket information", typeof(TicketsPermissions)),
+        isSecurityCritical: true);
+
+    /// <summary>
     /// Open the ticket reports. Each report shows only the tickets the reader may view.
     /// </summary>
     public static readonly Permission ViewTicketReports = new(
@@ -154,6 +162,11 @@ public static class TicketsPermissions
         IsSecurityCritical = true,
     };
 
+    private static readonly PermissionTemplate _viewProtected = new("ViewProtectedTicketInformation_{0}", LocalizationSource.Create("View protected information in {0}", typeof(TicketsPermissions)), ViewProtectedTicketInformation)
+    {
+        IsSecurityCritical = true,
+    };
+
     private static readonly Dictionary<TicketOperation, PermissionTemplate> _templates = new()
     {
         [TicketOperation.ViewAll] = _viewAll,
@@ -165,6 +178,7 @@ public static class TicketsPermissions
         [TicketOperation.Assign] = _assign,
         [TicketOperation.Merge] = _merge,
         [TicketOperation.Delete] = _delete,
+        [TicketOperation.ViewProtected] = _viewProtected,
     };
 
     // Keyed by the desk's name too: the cache is shared by every tenant of the process, and tenants set up from the same

@@ -122,6 +122,14 @@
                 <span class="hint">@T["0 keeps solved tickets until someone closes them."]</span>
             </div>
         </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="DeleteProtectedInformationDays" class="ocat-label">@T["Delete protected information after (days)"]</label>
+            <div class="ocat-end">
+                <input asp-for="DeleteProtectedInformationDays" class="form-control" type="number" min="0" />
+                <span class="hint">@T["Days after a ticket is closed that its protected information (logins and other secrets) is deleted. 0 keeps it."]</span>
+            </div>
+        </div>
     </div>
 </div>
 

@@ -28,6 +28,8 @@ public static class TicketsCoreServiceCollectionExtensions
         services.TryAddScoped<ITicketService, DefaultTicketService>();
         services.TryAddScoped<ITicketAccessService, DefaultTicketAccessService>();
         services.TryAddScoped<ITicketBoardService, DefaultTicketBoardService>();
+        services.TryAddScoped<ITicketProtectedInformation, DefaultTicketProtectedInformation>();
+        services.TryAddScoped<TicketProtectedInformationCleaner>();
         services.TryAddScoped<ITicketCategoryService, TicketCategoryService>();
         services.TryAddScoped<TicketAutoCloser>();
         services.TryAddScoped<TicketBacklogRecorder>();

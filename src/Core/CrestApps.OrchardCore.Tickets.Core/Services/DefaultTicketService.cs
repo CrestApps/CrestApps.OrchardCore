@@ -704,6 +704,13 @@ public sealed partial class DefaultTicketService : ITicketService
             await SaveAsync(target, targetPart, cancellationToken);
             await AddEventAsync(ticket.ContentItemId, actor, S["Merged into {0}.", targetPart.Number], [], cancellationToken);
             await AddEventAsync(target.ContentItemId, actor, S["{0} was merged into this ticket.", part.Number], [], cancellationToken);
+
+            // Its protected information moves with it, in the merge's own transaction.
+            if (_serviceProvider.GetService<ITicketProtectedInformation>() is { } protectedInformation
+                && await protectedInformation.MoveAsync(ticket.ContentItemId, target.ContentItemId, cancellationToken) > 0)
+            {
+                await AddEventAsync(target.ContentItemId, actor, S["The protected information of {0} came with it.", part.Number], [], cancellationToken);
+            }
             Enqueue(observer => observer.MergedAsync(ticket, target, cancellationToken));
 
             return new TicketResult { Ticket = target };

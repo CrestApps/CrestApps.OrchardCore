@@ -18,5 +18,11 @@ public sealed class TicketAutoCloseBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-        => this.RunAsync(async run => run.AddItems(await serviceProvider.GetRequiredService<TicketAutoCloser>().CloseDueAsync(cancellationToken: cancellationToken), "closed"));
+        => this.RunAsync(async run =>
+        {
+            run.AddItems(await serviceProvider.GetRequiredService<TicketAutoCloser>().CloseDueAsync(cancellationToken: cancellationToken), "closed");
+
+            // Then the protected information of tickets closed longer ago than their desk keeps it.
+            run.AddItems(await serviceProvider.GetRequiredService<TicketProtectedInformationCleaner>().DeleteDueAsync(cancellationToken), "protected information deleted");
+        });
 }

@@ -52,6 +52,7 @@ internal sealed class TicketDeskDisplayDriver : TicketSettingsDisplayDriverBase<
             model.TicketTypes = [.. desk.TicketTypes];
             model.ReopenWindowDays = desk.ReopenWindowDays;
             model.AutoCloseDays = desk.AutoCloseDays;
+            model.DeleteProtectedInformationDays = desk.DeleteProtectedInformationDays;
             model.AssignmentStrategy = desk.AssignmentStrategy;
             model.NotifyRequester = desk.NotifyRequester;
             model.NotifyAssignee = desk.NotifyAssignee;
@@ -82,6 +83,7 @@ internal sealed class TicketDeskDisplayDriver : TicketSettingsDisplayDriverBase<
         desk.TicketTypes = [.. (model.TicketTypes ?? []).Where(type => !string.IsNullOrWhiteSpace(type)).Distinct(StringComparer.OrdinalIgnoreCase)];
         desk.ReopenWindowDays = model.ReopenWindowDays;
         desk.AutoCloseDays = model.AutoCloseDays;
+        desk.DeleteProtectedInformationDays = model.DeleteProtectedInformationDays;
         desk.AssignmentStrategy = string.IsNullOrWhiteSpace(model.AssignmentStrategy) ? null : model.AssignmentStrategy;
         desk.NotifyRequester = model.NotifyRequester;
         desk.NotifyAssignee = model.NotifyAssignee;

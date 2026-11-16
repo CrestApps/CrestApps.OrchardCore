@@ -60,6 +60,11 @@ public sealed class TicketDesk : CatalogItem, ITicketSettingsRecord
     public int AutoCloseDays { get; set; } = 4;
 
     /// <summary>
+    /// Gets or sets how many days after a ticket is closed its protected information is deleted; 0 keeps it.
+    /// </summary>
+    public int DeleteProtectedInformationDays { get; set; }
+
+    /// <summary>
     /// Gets or sets how a new ticket with a team and no assignee is given to a team member: a strategy of
     /// <c>TeamAssignmentStrategies</c> (least loaded, round robin), or empty to leave it for an agent to take.
     /// </summary>

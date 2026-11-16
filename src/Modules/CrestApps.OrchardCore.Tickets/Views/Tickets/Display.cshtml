@@ -29,6 +29,10 @@
                 {
                     <span class="badge text-bg-primary fw-normal" title="@T["Status"]">@Model.Status.Name</span>
                 }
+                @if (Model.ProtectedItems.Count > 0)
+                {
+                    <a href="#ticket-protected" class="badge text-bg-warning fw-normal text-decoration-none"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Contains protected information"]</a>
+                }
                 @if (Model.Priority is not null)
                 {
                     <span class="badge ta-badge fw-normal" title="@T["Priority"]">
@@ -211,6 +215,7 @@ else if (Model.IsReadOnly)
         @await Component.InvokeAsync("Timeline", new { subject = $"{TicketsConstants.RecordKind}:{ticketId}", title = T["History"].Value, kinds = TicketsConstants.EntryKinds.Event })
     </div>
     <div class="col-12 col-lg-4">
+        <partial name="_TicketProtectedInformation" model="Model" />
         @await DisplayAsync(display.Sidebar)
     </div>
 </div>

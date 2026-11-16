@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
@@ -76,7 +77,7 @@ public sealed class TicketFormController : Controller
     [HttpPost("tickets/forms/{widgetId}", Name = "TicketFormSubmit")]
     [RequestSizeLimit(MaxRequestBytes)]
     [global::OrchardCore.RateLimits.RateLimitGroup(TicketsConstants.RateLimitGroups.WebForm)]
-    public async Task<IActionResult> Submit(string widgetId, string name, string email, string subject, string body, string returnUrl, string categoryId = null)
+    public async Task<IActionResult> Submit(string widgetId, string name, string email, string subject, string body, string returnUrl, string categoryId = null, string protectedLabel = null, string protectedValue = null)
     {
         var back = Url.IsLocalUrl(returnUrl) ? returnUrl : "~/";
 
@@ -150,9 +151,26 @@ public sealed class TicketFormController : Controller
             RequesterUnverified = signedIn is null,
         }, HttpContext.RequestAborted);
 
-        return result.Succeeded
-            ? Back(back, widgetId, SentQueryName, result.Ticket.GetOrCreate<TicketPart>().Number)
-            : Back(back, widgetId, ErrorQueryName, "failed");
+        if (!result.Succeeded)
+        {
+            return Back(back, widgetId, ErrorQueryName, "failed");
+        }
+
+        // A login or other secret the visitor shared, kept encrypted, apart from the ticket.
+        if (!string.IsNullOrWhiteSpace(protectedValue) && HttpContext.RequestServices.GetService<ITicketProtectedInformation>() is { } protectedInformation)
+        {
+            var requesterPart = result.Ticket.GetOrCreate<TicketPart>();
+
+            await protectedInformation.AddAsync(
+                result.Ticket.ContentItemId,
+                string.IsNullOrWhiteSpace(protectedLabel) ? HttpContext.RequestServices.GetRequiredService<IStringLocalizer<TicketFormController>>()["Shared by the requester"].Value : protectedLabel,
+                protectedValue,
+                new TicketActor { Party = requesterPart.Requester, Name = requesterPart.RequesterContact?.Name },
+                fromRequester: true,
+                HttpContext.RequestAborted);
+        }
+
+        return Back(back, widgetId, SentQueryName, result.Ticket.GetOrCreate<TicketPart>().Number);
     }
 
     /// <summary>

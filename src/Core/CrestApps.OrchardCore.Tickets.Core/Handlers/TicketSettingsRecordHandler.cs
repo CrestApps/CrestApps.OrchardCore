@@ -134,7 +134,7 @@ public sealed class TicketSettingsRecordHandler<T> : CatalogEntryHandlerBase<T>
 
         if (context.Model is TicketDesk desk)
         {
-            if (desk.ReopenWindowDays < 0 || desk.AutoCloseDays < 0 || desk.RatingRequestDelayHours < 0)
+            if (desk.ReopenWindowDays < 0 || desk.AutoCloseDays < 0 || desk.DeleteProtectedInformationDays < 0 || desk.RatingRequestDelayHours < 0)
             {
                 context.Result.Fail(new ValidationResult(S["Days can't be negative."], [nameof(TicketDesk.AutoCloseDays)]));
             }

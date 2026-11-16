@@ -85,7 +85,7 @@ internal sealed class TicketsMigrations : DataMigration
         await DefineCategoriesAsync();
         await SeedAsync();
 
-        return 15;
+        return 16;
     }
 
     /// <summary>
@@ -289,6 +289,17 @@ internal sealed class TicketsMigrations : DataMigration
         });
 
         return 15;
+    }
+
+    /// <summary>
+    /// Adds the index of tickets' protected items.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom15Async()
+    {
+        await TicketIndexSchema.CreateProtectedItemIndexAsync(SchemaBuilder);
+
+        return 16;
     }
 
     // The part a ticket category's term carries, and a term type with it for taxonomies of ticket categories.

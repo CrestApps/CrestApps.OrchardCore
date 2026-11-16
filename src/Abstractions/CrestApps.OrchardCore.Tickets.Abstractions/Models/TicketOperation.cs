@@ -49,4 +49,9 @@ public enum TicketOperation
     /// Delete a ticket.
     /// </summary>
     Delete,
+
+    /// <summary>
+    /// Show a ticket's protected information (after giving one's password) and remove it.
+    /// </summary>
+    ViewProtected,
 }

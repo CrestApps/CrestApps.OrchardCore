@@ -24,6 +24,7 @@ internal sealed class TicketsPermissionsProvider : IPermissionProvider
         TicketsPermissions.AssignTickets,
         TicketsPermissions.MergeTickets,
         TicketsPermissions.DeleteTickets,
+        TicketsPermissions.ViewProtectedTicketInformation,
         TicketsPermissions.ViewTicketReports,
     ];
 

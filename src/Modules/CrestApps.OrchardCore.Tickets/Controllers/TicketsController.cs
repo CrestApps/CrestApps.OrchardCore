@@ -502,6 +502,14 @@ public sealed class TicketsController : Controller
             await _tickets.LinkAsync(result.Ticket.ContentItemId, new RecordRef(Messaging.TicketConversationSource.RecordKind, model.ConversationId), TicketLinkKinds.Related, Actor(), cancellationToken);
         }
 
+        // A protected item given with the ticket is kept encrypted, apart from it.
+        if (!string.IsNullOrWhiteSpace(model.ProtectedValue)
+            && _serviceProvider.GetService<ITicketProtectedInformation>() is { } protectedInformation
+            && await protectedInformation.AddAsync(result.Ticket.ContentItemId, model.ProtectedLabel, model.ProtectedValue, Actor(), cancellationToken: cancellationToken) is null)
+        {
+            await _notifier.WarningAsync(H["The protected information wasn't kept: give it a label (up to {0} characters) and a value (up to {1}).", ITicketProtectedInformation.MaxLabelLength, ITicketProtectedInformation.MaxValueLength]);
+        }
+
         await _notifier.SuccessAsync(H["Ticket {0} was created.", result.Ticket.GetOrCreate<TicketPart>().Number]);
 
         return RedirectToAction(nameof(Display), new { id = result.Ticket.ContentItemId });
@@ -581,6 +589,22 @@ public sealed class TicketsController : Controller
             model.Draft = draft.Body;
             model.DraftIsInternal = draft.IsInternal;
             model.DraftStatusId = model.CanSetStatus ? draft.StatusId : null;
+        }
+
+        // Protected information: its labels for whoever sees the ticket; its values only for an agent with the permission
+        // who confirmed their password in the last few minutes.
+        if (_serviceProvider.GetService<ITicketProtectedInformation>() is { } protectedInformation)
+        {
+            model.ProtectedItems = await protectedInformation.ListAsync(id, cancellationToken);
+            model.CanAddProtected = !readOnly && await _access.CanAsync(User, ticket, TicketOperation.Note, cancellationToken);
+            model.CanViewProtected = await _access.CanAsync(User, ticket, TicketOperation.ViewProtected, cancellationToken);
+
+            if (model.CanViewProtected && model.ProtectedItems.Count > 0
+                && _serviceProvider.GetService<TicketProtectedReveals>() is { } reveals
+                && await reveals.IsGrantedAsync(UserId(), id, cancellationToken))
+            {
+                model.ProtectedValues = await protectedInformation.ReadValuesAsync(id, cancellationToken);
+            }
         }
 
         if (model.CanEdit)
@@ -1050,6 +1074,126 @@ public sealed class TicketsController : Controller
     }
 
     /// <summary>
+    /// Adds protected information to a ticket: a label and a secret value, kept encrypted and shown only after a password.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="label">What it is, such as "VPN login".</param>
+    /// <param name="value">The secret.</param>
+    /// <returns>The ticket page.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/protected/add", "TicketsAddProtected")]
+    public async Task<IActionResult> AddProtected(string id, string label, string value)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+
+        if (await _tickets.GetAsync(id) is not { } ticket || _serviceProvider.GetService<ITicketProtectedInformation>() is not { } protectedInformation)
+        {
+            return NotFound();
+        }
+
+        if (TicketLifecycle.IsReadOnly(ticket.GetOrCreate<TicketPart>()) || !await _access.CanAsync(User, ticket, TicketOperation.Note, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        if (await protectedInformation.AddAsync(id, label, value, Actor(), cancellationToken: cancellationToken) is null)
+        {
+            await _notifier.ErrorAsync(H["Give the protected information a label (up to {0} characters) and a value (up to {1}); a ticket holds at most {2}.", ITicketProtectedInformation.MaxLabelLength, ITicketProtectedInformation.MaxValueLength, ITicketProtectedInformation.MaxItemsPerTicket]);
+        }
+
+        return ProtectedSection(id);
+    }
+
+    /// <summary>
+    /// Shows a ticket's protected information to an agent who may see it and who confirms their password, for a few
+    /// minutes. Every reveal and every wrong password is on the ticket's timeline.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="password">The agent's current password.</param>
+    /// <returns>The ticket page.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/protected/show", "TicketsShowProtected")]
+    public async Task<IActionResult> ShowProtected(string id, string password)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+
+        if (await _tickets.GetAsync(id) is not { } ticket || _serviceProvider.GetService<ITicketProtectedInformation>() is not { } protectedInformation)
+        {
+            return NotFound();
+        }
+
+        if (!await _access.CanAsync(User, ticket, TicketOperation.ViewProtected, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        switch (await _serviceProvider.GetRequiredService<ITicketPasswordConfirmation>().CheckAsync(User, password))
+        {
+            case TicketPasswordCheck.Confirmed:
+                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: true, cancellationToken);
+                await _serviceProvider.GetRequiredService<TicketProtectedReveals>().GrantAsync(UserId(), id, cancellationToken);
+                break;
+            case TicketPasswordCheck.LockedOut:
+                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: false, cancellationToken);
+                await _notifier.ErrorAsync(H["Too many wrong passwords: your account is locked for a while."]);
+                break;
+            case TicketPasswordCheck.NoLocalPassword:
+                await _notifier.ErrorAsync(H["You sign in to this site without a password, so it can't be confirmed and the protected information can't be shown to you. Ask an administrator to set a password on your account."]);
+                break;
+            default:
+                await protectedInformation.RecordRevealAsync(id, Actor(), succeeded: false, cancellationToken);
+                await _notifier.ErrorAsync(H["That password isn't right."]);
+                break;
+        }
+
+        return ProtectedSection(id);
+    }
+
+    /// <summary>
+    /// Masks a ticket's protected information again before its few minutes are up.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <returns>The ticket page.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/protected/hide", "TicketsHideProtected")]
+    public async Task<IActionResult> HideProtected(string id)
+    {
+        await _serviceProvider.GetRequiredService<TicketProtectedReveals>().RevokeAsync(UserId(), id, HttpContext.RequestAborted);
+
+        return ProtectedSection(id);
+    }
+
+    /// <summary>
+    /// Removes an item of a ticket's protected information.
+    /// </summary>
+    /// <param name="id">The ticket.</param>
+    /// <param name="itemId">The item.</param>
+    /// <returns>The ticket page.</returns>
+    [HttpPost]
+    [Admin("ticket/{id}/protected/remove", "TicketsRemoveProtected")]
+    public async Task<IActionResult> RemoveProtected(string id, string itemId)
+    {
+        var cancellationToken = HttpContext.RequestAborted;
+
+        if (await _tickets.GetAsync(id) is not { } ticket || _serviceProvider.GetService<ITicketProtectedInformation>() is not { } protectedInformation)
+        {
+            return NotFound();
+        }
+
+        if (!await _access.CanAsync(User, ticket, TicketOperation.ViewProtected, cancellationToken))
+        {
+            return Forbid();
+        }
+
+        await protectedInformation.RemoveAsync(id, itemId, Actor(), cancellationToken);
+
+        return ProtectedSection(id);
+    }
+
+    private RedirectResult ProtectedSection(string id)
+        => Redirect(Url.Action(nameof(Display), new { id }) + "#ticket-protected");
+
+    /// <summary>
     /// Saves the ticket type's fields from the Details card of the ticket page.
     /// </summary>
     /// <param name="id">The ticket.</param>
@@ -1420,6 +1564,11 @@ public sealed class TicketsController : Controller
         var teamNames = (await TeamOptionsAsync(cancellationToken)).ToDictionary(item => item.Value, item => item.Text.Trim(' '), StringComparer.Ordinal);
         var now = _clock.UtcNow;
 
+        // One query for the page's lock badges.
+        var withProtected = _serviceProvider.GetService<ITicketProtectedInformation>() is { } protectedInformation
+            ? await protectedInformation.FindTicketsWithItemsAsync(tickets.Select(ticket => ticket.ContentItemId), cancellationToken)
+            : new HashSet<string>(StringComparer.Ordinal);
+
         var editableDesks = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var desk in lookups.Desks.Values)
@@ -1435,6 +1584,7 @@ public sealed class TicketsController : Controller
             Ticket = item.Ticket,
             Part = item.Part,
             CanEdit = editableDesks.Contains(item.Part.DeskId ?? string.Empty) && !TicketLifecycle.IsReadOnly(item.Part),
+            HasProtectedInformation = withProtected.Contains(item.Ticket.ContentItemId),
             Status = lookups.Statuses.GetValueOrDefault(item.Part.StatusId ?? string.Empty),
             Priority = lookups.Priorities.GetValueOrDefault(item.Part.PriorityId ?? string.Empty),
             DeskName = lookups.Desks.GetValueOrDefault(item.Part.DeskId ?? string.Empty)?.Name,

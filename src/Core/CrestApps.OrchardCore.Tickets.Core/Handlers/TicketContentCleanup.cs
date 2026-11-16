@@ -1,12 +1,14 @@
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.Tickets.Models;
+using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Timeline.Core.Services;
 using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Environment.Shell.Scope;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tickets.Core.Handlers;
 
@@ -19,13 +21,15 @@ namespace CrestApps.OrchardCore.Tickets.Core.Handlers;
 public sealed class TicketContentCleanup : ContentHandlerBase
 {
     private readonly ResumableSteps _steps;
+    private readonly ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TicketContentCleanup"/> class.
     /// </summary>
-    public TicketContentCleanup(ResumableSteps steps)
+    public TicketContentCleanup(ResumableSteps steps, ISession session)
     {
         _steps = steps;
+        _session = session;
     }
 
     /// <inheritdoc/>
@@ -39,6 +43,16 @@ public sealed class TicketContentCleanup : ContentHandlerBase
         var subject = new RecordRef(TicketsConstants.RecordKind, context.ContentItem.ContentItemId);
 
         await TimelineDeletionStep.RequestAsync(_steps, subject);
+
+        // The ticket's protected information goes with it, in the removal's own transaction. The documents are deleted
+        // here, through the session: the protected information service notes changes on the timeline, whose services
+        // need the content manager this handler is part of.
+        var ticketId = context.ContentItem.ContentItemId;
+
+        foreach (var item in await _session.Query<TicketProtectedItemDocument, TicketProtectedItemIndex>(index => index.TicketId == ticketId).ListAsync())
+        {
+            _session.Delete(item);
+        }
 
         if (ShellScope.Current is not null)
         {
