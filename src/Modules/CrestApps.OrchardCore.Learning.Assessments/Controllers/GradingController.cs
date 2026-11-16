@@ -201,7 +201,12 @@ public sealed class GradingController : Controller
 
             if (item.ManualScore != points || item.QuestionType == AssessmentsConstants.QuestionTypes.Essay)
             {
-                scores[item.Index] = new ManualScore { Points = points, Comment = Request.Form["comment" + item.Index].ToString() };
+                scores[item.Index] = new ManualScore
+                {
+                    Points = points,
+                    Comment = Request.Form["comment" + item.Index].ToString(),
+                    AIAssisted = string.Equals(Request.Form["aiAssisted" + item.Index].ToString(), bool.TrueString, StringComparison.OrdinalIgnoreCase),
+                };
             }
         }
 

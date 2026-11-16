@@ -134,6 +134,12 @@ public sealed class Submission : CatalogItem
     public DateTime? GradedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the grader saved the grade after using scoring help (a suggestion from AI). AI never saves a
+    /// grade itself; this records that the grader's grade was AI-assisted.
+    /// </summary>
+    public bool AIAssisted { get; set; }
+
+    /// <summary>
     /// Gets or sets who returned the work for resubmission.
     /// </summary>
     public string ReturnedBy { get; set; }
@@ -240,6 +246,11 @@ public sealed class SubmissionGrade
     /// Gets or sets when it was graded, in UTC.
     /// </summary>
     public DateTime? GradedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the grader used scoring help for this grade.
+    /// </summary>
+    public bool AIAssisted { get; set; }
 
     /// <summary>
     /// Gets or sets who replaced this grade.

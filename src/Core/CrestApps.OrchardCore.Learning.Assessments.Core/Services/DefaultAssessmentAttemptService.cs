@@ -351,6 +351,7 @@ public sealed class DefaultAssessmentAttemptService : IAssessmentAttemptService
             {
                 target.Items[index].ManualScore = score.Points;
                 target.Items[index].GraderComment = string.IsNullOrWhiteSpace(score.Comment) ? null : score.Comment.Trim();
+                target.Items[index].AIAssisted = score.AIAssisted;
             }
 
             target.Feedback = string.IsNullOrWhiteSpace(feedback) ? target.Feedback : feedback.Trim();

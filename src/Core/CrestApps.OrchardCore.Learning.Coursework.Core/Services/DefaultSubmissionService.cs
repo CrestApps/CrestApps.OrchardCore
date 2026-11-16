@@ -354,6 +354,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             submission.Feedback = string.IsNullOrWhiteSpace(request.Feedback) ? submission.Feedback : request.Feedback.Trim();
             submission.GraderId = request.Actor;
             submission.GradedUtc = now;
+            submission.AIAssisted = request.AIAssisted;
 
             await _store.UpdateAsync(submission, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
@@ -635,6 +636,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             Feedback = submission.Feedback,
             GraderId = submission.GraderId,
             GradedUtc = submission.GradedUtc,
+            AIAssisted = submission.AIAssisted,
             ReplacedBy = actor,
             ReplacedUtc = now,
             Reason = reason,

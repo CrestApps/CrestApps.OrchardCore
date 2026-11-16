@@ -157,6 +157,11 @@ public sealed class GradeSubmissionRequest
     /// for callers that check no permission, such as a workflow.
     /// </summary>
     public bool CanOverrideGrades { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the grader used scoring help (a suggestion from AI) for this grade.
+    /// </summary>
+    public bool AIAssisted { get; set; }
 }
 
 /// <summary>

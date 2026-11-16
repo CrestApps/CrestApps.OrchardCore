@@ -1,4 +1,6 @@
 @model SubmissionGradingViewModel
+@inject IDisplayManager<CrestApps.OrchardCore.Learning.Models.GradingAssistContext> AssistDisplay
+@inject OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor UpdateModelAccessor
 
 @{
     var submission = Model.Submission;
@@ -32,6 +34,10 @@
                 else if (submission.Status == SubmissionStatus.Graded)
                 {
                     <span class="badge text-bg-success ms-1">@T["Graded: {0}%", submission.Score?.ToString("0.##")]</span>
+                    @if (submission.AIAssisted)
+                    {
+                        <span class="badge ta-badge fw-normal ms-1" title="@T["The grader saved this grade after using scoring help."]"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> @T["AI-assisted"]</span>
+                    }
                 }
                 else if (submission.Status == SubmissionStatus.Returned)
                 {
@@ -120,6 +126,18 @@
                     </div>
                 </div>
 
+                @await DisplayAsync(await AssistDisplay.BuildDisplayAsync(new CrestApps.OrchardCore.Learning.Models.GradingAssistContext
+                {
+                    Kind = CrestApps.OrchardCore.Learning.Models.GradingAssistContext.SubmissionKind,
+                    RecordId = submission.ItemId,
+                    MaxPoints = Model.Part.MaxPoints,
+                    CanEdit = Model.CanGrade,
+                    PointsField = Model.Rubric is null ? Html.NameFor(m => m.Points).ToString() : null,
+                    FeedbackField = Html.NameFor(m => m.Feedback).ToString(),
+                    RubricFieldPrefix = Model.Rubric is null ? null : "Choices",
+                    AssistedField = Html.NameFor(m => m.AIAssisted).ToString(),
+                }, UpdateModelAccessor.ModelUpdater, "Detail"))
+
                 @if (regrade)
                 {
                     <div class="ocat-wrapper" asp-validation-class-for="Reason">
@@ -144,6 +162,10 @@
                     <li class="list-group-item">
                         <div>
                             @T["{0}% by {1}", grade.Score?.ToString("0.##"), Model.Names.TryGetValue(grade.GraderId ?? string.Empty, out var grader) ? grader : grade.GraderId]
+                            @if (grade.AIAssisted)
+                            {
+                                <span class="badge ta-badge fw-normal ms-1">@T["AI-assisted"]</span>
+                            }
                             @if (grade.LatePenaltyPercent is > 0 && grade.RawScore is { } earlierRaw)
                             {
                                 <span class="text-secondary small">@T["({0}% before the late penalty of {1}%)", earlierRaw.ToString("0.##"), grade.LatePenaltyPercent.Value.ToString("0.##")]</span>

@@ -102,6 +102,12 @@ public sealed class AttemptItem
     public string GraderComment { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the grader saved the manual score after using scoring help (a suggestion from AI). AI never
+    /// saves a score itself; this records that the grader's score was AI-assisted.
+    /// </summary>
+    public bool AIAssisted { get; set; }
+
+    /// <summary>
     /// Gets the score that counts: the grader score when there is one, else the automatic score.
     /// </summary>
     public decimal? Score => ManualScore ?? AutoScore;

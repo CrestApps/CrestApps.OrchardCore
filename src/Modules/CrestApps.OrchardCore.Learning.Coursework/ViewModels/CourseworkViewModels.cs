@@ -249,4 +249,7 @@ public class SubmissionGradingViewModel
 
     /// <summary>Gets or sets why graded work is graded again.</summary>
     public string Reason { get; set; }
+
+    /// <summary>Gets or sets whether the grader used scoring help (a suggestion from AI) for this grade.</summary>
+    public bool AIAssisted { get; set; }
 }

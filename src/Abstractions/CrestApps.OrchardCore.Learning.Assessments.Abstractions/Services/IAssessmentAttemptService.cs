@@ -133,6 +133,11 @@ public sealed class StartAttemptRequest
 public sealed class ManualScore
 {
     /// <summary>
+    /// Gets or sets whether the grader used scoring help (a suggestion from AI) for this score.
+    /// </summary>
+    public bool AIAssisted { get; set; }
+
+    /// <summary>
     /// Gets or sets the points.
     /// </summary>
     public decimal Points { get; set; }
