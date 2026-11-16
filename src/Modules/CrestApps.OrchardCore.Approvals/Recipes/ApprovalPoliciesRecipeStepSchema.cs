@@ -17,7 +17,7 @@ internal sealed class ApprovalPoliciesRecipeStepSchema : IRecipeStep
         var rule = new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("Kind", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The approver rule provider: Permission, Role, Users, Manager or Staff (with Staff on), or one a module adds.")),
+                ("Kind", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Integer).Description("The approver rule provider: Permission, Role, Users, Manager or Staff (with Staff on), or one a module adds. The numbers older recipes hold are read too: 0 Permission, 1 Role, 2 Manager, 3 Staff.")),
                 ("Value", Text("The permission's name, the role's name, or user or staff member ids separated by commas. Empty for Manager.")))
             .Required("Kind")
             .AdditionalProperties(false);
@@ -56,6 +56,7 @@ internal sealed class ApprovalPoliciesRecipeStepSchema : IRecipeStep
                             ("RequiredApprovals", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Minimum(1).Maximum(10).Description("How many different approvers must approve a policy without Stages.")),
                             ("AllowRequesterToApprove", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether the person who asked may approve their own request. Off by default.")),
                             ("AllowSubjectToDecide", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether a person may decide a request about themselves. Off by default.")),
+                            ("AllowSamePersonAcrossStages", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Whether one person may decide more than one stage of a request, such as in a small team. Off by default.")),
                             ("DueAfterHours", new JsonSchemaBuilder().Type(SchemaValueType.Integer | SchemaValueType.Null).Minimum(1).Description("Hours after which a request is due, for reminders.")))
                         .Required("Name")
                         .AdditionalProperties(true))

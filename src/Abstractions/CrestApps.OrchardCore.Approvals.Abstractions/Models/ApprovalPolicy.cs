@@ -94,6 +94,12 @@ public sealed class ApprovalPolicy : CatalogItem, INameAwareModel, IModifiedUtcA
     public bool AllowSubjectToDecide { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether one person may decide more than one stage of a request, such as in a
+    /// team too small to name different people for each stage.
+    /// </summary>
+    public bool AllowSamePersonAcrossStages { get; set; }
+
+    /// <summary>
     /// Gets or sets how many hours after it is made a request is due, or <see langword="null"/>.
     /// </summary>
     public int? DueAfterHours { get; set; }

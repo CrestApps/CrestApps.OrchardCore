@@ -165,6 +165,7 @@ public sealed class ApprovalPolicyHandler : CatalogEntryHandlerBase<ApprovalPoli
         policy.RequiredApprovals = json.ContainsKey(nameof(ApprovalPolicy.RequiredApprovals)) ? values.RequiredApprovals : policy.RequiredApprovals;
         policy.AllowRequesterToApprove = json.ContainsKey(nameof(ApprovalPolicy.AllowRequesterToApprove)) ? values.AllowRequesterToApprove : policy.AllowRequesterToApprove;
         policy.AllowSubjectToDecide = json.ContainsKey(nameof(ApprovalPolicy.AllowSubjectToDecide)) ? values.AllowSubjectToDecide : policy.AllowSubjectToDecide;
+        policy.AllowSamePersonAcrossStages = json.ContainsKey(nameof(ApprovalPolicy.AllowSamePersonAcrossStages)) ? values.AllowSamePersonAcrossStages : policy.AllowSamePersonAcrossStages;
         policy.DueAfterHours = json.ContainsKey(nameof(ApprovalPolicy.DueAfterHours)) ? values.DueAfterHours : policy.DueAfterHours;
         policy.Types = json.ContainsKey(nameof(ApprovalPolicy.Types)) ? values.Types ?? [] : policy.Types;
         policy.Enabled = json.ContainsKey(nameof(ApprovalPolicy.Enabled)) ? values.Enabled : policy.Enabled;

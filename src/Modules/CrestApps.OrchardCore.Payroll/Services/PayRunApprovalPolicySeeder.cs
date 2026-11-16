@@ -55,6 +55,19 @@ public sealed class PayRunApprovalPolicySeeder
     /// </summary>
     /// <param name="allowPreparerToApprove">Whether the person who prepared a run may approve it.</param>
     /// <returns>A task.</returns>
+    /// <summary>
+    /// Makes the pay run approval policy serve pay runs only, when it lists no approval type.
+    /// </summary>
+    /// <returns>A task.</returns>
+    public async Task ServePayRunsOnlyAsync()
+    {
+        if (await _policies.FindByNameAsync(PayrollConstants.PayRunApprovalPolicy) is { } policy && policy.Types is not { Count: > 0 })
+        {
+            policy.Types = [PayrollConstants.PayRunSubjectKind];
+            await _policies.UpdateAsync(policy);
+        }
+    }
+
     public async Task SyncAsync(bool allowPreparerToApprove)
     {
         if (await _policies.FindByNameAsync(PayrollConstants.PayRunApprovalPolicy) is { } policy

@@ -31,4 +31,8 @@ public sealed class ApprovalRequestManager : CatalogManager<ApprovalRequest>, IA
     /// <inheritdoc />
     public Task<IReadOnlyList<ApprovalRequest>> ListBySubjectAsync(string subjectKind, string subjectId, CancellationToken cancellationToken = default)
         => _store.ListBySubjectAsync(subjectKind, subjectId, cancellationToken);
+
+    /// <inheritdoc />
+    public Task<ApprovalRequest> FindCommittedAsync(ApprovalRequest loaded, CancellationToken cancellationToken = default)
+        => _store.FindCommittedAsync(loaded, cancellationToken);
 }

@@ -171,6 +171,15 @@
                 </div>
             </div>
         </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end">
+                <div class="form-check">
+                    <input asp-for="AllowSamePersonAcrossStages" type="checkbox" class="form-check-input" />
+                    <label asp-for="AllowSamePersonAcrossStages" class="form-check-label">@T["Let one person decide more than one stage"]</label>
+                    <span class="hint dashed">@T["Off by default: each stage is decided by someone who hasn't decided another, as a second pair of eyes. Turn it on when the team is too small."]</span>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

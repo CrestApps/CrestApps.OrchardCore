@@ -110,13 +110,62 @@ public sealed class ApprovalsAuthorizationTests
     }
 
     [Fact]
+    public async Task ANamedApproverWhoMayNotActOnTheRecord_IsRefused_AndNotListed()
+    {
+        // Arrange: the Finance rule names Lee, but the pay runs of group A are only Pat's to act on.
+        var context = new ApprovalsTestContext(Access());
+        context.Policy();
+        var groupA = await context.RequestAsync(subjectId: "run-a", scope: "groupA");
+        var inbox = new ApprovalInbox(context.Store, context.Service, context.Access);
+        var lee = Controller(context, "lee", grants: []);
+
+        // Act
+        var leeCanDecide = await context.Service.GetEligibilityAsync(groupA, TestSecurity.User("lee"), TestContext.Current.CancellationToken);
+        var patCanDecide = await context.Service.GetEligibilityAsync(groupA, TestSecurity.User("pat"), TestContext.Current.CancellationToken);
+        var (leeCount, _) = await inbox.ListWaitingAsync(TestSecurity.User("lee"), null, 0, 10, TestContext.Current.CancellationToken);
+        var (patCount, _) = await inbox.ListWaitingAsync(TestSecurity.User("pat"), null, 0, 10, TestContext.Current.CancellationToken);
+        var decided = await context.Service.DecideAsync(groupA, TestSecurity.User("lee"), ApprovalDecisionKind.Approve, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(leeCanDecide.CanDecide);
+        Assert.True(patCanDecide.CanDecide);
+        Assert.Equal(0, leeCount);
+        Assert.Equal(1, patCount);
+        Assert.False(decided.Succeeded);
+        Assert.IsType<NotFoundResult>(await lee.Decide(groupA.ItemId));
+        Assert.Equal(ApprovalStatus.Pending, groupA.Status);
+    }
+
+    [Fact]
+    public async Task WaitingForMe_CountsEveryPendingRequest_BeyondOneBatch()
+    {
+        // Arrange: more pending requests than one batch reads.
+        var context = new ApprovalsTestContext();
+        context.Policy();
+
+        for (var i = 0; i < ApprovalInbox.BatchSize + 30; i++)
+        {
+            await context.RequestAsync(subjectId: "run-" + i);
+        }
+
+        var inbox = new ApprovalInbox(context.Store, context.Service, context.Access);
+
+        // Act
+        var (count, page) = await inbox.ListWaitingAsync(TestSecurity.User("pat"), null, ApprovalInbox.BatchSize, 50, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ApprovalInbox.BatchSize + 30, count);
+        Assert.Equal(30, page.Count);
+    }
+
+    [Fact]
     public async Task WaitingForMe_ListsOnlyTheRequestsWhoseCurrentStageNamesThePerson()
     {
         // Arrange
         var (context, open, groupA) = await SeedAsync();
         var timesheet = TimesheetPolicy(context);
         var team = (await context.Service.RequestAsync(new ApprovalSubmission { Policy = timesheet.Name, SubjectKind = "Timesheet", SubjectId = "t-1", Title = "Week 46" }, TestSecurity.User("riley"), TestContext.Current.CancellationToken)).Request;
-        var inbox = new ApprovalInbox(context.Store, context.Service);
+        var inbox = new ApprovalInbox(context.Store, context.Service, context.Access);
 
         // Act
         var (morganCount, morgans) = await inbox.ListWaitingAsync(TestSecurity.User("morgan"), null, 0, 10, TestContext.Current.CancellationToken);
@@ -381,7 +430,7 @@ public sealed class ApprovalsAuthorizationTests
             context.Store,
             context.Service,
             context.Types,
-            new ApprovalInbox(context.Store, context.Service),
+            new ApprovalInbox(context.Store, context.Service, context.Access),
             Access(),
             TestSecurity.Granting(grants ?? [ApprovalsPermissions.ViewApprovalRequests, ApprovalsPermissions.ManageApprovalRequests]),
             display.Object,

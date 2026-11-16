@@ -88,6 +88,7 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
             model.AccessScope = policy.AccessScope;
             model.AllowRequesterToApprove = policy.AllowRequesterToApprove;
             model.AllowSubjectToDecide = policy.AllowSubjectToDecide;
+            model.AllowSamePersonAcrossStages = policy.AllowSamePersonAcrossStages;
             model.DueAfterHours = policy.DueAfterHours?.ToString(CultureInfo.InvariantCulture);
             model.IsNew = context.IsNew;
 
@@ -148,6 +149,7 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
         policy.AccessScope = Clean(model.AccessScope);
         policy.AllowRequesterToApprove = model.AllowRequesterToApprove;
         policy.AllowSubjectToDecide = model.AllowSubjectToDecide;
+        policy.AllowSamePersonAcrossStages = model.AllowSamePersonAcrossStages;
 
         // Each rule keeps the value of the provider chosen for it; a stage without rules isn't kept. The stages are
         // the policy's approvers from now on, so the fields of a policy saved before stages are cleared.

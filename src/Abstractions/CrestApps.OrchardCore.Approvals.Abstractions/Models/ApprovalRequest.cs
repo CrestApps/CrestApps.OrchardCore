@@ -152,6 +152,12 @@ public sealed class ApprovalRequest : CatalogItem, IModifiedUtcAwareModel
     public bool AllowSubjectToDecide { get; set; }
 
     /// <summary>
+    /// Gets or sets whether one person may decide more than one stage, copied from the policy when the request was
+    /// made.
+    /// </summary>
+    public bool AllowSamePersonAcrossStages { get; set; }
+
+    /// <summary>
     /// Gets or sets the version of the subject the request is about, such as a fingerprint of its totals, from the
     /// caller. A request about another version replaces it, and the subject handler can refuse a stale approval.
     /// </summary>

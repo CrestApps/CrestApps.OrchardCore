@@ -254,6 +254,88 @@ public sealed class ApprovalTypesTests
     }
 
     [Fact]
+    public async Task ANamedPolicy_IsRefused_ForATypeItDoesntServe()
+    {
+        // Arrange
+        var harness = new Harness();
+
+        harness.Policies.Add(new ApprovalPolicy { ItemId = "payruns", Name = "PayRunApproval", Types = ["PayRun"], Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Users, Value = "ana-id" }] });
+
+        // Act
+        var result = await harness.Service.RequestAsync(new ApprovalSubmission { Policy = "PayRunApproval", SubjectKind = TicketApprovalType.Name, SubjectId = "T-2" }, TestSecurity.User("riley"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains("doesn't serve Ticket", Assert.Single(result.Errors), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OnePerson_DecidesOneStage_UnlessThePolicyAllowsMore()
+    {
+        // Arrange: Ana is named by both stages of two policies; one lets her decide both.
+        var harness = new Harness();
+        ApprovalStage Stage() => new() { Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Users, Value = "ana-id" }] };
+
+        harness.Policies.Add(new ApprovalPolicy { ItemId = "strict", Name = "Strict", Stages = [Stage(), Stage()] });
+        harness.Policies.Add(new ApprovalPolicy { ItemId = "small", Name = "SmallTeam", Stages = [Stage(), Stage()], AllowSamePersonAcrossStages = true });
+
+        var strict = (await harness.Service.RequestAsync(new ApprovalSubmission { Policy = "Strict", SubjectKind = TicketApprovalType.Name, SubjectId = "T-3" }, TestSecurity.User("riley"), TestContext.Current.CancellationToken)).Request;
+        var small = (await harness.Service.RequestAsync(new ApprovalSubmission { Policy = "SmallTeam", SubjectKind = TicketApprovalType.Name, SubjectId = "T-4" }, TestSecurity.User("riley"), TestContext.Current.CancellationToken)).Request;
+
+        // Act
+        await harness.Service.DecideAsync(strict, TestSecurity.User("ana"), ApprovalDecisionKind.Approve, null, TestContext.Current.CancellationToken);
+        var strictAgain = await harness.Service.DecideAsync(strict, TestSecurity.User("ana"), ApprovalDecisionKind.Approve, null, TestContext.Current.CancellationToken);
+        await harness.Service.DecideAsync(small, TestSecurity.User("ana"), ApprovalDecisionKind.Approve, null, TestContext.Current.CancellationToken);
+        var sameStageAgain = await harness.Service.GetEligibilityAsync(small, TestSecurity.User("ana"), TestContext.Current.CancellationToken);
+        var smallAgain = await harness.Service.DecideAsync(small, TestSecurity.User("ana"), ApprovalDecisionKind.Approve, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(strictAgain.Succeeded);
+        Assert.Equal(ApprovalStatus.Pending, strict.Status);
+        Assert.True(sameStageAgain.CanDecide);
+        Assert.True(smallAgain.Succeeded);
+        Assert.Equal(ApprovalStatus.Approved, small.Status);
+    }
+
+    [Fact]
+    public async Task ThePayRunPolicySavedBeforeTypes_IsUpgradedToServePayRunsOnly()
+    {
+        // Arrange: the policy a tenant seeded before approval types, which serves every type.
+        var policy = new ApprovalPolicy { Name = "PayRunApproval", Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = "ApprovePayRuns" }] };
+        var policies = new Mock<INamedCatalogManager<ApprovalPolicy>>();
+
+        policies.Setup(manager => manager.FindByNameAsync("PayRunApproval", It.IsAny<CancellationToken>())).ReturnsAsync(policy);
+
+        var seeder = new global::CrestApps.OrchardCore.Payroll.Services.PayRunApprovalPolicySeeder(policies.Object, Mock.Of<global::OrchardCore.Settings.ISiteService>(), RecipeRoundTrip.Localizer<global::CrestApps.OrchardCore.Payroll.Services.PayRunApprovalPolicySeeder>());
+
+        // Act
+        await seeder.ServePayRunsOnlyAsync();
+
+        // Assert: a ticket asking with no policy no longer lands on it.
+        Assert.Equal(["PayRun"], policy.Types);
+        Assert.False(ApprovalPolicyResolver.Matches(policy, new ApprovalSubmission { SubjectKind = TicketApprovalType.Name }));
+        policies.Verify(manager => manager.UpdateAsync(policy, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ThePoliciesRecipeSchema_AcceptsTheOldNumberedKinds()
+    {
+        // Arrange
+        var schema = await new global::CrestApps.OrchardCore.Approvals.Recipes.ApprovalPoliciesRecipeStepSchema().GetSchemaAsync(TestContext.Current.CancellationToken);
+        var step = System.Text.Json.Nodes.JsonNode.Parse("""{ "name": "ApprovalPolicies", "Policies": [ { "Name": "Old", "Approvers": [ { "Kind": 2 }, { "Kind": "Users", "Value": "ana-id" } ] } ] }""");
+
+        // Act
+        var result = schema.Evaluate(JsonSerializer.SerializeToElement(step));
+
+        // Assert
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void TheApproverRuleValueEditorModel_IsInTheAbstractions_SoOtherModulesViewsCanUseIt()
+        => Assert.Same(typeof(ApprovalRequest).Assembly, typeof(ApproverRuleValueEditorViewModel).Assembly);
+
+    [Fact]
     public void TheRequestPage_HasATemplateForTheDisplayTypeDriversAddFieldsTo()
     {
         // The request page renders the request's DetailAdmin display; without a template every request page fails.
@@ -299,7 +381,7 @@ public sealed class ApprovalTypesTests
             var directory = new ApproverDirectory([new UsersApproverRuleProvider(), new AssigneeTeamApproverRuleProvider(), new FixedManagerApproverRuleProvider()]);
             var types = new ApprovalTypeCatalog(provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApprovalTypeOptions>>(), provider);
 
-            Service = new ApprovalService(manager, policies.Object, directory, Resolver, types, [Observer], new KeyedDistributedLock(), new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
+            Service = new ApprovalService(manager, policies.Object, directory, Resolver, types, new CrestApps.OrchardCore.Core.SourceAccess.SourceAccessService([]), [Observer], new KeyedDistributedLock(), new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
         }
 
         public List<ApprovalPolicy> Policies { get; } = [];

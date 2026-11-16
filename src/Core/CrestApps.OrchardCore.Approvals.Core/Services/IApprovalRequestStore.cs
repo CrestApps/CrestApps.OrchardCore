@@ -28,6 +28,15 @@ public interface IApprovalRequestStore : ICatalog<ApprovalRequest>
     Task<IReadOnlyList<ApprovalRequest>> ListBySubjectAsync(string subjectKind, string subjectId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reads a request as it is stored now: the copy loaded earlier stops being tracked, so the read isn't served
+    /// from the session's identity map.
+    /// </summary>
+    /// <param name="loaded">The request loaded earlier.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The stored request, or <see langword="null"/>.</returns>
+    Task<ApprovalRequest> FindCommittedAsync(ApprovalRequest loaded, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Reads a page of requests: only those the query's access filter allows.
     /// </summary>
     /// <param name="query">What the page shows.</param>

@@ -119,6 +119,82 @@ public sealed class ApprovalRequestStoreTests : IAsyncLifetime
         Assert.Equal(120.5m, Convert.ToDecimal(row[amounts], System.Globalization.CultureInfo.InvariantCulture));
     }
 
+    [Fact]
+    public async Task TwoApproversDecidingAtOnce_FromTheirOwnSessions_NeverOverwriteEachOther()
+    {
+        // Arrange: a pending request both Pat and Kim may decide; each loads it in their own unit of work first.
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using (var seed = _store.CreateSession())
+        {
+            var race = Request("race", "PayRun", null, ApprovalStatus.Pending, 50m);
+
+            race.Stages = [new ApprovalStage { Approvers = [new ApproverRule { Kind = ApproverRuleKinds.Permission, Value = "Finance" }], RequiredApprovals = 1 }];
+            await seed.SaveAsync(race, false, ApprovalsConstants.CollectionName, cancellationToken);
+            await seed.SaveChangesAsync(cancellationToken);
+        }
+
+        var closed = new RecordingSubjectHandler();
+        await using var sessionA = _store.CreateSession();
+        await using var sessionB = _store.CreateSession();
+        var (serviceA, managerA) = Service(sessionA, closed);
+        var (serviceB, managerB) = Service(sessionB, closed);
+        var loadedByPat = await managerA.FindByIdAsync("race", cancellationToken);
+        var loadedByKim = await managerB.FindByIdAsync("race", cancellationToken);
+
+        // Act: Pat approves and commits; Kim, who waited, rejects the copy loaded before.
+        var approved = await serviceA.DecideAsync(loadedByPat, TestSecurity.User("pat"), ApprovalDecisionKind.Approve, null, cancellationToken);
+        var rejected = await serviceB.DecideAsync(loadedByKim, TestSecurity.User("kim"), ApprovalDecisionKind.Reject, "Too late", cancellationToken);
+
+        // Assert: Pat's decision stands, Kim is told why, and the close hook ran once.
+        await using var reader = _store.CreateSession();
+        var stored = await new ApprovalRequestStore(reader).FindByIdAsync("race", cancellationToken);
+
+        Assert.True(approved.Succeeded, string.Join(" ", approved.Errors));
+        Assert.False(rejected.Succeeded);
+        Assert.Equal(ApprovalStatus.Approved, stored.Status);
+        Assert.Equal(["pat-id"], stored.Decisions.Select(decision => decision.UserId));
+        Assert.Equal([ApprovalStatus.Approved], closed.Closed);
+    }
+
+    // A service over one session, committing it as the module does.
+    private static (ApprovalService Service, ApprovalRequestManager Manager) Service(ISession session, RecordingSubjectHandler handler)
+    {
+        var clock = new Moq.Mock<global::OrchardCore.Modules.IClock>();
+
+        clock.SetupGet(entry => entry.UtcNow).Returns(new DateTime(2026, 11, 16, 10, 0, 0, DateTimeKind.Utc));
+
+        var manager = new ApprovalRequestManager(new ApprovalRequestStore(session), [new global::CrestApps.OrchardCore.Approvals.Core.Handlers.ApprovalRequestHandler(clock.Object)], Microsoft.Extensions.Logging.Abstractions.NullLogger<global::CrestApps.Core.Services.CatalogManager<ApprovalRequest>>.Instance);
+        var policies = new Moq.Mock<global::CrestApps.Core.Services.INamedCatalogManager<ApprovalPolicy>>();
+        var service = new ApprovalService(
+            manager,
+            policies.Object,
+            new NamedApproverDirectory(),
+            new ApprovalPolicyResolver(policies.Object),
+            new ListApprovalTypeCatalog([handler]),
+            new SourceAccessService([]),
+            [],
+            new KeyedDistributedLock(),
+            new SessionCommitter(session),
+            clock.Object,
+            RecipeRoundTrip.Localizer<ApprovalService>());
+
+        return (service, manager);
+    }
+
+    private sealed class SessionCommitter : IApprovalCommitter
+    {
+        private readonly ISession _session;
+
+        public SessionCommitter(ISession session)
+        {
+            _session = session;
+        }
+
+        public Task CommitAsync(CancellationToken cancellationToken = default)
+            => _session.SaveChangesAsync(cancellationToken);
+    }
+
     private static SourceAccessService Access()
         => new([new FixedSourceAccess("PayRun", new Dictionary<string, SourceAccessScope> { ["pat"] = SourceAccessScope.Of(["groupA"]) })]);
 

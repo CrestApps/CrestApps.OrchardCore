@@ -22,6 +22,23 @@ public sealed class ApprovalRequestStore : DocumentCatalog<ApprovalRequest, Appr
         CollectionName = ApprovalsConstants.CollectionName;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether two saves of one request from different units of work conflict: the second
+    /// fails instead of overwriting the first's decision.
+    /// </summary>
+    protected override bool CheckConcurrency
+        => true;
+
+    /// <inheritdoc />
+    public async Task<ApprovalRequest> FindCommittedAsync(ApprovalRequest loaded, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(loaded);
+
+        Session.Detach(loaded, CollectionName);
+
+        return await FindByIdAsync(loaded.ItemId, cancellationToken);
+    }
+
     /// <inheritdoc />
     public Task<ApprovalRequest> FindPendingAsync(string subjectKind, string subjectId, string policyId, CancellationToken cancellationToken = default)
     {

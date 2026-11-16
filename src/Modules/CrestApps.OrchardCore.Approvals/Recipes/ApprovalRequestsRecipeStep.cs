@@ -69,6 +69,8 @@ internal sealed class ApprovalRequestsRecipeStep : NamedRecipeStepHandler
             request.PolicyId = values.PolicyId;
             request.PolicyTitle = values.PolicyTitle;
             request.RequiredApprovals = Math.Max(1, values.RequiredApprovals);
+            request.Stages = values.Stages ?? [];
+            request.CurrentStage = Math.Max(0, values.CurrentStage);
             request.RequesterUserId = values.RequesterUserId;
             request.RequesterName = values.RequesterName;
 

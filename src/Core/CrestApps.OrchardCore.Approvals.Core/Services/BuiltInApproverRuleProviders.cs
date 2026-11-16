@@ -23,6 +23,10 @@ public sealed class PermissionApproverRuleProvider : IApproverRuleProvider
     private readonly IEnumerable<IPermissionProvider> _permissionProviders;
     private readonly IServiceProvider _serviceProvider;
 
+    // Kept for the unit of work: a list of requests asks the same questions many times.
+    private readonly Dictionary<string, bool> _answers = new(StringComparer.Ordinal);
+    private Dictionary<string, Permission> _permissions;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PermissionApproverRuleProvider"/> class.
     /// </summary>
@@ -53,7 +57,22 @@ public sealed class PermissionApproverRuleProvider : IApproverRuleProvider
 
     /// <inheritdoc />
     public async Task<bool> IsNamedAsync(ApproverRule rule, ApprovalRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
-        => await FindPermissionAsync(rule?.Value) is { } permission && await _authorizationService.AuthorizeAsync(user, permission);
+    {
+        if (await FindPermissionAsync(rule?.Value) is not { } permission)
+        {
+            return false;
+        }
+
+        var key = (user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.Identity?.Name) + "|" + permission.Name;
+
+        if (!_answers.TryGetValue(key, out var granted))
+        {
+            granted = await _authorizationService.AuthorizeAsync(user, permission);
+            _answers[key] = granted;
+        }
+
+        return granted;
+    }
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<string>> GetUserIdsAsync(ApproverRule rule, ApprovalRequest request, CancellationToken cancellationToken = default)
@@ -93,18 +112,20 @@ public sealed class PermissionApproverRuleProvider : IApproverRuleProvider
             return null;
         }
 
-        foreach (var provider in _permissionProviders)
+        if (_permissions is null)
         {
-            foreach (var permission in await provider.GetPermissionsAsync())
+            _permissions = new Dictionary<string, Permission>(StringComparer.Ordinal);
+
+            foreach (var provider in _permissionProviders)
             {
-                if (string.Equals(permission.Name, name.Trim(), StringComparison.Ordinal))
+                foreach (var permission in await provider.GetPermissionsAsync())
                 {
-                    return permission;
+                    _permissions.TryAdd(permission.Name, permission);
                 }
             }
         }
 
-        return null;
+        return _permissions.GetValueOrDefault(name.Trim());
     }
 }
 

@@ -17,8 +17,9 @@ namespace CrestApps.OrchardCore.Tests.Approvals;
 /// </summary>
 internal sealed class ApprovalsTestContext
 {
-    public ApprovalsTestContext()
+    public ApprovalsTestContext(ISourceAccessService access = null)
     {
+        Access = access ?? new CrestApps.OrchardCore.Core.SourceAccess.SourceAccessService([]);
         var clock = new Mock<IClock>();
 
         clock.SetupGet(entry => entry.UtcNow).Returns(() => Now);
@@ -39,7 +40,7 @@ internal sealed class ApprovalsTestContext
 
         PolicyManager = policies.Object;
         Types = new ListApprovalTypeCatalog(Handlers);
-        Service = new ApprovalService(Manager, PolicyManager, Directory, new ApprovalPolicyResolver(PolicyManager), Types, Observers, Locks, new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
+        Service = new ApprovalService(Manager, PolicyManager, Directory, new ApprovalPolicyResolver(PolicyManager), Types, Access, Observers, Locks, new NoopApprovalCommitter(), clock.Object, RecipeRoundTrip.Localizer<ApprovalService>());
     }
 
     public DateTime Now { get; set; } = new(2026, 11, 13, 15, 0, 0, DateTimeKind.Utc);
@@ -63,6 +64,8 @@ internal sealed class ApprovalsTestContext
     public List<IApprovalTypeHandler> Handlers { get; }
 
     public ListApprovalTypeCatalog Types { get; }
+
+    public ISourceAccessService Access { get; }
 
     public ApprovalService Service { get; }
 
@@ -116,6 +119,9 @@ internal sealed class InMemoryApprovalRequestStore : InMemoryCatalog<ApprovalReq
 
     public Task<IReadOnlyList<ApprovalRequest>> ListBySubjectAsync(string subjectKind, string subjectId, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<ApprovalRequest>>(Entries.Where(entry => entry.SubjectKind == subjectKind && entry.SubjectId == subjectId).OrderByDescending(entry => entry.CreatedUtc).ToList());
+
+    public Task<ApprovalRequest> FindCommittedAsync(ApprovalRequest loaded, CancellationToken cancellationToken = default)
+        => Task.FromResult(Entries.FirstOrDefault(entry => entry.ItemId == loaded.ItemId));
 
     public Task<(int Count, IReadOnlyList<ApprovalRequest> Requests)> ListPageAsync(ApprovalRequestQuery query, int skip, int take, CancellationToken cancellationToken = default)
     {
@@ -262,6 +268,19 @@ internal sealed class ListApprovalTypeCatalog : IApprovalTypeCatalog
             {
                 await handler.CanceledAsync(request, cancellationToken);
             }
+        }
+
+        public async Task<bool> CanAccessAsync(ApprovalRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+        {
+            foreach (var handler in _handlers)
+            {
+                if (!await handler.CanAccessAsync(request, user, cancellationToken))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public Task<string> GetSubjectUrlAsync(ApprovalRequest request, CancellationToken cancellationToken = default)

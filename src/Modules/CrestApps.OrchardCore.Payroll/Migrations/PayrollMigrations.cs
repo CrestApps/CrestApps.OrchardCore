@@ -26,7 +26,7 @@ internal sealed class PayrollMigrations : DataMigration
         await _seeder.SeedAsync();
         await _policySeeder.SeedAsync();
 
-        return 8;
+        return 9;
     }
 
     // Pay profiles and pay items.
@@ -84,5 +84,14 @@ internal sealed class PayrollMigrations : DataMigration
         await PayStatementIndexSchema.AddFlatWagesAsync(SchemaBuilder);
 
         return 8;
+    }
+
+    // The pay run approval policy serves pay runs only, so a request of another type that names no policy never
+    // lands on it (policies saved before approval types served every type).
+    public async Task<int> UpdateFrom8Async()
+    {
+        await _policySeeder.ServePayRunsOnlyAsync();
+
+        return 9;
     }
 }

@@ -86,6 +86,11 @@ public class ApprovalPolicyViewModel
     public bool AllowSubjectToDecide { get; set; }
 
     /// <summary>
+    /// Gets or sets whether one person may decide more than one stage.
+    /// </summary>
+    public bool AllowSamePersonAcrossStages { get; set; }
+
+    /// <summary>
     /// Gets or sets the hours until a request is due, as text.
     /// </summary>
     public string DueAfterHours { get; set; }
@@ -145,33 +150,6 @@ public class ApproverRuleViewModel
     /// Gets or sets the values posted by each provider's editor, by provider name; a multiple choice posts several.
     /// </summary>
     public Dictionary<string, string[]> Values { get; set; } = new(StringComparer.OrdinalIgnoreCase);
-}
-
-/// <summary>
-/// The shape model of an approver rule value editor (<c>ApproverRuleValue_Edit</c>, with the alternate
-/// <c>ApproverRuleValue_Edit__{Kind}</c>): the field name to post under and the current value.
-/// </summary>
-public class ApproverRuleValueEditorViewModel
-{
-    /// <summary>
-    /// Gets or sets the provider's name.
-    /// </summary>
-    public string Kind { get; set; }
-
-    /// <summary>
-    /// Gets or sets the form field name the editor posts its value under.
-    /// </summary>
-    public string FieldName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the element id prefix.
-    /// </summary>
-    public string FieldId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the rule's value when its kind is this provider's, or <see langword="null"/>.
-    /// </summary>
-    public string Value { get; set; }
 }
 
 /// <summary>

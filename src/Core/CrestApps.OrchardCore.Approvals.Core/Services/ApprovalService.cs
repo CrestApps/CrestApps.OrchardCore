@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Approvals.Models;
 using CrestApps.OrchardCore.Approvals.Services;
+using CrestApps.OrchardCore.SourceAccess;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -18,6 +19,7 @@ public sealed class ApprovalService : IApprovalService
     private readonly IApproverDirectory _directory;
     private readonly IApprovalPolicyResolver _resolver;
     private readonly IApprovalTypeCatalog _types;
+    private readonly ISourceAccessService _access;
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(60);
 
@@ -36,6 +38,7 @@ public sealed class ApprovalService : IApprovalService
     /// <param name="directory">Who the approver rules name.</param>
     /// <param name="resolver">Chooses the policy of a request that names none.</param>
     /// <param name="types">The approval types and their handlers.</param>
+    /// <param name="access">Who may act on the records of each type and scope.</param>
     /// <param name="observers">The observers of changes.</param>
     /// <param name="locks">The locks, one per subject and per request.</param>
     /// <param name="committer">Commits while a lock is held.</param>
@@ -47,6 +50,7 @@ public sealed class ApprovalService : IApprovalService
         IApproverDirectory directory,
         IApprovalPolicyResolver resolver,
         IApprovalTypeCatalog types,
+        ISourceAccessService access,
         IEnumerable<IApprovalObserver> observers,
         IDistributedLock locks,
         IApprovalCommitter committer,
@@ -58,6 +62,7 @@ public sealed class ApprovalService : IApprovalService
         _directory = directory;
         _resolver = resolver;
         _types = types;
+        _access = access;
         _observers = observers;
         _locks = locks;
         _committer = committer;
@@ -78,7 +83,12 @@ public sealed class ApprovalService : IApprovalService
 
         var policy = await _resolver.ResolveAsync(submission, cancellationToken);
 
-        if (policy is null)
+        if (policy is not null && !policy.Serves(submission.SubjectKind?.Trim()))
+        {
+            // A named policy is used whatever its conditions, but never for a type it doesn't serve.
+            errors.Add(S["The approval policy {0} doesn't serve {1}.", policy.Title ?? policy.Name, submission.SubjectKind?.Trim() ?? string.Empty]);
+        }
+        else if (policy is null)
         {
             errors.Add(string.IsNullOrWhiteSpace(submission.Policy)
                 ? S["No enabled approval policy serves {0} with this amount, currency and scope. Add one under Approvals > Policies, or name the policy.", submission.SubjectKind?.Trim() ?? string.Empty]
@@ -148,6 +158,7 @@ public sealed class ApprovalService : IApprovalService
         request.RequiredApprovals = Math.Max(1, request.Stages[0].RequiredApprovals);
         request.AllowRequesterToApprove = policy.AllowRequesterToApprove;
         request.AllowSubjectToDecide = policy.AllowSubjectToDecide;
+        request.AllowSamePersonAcrossStages = policy.AllowSamePersonAcrossStages;
         request.SubjectVersion = version;
         request.RequesterUserId = id;
         request.RequesterName = name;
@@ -195,8 +206,9 @@ public sealed class ApprovalService : IApprovalService
             return new ApprovalEligibility(false, S["Only a signed-in person can decide."]);
         }
 
-        // One person decides one stage at most: who approved the manager stage doesn't also approve finance.
-        if (request.Decisions.Any(decision => decision.UserId == userId))
+        // A person decides a stage once, and one stage at most unless the policy allows more: who approved the manager
+        // stage doesn't also approve finance.
+        if (request.Decisions.Any(decision => decision.UserId == userId && (decision.Stage == request.CurrentStage || !request.AllowSamePersonAcrossStages)))
         {
             return new ApprovalEligibility(false, S["You already decided this request."]);
         }
@@ -216,15 +228,32 @@ public sealed class ApprovalService : IApprovalService
             return new ApprovalEligibility(false, S["The request is about you, so you can't decide it."]);
         }
 
+        var named = false;
+
         foreach (var rule in rules.Approvers)
         {
             if (await _directory.IsNamedAsync(rule, request, user, cancellationToken))
             {
-                return ApprovalEligibility.Allowed;
+                named = true;
+
+                break;
             }
         }
 
-        return new ApprovalEligibility(false, S["You are not an approver of this request."]);
+        if (!named)
+        {
+            return new ApprovalEligibility(false, S["You are not an approver of this request."]);
+        }
+
+        // Being named isn't enough: the approver must also be allowed to act on the record, such as a pay run of an
+        // employer they approve for, whatever rule names them.
+        if (!await _access.CanAccessAsync(user, request.SubjectKind, request.AccessScope, SourceAccessLevel.Manage, cancellationToken)
+            || !await _types.GetHandler(request.SubjectKind).CanAccessAsync(request, user, cancellationToken))
+        {
+            return new ApprovalEligibility(false, S["You may not act on this record, so you can't decide its request."]);
+        }
+
+        return ApprovalEligibility.Allowed;
     }
 
     /// <inheritdoc />
@@ -242,10 +271,18 @@ public sealed class ApprovalService : IApprovalService
 
         await using (locker)
         {
-            var current = await _requests.FindByIdAsync(request.ItemId, cancellationToken) ?? request;
+            // The stored request, not the copy the caller loaded before the lock: another approver may have decided.
+            if (await _requests.FindCommittedAsync(request, cancellationToken) is not { } current)
+            {
+                return new ApprovalResult { Request = request, Errors = [S["The request no longer exists."]] };
+            }
+
             var result = await DecideLockedAsync(current, user, kind, note, cancellationToken);
 
-            await _committer.CommitAsync(cancellationToken);
+            if (result.Succeeded && !await TryCommitAsync(cancellationToken))
+            {
+                return new ApprovalResult { Request = request, Errors = [S["Someone else decided this request at the same time. Reload it."]] };
+            }
             CopyState(current, request);
 
             return result.Succeeded ? new ApprovalResult { Request = request } : new ApprovalResult { Request = request, Errors = result.Errors };
@@ -347,10 +384,17 @@ public sealed class ApprovalService : IApprovalService
 
         await using (locker)
         {
-            var current = await _requests.FindByIdAsync(request.ItemId, cancellationToken) ?? request;
+            if (await _requests.FindCommittedAsync(request, cancellationToken) is not { } current)
+            {
+                return false;
+            }
+
             var canceled = await CloseCanceledAsync(current, reason, cancellationToken);
 
-            await _committer.CommitAsync(cancellationToken);
+            if (canceled && !await TryCommitAsync(cancellationToken))
+            {
+                return false;
+            }
             CopyState(current, request);
 
             return canceled;
@@ -411,6 +455,21 @@ public sealed class ApprovalService : IApprovalService
         var stages = policy.GetStages();
 
         return (stages[Math.Clamp(request.CurrentStage, 0, stages.Count - 1)].Approvers, policy.AllowRequesterToApprove, policy.AllowSubjectToDecide);
+    }
+
+    // Commits; a request saved by another unit of work since it was read is a conflict, never an overwrite.
+    private async Task<bool> TryCommitAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _committer.CommitAsync(cancellationToken);
+
+            return true;
+        }
+        catch (global::YesSql.ConcurrencyException)
+        {
+            return false;
+        }
     }
 
     private static void CopyState(ApprovalRequest from, ApprovalRequest to)

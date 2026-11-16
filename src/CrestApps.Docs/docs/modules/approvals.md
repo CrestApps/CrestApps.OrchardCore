@@ -22,7 +22,9 @@ Projects: `CrestApps.OrchardCore.Approvals.Abstractions` (models and contracts: 
 4. The current stage's approvers are told (the **Approvals to decide** notification). A person a rule of the stage names may decide; the type's handler runs `DecidingAsync` first and may refuse.
 5. When a stage has its approvals, the next one starts (`StageApprovedAsync`, and its approvers are told). One rejection at any stage rejects the request (`RejectedAsync`); the last stage's approvals approve it (`ApprovedAsync`). A withdrawn or replaced request calls `CanceledAsync`. The closing hooks run in the decision's unit of work.
 
-Two rules are built in, on by default and checked at every stage: the requester can't approve (`AllowRequesterToApprove`), and a person in the request's `SubjectUserIds` can't decide it (`AllowSubjectToDecide`). A person decides one stage of a request at most.
+Two rules are built in, on by default and checked at every stage: the requester can't approve (`AllowRequesterToApprove`), and a person in the request's `SubjectUserIds` can't decide it (`AllowSubjectToDecide`). A person decides one stage of a request at most, unless the policy has `AllowSamePersonAcrossStages`. Being named by a rule isn't enough: the approver must also pass the type's source access at the Manage level (`ISourceAccess` for the type and the request's `AccessScope`, when the type has one) and the handler's `CanAccessAsync`, so a role rule never lets a clerk of one employer decide another's pay runs.
+
+Decisions are made under a lock per request, on the request as stored (`IApprovalRequestManager.FindCommittedAsync`, not the copy loaded earlier), and the store checks concurrency: two approvers deciding at once never overwrite each other, and the second is told to reload.
 
 ## Register a type
 
@@ -46,6 +48,7 @@ Derive from `ApprovalTypeHandlerBase` and override the hooks the type needs:
 | --- | --- | --- |
 | `RequestingAsync(ApprovalRequestingContext)` | Before the request is stored | Fill `Request.Title`, `SubjectUrl`, `SubjectUserIds`, `SubjectStaffMemberId`; `AddApprover(rule)` to every stage; `Request.Put(...)` the type's data; `Refuse(reason)`. |
 | `DecidingAsync(ApprovalDecidingContext)` | Before a decision is recorded, once the person is an approver | `Refuse(reason)` when the record changed since it was asked (compare `Request.SubjectVersion`). |
+| `CanAccessAsync(request, user)` | When deciding who may decide, after the type's source access | Refuse a named approver the record isn't theirs to act on. |
 | `StageApprovedAsync(request)` | A stage that isn't the last is approved | Move the record to the next step. |
 | `ApprovedAsync`, `RejectedAsync`, `CanceledAsync` | The request closes | Move the record on, in the same unit of work. |
 | `GetSubjectUrlAsync`, `GetSubjectDisplayAsync` | The request page | Link to and describe the record (defaults: `SubjectUrl`, `Title`). |
@@ -125,7 +128,7 @@ public sealed class AssigneeTeamApproverRuleProvider : IApproverRuleProvider
 }
 ```
 
-The policy editor lists every provider in each rule row and shows the value editor of the one chosen: the `ApproverRuleValue_Edit` shape (a text box) with the alternate `ApproverRuleValue_Edit__{Kind}`. Add `Views/ApproverRuleValue.Edit-AssigneeTeam.cshtml` for your own; its model's `Editor` (`ApproverRuleValueEditorViewModel`) gives the `FieldName` to post under and the current `Value`. A rule whose provider's feature is off is kept and names nobody.
+The policy editor lists every provider in each rule row and shows the value editor of the one chosen: the `ApproverRuleValue_Edit` shape (a text box) with the alternate `ApproverRuleValue_Edit__{Kind}`. Add `Views/ApproverRuleValue.Edit-AssigneeTeam.cshtml` for your own; its model's `Editor` (`ApproverRuleValueEditorViewModel`, in Approvals.Abstractions) gives the `FieldName` to post under and the current `Value`. A rule whose provider's feature is off is kept and names nobody.
 
 Rules stored before providers were open held a number (0 Permission, 1 Role, 2 Manager, 3 Staff); `ApproverRuleKindJsonConverter` reads it as the name, so old policies and requests load and decide unchanged.
 
@@ -157,7 +160,7 @@ if (!result.Succeeded)
 }
 ```
 
-Name a policy with `Policy` (id or technical name) to use it whatever its conditions, as Payroll does with `PayRunApproval`. Asking again while a request is pending returns it; asking with another `SubjectVersion` withdraws it and asks again.
+Name a policy with `Policy` (id or technical name) to use it whatever its conditions, as Payroll does with `PayRunApproval`; a named policy that doesn't serve the type is refused. Asking again while a request is pending returns it; asking with another `SubjectVersion` withdraws it and asks again.
 
 From a workflow: **Request Approval** takes the approval type, an optional policy, the subject's id, scope, title, page, amount and currency (Liquid), and writes `ApprovalRequestId`. The **Approval Requested**, **Approval Approved** and **Approval Rejected** events take an optional **Approval type**, so a workflow starts only for its type.
 
@@ -189,7 +192,7 @@ A `DisplayDriver<ApprovalPolicy>` adds fields to the policy editor the same way,
 | `ViewApprovalRequests` | **All requests** of the subject types their source access allows | Only where a rule names them |
 | `ManageApprovalRequests` | as View | May withdraw any request their source access allows at the Manage level |
 
-The module that owns a type registers an `ISourceAccess` for it (see [Banking: who sees which disbursements](./banking.md#who-sees-which-disbursements)); the list, export, data set and workflow tasks use it for people who see requests through the permission. Anyone else gets "not found" for a request, not even that it exists. **Waiting for me** looks at the oldest 1,000 pending requests (`ApprovalInbox.MaxPendingScanned`).
+The module that owns a type registers an `ISourceAccess` for it (see [Banking: who sees which disbursements](./banking.md#who-sees-which-disbursements)); approvers need it at the Manage level, and the list, export, data set and workflow tasks use it for people who see requests through the permission. Anyone else gets "not found" for a request, not even that it exists. **Waiting for me** reads the pending requests the person's access allows from the database, a batch at a time (`ApprovalInbox.BatchSize`), and checks each one's current stage, so its count is exact.
 
 ## Reference
 

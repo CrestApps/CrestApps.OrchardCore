@@ -30,6 +30,16 @@ public interface IApprovalTypeHandler
     Task DecidingAsync(ApprovalDecidingContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns whether a person a stage names may act on this request's record, beyond the type's source access
+    /// (<c>ISourceAccess</c> for the type and the request's access scope), which Approvals checks first.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <param name="user">The person.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns><see langword="true"/> when they may.</returns>
+    Task<bool> CanAccessAsync(ApprovalRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Called after a stage that isn't the last is approved and the next one starts.
     /// </summary>
     /// <param name="request">The request, at its next stage.</param>
@@ -90,6 +100,10 @@ public abstract class ApprovalTypeHandlerBase : IApprovalTypeHandler
     /// <inheritdoc />
     public virtual Task DecidingAsync(ApprovalDecidingContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public virtual Task<bool> CanAccessAsync(ApprovalRequest request, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+        => Task.FromResult(true);
 
     /// <inheritdoc />
     public virtual Task StageApprovedAsync(ApprovalRequest request, CancellationToken cancellationToken = default)

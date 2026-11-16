@@ -26,4 +26,13 @@ public interface IApprovalRequestManager : ICatalogManager<ApprovalRequest>
     /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The requests.</returns>
     Task<IReadOnlyList<ApprovalRequest>> ListBySubjectAsync(string subjectKind, string subjectId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads a request as it is stored now, not the copy loaded earlier in this unit of work, so a decision made under
+    /// a lock sees what another approver committed meanwhile.
+    /// </summary>
+    /// <param name="loaded">The request loaded earlier, which stops being tracked.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The stored request, or <see langword="null"/> when it was deleted.</returns>
+    Task<ApprovalRequest> FindCommittedAsync(ApprovalRequest loaded, CancellationToken cancellationToken = default);
 }
