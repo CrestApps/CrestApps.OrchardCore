@@ -3,11 +3,12 @@ using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.AspNetCore.Authorization;
 
-namespace CrestApps.OrchardCore.Learning.Assessments.Services;
+namespace CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 
 /// <summary>
-/// Decides which attempts a person may grade: everyone with Grade assessments, or the graders, instructors and
-/// assistants on the staff of the course of the attempt.
+/// Decides whose work a person may grade: everyone with Grade assessments, or the graders, instructors and assistants
+/// on the staff of the course of the work, who also hold Manage the courses you teach. Nobody grades their own work.
+/// Every grading page (quiz attempts, coursework) uses it.
 /// </summary>
 public sealed class GradingScope
 {
@@ -24,6 +25,8 @@ public sealed class GradingScope
     /// <summary>
     /// Initializes a new instance of the <see cref="GradingScope"/> class.
     /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="courseStructure">The course structure reader.</param>
     public GradingScope(IAuthorizationService authorizationService, ICourseStructureService courseStructure)
     {
         _authorizationService = authorizationService;
@@ -37,6 +40,11 @@ public sealed class GradingScope
     /// <returns>The course ids.</returns>
     public async Task<IReadOnlyCollection<string>> GetCourseIdsAsync(ClaimsPrincipal user)
     {
+        if (user is null)
+        {
+            return [];
+        }
+
         if (await _authorizationService.AuthorizeAsync(user, AssessmentPermissions.GradeAssessments))
         {
             return null;
@@ -59,16 +67,26 @@ public sealed class GradingScope
     /// <param name="user">The person.</param>
     /// <param name="attempt">The attempt.</param>
     /// <returns><see langword="true"/> when allowed.</returns>
-    public async Task<bool> CanGradeAsync(ClaimsPrincipal user, AssessmentAttempt attempt)
+    public Task<bool> CanGradeAsync(ClaimsPrincipal user, AssessmentAttempt attempt)
+        => attempt is null ? Task.FromResult(false) : CanGradeAsync(user, attempt.UserId, attempt.CourseId);
+
+    /// <summary>
+    /// Gets whether a person may grade the work of a learner in a course.
+    /// </summary>
+    /// <param name="user">The person.</param>
+    /// <param name="learnerId">The learner whose work it is.</param>
+    /// <param name="courseId">The course of the work.</param>
+    /// <returns><see langword="true"/> when allowed.</returns>
+    public async Task<bool> CanGradeAsync(ClaimsPrincipal user, string learnerId, string courseId)
     {
-        // Nobody grades, regrades or voids their own attempt.
-        if (string.Equals(attempt.UserId, user?.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal))
+        // Nobody grades, regrades or voids their own work.
+        if (user is null || string.Equals(learnerId, user.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal))
         {
             return false;
         }
 
         var courses = await GetCourseIdsAsync(user);
 
-        return courses is null || (attempt.CourseId is not null && courses.Contains(attempt.CourseId));
+        return courses is null || (courseId is not null && courses.Contains(courseId));
     }
 }

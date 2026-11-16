@@ -1,0 +1,3 @@
+@model ShapeViewModel<GradingQueueRow>
+
+<span class="badge ta-badge fw-normal"><i class="@(Model.Value.Item.Icon ?? "fa-solid fa-file-pen") text-secondary me-1" aria-hidden="true"></i>@Model.Value.Item.ItemTitle</span>

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Learning.Coursework</RootNamespace>
+    <Title>CrestApps OrchardCore Learning Coursework Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Public contracts of Learning coursework: the coursework course item, rubrics with criteria and levels, a learner's
+      submissions with their files, grades and feedback, and the submission service and observers.
+    </Description>
+    <PackageTags>$(PackageTags) Learning LMS Coursework Submissions Rubrics Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Abstractions\CrestApps.OrchardCore.Learning.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

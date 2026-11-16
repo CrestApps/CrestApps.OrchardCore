@@ -1,0 +1,17 @@
+@model CourseworkSubmissionsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="LearningCourseworkSubmissions" title="@T["Submissions"]">
+        <breadcrumb-item id="LearningCourseworkItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = Model.Coursework.ContentItemId })">@Model.Coursework.DisplayText</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<admin-list name="LearningCourseworkSubmissions" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> No work was handed in yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Learner" position="20" title="@T["Learner"]" />
+        <admin-list-column name="Submitted" position="30" title="@T["Handed in"]" width="auto" />
+        <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

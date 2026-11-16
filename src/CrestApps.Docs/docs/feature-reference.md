@@ -260,6 +260,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Learning.Certifications` | Learning Certifications | [Learning Certifications](./modules/learning-certifications) |
 | `CrestApps.OrchardCore.Learning.Classes` | Learning Classes | [Learning Classes](./modules/learning-classes) |
 | `CrestApps.OrchardCore.Learning.Commerce` | Learning Commerce | [Learning Commerce](./modules/learning-commerce) |
+| `CrestApps.OrchardCore.Learning.Coursework` | Learning Coursework | [Learning Coursework](./modules/learning-coursework) |
 | `CrestApps.OrchardCore.Learning.Programs` | Learning Paths | [Learning Programs](./modules/learning-programs) |
 | `CrestApps.OrchardCore.Learning.Programs.RequiredLearning` | Required Learning | [Learning Programs](./modules/learning-programs#required-learning) |
 | `CrestApps.OrchardCore.Learning.Programs.TeamLearning` | Team Learning | [Learning Programs](./modules/learning-programs#team-learning) |

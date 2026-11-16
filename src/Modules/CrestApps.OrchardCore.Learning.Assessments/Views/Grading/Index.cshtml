@@ -2,11 +2,11 @@
 
 <zone Name="Title"><breadcrumb name="LearningGrading" title="@T["Grading"]" /></zone>
 
-<admin-list name="LearningGrading" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing to grade.</strong> Every submitted attempt is scored."]">
+<admin-list name="LearningGrading" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing to grade.</strong> All handed-in work is graded."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
         <admin-list-column name="Learner" position="20" title="@T["Learner"]" />
-        <admin-list-column name="Quiz" position="30" title="@T["Quiz"]" width="auto" />
+        <admin-list-column name="Item" position="30" title="@T["Work"]" width="auto" />
         <admin-list-column name="Submitted" position="40" title="@T["Submitted"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>

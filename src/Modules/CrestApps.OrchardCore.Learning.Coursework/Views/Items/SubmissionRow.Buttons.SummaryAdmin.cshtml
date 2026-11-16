@@ -1,0 +1,3 @@
+@model ShapeViewModel<SubmissionRow>
+
+<a href="@Url.RouteUrl("LearningCourseworkGradeSubmission", new { id = Model.Value.Submission.ItemId })" class="btn btn-primary btn-sm">@(Model.Value.Submission.Current && Model.Value.Submission.Status == SubmissionStatus.Submitted ? T["Grade"] : T["View"])</a>

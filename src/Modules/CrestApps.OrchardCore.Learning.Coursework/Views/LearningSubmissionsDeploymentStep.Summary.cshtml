@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Learning.Coursework.Recipes
+@model ShapeViewModel<LearningSubmissionsDeploymentStep>
+
+<h5>@T["Learning coursework submissions (learner records)"]</h5>
+<span class="hint">@(Model.Value.CourseworkId is null ? T["Every coursework item"] : T["One coursework item"])</span>

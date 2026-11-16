@@ -47,4 +47,18 @@ public static class AssessmentsServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers a source of work that waits for a grader, which the grading list merges with the others.
+    /// </summary>
+    /// <typeparam name="TSource">The source.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddGradingQueueSource<TSource>(this IServiceCollection services)
+        where TSource : class, IGradingQueueSource
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IGradingQueueSource, TSource>());
+
+        return services;
+    }
 }

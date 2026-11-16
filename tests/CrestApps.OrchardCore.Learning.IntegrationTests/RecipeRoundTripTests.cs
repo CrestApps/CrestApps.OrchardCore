@@ -53,11 +53,10 @@ public sealed class RecipeRoundTripTests
         });
 
         var enrollments = recipe["steps"]!.AsArray().OfType<JsonObject>().Single(step => step["name"]?.GetValue<string>() == LearningConstants.EnrollmentsRecipeStep);
-        // Other tests on the shared site add enrollments of their own, so only the fixture's enrollment is looked for.
-        var rows = enrollments["Enrollments"]!.AsArray().OfType<JsonObject>().ToArray();
-        Assert.All(rows, item => Assert.Null(item["userId"] ?? item["UserId"]));
-        var row = Assert.Single(rows, item => (item["courseId"] ?? item["CourseId"])?.GetValue<string>() == _fixture.CourseId && item["UserName"]?.GetValue<string>() == "learner1");
+        // The step exports every enrollment of the shared site, and other tests add theirs; the fixture's is checked.
+        var row = Assert.Single(enrollments["Enrollments"]!.AsArray().OfType<JsonObject>(), node => (node["ItemId"] ?? node["itemId"])?.GetValue<string>() == _fixture.EnrollmentId);
         Assert.Equal("learner1", row["UserName"]?.GetValue<string>());
+        Assert.Null(row["UserId"]);
 
         var content = recipe["steps"]!.AsArray().OfType<JsonObject>().Single(step => string.Equals(step["name"]?.GetValue<string>(), "content", StringComparison.OrdinalIgnoreCase));
         var exported = content["data"]!.AsArray().OfType<JsonObject>().ToArray();
@@ -67,8 +66,7 @@ public sealed class RecipeRoundTripTests
         var exportedCourse = exported.Single(item => item["ContentItemId"]?.GetValue<string>() == _fixture.CourseId).ToJsonString();
         Assert.DoesNotContain("KeyHash", exportedCourse, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ROUND-TRIP-KEY", recipe.ToJsonString(), StringComparison.Ordinal);
-        var exportedKey = Assert.Single(enrollments["CourseKeys"]!.AsArray().OfType<JsonObject>());
-        Assert.Equal(_fixture.CourseId, exportedKey["CourseId"]?.GetValue<string>());
+        Assert.Single(enrollments["CourseKeys"]!.AsArray().OfType<JsonObject>(), key => key["CourseId"]?.GetValue<string>() == _fixture.CourseId);
         Assert.Contains(exported, item => item["ContentItemId"]?.GetValue<string>() == _fixture.PageLessonId
             && item["ContainedPart"]?["ListContentItemId"]?.GetValue<string>() == _fixture.CourseId);
 

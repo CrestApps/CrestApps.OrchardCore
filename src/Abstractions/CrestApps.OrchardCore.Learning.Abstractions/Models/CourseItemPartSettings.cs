@@ -15,4 +15,10 @@ public sealed class CourseItemPartSettings
     /// Gets or sets the completion mode a new item starts with.
     /// </summary>
     public string DefaultCompletionMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a new item starts as gradable, so its score counts towards the course grade. The author can
+    /// still change it on the item.
+    /// </summary>
+    public bool Gradable { get; set; }
 }

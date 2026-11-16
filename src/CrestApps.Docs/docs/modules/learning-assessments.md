@@ -46,7 +46,22 @@ A quiz's access code is kept as a salted hash outside the quiz content item, in 
 
 - Questions and banks fail Orchard's view permissions for everyone except people who manage or view question banks, so the display route, the content API, GraphQL and the content data source never return a key. Questions have no display shapes besides their title, so search results and list feeds show titles only.
 - The attempt page never carries the key while the attempt is open; the review shows it according to the quiz's review policy.
-- **Grading**: people with **Grade assessments** grade every course; a course's Graders, Instructors and Assistants grade its attempts only if they also hold **Manage own courses**.
+- **Grading**: people with **Grade assessments** grade every course; a course's Graders, Instructors and Assistants grade its attempts only if they also hold **Manage own courses**. The rule is `GradingScope` in `Learning.Assessments.Core`, which other grading pages (coursework) use too.
+
+## The grading list
+
+The **Grading** page (`/Admin/learning/grading`) lists all the work that waits for a grader in the courses the person grades, oldest first. Quiz attempts that need a grader are one source; other modules add theirs through the grading list's extension point in `Learning.Assessments.Abstractions`:
+
+```csharp
+public interface IGradingQueueSource
+{
+    Task<GradingQueuePage> ListWaitingAsync(GradingQueueQuery query, CancellationToken cancellationToken = default);
+}
+
+services.AddGradingQueueSource<MyWorkGradingQueueSource>();
+```
+
+A source returns the count of its waiting work and its oldest items, at most `query.Take` of them, limited to `query.CourseIds` when that is not `null`. Each `GradingQueueItem` names its kind, the record, the learner, the course, the course item with its title, a short reference, an icon, the submitted time in UTC, and the area, controller, action and route values of the page that grades it. `GradingQueue` asks every source for the items before the page and the page itself, merges them by submitted time and pages across the merged list. [Learning Coursework](./learning-coursework) adds its submissions this way.
 
 ## Permissions
 

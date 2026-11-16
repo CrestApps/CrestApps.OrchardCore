@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Learning.Coursework.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<CourseworkSubmittedEvent>
+
+<header><h4><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> @Model.Activity.GetTitleOrDefault(() => T["Coursework Submitted"])</h4></header>

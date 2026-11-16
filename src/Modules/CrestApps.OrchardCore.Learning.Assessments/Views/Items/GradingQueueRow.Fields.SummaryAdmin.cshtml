@@ -1,0 +1,7 @@
+@model ShapeViewModel<GradingQueueRow>
+
+<a href="@Model.Value.Url">@Model.Value.LearnerName</a>
+@if (!string.IsNullOrEmpty(Model.Value.Item.Reference))
+{
+    <div class="admin-list-secondary">@Model.Value.Item.Reference</div>
+}

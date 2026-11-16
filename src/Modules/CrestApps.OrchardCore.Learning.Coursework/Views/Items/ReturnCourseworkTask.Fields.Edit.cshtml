@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Learning.Coursework.Workflows
+
+@model ReturnCourseworkTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="SubmissionId" class="form-label">@T["Submission id"]</label>
+    <input asp-for="SubmissionId" class="form-control code" />
+    <span class="hint">@T["The submission, such as {{ Workflow.Input.SubmissionId }}."]</span>
+</div>
+<div class="mb-3">
+    <label asp-for="Feedback" class="form-label">@T["Feedback"]</label>
+    <textarea asp-for="Feedback" rows="3" class="form-control"></textarea>
+    <span class="hint">@T["What the learner should change. Supports Liquid."]</span>
+</div>

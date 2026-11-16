@@ -30,6 +30,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Migrations;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Navigation;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
+using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -82,8 +83,7 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<QuizPartLearnerDisplayDriver>()
             .AddHandler<QuizCloseDateHandler>();
 
-        services.AddScoped<GradingScope>();
-        services.AddDisplayDriver<AssessmentAttempt, AttemptRowDisplayDriver>();
+        services.AddDisplayDriver<GradingQueueRow, GradingQueueRowDisplayDriver>();
         services.AddPermissionProvider<AssessmentsPermissionsProvider>();
         services.AddNavigationProvider<AssessmentsAdminMenu>();
         services.AddSingleton<IBackgroundTask, AttemptDeadlineBackgroundTask>();

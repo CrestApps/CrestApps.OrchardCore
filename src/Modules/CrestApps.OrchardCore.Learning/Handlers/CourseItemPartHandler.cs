@@ -19,15 +19,15 @@ internal sealed class CourseItemPartHandler : ContentPartHandler<CourseItemPart>
 
     public override async Task InitializingAsync(InitializingContentContext context, CourseItemPart part)
     {
-        await ApplyDefaultsAsync(part);
+        await ApplyDefaultsAsync(part, initializing: true);
     }
 
     public override async Task UpdatedAsync(UpdateContentContext context, CourseItemPart part)
     {
-        await ApplyDefaultsAsync(part);
+        await ApplyDefaultsAsync(part, initializing: false);
     }
 
-    private async Task ApplyDefaultsAsync(CourseItemPart part)
+    private async Task ApplyDefaultsAsync(CourseItemPart part, bool initializing)
     {
         var type = await _contentDefinitionManager.GetTypeDefinitionAsync(part.ContentItem.ContentType);
         var settings = type?.Parts.FirstOrDefault(definition => definition.PartDefinition?.Name == nameof(CourseItemPart))?.GetSettings<CourseItemPartSettings>();
@@ -45,6 +45,12 @@ internal sealed class CourseItemPartHandler : ContentPartHandler<CourseItemPart>
         if (string.IsNullOrEmpty(part.CompletionMode))
         {
             part.CompletionMode = settings.DefaultCompletionMode;
+        }
+
+        // Only a new item takes the type's default, so an author who clears Gradable keeps it cleared.
+        if (initializing && settings.Gradable)
+        {
+            part.Gradable = true;
         }
     }
 }

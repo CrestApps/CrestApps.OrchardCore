@@ -1,0 +1,103 @@
+@model CourseworkPartViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Coursework"]</div>
+    <div class="card-body">
+        @if (Model.IsNew)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="hint">@T["Save the coursework first; then its submissions are listed here."]</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("LearningCourseworkSubmissions", new { courseworkId = Model.CourseworkId })"><i class="fa-solid fa-inbox me-1" aria-hidden="true"></i>@T["Submissions"]</a>
+                    <span class="hint">@T["The work learners handed in, to grade or return."]</span>
+                </div>
+            </div>
+        }
+
+        <div class="ocat-wrapper" asp-validation-class-for="Due">
+            <label asp-for="Due" class="ocat-label">@T["Due"]</label>
+            <div class="ocat-end">
+                <input asp-for="Due" type="datetime-local" class="form-control" />
+                <span class="hint">@T["In your time zone. Work handed in after it is marked late. Empty means no due date."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="SubmissionType">
+            <label asp-for="SubmissionType" class="ocat-label">@T["Learners hand in"]</label>
+            <div class="ocat-end">
+                <select asp-for="SubmissionType" asp-items="Model.SubmissionTypeOptions" class="form-select"></select>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="AllowResubmission" class="form-check-input" />
+                    <label asp-for="AllowResubmission" class="form-check-label">@T["Learners may hand the work in again until it is graded"]</label>
+                    <span class="hint dashed">@T["The newest hand-in replaces the earlier one. A grader can always return work to hand in again."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Files"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="AllowedExtensions">
+            <label asp-for="AllowedExtensions" class="ocat-label">@T["File types"]</label>
+            <div class="ocat-end">
+                <input asp-for="AllowedExtensions" class="form-control" maxlength="500" />
+                <span class="hint">@T["Extensions separated by commas, such as .pdf, .docx. Empty takes any type."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="MaxFileSizeMb">
+            <label asp-for="MaxFileSizeMb" class="ocat-label">@T["Largest file (MB)"]</label>
+            <div class="ocat-end">
+                <input asp-for="MaxFileSizeMb" type="number" min="1" max="50" class="form-control" />
+                <span asp-validation-for="MaxFileSizeMb"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="MaxFiles">
+            <label asp-for="MaxFiles" class="ocat-label">@T["Most files"]</label>
+            <div class="ocat-end">
+                <input asp-for="MaxFiles" type="number" min="1" max="10" class="form-control" />
+                <span asp-validation-for="MaxFiles"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Grading"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="RubricId">
+            <label asp-for="RubricId" class="ocat-label">@T["Rubric"]</label>
+            <div class="ocat-end">
+                <select asp-for="RubricId" asp-items="Model.RubricOptions" class="form-select">
+                    <option value="">@T["No rubric: grade out of points"]</option>
+                </select>
+                <span asp-validation-for="RubricId"></span>
+                <span class="hint">@T["A published rubric the grader picks a level of each criterion from."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="MaxPoints">
+            <label asp-for="MaxPoints" class="ocat-label">@T["Out of (points)"]</label>
+            <div class="ocat-end">
+                <input asp-for="MaxPoints" type="number" min="0" step="0.01" class="form-control" />
+                <span asp-validation-for="MaxPoints"></span>
+                <span class="hint">@T["The points the work is graded out of when it has no rubric."]</span>
+            </div>
+        </div>
+    </div>
+</div>

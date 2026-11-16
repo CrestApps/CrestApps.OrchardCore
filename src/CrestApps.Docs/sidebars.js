@@ -489,6 +489,7 @@ const sidebars = {
                 'modules/learning-certifications',
                 'modules/learning-classes',
                 'modules/learning-commerce',
+                'modules/learning-coursework',
                 'modules/learning-programs',
             ],
         },

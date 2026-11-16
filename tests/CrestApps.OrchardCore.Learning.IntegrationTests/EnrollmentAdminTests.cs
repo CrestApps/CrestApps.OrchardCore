@@ -1,6 +1,5 @@
 using System.Net;
 using CrestApps.OrchardCore.Learning.Core.Services;
-using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
@@ -35,10 +34,11 @@ public sealed class EnrollmentAdminTests
                 ["__RequestVerificationToken"] = token,
             }), TestContext.Current.CancellationToken);
 
-        // Other tests on the shared site may enroll the spare learner elsewhere, so the other course's count is taken first.
-        Task<IReadOnlyList<Enrollment>> EnrollmentsOfSpareLearner()
-            => _fixture.InTenantAsync(services => services.GetRequiredService<EnrollmentStore>().ListByUserAsync(_fixture.SpareLearnerId));
-        var inOtherCourseBefore = (await EnrollmentsOfSpareLearner()).Count(item => item.CourseId == _fixture.OtherCourseId);
+        // Other tests of the shared site enroll the spare learner too (required learning), so only the enrollments this
+        // test makes are checked.
+        var before = (await _fixture.InTenantAsync(async services => await services.GetRequiredService<EnrollmentStore>().ListByUserAsync(_fixture.SpareLearnerId)))
+            .Select(enrollment => enrollment.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
 
         // Act
         var unknown = await Enroll("4nosuchuser000000000000000", _fixture.CourseId);
@@ -59,9 +59,10 @@ public sealed class EnrollmentAdminTests
         Assert.Contains("learning/enrollments/", own.Headers.Location?.ToString(), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(_fixture.OtherCourseId, list);
 
-        var enrollments = await EnrollmentsOfSpareLearner();
-        Assert.Single(enrollments, item => item.CourseId == _fixture.CourseId);
-        Assert.Equal(inOtherCourseBefore, enrollments.Count(item => item.CourseId == _fixture.OtherCourseId));
+        var enrollments = (await _fixture.InTenantAsync(async services => await services.GetRequiredService<EnrollmentStore>().ListByUserAsync(_fixture.SpareLearnerId)))
+            .Where(enrollment => !before.Contains(enrollment.ItemId));
+        var enrollment = Assert.Single(enrollments);
+        Assert.Equal(_fixture.CourseId, enrollment.CourseId);
     }
 
     [Fact]

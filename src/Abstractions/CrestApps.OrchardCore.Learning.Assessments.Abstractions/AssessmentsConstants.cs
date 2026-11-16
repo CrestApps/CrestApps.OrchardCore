@@ -11,6 +11,11 @@ public static class AssessmentsConstants
     public const string QuizKind = "Quiz";
 
     /// <summary>
+    /// The kind of a quiz attempt in the grading list.
+    /// </summary>
+    public const string AttemptGradingQueueKind = "Attempt";
+
+    /// <summary>
     /// The kind of Learning secret that holds the access code of a quiz.
     /// </summary>
     public const string QuizAccessCodeSecret = "QuizAccessCode";

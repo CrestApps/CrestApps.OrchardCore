@@ -73,15 +73,17 @@ public sealed class GradingController : Controller
     }
 
     /// <summary>
-    /// Lists the attempts that wait for a grader, oldest first.
+    /// Lists the work that waits for a grader, oldest first: quiz attempts and the work of every other grading queue
+    /// source, such as coursework submissions, merged into one list.
     /// </summary>
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
+    /// <param name="queue">The merged grading queue.</param>
     /// <returns>The list.</returns>
     [HttpGet]
     [Admin("learning/grading", "LearningGrading")]
-    public async Task<IActionResult> Index(PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory)
+    public async Task<IActionResult> Index(PagerParameters pagerParameters, [FromServices] IOptions<PagerOptions> pagerOptions, [FromServices] IShapeFactory shapeFactory, [FromServices] GradingQueue queue)
     {
         var courses = await _scope.GetCourseIdsAsync(User);
 
@@ -91,14 +93,23 @@ public sealed class GradingController : Controller
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
-        var (count, items) = await _attemptStore.PageNeedingGradingAsync(courses, pager.Page, pager.PageSize);
+        var page = await queue.PageAsync(courses, pager.Page, pager.PageSize, HttpContext.RequestAborted);
+        var people = (await _userSearchService.GetAsync(page.Items.Select(item => item.UserId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal)))
+            .ToDictionary(user => user.UserId, user => string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName, StringComparer.Ordinal);
 
         return View(new GradingListViewModel
         {
-            List = new AdminListContext<AssessmentAttempt>
+            List = new AdminListContext<GradingQueueRow>
             {
-                Source = items.ToList(),
-                Pager = await shapeFactory.PagerAsync(pager, count, new RouteValueDictionary()),
+                Source = page.Items
+                    .Select(item => new GradingQueueRow
+                    {
+                        Item = item,
+                        LearnerName = item.UserId is not null && people.TryGetValue(item.UserId, out var name) ? name : item.UserId,
+                        Url = Url.Action(item.Action, item.Controller, new RouteValueDictionary(item.RouteValues) { ["area"] = item.Area }),
+                    })
+                    .ToList(),
+                Pager = await shapeFactory.PagerAsync(pager, page.Count, new RouteValueDictionary()),
             },
         });
     }
