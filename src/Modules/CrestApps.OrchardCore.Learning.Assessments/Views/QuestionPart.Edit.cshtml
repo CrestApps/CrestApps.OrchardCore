@@ -1,5 +1,16 @@
 @model QuestionPartViewModel
 
+@if (!string.IsNullOrEmpty(Model.SourceIdentifier))
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Imported from"]</span>
+        <div class="ocat-end">
+            <p class="form-control-plaintext mb-0">@T["Item {0} of {1}", Model.SourceIdentifier, Model.SourceFile ?? string.Empty]</p>
+            <span class="hint">@T["Importing a file with the same item into the same question bank again updates this question."]</span>
+        </div>
+    </div>
+}
+
 <div class="ocat-wrapper" asp-validation-class-for="Prompt">
     <label asp-for="Prompt" class="ocat-label">@T["Question"]</label>
     <div class="ocat-end">

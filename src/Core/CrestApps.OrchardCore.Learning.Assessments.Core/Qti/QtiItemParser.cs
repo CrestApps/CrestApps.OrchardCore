@@ -723,7 +723,7 @@ internal static class QtiItemParser
     {
         if (element.Name.Namespace != itemNamespace)
         {
-            return new XElement(element.Name, element.Attributes().Where(attribute => !attribute.IsNamespaceDeclaration), element.Nodes().Select(node => node is XElement child ? Normalize(child, itemNamespace, version3) : CopyNode(node)));
+            return new XElement(element.Name, element.Attributes().Where(attribute => !attribute.IsNamespaceDeclaration), element.Nodes().Select(node => node is XElement child ? (XNode)Normalize(child, itemNamespace, version3) : CopyNode(node)));
         }
 
         var local = element.Name.LocalName;
@@ -743,7 +743,7 @@ internal static class QtiItemParser
 
         foreach (var node in element.Nodes())
         {
-            normalized.Add(node is XElement child ? Normalize(child, itemNamespace, version3) : CopyNode(node));
+            normalized.Add(node is XElement child ? (XNode)Normalize(child, itemNamespace, version3) : CopyNode(node));
         }
 
         return normalized;

@@ -32,4 +32,15 @@ public sealed class QuestionPart : ContentPart
     /// Gets or sets the feedback shown in the review, whatever the answer.
     /// </summary>
     public string GeneralFeedback { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the question in the system it was imported from, such as the identifier of a QTI
+    /// assessment item. Importing a row with the same identifier into the same question bank updates this question.
+    /// </summary>
+    public string SourceIdentifier { get; set; }
+
+    /// <summary>
+    /// Gets or sets the file the question was imported from, such as <c>bank.zip/items/choice.xml</c>.
+    /// </summary>
+    public string SourceFile { get; set; }
 }

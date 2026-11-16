@@ -19,4 +19,12 @@ public class QuestionPartViewModel
 
     /// <summary>Gets or sets the general feedback.</summary>
     public string GeneralFeedback { get; set; }
+
+    /// <summary>Gets or sets the identifier of the question in the system it was imported from; shown, never posted.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string SourceIdentifier { get; set; }
+
+    /// <summary>Gets or sets the file the question was imported from; shown, never posted.</summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string SourceFile { get; set; }
 }

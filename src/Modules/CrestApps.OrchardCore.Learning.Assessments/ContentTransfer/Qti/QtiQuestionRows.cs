@@ -101,7 +101,9 @@ public static class QtiQuestionRows
 
             var question = item.Question;
             row[ContentTransferColumns.ContentType] = contentType;
-            row["QuestionPart_Prompt"] = question.Prompt;
+            row["QuestionPart_Prompt"] = question.Prompt ?? (question.QuestionType == AssessmentsConstants.QuestionTypes.FillInBlanks
+                ? $"<p>{System.Net.WebUtility.HtmlEncode(S["Fill in the blanks."])}</p>"
+                : $"<p>{System.Net.WebUtility.HtmlEncode(item.Title ?? item.Identifier)}</p>");
             row["QuestionPart_Points"] = question.Points.ToString(CultureInfo.InvariantCulture);
             row["QuestionPart_GeneralFeedback"] = question.GeneralFeedback;
             row["QuestionPart_SourceIdentifier"] = item.Identifier;

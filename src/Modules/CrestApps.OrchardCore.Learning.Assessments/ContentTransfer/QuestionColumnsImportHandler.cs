@@ -109,12 +109,20 @@ public abstract class QuestionColumnsImportHandler<TPart> : ContentImportHandler
         => value.Trim().ToLowerInvariant() is "true" or "yes" or "1" or "x" or "y";
 
     /// <summary>
-    /// Splits a list cell.
+    /// Splits a list cell, reading the escapes of <see cref="QuestionCells"/>.
     /// </summary>
     /// <param name="value">The cell.</param>
     /// <returns>The values.</returns>
     protected static List<string> List(string value)
-        => value.Split(ListSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        => QuestionCells.Split(value);
+
+    /// <summary>
+    /// Writes a list cell, escaping each value as <see cref="QuestionCells"/> reads it.
+    /// </summary>
+    /// <param name="values">The values.</param>
+    /// <returns>The cell.</returns>
+    protected static string Join(IEnumerable<string> values)
+        => QuestionCells.Join((values ?? []).Select(value => QuestionCells.EscapeValue(value)));
 
     /// <summary>
     /// Writes a number with a dot.

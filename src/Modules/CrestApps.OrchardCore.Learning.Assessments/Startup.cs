@@ -266,6 +266,12 @@ public sealed class AssessmentsContentTransferStartup : StartupBase
         services.AddContentPartImportHandler<ShortTextQuestionPart, ShortTextQuestionPartImportHandler>();
         services.AddContentPartImportHandler<NumericQuestionPart, NumericQuestionPartImportHandler>();
         services.AddContentPartImportHandler<EssayQuestionPart, EssayQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<MatchingQuestionPart, MatchingQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<OrderingQuestionPart, OrderingQuestionPartImportHandler>();
+        services.AddContentPartImportHandler<FillInBlanksQuestionPart, FillInBlanksQuestionPartImportHandler>();
+
+        // One import creates questions of every kind, each row naming its type.
+        services.AddSingleton<IContentImportRowTypeProvider, QuestionRowTypeProvider>();
     }
 }
 
@@ -280,5 +286,6 @@ public sealed class QtiImportStartup : StartupBase
     {
         services.AddSingleton<IContentTransferFileFormatProvider, QtiPackageFileFormatProvider>();
         services.AddSingleton<IContentTransferFileFormatProvider, QtiItemFileFormatProvider>();
+        services.AddScoped<IContentImportHandler, QtiQuestionImportHandler>();
     }
 }

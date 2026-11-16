@@ -28,6 +28,8 @@ internal sealed class QuestionPartDisplayDriver : ContentPartDisplayDriver<Quest
             model.Difficulty = part.Difficulty;
             model.Tags = string.Join(", ", part.Tags ?? []);
             model.GeneralFeedback = part.GeneralFeedback;
+            model.SourceIdentifier = part.SourceIdentifier;
+            model.SourceFile = part.SourceFile;
         });
 
     public override async Task<IDisplayResult> UpdateAsync(QuestionPart part, UpdatePartEditorContext context)
