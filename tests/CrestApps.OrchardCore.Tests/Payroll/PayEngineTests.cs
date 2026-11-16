@@ -218,7 +218,7 @@ public sealed class PayEngineTests
     }
 
     [Fact]
-    public async Task TaxTable_UsedByAPayrollTaxRule_IsKept_AndATableNotInEffectSkipsTheRuleWithAWarning()
+    public async Task TaxTable_UsedByAnIncomeTaxRule_IsKept_AndATableNotInEffectSkipsTheRuleWithAWarning()
     {
         await using var harness = await CreateHarnessAsync();
 

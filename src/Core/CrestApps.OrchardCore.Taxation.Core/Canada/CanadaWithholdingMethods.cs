@@ -284,7 +284,9 @@ public sealed class CanadaFederalWithholdingMethod : IIncomeTaxWithholdingMethod
                 + (lowest * Math.Min(pay.YearParentalInsurance, context.Parameter(CanadaIncomeTax.Parameters.QpipMaximum, decimal.MaxValue)))
             : (lowest * Math.Min(pay.YearBasePension, context.Parameter(CanadaIncomeTax.Parameters.CppBaseMaximum, decimal.MaxValue)))
                 + (lowest * Math.Min(pay.YearEmploymentInsurance, context.Parameter(CanadaIncomeTax.Parameters.EiMaximum, decimal.MaxValue)));
-        var k4 = Math.Min(lowest * pay.Periods * pay.Income, lowest * context.Parameter(CanadaIncomeTax.Parameters.CanadaEmploymentAmount));
+        // K4 = lowest rate × the lesser of A and the Canada employment amount (T4127): A, the annual taxable income, so a
+        // bonus paid alone still gets the credit.
+        var k4 = lowest * Math.Min(Math.Max(0, annual), context.Parameter(CanadaIncomeTax.Parameters.CanadaEmploymentAmount));
         var basic = Math.Max(0, await context.ComputeTableAsync(BracketsTable, Math.Max(0, annual), cancellationToken) - k1 - k2 - k4);
 
         return pay.Quebec ? basic - (context.Parameter(CanadaIncomeTax.Parameters.QuebecAbatement) * basic) : basic;
@@ -381,7 +383,7 @@ public sealed class CanadaProvincialWithholdingMethod : IIncomeTaxWithholdingMet
         var k2 = (lowest * Math.Min(pay.YearBasePension, context.Parameter(CanadaIncomeTax.Parameters.CppBaseMaximum, decimal.MaxValue)))
             + (lowest * Math.Min(pay.YearEmploymentInsurance, context.Parameter(CanadaIncomeTax.Parameters.EiMaximum, decimal.MaxValue)));
         var k4 = parameters.TryGetValue(CanadaIncomeTax.Parameters.CanadaEmploymentAmount, out var employmentAmount)
-            ? Math.Min(lowest * pay.Periods * pay.Income, lowest * employmentAmount)
+            ? lowest * Math.Min(Math.Max(0, annual), employmentAmount)
             : 0m;
         var k5 = parameters.TryGetValue(CanadaIncomeTax.Parameters.SupplementalCreditThreshold, out var creditThreshold)
             ? Math.Max(0, (k1 + k2 - creditThreshold) * context.Parameter(CanadaIncomeTax.Parameters.SupplementalCreditRate))

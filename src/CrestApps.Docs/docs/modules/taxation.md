@@ -463,16 +463,17 @@ Income Tax works out taxes on income: income tax withholding at every level (fed
 | Member | What it carries |
 | --- | --- |
 | `PayerId`, `EarnerId` | Ids for a provider that keeps its own records. |
-| `RegisteredJurisdictions` | The jurisdictions the payer is registered in. |
+| `RegisteredJurisdictions`, `Registrations` | The jurisdictions the payer is registered in; its `IncomeTaxRegistration`s, each with the account id and the rate the agency assigned it on the pay date (a registration's jurisdiction counts as registered too). |
 | `IncomeKind`, `ContractorWithholding` | Employment, contractor, pension or other income; whether a contractor's payments are withheld on. |
 | `HomeJurisdictions`, `WorkJurisdictions` | Where the earner lives and works, such as `CA`, `CA-ON`. |
 | `Elections` | `IncomeTaxElection`s: the values of each jurisdiction's withholding form in effect. |
 | `PayDate`, `PeriodsPerYear`, `Currency` | When, how often, in what. |
 | `Income`, `SupplementalIncome`, `SupplementalMethod` | The period's regular and supplemental income of each tax category, and how supplemental income is withheld on. |
+| `RegularIncomePerPeriod` | For a payment with no regular income of its own (a bonus paid alone), a period of the earner's regular income: methods that add supplemental income to regular pay add it to this. |
 | `YearIncome`, `YearSupplementalIncome` | The year's income of each category before this payment. |
 | `TaxesToDate` | `IncomeTaxToDate` by tax code: the year's taxable income and tax, and the period's, for wage bases, maximums and a second payment in a period. |
 
-Each line has the tax code, name, jurisdiction, the jurisdiction that collects it (`CollectedBy`), the category, the payer (`IncomeTaxPayer`), the taxable income, the part withheld at a flat rate, and the amount. Register a provider with `services.TryAddEnumerable(ServiceDescriptor.Scoped<IIncomeTaxProvider, MyProvider>())`; Payroll's settings choose one when there are several.
+Each line has the tax code, name, jurisdiction, the jurisdiction that collects it (`CollectedBy`), the category, the payer (`IncomeTaxPayer`), the taxable income, the part withheld at a flat rate, and the amount. Register a provider with `services.TryAddEnumerable(ServiceDescriptor.Scoped<IIncomeTaxProvider, MyProvider>())`; Payroll's settings choose one when there are several, and with none chosen Payroll uses the only one besides the built-in rules. The built-in provider's stored name is `TaxTables`, kept from before the move so saved settings still name it.
 
 ### Income tax rules
 
@@ -481,10 +482,11 @@ The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s 
 | Field | Use |
 | --- | --- |
 | `Jurisdiction`, `CollectedBy` | Any level; another agency that collects it (a province's tax the CRA collects is `CA-ON` collected by `CA`). |
-| `ByPlaceOfWork` | Match the jurisdiction by where the person works when known (Canada's province of employment). |
+| `ByPlaceOfWork` | Match the jurisdiction by where the person works (Canada's province of employment), never where they live: with no place of work in the country known, a rule below the country applies nowhere and the result warns. |
 | `ExceptJurisdictions` | People it doesn't apply to (`CA-QC` for the Canada Pension Plan). |
 | `Category`, `IncomeKinds`, `Payer` | The income taxed, the kinds of income, who pays. |
 | `Method` with `Rate`, `FixedAmount`, `TaxTableId` | A Taxation calculation method, or a country's withholding method with its `Tables` and `Parameters`. |
+| `RateFromRegistration` | The payer's own rate replaces `Rate`: its registration's rate on the pay date with the jurisdiction that collects the tax (an unemployment insurance rate, Quebec's health services fund rate). `Rate` applies when there is none; with neither, the rule isn't worked out and the result warns. |
 | `WageBase`, `WageThreshold` | The most income taxed in a year; only the year's income above an amount (a second tier). |
 | `YearlyExemption` | An amount never taxed, taken off each pay in proportion to the periods of a year, cut to cents. |
 | `YearlyMaximum` | The most tax in a year. |

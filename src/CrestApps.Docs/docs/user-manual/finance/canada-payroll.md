@@ -33,13 +33,15 @@ Canadian source deductions come from **Canada Income Tax** in Taxation, which fo
 On each employer under **Payroll > Employers**, set the currency to CAD and add the tax registrations:
 
 - **CA**, agency CRA, with your business number and payroll program account (such as 123456789RP0001) as the account id. Under **Deposits**, choose your remitter type: **Monthly** for a regular remitter, **Quarterly by the 15th**, **Twice a month** (accelerated threshold 1) or **Four times a month** (accelerated threshold 2).
-- **CA-QC**, agency Revenu Québec, with your identification number (such as 1234567890TQ0001), when you pay people who work in Quebec, with its remittance frequency.
+- **CA-QC**, agency Revenu Québec, with your identification number (such as 1234567890TQ0001), when you pay people who work in Quebec, with its remittance frequency. Add the **health services fund rate** Revenu Québec gives you for your total payroll as the registration's rate, from January 1; without one, the lowest rate (1.65%) is used.
+
+On the employer, under **Canada**, choose the **dental benefits** code the T4's box 45 reports: the dental care you offered that employees could have had on December 31. Enter a contact name and phone on the employer too: the T4 XML file needs them.
 
 Provincial and territorial tax, and EI, are collected by the CRA under your CA registration. Quebec tax, QPP and QPIP are collected by Revenu Québec under your CA-QC registration.
 
 ## Enter each person's claims
 
-The province of employment comes from where the person works (the team's work site) or lives. On the pay profile, add the **Tax elections** the person gave you:
+The province of employment is where the person works: choose their work site on the pay profile, with its province on the site's **Payroll** card. It is never where they live: a person whose work site names no province, or several, can't be paid until it names one. On the pay profile, enter the social insurance number (a number that fails its check digit is refused) and add the **Tax elections** the person gave you:
 
 - **CA**, from the federal TD1: the total claim amount (empty for the basic personal amount), any additional tax to deduct each pay, a prescribed zone deduction, and other deductions a tax services office authorized.
 - The province or territory, such as **CA-ON**, from its TD1: the total claim amount (empty for the basic personal amount) and, in Ontario, the dependants the Ontario tax reduction counts.
@@ -53,20 +55,21 @@ Payroll works out each pay by the published formulas:
 - **EI** is a share of insurable earnings up to the year's maximum. The employer pays 1.4 times the employee's premium.
 - In Quebec, **QPP** and **QPP2** take the place of CPP and CPP2, **QPIP** is added, and EI is at Quebec's lower rate.
 - **Federal and provincial tax** annualize the period's pay, apply the brackets and credits, and divide back by the pay periods. Quebec tax uses Revenu Québec's formulas, and federal tax is reduced by the Quebec abatement.
-- A **bonus** or retroactive pay is taxed by the bonus method: the year's tax with the bonus, less the year's tax without it. In Quebec, a lump sum is withheld at the marginal rate, or at 7% when the year's income with it is 18,952 or less.
+- A **bonus** or retroactive pay is taxed by the bonus method: the year's tax with the bonus, less the year's tax without it. A bonus paid on its own is added to a year of the person's regular pay (from their latest pay, or their salary). In Quebec, a lump sum is withheld at the marginal rate, or at 7% when the year's income with it is 18,952 or less.
+- The employer's **health services fund** contribution in Quebec is the rate on its CA-QC registration times the pay of people who work in Quebec.
 
 Once a maximum is reached, nothing more is taken for that contribution for the rest of the year.
 
 ## Remit the source deductions
 
-Open **Payroll > Liabilities and Filings > Liabilities**. The CRA's row (CA) holds federal and provincial tax, CPP and EI, both shares. Revenu Québec's row (CA-QC) holds Quebec tax, QPP and QPIP, both shares. Each row follows the remitter type of the registration, with its due date. After you remit, record the deposit under **Record a deposit** with the jurisdiction CA or CA-QC.
+Open **Payroll > Liabilities and Filings > Liabilities**. The CRA's row (CA) holds federal and provincial tax, CPP and EI, both shares. Revenu Québec's row (CA-QC) holds Quebec tax, QPP and QPIP, both shares, and the health services fund. Each row follows the remitter type of the registration, with its due date. After you remit, record the deposit under **Record a deposit** with the jurisdiction CA or CA-QC.
 
 ## File the T4 and RL-1 slips
 
 1. Close the year under **Year end**, then open **Filings**.
-2. Prepare **T4 slips and T4 Summary**. Each person paid Canadian source deductions has a T4 with a PDF, and the Summary adds the employer's CPP and EI, your remittances and the balance.
-3. For people in Quebec, prepare **RL-1 slips and RL-1 Summary** the same way.
-4. To file the T4 by Internet file transfer, run **Canada Payroll: T4 slips as a T4 XML file** from **Tools > Recipes**. Then publish the pipeline it adds, with a delivery step that keeps the file private, such as an SFTP server. Only a user who may see full tax ids gets the social insurance numbers in the file.
+2. Prepare **T4 slips and T4 Summary**. Each person paid Canadian source deductions has a T4 with a PDF (a person employed in two provinces has one for each), and the Summary adds the employer's CPP and EI, your remittances and the balance. Box 24 stops at the year's maximum insurable earnings and box 26 at the year's additional maximum pensionable earnings.
+3. For people in Quebec, prepare **RL-1 slips and RL-1 Summary** the same way. The RL-1 Summary includes the health services fund.
+4. To file the T4 by Internet file transfer, run **Canada Payroll: T4 slips as a T4 XML file** from **Tools > Recipes**. Then publish the pipeline it adds, with a delivery step that keeps the file private, such as an SFTP server. Only a user who may see full tax ids gets the social insurance numbers in the file. The T4 slips data set carries them encrypted, so a preview or a CSV never shows them. The file is refused when a slip has no province of employment, a number fails its check digit, or the employer has no dental benefits code or contact.
 5. Mark each filing as filed. People then see their slips under **Tax forms** in **My pay**.
 
 ## Not covered yet
@@ -74,4 +77,4 @@ Open **Payroll > Liabilities and Filings > Liabilities**. The CRA's row (CA) hol
 - The Record of Employment (ROE) is not prepared.
 - Direct deposit pays US dollar ACH files only: pay Canadian employees by check until a Canadian (CPA Standard 005) provider exists.
 - The commission (variable pay) methods of the T4127 and the TP-1015.F are not used: commissions are taxed as regular pay or as a bonus.
-- Quebec employer contributions to the Health Services Fund, the labour standards and the workforce skills development fund are not worked out.
+- Quebec employer contributions to the labour standards and the workforce skills development fund are not worked out.
