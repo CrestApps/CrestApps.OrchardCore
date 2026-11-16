@@ -29,6 +29,7 @@ public static class LearningCredentialsCoreServiceCollectionExtensions
         services.TryAddScoped<CredentialAwardStore>();
         services.TryAddScoped<CredentialSigningKeys>();
         services.TryAddScoped<CredentialStatusLists>();
+        services.TryAddScoped<CredentialVerifier>();
         services.TryAddScoped<CredentialIssuerContext>();
         services.TryAddScoped<CredentialRecipientResolver>();
         services.TryAddScoped<ICredentialAwardService, DefaultCredentialAwardService>();
