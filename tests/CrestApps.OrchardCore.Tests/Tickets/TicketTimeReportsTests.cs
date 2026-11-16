@@ -1,10 +1,16 @@
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Agreements.Models;
+using CrestApps.OrchardCore.Agreements.Services;
+using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.ServiceLevels;
+using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tickets;
+using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Reports;
 using CrestApps.OrchardCore.Tickets.TimeTracker;
@@ -13,6 +19,7 @@ using CrestApps.OrchardCore.TimeTracker.Core.Indexes;
 using CrestApps.OrchardCore.TimeTracker.Core.Services;
 using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -124,10 +131,69 @@ public sealed class TicketTimeReportsTests
         });
     }
 
-    private static Task<CalendarTestHarness> CreateAsync(string readerId)
+    [Fact]
+    public async Task AccountHealth_ShowsEachAccountsTickets_Time_Targets_AgreementHours_AndSatisfaction()
+    {
+        // Arrange (Contoso's a1 was rated 4 and met its target, and its agreement used 8.5 of its 10 hours; Fabrikam's a2
+        // is open and missed its target)
+        var agreement = new Agreement { ItemId = "gold", AccountId = "contoso" };
+        var balances = new Mock<IAgreementBalanceService>();
+        balances.Setup(service => service.ListInForceAsync("contoso", It.IsAny<DateOnly?>(), It.IsAny<CancellationToken>())).ReturnsAsync([agreement]);
+        balances.Setup(service => service.ListInForceAsync(It.Is<string>(id => id != "contoso"), It.IsAny<DateOnly?>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        balances.Setup(service => service.GetBalanceAsync(agreement, It.IsAny<DateOnly?>(), It.IsAny<CancellationToken>())).ReturnsAsync(new AgreementBalance { CoveredMinutes = 600, UsedMinutes = 510 });
+        var authorization = new Mock<IAuthorizationService>();
+        authorization.Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>())).ReturnsAsync(AuthorizationResult.Success());
+        await using var harness = await CreateAsync("ana", services =>
+        {
+            services.AddSingleton(balances.Object);
+            services.AddSingleton(authorization.Object);
+        });
+        await SeedAsync(harness);
+        await harness.RunAsync(async services =>
+        {
+            var session = services.GetRequiredService<ISession>();
+            var a1 = await session.Query<ContentItem, TicketIndex>(index => index.ContentItemId == "a1").FirstOrDefaultAsync();
+            a1.Alter<TicketPart>(part => part.Satisfaction = new TicketSatisfaction { Score = 4, RatedUtc = _day.AddHours(11) });
+            await session.SaveAsync(a1);
+            await session.SaveAsync(EndedTimer("s1", "a1", breached: false), false, ServiceLevelsConstants.CollectionName);
+            await session.SaveAsync(EndedTimer("s2", "a2", breached: true), false, ServiceLevelsConstants.CollectionName);
+
+            return true;
+        });
+
+        // Act
+        var document = await RunAsync<TicketAccountHealthReport>(harness);
+
+        // Assert (a3 is on a desk Ana can't see; the accounts with the most open tickets come first)
+        var metrics = Metrics(document);
+        Assert.Equal("2", metrics["Accounts"]);
+        Assert.Equal(TicketReportData.Rate(1, 2), metrics["Targets met"]);
+        Assert.Equal("4.0 (1)", metrics["Satisfaction"]);
+        var rows = Rows(document, "By account");
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(["fabrikam", "1", "0", "1", ReportFormat.Duration(60 * 60), TicketReportData.Rate(0, 1), "-", "-"], rows[0]);
+        Assert.Equal(["contoso", "1", "1", "0", ReportFormat.Duration(120 * 60), TicketReportData.Rate(1, 1), ReportFormat.Percent(0.85), "4.0 (1)"], rows[1]);
+    }
+
+    private static ServiceLevelTimer EndedTimer(string id, string ticketId, bool breached)
+        => new()
+        {
+            ItemId = id,
+            Subject = new RecordRef(TicketsConstants.RecordKind, ticketId),
+            Metric = "Resolution",
+            TargetSeconds = 3600,
+            State = ServiceLevelTimerState.Completed,
+            StartedUtc = _day.AddHours(2),
+            DueUtc = _day.AddHours(3),
+            EndedUtc = _day.AddHours(10),
+            BreachedUtc = breached ? _day.AddHours(3) : null,
+        };
+
+    private static Task<CalendarTestHarness> CreateAsync(string readerId, Action<IServiceCollection> configure = null)
         => TicketReportDataSourceTests.CreateAsync(
             services =>
             {
+                configure?.Invoke(services);
                 var accessor = new Mock<IHttpContextAccessor>();
                 accessor.SetupGet(value => value.HttpContext).Returns(new DefaultHttpContext { User = TicketReportDataSourceTests.User(readerId) });
                 services.AddSingleton(accessor.Object);

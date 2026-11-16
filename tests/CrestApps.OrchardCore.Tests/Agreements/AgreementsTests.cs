@@ -25,6 +25,11 @@ public sealed class AgreementsTests
     // Monday 16 November 2026, noon in New York.
     private static readonly DateTime _noon = new(2026, 11, 16, 17, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>
+    /// Gets the kit's clock: Monday 16 November 2026, noon in New York.
+    /// </summary>
+    internal static DateTime Noon => _noon;
+
     [Fact]
     public async Task AnAgreement_IsNumbered_AndItsNameHoursAndRoundingAreChecked()
     {
@@ -156,7 +161,7 @@ public sealed class AgreementsTests
         Assert.Equal(["Current"], inForce.Select(agreement => agreement.Name));
     }
 
-    private sealed class Kit : IAsyncDisposable
+    internal sealed class Kit : IAsyncDisposable
     {
         public CalendarTestHarness Harness { get; private set; }
 
@@ -166,7 +171,7 @@ public sealed class AgreementsTests
 
         public List<string> Told { get; } = [];
 
-        public static async Task<Kit> CreateAsync()
+        public static async Task<Kit> CreateAsync(Action<IServiceCollection> configure = null)
         {
             var kit = new Kit();
             var clock = new Mock<IClock>();
@@ -197,6 +202,7 @@ public sealed class AgreementsTests
                     services.AddSingleton<INumberSequence, InMemoryNumberSequence>();
                     services.AddSingleton(provider.Object);
                     services.AddSingleton(observer.Object);
+                    configure?.Invoke(services);
                 },
                 AgreementsIndexSchema.CreateAsync,
                 [new AgreementIndexProvider()],

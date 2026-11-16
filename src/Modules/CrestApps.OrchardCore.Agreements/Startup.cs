@@ -8,8 +8,11 @@ using CrestApps.OrchardCore.Agreements.Migrations;
 using CrestApps.OrchardCore.Agreements.Navigation;
 using CrestApps.OrchardCore.Agreements.Recipes;
 using CrestApps.OrchardCore.Agreements.Models;
+using CrestApps.OrchardCore.Agreements.Reports;
 using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -63,6 +66,24 @@ public sealed class AgreementNotificationsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
         => services.AddScoped<IAgreementObserver, AgreementAccountManagerNotifier>();
+}
+
+/// <summary>
+/// With Reports on, the agreement reports under Reports: the hours of each agreement and when they run out, and the
+/// burn-down of its hours against an even pace.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class AgreementReportsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.TryAddScoped<AgreementReportData>();
+        services.AddDisplayDriver<ReportFilter, AgreementReportFilterDisplayDriver>();
+        services
+            .AddReport<AgreementUsageReport>()
+            .AddReport<AgreementBurnDownReport>();
+    }
 }
 
 /// <summary>

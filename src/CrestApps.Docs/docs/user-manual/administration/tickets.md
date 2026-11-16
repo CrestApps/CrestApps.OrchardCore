@@ -185,6 +185,7 @@ Under **Reports**, with **View ticket reports**:
 | **Ticket Agent and Team Performance** | For each assignee and team: tickets solved, the time they took, how often they were reopened or escalated, and open tickets now |
 | **Ticket Distribution** | Tickets by channel, desk, ticket type, priority and where they stand now |
 | **Ticket Time** | With Time Tracker: the time logged on tickets, billable and not billed, by person, account, desk and ticket type, and the tickets with the most time |
+| **Account Health** | For each account: tickets opened, solved and open now, service-level targets met, how satisfied requesters were, and, with Time Tracker and [agreements](./agreements.md), the time worked and how much of its agreements' hours are used |
 | **Ticket Resolution and Work Time** | With Time Tracker: for solved tickets, how long they took against how long people worked on them (work time) and everyone's time added up (effort), people per ticket and the touch ratio |
 
 Each report counts only the tickets you may see. To build your own, use the **Tickets** data source in the [Report Builder](../report-builder/index.md).

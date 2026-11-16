@@ -31,7 +31,7 @@ public sealed class DataSourcesStartup : StartupBase
 
 /// <summary>
 /// The ticket reports under Reports: volume and backlog, response and resolution times, service-level compliance,
-/// agent and team performance, and distribution.
+/// agent and team performance, distribution, and the health of each account.
 /// </summary>
 [RequireFeatures(ReportsConstants.Feature)]
 public sealed class ReportsStartup : StartupBase
@@ -46,6 +46,7 @@ public sealed class ReportsStartup : StartupBase
             .AddReport<TicketResponseTimesReport>()
             .AddReport<TicketServiceLevelReport>()
             .AddReport<TicketPerformanceReport>()
-            .AddReport<TicketDistributionReport>();
+            .AddReport<TicketDistributionReport>()
+            .AddReport<TicketAccountHealthReport>();
     }
 }

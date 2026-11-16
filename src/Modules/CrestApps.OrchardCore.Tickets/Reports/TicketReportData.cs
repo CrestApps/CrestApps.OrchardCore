@@ -5,6 +5,9 @@ using CrestApps.OrchardCore.Parties.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.ServiceLevels;
+using CrestApps.OrchardCore.ServiceLevels.Core.Indexes;
+using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tickets.Core.Indexes;
 using CrestApps.OrchardCore.Tickets.Core.Services;
@@ -50,6 +53,11 @@ internal sealed record TicketFacts(
     /// Gets the account the ticket is for.
     /// </summary>
     public string AccountId { get; init; }
+
+    /// <summary>
+    /// Gets the requester's satisfaction score, from 1 to 5; <see langword="null"/> when they didn't rate the ticket.
+    /// </summary>
+    public int? SatisfactionScore { get; init; }
 
     public bool IsOpen => Category is TicketStatusCategory.New or TicketStatusCategory.Open or TicketStatusCategory.Pending or TicketStatusCategory.OnHold;
 
@@ -155,6 +163,7 @@ internal sealed class TicketReportData
             {
                 Number = row.Number,
                 AccountId = row.AccountId,
+                SatisfactionScore = row.SatisfactionScore,
             }));
 
             if (rows.Count < BatchSize)
@@ -206,6 +215,22 @@ internal sealed class TicketReportData
         }
 
         return names;
+    }
+
+    /// <summary>
+    /// Reads the service-level timers that match a filter, keeping only the ones of tickets the reader may see.
+    /// </summary>
+    public async Task<List<ServiceLevelTimer>> ReadTimersAsync(TicketScopedQuery scope, Func<IQueryIndex<ServiceLevelTimerIndex>, IQueryIndex<ServiceLevelTimerIndex>> filter, CancellationToken cancellationToken)
+    {
+        var timers = new List<ServiceLevelTimer>();
+        var all = ReportIndexPages.ReadAsync<ServiceLevelTimer, ServiceLevelTimerIndex>(_session, filter, index => index.StartedUtc, ServiceLevelsConstants.CollectionName, cancellationToken);
+
+        await foreach (var timer in _access.KeepVisibleAsync(scope, all, timer => timer.Subject.Id, cancellationToken))
+        {
+            timers.Add(timer);
+        }
+
+        return timers;
     }
 
     /// <summary>

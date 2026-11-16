@@ -42,6 +42,15 @@ The **Agreements** background task (hourly) runs `AgreementLifecycle`: an active
 
 **Agreements** in the admin menu lists the agreements (the admin list's List and Grid layouts) with their status and hours; the editor has the general values, the **Covered hours** panel with how the hours stand now, and the panels other modules add through display drivers on `Agreement`. An account's page lists its agreements with the hours used, and links to a new agreement for it.
 
+## Reports
+
+With Reports on, two reports under **Reports > Billing & Usage** need `ViewAgreements` (`AgreementReportsStartup`). Both read each active agreement with covered hours, or the one chosen in their **Agreement** filter, as of the last day of the chosen days (today at the latest), in the period that holds that day: the whole agreement for a block, the month for an allowance.
+
+- **Agreement Usage**: for each agreement, the hours covered, used, left and past the cover, the share used (colored from 80% and at 100%), and the day the hours ran out or, at the pace from the period's start, are expected to (`AgreementBurnDown.ProjectRunOut`); then where the hours went, by usage provider.
+- **Agreement Burn-down**: a line chart of the hours left at the end of each day of the period against an even pace through it (a period without an end has no even line), with a table of the days for the chosen agreement; without a choice, the six agreements that used the most of their hours (`AgreementBurnDown.Days`).
+
+Tickets adds **Account Health** (see [Tickets](./tickets.md#reports)).
+
 ## Permissions
 
 | Permission | Allows |

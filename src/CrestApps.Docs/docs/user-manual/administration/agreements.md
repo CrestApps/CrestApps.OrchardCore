@@ -36,6 +36,17 @@ Each entry is rounded up as the agreement says. The account's page lists its agr
 
 A new ticket of the account on a desk and of a type the agreement covers works under it: the ticket's **Agreement** shows under **Planning**, and the agreement's service level runs the ticket before the account's own. An agent can choose another of the account's agreements, or none; the change is in the ticket's **History**.
 
+## Reports
+
+Under **Reports > Billing & Usage**, with **View agreements with accounts and their hours**:
+
+| Report | Shows |
+| --- | --- |
+| **Agreement Usage** | For each active agreement with covered hours: its period, the hours covered, used and left, the overage, the share used, and when the hours ran out or are expected to run out at the pace so far; then where the hours went (tickets, work orders) |
+| **Agreement Burn-down** | A chart of the hours left each day of the period against an even pace; choose an agreement to see its days |
+
+Both show where each agreement stands on the last day you choose (today at the latest), in the period that holds that day. Choose one agreement in **Agreement** to see only it. **Account Health**, under **Reports > Executive**, puts each account's tickets, service levels, satisfaction and agreement hours side by side (see [Tickets](./tickets.md#reports)).
+
 ## Warnings
 
 The account's manager (the owner on its account team) gets a notification when an agreement has used 80% and then all of its hours, once each month for an allowance, and when it is about to end. Agreements past their end date become expired.

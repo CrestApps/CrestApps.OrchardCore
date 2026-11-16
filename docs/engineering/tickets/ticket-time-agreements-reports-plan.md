@@ -1,6 +1,6 @@
 # Ticket time, support agreements and business reports
 
-Status: slices 1 to 6 built (2026-11-15). Mike took every recommendation in section 9 (2026-11-15); slice 7 (agreement reports) is next.
+Status: slices 1 to 7 built (2026-11-15). Mike took every recommendation in section 9 (2026-11-15). Open: section 6.5's past usage when a ticket's agreement changes.
 
 Builds on the Tickets module ([`ticket-support-plan.md`](ticket-support-plan.md), branch `ma/tickets-phase-2`) on Orchard Core 4 preview-19225 and .NET 11. Ticket boards, the intake plan (categories and conditional questions, [`ticket-intake-plan.md`](ticket-intake-plan.md) on `ma/pensive-jackson-c56dcb`) and business hours are planned in other sessions and are only referenced here.
 
@@ -169,7 +169,7 @@ Built in slice 6, with one difference: the time counts against the ticket's curr
 4. **Ticket fields** from section 5 (built, decision 8): `SolvedById`, `Impact` and `Urgency` with the priority matrix, estimates, billing type (site and owner only on request).
 5. **Agreements building block** (built, decisions 1 to 3), migrating Work Orders' agreements.
 6. **Support coverage and usage** in Tickets (built): `AgreementId`, usage, balances, warnings to the account's manager.
-7. **Agreement reports**: usage, burn-down, account health.
+7. **Agreement reports** (built): Agreement Usage and Agreement Burn-down in the Agreements module (with Reports), Account Health in Tickets.
 
 ## 8. Tests
 

@@ -219,6 +219,8 @@ With Time Tracker on too, two more reports read the time logged on tickets (`Tic
 
 A ticket entry counts as not billed when its stage is any desk's **Time not billed to the customer** stage.
 
+**Account Health** (`TicketAccountHealthReport`, under **Executive**) lists each account with tickets, time or targets in the period: tickets opened, solved and open now, the service-level targets that ended in the period and how many were met, and the average satisfaction score of the tickets solved in the period that were rated. With Time Tracker on it adds the time worked on the account's tickets; with Agreements on, and for readers with `ViewAgreements`, the share of the hours of the account's agreements in force today used in their current period (colored from 80%). The accounts with the most open tickets come first.
+
 ## API
 
 The **Tickets API** feature maps `api/tickets/v1` with Orchard Core's `Api` authentication scheme (a bearer token). Each call checks the caller's ticket permissions and scope as the pages do; a ticket out of scope is answered `404`. Writes take an `Idempotency-Key` header, so sending one again returns the first answer.

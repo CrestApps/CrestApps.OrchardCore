@@ -1,7 +1,5 @@
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using CrestApps.OrchardCore.Reports.Models;
-using CrestApps.OrchardCore.ServiceLevels;
 using CrestApps.OrchardCore.ServiceLevels.Core.Indexes;
 using CrestApps.OrchardCore.ServiceLevels.Models;
 using CrestApps.OrchardCore.ServiceLevels.Services;
@@ -11,7 +9,6 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 using YesSql;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tickets.Reports;
 
@@ -22,22 +19,16 @@ namespace CrestApps.OrchardCore.Tickets.Reports;
 internal sealed class TicketServiceLevelReport : IReport
 {
     private readonly TicketReportData _data;
-    private readonly TicketReportAccess _access;
-    private readonly ISession _session;
     private readonly IEnumerable<IServiceLevelScopeProvider> _scopes;
 
     internal readonly IStringLocalizer S;
 
     public TicketServiceLevelReport(
         TicketReportData data,
-        TicketReportAccess access,
-        ISession session,
         IEnumerable<IServiceLevelScopeProvider> scopes,
         IStringLocalizer<TicketServiceLevelReport> stringLocalizer)
     {
         _data = data;
-        _access = access;
-        _session = session;
         _scopes = scopes;
         S = stringLocalizer;
     }
@@ -176,18 +167,8 @@ internal sealed class TicketServiceLevelReport : IReport
         return section;
     }
 
-    private async Task<List<ServiceLevelTimer>> ReadAsync(TicketScopedQuery scope, Func<IQueryIndex<ServiceLevelTimerIndex>, IQueryIndex<ServiceLevelTimerIndex>> filter, CancellationToken cancellationToken)
-    {
-        var timers = new List<ServiceLevelTimer>();
-        var all = ReportIndexPages.ReadAsync<ServiceLevelTimer, ServiceLevelTimerIndex>(_session, filter, index => index.StartedUtc, ServiceLevelsConstants.CollectionName, cancellationToken);
-
-        await foreach (var timer in _access.KeepVisibleAsync(scope, all, timer => timer.Subject.Id, cancellationToken))
-        {
-            timers.Add(timer);
-        }
-
-        return timers;
-    }
+    private Task<List<ServiceLevelTimer>> ReadAsync(TicketScopedQuery scope, Func<IQueryIndex<ServiceLevelTimerIndex>, IQueryIndex<ServiceLevelTimerIndex>> filter, CancellationToken cancellationToken)
+        => _data.ReadTimersAsync(scope, filter, cancellationToken);
 
     private async Task<Dictionary<string, string>> GetMetricNamesAsync(CancellationToken cancellationToken)
     {
