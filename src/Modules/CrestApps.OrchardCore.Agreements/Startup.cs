@@ -21,6 +21,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
@@ -65,7 +66,17 @@ public sealed class AgreementNotificationsStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<IAgreementObserver, AgreementAccountManagerNotifier>();
+    {
+        services.AddScoped<IAgreementObserver, AgreementAccountManagerNotifier>();
+        services.AddNotificationType(
+            AgreementsConstants.NotificationTypes.Hours,
+            LocalizationSource.Create<AgreementNotificationsStartup>("Agreement hours"),
+            type => type.Description = LocalizationSource.Create<AgreementNotificationsStartup>("When an agreement of an account you manage has used 80% or all of its hours."));
+        services.AddNotificationType(
+            AgreementsConstants.NotificationTypes.Ending,
+            LocalizationSource.Create<AgreementNotificationsStartup>("Agreements ending"),
+            type => type.Description = LocalizationSource.Create<AgreementNotificationsStartup>("When an agreement of an account you manage is about to end."));
+    }
 }
 
 /// <summary>

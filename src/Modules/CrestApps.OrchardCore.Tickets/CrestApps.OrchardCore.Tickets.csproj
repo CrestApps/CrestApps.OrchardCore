@@ -41,6 +41,7 @@
     <PackageReference Include="OrchardCore.Title" />
     <PackageReference Include="OrchardCore.Settings" />
     <PackageReference Include="OrchardCore.Notifications.Abstractions" />
+    <PackageReference Include="OrchardCore.Notifications.Core" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
     <PackageReference Include="OrchardCore.AuditTrail.Abstractions" />
   </ItemGroup>

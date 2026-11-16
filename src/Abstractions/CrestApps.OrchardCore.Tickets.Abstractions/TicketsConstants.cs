@@ -139,6 +139,43 @@ public static class TicketsConstants
     }
 
     /// <summary>
+    /// The notification types Tickets sends, each a row of a user's notification preferences. They are stored on the
+    /// notifications, so they never change.
+    /// </summary>
+    public static class NotificationTypes
+    {
+        /// <summary>A ticket was assigned to you.</summary>
+        public const string Assigned = "TicketAssigned";
+
+        /// <summary>A ticket was assigned to a team you are on.</summary>
+        public const string TeamAssigned = "TicketTeamAssigned";
+
+        /// <summary>The requester replied on your ticket.</summary>
+        public const string RequesterReplied = "TicketRequesterReplied";
+
+        /// <summary>Someone added an internal note on your ticket.</summary>
+        public const string NoteAdded = "TicketNoteAdded";
+
+        /// <summary>Someone else moved your ticket to another status.</summary>
+        public const string StatusChanged = "TicketStatusChanged";
+
+        /// <summary>A request waits for your approval.</summary>
+        public const string ApprovalRequested = "TicketApprovalRequested";
+
+        /// <summary>A service-level target of your ticket is close or missed.</summary>
+        public const string ServiceLevel = "TicketServiceLevel";
+
+        /// <summary>A ticket was merged into yours.</summary>
+        public const string Merged = "TicketMerged";
+
+        /// <summary>An agent replied on your request (for a requester who signs in).</summary>
+        public const string Replied = "TicketReplied";
+
+        /// <summary>A workflow's Notify About Ticket task.</summary>
+        public const string Workflow = "TicketWorkflow";
+    }
+
+    /// <summary>
     /// The names of the workflow events Tickets raises.
     /// </summary>
     public static class Events

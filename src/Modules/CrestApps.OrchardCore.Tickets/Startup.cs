@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Tickets.Drivers;
 using CrestApps.OrchardCore.Tickets.Migrations;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Navigation;
+using CrestApps.OrchardCore.Tickets.Notifications;
 using CrestApps.OrchardCore.Tickets.Portal;
 using CrestApps.OrchardCore.Tickets.Recipes;
 using CrestApps.OrchardCore.Tickets.Services;
@@ -41,6 +42,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Notifications;
 using OrchardCore.Recipes;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
@@ -138,7 +140,8 @@ public sealed class MessagingStartup : StartupBase
 }
 
 /// <summary>
-/// Tells agents through Orchard's notifications when a ticket is assigned to them.
+/// Tells people about their tickets through Orchard's notifications: the notification center and the methods each user
+/// chose for each type in their notification preferences.
 /// </summary>
 [RequireFeatures(OrchardCoreFeatureIds.Notifications)]
 public sealed class NotificationsStartup : StartupBase
@@ -146,7 +149,19 @@ public sealed class NotificationsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddScoped<TicketNotificationSender>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketAssignmentNotifier>());
+        services.AddDisplayDriver<Notification, TicketNotificationDisplayDriver>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationVisibilityHandler, TicketNotificationVisibilityHandler>());
+
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.Assigned,
+            LocalizationSource.Create<Startup>("Tickets assigned to you"),
+            type => type.Description = LocalizationSource.Create<Startup>("When a ticket is given to you by someone else or by the desk's assignment."));
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.Workflow,
+            LocalizationSource.Create<Startup>("Ticket workflow notices"),
+            type => type.Description = LocalizationSource.Create<Startup>("When a workflow's Notify About Ticket task tells you about a ticket."));
     }
 }
 

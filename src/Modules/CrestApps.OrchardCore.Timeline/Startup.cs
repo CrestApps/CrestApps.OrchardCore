@@ -7,12 +7,15 @@ using CrestApps.OrchardCore.Timeline.Migrations;
 using CrestApps.OrchardCore.Timeline.Notifications;
 using CrestApps.OrchardCore.Timeline.Recipes;
 using CrestApps.OrchardCore.Timeline.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Notifications;
 using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
@@ -46,6 +49,11 @@ public sealed class NotificationsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddTimelineEntryHandler<TimelineMentionHandler>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<INotificationVisibilityHandler, TimelineMentionVisibilityHandler>());
+        services.AddNotificationType(
+            TimelineConstants.MentionNotificationType,
+            LocalizationSource.Create<Startup>("Mentions"),
+            type => type.Description = LocalizationSource.Create<Startup>("When someone mentions you with @ in a note or reply, on a ticket or any other record."));
     }
 }
 

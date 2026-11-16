@@ -229,6 +229,7 @@ public sealed class TicketAgreementUsageTests
             notifications.Object,
             users.Object,
             services,
+            Microsoft.Extensions.Options.Options.Create(new global::OrchardCore.Admin.AdminOptions()),
             new PassThroughStringLocalizer<CrestApps.OrchardCore.Agreements.Services.AgreementAccountManagerNotifier>());
         var agreement = new Agreement { ItemId = "gold", Number = "SA-00001", Name = "Gold support", AccountId = "contoso" };
 
@@ -239,6 +240,9 @@ public sealed class TicketAgreementUsageTests
         var (to, message) = Assert.Single(sent);
         Assert.Same(user, to);
         Assert.Equal("Contoso has used 80% of the hours of agreement SA-00001", message.Subject);
+        Assert.Equal(AgreementsConstants.NotificationTypes.Hours, message.Type);
+        Assert.Equal("gold", message.ReferenceId);
+        Assert.Equal("~/Admin/agreements/edit/gold", message.Url);
     }
 
     private static Task<CalendarTestHarness> CreateAsync()

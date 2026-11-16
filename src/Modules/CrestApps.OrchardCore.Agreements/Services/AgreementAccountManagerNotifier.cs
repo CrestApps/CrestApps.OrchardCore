@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Agreements.Services;
 using CrestApps.OrchardCore.Staff.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.Notifications;
 using OrchardCore.Notifications.Models;
@@ -21,6 +23,7 @@ internal sealed class AgreementAccountManagerNotifier : IAgreementObserver
     private readonly INotificationService _notifications;
     private readonly IUserService _users;
     private readonly IServiceProvider _services;
+    private readonly AdminOptions _adminOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -29,8 +32,10 @@ internal sealed class AgreementAccountManagerNotifier : IAgreementObserver
         INotificationService notifications,
         IUserService users,
         IServiceProvider services,
+        IOptions<AdminOptions> adminOptions,
         IStringLocalizer<AgreementAccountManagerNotifier> stringLocalizer)
     {
+        _adminOptions = adminOptions.Value;
         _contentManager = contentManager;
         _notifications = notifications;
         _users = users;
@@ -43,7 +48,7 @@ internal sealed class AgreementAccountManagerNotifier : IAgreementObserver
     {
         ArgumentNullException.ThrowIfNull(agreement);
 
-        await NotifyAsync(agreement, account => new NotificationMessage
+        await NotifyAsync(agreement, AgreementsConstants.NotificationTypes.Ending, account => new NotificationMessage
         {
             Subject = S["Agreement {0} with {1} ends on {2}", agreement.Number, account, agreement.EndDate?.ToString("d", System.Globalization.CultureInfo.CurrentCulture)],
             Summary = S["{0} ends soon; renew it or let it end.", agreement.Name],
@@ -60,7 +65,7 @@ internal sealed class AgreementAccountManagerNotifier : IAgreementObserver
         var used = (balance.UsedMinutes / 60).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
         var covered = (balance.CoveredMinutes / 60).ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
 
-        await NotifyAsync(agreement, account => new NotificationMessage
+        await NotifyAsync(agreement, AgreementsConstants.NotificationTypes.Hours, account => new NotificationMessage
         {
             Subject = percent >= 100
                 ? S["{0} has used all the hours of agreement {1}", account, agreement.Number]
@@ -72,7 +77,7 @@ internal sealed class AgreementAccountManagerNotifier : IAgreementObserver
         }, cancellationToken);
     }
 
-    private async Task NotifyAsync(Agreement agreement, Func<string, NotificationMessage> message, CancellationToken cancellationToken)
+    private async Task NotifyAsync(Agreement agreement, string type, Func<string, NotificationMessage> message, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(agreement.AccountId)
             || await _contentManager.GetAsync(agreement.AccountId, VersionOptions.Published) is not { } account
@@ -90,6 +95,11 @@ internal sealed class AgreementAccountManagerNotifier : IAgreementObserver
             return;
         }
 
-        await _notifications.SendAsync(user, message(account.DisplayText), cancellationToken);
+        var notification = message(account.DisplayText);
+        notification.Type = type;
+        notification.ReferenceId = agreement.ItemId;
+        notification.Url = $"~/{_adminOptions.AdminUrlPrefix}/agreements/edit/{agreement.ItemId}";
+
+        await _notifications.SendAsync(user, notification, cancellationToken);
     }
 }

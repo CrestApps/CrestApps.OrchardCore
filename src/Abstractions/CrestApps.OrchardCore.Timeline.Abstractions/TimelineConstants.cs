@@ -6,6 +6,12 @@ namespace CrestApps.OrchardCore.Timeline;
 public static class TimelineConstants
 {
     /// <summary>
+    /// The notification type of a mention (<c>@username</c>) in a timeline entry, on any record. It is stored on the
+    /// notifications, so it never changes.
+    /// </summary>
+    public const string MentionNotificationType = "TimelineMention";
+
+    /// <summary>
     /// The entry properties the timeline card reads.
     /// </summary>
     public static class Properties

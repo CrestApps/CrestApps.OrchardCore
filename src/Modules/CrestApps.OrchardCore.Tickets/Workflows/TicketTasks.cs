@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Tickets.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
@@ -589,13 +590,19 @@ public sealed class NotifyTicketTask : TicketTaskActivity
                 return Outcome("Failed");
             }
 
-            await notifications.SendAsync(user, new global::OrchardCore.Notifications.Models.NotificationMessage
+            var message = new global::OrchardCore.Notifications.Models.NotificationMessage
             {
                 Subject = subject,
                 Summary = WebUtility.HtmlEncode(subject),
                 TextBody = body,
                 HtmlBody = WebUtility.HtmlEncode(body),
-            });
+                Type = TicketsConstants.NotificationTypes.Workflow,
+                ReferenceId = ticket.ContentItemId,
+                Url = services.GetService<Notifications.TicketNotificationSender>()?.AdminUrl(ticket.ContentItemId),
+            };
+            message.Put(new Notifications.TicketNotificationInfo { TicketId = ticket.ContentItemId, Number = part.Number, Title = ticket.DisplayText, DeskId = part.DeskId });
+
+            await notifications.SendAsync(user, message);
 
             return Outcome("Done");
         }

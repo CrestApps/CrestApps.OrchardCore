@@ -11,6 +11,18 @@ public static class AgreementsConstants
     public const string RecordKind = "Agreement";
 
     /// <summary>
+    /// The notification types Agreements sends. They are stored on the notifications, so they never change.
+    /// </summary>
+    public static class NotificationTypes
+    {
+        /// <summary>An agreement passed 80% or 100% of its hours.</summary>
+        public const string Hours = "AgreementHours";
+
+        /// <summary>An agreement is about to end.</summary>
+        public const string Ending = "AgreementEnding";
+    }
+
+    /// <summary>
     /// The YesSql collection agreements are kept in.
     /// </summary>
     public const string CollectionName = "Agreements";

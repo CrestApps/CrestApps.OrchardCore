@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Editors;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
@@ -39,7 +40,14 @@ public sealed class ApprovalNotificationsStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
-        => services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketApprovalNotifier>());
+    {
+        services.TryAddScoped<Notifications.TicketNotificationSender>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ITicketObserver, TicketApprovalNotifier>());
+        services.AddNotificationType(
+            TicketsConstants.NotificationTypes.ApprovalRequested,
+            LocalizationSource.Create<ApprovalNotificationsStartup>("Ticket approvals"),
+            type => type.Description = LocalizationSource.Create<ApprovalNotificationsStartup>("When a request waits for your approval."));
+    }
 }
 
 /// <summary>

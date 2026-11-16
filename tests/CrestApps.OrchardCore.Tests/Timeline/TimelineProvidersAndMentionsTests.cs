@@ -106,6 +106,9 @@ public sealed class TimelineProvidersAndMentionsTests
         Assert.DoesNotContain("4111", message.Html, StringComparison.Ordinal);
         Assert.Contains("&lt;a href=x&gt;Reset&lt;/a&gt;", message.Summary, StringComparison.Ordinal);
         Assert.Contains("/Admin/leads/l1", message.Html, StringComparison.Ordinal);
+        Assert.Equal(TimelineConstants.MentionNotificationType, message.Type);
+        Assert.Equal("Lead:l1", message.ReferenceId);
+        Assert.Equal("/Admin/leads/l1", message.Url);
     }
 
     private static TimelineMentionHandler MentionHandler(List<(string User, NotificationMessageCapture Message)> sent, string[] readers)
@@ -135,7 +138,7 @@ public sealed class TimelineProvidersAndMentionsTests
 
         var notifications = new Mock<INotificationService>();
         notifications.Setup(service => service.SendAsync(It.IsAny<object>(), It.IsAny<INotificationMessage>(), It.IsAny<CancellationToken>()))
-            .Callback((object user, INotificationMessage message, CancellationToken _) => sent.Add((((User)user).UserName, new NotificationMessageCapture(message.Summary, message.TextBody, message.HtmlBody))))
+            .Callback((object user, INotificationMessage message, CancellationToken _) => sent.Add((((User)user).UserName, new NotificationMessageCapture(message.Summary, message.TextBody, message.HtmlBody, message.Type, message.ReferenceId, message.Url))))
             .ReturnsAsync(new NotificationSendResult());
 
         return new TimelineMentionHandler(userManager.Object, principals.Object, access.Object, records.Object, notifications.Object, new PassThrough());
@@ -158,7 +161,7 @@ public sealed class TimelineProvidersAndMentionsTests
             [new Claim(ClaimTypes.NameIdentifier, "manager"), .. permissions.Select(permission => new Claim(global::OrchardCore.Security.Permissions.Permission.ClaimType, permission))],
             "test"));
 
-    private sealed record NotificationMessageCapture(string Summary, string Text, string Html);
+    private sealed record NotificationMessageCapture(string Summary, string Text, string Html, string Type, string ReferenceId, string Url);
 
     private sealed class User : IUser
     {

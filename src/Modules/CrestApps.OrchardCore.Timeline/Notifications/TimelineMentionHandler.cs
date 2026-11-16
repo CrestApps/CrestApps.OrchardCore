@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Timeline.Models;
 using CrestApps.OrchardCore.Timeline.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Entities;
 using OrchardCore.Notifications;
 using OrchardCore.Notifications.Models;
 using OrchardCore.Users;
@@ -75,7 +76,7 @@ internal sealed partial class TimelineMentionHandler : ITimelineEntryHandler
             // redacted later would live on in them. The reader follows the link to read it.
             var encodedTitle = WebUtility.HtmlEncode(title);
 
-            await _notificationService.SendAsync(user, new NotificationMessage
+            var message = new NotificationMessage
             {
                 Subject = S["You were mentioned on {0}", title],
                 Summary = S["You were mentioned on {0}.", encodedTitle],
@@ -85,7 +86,13 @@ internal sealed partial class TimelineMentionHandler : ITimelineEntryHandler
                 HtmlBody = string.IsNullOrEmpty(record?.AdminUrl)
                     ? S["You were mentioned on {0}.", encodedTitle]
                     : S["You were mentioned on <a href=\"{0}\">{1}</a>.", WebUtility.HtmlEncode(record.AdminUrl), encodedTitle],
-            }, cancellationToken);
+                Type = TimelineConstants.MentionNotificationType,
+                ReferenceId = entry.Subject.ToString(),
+                Url = record?.AdminUrl,
+            };
+            message.Put(new TimelineMentionInfo { Subject = entry.Subject.ToString(), EntryId = entry.ItemId, Visibility = entry.Visibility });
+
+            await _notificationService.SendAsync(user, message, cancellationToken);
         }
     }
 
