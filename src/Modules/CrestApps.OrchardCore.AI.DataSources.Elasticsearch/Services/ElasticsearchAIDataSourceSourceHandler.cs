@@ -8,6 +8,7 @@ using CrestApps.Core.Infrastructure.Indexing.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Extensions;
 using CrestApps.OrchardCore.AI.Core.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.DataConnectors;
 using CrestApps.OrchardCore.DataConnectors.Http;
@@ -28,6 +29,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly ElasticsearchDataSourceOptions _options;
     private readonly ILogger<ElasticsearchAIDataSourceSourceHandler> _logger;
     private readonly IDataConnectionResolver _dataConnectionResolver;
+    private readonly IAIEndpointPolicy _endpointPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ElasticsearchAIDataSourceSourceHandler"/> class.
@@ -36,19 +38,25 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="options">The global Elasticsearch data source options.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="dataConnectionResolver">Resolves the data connection a data source may reference; <see langword="null"/> while the Data Connectors feature is off.</param>
+    /// <param name="endpointPolicy">The policy that keeps the cluster's URL off the site's own network; <see langword="null"/> refuses every private address.</param>
     public ElasticsearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
         ILogger<ElasticsearchAIDataSourceSourceHandler> logger,
-        IDataConnectionResolver dataConnectionResolver = null)
+        IDataConnectionResolver dataConnectionResolver = null,
+        IAIEndpointPolicy endpointPolicy = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
         _logger = logger;
         _dataConnectionResolver = dataConnectionResolver;
+        _endpointPolicy = endpointPolicy;
     }
 
     public string SourceType => AIDataSourceSourceTypes.Elasticsearch;
+
+    private bool IsAllowed(string url)
+        => _endpointPolicy?.IsAllowed(url) ?? AIEgress.IsAllowedEndpoint(url, isDevelopment: false, options: null);
 
     public async ValueTask ValidateAsync(
         AIDataSource dataSource,
@@ -108,6 +116,13 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             string.IsNullOrWhiteSpace(metadata.Url))
         {
             result.Fail(new ValidationResult("Elasticsearch URL is required for self-managed environments.", [nameof(ElasticsearchSourceMetadata.Url)]));
+        }
+        else if (string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
+            !IsAllowed(metadata.Url))
+        {
+            // The editor, the recipe step and the API all validate here, so none of them can point a data source at the
+            // site's own network.
+            result.Fail(new ValidationResult("This address is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.", [nameof(ElasticsearchSourceMetadata.Url)]));
         }
 
         if (string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
