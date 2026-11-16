@@ -62,6 +62,12 @@ public sealed class CourseItemProgress
     public bool SelfReported { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the item's result (its status, score or pass) was reported by the browser, as a learning
+    /// package reports its own. A share of a page or video viewed is not a result, so it never sets this.
+    /// </summary>
+    public bool ResultSelfReported { get; set; }
+
+    /// <summary>
     /// Gets or sets the person who marked the item complete by hand, when it was not the learner's own work.
     /// </summary>
     public string CompletedBy { get; set; }

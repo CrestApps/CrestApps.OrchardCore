@@ -52,6 +52,8 @@ public static class CompletionSnapshotFactory
                 State = itemProgress?.State ?? CourseItemState.NotStarted,
                 Score = itemProgress?.Score,
                 SelfReported = itemProgress?.SelfReported ?? false,
+                ResultSelfReported = itemProgress?.ResultSelfReported ?? false,
+                AllowSelfReported = entry.Part?.AllowSelfReported ?? false,
                 CompletedUtc = itemProgress?.CompletedUtc,
             });
         }

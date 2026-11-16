@@ -19,7 +19,7 @@ A **certification path** (`CertificationPath`, one per Skills certification) is 
 | Requirements needed | All of them, or any one. |
 | First certificate | The requirements of the first cycle. |
 | Renewal | The requirements of a renewal; empty means the first-certificate requirements. |
-| Requirement kinds | `CourseCompleted` (a course completed, with an optional minimum grade) and `AssessmentPassed` (a quiz passed, with an optional minimum percent; only attempts the site scored count). Modules add kinds with `services.AddCertificationRequirement<T>()` and `ICertificationRequirement`. |
+| Requirement kinds | `CourseCompleted` (a course completed, with an optional minimum grade; a completion whose required item's result was reported by the browser, such as a learning package's own score, counts only when the item allows it) and `AssessmentPassed` (a quiz passed, with an optional minimum percent; only attempts the site scored count). Modules add kinds with `services.AddCertificationRequirement<T>()` and `ICertificationRequirement`. |
 | Expiry counted from | The day the requirements are met; the previous expiry (the anniversary is kept); or a fixed day of the year, with the shortest first period. The length comes from the certification's **Valid for (months)**. |
 | Renewal opens | How many days before expiry renewal opens. |
 | Grace period | How many days after expiry the renewal requirements still renew the certificate. After it, the person starts over with the first-certificate requirements. |

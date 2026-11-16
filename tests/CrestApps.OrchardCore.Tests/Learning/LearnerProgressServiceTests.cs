@@ -266,6 +266,49 @@ public sealed class LearnerProgressServiceTests
     }
 
     [Fact]
+    public async Task TheCompletionSnapshot_KeepsWhetherEachItemLetsABrowserResultCount()
+    {
+        // Arrange: Phase 8. Certifications read the snapshot to refuse a completion that rests on a browser result.
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "package", "Package", CompletionModes.PackageReported, configure: part => part.AllowSelfReported = true);
+        courses.AddItem("course1", "strict", "Package", CompletionModes.PackageReported);
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act
+        await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "package", ReportedComplete = true, SelfReported = true }), enrollment.ItemId);
+        var last = await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "strict", ReportedComplete = true, SelfReported = true }), enrollment.ItemId);
+
+        // Assert
+        var items = last.Enrollment.Completion.Items;
+
+        Assert.True(last.CourseCompleted);
+        Assert.True(items.Single(item => item.ContentItemId == "package").AllowSelfReported);
+        Assert.False(items.Single(item => item.ContentItemId == "strict").AllowSelfReported);
+        Assert.All(items, item => Assert.True(item.ResultSelfReported));
+    }
+
+    [Fact]
+    public async Task AViewedPage_IsNotAResultReportedByTheBrowser()
+    {
+        // Arrange: a page has no length, so the share viewed is the browser's claim (SelfReported), but it is not a
+        // result: it must not stop a certificate the way a package's own status or score does.
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "page");
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act
+        var update = await Progress(harness, (service, e) => service.RecordViewedAsync(e, "page", 100), enrollment.ItemId);
+
+        // Assert
+        Assert.True(update.CourseCompleted);
+        Assert.False(Assert.Single(update.Enrollment.Completion.Items).ResultSelfReported);
+    }
+
+    [Fact]
     public async Task Progress_OnAnItemThatIsNotReleased_IsRefused()
     {
         // Arrange

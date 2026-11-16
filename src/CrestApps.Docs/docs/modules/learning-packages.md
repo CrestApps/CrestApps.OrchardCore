@@ -125,7 +125,7 @@ When the package commits or finishes, the result goes to Learning (`ILearnerProg
 - `passed` or `failed` is kept;
 - the result is **marked self-reported** on the item's progress and in the completion snapshot.
 
-A course item a learner completes through a package is therefore recorded as reported by the browser. A completed enrollment opens the package for review (`lesson_mode` review, `credit` no-credit), and nothing it sends is kept.
+A course item a learner completes through a package is therefore recorded as reported by the browser. Because a learner can change what the browser sends, such a completion does not count toward a certification by default: the **Course completed** requirement of a certification path skips a completed enrollment in which a required item's result was reported by the browser. Tick **Let a result reported by the browser count toward a certification** on the item to allow it. A completed enrollment opens the package for review (`lesson_mode` review, `credit` no-credit), and nothing it sends is kept.
 
 ## Data portability and personal data
 

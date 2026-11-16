@@ -189,6 +189,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
 
             item.Attempts = Math.Max(item.Attempts, result.Attempts);
             item.SelfReported = result.SelfReported;
+            item.ResultSelfReported = result.SelfReported;
 
             var passMark = context.Entry.Part?.PassMark;
 
@@ -238,6 +239,7 @@ public sealed class DefaultLearnerProgressService : ILearnerProgressService
         item.Score = Math.Clamp(result.Score.Value, 0, 100);
         item.Passed = result.Passed ?? (entry.Part.PassMark is { } passMark ? item.Score >= passMark : item.Passed);
         item.SelfReported = result.SelfReported;
+        item.ResultSelfReported = result.SelfReported;
         progress.ModifiedUtc = now;
 
         if (context.IsNewProgress)

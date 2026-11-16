@@ -93,6 +93,66 @@ public sealed class CertificationEvidenceRulesTests
         Assert.Equal(["CourseCompleted"], ben);
     }
 
+    [Fact]
+    public async Task ACompletionResting_OnAResultTheBrowserReported_EarnsNoCourseEvidence_UnlessTheItemAllowsIt()
+    {
+        // Arrange: Phase 8. A learning package reports its own result in the browser, so by default it cannot support a
+        // certificate. ana's required item was reported by the browser on an item that does not allow it; ben's on one
+        // that does; cleo's item was computed on the server.
+        await using var h = await CertificationHarness.CreateAsync();
+        var path = await h.AddPathAsync();
+
+        foreach (var user in new[] { "ana", "ben", "cleo" })
+        {
+            await h.CompleteCourseAsync(user, "safety");
+        }
+
+        await ChangeEnrollmentAsync(h, "ana", "safety", enrollment => AddSnapshotItem(enrollment, selfReported: true, allowSelfReported: false));
+        await ChangeEnrollmentAsync(h, "ben", "safety", enrollment => AddSnapshotItem(enrollment, selfReported: true, allowSelfReported: true));
+        await ChangeEnrollmentAsync(h, "cleo", "safety", enrollment => AddSnapshotItem(enrollment, selfReported: false, allowSelfReported: false));
+
+        // Act
+        var ana = await EvidenceKindsAsync(h, path, "ana");
+        var ben = await EvidenceKindsAsync(h, path, "ben");
+        var cleo = await EvidenceKindsAsync(h, path, "cleo");
+
+        // Assert
+        Assert.DoesNotContain("CourseCompleted", ana);
+        Assert.Contains("CourseCompleted", ben);
+        Assert.Contains("CourseCompleted", cleo);
+    }
+
+    [Fact]
+    public async Task AnOptionalItemReportedByTheBrowser_DoesNotStopTheCourseEvidence()
+    {
+        // Arrange
+        await using var h = await CertificationHarness.CreateAsync();
+        var path = await h.AddPathAsync();
+        await h.CompleteCourseAsync("ana", "safety");
+        await ChangeEnrollmentAsync(h, "ana", "safety", enrollment => AddSnapshotItem(enrollment, selfReported: true, allowSelfReported: false, required: false));
+
+        // Act
+        var ana = await EvidenceKindsAsync(h, path, "ana");
+
+        // Assert
+        Assert.Contains("CourseCompleted", ana);
+    }
+
+    private static void AddSnapshotItem(Enrollment enrollment, bool selfReported, bool allowSelfReported, bool required = true)
+    {
+        enrollment.Completion ??= new CompletionSnapshot();
+        enrollment.Completion.Items.Add(new CompletionSnapshotItem
+        {
+            ContentItemId = "package",
+            Title = "Package",
+            Required = required,
+            State = CourseItemState.Completed,
+            SelfReported = selfReported,
+            ResultSelfReported = selfReported,
+            AllowSelfReported = allowSelfReported,
+        });
+    }
+
     private static Task<string[]> EvidenceKindsAsync(CertificationHarness h, CertificationPath path, string userId)
         => h.RunAsync(async services =>
         {

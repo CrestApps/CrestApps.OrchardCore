@@ -46,6 +46,17 @@ public sealed class CompletionSnapshotItem
     public bool SelfReported { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the item's result (its status, score or pass) was reported by the browser.
+    /// </summary>
+    public bool ResultSelfReported { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the item let a result reported by the browser count toward a certification, as it was set
+    /// at completion.
+    /// </summary>
+    public bool AllowSelfReported { get; set; }
+
+    /// <summary>
     /// Gets or sets when the item was completed, in UTC.
     /// </summary>
     public DateTime? CompletedUtc { get; set; }
