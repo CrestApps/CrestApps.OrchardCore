@@ -249,23 +249,23 @@ public sealed class PackageRuntimeService
             var cmi = state.Cmi ??= new Scorm12Cmi();
             var review = string.Equals(cmi.LessonMode, "review", StringComparison.Ordinal);
 
-            // A review keeps nothing: the values are checked on a copy, so the frame still gets its errors.
-            var target = review ? Copy(cmi) : cmi;
-            var refused = Replay(target, changes);
-
             if (review)
             {
-                result = new PackageRuntimeResult { Refused = refused, State = state, Review = true };
+                // A review keeps nothing: the values are checked on a copy, so the frame still gets its errors.
+                result = new PackageRuntimeResult { Refused = Replay(Copy(cmi), changes), State = state, Review = true };
 
                 return null;
             }
 
             var now = _clock.UtcNow;
 
-            if (!EnrollmentAccessAllows(enrollment, now))
+            // A learner's write: the enrollment must still give access, as for any other item.
+            if (!EnrollmentAccess.HasAccess(enrollment, now))
             {
                 return enrollment.Status == EnrollmentStatus.Active ? PackageRuntimeErrors.AccessEnded : PackageRuntimeErrors.NotActive;
             }
+
+            var refused = Replay(cmi, changes);
 
             if (request.Finish)
             {
@@ -288,6 +288,20 @@ public sealed class PackageRuntimeService
             await _store.UpdateAsync(state, cancellationToken);
 
             result = new PackageRuntimeResult { Refused = refused, State = state };
+
+            // A commit or a finish reports to Learning as the learner's own work, on the learner path: the access window
+            // and the item's release rules apply there too, and the result is marked self-reported. Learning commits the
+            // session (the state saved above with it), so the state is not touched after this; the runtime lock is held
+            // first and the enrollment lock inside it, the order every Learning record write takes.
+            if (request.Commit || request.Finish)
+            {
+                result.Progress = await _progress.RecordWithRetryAsync(enrollment, PackageResultMapper.Map(cmi, launch.PackageItemId, state.Sessions), cancellationToken);
+
+                if (result.Progress?.RefusedReason is not null && _logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("The package result of item {ItemId} was not recorded on enrollment {EnrollmentId}: {Reason}.", launch.PackageItemId, launch.EnrollmentId, result.Progress.RefusedReason);
+                }
+            }
 
             return null;
         }, () => PackageRuntimeErrors.Busy, cancellationToken);
@@ -434,9 +448,6 @@ public sealed class PackageRuntimeService
 
         return (await _release.EvaluateAsync(entry, enrollment, progress)).IsReleased ? null : PackageRuntimeErrors.NotAvailableYet;
     }
-
-    private static bool EnrollmentAccessAllows(Enrollment enrollment, DateTime now)
-        => EnrollmentAccess.HasAccess(enrollment, now);
 
     private static List<PackageRuntimeRefusal> Replay(Scorm12Cmi cmi, IList<PackageRuntimeChange> changes)
     {

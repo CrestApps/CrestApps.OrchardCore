@@ -490,6 +490,7 @@ const sidebars = {
                 'modules/learning-classes',
                 'modules/learning-commerce',
                 'modules/learning-coursework',
+                'modules/learning-packages',
                 'modules/learning-programs',
             ],
         },

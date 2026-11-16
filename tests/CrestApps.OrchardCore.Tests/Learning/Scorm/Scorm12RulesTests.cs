@@ -34,7 +34,6 @@ public sealed class Scorm12RulesTests
 
     [Theory]
     [InlineData("not attempted", "80", "passed")]
-    [InlineData("incomplete", "80", "passed")]
     [InlineData("completed", "79.5", "failed")]
     [InlineData("browsed", "95", "passed")]
     [InlineData("not attempted", "10", "failed")]
@@ -49,7 +48,8 @@ public sealed class Scorm12RulesTests
     [Theory]
     [InlineData("passed", "10")]
     [InlineData("failed", "99")]
-    public void MasteryScore_LeavesTheContentsOwnPassOrFail(string status, string raw)
+    [InlineData("incomplete", "90")]
+    public void MasteryScore_LeavesTheContentsOwnPassOrFail_AndWorkItCallsIncomplete(string status, string raw)
     {
         var cmi = new Scorm12Cmi { LessonStatus = status, ScoreRaw = raw, MasteryScore = "80" };
 
@@ -63,10 +63,10 @@ public sealed class Scorm12RulesTests
     [InlineData("80", "90", "no-credit")]
     public void MasteryScore_NeedsAMasteryScoreARawScoreAndCredit(string mastery, string raw, string credit)
     {
-        var cmi = new Scorm12Cmi { LessonStatus = "incomplete", ScoreRaw = raw, MasteryScore = mastery, Credit = credit };
+        var cmi = new Scorm12Cmi { LessonStatus = "completed", ScoreRaw = raw, MasteryScore = mastery, Credit = credit };
 
         Assert.False(Scorm12Rules.ApplyMasteryScore(cmi));
-        Assert.Equal("incomplete", cmi.LessonStatus);
+        Assert.Equal("completed", cmi.LessonStatus);
     }
 
     [Fact]

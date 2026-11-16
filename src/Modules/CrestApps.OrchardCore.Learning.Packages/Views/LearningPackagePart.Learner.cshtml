@@ -47,9 +47,9 @@
         {
             <ul class="list-inline text-secondary small mb-3">
                 <li class="list-inline-item"><span class="badge @statusClass">@statusText</span></li>
-                @if (!string.IsNullOrEmpty(cmi?.ScoreRaw))
+                @if (Model.Score is { } score)
                 {
-                    <li class="list-inline-item"><i class="fa-solid fa-star-half-stroke me-1" aria-hidden="true"></i>@T["Score: {0}", cmi.ScoreRaw]@(string.IsNullOrEmpty(cmi.ScoreMax) ? null : " / " + cmi.ScoreMax)</li>
+                    <li class="list-inline-item"><i class="fa-solid fa-star-half-stroke me-1" aria-hidden="true"></i>@T["Score: {0}%", score.ToString("0.##")]</li>
                 }
                 @if (cmi is not null && cmi.TotalTime != "0000:00:00.00")
                 {

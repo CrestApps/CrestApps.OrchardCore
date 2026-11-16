@@ -95,6 +95,7 @@ Rules that follow from the table:
 | --- | --- | --- | --- |
 | Questions, quizzes, attempts, grading and item analysis | **Learning Assessments** (`Learning.Assessments.Abstractions`/`.Core`) | `IAssessmentAttemptService`, `AddQuestionType` with an `IQuestionScorer`, `IAttemptObserver` | Score answers in the browser; keep a quiz secret or key in a content item (use `LearningSecretStore`) |
 | Courses, lessons, enrollments, progress and completion | **Learning** (`Learning.Abstractions`/`.Core`) | `IEnrollmentService` (grants with a source: `AddEnrollmentSource`), `ILearnerProgressService`, `ICourseAccessService`, `AddCourseItemKind<TPart>`, `AddCourseItemReleaseRule<T>`, `AddCourseCompletionCriterion<T>`, `IEnrollmentObserver`, `ICourseItemHandler` | Gate content another way; add an enrollment, seat or course-access record of your own (an order or a subscription grants access through an enrollment source) |
+| Learning packages (SCORM 1.2) and their runtime state | **Learning Packages** (`Learning.Packages.Abstractions`/`.Core`) | `LearningPackageImporter`, `PackageRuntimeService`, `Scorm12DataModel` (the SCORM 1.2 data model checked on the server), `PackageLaunchTokens`; the package files in the protected file area `LearningPackageFiles` | Run package content on the site's origin; trust a value the package frame accepted; serve package files without the launch token |
 
 ### Communication
 

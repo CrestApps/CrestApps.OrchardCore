@@ -28,8 +28,10 @@ public static class Scorm12Rules
 
     /// <summary>
     /// Sets the lesson status from the mastery score when the content sent a raw score without passing or failing the
-    /// learner itself: passed when the raw score reaches the mastery score, failed otherwise. Nothing changes without a
-    /// mastery score, without a numeric raw score, or in <c>no-credit</c>.
+    /// learner itself: passed when the raw score reaches the mastery score, failed otherwise. It applies to a status of
+    /// <c>not attempted</c>, <c>completed</c> or <c>browsed</c>; the content's own <c>passed</c> or <c>failed</c> stands,
+    /// and so does <c>incomplete</c>, which says the learner has not finished. Nothing changes without a mastery score,
+    /// without a numeric raw score, or in <c>no-credit</c>.
     /// </summary>
     /// <param name="cmi">The data.</param>
     /// <returns><see langword="true"/> when the status changed.</returns>
@@ -38,7 +40,7 @@ public static class Scorm12Rules
         ArgumentNullException.ThrowIfNull(cmi);
 
         if (!string.Equals(cmi.Credit, "credit", StringComparison.Ordinal) ||
-            cmi.LessonStatus is "passed" or "failed" ||
+            cmi.LessonStatus is not ("not attempted" or "completed" or "browsed") ||
             !TryParseNumber(cmi.MasteryScore, out var mastery) ||
             !TryParseNumber(cmi.ScoreRaw, out var raw))
         {

@@ -45,6 +45,7 @@ internal sealed class LearningPackagePartLearnerDisplayDriver : ContentPartDispl
             if (enrollment is not null && string.Equals(enrollment.UserId, userId, StringComparison.Ordinal))
             {
                 model.State = await _runtime.GetStateAsync(enrollment.ItemId, part.ContentItem.ContentItemId);
+                model.Score = model.State is null ? null : PackageResultMapper.ScorePercent(model.State.Cmi);
             }
         }).Location("Detail", "Content:5");
 }
