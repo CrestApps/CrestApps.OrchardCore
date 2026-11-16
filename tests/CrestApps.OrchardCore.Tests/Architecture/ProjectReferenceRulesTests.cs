@@ -207,14 +207,15 @@ public sealed class ProjectReferenceRulesTests
     }
 
     /// <summary>
-    /// A module references another module only to carry a feature dependency to the site that installs its package.
-    /// A module package tells the host it is a module through its <c>build\&lt;package&gt;.props</c>, and NuGet drops a
+    /// Every reference to a module or theme project sets <c>PrivateAssets="none"</c>, wherever it is declared. A module
+    /// package tells the host it is a module through its <c>build\&lt;package&gt;.props</c>, and NuGet drops a
     /// dependency's build assets unless the reference sets <c>PrivateAssets="none"</c>. Without it the dependency's
     /// assembly is copied but never loaded as a module, so its feature is missing and every service it registers fails
-    /// to resolve (production, 2026-11-16: Messaging broadcasts could not resolve <c>IOutreachEngine</c>).
+    /// to resolve (production, 2026-11-16: Messaging broadcasts could not resolve <c>IOutreachEngine</c>). Hosts and test
+    /// projects are held to the same rule so a reference copied from one of them into a module is already right.
     /// </summary>
     [Fact]
-    public void ModuleReferences_ToOtherModules_FlowToTheHost()
+    public void ModuleReferences_InEveryProject_FlowToTheHost()
     {
         var root = FindRepositoryRoot();
         var moduleRoots = new[]
@@ -224,10 +225,15 @@ public sealed class ProjectReferenceRulesTests
         };
         var offenders = new List<string>();
 
-        foreach (var moduleRoot in moduleRoots.Where(Directory.Exists))
+        foreach (var projectRoot in new[] { Path.Combine(root, "src"), Path.Combine(root, "tests") }.Where(Directory.Exists))
         {
-            foreach (var project in Directory.EnumerateFiles(moduleRoot, "*.csproj", SearchOption.AllDirectories))
+            foreach (var project in Directory.EnumerateFiles(projectRoot, "*.csproj", SearchOption.AllDirectories))
             {
+                if (IsBuildOutput(project))
+                {
+                    continue;
+                }
+
                 var document = XDocument.Load(project);
 
                 foreach (var element in document.Descendants("ProjectReference"))
@@ -261,9 +267,18 @@ public sealed class ProjectReferenceRulesTests
         }
 
         Assert.True(offenders.Count == 0,
-            "A reference from one module to another must set PrivateAssets=\"none\", or the site that installs the " +
+            "A reference to a module or theme project must set PrivateAssets=\"none\", or a site that installs the " +
             "package gets the referenced module's assembly without loading it as a module. Offending references: " +
             string.Join(", ", offenders) + ".");
+    }
+
+    private static bool IsBuildOutput(string path)
+    {
+        var separator = Path.DirectorySeparatorChar;
+
+        return path.Contains($"{separator}bin{separator}", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains($"{separator}obj{separator}", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains($"{separator}node_modules{separator}", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsSharedLibrary(string projectName)
