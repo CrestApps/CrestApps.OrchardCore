@@ -70,9 +70,26 @@ public sealed class Submission : CatalogItem
     public SubmissionStatus Status { get; set; }
 
     /// <summary>
-    /// Gets or sets the grade as a percentage.
+    /// Gets or sets the grade as a percentage, after the late penalty. This is the score that counts in the course
+    /// grade.
     /// </summary>
     public decimal? Score { get; set; }
+
+    /// <summary>
+    /// Gets or sets the grade as a percentage before the late penalty.
+    /// </summary>
+    public decimal? RawScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the late penalty taken off the raw score, as a percentage of it.
+    /// </summary>
+    public decimal? LatePenaltyPercent { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many days, counting a part of a day as a day, the work came after the due date when it was
+    /// first graded.
+    /// </summary>
+    public int? DaysLate { get; set; }
 
     /// <summary>
     /// Gets or sets the points given.
@@ -173,9 +190,19 @@ public sealed class SubmissionFile
 public sealed class SubmissionGrade
 {
     /// <summary>
-    /// Gets or sets the grade as a percentage.
+    /// Gets or sets the grade as a percentage, after the late penalty.
     /// </summary>
     public decimal? Score { get; set; }
+
+    /// <summary>
+    /// Gets or sets the grade as a percentage before the late penalty.
+    /// </summary>
+    public decimal? RawScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the late penalty, as a percentage of the raw score.
+    /// </summary>
+    public decimal? LatePenaltyPercent { get; set; }
 
     /// <summary>
     /// Gets or sets the points.

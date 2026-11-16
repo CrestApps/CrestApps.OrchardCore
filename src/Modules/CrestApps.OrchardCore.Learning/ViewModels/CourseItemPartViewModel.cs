@@ -20,6 +20,8 @@ public class CourseItemPartViewModel
 
     public decimal? PassMark { get; set; }
 
+    public string GradeCategoryId { get; set; }
+
     public bool FreePreview { get; set; }
 
     public bool AllowSelfReported { get; set; }
@@ -43,4 +45,7 @@ public class CourseItemPartViewModel
 
     [BindNever]
     public IList<SelectListItem> ItemOptions { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> GradeCategoryOptions { get; set; } = [];
 }

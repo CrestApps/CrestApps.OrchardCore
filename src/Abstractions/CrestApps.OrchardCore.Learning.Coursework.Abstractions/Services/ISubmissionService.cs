@@ -10,7 +10,8 @@ public interface ISubmissionService
 {
     /// <summary>
     /// Hands in coursework for a learner under their own active enrollment in the course of the item. The files are
-    /// kept in the protected store before the record is saved, and removed again when anything fails.
+    /// kept in the protected store before the record is saved, and removed again when anything fails. Past the
+    /// coursework's close date only work a grader returned is taken.
     /// </summary>
     /// <param name="request">The learner, the coursework item, the text and the files.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -18,8 +19,10 @@ public interface ISubmissionService
     Task<SubmissionResult> SubmitAsync(SubmitCourseworkRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Grades the current submission with rubric choices or points and feedback. Grading graded work again needs a
-    /// reason and keeps the earlier grade.
+    /// Grades the current submission with rubric choices or points and feedback. Late work loses the coursework's late
+    /// penalty: the raw score, the days late and the penalty are kept on the submission, and the score after the
+    /// penalty is the one reported to the course grade. Grading graded work again needs a reason, keeps the earlier
+    /// grade and applies the same days late and penalty to the new raw score.
     /// </summary>
     /// <param name="request">The grade.</param>
     /// <param name="cancellationToken">A token to cancel the work.</param>
@@ -235,4 +238,7 @@ public static class SubmissionErrors
 
     /// <summary>Nobody grades or returns their own work.</summary>
     public const string OwnSubmission = "OwnSubmission";
+
+    /// <summary>The coursework stopped taking work some days after the due date.</summary>
+    public const string Closed = "Closed";
 }

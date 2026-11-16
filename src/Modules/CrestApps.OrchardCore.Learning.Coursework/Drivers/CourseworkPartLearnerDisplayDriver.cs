@@ -52,6 +52,8 @@ internal sealed class CourseworkPartLearnerDisplayDriver : ContentPartDisplayDri
             model.Enrolled = learner?.Enrollment is not null;
             model.EnrollmentActive = learner?.Enrollment?.Status == EnrollmentStatus.Active;
             model.PastDue = part.DueUtc is { } due && _clock.UtcNow > DateTime.SpecifyKind(due, DateTimeKind.Utc);
+            model.CloseUtc = CourseworkLatePolicy.GetCloseUtc(part);
+            model.Closed = CourseworkLatePolicy.IsClosed(part, _clock.UtcNow);
 
             if (learner?.Enrollment is not null)
             {
@@ -62,9 +64,9 @@ internal sealed class CourseworkPartLearnerDisplayDriver : ContentPartDisplayDri
 
             var latest = model.Latest;
 
-            model.CanSubmit = model.EnrollmentActive && (latest is null
-                || latest.Status == SubmissionStatus.Returned
-                || (latest.Status == SubmissionStatus.Submitted && part.AllowResubmission));
+            // Past the close date only work a grader returned is taken again.
+            model.CanSubmit = model.EnrollmentActive && (latest?.Status == SubmissionStatus.Returned
+                || (!model.Closed && (latest is null || (latest.Status == SubmissionStatus.Submitted && part.AllowResubmission))));
 
             var rubricId = latest?.Status == SubmissionStatus.Graded && !string.IsNullOrEmpty(latest.RubricId) ? latest.RubricId : part.RubricId;
 

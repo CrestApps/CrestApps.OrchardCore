@@ -52,6 +52,28 @@
                 <span asp-validation-for="Weight"></span>
             </div>
         </div>
+        @if (Model.GradeCategoryOptions.Count > 0)
+        {
+            <div class="ocat-wrapper" id="@Html.IdFor(m => m.GradeCategoryId)-wrapper" hidden="@(!Model.Gradable)">
+                <label asp-for="GradeCategoryId" class="ocat-label">@T["Grade category"]</label>
+                <div class="ocat-end">
+                    <select asp-for="GradeCategoryId" asp-items="Model.GradeCategoryOptions" class="form-select"></select>
+                    <span class="hint">@T["The category of the course this item counts in. An item without a category counts as a category of its own, weighted by its item weight."]</span>
+                </div>
+            </div>
+            <script at="Foot">
+                (function () {
+                    const gradable = document.getElementById('@Html.IdFor(m => m.Gradable)');
+                    const wrapper = document.getElementById('@Html.IdFor(m => m.GradeCategoryId)-wrapper');
+
+                    if (gradable && wrapper) {
+                        gradable.addEventListener('change', function () {
+                            wrapper.hidden = !gradable.checked;
+                        });
+                    }
+                })();
+            </script>
+        }
         <div class="ocat-wrapper" asp-validation-class-for="PassMark">
             <label asp-for="PassMark" class="ocat-label">@T["Pass mark (%)"]</label>
             <div class="ocat-end">

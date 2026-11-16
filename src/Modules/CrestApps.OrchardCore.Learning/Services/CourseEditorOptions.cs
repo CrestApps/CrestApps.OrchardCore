@@ -9,7 +9,7 @@ using YesSql.Services;
 namespace CrestApps.OrchardCore.Learning.Services;
 
 /// <summary>
-/// Reads what the course editors offer: the items a course contains and the other courses.
+/// Reads what the course editors offer: the items a course contains, its gradebook categories and the other courses.
 /// </summary>
 public sealed class CourseEditorOptions
 {
@@ -83,6 +83,25 @@ public sealed class CourseEditorOptions
         }
 
         return options;
+    }
+
+    /// <summary>
+    /// Reads the gradebook categories of the latest version of a course.
+    /// </summary>
+    /// <param name="courseId">The content item id of the course.</param>
+    /// <returns>The categories; empty when there is no such course or it has none.</returns>
+    public async Task<IReadOnlyList<GradeCategory>> GetGradeCategoriesAsync(string courseId)
+    {
+        if (string.IsNullOrEmpty(courseId))
+        {
+            return [];
+        }
+
+        var course = await _contentManager.GetAsync(courseId, VersionOptions.Latest);
+
+        return (course?.Get<CoursePart>(nameof(CoursePart))?.GradeCategories ?? [])
+            .Where(category => !string.IsNullOrEmpty(category?.Id))
+            .ToList();
     }
 
     /// <summary>

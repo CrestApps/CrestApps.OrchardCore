@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
@@ -14,7 +15,8 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.Learning.Drivers;
 
 /// <summary>
-/// The editor of the course part: code, summary, enrollment, completion criteria, prerequisites and staff.
+/// The editor of the course part: code, summary, enrollment, completion criteria, gradebook categories, prerequisites
+/// and staff.
 /// </summary>
 internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CoursePart>
 {
@@ -71,6 +73,9 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             model.AssistantIds = StaffIds(part, LearningConstants.CourseStaffRoles.Assistant);
             model.GraderIds = StaffIds(part, LearningConstants.CourseStaffRoles.Grader);
             model.ObserverIds = StaffIds(part, LearningConstants.CourseStaffRoles.Observer);
+            model.GradeCategories = (part.GradeCategories ?? [])
+                .Select(category => new GradeCategoryRowViewModel { Id = category.Id, Name = category.Name, Weight = category.Weight, DropLowest = category.DropLowest })
+                .ToList();
             model.ItemOptions = await _editorOptions.GetItemOptionsAsync(courseId, null, S["No final assessment"], model.FinalItemId);
             model.CourseOptions = await _editorOptions.GetCourseOptionsAsync(courseId, model.PrerequisiteCourseIds);
             model.EnrollmentModeOptions =
@@ -154,6 +159,7 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         part.EnrollmentMode = model.EnrollmentMode;
         part.AccessDays = model.AccessDays;
         part.PassMark = model.PassMark;
+        part.GradeCategories = ReadGradeCategories(part, model, context);
 
         // The key is kept in its own record, out of the content item; it changes only when the rest of the form is valid.
         if (context.Updater.ModelState.IsValid)
@@ -210,6 +216,64 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
             .ToList();
 
         return Edit(part, context);
+    }
+
+    /// <summary>
+    /// Reads the gradebook categories posted by the editor. Rows without a name are left out. A row keeps its id only
+    /// when the course already has a category with that id; any other row gets a new id here, so ids never come from
+    /// the browser.
+    /// </summary>
+    private List<GradeCategory> ReadGradeCategories(CoursePart part, CoursePartViewModel model, UpdatePartEditorContext context)
+    {
+        var existing = (part.GradeCategories ?? [])
+            .Where(category => !string.IsNullOrEmpty(category?.Id))
+            .Select(category => category.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        var categories = new List<GradeCategory>();
+
+        foreach (var row in model.GradeCategories ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(row?.Name))
+            {
+                continue;
+            }
+
+            var name = row.Name.Trim();
+
+            if (row.Weight is not > 0)
+            {
+                context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.GradeCategories), S["The weight of the category '{0}' must be more than zero.", name]);
+            }
+
+            if (row.DropLowest is < 0)
+            {
+                context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.GradeCategories), S["The category '{0}' cannot drop fewer than zero scores.", name]);
+            }
+
+            var id = row.Id?.Trim();
+
+            if (string.IsNullOrEmpty(id) || !existing.Contains(id) || !used.Add(id))
+            {
+                id = IdGenerator.GenerateId();
+                used.Add(id);
+            }
+
+            categories.Add(new GradeCategory
+            {
+                Id = id,
+                Name = name,
+                Weight = row.Weight is > 0 ? row.Weight.Value : 1,
+                DropLowest = row.DropLowest is > 0 ? row.DropLowest.Value : 0,
+            });
+        }
+
+        if (categories.GroupBy(category => category.Name, StringComparer.CurrentCultureIgnoreCase).Any(group => group.Count() > 1))
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.GradeCategories), S["Give each grade category a different name."]);
+        }
+
+        return categories;
     }
 
     private static decimal? ReadDecimal(CoursePart part, string ruleName, string key)

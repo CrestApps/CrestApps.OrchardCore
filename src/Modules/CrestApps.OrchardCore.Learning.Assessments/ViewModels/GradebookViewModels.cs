@@ -86,6 +86,10 @@ public class GradebookViewModel
     [BindNever]
     public IList<(string Id, string Title, decimal Weight)> Items { get; set; } = [];
 
+    /// <summary>Gets or sets the gradebook categories, with the items without a category last; empty when the course has none.</summary>
+    [BindNever]
+    public IReadOnlyList<GradeCategoryResult> Categories { get; set; } = [];
+
     /// <summary>Gets or sets one row a learner.</summary>
     [BindNever]
     public IList<GradebookRowViewModel> Rows { get; set; } = [];
@@ -108,4 +112,7 @@ public class GradebookRowViewModel
 
     /// <summary>Gets or sets the score of each graded item, by id.</summary>
     public IDictionary<string, CourseItemProgress> Items { get; set; } = new Dictionary<string, CourseItemProgress>(StringComparer.Ordinal);
+
+    /// <summary>Gets or sets the score of each category and the items it dropped.</summary>
+    public CourseGradeBreakdown Breakdown { get; set; } = new();
 }

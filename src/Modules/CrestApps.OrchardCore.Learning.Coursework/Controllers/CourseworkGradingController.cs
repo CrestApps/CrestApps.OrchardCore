@@ -227,6 +227,7 @@ public sealed class CourseworkGradingController : Controller
         model.Rubric = rubric;
         model.EarlierAttempts = earlier;
         model.CanGrade = submission.Current && submission.Status != SubmissionStatus.Returned;
+        (model.DaysLate, model.LatePenaltyPercent) = CourseworkLatePolicy.Resolve(submission, part);
         model.Names = await NamesAsync(submission.History.Select(grade => grade.GraderId)
             .Concat(submission.History.Select(grade => grade.ReplacedBy))
             .Append(submission.GraderId)

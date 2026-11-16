@@ -16,7 +16,8 @@ using YesSql;
 namespace CrestApps.OrchardCore.Learning.Assessments.Controllers;
 
 /// <summary>
-/// The gradebook of a course: every learner and the score of every graded item, with the course grade on a grade scale.
+/// The gradebook of a course: every learner and the score of every graded item, the score of each gradebook category
+/// with the items it dropped, and the course grade on a grade scale.
 /// </summary>
 [Admin]
 [Feature(AssessmentsConstants.Features.Gradebook)]
@@ -98,11 +99,16 @@ public sealed class GradebookController : Controller
             return NotFound();
         }
 
+        var outline = await _courseStructure.GetOutlineAsync(course);
+
         model.CourseTitle = course.DisplayText;
-        model.Items = (await _courseStructure.GetOutlineAsync(course)).Entries
+        model.Items = outline.Entries
             .Where(entry => entry.Part?.Gradable == true)
             .Select(entry => (entry.Item.ContentItemId, entry.Item.DisplayText, entry.Part.Weight))
             .ToList();
+
+        // The category columns: a breakdown without progress lists every category, and the items without one last.
+        model.Categories = CourseGradeCalculator.ComputeBreakdown(outline, null).Categories;
 
         var (count, enrollments) = await _enrollmentStore.PageAsync(new EnrollmentQuery { CourseId = course.ContentItemId }, 1, MaxRows);
         var progress = (await _progressStore.ListByEnrollmentsAsync(enrollments.Select(enrollment => enrollment.ItemId).ToArray()))
@@ -129,6 +135,8 @@ public sealed class GradebookController : Controller
                     }
                 }
             }
+
+            row.Breakdown = CourseGradeCalculator.ComputeBreakdown(outline, entry);
 
             return row;
         }).OrderBy(row => row.LearnerName, StringComparer.CurrentCultureIgnoreCase).ToList();

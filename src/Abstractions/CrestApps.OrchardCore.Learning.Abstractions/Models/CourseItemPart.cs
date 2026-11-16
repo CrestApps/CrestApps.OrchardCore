@@ -40,6 +40,12 @@ public sealed class CourseItemPart : ContentPart
     public decimal Weight { get; set; } = 1;
 
     /// <summary>
+    /// Gets or sets the gradebook category of the course the item counts in, one of
+    /// <see cref="CoursePart.GradeCategories"/>, or <see langword="null"/> for none.
+    /// </summary>
+    public string GradeCategoryId { get; set; }
+
+    /// <summary>
     /// Gets or sets the score, as a percentage, that passes the item for the <c>Passed</c> completion mode.
     /// </summary>
     public decimal? PassMark { get; set; }

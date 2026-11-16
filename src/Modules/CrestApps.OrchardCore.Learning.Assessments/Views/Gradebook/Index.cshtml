@@ -49,7 +49,23 @@ else
                         <th scope="col">@T["Learner"]</th>
                         @foreach (var item in Model.Items)
                         {
-                            <th scope="col" class="text-end">@item.Title <span class="text-secondary small d-block">@T["weight {0}", item.Weight.ToString("0.##")]</span></th>
+                            var itemCategory = Model.Categories.FirstOrDefault(category => category.ItemIds.Contains(item.Id));
+
+                            <th scope="col" class="text-end">
+                                @item.Title
+                                <span class="text-secondary small d-block">@T["weight {0}", item.Weight.ToString("0.##")]</span>
+                                @if (itemCategory is not null)
+                                {
+                                    <span class="text-secondary small d-block">@(itemCategory.Name ?? T["No category"].Value)</span>
+                                }
+                            </th>
+                        }
+                        @foreach (var category in Model.Categories)
+                        {
+                            <th scope="col" class="text-end border-start">
+                                @(category.Name ?? T["No category"].Value)
+                                <span class="text-secondary small d-block">@T["weight {0}", category.Weight.ToString("0.##")]</span>
+                            </th>
                         }
                         <th scope="col" class="text-end">@T["Course grade"]</th>
                     </tr>
@@ -64,10 +80,31 @@ else
                             </th>
                             @foreach (var item in Model.Items)
                             {
+                                var dropped = row.Breakdown.IsDropped(item.Id);
+
                                 <td class="text-end">
                                     @if (row.Items.TryGetValue(item.Id, out var progress) && progress.Score is { } score)
                                     {
-                                        <span class="@(progress.Passed == false ? "text-danger" : null)">@Grade(score)</span>
+                                        <span class="@(dropped ? "text-decoration-line-through text-secondary" : progress.Passed == false ? "text-danger" : null)">@Grade(score)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-secondary">-</span>
+                                    }
+                                    @if (dropped)
+                                    {
+                                        <span class="badge ta-badge fw-normal ms-1" title="@T["One of the lowest scores of its category, left out of the category score."]">@T["dropped"]</span>
+                                    }
+                                </td>
+                            }
+                            @foreach (var category in Model.Categories)
+                            {
+                                var result = row.Breakdown.Categories.FirstOrDefault(candidate => candidate.CategoryId == category.CategoryId);
+
+                                <td class="text-end border-start">
+                                    @if (result?.Score is { } categoryScore)
+                                    {
+                                        @Grade(categoryScore)
                                     }
                                     else
                                     {

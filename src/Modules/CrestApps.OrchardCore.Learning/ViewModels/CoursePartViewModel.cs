@@ -45,6 +45,8 @@ public class CoursePartViewModel
 
     public string[] ObserverIds { get; set; } = [];
 
+    public List<GradeCategoryRowViewModel> GradeCategories { get; set; } = [];
+
     [BindNever]
     public bool HasEnrollmentKey { get; set; }
 
@@ -59,4 +61,37 @@ public class CoursePartViewModel
 
     [BindNever]
     public IList<SelectListItem> EnrollmentModeOptions { get; set; } = [];
+}
+
+/// <summary>
+/// A gradebook category row of the course editor.
+/// </summary>
+public class GradeCategoryRowViewModel
+{
+    /// <summary>Gets or sets the id; empty for a new category, which gets an id when the course is saved.</summary>
+    public string Id { get; set; }
+
+    /// <summary>Gets or sets the name.</summary>
+    public string Name { get; set; }
+
+    /// <summary>Gets or sets the weight in the course grade.</summary>
+    public decimal? Weight { get; set; }
+
+    /// <summary>Gets or sets how many of the lowest scores are dropped.</summary>
+    public int? DropLowest { get; set; }
+}
+
+/// <summary>
+/// The model of the gradebook category row partial.
+/// </summary>
+public class GradeCategoryRowModel
+{
+    /// <summary>Gets or sets the prefix of the field names.</summary>
+    public string Prefix { get; set; }
+
+    /// <summary>Gets or sets the index of the row.</summary>
+    public string Index { get; set; }
+
+    /// <summary>Gets or sets the category.</summary>
+    public GradeCategoryRowViewModel Category { get; set; }
 }

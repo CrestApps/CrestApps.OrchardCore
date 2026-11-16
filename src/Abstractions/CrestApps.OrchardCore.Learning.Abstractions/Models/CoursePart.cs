@@ -45,6 +45,11 @@ public sealed class CoursePart : ContentPart
     public decimal? PassMark { get; set; }
 
     /// <summary>
+    /// Gets or sets the gradebook categories. Empty means the course grade is the weighted mean of the gradable items.
+    /// </summary>
+    public IList<GradeCategory> GradeCategories { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets what a learner must hold before enrolling.
     /// </summary>
     public IList<CoursePrerequisite> Prerequisites { get; set; } = [];

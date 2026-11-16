@@ -15,8 +15,8 @@ using YesSql;
 namespace CrestApps.OrchardCore.Learning.Coursework.Drivers;
 
 /// <summary>
-/// The editor of the coursework part: the due date in the editor's time zone, what the learner hands in, the file
-/// rules, resubmission, and the rubric or points the work is graded against.
+/// The editor of the coursework part: the due date in the editor's time zone, the late policy, what the learner hands
+/// in, the file rules, resubmission, and the rubric or points the work is graded against.
 /// </summary>
 internal sealed class CourseworkPartDisplayDriver : ContentPartDisplayDriver<CourseworkPart>
 {
@@ -39,6 +39,9 @@ internal sealed class CourseworkPartDisplayDriver : ContentPartDisplayDriver<Cou
         => Initialize<CourseworkPartViewModel>(GetEditorShapeType(context), async model =>
         {
             model.Due = part.DueUtc is { } due ? (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(due, DateTimeKind.Utc)))).DateTime : null;
+            model.LatePenaltyPercentPerDay = part.LatePenaltyPercentPerDay;
+            model.MaxLatePenaltyPercent = part.MaxLatePenaltyPercent;
+            model.CloseAfterDays = part.CloseAfterDays;
             model.SubmissionType = part.SubmissionType;
             model.AllowedExtensions = string.Join(", ", part.AllowedExtensions ?? []);
             model.MaxFileSizeMb = part.MaxFileSizeMb;
@@ -78,7 +81,25 @@ internal sealed class CourseworkPartDisplayDriver : ContentPartDisplayDriver<Cou
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.RubricId), S["Choose a published rubric."]);
         }
 
+        if (model.LatePenaltyPercentPerDay is < 0 or > 100)
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.LatePenaltyPercentPerDay), S["The late penalty a day is a percentage from 0 to 100."]);
+        }
+
+        if (model.MaxLatePenaltyPercent is < 0 or > 100)
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.MaxLatePenaltyPercent), S["The largest late penalty is a percentage from 0 to 100."]);
+        }
+
+        if (model.CloseAfterDays is < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.CloseAfterDays), S["Close the coursework zero or more days after the due date, or leave it empty."]);
+        }
+
         part.DueUtc = model.Due is { } due ? await _localClock.ToUtcLenientAsync(DateTime.SpecifyKind(due, DateTimeKind.Unspecified)) : null;
+        part.LatePenaltyPercentPerDay = Math.Clamp(model.LatePenaltyPercentPerDay, 0, 100);
+        part.MaxLatePenaltyPercent = Math.Clamp(model.MaxLatePenaltyPercent, 0, 100);
+        part.CloseAfterDays = model.CloseAfterDays is >= 0 ? model.CloseAfterDays : null;
         part.SubmissionType = model.SubmissionType;
         part.AllowedExtensions = ParseExtensions(model.AllowedExtensions);
         part.MaxFileSizeMb = Math.Clamp(model.MaxFileSizeMb, 1, MaxFileSizeMbLimit);

@@ -126,6 +126,12 @@ internal sealed class DefaultSubmissionService : ISubmissionService
                 return SubmissionResult.Fail(SubmissionErrors.AlreadySubmitted, current);
             }
 
+            // Past the close date only work a grader returned is taken again.
+            if (current?.Status != SubmissionStatus.Returned && CourseworkLatePolicy.IsClosed(coursework.Part, _clock.UtcNow))
+            {
+                return SubmissionResult.Fail(SubmissionErrors.Closed, current);
+            }
+
             // The files are kept before the record is saved, and removed again when anything after fails.
             var stored = new List<SubmissionFile>();
 
@@ -251,13 +257,16 @@ internal sealed class DefaultSubmissionService : ISubmissionService
                 return SubmissionResult.Fail(SubmissionErrors.ReasonRequired, submission);
             }
 
-            var score = await ScoreAsync(submission, request);
+            var part = (await _contentSource.GetPublishedAsync(submission.CourseworkId)).FindPart<CourseworkPart>();
+            var score = await ScoreAsync(part, request);
 
             if (score is null)
             {
                 return SubmissionResult.Fail(SubmissionErrors.InvalidScore, submission);
             }
 
+            // The days late and the penalty are set when the work is first graded; a regrade applies them again.
+            var (daysLate, penalty) = CourseworkLatePolicy.Resolve(submission, part);
             var now = _clock.UtcNow;
 
             if (regrade)
@@ -266,7 +275,10 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             }
 
             submission.Status = SubmissionStatus.Graded;
-            submission.Score = score.Percent;
+            submission.RawScore = score.Percent;
+            submission.DaysLate = daysLate;
+            submission.LatePenaltyPercent = penalty;
+            submission.Score = CourseworkLatePolicy.Apply(score.Percent, penalty);
             submission.Points = score.Points;
             submission.MaxPoints = score.MaxPoints;
             submission.RubricId = score.RubricId;
@@ -279,7 +291,7 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             await ReportAsync(submission.EnrollmentId, new CourseItemResult
             {
                 ItemId = submission.CourseworkId,
-                Score = score.Percent,
+                Score = submission.Score,
                 Submitted = true,
                 Graded = true,
                 Attempts = submission.Attempt,
@@ -336,6 +348,8 @@ internal sealed class DefaultSubmissionService : ISubmissionService
             {
                 KeepGrade(submission, actor, now, "Returned for resubmission.");
                 submission.Score = null;
+                submission.RawScore = null;
+                submission.LatePenaltyPercent = null;
                 submission.Points = null;
                 submission.MaxPoints = null;
                 submission.RubricChoices = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -485,9 +499,8 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         return new CourseworkTarget(outlineItem, courseId, outlineItem.FindPart<CourseworkPart>() ?? item.FindPart<CourseworkPart>());
     }
 
-    private async Task<GradeScore> ScoreAsync(Submission submission, GradeSubmissionRequest request)
+    private async Task<GradeScore> ScoreAsync(CourseworkPart part, GradeSubmissionRequest request)
     {
-        var part = (await _contentSource.GetPublishedAsync(submission.CourseworkId)).FindPart<CourseworkPart>();
         var rubricId = part?.RubricId;
         var rubric = string.IsNullOrEmpty(rubricId) ? null : (await _contentSource.GetPublishedAsync(rubricId)).FindPart<RubricPart>();
 
@@ -525,6 +538,8 @@ internal sealed class DefaultSubmissionService : ISubmissionService
         var grade = new SubmissionGrade
         {
             Score = submission.Score,
+            RawScore = submission.RawScore,
+            LatePenaltyPercent = submission.LatePenaltyPercent,
             Points = submission.Points,
             MaxPoints = submission.MaxPoints,
             RubricChoices = new Dictionary<string, string>(submission.RubricChoices ?? [], StringComparer.Ordinal),

@@ -25,7 +25,7 @@
             <label asp-for="Due" class="ocat-label">@T["Due"]</label>
             <div class="ocat-end">
                 <input asp-for="Due" type="datetime-local" class="form-control" />
-                <span class="hint">@T["In your time zone. Work handed in after it is marked late. Empty means no due date."]</span>
+                <span class="hint">@T["In your time zone. Work handed in after it is marked late and loses the late penalty below. Empty means no due date."]</span>
             </div>
         </div>
 
@@ -43,6 +43,43 @@
                     <label asp-for="AllowResubmission" class="form-check-label">@T["Learners may hand the work in again until it is graded"]</label>
                     <span class="hint dashed">@T["The newest hand-in replaces the earlier one. A grader can always return work to hand in again."]</span>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">@T["Late work"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <span class="hint">@T["Applies only when the coursework has a due date. A part of a day late counts as a whole day."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="LatePenaltyPercentPerDay">
+            <label asp-for="LatePenaltyPercentPerDay" class="ocat-label">@T["Late penalty a day (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="LatePenaltyPercentPerDay" type="number" min="0" max="100" step="0.01" class="form-control" />
+                <span asp-validation-for="LatePenaltyPercentPerDay"></span>
+                <span class="hint">@T["The share of the grade late work loses for each day late. 0 takes nothing off."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="MaxLatePenaltyPercent">
+            <label asp-for="MaxLatePenaltyPercent" class="ocat-label">@T["Largest late penalty (%)"]</label>
+            <div class="ocat-end">
+                <input asp-for="MaxLatePenaltyPercent" type="number" min="0" max="100" step="0.01" class="form-control" />
+                <span asp-validation-for="MaxLatePenaltyPercent"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="CloseAfterDays">
+            <label asp-for="CloseAfterDays" class="ocat-label">@T["Stop taking work after (days)"]</label>
+            <div class="ocat-end">
+                <input asp-for="CloseAfterDays" type="number" min="0" step="1" class="form-control" />
+                <span asp-validation-for="CloseAfterDays"></span>
+                <span class="hint">@T["Whole days after the due date; 0 takes no late work. Empty takes late work at any time. Work a grader returns can still be handed in again."]</span>
             </div>
         </div>
     </div>

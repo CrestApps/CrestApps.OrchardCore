@@ -15,6 +15,14 @@
             {
                 <li class="list-inline-item"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Due"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(due, DateTimeKind.Utc), Format: "g"))</li>
             }
+            @if (part.DueUtc is not null && part.LatePenaltyPercentPerDay > 0)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-hourglass-end me-1" aria-hidden="true"></i>@T["Late work loses {0}% a day, up to {1}%", part.LatePenaltyPercentPerDay.ToString("0.##"), part.MaxLatePenaltyPercent.ToString("0.##")]</li>
+            }
+            @if (Model.CloseUtc is { } close)
+            {
+                <li class="list-inline-item"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Closes"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(close, DateTimeKind.Utc), Format: "g"))</li>
+            }
             @if (takesFiles)
             {
                 <li class="list-inline-item"><i class="fa-solid fa-paperclip me-1" aria-hidden="true"></i>@T.Plural(part.MaxFiles, "Up to 1 file", "Up to {0} files"), @T["{0} MB each", part.MaxFileSizeMb]@(string.IsNullOrEmpty(accept) ? null : " (" + accept + ")")</li>
@@ -36,6 +44,10 @@
                 @if (latest.Status == SubmissionStatus.Graded)
                 {
                     <p class="mb-1"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Your work is graded: {0}%.", latest.Score?.ToString("0.##")]</p>
+                    @if (latest.LatePenaltyPercent is > 0 && latest.RawScore is { } raw)
+                    {
+                        <p class="mb-1 small">@T["{0}% before a late penalty of {1}% (days late: {2}).", raw.ToString("0.##"), latest.LatePenaltyPercent.Value.ToString("0.##"), latest.DaysLate ?? 0]</p>
+                    }
                 }
                 else if (latest.Status == SubmissionStatus.Returned)
                 {
@@ -99,11 +111,16 @@
             }
         }
 
+        @if (!Model.CanSubmit && Model.Closed && Model.EnrollmentActive && (latest is null || latest.Status == SubmissionStatus.Submitted))
+        {
+            <p class="text-secondary small mb-0"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This coursework no longer takes work."]</p>
+        }
+
         @if (Model.CanSubmit)
         {
             @if (Model.PastDue)
             {
-                <p class="text-warning small mb-2"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T["The due date has passed. Work handed in now is marked late."]</p>
+                <p class="text-warning small mb-2"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@(part.LatePenaltyPercentPerDay > 0 ? T["The due date has passed. Work handed in now is marked late and loses the late penalty."] : T["The due date has passed. Work handed in now is marked late."])</p>
             }
 
             <form method="post" enctype="multipart/form-data" action="@Url.RouteUrl("LearningCourseworkSubmit", new { courseworkId = Model.CourseworkId })">

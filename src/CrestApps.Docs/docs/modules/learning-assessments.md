@@ -63,6 +63,32 @@ services.AddGradingQueueSource<MyWorkGradingQueueSource>();
 
 A source returns the count of its waiting work and its oldest items, at most `query.Take` of them, limited to `query.CourseIds` when that is not `null`. Each `GradingQueueItem` names its kind, the record, the learner, the course, the course item with its title, a short reference, an icon, the submitted time in UTC, and the area, controller, action and route values of the page that grades it. `GradingQueue` asks every source for the items before the page and the page itself, merges them by submitted time and pages across the merged list. [Learning Coursework](./learning-coursework) adds its submissions this way.
 
+## Gradebook
+
+The **Gradebook** page (`/Admin/learning/gradebook`, feature **Learning Gradebook**) shows, for one course, every learner with the score of each gradable item, the score of each grade category and the course grade, in percentages or on a grade scale.
+
+### How the course grade is computed
+
+An item counts in the course grade when it is gradable (**Counts toward the course grade** on the item) and its weight is more than zero. An item the learner has no score on counts as zero. `CourseGradeCalculator` in `Learning.Core` computes the grade wherever Learning stores or shows it (the enrollment's `Grade` and `Passed`, the completion criteria, the gradebook).
+
+- **A course without grade categories**: the course grade is the weighted mean of the items, each weighted by its item weight.
+- **A course with grade categories**: each category's score is the weighted mean (item weights) of its items, after its lowest scores are dropped. The course grade is the weighted mean of the category scores, each weighted by its category weight. A category with no item that counts is left out of the course grade.
+- **Items without a category** (or with a category the course no longer has) count as one more category, named **No category** in the gradebook, whose weight is the sum of their item weights. It drops nothing. In other words, each such item weighs in the course grade as if it were a category of its own with its item weight, which is also how a course without categories works.
+
+For example, Homework (weight 40) holds two worksheets that scored 100 and 50, so it scores 75; Exams (weight 60) holds a midterm (item weight 2) at 90 and a quiz (item weight 1) at 60, so it scores 80. The course grade is (40 × 75 + 60 × 80) / 100 = 78.
+
+### Grade categories and drop lowest
+
+Grade categories belong to the course: the **Grade categories** card of the course editor lists them, each with a name, a weight (more than zero) and **Drop lowest**, the number of the lowest scores of the category to leave out. **Add a category** and the remove buttons work without a page reload; rows without a name are left out, and a new category gets its id when the course is saved. The categories are stored on `CoursePart.GradeCategories` (`GradeCategory`: `Id`, `Name`, `Weight`, `DropLowest`).
+
+The editor of a gradable course item has a **Grade category** select with the categories of its course (the course that contains the item), shown once the course has categories. The choice is stored on `CourseItemPart.GradeCategoryId`.
+
+Dropping takes the lowest scores first; a missing score (zero) is dropped before a real zero, and items with the same score are dropped in outline order. A category never drops all its items: at least one item always counts, however large **Drop lowest** is.
+
+In the gradebook each category has a column, after the items and before the course grade. A dropped score is struck through and marked **dropped**. `CourseGradeCalculator.ComputeBreakdown` returns the same breakdown (`CourseGradeBreakdown`: the grade, and for each category its score, its items and the items it dropped) for other pages and modules.
+
+The course grade stored on an enrollment is computed again when the learner's progress changes; after the categories or weights of a course change, the stored grade of a learner follows on their next result.
+
 ## Permissions
 
 | Permission | Lets a person |

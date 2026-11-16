@@ -75,6 +75,9 @@ public sealed class SubmissionReportDataSet : IndexedReportDataSet<Submission, S
         AddField("SubmittedUtc", S["Handed in"], DataFieldType.DateTime, record => record.SubmittedUtc, group);
         AddField("FileCount", S["Files"], DataFieldType.Integer, record => record.Files?.Count ?? 0, group);
         AddField("Score", S["Grade (%)"], DataFieldType.Decimal, record => record.Score, group);
+        AddField("RawScore", S["Grade before the late penalty (%)"], DataFieldType.Decimal, record => record.RawScore, group);
+        AddField("LatePenaltyPercent", S["Late penalty (%)"], DataFieldType.Decimal, record => record.LatePenaltyPercent, group);
+        AddField("DaysLate", S["Days late"], DataFieldType.Integer, record => record.DaysLate, group);
         AddField("Points", S["Points"], DataFieldType.Decimal, record => record.Points, group);
         AddField("MaxPoints", S["Out of"], DataFieldType.Decimal, record => record.MaxPoints, group);
         AddField("GraderId", S["Grader"], DataFieldType.Text, record => record.GraderId, group).Identifier(ReportDataReferences.User());

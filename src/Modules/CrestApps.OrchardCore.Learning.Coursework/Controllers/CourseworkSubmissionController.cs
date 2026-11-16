@@ -153,6 +153,7 @@ public sealed class CourseworkSubmissionController : Controller
             SubmissionErrors.AlreadySubmitted => H["You already handed this work in. You can hand it in again only if a grader returns it."],
             SubmissionErrors.AlreadyGraded => H["Your work is graded, so it cannot be handed in again."],
             SubmissionErrors.Busy => H["Your work is being saved. Try again in a moment."],
+            SubmissionErrors.Closed => H["This coursework no longer takes work: it closed some days after the due date. Ask your instructor if you need more time."],
             _ => H["Your work could not be handed in."],
         };
 

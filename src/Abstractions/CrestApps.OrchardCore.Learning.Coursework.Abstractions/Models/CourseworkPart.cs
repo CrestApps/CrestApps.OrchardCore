@@ -14,6 +14,23 @@ public sealed class CourseworkPart : ContentPart
     public DateTime? DueUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the percentage taken off the score for each day, or part of a day, the work is late. Zero means no
+    /// late penalty.
+    /// </summary>
+    public decimal LatePenaltyPercentPerDay { get; set; }
+
+    /// <summary>
+    /// Gets or sets the largest late penalty, as a percentage from 0 to 100.
+    /// </summary>
+    public decimal MaxLatePenaltyPercent { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets how many whole days after the due date the coursework stops taking work, or
+    /// <see langword="null"/> to take late work at any time. Work a grader returned can still be handed in again.
+    /// </summary>
+    public int? CloseAfterDays { get; set; }
+
+    /// <summary>
     /// Gets or sets what the learner hands in.
     /// </summary>
     public CourseworkSubmissionType SubmissionType { get; set; } = CourseworkSubmissionType.TextAndFiles;

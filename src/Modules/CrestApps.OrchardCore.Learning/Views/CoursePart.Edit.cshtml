@@ -1,5 +1,10 @@
 @model CoursePartViewModel
 
+@{
+    var categoriesPrefix = Html.NameFor(m => m.GradeCategories).ToString();
+    var categoriesEditorId = Html.IdFor(m => m.GradeCategories) + "-editor";
+}
+
 <div class="card mb-3">
     <div class="card-header">@T["Course"]</div>
     <div class="card-body">
@@ -95,7 +100,7 @@
             <div class="ocat-end">
                 <input asp-for="PassMark" type="number" min="0" max="100" step="0.01" class="form-control" />
                 <span asp-validation-for="PassMark"></span>
-                <span class="hint">@T["The course grade is the weighted mean of the gradable items. Leave empty for a course without a grade."]</span>
+                <span class="hint">@T["The course grade is the weighted mean of the gradable items, or of the grade categories below when the course has them. Leave empty for a course without a grade."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="MinimumGrade">
@@ -129,6 +134,58 @@
         </div>
     </div>
 </div>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Grade categories"]</div>
+    <div class="card-body" id="@categoriesEditorId">
+        <span class="hint d-block mb-2">@T["Optional. A category's score is the weighted mean of its items after its lowest scores are dropped, and the course grade is the weighted mean of the categories. A gradable item without a category counts as a category of its own, weighted by its item weight. Rows without a name are left out."]</span>
+        <span asp-validation-for="GradeCategories"></span>
+        <div data-grade-categories>
+            @for (var i = 0; i < Model.GradeCategories.Count; i++)
+            {
+                <partial name="GradeCategoryRow" model="@(new GradeCategoryRowModel { Prefix = categoriesPrefix, Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), Category = Model.GradeCategories[i] })" />
+            }
+        </div>
+        <template data-grade-category-template>
+            <partial name="GradeCategoryRow" model="@(new GradeCategoryRowModel { Prefix = categoriesPrefix, Index = "0", Category = new GradeCategoryRowViewModel { Weight = 1, DropLowest = 0 } })" />
+        </template>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-grade-category-add><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add a category"]</button>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const editor = document.getElementById('@categoriesEditorId');
+        const rows = editor.querySelector('[data-grade-categories]');
+        const template = editor.querySelector('[data-grade-category-template]');
+        const prefix = '@categoriesPrefix';
+
+        // Field names are Prefix[i].Name: number the rows again after any change, so the posted list has no gaps.
+        function renumber() {
+            rows.querySelectorAll('[data-grade-category]').forEach(function (row, i) {
+                row.querySelectorAll('[name]').forEach(function (input) {
+                    if (input.name.indexOf(prefix + '[') === 0) {
+                        input.name = prefix + '[' + i + ']' + input.name.substring(input.name.indexOf(']') + 1);
+                    }
+                });
+            });
+        }
+
+        rows.addEventListener('click', function (event) {
+            const remove = event.target.closest('[data-grade-category-remove]');
+
+            if (remove) {
+                remove.closest('[data-grade-category]').remove();
+                renumber();
+            }
+        });
+
+        editor.querySelector('[data-grade-category-add]').addEventListener('click', function () {
+            rows.appendChild(template.content.cloneNode(true));
+            renumber();
+        });
+    })();
+</script>
 
 <div class="card mb-3">
     <div class="card-header">@T["Course staff"]</div>

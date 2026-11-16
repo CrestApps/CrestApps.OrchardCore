@@ -53,11 +53,11 @@ Lessons are contained in their course through Orchard's List part, so **New** on
 
 ### Course part
 
-`Code`, `Summary`, `Level`, `EstimatedMinutes`, `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash outside the content item, in `LearningSecretStore`, never shown again; five wrong keys for one course within 15 minutes lock that person out of it for 15 minutes), `AccessDays` (how long an enrollment gives access; empty for no end), `PassMark`, `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
+`Code`, `Summary`, `Level`, `EstimatedMinutes`, `EnrollmentMode` (`Closed`, `Open`, `Key`, `Approval`), the enrollment key (stored as a salted hash outside the content item, in `LearningSecretStore`, never shown again; five wrong keys for one course within 15 minutes lock that person out of it for 15 minutes), `AccessDays` (how long an enrollment gives access; empty for no end), `PassMark`, `GradeCategories` (gradebook categories with a weight and a number of lowest scores to drop; see [Learning Assessments](./learning-assessments#gradebook)), `Prerequisites` (other courses to complete first), `CompletionCriteria` and `Staff` (a user and a role: `Instructor`, `Assistant`, `Grader` or `Observer`).
 
 ### Course item part
 
-`CompletionMode` (`Viewed`, `MarkedDone`, `MinimumTime`, `Watched`, `Acknowledged`), `MinimumMinutes`, `EstimatedMinutes`, `Gradable`, `Weight`, `PassMark`, `FreePreview` (anyone may open it), `AllowSelfReported` and `ReleaseRules`.
+`CompletionMode` (`Viewed`, `MarkedDone`, `MinimumTime`, `Watched`, `Acknowledged`), `MinimumMinutes`, `EstimatedMinutes`, `Gradable`, `Weight`, `GradeCategoryId` (the gradebook category of its course), `PassMark`, `FreePreview` (anyone may open it), `AllowSelfReported` and `ReleaseRules`.
 
 ## Records
 

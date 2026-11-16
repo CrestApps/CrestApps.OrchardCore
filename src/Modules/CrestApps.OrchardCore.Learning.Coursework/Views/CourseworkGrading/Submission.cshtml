@@ -38,6 +38,10 @@
                     <span class="badge text-bg-warning ms-1">@T["Returned to hand in again"]</span>
                 }
             </p>
+            @if (submission.Status == SubmissionStatus.Graded && submission.RawScore is { } rawScore && submission.LatePenaltyPercent is > 0)
+            {
+                <p class="mb-2 small">@T["Raw score {0}%, late penalty {1}% (days late: {2}), final score {3}%.", rawScore.ToString("0.##"), submission.LatePenaltyPercent.Value.ToString("0.##"), submission.DaysLate ?? 0, submission.Score?.ToString("0.##")]</p>
+            }
             @if (!string.IsNullOrWhiteSpace(submission.Text))
             {
                 <div class="border rounded p-2 mb-2 text-break" style="white-space: pre-wrap">@submission.Text</div>
@@ -63,6 +67,14 @@
         <div class="card text-bg-theme mb-3">
             <div class="card-header">@(regrade ? T["Grade again"] : T["Grade"])</div>
             <div class="card-body">
+                @if (Model.LatePenaltyPercent > 0)
+                {
+                    <div class="ocat-wrapper">
+                        <div class="ocat-end-offset">
+                            <span class="hint">@T["Handed in late (days late: {0}): the grade you give loses a late penalty of {1}%.", Model.DaysLate, Model.LatePenaltyPercent.ToString("0.##")]</span>
+                        </div>
+                    </div>
+                }
                 @if (Model.Rubric is not null)
                 {
                     @foreach (var criterion in Model.Rubric.Criteria)
@@ -130,7 +142,13 @@
                 @foreach (var grade in submission.History.AsEnumerable().Reverse())
                 {
                     <li class="list-group-item">
-                        <div>@T["{0}% by {1}", grade.Score?.ToString("0.##"), Model.Names.TryGetValue(grade.GraderId ?? string.Empty, out var grader) ? grader : grade.GraderId]</div>
+                        <div>
+                            @T["{0}% by {1}", grade.Score?.ToString("0.##"), Model.Names.TryGetValue(grade.GraderId ?? string.Empty, out var grader) ? grader : grade.GraderId]
+                            @if (grade.LatePenaltyPercent is > 0 && grade.RawScore is { } earlierRaw)
+                            {
+                                <span class="text-secondary small">@T["({0}% before the late penalty of {1}%)", earlierRaw.ToString("0.##"), grade.LatePenaltyPercent.Value.ToString("0.##")]</span>
+                            }
+                        </div>
                         <div class="small text-secondary">@T["Replaced by {0}:", Model.Names.TryGetValue(grade.ReplacedBy ?? string.Empty, out var replacer) ? replacer : grade.ReplacedBy] @grade.Reason</div>
                     </li>
                 }

@@ -14,6 +14,15 @@ public class CourseworkPartViewModel
     /// <summary>Gets or sets the due date, in the editor's time zone.</summary>
     public DateTime? Due { get; set; }
 
+    /// <summary>Gets or sets the percentage taken off a score for each day late.</summary>
+    public decimal LatePenaltyPercentPerDay { get; set; }
+
+    /// <summary>Gets or sets the largest late penalty, as a percentage.</summary>
+    public decimal MaxLatePenaltyPercent { get; set; }
+
+    /// <summary>Gets or sets how many whole days after the due date the coursework stops taking work.</summary>
+    public int? CloseAfterDays { get; set; }
+
     /// <summary>Gets or sets what the learner hands in.</summary>
     public CourseworkSubmissionType SubmissionType { get; set; }
 
@@ -141,6 +150,12 @@ public class CourseworkPanelViewModel
     /// <summary>Gets or sets whether the due date passed.</summary>
     public bool PastDue { get; set; }
 
+    /// <summary>Gets or sets when the coursework stops taking work, in UTC, or <see langword="null"/> when it never does.</summary>
+    public DateTime? CloseUtc { get; set; }
+
+    /// <summary>Gets or sets whether the coursework stopped taking work.</summary>
+    public bool Closed { get; set; }
+
     /// <summary>Gets or sets the rubric the work is graded against, or <see langword="null"/>.</summary>
     public RubricPart Rubric { get; set; }
 }
@@ -211,6 +226,14 @@ public class SubmissionGradingViewModel
     /// <summary>Gets or sets whether the submission can be graded now.</summary>
     [BindNever]
     public bool CanGrade { get; set; }
+
+    /// <summary>Gets or sets the days the work was late: the ones kept at its first grade, or else the ones the policy gives now.</summary>
+    [BindNever]
+    public int DaysLate { get; set; }
+
+    /// <summary>Gets or sets the late penalty the grade takes, as a percentage of the raw score.</summary>
+    [BindNever]
+    public decimal LatePenaltyPercent { get; set; }
 
     /// <summary>Gets or sets the level chosen for each criterion, by criterion id.</summary>
     public Dictionary<string, string> Choices { get; set; } = new(StringComparer.Ordinal);

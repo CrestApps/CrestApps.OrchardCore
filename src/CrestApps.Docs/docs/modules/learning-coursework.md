@@ -19,6 +19,7 @@ Coursework is a content item of the **Coursework** type (`CourseworkLesson`, def
 | Property | Meaning |
 | --- | --- |
 | `DueUtc` | When the work is due. The editor takes it in the editor's time zone and keeps it in UTC; work handed in after it is marked late. Empty means no due date. |
+| `LatePenaltyPercentPerDay`, `MaxLatePenaltyPercent`, `CloseAfterDays` | The late policy (see [Late work](#late-work)). |
 | `SubmissionType` | What the learner hands in: `Text`, `Files`, or `TextAndFiles` (text, files or both, the default). |
 | `AllowedExtensions` | The file types taken, such as `.pdf, .docx`. Empty takes any type. |
 | `MaxFileSizeMb`, `MaxFiles` | The largest file (1 to 50 MB) and the most files (1 to 10). |
@@ -54,6 +55,22 @@ Every hand-in, grade and return runs under one lock per enrollment and coursewor
 
 The **Grading** list of [Learning Assessments](./learning-assessments) (`/Admin/learning/grading`) shows the submissions that wait for a grader beside the quiz attempts that do, oldest first, each linking to its own grading page. Coursework adds them through the grading list's extension point, `IGradingQueueSource` (registered with `AddGradingQueueSource<T>()`).
 
+## Late work
+
+The **Late work** card of the coursework editor sets the late policy. It applies only when the coursework has a due date.
+
+- **Late penalty a day (%)** (`LatePenaltyPercentPerDay`): the share of the grade late work loses for each day late. 0, the default, takes nothing off.
+- **Largest late penalty (%)** (`MaxLatePenaltyPercent`): the most the penalty can reach, from 0 to 100 (100 by default).
+- **Stop taking work after (days)** (`CloseAfterDays`): whole days after the due date after which the coursework takes no more work. 0 takes no late work; empty takes late work at any time.
+
+**Days late** are the time between the due date and the hand-in, a part of a day counting as a whole day: 1 minute late and 24 hours late are both 1 day, 24 hours and 1 minute late are 2 days. Work on time is 0 days late. The **penalty** is the days late times the penalty a day, no more than the largest penalty. The **final score** is the raw score less the penalty, `raw × (1 − penalty / 100)`, rounded to two decimals (`CourseworkLatePolicy`).
+
+When work is first graded, `GradeAsync` keeps the raw score (`RawScore`), the days late (`DaysLate`), the penalty (`LatePenaltyPercent`) and the final score (`Score`) on the submission, and reports the final score to the course grade. The days late are counted from the due date the coursework has at that moment, so moving the due date before grading excuses late work. A regrade applies the same days late and penalty to the new raw score, even when the policy or the due date changed since; the earlier grade keeps its own raw score and penalty in the history.
+
+After the close date, `SubmitAsync` refuses work with `SubmissionErrors.Closed`, and the learner sees that the coursework no longer takes work. Work a grader returned for resubmission is still taken after the close date (it is late, and the penalty applies to it).
+
+The learner panel shows the penalty a day and the close date with the due date. The grading page tells the grader before grading how many days late the work is and the penalty the grade will take; once graded, the grading page and the learner panel show the raw score, the penalty and the final score. Times are shown in the viewer's time zone.
+
 ## Grades shown to learners
 
 A learner sees the grade and the feedback as soon as the work is graded. The Gradebook has no setting yet to hold grades until an instructor posts them; when it gets one, the coursework panel will follow it.
@@ -70,7 +87,7 @@ The events carry `SubmissionId`, `UserId`, `CourseworkId`, `CourseId`, `Enrollme
 
 ## Data, recipes and personal data
 
-- **Data source.** The **Learning coursework** data source (`LearningCoursework`, for Data Pipelines and the Report Builder) has a **Submissions** data set: one row per hand-in with the learner's user id, the course, the coursework, the attempt, the state, whether it was late, when it came, the number of files, the grade, the grader and the number of regrades. It holds no text, files, feedback or e-mail addresses, and needs **View learning reports**.
+- **Data source.** The **Learning coursework** data source (`LearningCoursework`, for Data Pipelines and the Report Builder) has a **Submissions** data set: one row per hand-in with the learner's user id, the course, the coursework, the attempt, the state, whether it was late, when it came, the number of files, the grade, the grade before the late penalty, the penalty, the days late, the grader and the number of regrades. It holds no text, files, feedback or e-mail addresses, and needs **View learning reports**.
 - **Recipe and deployment.** Submissions are learner records with the `LearningSubmissions` recipe and deployment step (section 10.1 of the plan). The deployment step is opt-in, can be limited to one coursework item, reads 500 submissions a page, names people by user name and needs **Export learner records**; the export is told to the learner record export observers. The step carries the file names and ids but not the files themselves, which stay in the protected store of the site they were handed in on. Coursework items and rubrics are content and move with the content steps.
 - **Personal data.** The export lists a person's submissions with their text, file names, grade and feedback. Erasure deletes their files from the protected store and clears the text, the file list and every feedback and reason, but keeps each submission's state, dates and grade, because the course grade of the enrollment rests on them; the erasure result says how many were kept this way.
 
@@ -90,7 +107,6 @@ Coursework adds no permission of its own. Grading uses the rule of the quiz grad
 
 ## Not in this version
 
-- Gradebook categories, drop-lowest and late penalties (Phase 7 of the plan).
 - Holding grades until an instructor posts them.
 - Notifications, Audit Trail events and webhooks for coursework.
 - Group work and peer review.

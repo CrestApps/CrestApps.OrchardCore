@@ -16,8 +16,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Learning.Drivers;
 
 /// <summary>
-/// The editor of the course item part: how the item is completed, whether it is graded, whether it is a free preview and
-/// when it opens. The kind comes from the content type and never changes on an item.
+/// The editor of the course item part: how the item is completed, whether it is graded and in which gradebook category
+/// of its course, whether it is a free preview and when it opens. The kind comes from the content type and never
+/// changes on an item.
 /// </summary>
 internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<CourseItemPart>
 {
@@ -77,6 +78,20 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
             var courseId = part.ContentItem.TryGet<ContainedPart>(out var contained) ? contained.ListContentItemId : null;
 
             model.ItemOptions = await _editorOptions.GetItemOptionsAsync(courseId, part.ContentItem.ContentItemId, S["Opens with the course"], model.AfterItemId);
+
+            var categories = await _editorOptions.GetGradeCategoriesAsync(courseId);
+
+            model.GradeCategoryId = part.GradeCategoryId;
+
+            if (categories.Count > 0)
+            {
+                model.GradeCategoryOptions.Add(new SelectListItem(S["No category"], string.Empty, string.IsNullOrEmpty(part.GradeCategoryId)));
+
+                foreach (var category in categories)
+                {
+                    model.GradeCategoryOptions.Add(new SelectListItem(category.Name, category.Id, category.Id == part.GradeCategoryId));
+                }
+            }
         });
     }
 
@@ -116,6 +131,12 @@ internal sealed class CourseItemPartDisplayDriver : ContentPartDisplayDriver<Cou
         part.Weight = model.Weight;
         part.PassMark = model.PassMark;
         part.FreePreview = model.FreePreview;
+
+        // Only a category of the item's course is kept; the course is the list that contains the item.
+        var courseId = part.ContentItem.TryGet<ContainedPart>(out var contained) ? contained.ListContentItemId : null;
+        var categories = await _editorOptions.GetGradeCategoriesAsync(courseId);
+
+        part.GradeCategoryId = categories.Any(category => category.Id == model.GradeCategoryId) ? model.GradeCategoryId : null;
         part.AllowSelfReported = model.AllowSelfReported;
 
         var rules = part.ReleaseRules
