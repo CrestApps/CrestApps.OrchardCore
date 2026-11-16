@@ -72,6 +72,7 @@ public sealed class Startup : StartupBase
 
         services.AddTicketsCore();
         services.AddScoped<IContentHandler, TicketContentCleanup>();
+        services.AddScoped<IContentHandler, TicketCategoryTaxonomyHandler>();
         services.AddTimelineAccessProvider<TicketTimelineAccess>();
         services.AddRecordSource<TicketRecordSource>();
         services.AddPersonalDataContributor<TicketPersonalDataContributor>();
