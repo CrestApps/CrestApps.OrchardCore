@@ -40,6 +40,34 @@ public sealed class IncomeTaxStartup : StartupBase
         services.AddDataMigration<IncomeTaxMigrations>()
             .AddIndexProvider<IncomeTaxRuleIndexProvider>();
         services.AddDisplayDriver<IncomeTaxRule, IncomeTaxRuleDisplayDriver>();
+        services.AddDisplayDriver<IncomeTaxRule, IncomeTaxFlatRateDisplayDriver>();
+        services.AddDisplayDriver<IncomeTaxRule, IncomeTaxShareOfTaxDisplayDriver>();
+        services.AddDisplayDriver<IncomeTaxRule, IncomeTaxTableDisplayDriver>();
+        services.AddDisplayDriver<IncomeTaxRule, IncomeTaxFixedAmountDisplayDriver>();
+        services.AddDisplayDriver<IncomeTaxRule, IncomeTaxWithholdingDisplayDriver>();
+        services.AddIncomeTaxRuleSource(
+            IncomeTaxRuleSources.FlatRate,
+            global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("Flat rate"),
+            global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("A rate on pay, with an optional yearly wage base, threshold, exemption and maximum, or the payer's own rate: Social Security, Medicare, unemployment insurance, CPP, EI."),
+            TaxCalculationMethodNames.Percentage,
+            position: 10);
+        services.AddIncomeTaxRuleSource(
+            IncomeTaxRuleSources.ShareOfTax,
+            global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("Share of another tax"),
+            global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("A multiple of another tax of the same pay, such as the employer's share of a contribution (1.4 times EI, once CPP)."),
+            TaxCalculationMethodNames.Percentage,
+            position: 20);
+        services.AddIncomeTaxRuleSource(
+            IncomeTaxRuleSources.TaxTable,
+            global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("Tax table or brackets"),
+            global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("A tax table or progressive brackets, optionally on a year's income with the person's election, such as a state or local income tax."),
+            position: 30);
+        services.AddIncomeTaxRuleSource(
+            IncomeTaxRuleSources.FixedAmount,
+            global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("Fixed amount"),
+            global::OrchardCore.Localization.LocalizationSource.Create<IncomeTaxStartup>("The same amount each pay, such as a local head tax."),
+            TaxCalculationMethodNames.FixedAmount,
+            position: 40);
         services.AddNavigationProvider<IncomeTaxAdminMenu>();
         services.AddPermissionProvider<IncomeTaxPermissionsProvider>();
     }
@@ -96,6 +124,12 @@ public sealed class UnitedStatesIncomeTaxStartup : StartupBase
     {
         services.AddElectionFieldSet(UnitedStatesElectionFields.Create());
         services.AddIncomeTaxWithholdingMethod<UnitedStatesFormW4WithholdingMethod>();
+        services.AddIncomeTaxRuleSource(
+            UnitedStatesIncomeTax.FormW4Method,
+            global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesIncomeTaxStartup>("Federal income tax (Form W-4)"),
+            global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesIncomeTaxStartup>("The IRS percentage method of Publication 15-T, by the filing status and amounts of each person's Form W-4."),
+            UnitedStatesIncomeTax.FormW4Method,
+            position: 50);
         services.AddIncomeTaxCategory(IncomeTaxCategories.ContractorWithholding, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesIncomeTaxStartup>("Backup withholding (contractors)"));
     }
 }
@@ -113,7 +147,7 @@ public sealed class CanadaIncomeTaxStartup : StartupBase
 }
 
 /// <summary>
-/// Adds Taxes &gt; Income tax rules.
+/// Adds Commerce &gt; Taxation &gt; Income tax rules, with the rest of Taxation's setup.
 /// </summary>
 internal sealed class IncomeTaxAdminMenu : AdminNavigationProvider
 {
@@ -127,14 +161,14 @@ internal sealed class IncomeTaxAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["Taxes"], S["Taxes"].PrefixPosition(), taxes => taxes
-                .Id("taxes")
-                .AddClass("taxes")
+            .Add(S["Commerce"], commerce => commerce
+                .Add(S["Taxation"], S["Taxation"].PrefixPosition(), taxation => taxation
+                .Id("taxation")
                 .Add(S["Income tax rules"], S["Income tax rules"].PrefixPosition(), rules => rules
                     .Id("taxationIncomeTaxRules")
                     .Action("Index", "IncomeTaxRules", "CrestApps.OrchardCore.Taxation")
                     .Permission(global::CrestApps.OrchardCore.Taxation.Core.TaxationPermissions.ManageIncomeTaxRules)
-                    .LocalNav()));
+                    .LocalNav())));
 
         return ValueTask.CompletedTask;
     }

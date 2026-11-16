@@ -1,8 +1,21 @@
 @model ShapeViewModel<IncomeTaxRule>
 @using System.Globalization
+@using CrestApps.OrchardCore.Taxation.Services
+@using Microsoft.Extensions.Localization
+@using Microsoft.Extensions.Options
+@using OrchardCore
+
+@inject IOptions<IncomeTaxRuleSourceOptions> SourceOptions
+@inject IStringLocalizerFactory LocalizerFactory
 
 @{
     var rule = Model.Value;
+    var source = rule.Source is { } name ? SourceOptions.Value.Sources.GetValueOrDefault(name) : null;
+}
+
+@if (source is not null)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Kind of rule"]">@LocalizerFactory.Localize(source.DisplayName).Value</span>
 }
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Jurisdiction"]">@rule.Jurisdiction</span>

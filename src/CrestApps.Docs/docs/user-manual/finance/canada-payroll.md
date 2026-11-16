@@ -11,7 +11,7 @@ Canadian source deductions come from **Canada Income Tax** in Taxation, which fo
 
 | | |
 | --- | --- |
-| **Menu** | Taxes > Income tax rules, Payroll > Employers, the pay profile's **Tax elections**, Payroll > Liabilities and Filings |
+| **Menu** | Commerce > Taxation > Income tax rules, Payroll > Employers, the pay profile's **Tax elections**, Payroll > Liabilities and Filings |
 | **Permission** | Manage income tax rules for the rules; Manage employers; Manage pay profiles; Manage payroll filings |
 | **Feature** | Canada Income Tax and Canada Payroll Filings |
 

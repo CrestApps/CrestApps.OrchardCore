@@ -65,6 +65,14 @@ public sealed class IncomeTaxRule : CatalogItem, INameAwareModel, IModifiedUtcAw
     public IncomeTaxPayer Payer { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of rule, chosen when it is added and fixed afterwards: one of
+    /// <see cref="IncomeTaxRuleSources"/> or a source a country pack registers (<c>IncomeTaxRuleSourceOptions</c>),
+    /// such as UnitedStatesFormW4. It decides which fields the rule's editor shows; the calculation reads only
+    /// <see cref="Method"/> and the amounts. A rule saved without one gets <see cref="IncomeTaxRuleSources.Infer"/>.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of Taxation's calculation method, such as Percentage or Progressive, or of a withholding
     /// method a country pack adds (<c>IIncomeTaxWithholdingMethod</c>), such as UnitedStatesFormW4.
     /// </summary>

@@ -68,6 +68,7 @@ internal sealed class IncomeTaxRulesRecipeStepSchema : IRecipeStep
                             ("IncomeKinds", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Employment", "Contractor", "Pension", "Other")).Description("The kinds of income the rule applies to; empty for employment income (or contractor payments for ContractorWithholding).")),
                             ("Category", Text("The tax category whose income is taxed: IncomeTax, SocialInsurance, Unemployment or one a country pack adds.")),
                             ("Payer", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Employee", "Employer").Description("Who pays.")),
+                            ("Source", Text("The kind of rule, which decides the fields its editor shows: FlatRate, ShareOfTax, TaxTable, FixedAmount, or one a country pack adds, such as UnitedStatesFormW4, CanadaFederal, CanadaProvincial or QuebecTP1015. Omitted, it comes from the method and the share.")),
                             ("Method", Text("A Taxation calculation method (Percentage, FixedAmount, TaxTable, Progressive or Threshold) or a withholding method a country pack adds, such as UnitedStatesFormW4, CanadaFederal, CanadaProvincial or QuebecTP1015.")),
                             ("Rate", Number("The rate as a percent, such as 6.2.")),
                             ("FixedAmount", Number("The fixed amount.")),

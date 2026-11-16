@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -16,7 +18,7 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Taxation.Controllers;
 
 /// <summary>
-/// Taxes &gt; Income tax rules: the rules the built-in income tax provider works taxes on income out with. They are the
+/// Commerce &gt; Taxation &gt; Income tax rules: the rules the built-in income tax provider works taxes on income out with. They are the
 /// same for every payer, and editing them is setup, so they need their own permission.
 /// </summary>
 [Admin]
@@ -52,6 +54,32 @@ public sealed class IncomeTaxRulesController : CatalogAdminController<IncomeTaxR
 
     protected override LocalizedHtmlString DeletedNotification
         => H["The income tax rule has been removed."];
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A rule is one kind, chosen in "Add income tax rule" (<c>?source=FlatRate</c>) and fixed afterwards; its source's
+    /// method is set from the start. With one source on offer, it is that one.
+    /// </remarks>
+    protected override Task<bool> InitializeNewAsync(IncomeTaxRule model)
+    {
+        var sources = HttpContext.RequestServices.GetRequiredService<IOptions<IncomeTaxRuleSourceOptions>>().Value.Sources;
+        var requested = Request.Query["source"].ToString();
+
+        if (string.IsNullOrWhiteSpace(requested) && sources.Count == 1)
+        {
+            requested = sources.Keys.First();
+        }
+
+        if (string.IsNullOrWhiteSpace(requested) || !sources.TryGetValue(requested, out var source))
+        {
+            return Task.FromResult(false);
+        }
+
+        model.Source = source.Name;
+        model.Method = source.Method ?? TaxCalculationMethodNames.TaxTable;
+
+        return Task.FromResult(true);
+    }
 
     [Admin("taxation/income-tax-rules", "IncomeTaxRulesIndex")]
     public Task<IActionResult> Index()

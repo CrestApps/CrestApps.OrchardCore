@@ -201,6 +201,24 @@ public static class CanadaIncomeTax
         services.AddIncomeTaxWithholdingMethod<CanadaFederalWithholdingMethod>();
         services.AddIncomeTaxWithholdingMethod<CanadaProvincialWithholdingMethod>();
         services.AddIncomeTaxWithholdingMethod<QuebecWithholdingMethod>();
+        services.AddIncomeTaxRuleSource(
+            FederalMethod,
+            LocalizationSource.Create("Federal income tax (TD1)", typeof(CanadaIncomeTax)),
+            LocalizationSource.Create("The CRA's formulas of T4127 for federal tax, with each person's federal TD1 claim.", typeof(CanadaIncomeTax)),
+            FederalMethod,
+            position: 60);
+        services.AddIncomeTaxRuleSource(
+            ProvincialMethod,
+            LocalizationSource.Create("Provincial or territorial income tax (TD1)", typeof(CanadaIncomeTax)),
+            LocalizationSource.Create("The CRA's formulas of T4127 for a province's or territory's tax outside Quebec, with each person's provincial TD1 claim.", typeof(CanadaIncomeTax)),
+            ProvincialMethod,
+            position: 61);
+        services.AddIncomeTaxRuleSource(
+            QuebecMethod,
+            LocalizationSource.Create("Quebec income tax (TP-1015.3)", typeof(CanadaIncomeTax)),
+            LocalizationSource.Create("Revenu Quebec's formulas of TP-1015.F for Quebec tax, with each person's TP-1015.3 claim.", typeof(CanadaIncomeTax)),
+            QuebecMethod,
+            position: 62);
 
         return services;
     }

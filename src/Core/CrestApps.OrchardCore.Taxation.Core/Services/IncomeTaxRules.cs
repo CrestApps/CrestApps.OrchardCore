@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using YesSql.Indexes;
@@ -161,6 +162,7 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
         // A recipe or a deployment plan hands the values in; a page sets them itself and passes none.
         CatalogDeploymentSerializer.Populate(context.Model, context.Data);
         Normalize(context.Model);
+        EnsureSource(context.Model);
 
         return Task.CompletedTask;
     }
@@ -178,9 +180,28 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
     {
         CatalogDeploymentSerializer.Populate(context.Model, context.Data);
         Normalize(context.Model);
+        EnsureSource(context.Model);
         context.Model.ModifiedUtc = _clock.UtcNow;
 
         return Task.CompletedTask;
+    }
+
+    // A rule saved or imported before rules had a source gets one from what it holds; a source with a method of its own
+    // sets it, so a recipe can name the source alone.
+    private void EnsureSource(IncomeTaxRule rule)
+    {
+        if (string.IsNullOrWhiteSpace(rule.Source))
+        {
+            var withholding = _services.GetServices<IIncomeTaxWithholdingMethod>().Select(method => method.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            rule.Source = IncomeTaxRuleSources.Infer(rule, withholding.Contains);
+        }
+
+        if (_services.GetService<IOptions<IncomeTaxRuleSourceOptions>>()?.Value.Sources.GetValueOrDefault(rule.Source) is { Method: { } method } source)
+        {
+            rule.Source = source.Name;
+            rule.Method = method;
+        }
     }
 
     // Trims and upper-cases what a page, a recipe or a deployment plan typed.

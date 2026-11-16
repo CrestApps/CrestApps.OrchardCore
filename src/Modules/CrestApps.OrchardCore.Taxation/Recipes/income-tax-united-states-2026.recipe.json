@@ -426,6 +426,7 @@
           "EffectiveFrom": "2026-01-01",
           "EffectiveTo": "2026-12-31",
           "Enabled": true,
+          "Source": "UnitedStatesFormW4",
           "Method": "UnitedStatesFormW4",
           "UsesElections": true,
           "AllowanceAmount": 4300,
@@ -455,6 +456,7 @@
           "EffectiveFrom": "2026-01-01",
           "EffectiveTo": "2026-12-31",
           "Enabled": true,
+          "Source": "FlatRate",
           "Method": "Percentage",
           "Rate": 6.2,
           "WageBase": 184500
@@ -469,6 +471,7 @@
           "EffectiveFrom": "2026-01-01",
           "EffectiveTo": "2026-12-31",
           "Enabled": true,
+          "Source": "FlatRate",
           "Method": "Percentage",
           "Rate": 6.2,
           "WageBase": 184500
@@ -483,6 +486,7 @@
           "EffectiveFrom": "2026-01-01",
           "EffectiveTo": "2026-12-31",
           "Enabled": true,
+          "Source": "FlatRate",
           "Method": "Percentage",
           "Rate": 1.45
         },
@@ -496,6 +500,7 @@
           "EffectiveFrom": "2026-01-01",
           "EffectiveTo": "2026-12-31",
           "Enabled": true,
+          "Source": "FlatRate",
           "Method": "Percentage",
           "Rate": 1.45
         },
@@ -509,6 +514,7 @@
           "EffectiveFrom": "2026-01-01",
           "EffectiveTo": "2026-12-31",
           "Enabled": true,
+          "Source": "FlatRate",
           "Method": "Percentage",
           "Rate": 0.9,
           "WageThreshold": 200000
@@ -523,6 +529,7 @@
           "EffectiveFrom": "2026-01-01",
           "EffectiveTo": "2026-12-31",
           "Enabled": true,
+          "Source": "FlatRate",
           "Method": "Percentage",
           "Rate": 0.6,
           "WageBase": 7000
@@ -537,6 +544,7 @@
           "EffectiveFrom": "2026-01-01",
           "EffectiveTo": "2026-12-31",
           "Enabled": true,
+          "Source": "FlatRate",
           "Method": "Percentage",
           "Rate": 24
         }

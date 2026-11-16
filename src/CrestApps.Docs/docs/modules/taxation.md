@@ -477,7 +477,7 @@ Each line has the tax code, name, jurisdiction, the jurisdiction that collects i
 
 ### Income tax rules
 
-The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Taxes > Income tax rules** with the **Manage income tax rules** permission. The permission is security critical (the rules decide every payer's withholding), so only the Administrator role has it by default; give it to another role on purpose. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
+The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s in effect on the pay date, managed under **Commerce > Taxation > Income tax rules** with the **Manage income tax rules** permission. The permission is security critical (the rules decide every payer's withholding), so only the Administrator role has it by default; give it to another role on purpose. A rule applies when the payer is registered in the jurisdiction that collects it, it is for the kind of income, the person is in its jurisdiction (for one below a country), and the person is in none of its excepted jurisdictions. Its fields express each country's taxes without code:
 
 | Field | Use |
 | --- | --- |
@@ -485,6 +485,7 @@ The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s 
 | `ByPlaceOfWork` | Match the jurisdiction by where the person works (Canada's province of employment), never where they live: with no place of work in the country known, a rule below the country applies nowhere and the result warns. |
 | `ExceptJurisdictions` | People it doesn't apply to (`CA-QC` for the Canada Pension Plan). |
 | `Category`, `IncomeKinds`, `Payer` | The income taxed, the kinds of income, who pays. |
+| `Source` | The kind of rule, chosen in **Add income tax rule** and fixed afterwards; it decides which fields the editor shows (see below). |
 | `Method` with `Rate`, `FixedAmount`, `TaxTableId` | A Taxation calculation method, or a country's withholding method with its `Tables` and `Parameters`. |
 | `RateFromRegistration` | The payer's own rate replaces `Rate`: its registration's rate on the pay date with the jurisdiction that collects the tax (an unemployment insurance rate, Quebec's health services fund rate). `Rate` applies when there is none; with neither, the rule isn't worked out and the result warns. |
 | `WageBase`, `WageThreshold` | The most income taxed in a year; only the year's income above an amount (a second tier). |
@@ -497,15 +498,36 @@ The built-in provider (`IncomeTaxRulesProvider`) works out the `IncomeTaxRule`s 
 
 Contributions and flat taxes are worked out first, then withholding methods that give credits for them (`UsesOtherTaxes`), then shares; lines come back in jurisdiction and tax code order. Rules are imported and exported with the `IncomeTaxRules` recipe and deployment step, and kept in the `IncomeTax` YesSql collection.
 
+### Rule sources
+
+**Add income tax rule** opens a dialog of the kinds of rule (`IncomeTaxRuleSourceOptions`, each card the `IncomeTaxRuleSource_Link` shape with a `IncomeTaxRuleSource_Link__{Name}` alternate). The editor then shows the fields every rule has (`IncomeTaxRuleDisplayDriver`: the tax, where it applies, who pays, when) and the card of the rule's source, from a display driver whose `CanHandleModel` accepts only that source:
+
+| Source | Method | Fields | Driver |
+| --- | --- | --- | --- |
+| `FlatRate` | `Percentage` | `Rate`, `RateFromRegistration`, `WageBase`, `WageThreshold`, `YearlyExemption`, `YearlyMaximum` | `IncomeTaxFlatRateDisplayDriver` |
+| `ShareOfTax` | `Percentage` | `ShareOfTaxCode`, `ShareMultiplier`, `YearlyMaximum` | `IncomeTaxShareOfTaxDisplayDriver` |
+| `TaxTable` | `TaxTable`, `Progressive` or `Threshold` | `TaxTableId`, `WageBase`, `Annualize`, `UsesElections`, `AllowanceAmount`, supplemental rates | `IncomeTaxTableDisplayDriver` |
+| `FixedAmount` | `FixedAmount` | `FixedAmount`, `YearlyMaximum` | `IncomeTaxFixedAmountDisplayDriver` |
+| A pack's withholding source | the source's method | the method's `Tables` and `Parameters`, `UsesElections`, `AllowanceAmount`, supplemental rates unless the method `HandlesSupplementalIncome` | `IncomeTaxWithholdingDisplayDriver` |
+
+A source driver saves only its own values and clears the others, so a rule never carries a field its kind doesn't use. A source registered with a method sets it (the handler sets it for a recipe too, so a recipe may name the source alone). A rule saved or imported without a source gets one from what it holds (`IncomeTaxRuleSources.Infer`: a share, the rate or amount methods, a withholding method's name, else a table). A source whose feature is off isn't offered, and its rules show only the shared fields.
+
 ### Country packs
 
-A country pack registers what its formulas need:
+A country pack registers what its formulas need, and the kinds of rule it adds:
 
 ```csharp
 services.AddIncomeTaxCategory("InsurableEarnings", LocalizationSource.Create("Insurable earnings (EI, QPIP)", typeof(Startup)));
 services.AddElectionFieldSet(MyElectionFields.Create());     // the fields of a withholding form, for a jurisdiction or a prefix such as CA-*
 services.AddIncomeTaxWithholdingMethod<MyWithholdingMethod>();
+services.AddIncomeTaxRuleSource(
+    "MyWithholding",
+    LocalizationSource.Create("My country's income tax", typeof(Startup)),
+    LocalizationSource.Create("The tax agency's formulas, with each person's withholding form.", typeof(Startup)),
+    method: "MyWithholding");                                // its rules get Taxation's withholding editor
 ```
+
+A source with a withholding method needs no driver: `IncomeTaxWithholdingDisplayDriver` shows the method's tables and amounts. A pack that needs other fields registers a source without a method, or with one, and adds its own `DisplayDriver<IncomeTaxRule>` whose `CanHandleModel` accepts only its source. The United States pack adds `UnitedStatesFormW4`; the Canada pack adds `CanadaFederal`, `CanadaProvincial` and `QuebecTP1015`.
 
 An `IIncomeTaxWithholdingMethod` declares its tables (optional ones with `Required: false`) and parameters, and gets an `IncomeTaxWithholdingContext`: the rule, the request, the election, the period's income, the supplemental income when it `HandlesSupplementalIncome`, the lines worked out before it, and functions that compute a table's brackets, its lowest rate and its rate at an amount.
 

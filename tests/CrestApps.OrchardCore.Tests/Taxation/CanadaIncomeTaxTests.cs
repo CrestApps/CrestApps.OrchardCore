@@ -318,6 +318,38 @@ public sealed class CanadaIncomeTaxTests
         return request;
     }
 
+    [Fact]
+    public async Task RecipeRules_WithoutASource_GetOneFromWhatTheyHold_AndASourceSetsItsMethod()
+    {
+        await using var harness = await CreateHarnessAsync();
+
+        // Rules written before rules had a source; and one that names its source and no method.
+        Assert.Empty(await ImportRecipeAsync(harness, rules =>
+        {
+            foreach (var rule in rules.Select(node => node!.AsObject()))
+            {
+                rule.Remove("Source");
+
+                if (rule["TaxCode"]!.GetValue<string>() == "CA-QC-HSF")
+                {
+                    rule.Remove("Method");
+                    rule["Source"] = IncomeTaxRuleSources.FlatRate;
+                }
+            }
+        }));
+
+        var stored = await harness.RunAsync(async services => (await services.GetRequiredService<IIncomeTaxRuleManager>().ListAsync())
+            .GroupBy(rule => rule.TaxCode)
+            .ToDictionary(group => group.Key, group => (group.First().Source, group.First().Method), StringComparer.Ordinal), commit: false);
+
+        Assert.Equal((CanadaIncomeTax.FederalMethod, CanadaIncomeTax.FederalMethod), stored["CA-FIT"]);
+        Assert.Equal((CanadaIncomeTax.ProvincialMethod, CanadaIncomeTax.ProvincialMethod), stored["CA-ON-PIT"]);
+        Assert.Equal((CanadaIncomeTax.QuebecMethod, CanadaIncomeTax.QuebecMethod), stored["CA-QC-PIT"]);
+        Assert.Equal((IncomeTaxRuleSources.FlatRate, TaxCalculationMethodNames.Percentage), stored["CA-CPP"]);
+        Assert.Equal((IncomeTaxRuleSources.ShareOfTax, TaxCalculationMethodNames.Percentage), stored["CA-EI-ER"]);
+        Assert.Equal((IncomeTaxRuleSources.FlatRate, TaxCalculationMethodNames.Percentage), stored["CA-QC-HSF"]);
+    }
+
     private static async Task<Dictionary<string, decimal>> AmountsAsync(CalendarTestHarness harness, IncomeTaxRequest request)
         => await harness.RunAsync(async services =>
         {
@@ -331,7 +363,7 @@ public sealed class CanadaIncomeTaxTests
         }, commit: false);
 
     // Imports the shipped recipe: its tax tables into the catalog, its rules through the rules step (and their handler).
-    private static async Task<IReadOnlyList<string>> ImportRecipeAsync(CalendarTestHarness harness)
+    private static async Task<IReadOnlyList<string>> ImportRecipeAsync(CalendarTestHarness harness, Action<JsonArray> editRules = null)
     {
         var recipe = JsonNode.Parse(await File.ReadAllTextAsync(RecipePath(), TestContext.Current.CancellationToken))!.AsObject();
         var steps = recipe["steps"]!.AsArray();
@@ -340,6 +372,8 @@ public sealed class CanadaIncomeTaxTests
 
         var tables = steps.Single(step => step!["name"]!.GetValue<string>() == "TaxTable")!["TaxTables"].Deserialize<List<TaxTable>>(_options);
         var rules = steps.Single(step => step!["name"]!.GetValue<string>() == TaxationConstants.IncomeTaxRulesRecipeStepName)!.AsObject();
+
+        editRules?.Invoke(rules["Rules"]!.AsArray());
 
         return await harness.RunAsync(async services =>
         {

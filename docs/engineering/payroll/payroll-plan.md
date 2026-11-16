@@ -1124,6 +1124,16 @@ Dev sites built before the Banking merge or the Income Tax move must be recreate
 - Docs: `npm run check:manuals` 170 User Manual and 189 Technical Manual pages; `docusaurus build` succeeds (with `SWC_NATIVE_BINDING_CACHE` set to a folder under the profile, the sandbox's known cache-permission problem).
 - Fresh site (data folder `App_Data_PayrollE2E8`, Release net11.0, Blank recipe, Canada Payroll Filings on): the employer editor shows the **Canada** card; code 6 is refused with "Choose one of the five dental benefits codes.", code 3 saves and shows again on edit; the income tax rule editor shows **Use the payer's own rate**.
 
+### Menus and income tax rule sources (2026-11-16)
+
+Mike's review of the admin menus and the income tax rule form:
+
+- **One place for taxation**: Taxation's Jurisdictions and Tables, and Income Tax's Income tax rules, moved from a top-level **Taxes** menu into **Commerce > Taxation**, beside Categories, Types and Rules. The pages and permissions are unchanged; there was never a second Jurisdictions page, only two menu paths to it.
+- **Payroll** has an icon (`fa-money-check-dollar`), set by each of its menu providers.
+- **Approvals** keeps its top-level menu and has an icon (`fa-stamp`). Mike first chose to move it under Settings, then asked to keep it top level with an icon.
+- **Rule sources**: `IncomeTaxRule.Source` is the kind of rule, chosen in a dialog when it is added and fixed afterwards (`IncomeTaxRuleSourceOptions`, `AddIncomeTaxRuleSource`). Taxation adds Flat rate, Share of another tax, Tax table or brackets and Fixed amount; United States Income Tax adds Form W-4 and Canada Income Tax adds the TD1 federal and provincial and Quebec's TP-1015.3, so a site sees only its countries' kinds. The editor is the shared fields (`IncomeTaxRuleDisplayDriver`) plus one card from the source's driver (`CanHandleModel` on the source); a source with a withholding method uses `IncomeTaxWithholdingDisplayDriver`, and a pack can add its own driver. A source driver clears the values its kind doesn't use. The calculation still reads only `Method` and the amounts.
+- Stored and imported rules without a source get one from what they hold (`IncomeTaxRuleSources.Infer`) when the handler sees them, and a source with a method sets it. No data migration: nothing queries by source, the editor infers it the same way before its source drivers run (`IncomeTaxRuleDisplayDriver` is registered first), and the row badge shows it once the rule is saved or imported again. The US and Canada recipes now name each rule's source.
+
 ### For Mike
 
 What only you can settle before the first live pay:

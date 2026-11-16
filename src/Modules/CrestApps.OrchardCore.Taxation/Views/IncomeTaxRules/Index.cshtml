@@ -1,4 +1,14 @@
+@using CrestApps.OrchardCore.Taxation.Services
+@using Microsoft.Extensions.Options
+@using OrchardCore.DisplayManagement
+
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<IncomeTaxRule>>
+
+@inject IOptions<IncomeTaxRuleSourceOptions> SourceOptions
+
+@{
+    var sources = SourceOptions.Value.Sources.Values.OrderBy(source => source.Position).ThenBy(source => source.Name, StringComparer.Ordinal).ToList();
+}
 
 <zone Name="Title">
     <breadcrumb name="IncomeTaxRules" title="@T["Income tax rules"]" />
@@ -16,7 +26,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add income tax rule"]</a>
+                    <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#modalAddIncomeTaxRule">@T["Add income tax rule"]</button>
                 </div>
             </div>
         </div>
@@ -35,5 +45,37 @@
 
     <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">@T["Your search returned no results."]</div>
 </form>
+
+<div class="modal fade" id="modalAddIncomeTaxRule" tabindex="-1" aria-labelledby="income-tax-rule-sources-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="income-tax-rule-sources-title">@T["Which kind of income tax rule?"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+            </div>
+            <div class="modal-body">
+                @if (sources.Count == 0)
+                {
+                    <p class="alert alert-warning mb-0">@T["No kind of income tax rule is available."]</p>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-2 g-3">
+                        @foreach (var source in sources)
+                        {
+                            IShape shape = await New.IncomeTaxRuleSource_Link(Source: source);
+                            shape.Metadata.Alternates.Add("IncomeTaxRuleSource_Link__" + source.Name);
+
+                            @await DisplayAsync(shape)
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script asp-name="list-management-ui" at="Foot"></script>

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace CrestApps.OrchardCore.Taxation.ViewModels;
 
 /// <summary>
-/// The income tax rule editor.
+/// The fields every income tax rule has, whatever its source: what the tax is, where it applies, who pays and when.
 /// </summary>
 public class IncomeTaxRuleViewModel
 {
@@ -26,25 +26,65 @@ public class IncomeTaxRuleViewModel
 
     public string Payer { get; set; }
 
-    public string Method { get; set; }
+    public DateOnly? EffectiveFrom { get; set; }
 
+    public DateOnly? EffectiveTo { get; set; }
+
+    public bool Enabled { get; set; }
+
+    [BindNever]
+    public string SourceDisplayName { get; set; }
+
+    [BindNever]
+    public string SourceDescription { get; set; }
+
+    [BindNever]
+    public IList<SelectListItem> Categories { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> AvailableIncomeKinds { get; set; } = [];
+}
+
+/// <summary>
+/// A flat rate rule: a rate on the income within a wage base, above a threshold, after an exemption, up to a maximum.
+/// </summary>
+public class IncomeTaxFlatRateViewModel
+{
     public string Rate { get; set; }
 
     public bool RateFromRegistration { get; set; }
 
-    public string FixedAmount { get; set; }
-
-    public string TaxTableId { get; set; }
-
     public string WageBase { get; set; }
+
+    public string WageThreshold { get; set; }
 
     public string YearlyExemption { get; set; }
 
     public string YearlyMaximum { get; set; }
+}
 
+/// <summary>
+/// A rule that is a multiple of another tax of the same pay.
+/// </summary>
+public class IncomeTaxShareOfTaxViewModel
+{
     public string ShareOfTaxCode { get; set; }
 
     public string ShareMultiplier { get; set; }
+
+    public string YearlyMaximum { get; set; }
+}
+
+/// <summary>
+/// A rule worked out on a tax table or progressive brackets.
+/// </summary>
+public class IncomeTaxTableViewModel
+{
+    public string Method { get; set; }
+
+    public string TaxTableId { get; set; }
+
+    public string WageBase { get; set; }
 
     public bool Annualize { get; set; }
 
@@ -58,44 +98,55 @@ public class IncomeTaxRuleViewModel
 
     public string SupplementalExcessThreshold { get; set; }
 
-    public string WageThreshold { get; set; }
-
-    public Dictionary<string, string> WithholdingTables { get; set; } = [];
-
-    public Dictionary<string, string> WithholdingParameters { get; set; } = [];
-
-    [BindNever]
-    public IList<IncomeTaxWithholdingMethodViewModel> WithholdingMethods { get; set; } = [];
-
-    public DateOnly? EffectiveFrom { get; set; }
-
-    public DateOnly? EffectiveTo { get; set; }
-
-    public bool Enabled { get; set; }
-
-    [BindNever]
-    public IList<SelectListItem> Categories { get; set; } = [];
-
     [BindNever]
     public IList<SelectListItem> Methods { get; set; } = [];
 
     [BindNever]
     public IList<SelectListItem> Tables { get; set; } = [];
-
-    [BindNever]
-    public IList<SelectListItem> AvailableIncomeKinds { get; set; } = [];
 }
 
 /// <summary>
-/// The tables and amounts of a withholding method, in the income tax rule editor.
+/// A rule of the same amount each pay.
 /// </summary>
-public class IncomeTaxWithholdingMethodViewModel
+public class IncomeTaxFixedAmountViewModel
 {
-    public string Name { get; set; }
+    public string FixedAmount { get; set; }
 
-    public string DisplayName { get; set; }
+    public string YearlyMaximum { get; set; }
+}
 
-    public IList<(string Key, string Label)> Tables { get; set; } = [];
+/// <summary>
+/// A rule worked out by a country pack's withholding method: the method's tables and amounts, and how the person's
+/// election and supplemental income are treated.
+/// </summary>
+public class IncomeTaxWithholdingViewModel
+{
+    public Dictionary<string, string> Tables { get; set; } = [];
 
-    public IList<(string Key, string Label)> Parameters { get; set; } = [];
+    public Dictionary<string, string> Parameters { get; set; } = [];
+
+    public bool UsesElections { get; set; }
+
+    public string AllowanceAmount { get; set; }
+
+    public string SupplementalRate { get; set; }
+
+    public string SupplementalExcessRate { get; set; }
+
+    public string SupplementalExcessThreshold { get; set; }
+
+    [BindNever]
+    public string MethodDisplayName { get; set; }
+
+    [BindNever]
+    public bool HandlesSupplementalIncome { get; set; }
+
+    [BindNever]
+    public IList<(string Key, string Label, bool Required)> TableInputs { get; set; } = [];
+
+    [BindNever]
+    public IList<(string Key, string Label, bool Required)> ParameterInputs { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> AvailableTables { get; set; } = [];
 }

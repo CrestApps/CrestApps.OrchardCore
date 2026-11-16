@@ -52,6 +52,40 @@ public static class IncomeTaxServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds a kind of income tax rule to the list "Add income tax rule" shows. Adding a name again replaces it. Its
+    /// fields come from a display driver of <see cref="Taxation.Models.IncomeTaxRule"/> that handles only rules whose
+    /// <c>Source</c> is <paramref name="name"/>; a source whose <paramref name="method"/> is a withholding method gets
+    /// that method's tables and amounts from Taxation's own driver.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="name">The stored name; it never changes.</param>
+    /// <param name="displayName">What people see.</param>
+    /// <param name="description">What the kind of rule is for, with examples.</param>
+    /// <param name="method">The method its rules always use, or <see langword="null"/> when the editor chooses it.</param>
+    /// <param name="position">Where it is listed; lower first.</param>
+    /// <returns>The services.</returns>
+    public static IServiceCollection AddIncomeTaxRuleSource(
+        this IServiceCollection services,
+        string name,
+        LocalizationSource displayName,
+        LocalizationSource description,
+        string method = null,
+        int position = 100)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        return services.Configure<IncomeTaxRuleSourceOptions>(options => options.Sources[name] = new IncomeTaxRuleSource
+        {
+            Name = name,
+            DisplayName = displayName,
+            Description = description,
+            Method = method,
+            Position = position,
+        });
+    }
+
+    /// <summary>
     /// Adds a withholding method that income tax rules can name, such as a country's withholding formulas.
     /// </summary>
     /// <typeparam name="TMethod">The method.</typeparam>

@@ -127,7 +127,7 @@ public class ValidationOwnershipArchitectureTests
             "Type a number of zero or more, with a dot for decimals.",
             "Amounts and percents are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose ranges the handler checks."),
         (
-            "src/Modules/CrestApps.OrchardCore.Taxation/Drivers/IncomeTaxRuleDisplayDriver.cs",
+            "src/Modules/CrestApps.OrchardCore.Taxation/Drivers/IncomeTaxRuleSourceDisplayDriver.cs",
             "Type a number of zero or more, with a dot for decimals.",
             "Rates, amounts and wage bases are typed as text with a dot so a decimal comma never changes them; a recipe carries the numbers, whose ranges the handler checks."),
     ];
