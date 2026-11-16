@@ -42,7 +42,7 @@
     {
         <div class="mb-3">
             <label for="CategoryId" class="form-label @(Model.CategoryRequired ? "ocat-label-required" : null)">@T["Category"]</label>
-            @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Items: Model.Categories, SelectedId: Model.CategoryId, Required: Model.CategoryRequired, EmptyText: T["Choose a category"].Value))
+            @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Choices: Model.Categories, SelectedId: Model.CategoryId, Required: Model.CategoryRequired, EmptyText: T["Choose a category"].Value))
             <span asp-validation-for="CategoryId" class="text-danger"></span>
             <span class="hint">@T["The category decides which questions below apply and, when the desk is left to it, where the ticket goes."]</span>
         </div>

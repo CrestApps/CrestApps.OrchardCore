@@ -151,20 +151,20 @@ internal sealed class TicketPartDisplayDriver : ContentPartDisplayDriver<TicketP
 
                 if (!string.IsNullOrEmpty(category.DeskId) && category.DeskId != part.DeskId && desks.TryGetValue(category.DeskId, out var deskName))
                 {
-                    model.CategoryRoutingChanges.Add(S["desk {0}", deskName]);
+                    model.CategoryRoutingChanges.Add(S["the desk to {0}", deskName]);
                 }
 
                 if (!string.IsNullOrEmpty(category.PriorityId) && category.PriorityId != part.PriorityId
                     && model.Priorities.FirstOrDefault(item => item.Value == category.PriorityId) is { } priority)
                 {
-                    model.CategoryRoutingChanges.Add(S["priority {0}", priority.Text]);
+                    model.CategoryRoutingChanges.Add(S["the priority to {0}", priority.Text]);
                 }
 
                 if (model.CanAssign && !string.IsNullOrEmpty(category.TeamId) && category.TeamId != part.TeamId
                     && _serviceProvider.GetService<ITeamManager>() is { } teamManager
                     && await teamManager.FindByIdAsync(category.TeamId, CancellationToken) is { } team)
                 {
-                    model.CategoryRoutingChanges.Add(S["team {0}", team.Name]);
+                    model.CategoryRoutingChanges.Add(S["the team to {0}", team.Name]);
                 }
             }
         }

@@ -21,6 +21,27 @@ public class TicketFormViewModel
     public string SuccessMessage { get; set; }
 
     public string Error { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ticket type's form as customers fill it in: the subject and the fields customers fill in, with
+    /// their rules; <see langword="null"/> before the widget is set up.
+    /// </summary>
+    public global::OrchardCore.DisplayManagement.IShape Editor { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the form asks for the subject itself (a ticket type without a title).
+    /// </summary>
+    public bool AsksForSubject { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the categories customers can choose; none when the type has no categories.
+    /// </summary>
+    public List<CrestApps.OrchardCore.ContentFields.Taxonomies.CascadingPickerItem> Categories { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether a category must be chosen.
+    /// </summary>
+    public bool CategoryRequired { get; set; }
 }
 
 /// <summary>

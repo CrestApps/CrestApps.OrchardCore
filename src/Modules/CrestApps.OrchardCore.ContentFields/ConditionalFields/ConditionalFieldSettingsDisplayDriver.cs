@@ -110,7 +110,8 @@ internal sealed class ConditionalFieldSettingsDisplayDriver : ContentPartFieldDe
         // A field that depends on itself, or fields that depend on each other, could never be decided.
         if (rule is not null && await FindCycleAsync(model, rule) is { Count: > 0 } cycle)
         {
-            context.Updater.ModelState.AddModelError(Prefix, S["These fields show depending on each other, so none could ever be decided: {0}.", string.Join(", ", cycle)]);
+            var names = cycle.Select(key => sources.TryGetValue(key, out var source) ? source.DisplayName : model.DisplayName());
+            context.Updater.ModelState.AddModelError(Prefix, S["These fields show depending on each other, so none could ever be decided: {0}.", string.Join(", ", names)]);
         }
 
         context.Builder.WithSettings(new ConditionalFieldSettings { ShowWhen = rule });
