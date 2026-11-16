@@ -11,46 +11,56 @@
 
     @if (Model.Types.Count > 1)
     {
-        <div class="mb-3">
-            <label class="form-label">@T["Ticket type"]</label>
-            <div class="btn-group flex-wrap" role="group" aria-label="@T["Ticket type"]">
-                @foreach (var type in Model.Types)
-                {
-                    <a class="btn btn-sm @(type.Selected ? "btn-primary" : "btn-outline-secondary")" asp-action="Create" asp-route-contentType="@type.Value" asp-route-requester="@Model.Requester" asp-route-accountId="@Model.AccountId">@type.Text</a>
-                }
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Ticket type"]</span>
+            <div class="ocat-end">
+                <div class="btn-group flex-wrap" role="group" aria-label="@T["Ticket type"]">
+                    @foreach (var type in Model.Types)
+                    {
+                        <a class="btn btn-sm @(type.Selected ? "btn-primary" : "btn-outline-secondary")" asp-action="Create" asp-route-contentType="@type.Value" asp-route-requester="@Model.Requester" asp-route-accountId="@Model.AccountId" aria-current="@(type.Selected ? "true" : null)">@type.Text</a>
+                    }
+                </div>
             </div>
         </div>
     }
 
-    <div class="row">
-        <div class="col-12 col-md-6 mb-3">
-            <label class="form-label">@T["Requester"]</label>
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Requester"]</label>
+        <div class="ocat-end">
             @await Component.InvokeAsync("PartyPicker", new { name = Html.NameFor(m => m.Requester).ToString(), selectedValues = string.IsNullOrEmpty(Model.Requester) ? Array.Empty<string>() : new[] { Model.Requester }, buttonText = T["Choose who it is for"].Value })
-            <span class="hint">@T["Someone who is not on the site yet: leave this empty and write their name and e-mail."]</span>
+            <span class="hint">@T["Someone who is not on the site yet: leave this empty and write their name and e-mail below."]</span>
         </div>
-        <div class="col-6 col-md-3 mb-3">
-            <label asp-for="RequesterName" class="form-label">@T["Name"]</label>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RequesterName" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-end">
             <input asp-for="RequesterName" class="form-control" autocomplete="off" />
         </div>
-        <div class="col-6 col-md-3 mb-3">
-            <label asp-for="RequesterEmail" class="form-label">@T["E-mail"]</label>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RequesterEmail" class="ocat-label">@T["E-mail"]</label>
+        <div class="ocat-end">
             <input asp-for="RequesterEmail" type="email" class="form-control" autocomplete="off" />
         </div>
     </div>
 
     @if (Model.Categories.Count > 0)
     {
-        <div class="mb-3">
-            <label for="CategoryId" class="form-label @(Model.CategoryRequired ? "ocat-label-required" : null)">@T["Category"]</label>
-            @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Choices: Model.Categories, SelectedId: Model.CategoryId, Required: Model.CategoryRequired, EmptyText: T["Choose a category"].Value))
-            <span asp-validation-for="CategoryId" class="text-danger"></span>
-            <span class="hint">@T["The category decides which questions below apply and, when the desk is left to it, where the ticket goes."]</span>
+        <div class="ocat-wrapper">
+            <label for="CategoryId" class="ocat-label @(Model.CategoryRequired ? "ocat-label-required" : null)">@T["Category"]</label>
+            <div class="ocat-end">
+                @await DisplayAsync(await New.TaxonomyCascadingPicker(InputName: "CategoryId", InputId: "CategoryId", Choices: Model.Categories, SelectedId: Model.CategoryId, Required: Model.CategoryRequired, EmptyText: T["Choose a category"].Value))
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
+                <span class="hint">@T["The category decides which questions below apply and, when the desk is left to it, where the ticket goes."]</span>
+            </div>
         </div>
     }
 
-    <div class="row">
-        <div class="col-12 col-md-6 mb-3">
-            <label asp-for="DeskId" class="form-label">@T["Desk"]</label>
+    <div class="ocat-wrapper">
+        <label asp-for="DeskId" class="ocat-label">@T["Desk"]</label>
+        <div class="ocat-end">
             <select asp-for="DeskId" asp-items="Model.Desks" class="form-select">
                 @if (Model.Categories.Count > 0)
                 {
@@ -59,8 +69,11 @@
             </select>
             <span asp-validation-for="DeskId" class="text-danger"></span>
         </div>
-        <div class="col-12 col-md-6 mb-3">
-            <label asp-for="PriorityId" class="form-label">@T["Priority"]</label>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="PriorityId" class="ocat-label">@T["Priority"]</label>
+        <div class="ocat-end">
             <select asp-for="PriorityId" asp-items="Model.Priorities" class="form-select">
                 <option value="">@T["The ticket type's default"]</option>
             </select>
@@ -72,17 +85,21 @@
     @{ Model.Editor.Properties.Remove("Actions"); }
     @await DisplayAsync(Model.Editor)
 
-    <div class="mb-3">
-        <label asp-for="Body" class="form-label">@T["What it is about"]</label>
-        <textarea asp-for="Body" class="form-control" rows="6"></textarea>
-        <span class="hint">@T["The first message of the ticket, as the requester would write it. The requester sees it."]</span>
+    <div class="ocat-wrapper">
+        <label asp-for="Body" class="ocat-label">@T["What it is about"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Body" class="form-control" rows="6"></textarea>
+            <span class="hint">@T["The first message of the ticket, as the requester would write it. The requester sees it."]</span>
+        </div>
     </div>
 
     @if (Model.CanAttach)
     {
-        <div class="mb-3">
-            <label for="ticket-files" class="form-label">@T["Files"]</label>
-            <input id="ticket-files" type="file" name="files" class="form-control" multiple />
+        <div class="ocat-wrapper">
+            <label for="ticket-files" class="ocat-label">@T["Files"]</label>
+            <div class="ocat-end">
+                <input id="ticket-files" type="file" name="files" class="form-control" multiple />
+            </div>
         </div>
     }
 
