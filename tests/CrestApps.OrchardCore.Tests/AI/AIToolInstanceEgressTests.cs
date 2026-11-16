@@ -191,6 +191,7 @@ public sealed class AIToolInstanceEgressTests
 
     [Theory]
     [InlineData("fd00:ec2::254")]
+    [InlineData("fd20:ce::254")]
     [InlineData("168.63.129.16")]
     [InlineData("100.100.100.200")]
     [InlineData("192.0.0.192")]
@@ -209,6 +210,7 @@ public sealed class AIToolInstanceEgressTests
 
         Assert.False(AIEgress.IsAllowedEndpoint("http://168.63.129.16/machine", isDevelopment: false, options));
         Assert.False(AIEgress.IsAllowedEndpoint("http://[fd00:ec2::254]/latest/meta-data/", isDevelopment: false, options));
+        Assert.False(AIEgress.IsAllowedEndpoint("http://[fd20:ce::254]/computeMetadata/v1/", isDevelopment: false, options));
         Assert.True(AIEgress.IsAllowedEndpoint("http://10.0.0.5:11434/", isDevelopment: false, options));
     }
 
