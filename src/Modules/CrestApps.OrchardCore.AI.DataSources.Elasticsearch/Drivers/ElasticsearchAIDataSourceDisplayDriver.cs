@@ -131,12 +131,7 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 
         var environmentType = NormalizeEnvironmentType(model.EnvironmentType);
         var authenticationType = NormalizeAuthenticationType(model.AuthenticationType);
-        var previousMetadata = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
-
-        // The stored credentials were given for one cluster and one way of signing in; changing either drops them.
-        var existingMetadata = SendsToSamePlace(previousMetadata, environmentType, model.Url, model.CloudId, authenticationType)
-            ? previousMetadata
-            : new ElasticsearchSourceMetadata();
+        var existingMetadata = KeptCredentials(dataSource.GetOrCreate<ElasticsearchSourceMetadata>(), environmentType, model.Url, model.CloudId, authenticationType);
 
         if (string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(model.Url))
@@ -233,6 +228,10 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 
         return Edit(dataSource, context);
     }
+
+    // The stored credentials were given for one cluster and one way of signing in; changing either drops them.
+    private static ElasticsearchSourceMetadata KeptCredentials(ElasticsearchSourceMetadata stored, string environmentType, string url, string cloudId, string authenticationType)
+        => SendsToSamePlace(stored, environmentType, url, cloudId, authenticationType) ? stored : new ElasticsearchSourceMetadata();
 
     private static bool SendsToSamePlace(ElasticsearchSourceMetadata stored, string environmentType, string url, string cloudId, string authenticationType)
     {
