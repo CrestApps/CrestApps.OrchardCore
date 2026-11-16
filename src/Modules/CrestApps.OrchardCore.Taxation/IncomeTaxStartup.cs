@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Taxation.Core.Canada;
 using CrestApps.OrchardCore.Taxation.Core.Services;
 using CrestApps.OrchardCore.Taxation.Core.UnitedStates;
 using CrestApps.OrchardCore.Taxation.Deployments;
@@ -94,6 +95,18 @@ public sealed class UnitedStatesIncomeTaxStartup : StartupBase
         services.AddIncomeTaxWithholdingMethod<UnitedStatesFormW4WithholdingMethod>();
         services.AddIncomeTaxCategory(IncomeTaxCategories.ContractorWithholding, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesIncomeTaxStartup>("Backup withholding (contractors)"));
     }
+}
+
+/// <summary>
+/// Canada Income Tax: the TD1 and TP-1015.3 claims, the CRA's federal, provincial and territorial formulas, Revenu
+/// Québec's formulas, and the contributions (CPP, QPP, EI, QPIP) as rules. The yearly figures come as dated recipes.
+/// </summary>
+[Feature(TaxationConstants.Feature.IncomeTaxCanada)]
+public sealed class CanadaIncomeTaxStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddCanadaIncomeTax();
 }
 
 /// <summary>

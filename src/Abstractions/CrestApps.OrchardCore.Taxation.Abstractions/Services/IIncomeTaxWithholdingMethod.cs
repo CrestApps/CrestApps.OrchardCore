@@ -61,7 +61,8 @@ public interface IIncomeTaxWithholdingMethod
 /// </summary>
 /// <param name="Key">The stored key.</param>
 /// <param name="Label">What the rule's editor shows.</param>
-public sealed record IncomeTaxWithholdingInput(string Key, LocalizationSource Label);
+/// <param name="Required">Whether a rule must give it; an optional table is worked out only when the rule names one.</param>
+public sealed record IncomeTaxWithholdingInput(string Key, LocalizationSource Label, bool Required = true);
 
 /// <summary>
 /// What a withholding method works from.
@@ -106,6 +107,12 @@ public sealed class IncomeTaxWithholdingContext
     public Func<string, CancellationToken, Task<decimal>> LowestRateAsync { get; init; }
 
     /// <summary>
+    /// Gets a function that gives the rate (a fraction) of one of the rule's tables, by its key, at an amount: the
+    /// marginal rate.
+    /// </summary>
+    public Func<string, decimal, CancellationToken, Task<decimal>> RateAtAsync { get; init; }
+
+    /// <summary>
     /// Gets a value of the election, or <see langword="null"/>.
     /// </summary>
     /// <param name="name">The field's name.</param>
@@ -139,12 +146,12 @@ public sealed class IncomeTaxWithholdingContext
         => Rule.Parameters is { } parameters && parameters.TryGetValue(key, out var value) ? value : defaultValue;
 
     /// <summary>
-    /// Gets the amount of another tax of the same payment, by its code, or zero.
+    /// Gets the amount of another tax of the same payment, by its code, in cents (as it is withheld), or zero.
     /// </summary>
     /// <param name="taxCode">The tax's code.</param>
     /// <returns>The amount.</returns>
     public decimal OtherTax(string taxCode)
-        => OtherTaxes.Where(line => string.Equals(line.TaxCode, taxCode, StringComparison.OrdinalIgnoreCase)).Sum(line => line.Amount);
+        => Math.Round(OtherTaxes.Where(line => string.Equals(line.TaxCode, taxCode, StringComparison.OrdinalIgnoreCase)).Sum(line => line.Amount), 2, MidpointRounding.AwayFromZero);
 
     /// <summary>
     /// Gets whether the person is in a jurisdiction (home or work).

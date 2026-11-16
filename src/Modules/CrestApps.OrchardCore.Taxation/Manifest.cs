@@ -61,3 +61,14 @@ using OrchardCore.Modules.Manifest;
         TaxationConstants.Feature.IncomeTax,
     ]
 )]
+
+[assembly: Feature(
+    Id = TaxationConstants.Feature.IncomeTaxCanada,
+    Name = "Canada Income Tax",
+    Description = "TD1 claims and the CRA payroll deductions formulas (T4127) for federal, provincial and territorial tax, Revenu Québec's formulas (TP-1015.F) for Quebec, the Canada and Quebec Pension Plans with their second tiers, Employment Insurance and the Quebec Parental Insurance Plan, with the yearly figures as dated recipes.",
+    Category = "Finance",
+    Dependencies =
+    [
+        TaxationConstants.Feature.IncomeTax,
+    ]
+)]

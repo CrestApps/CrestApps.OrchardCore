@@ -285,7 +285,7 @@ public sealed class IncomeTaxRuleHandler : CatalogEntryHandlerBase<IncomeTaxRule
 
         if (withholding is not null)
         {
-            foreach (var table in withholding.Tables.Where(table => string.IsNullOrEmpty(rule.Tables?.GetValueOrDefault(table.Key))))
+            foreach (var table in withholding.Tables.Where(table => table.Required && string.IsNullOrEmpty(rule.Tables?.GetValueOrDefault(table.Key))))
             {
                 context.Result.Fail(new ValidationResult(S["The method needs the tax table {0}.", table.Label.Value], [nameof(IncomeTaxRule.Tables)]));
             }
@@ -452,7 +452,7 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
     private async Task<IncomeTaxLine> CalculateRuleAsync(IncomeTaxRule rule, IIncomeTaxWithholdingMethod withholding, IncomeTaxRequest request, IReadOnlyList<IncomeTaxLine> others, IncomeTaxResult result, CancellationToken cancellationToken)
     {
         List<string> tableIds = withholding is not null
-            ? [.. withholding.Tables.Select(table => rule.Tables?.GetValueOrDefault(table.Key))]
+            ? [.. withholding.Tables.Where(table => table.Required || !string.IsNullOrEmpty(rule.Tables?.GetValueOrDefault(table.Key))).Select(table => rule.Tables?.GetValueOrDefault(table.Key))]
             : _methods.GetMethod(rule.Method) is { } method && method.Inputs.HasFlag(TaxCalculationMethodInputs.TaxTable) ? [rule.TaxTableId] : [];
         var day = request.PayDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
@@ -533,10 +533,11 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             reported = regular + supplemental;
         }
 
-        // A yearly exemption is taken off each pay in proportion to the periods of a year (regular income first).
+        // A yearly exemption is taken off each pay in proportion to the periods of a year (regular income first), cut to
+        // cents as the CRA and Revenu Québec do (3,500 ÷ 26 = 134.61).
         if (rule.YearlyExemption is { } exemption && exemption > 0)
         {
-            var share = exemption / periods;
+            var share = Math.Truncate(exemption / periods * 100m) / 100m;
             var fromRegular = Math.Min(regular, share);
 
             regular -= fromRegular;
@@ -651,6 +652,7 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
             OtherTaxes = others,
             ComputeTableAsync = (key, amount, token) => ComputeTableAsync(rule, key, amount, token),
             LowestRateAsync = (key, token) => LowestRateAsync(rule, key, token),
+            RateAtAsync = (key, amount, token) => RateAtAsync(rule, key, amount, token),
         }, cancellationToken));
 
     private async Task<TaxTable> TableAsync(IncomeTaxRule rule, string key, CancellationToken cancellationToken)
@@ -673,6 +675,14 @@ public sealed class IncomeTaxRulesProvider : IIncomeTaxProvider
     // The rate of a table's lowest bracket: credits are worked out at it.
     private async Task<decimal> LowestRateAsync(IncomeTaxRule rule, string key, CancellationToken cancellationToken)
         => (await TableAsync(rule, key, cancellationToken)).Rows.OrderBy(row => row.Minimum).Select(row => row.Rate).FirstOrDefault(rate => rate > 0);
+
+    // The rate of the bracket an amount falls in: the marginal rate.
+    private async Task<decimal> RateAtAsync(IncomeTaxRule rule, string key, decimal amount, CancellationToken cancellationToken)
+        => (await TableAsync(rule, key, cancellationToken)).Rows
+            .Where(row => amount > row.Minimum || (row.Minimum == 0 && amount >= 0))
+            .OrderByDescending(row => row.Minimum)
+            .Select(row => row.Rate)
+            .FirstOrDefault();
 
     private async Task<decimal> ComputeAsync(IncomeTaxRule rule, decimal income, CancellationToken cancellationToken)
     {
