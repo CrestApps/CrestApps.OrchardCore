@@ -21,7 +21,8 @@ public sealed class LearningPackagePart : ContentPart
 
     /// <summary>
     /// Gets or sets the standard of the package, detected from its manifest: <see cref="PackagesConstants.Standards.Scorm12"/>,
-    /// <see cref="PackagesConstants.Standards.Scorm2004ThirdEdition"/> or <see cref="PackagesConstants.Standards.Scorm2004FourthEdition"/>.
+    /// <see cref="PackagesConstants.Standards.Scorm2004ThirdEdition"/>, <see cref="PackagesConstants.Standards.Scorm2004FourthEdition"/>
+    /// or <see cref="PackagesConstants.Standards.Cmi5"/>.
     /// </summary>
     public string Standard { get; set; }
 
@@ -100,6 +101,11 @@ public sealed class LearningPackagePart : ContentPart
     /// implemented, so it is not applied.
     /// </summary>
     public bool HasSequencing { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cmi5 course structure, for a cmi5 package; <see langword="null"/> for SCORM.
+    /// </summary>
+    public Cmi5Course Cmi5 { get; set; }
 
     /// <summary>
     /// Gets or sets how many SCOs the default organization has. Only the first one is launched.

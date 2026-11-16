@@ -27,6 +27,8 @@
 <div class="card mb-3 learning-package"
      data-learning-package
      data-launch-url="@Url.RouteUrl("LearningPackageLaunch", new { itemId = Model.PackageItemId })"
+     data-cmi5-launch-url="@(Model.Part.Cmi5 is null ? null : Url.RouteUrl("LearningCmi5Launch", new { itemId = Model.PackageItemId }))"
+     data-window-text="@T["The lesson opened in a new window. Reload this page when you finish to see your progress."]"
      data-frame-title="@T["Learning package: {0}", Model.Part.Title ?? string.Empty]"
      data-error-text="@T["The package could not be opened. Try again."]"
      data-finished-text="@T["The session ended. Your progress is saved."]">
@@ -70,7 +72,38 @@
 
             <p class="small text-secondary">@T["The package reports your progress itself, so its results are marked as reported by your browser."]</p>
 
-            @if (Model.CanLaunch)
+            @if (Model.Part.Cmi5 is { } course)
+            {
+                <ul class="list-group mb-3" data-cmi5-aus>
+                    @for (var index = 0; index < course.Aus.Count; index++)
+                    {
+                        var au = course.Aus[index];
+                        var auState = state?.Cmi5?.Aus.FirstOrDefault(item => item.AuId == au.Id);
+                        var auStatus = auState is null ? T["Not started"]
+                            : auState.Satisfied ? T["Satisfied"]
+                            : auState.Passed ? T["Passed"]
+                            : auState.Completed ? T["Completed"]
+                            : auState.Failed ? T["Failed"]
+                            : T["In progress"];
+
+                        <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                            <span class="me-auto">@au.Title</span>
+                            <span class="badge @(auState?.Satisfied == true ? "text-bg-success" : auState?.Failed == true ? "text-bg-danger" : "text-bg-secondary")">@auStatus</span>
+                            @if (Model.CanLaunch)
+                            {
+                                <button type="button" class="btn btn-primary btn-sm" data-cmi5-au="@index">
+                                    <i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Review ? T["Review"] : auState is null ? T["Launch"] : T["Launch again"])
+                                </button>
+                            }
+                        </li>
+                    }
+                </ul>
+                @if (!Model.CanLaunch)
+                {
+                    <p class="mb-0">@T["Your enrollment is not active, so the package cannot be opened."]</p>
+                }
+            }
+            else if (Model.CanLaunch)
             {
                 <button type="button" class="btn btn-primary" data-package-launch>
                     <i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Review ? T["Review"] : Model.Resumes ? T["Resume"] : state is null ? T["Launch"] : T["Launch again"])

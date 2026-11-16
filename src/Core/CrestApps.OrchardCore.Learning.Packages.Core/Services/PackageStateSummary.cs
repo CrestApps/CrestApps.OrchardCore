@@ -29,6 +29,18 @@ public sealed record PackageStateSummary(string Status, decimal? Score, string T
             return new PackageStateSummary(null, null, null, false);
         }
 
+        if (string.Equals(state.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal))
+        {
+            var cmi5 = state.Cmi5 ?? new Cmi5State();
+            var status = cmi5.CourseSatisfied
+                ? cmi5.Aus.Any(au => au.Passed) ? "passed" : "completed"
+                : cmi5.Aus.Any(au => au.Failed && !au.Passed) ? "failed" : state.Sessions > 0 ? "incomplete" : null;
+            var scores = cmi5.Aus.Where(au => au.ScoreScaled is not null).Select(au => au.ScoreScaled.Value).ToList();
+            decimal? score = scores.Count == 0 ? null : Math.Round(Math.Clamp(scores.Average() * 100, 0, 100), 2, MidpointRounding.AwayFromZero);
+
+            return new PackageStateSummary(status, score, null, false);
+        }
+
         if (PackagesConstants.Standards.IsScorm2004(state.Standard))
         {
             var cmi = state.Cmi2004 ?? new Scorm2004Cmi();

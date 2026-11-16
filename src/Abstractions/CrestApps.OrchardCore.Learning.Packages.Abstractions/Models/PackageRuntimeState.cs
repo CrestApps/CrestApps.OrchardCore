@@ -40,6 +40,9 @@ public sealed class PackageRuntimeState : CatalogItem
     /// <summary>Gets or sets the SCORM 2004 data; <see langword="null"/> for a SCORM 1.2 state.</summary>
     public Scorm2004Cmi Cmi2004 { get; set; }
 
+    /// <summary>Gets or sets the cmi5 state; <see langword="null"/> for a SCORM state.</summary>
+    public Cmi5State Cmi5 { get; set; }
+
     /// <summary>Gets or sets how many times the learner launched the package.</summary>
     public int Sessions { get; set; }
 

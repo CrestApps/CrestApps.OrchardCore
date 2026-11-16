@@ -79,6 +79,14 @@ public sealed class PackageRunController : Controller
             return File(file.Content, file.ContentType);
         }
 
+        // A cmi5 AU talks to the LRS itself: its pages are served as they are, never cached.
+        if (string.Equals(file.Standard, PackagesConstants.Standards.Cmi5, StringComparison.Ordinal))
+        {
+            Response.Headers.CacheControl = "no-store";
+
+            return File(file.Content, file.ContentType);
+        }
+
         // A page starts with the learner's data, so it is never cached.
         Response.Headers.CacheControl = "no-store";
 

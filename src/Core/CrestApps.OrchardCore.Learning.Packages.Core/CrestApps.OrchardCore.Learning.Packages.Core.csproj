@@ -6,7 +6,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      Core services of Learning packages: safe extraction of an uploaded package, the SCORM 1.2 manifest reader, the
+      Core services of Learning packages: safe extraction of an uploaded package, the SCORM and cmi5 course readers, the
       package files in the protected store, the SCORM 1.2 run-time data model checked on the server, the learner's
       runtime state per enrollment and package, signed launch tokens, and the result reported to Learning progress,
       marked self-reported.
@@ -35,6 +35,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Packages.Abstractions\CrestApps.OrchardCore.Learning.Packages.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.FileStorage.Core\CrestApps.OrchardCore.FileStorage.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Xapi.Core\CrestApps.OrchardCore.Learning.Xapi.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>
 

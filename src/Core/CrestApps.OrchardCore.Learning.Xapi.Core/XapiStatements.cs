@@ -90,7 +90,12 @@ public static class XapiAgents
         return agent;
     }
 
-    internal static string Text(JsonNode node)
+    /// <summary>
+    /// Gets the text of a JSON string value.
+    /// </summary>
+    /// <param name="node">The value.</param>
+    /// <returns>The text, or <see langword="null"/> when the value is not a string.</returns>
+    public static string Text(JsonNode node)
         => node is JsonValue value && value.GetValueKind() == JsonValueKind.String ? value.GetValue<string>() : null;
 }
 

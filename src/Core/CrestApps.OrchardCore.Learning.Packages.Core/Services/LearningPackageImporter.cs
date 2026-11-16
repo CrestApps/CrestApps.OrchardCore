@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using CrestApps.OrchardCore.FileStorage;
+using CrestApps.OrchardCore.Learning.Packages.Core.Cmi5;
 using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using Microsoft.Extensions.Logging;
@@ -35,6 +36,12 @@ public sealed class LearningPackageOptions
     /// Gets or sets the most bytes a package may take once extracted.
     /// </summary>
     public long MaxExpandedBytes { get; set; } = 1024L * 1024 * 1024;
+
+    /// <summary>
+    /// Gets or sets whether a cmi5 package (with <c>cmi5.xml</c> at its root) is imported. The Learning cmi5 Packages
+    /// feature turns it on.
+    /// </summary>
+    public bool AcceptCmi5 { get; set; }
 }
 
 /// <summary>
@@ -57,8 +64,8 @@ public static class PackageImportErrors
 /// </summary>
 public sealed class PackageImportResult
 {
-    /// <summary>Gets or sets the error: one of <see cref="PackageImportErrors"/>, <see cref="PackageArchiveErrors"/> or
-    /// <see cref="ScormManifestErrors"/>; <see langword="null"/> when the package was imported.</summary>
+    /// <summary>Gets or sets the error: one of <see cref="PackageImportErrors"/>, <see cref="PackageArchiveErrors"/>,
+    /// <see cref="ScormManifestErrors"/> or <see cref="Cmi5Errors"/>; <see langword="null"/> when the package was imported.</summary>
     public string Error { get; set; }
 
     /// <summary>Gets or sets the archive entry that was refused, when there is one.</summary>
@@ -67,8 +74,11 @@ public sealed class PackageImportResult
     /// <summary>Gets or sets the package file kept in the protected store.</summary>
     public ProtectedFile File { get; set; }
 
-    /// <summary>Gets or sets the manifest.</summary>
+    /// <summary>Gets or sets the SCORM manifest; <see langword="null"/> for a cmi5 package.</summary>
     public ScormManifest Manifest { get; set; }
+
+    /// <summary>Gets or sets the cmi5 course structure; <see langword="null"/> for a SCORM package.</summary>
+    public Cmi5Course Cmi5 { get; set; }
 
     /// <summary>Gets or sets how many files the package has.</summary>
     public int FileCount { get; set; }
@@ -95,8 +105,16 @@ public sealed class PackageImportResult
             throw new InvalidOperationException("A refused package cannot be applied.");
         }
 
+        if (Cmi5 is not null)
+        {
+            ApplyCmi5To(part, fileName, importedBy, importedUtc);
+
+            return;
+        }
+
         var launch = Manifest.Launch;
 
+        part.Cmi5 = null;
         part.PackageFileId = File.FileId;
         part.FileName = fileName;
         part.Standard = Manifest.Standard;
@@ -117,6 +135,37 @@ public sealed class PackageImportResult
         part.ObjectiveIds = [.. launch.ObjectiveIds];
         part.HasSequencing = Manifest.HasSequencing;
         part.ScoCount = Manifest.Scos.Count;
+        part.FileCount = FileCount;
+        part.ExpandedSize = ExpandedSize;
+        part.ImportedUtc = importedUtc;
+        part.ImportedBy = importedBy;
+    }
+
+    private void ApplyCmi5To(LearningPackagePart part, string fileName, string importedBy, DateTime importedUtc)
+    {
+        var first = Cmi5.Aus.FirstOrDefault(au => !au.IsAbsolute);
+
+        part.PackageFileId = File.FileId;
+        part.FileName = fileName;
+        part.Standard = PackagesConstants.Standards.Cmi5;
+        part.ManifestIdentifier = Cmi5.Id;
+        part.Title = Cmi5.Title;
+        part.Cmi5 = Cmi5;
+        part.LaunchItemIdentifier = Cmi5.Aus[0].Id;
+        part.LaunchItemTitle = Cmi5.Aus[0].Title;
+        part.LaunchPath = first?.Path;
+        part.LaunchQuery = first?.Query;
+
+        // The values of a SCORM import do not apply to a cmi5 course.
+        part.MasteryScore = null;
+        part.MaxTimeAllowed = null;
+        part.TimeLimitAction = null;
+        part.LaunchData = null;
+        part.CompletionThreshold = null;
+        part.ScaledPassingScore = null;
+        part.ObjectiveIds = [];
+        part.HasSequencing = false;
+        part.ScoCount = Cmi5.Aus.Count;
         part.FileCount = FileCount;
         part.ExpandedSize = ExpandedSize;
         part.ImportedUtc = importedUtc;
@@ -208,12 +257,18 @@ public sealed class LearningPackageImporter
             }
 
             var manifestPath = archive.Files.FirstOrDefault(file => string.Equals(file, "imsmanifest.xml", StringComparison.OrdinalIgnoreCase));
+            var cmi5Path = archive.Files.FirstOrDefault(file => string.Equals(file, "cmi5.xml", StringComparison.OrdinalIgnoreCase));
+
+            if (manifestPath is null && cmi5Path is not null)
+            {
+                return _options.AcceptCmi5
+                    ? await ImportCmi5Async(fileName, folder, extracted, cmi5Path, archive, cancellationToken)
+                    : PackageImportResult.Fail(ScormManifestErrors.Cmi5);
+            }
 
             if (manifestPath is null)
             {
-                return PackageImportResult.Fail(archive.Files.Any(file => string.Equals(file, "cmi5.xml", StringComparison.OrdinalIgnoreCase))
-                    ? ScormManifestErrors.Cmi5
-                    : ScormManifestErrors.Missing);
+                return PackageImportResult.Fail(ScormManifestErrors.Missing);
             }
 
             ScormManifestResult parsed;
@@ -243,28 +298,10 @@ public sealed class LearningPackageImporter
                 sco.Path = file;
             }
 
-            // Only the files that passed the checks are kept, under their normalized names.
-            var cleanPath = Path.Combine(folder, "package.zip");
+            var stored = await StoreCleanArchiveAsync(fileName, folder, extracted, archive, cancellationToken);
 
-            using (var clean = ZipFile.Open(cleanPath, ZipArchiveMode.Create))
+            if (stored is null)
             {
-                foreach (var file in archive.Files)
-                {
-                    clean.CreateEntryFromFile(Path.Combine(extracted, file.Replace('/', Path.DirectorySeparatorChar)), file, CompressionLevel.Optimal);
-                }
-            }
-
-            ProtectedFile stored;
-
-            try
-            {
-                await using var content = new FileStream(cleanPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                stored = await _files.SaveAsync(Path.GetFileName(fileName), content, cancellationToken);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                _logger.LogWarning(exception, "A learning package was refused by the protected store.");
-
                 return PackageImportResult.Fail(PackageImportErrors.Refused);
             }
 
@@ -279,6 +316,77 @@ public sealed class LearningPackageImporter
         finally
         {
             TryDelete(folder);
+        }
+    }
+
+    // A cmi5 package: cmi5.xml at the root, and every AU with a relative URL opens a file of the package.
+    private async Task<PackageImportResult> ImportCmi5Async(string fileName, string folder, string extracted, string cmi5Path, PackageArchiveResult archive, CancellationToken cancellationToken)
+    {
+        Cmi5ParseResult parsed;
+
+        await using (var structure = new FileStream(Path.Combine(extracted, cmi5Path), FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            parsed = Cmi5CourseParser.Parse(structure);
+        }
+
+        if (!parsed.Succeeded)
+        {
+            return PackageImportResult.Fail(parsed.Error);
+        }
+
+        foreach (var au in parsed.Course.Aus.Where(au => !au.IsAbsolute))
+        {
+            var file = archive.Files.FirstOrDefault(candidate => string.Equals(candidate, au.Path, StringComparison.Ordinal))
+                ?? archive.Files.FirstOrDefault(candidate => string.Equals(candidate, au.Path, StringComparison.OrdinalIgnoreCase));
+
+            if (file is null)
+            {
+                return PackageImportResult.Fail(Cmi5Errors.LaunchFileMissing);
+            }
+
+            au.Path = file;
+        }
+
+        var stored = await StoreCleanArchiveAsync(fileName, folder, extracted, archive, cancellationToken);
+
+        if (stored is null)
+        {
+            return PackageImportResult.Fail(PackageImportErrors.Refused);
+        }
+
+        return new PackageImportResult
+        {
+            File = stored,
+            Cmi5 = parsed.Course,
+            FileCount = archive.Files.Count,
+            ExpandedSize = archive.ExpandedSize,
+        };
+    }
+
+    // Only the files that passed the checks are kept, under their normalized names.
+    private async Task<ProtectedFile> StoreCleanArchiveAsync(string fileName, string folder, string extracted, PackageArchiveResult archive, CancellationToken cancellationToken)
+    {
+        var cleanPath = Path.Combine(folder, "package.zip");
+
+        using (var clean = ZipFile.Open(cleanPath, ZipArchiveMode.Create))
+        {
+            foreach (var file in archive.Files)
+            {
+                clean.CreateEntryFromFile(Path.Combine(extracted, file.Replace('/', Path.DirectorySeparatorChar)), file, CompressionLevel.Optimal);
+            }
+        }
+
+        try
+        {
+            await using var content = new FileStream(cleanPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+            return await _files.SaveAsync(Path.GetFileName(fileName), content, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning(exception, "A learning package was refused by the protected store.");
+
+            return null;
         }
     }
 

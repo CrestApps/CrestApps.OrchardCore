@@ -6,13 +6,13 @@
     <Description>
       $(CrestAppsDescription)
 
-      Learning packages for the Learning module: a learning package course item that runs an imported SCORM 1.2 or SCORM
-      2004 (3rd and 4th Edition) package
+      Learning packages for the Learning module: a learning package course item that runs an imported SCORM 1.2, SCORM
+      2004 (3rd and 4th Edition) or cmi5 package
       in a sandboxed frame on an opaque origin, with a signed launch token, the SCORM run-time API in the frame, the
       runtime state kept and checked on the server, and the result reported to the learner's progress, marked
       self-reported.
     </Description>
-    <PackageTags>$(PackageTags) Learning LMS SCORM Packages</PackageTags>
+    <PackageTags>$(PackageTags) Learning LMS SCORM cmi5 Packages</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -50,7 +50,10 @@
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Packages.Core\CrestApps.OrchardCore.Learning.Packages.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.PersonalData.Core\CrestApps.OrchardCore.PersonalData.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Recipes.Core\CrestApps.OrchardCore.Recipes.Core.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Xapi.Abstractions\CrestApps.OrchardCore.Learning.Xapi.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Learning.Xapi.Core\CrestApps.OrchardCore.Learning.Xapi.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Learning\CrestApps.OrchardCore.Learning.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Xapi\CrestApps.OrchardCore.Learning.Xapi.csproj" />
   </ItemGroup>
 
 </Project>

@@ -13,7 +13,7 @@
         {
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
-                    <span class="hint">@T["Save the item first; then import a SCORM 1.2 or SCORM 2004 package into it."]</span>
+                    <span class="hint">@T["Save the item first; then import a SCORM 1.2, SCORM 2004 or cmi5 package into it."]</span>
                 </div>
             </div>
         }
@@ -22,7 +22,7 @@
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
                     <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("LearningPackageUpload", new { contentItemId = Model.ContentItemId })"><i class="fa-solid fa-file-zipper me-1" aria-hidden="true"></i>@(imported ? T["Import another package"] : T["Import a package"])</a>
-                    <span class="hint">@T["A .zip file of a SCORM 1.2 or SCORM 2004 (3rd or 4th Edition) package. The import goes into a draft; publish the item to give it to learners."]</span>
+                    <span class="hint">@T["A .zip file of a SCORM 1.2, SCORM 2004 (3rd or 4th Edition) or, with Learning cmi5 Packages, cmi5 package. The import goes into a draft; publish the item to give it to learners."]</span>
                 </div>
             </div>
         }
@@ -34,6 +34,53 @@
                 <div class="ocat-wrapper">
                     <div class="ocat-end-offset">
                         <span class="hint">@T["No package is imported yet. Learners cannot launch this item until one is."]</span>
+                    </div>
+                </div>
+            }
+        }
+        else if (part.Cmi5 is { } course)
+        {
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Package"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0">@part.Title <span class="badge ta-badge ms-1">cmi5</span></p>
+                    <span class="hint">@T["{0}, {1} files.", part.FileName, part.FileCount]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Course id"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0"><code>@course.Id</code></p>
+                    <span class="hint">@T["From cmi5.xml. Each learner's enrollment gets a registration on this course in the Learning Record Store."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Assignable units"]</span>
+                <div class="ocat-end">
+                    <ul class="list-unstyled form-control-plaintext mb-0" data-cmi5-aus>
+                        @foreach (var au in course.Aus)
+                        {
+                            <li class="mb-1">
+                                <strong>@au.Title</strong>
+                                <span class="badge ta-badge fw-normal ms-1" title="@T["Satisfied when"]">@au.MoveOn</span>
+                                @if (au.MasteryScore is { } mastery)
+                                {
+                                    <span class="badge ta-badge fw-normal" title="@T["Mastery score"]">@T["Mastery {0}", mastery.ToString("0.###", System.Globalization.CultureInfo.CurrentCulture)]</span>
+                                }
+                                <span class="badge ta-badge fw-normal" title="@T["Launch"]">@(au.IsAbsolute || au.LaunchMethod == "OwnWindow" ? T["Own window"] : T["Frame"])</span>
+                                <div class="hint">@au.Url</div>
+                            </li>
+                        }
+                    </ul>
+                    <span class="hint">@T["The item completes when the course is satisfied: every AU met its moveOn. A file of the package runs in the sandboxed frame; an https AU and an OwnWindow AU open in a window of their own."]</span>
+                </div>
+            </div>
+            @if (part.ImportedUtc is { } cmi5Imported)
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Imported"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(cmi5Imported, DateTimeKind.Utc), Format: "g"))</p>
                     </div>
                 </div>
             }

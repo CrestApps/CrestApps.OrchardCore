@@ -134,6 +134,59 @@
 			}
 		});
 	}
-	document.querySelectorAll("[data-learning-package]").forEach(start);
+	function startCmi5(root) {
+		const host = root.querySelector("[data-package-frame-host]");
+		const buttons = root.querySelectorAll("[data-cmi5-au]");
+		if (!host || buttons.length === 0) return;
+		window.addEventListener("message", (event) => {
+			const frame = host.querySelector("iframe");
+			if (!frame || event.source !== frame.contentWindow || event.origin !== "null") return;
+			if (event.data?.protocol === "crestapps-cmi5" && event.data.type === "return") window.location.reload();
+		});
+		buttons.forEach((button) => button.addEventListener("click", async () => {
+			buttons.forEach((other) => {
+				other.disabled = true;
+			});
+			setStatus(root, "");
+			try {
+				const body = form(root, { au: button.dataset.cmi5Au });
+				const response = await fetch(root.dataset.cmi5LaunchUrl, {
+					method: "POST",
+					body,
+					credentials: "same-origin",
+					headers: { "X-Requested-With": "XMLHttpRequest" }
+				});
+				const result = response.ok ? await response.json() : null;
+				if (!result?.launched) {
+					setStatus(root, result?.message || root.dataset.errorText);
+					return;
+				}
+				if (result.ownWindow) {
+					window.open(result.launchUrl, "_blank", "noopener");
+					setStatus(root, root.dataset.windowText);
+					return;
+				}
+				const frame = document.createElement("iframe");
+				frame.name = frameName;
+				frame.title = root.dataset.frameTitle;
+				frame.className = "learning-package-frame w-100 border rounded bg-white";
+				frame.style.minHeight = "70vh";
+				frame.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
+				frame.setAttribute("allow", "fullscreen");
+				frame.setAttribute("referrerpolicy", "no-referrer");
+				frame.src = result.launchUrl;
+				host.replaceChildren(frame);
+				host.classList.remove("d-none");
+				frame.focus();
+			} catch {
+				setStatus(root, root.dataset.errorText);
+			} finally {
+				buttons.forEach((other) => {
+					other.disabled = false;
+				});
+			}
+		}));
+	}
+	document.querySelectorAll("[data-learning-package]").forEach((root) => root.dataset.cmi5LaunchUrl ? startCmi5(root) : start(root));
 	//#endregion
 })();

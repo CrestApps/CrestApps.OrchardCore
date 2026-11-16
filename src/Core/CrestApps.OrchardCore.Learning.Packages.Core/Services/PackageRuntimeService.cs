@@ -94,40 +94,17 @@ public sealed class PackageRuntimeService
     /// <returns>The launch, or why it was refused.</returns>
     public async Task<PackageLaunchResult> LaunchAsync(string userId, string studentName, string packageItemId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(userId))
+        var resolved = await ResolveLaunchAsync(userId, packageItemId, cancellationToken);
+
+        if (resolved.Error is not null)
         {
-            return PackageLaunchResult.Fail(PackageRuntimeErrors.NotEnrolled);
+            return PackageLaunchResult.Fail(resolved.Error);
         }
 
-        var target = await FindPackageAsync(packageItemId);
-
-        if (target.Error is not null)
-        {
-            return PackageLaunchResult.Fail(target.Error);
-        }
-
-        var (_, enrollment) = await _learnerResolver.ResolveAsync(userId, target.Item, cancellationToken);
-
-        if (enrollment is null)
-        {
-            return PackageLaunchResult.Fail(PackageRuntimeErrors.NotEnrolled);
-        }
-
-        // A completed enrollment is a record: the learner may open the package again to review it, and nothing it
-        // sends is kept. Otherwise a launch is a learner's write, with the same checks as any other item.
-        var review = enrollment.Status == EnrollmentStatus.Completed;
+        var target = resolved;
+        var enrollment = resolved.Enrollment;
+        var review = resolved.Review;
         var now = _clock.UtcNow;
-
-        if (!review)
-        {
-            var refused = await CheckLearnerAccessAsync(enrollment, target.Entry, now, cancellationToken);
-
-            if (refused is not null)
-            {
-                return PackageLaunchResult.Fail(refused);
-            }
-        }
-
         var part = target.Part;
         var launch = new PackageLaunch(IdGenerator.GenerateId(), enrollment.ItemId, target.Item.ContentItemId, part.PackageFileId, userId);
         PackageRuntimeState launched = null;
@@ -209,6 +186,60 @@ public sealed class PackageRuntimeService
             Launch = launch,
             Part = part,
             State = launched,
+            Review = review,
+        };
+    }
+
+    /// <summary>
+    /// Finds what a learner's launch of a package item opens: the published item in the outline of a course, the
+    /// learner's own enrollment, and whether the launch is a review of a completed enrollment. Otherwise the enrollment
+    /// must be active, within the learner's access dates, and the item's release rules must open it, as for any other
+    /// item of the course.
+    /// </summary>
+    /// <param name="userId">The learner.</param>
+    /// <param name="packageItemId">The package item.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The target, or why the launch is refused.</returns>
+    public async Task<PackageLaunchTarget> ResolveLaunchAsync(string userId, string packageItemId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return PackageLaunchTarget.Fail(PackageRuntimeErrors.NotEnrolled);
+        }
+
+        var target = await FindPackageAsync(packageItemId);
+
+        if (target.Error is not null)
+        {
+            return PackageLaunchTarget.Fail(target.Error);
+        }
+
+        var (_, enrollment) = await _learnerResolver.ResolveAsync(userId, target.Item, cancellationToken);
+
+        if (enrollment is null)
+        {
+            return PackageLaunchTarget.Fail(PackageRuntimeErrors.NotEnrolled);
+        }
+
+        // A completed enrollment is a record: the learner may open the package again to review it, and nothing it
+        // sends is kept. Otherwise a launch is a learner's write, with the same checks as any other item.
+        var review = enrollment.Status == EnrollmentStatus.Completed;
+
+        if (!review)
+        {
+            var refused = await CheckLearnerAccessAsync(enrollment, target.Entry, _clock.UtcNow, cancellationToken);
+
+            if (refused is not null)
+            {
+                return PackageLaunchTarget.Fail(refused);
+            }
+        }
+
+        return new PackageLaunchTarget
+        {
+            Item = target.Item,
+            Part = target.Part,
+            Enrollment = enrollment,
             Review = review,
         };
     }

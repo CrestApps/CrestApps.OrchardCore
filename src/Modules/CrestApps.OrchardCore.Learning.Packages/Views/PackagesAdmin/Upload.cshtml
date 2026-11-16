@@ -11,7 +11,7 @@
     @Html.ValidationSummary()
 
     <div class="card text-bg-theme mb-3">
-        <div class="card-header">@T["SCORM package"]</div>
+        <div class="card-header">@(Model.AcceptCmi5 ? T["SCORM or cmi5 package"] : T["SCORM package"])</div>
         <div class="card-body">
             @if (!string.IsNullOrEmpty(Model.Part?.PackageFileId))
             {
@@ -27,6 +27,10 @@
                 <label for="package" class="ocat-label">@T["Package file"]</label>
                 <div class="ocat-end">
                     <input id="package" name="package" type="file" class="form-control" accept=".zip,application/zip" required />
+                    @if (Model.AcceptCmi5)
+                    {
+                        <span class="hint">@T["Or a cmi5 course: a .zip file with cmi5.xml at its root. AUs with a relative URL must be files of the package; an AU with an absolute URL must use https."]</span>
+                    }
                     <span class="hint">@T["A .zip file of up to {0} MB with imsmanifest.xml at its root: a SCORM 1.2 or SCORM 2004 (3rd or 4th Edition) package, whose version is read from its manifest. The files are checked, kept in a private store and opened only for learners who launch the item.", Model.MaxUploadMb]</span>
                 </div>
             </div>

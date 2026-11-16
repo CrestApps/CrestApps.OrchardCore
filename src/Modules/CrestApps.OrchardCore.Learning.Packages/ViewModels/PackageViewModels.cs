@@ -42,6 +42,9 @@ public class PackageUploadViewModel
 
     /// <summary>Gets or sets the largest upload, in megabytes.</summary>
     public long MaxUploadMb { get; set; }
+
+    /// <summary>Gets or sets whether cmi5 packages are imported.</summary>
+    public bool AcceptCmi5 { get; set; }
 }
 
 /// <summary>

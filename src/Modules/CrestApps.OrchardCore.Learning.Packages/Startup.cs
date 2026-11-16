@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Packages.Core.Cmi5;
 using CrestApps.OrchardCore.Learning.Packages.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Packages.Drivers;
 using CrestApps.OrchardCore.Learning.Packages.Migrations;
@@ -41,6 +42,22 @@ public sealed class Startup : StartupBase
 
         services.AddPermissionProvider<PackagesPermissionProvider>();
         services.AddPersonalDataContributor<PackagesPersonalDataContributor>();
+    }
+}
+
+/// <summary>
+/// Registers cmi5 packages: the importer takes cmi5.xml, the launch and fetch endpoints, and the index of registrations.
+/// </summary>
+[Feature(PackagesConstants.Features.Cmi5)]
+public sealed class Cmi5Startup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<Cmi5Migrations>()
+            .AddIndexProvider<Cmi5RegistrationIndexProvider>();
+
+        services.AddLearningCmi5Core();
     }
 }
 

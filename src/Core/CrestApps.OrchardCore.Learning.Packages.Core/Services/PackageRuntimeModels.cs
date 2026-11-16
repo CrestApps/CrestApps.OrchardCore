@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using CrestApps.OrchardCore.Learning.Services;
+using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Learning.Packages.Core.Services;
 
@@ -37,6 +39,30 @@ public static class PackageRuntimeErrors
 
     /// <summary>The request has more changes than one call may carry.</summary>
     public const string TooManyChanges = "TooManyChanges";
+}
+
+/// <summary>
+/// What a learner's launch of a package item opens, or why it is refused.
+/// </summary>
+public sealed class PackageLaunchTarget
+{
+    /// <summary>Gets or sets the error, one of <see cref="PackageRuntimeErrors"/>, or <see langword="null"/>.</summary>
+    public string Error { get; set; }
+
+    /// <summary>Gets or sets the package item, as the course outline has it.</summary>
+    public ContentItem Item { get; set; }
+
+    /// <summary>Gets or sets the package part.</summary>
+    public LearningPackagePart Part { get; set; }
+
+    /// <summary>Gets or sets the learner's enrollment.</summary>
+    public Enrollment Enrollment { get; set; }
+
+    /// <summary>Gets or sets whether the launch is a review of a completed enrollment.</summary>
+    public bool Review { get; set; }
+
+    internal static PackageLaunchTarget Fail(string error)
+        => new() { Error = error };
 }
 
 /// <summary>

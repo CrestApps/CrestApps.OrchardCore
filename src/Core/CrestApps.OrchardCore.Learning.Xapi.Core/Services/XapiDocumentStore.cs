@@ -49,6 +49,52 @@ public sealed class XapiDocumentStore : DocumentCatalog<XapiDocument, XapiDocume
     }
 
     /// <summary>
+    /// Stores a document a module writes itself, such as the cmi5 launch data: it replaces the document's content.
+    /// </summary>
+    /// <param name="scope">Where the document is.</param>
+    /// <param name="documentId">The state id or profile id.</param>
+    /// <param name="agent">The agent, as JSON, or <see langword="null"/> for an activity profile.</param>
+    /// <param name="contentType">The content type.</param>
+    /// <param name="content">The content.</param>
+    /// <param name="nowUtc">The time, in UTC.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The document.</returns>
+    public async Task<XapiDocument> SaveAsync(XapiDocumentScope scope, string documentId, string agent, string contentType, byte[] content, DateTime nowUtc, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentException.ThrowIfNullOrEmpty(documentId);
+
+        var document = await FindAsync(scope, documentId, cancellationToken);
+        var isNew = document is null;
+
+        document ??= new XapiDocument
+        {
+            Kind = scope.Kind,
+            ActivityId = scope.ActivityId,
+            AgentKey = scope.AgentKey,
+            Agent = agent,
+            Registration = scope.Registration,
+            DocumentId = documentId,
+        };
+
+        document.ContentType = contentType;
+        document.Content = content ?? [];
+        document.ETag = XapiDocumentsResource.ETagOf(document.Content);
+        document.UpdatedUtc = nowUtc;
+
+        if (isNew)
+        {
+            await CreateAsync(document, cancellationToken);
+        }
+        else
+        {
+            await UpdateAsync(document, cancellationToken);
+        }
+
+        return document;
+    }
+
+    /// <summary>
     /// Lists the documents in a scope, changed after a time.
     /// </summary>
     /// <param name="scope">Where the documents are.</param>
