@@ -187,28 +187,6 @@ public enum PayCodeProrationRule
 }
 
 /// <summary>
-/// The tax categories every country has; a country pack adds its own with <c>AddPayrollTaxCategory</c>.
-/// </summary>
-public static class PayrollTaxCategories
-{
-    /// <summary>Income tax withheld from pay.</summary>
-    public const string IncomeTax = "IncomeTax";
-
-    /// <summary>Social insurance (pensions, health), paid by the employee, the employer or both.</summary>
-    public const string SocialInsurance = "SocialInsurance";
-
-    /// <summary>Unemployment insurance.</summary>
-    public const string Unemployment = "Unemployment";
-
-    /// <summary>
-    /// Withholding on a contractor's payments (backup withholding in the United States), registered by the country pack
-    /// that has it. Only rules of this category apply to contractors, and only when the profile says so or the
-    /// contractor gave no tax id.
-    /// </summary>
-    public const string ContractorWithholding = "ContractorWithholding";
-}
-
-/// <summary>
 /// Reads the Payroll settings of a pay code.
 /// </summary>
 public static class PayrollPayCodeSettingsExtensions

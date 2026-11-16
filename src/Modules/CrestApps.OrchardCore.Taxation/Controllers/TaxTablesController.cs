@@ -255,7 +255,7 @@ public sealed class TaxTablesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        // Other modules' records that use the table, such as payroll tax rules.
+        // Other modules' records that use the table, such as income tax rules.
         foreach (var usage in _usages)
         {
             if (await usage.GetUsagesAsync(model, HttpContext.RequestAborted) is { Count: > 0 } uses)

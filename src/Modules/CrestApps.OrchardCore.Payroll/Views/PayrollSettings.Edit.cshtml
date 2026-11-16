@@ -42,7 +42,7 @@
                 <select asp-for="TaxProvider" asp-items="Model.TaxProviders" class="form-select" style="max-width: 20rem">
                     <option value="">@T["The only one there is"]</option>
                 </select>
-                <span class="hint">@T["What works out taxes. Turn on Payroll Tax Tables for the built-in one, or a module of a tax engine."]</span>
+                <span class="hint">@T["What works out taxes: Taxation's Income Tax rules (the built-in one, with a country pack such as United States or Canada Income Tax), or a module of a tax engine."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="MinimumNetPay">

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Recipes;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Workforce;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,7 +56,7 @@ public sealed class PayrollCatalogRecipeTests
         var code = Assert.Single(await harness.RunAsync(async services => (await services.GetRequiredService<IPayCodeManager>().GetAllAsync()).ToList(), commit: false));
 
         Assert.Equal(("RET", "Retirement", PayCodeClass.Deduction, PayCodeKinds.Contribution), (code.Code, code.Name, code.Class, code.Kind));
-        Assert.Equal(PayCodeTaxTreatment.Exempt, code.TreatmentFor(PayrollTaxCategories.IncomeTax));
+        Assert.Equal(PayCodeTaxTreatment.Exempt, code.TreatmentFor(IncomeTaxCategories.IncomeTax));
         Assert.Equal(20, code.GetPayrollSettings().Priority);
     }
 

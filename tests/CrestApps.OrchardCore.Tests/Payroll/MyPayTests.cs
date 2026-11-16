@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Disbursements;
 using CrestApps.OrchardCore.Tests.Workforce;
@@ -548,7 +549,7 @@ public sealed class MyPayTests
             Mock.Of<IShapeFactory>(),
             services,
             new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = CalendarTestHarness.User("lee-user") } },
-            Microsoft.Extensions.Options.Options.Create(new PayrollElectionOptions()),
+            Microsoft.Extensions.Options.Options.Create(new IncomeTaxElectionOptions()),
             Mock.Of<Microsoft.Extensions.Localization.IStringLocalizerFactory>(),
             tracker,
             services.GetRequiredService<IClock>(),

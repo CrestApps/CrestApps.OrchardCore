@@ -27,24 +27,24 @@ public sealed class ContractorPaymentsTests
     {
         var rules = new[]
         {
-            new PayrollTaxRule { ItemId = "bwh", TaxCode = Form1099Nec.BackupWithholdingCode, Name = "Backup withholding", Jurisdiction = "US", Category = PayrollTaxCategories.ContractorWithholding, Method = "Percentage", Rate = 24, EffectiveFrom = new DateOnly(2026, 1, 1) },
-            new PayrollTaxRule { ItemId = "ss", TaxCode = "US-SS-EE", Name = "Social Security", Jurisdiction = "US", Category = PayrollTaxCategories.SocialInsurance, Method = "Percentage", Rate = 6.2m, EffectiveFrom = new DateOnly(2026, 1, 1) },
+            new IncomeTaxRule { ItemId = "bwh", TaxCode = Form1099Nec.BackupWithholdingCode, Name = "Backup withholding", Jurisdiction = "US", Category = IncomeTaxCategories.ContractorWithholding, Method = "Percentage", Rate = 24, EffectiveFrom = new DateOnly(2026, 1, 1) },
+            new IncomeTaxRule { ItemId = "ss", TaxCode = "US-SS-EE", Name = "Social Security", Jurisdiction = "US", Category = IncomeTaxCategories.SocialInsurance, Method = "Percentage", Rate = 6.2m, EffectiveFrom = new DateOnly(2026, 1, 1) },
         };
-        var manager = new Mock<IPayrollTaxRuleManager>();
+        var manager = new Mock<IIncomeTaxRuleManager>();
 
         manager.Setup(candidate => candidate.ListAsync(It.IsAny<CancellationToken>())).ReturnsAsync(rules);
 
-        var provider = new TaxTablesPayrollTaxProvider(manager.Object, new DefaultTaxCalculationMethodProvider([new PercentageTaxCalculationMethod()]), new InMemoryNamedCatalog<TaxTable>(), [], new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<TaxTablesPayrollTaxProvider>());
+        var provider = new IncomeTaxRulesProvider(manager.Object, new DefaultTaxCalculationMethodProvider([new PercentageTaxCalculationMethod()]), new InMemoryNamedCatalog<TaxTable>(), [], new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<IncomeTaxRulesProvider>());
 
-        PayrollTaxRequest Request(PayWorkerType type, bool withhold)
+        IncomeTaxRequest Request(PayWorkerType type, bool withhold)
             => new()
             {
-                Employer = new Employer { Registrations = [new EmployerTaxRegistration { Jurisdiction = "US" }] },
+                RegisteredJurisdictions = ["US"],
                 PayDate = new DateOnly(2026, 11, 20),
                 PeriodsPerYear = 26,
-                WorkerType = type,
+                IncomeKind = type == PayWorkerType.Contractor ? IncomeKind.Contractor : IncomeKind.Employment,
                 ContractorWithholding = withhold,
-                Wages = new Dictionary<string, decimal> { [PayrollTaxCategories.ContractorWithholding] = 1000, [PayrollTaxCategories.SocialInsurance] = 1000 },
+                Income = new Dictionary<string, decimal> { [IncomeTaxCategories.ContractorWithholding] = 1000, [IncomeTaxCategories.SocialInsurance] = 1000 },
             };
 
         var withheld = await provider.CalculateAsync(Request(PayWorkerType.Contractor, withhold: true), TestContext.Current.CancellationToken);
@@ -60,13 +60,13 @@ public sealed class ContractorPaymentsTests
     [Fact]
     public void AContractorWithNoTaxId_IsWithheldOn_AndOneWithATaxIdOnlyWhenTheProfileSaysSo()
     {
-        var categories = new PayrollTaxCategoryOptions();
+        var categories = new IncomeTaxCategoryOptions();
 
-        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.ContractorWithholding, global::OrchardCore.Localization.LocalizationSource.Create<ContractorPaymentsTests>("Backup withholding")));
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.ContractorWithholding, global::OrchardCore.Localization.LocalizationSource.Create<ContractorPaymentsTests>("Backup withholding")));
 
         var step = new TaxesPayCalculationStep([], Options.Create(categories), new ServiceCollection().BuildServiceProvider(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<TaxesPayCalculationStep>());
 
-        PayrollTaxRequest Request(EmployeePayProfile profile)
+        IncomeTaxRequest Request(EmployeePayProfile profile)
             => step.Request(new PayCalculationContext { Profile = profile, PayDate = new DateOnly(2026, 11, 20) });
 
         Assert.True(Request(new EmployeePayProfile { WorkerType = PayWorkerType.Contractor }).ContractorWithholding);
@@ -127,7 +127,7 @@ public sealed class ContractorPaymentsTests
 
                 if (withheld > 0)
                 {
-                    lines.Add(new PayStatementLine { Type = PayLineType.Tax, TaxCode = Form1099Nec.BackupWithholdingCode, TaxCategory = PayrollTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = paid, Amount = withheld });
+                    lines.Add(new PayStatementLine { Type = PayLineType.Tax, TaxCode = Form1099Nec.BackupWithholdingCode, TaxCategory = IncomeTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = paid, Amount = withheld });
                 }
 
                 await store.CreateAsync(new PayStatement

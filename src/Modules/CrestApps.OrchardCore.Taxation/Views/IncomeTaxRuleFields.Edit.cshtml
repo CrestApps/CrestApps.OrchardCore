@@ -1,4 +1,4 @@
-@model PayrollTaxRuleViewModel
+@model IncomeTaxRuleViewModel
 
 <div class="card mb-3">
     <div class="card-header">@T["The tax"]</div>
@@ -8,7 +8,7 @@
             <div class="ocat-end">
                 <input asp-for="Name" class="form-control" />
                 <span asp-validation-for="Name" class="text-danger"></span>
-                <span class="hint">@T["What a pay statement shows, such as State income tax."]</span>
+                <span class="hint">@T["What a pay statement shows, such as State income tax or Canada Pension Plan."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="TaxCode">
@@ -16,30 +16,51 @@
             <div class="ocat-end">
                 <input asp-for="TaxCode" class="form-control text-uppercase" style="max-width: 14rem" />
                 <span asp-validation-for="TaxCode" class="text-danger"></span>
-                <span class="hint">@T["The same for every dated version of the tax: the year's totals and the wage base add up by it."]</span>
+                <span class="hint">@T["The same for every dated version of the tax: the year's totals, the wage base and the yearly maximum add up by it."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="Jurisdiction">
             <label asp-for="Jurisdiction" class="ocat-label ocat-label-required">@T["Jurisdiction"]</label>
             <div class="ocat-end">
-                <input asp-for="Jurisdiction" class="form-control text-uppercase" style="max-width: 10rem" placeholder="US-CA" />
+                <input asp-for="Jurisdiction" class="form-control text-uppercase" style="max-width: 10rem" placeholder="US-CA, CA-ON" />
                 <span asp-validation-for="Jurisdiction" class="text-danger"></span>
-                <span class="hint">@T["The tax applies to employers registered there. A jurisdiction below a country (with a dash) applies only to people who live or work there."]</span>
+                <span class="hint">@T["The tax applies to payers registered there. A jurisdiction below a country (with a dash) applies only to people who live or work there."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
-            <label asp-for="Category" class="ocat-label">@T["Wages taxed"]</label>
+            <label asp-for="CollectedBy" class="ocat-label">@T["Collected by"]</label>
+            <div class="ocat-end">
+                <input asp-for="CollectedBy" class="form-control text-uppercase" style="max-width: 10rem" placeholder="CA" />
+                <span class="hint">@T["The jurisdiction whose registration covers the tax when it isn't the one above, such as CA for a province's tax the CRA collects; empty for the one above."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="ExceptJurisdictions" class="ocat-label">@T["Not for people in"]</label>
+            <div class="ocat-end">
+                <input asp-for="ExceptJurisdictions" class="form-control text-uppercase" style="max-width: 20rem" placeholder="CA-QC" />
+                <span class="hint">@T["Jurisdictions, separated by commas, whose people the tax doesn't apply to, such as CA-QC for the Canada Pension Plan (Quebec has its own)."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="Category" class="ocat-label">@T["Income taxed"]</label>
             <div class="ocat-end">
                 <select asp-for="Category" asp-items="Model.Categories" class="form-select" style="max-width: 20rem"></select>
-                <span class="hint">@T["The tax category whose wages are taxed; each pay code says whether it counts for it."]</span>
+                <span class="hint">@T["The tax category whose income is taxed (such as pensionable or insurable earnings); each pay code says whether it counts for it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="IncomeKinds" class="ocat-label">@T["Kinds of income"]</label>
+            <div class="ocat-end">
+                <select asp-for="IncomeKinds" asp-items="Model.AvailableIncomeKinds" class="form-select" multiple style="max-width: 20rem"></select>
+                <span class="hint">@T["None chosen means employment income (contractor payments for backup withholding)."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
             <label asp-for="Payer" class="ocat-label">@T["Paid by"]</label>
             <div class="ocat-end">
                 <select asp-for="Payer" class="form-select" style="max-width: 20rem">
-                    <option value="Employee">@T["The employee (withheld from pay)"]</option>
-                    <option value="Employer">@T["The employer (on top of pay)"]</option>
+                    <option value="Employee">@T["The earner (withheld from pay)"]</option>
+                    <option value="Employer">@T["The payer (on top of pay)"]</option>
                 </select>
             </div>
         </div>
@@ -85,7 +106,7 @@
             <div class="ocat-end">
                 <input asp-for="WageBase" class="form-control" inputmode="decimal" style="max-width: 10rem" />
                 <span asp-validation-for="WageBase" class="text-danger"></span>
-                <span class="hint">@T["The most wages taxed in a calendar year; empty for no limit."]</span>
+                <span class="hint">@T["The most income taxed in a calendar year; empty for no limit."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="WageThreshold">
@@ -93,7 +114,35 @@
             <div class="ocat-end">
                 <input asp-for="WageThreshold" class="form-control" inputmode="decimal" style="max-width: 10rem" />
                 <span asp-validation-for="WageThreshold" class="text-danger"></span>
-                <span class="hint">@T["Only the part of a calendar year's wages above it is taxed, such as an additional rate on high earners; empty to tax every wage."]</span>
+                <span class="hint">@T["Only the part of a calendar year's income above it is taxed, such as an additional rate on high earners or a pension plan's second tier; empty to tax all of it."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="YearlyExemption">
+            <label asp-for="YearlyExemption" class="ocat-label">@T["Yearly exemption"]</label>
+            <div class="ocat-end">
+                <input asp-for="YearlyExemption" class="form-control" inputmode="decimal" style="max-width: 10rem" placeholder="3500" />
+                <span asp-validation-for="YearlyExemption" class="text-danger"></span>
+                <span class="hint">@T["An amount of a year's income never taxed, taken off each pay in proportion to the pay periods of a year, such as the CPP basic exemption; empty for none."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="YearlyMaximum">
+            <label asp-for="YearlyMaximum" class="ocat-label">@T["Yearly maximum"]</label>
+            <div class="ocat-end">
+                <input asp-for="YearlyMaximum" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+                <span asp-validation-for="YearlyMaximum" class="text-danger"></span>
+                <span class="hint">@T["The most tax taken in a calendar year, such as a contribution's maximum; empty for no limit."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" asp-validation-class-for="ShareMultiplier">
+            <label asp-for="ShareOfTaxCode" class="ocat-label">@T["Share of another tax"]</label>
+            <div class="ocat-end">
+                <div class="input-group" style="max-width: 24rem">
+                    <input asp-for="ShareMultiplier" class="form-control" inputmode="decimal" placeholder="1.4" />
+                    <span class="input-group-text">@T["times"]</span>
+                    <input asp-for="ShareOfTaxCode" class="form-control text-uppercase" placeholder="CA-EI" />
+                </div>
+                <span asp-validation-for="ShareMultiplier" class="text-danger"></span>
+                <span class="hint">@T["The tax is a multiple of another tax of the same pay, such as the employer's EI premium (1.4 times the employee's); the method above is then not used."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="SupplementalRate">
@@ -101,7 +150,7 @@
             <div class="ocat-end">
                 <input asp-for="SupplementalRate" class="form-control" inputmode="decimal" style="max-width: 8rem" />
                 <span asp-validation-for="SupplementalRate" class="text-danger"></span>
-                <span class="hint">@T["Withheld from bonuses and commissions when a run uses the flat method; empty to withhold them with regular wages."]</span>
+                <span class="hint">@T["Withheld from bonuses and commissions when a run uses the flat method; empty to withhold them with regular income."]</span>
             </div>
         </div>
         <div class="ocat-wrapper" asp-validation-class-for="SupplementalExcessRate">
@@ -114,20 +163,20 @@
                 </div>
                 <span asp-validation-for="SupplementalExcessRate" class="text-danger"></span>
                 <span asp-validation-for="SupplementalExcessThreshold" class="text-danger"></span>
-                <span class="hint">@T["The rate withheld from the supplemental wages a person is paid in a calendar year above the amount, whatever the method and the election; empty for none."]</span>
+                <span class="hint">@T["The rate withheld from the supplemental income a person is paid in a calendar year above the amount, whatever the method and the election; empty for none."]</span>
             </div>
         </div>
         <div class="ocat-wrapper">
             <div class="ocat-end-offset">
                 <div class="form-check">
                     <input asp-for="Annualize" type="checkbox" class="form-check-input" />
-                    <label asp-for="Annualize" class="form-check-label">@T["Work it out on a year's wages"]</label>
-                    <span class="hint dashed">@T["The period's wages are turned into a year's, the method applied, and the result divided back: how income tax tables are written."]</span>
+                    <label asp-for="Annualize" class="form-check-label">@T["Work it out on a year's income"]</label>
+                    <span class="hint dashed">@T["The period's income is turned into a year's, the method applied, and the result divided back: how income tax tables are written."]</span>
                 </div>
                 <div class="form-check">
                     <input asp-for="UsesElections" type="checkbox" class="form-check-input" />
                     <label asp-for="UsesElections" class="form-check-label">@T["The person's election applies"]</label>
-                    <span class="hint dashed">@T["Exempt withholds nothing, each allowance lowers a year's wages by the amount below, and extra withholding is added."]</span>
+                    <span class="hint dashed">@T["Exempt withholds nothing, each allowance lowers a year's income by the amount below, and extra withholding is added."]</span>
                 </div>
             </div>
         </div>

@@ -1,7 +1,7 @@
-@model ListCatalogEntryViewModel<CatalogEntryViewModel<PayrollTaxRule>>
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<IncomeTaxRule>>
 
 <zone Name="Title">
-    <breadcrumb name="PayrollTaxRules" title="@T["Tax rules"]" />
+    <breadcrumb name="IncomeTaxRules" title="@T["Income tax rules"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for delete actions. *@
@@ -16,15 +16,15 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add tax rule"]</a>
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add income tax rule"]</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <admin-list name="PayrollTaxRules" context="Model.List"
+    <admin-list name="IncomeTaxRules" context="Model.List"
                 show-select-all="false"
-                empty-message="@T["<strong>Nothing here!</strong> No tax rule has been added yet. A country pack adds its own with a recipe."]">
+                empty-message="@T["<strong>Nothing here!</strong> No income tax rule has been added yet. A country pack (United States, Canada) adds its own with a dated recipe under Tools &gt; Recipes."]">
         <admin-list-list item-css-class="list-group-item" />
         <admin-list-grid>
             <admin-list-column name="Name" position="20" title="@T["Name"]" />

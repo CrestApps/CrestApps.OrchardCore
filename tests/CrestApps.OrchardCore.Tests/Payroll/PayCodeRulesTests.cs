@@ -8,6 +8,8 @@ using CrestApps.OrchardCore.Payroll.Drivers;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -82,11 +84,11 @@ public sealed class PayCodeRulesTests
     [Fact]
     public void TaxMatrix_ADeductionNotTaxedForIncomeTax_LowersOnlyIncomeTaxWages()
     {
-        var retirement = Code("RET", PayCodeClass.Deduction, PayCodeKinds.Contribution, settings => settings.TaxTreatment[PayrollTaxCategories.IncomeTax] = PayCodeTaxTreatment.Exempt);
+        var retirement = Code("RET", PayCodeClass.Deduction, PayCodeKinds.Contribution, settings => settings.TaxTreatment[IncomeTaxCategories.IncomeTax] = PayCodeTaxTreatment.Exempt);
         var health = Code("HLTH", PayCodeClass.Deduction, PayCodeKinds.Contribution, settings =>
         {
-            settings.TaxTreatment[PayrollTaxCategories.IncomeTax] = PayCodeTaxTreatment.Exempt;
-            settings.TaxTreatment[PayrollTaxCategories.SocialInsurance] = PayCodeTaxTreatment.Exempt;
+            settings.TaxTreatment[IncomeTaxCategories.IncomeTax] = PayCodeTaxTreatment.Exempt;
+            settings.TaxTreatment[IncomeTaxCategories.SocialInsurance] = PayCodeTaxTreatment.Exempt;
         });
         PayCodeAmount[] lines =
         [
@@ -100,10 +102,10 @@ public sealed class PayCodeRulesTests
             new(health, 30),
         ];
 
-        Assert.Equal(1120, PayCodeTaxMatrix.WagesFor(PayrollTaxCategories.IncomeTax, lines));
-        Assert.Equal(1220, PayCodeTaxMatrix.WagesFor(PayrollTaxCategories.SocialInsurance, lines));
-        Assert.Equal(1250, PayCodeTaxMatrix.WagesFor(PayrollTaxCategories.Unemployment, lines));
-        Assert.Equal(0, PayCodeTaxMatrix.WagesFor(PayrollTaxCategories.IncomeTax, [new(retirement, 100)]));
+        Assert.Equal(1120, PayCodeTaxMatrix.WagesFor(IncomeTaxCategories.IncomeTax, lines));
+        Assert.Equal(1220, PayCodeTaxMatrix.WagesFor(IncomeTaxCategories.SocialInsurance, lines));
+        Assert.Equal(1250, PayCodeTaxMatrix.WagesFor(IncomeTaxCategories.Unemployment, lines));
+        Assert.Equal(0, PayCodeTaxMatrix.WagesFor(IncomeTaxCategories.IncomeTax, [new(retirement, 100)]));
     }
 
     [Fact]
@@ -122,7 +124,7 @@ public sealed class PayCodeRulesTests
         Assert.Equal((PayCodeCalculation.HoursByRate, false, false), (holiday.Calculation, holiday.CountsInRegularRate, holiday.CountsAsHoursWorked));
         Assert.Equal((PayCodeCalculation.FixedAmount, true, true), (bonus.Calculation, bonus.Supplemental, bonus.CountsInRegularRate));
         Assert.Equal(PayCodeProrationRule.WorkingDays, salary.Proration);
-        Assert.Equal(PayCodeTaxTreatment.Exempt, reimbursement.TreatmentFor(PayrollTaxCategories.IncomeTax));
+        Assert.Equal(PayCodeTaxTreatment.Exempt, reimbursement.TreatmentFor(IncomeTaxCategories.IncomeTax));
         Assert.False(reimbursement.GetPayrollSettings().InRetroPay);
         Assert.Equal(PayCodeCalculation.FixedAmount, stored.GetPayrollSettings().Calculation);
         Assert.Equal(PayrollPayCodeSettingsExtensions.DefaultPriority, stored.GetPayrollSettings().Priority);
@@ -146,8 +148,8 @@ public sealed class PayCodeRulesTests
         var settings = code.GetPayrollSettings();
 
         Assert.Equal(PayCodeCalculation.PercentOfEarnings, settings.Calculation);
-        Assert.Equal(PayCodeTaxTreatment.Exempt, code.TreatmentFor(PayrollTaxCategories.IncomeTax));
-        Assert.Equal(PayCodeTaxTreatment.Taxed, code.TreatmentFor(PayrollTaxCategories.SocialInsurance));
+        Assert.Equal(PayCodeTaxTreatment.Exempt, code.TreatmentFor(IncomeTaxCategories.IncomeTax));
+        Assert.Equal(PayCodeTaxTreatment.Taxed, code.TreatmentFor(IncomeTaxCategories.SocialInsurance));
         Assert.Equal(23000, settings.YearLimitOn(new DateOnly(2026, 12, 31)));
         Assert.Null(settings.YearLimitOn(new DateOnly(2025, 12, 31)));
         Assert.Equal((PayCodeArrearsRule.CarryForward, 20), (settings.Arrears, settings.Priority));
@@ -180,7 +182,7 @@ public sealed class PayCodeRulesTests
         Assert.False(codes["BONUS"].TryGet<PayrollPayCodeSettings>(out _));
         Assert.True(codes["LOAN"].TryGet<PayrollPayCodeSettings>(out var loan));
         Assert.Equal((PayCodeClass.Deduction, PayCodeArrearsRule.CarryForward, 200), (codes["LOAN"].Class, loan.Arrears, loan.Priority));
-        Assert.Equal(PayCodeTaxTreatment.Exempt, codes["REIMB"].TreatmentFor(PayrollTaxCategories.IncomeTax));
+        Assert.Equal(PayCodeTaxTreatment.Exempt, codes["REIMB"].TreatmentFor(IncomeTaxCategories.IncomeTax));
         Assert.True(codes["SAL"].GetPayrollSettings().CountsAsHoursWorked);
     }
 
@@ -226,7 +228,7 @@ public sealed class PayCodeRulesTests
         {
             Calculation = "PercentOfEarnings",
             BaseCodeIds = ["reg", earning.ItemId, "reg"],
-            Treatments = new() { [PayrollTaxCategories.IncomeTax] = "Exempt", ["Unknown"] = "Exempt", [PayrollTaxCategories.Unemployment] = string.Empty },
+            Treatments = new() { [IncomeTaxCategories.IncomeTax] = "Exempt", ["Unknown"] = "Exempt", [IncomeTaxCategories.Unemployment] = string.Empty },
             PeriodLimit = "250.50",
             YearLimits = [new() { EffectiveFrom = new DateOnly(2027, 1, 1), Amount = "1200" }, new() { EffectiveFrom = new DateOnly(2026, 1, 1), Amount = "1000" }, new()],
             Priority = 50,
@@ -248,7 +250,7 @@ public sealed class PayCodeRulesTests
 
         Assert.Equal(0, goodErrors);
         Assert.Equal(["reg"], settings.BaseCodeIds);
-        Assert.Equal([PayrollTaxCategories.IncomeTax], settings.TaxTreatment.Keys);
+        Assert.Equal([IncomeTaxCategories.IncomeTax], settings.TaxTreatment.Keys);
         Assert.Equal(250.50m, settings.PeriodLimit);
         Assert.Equal([new DateOnly(2026, 1, 1), new DateOnly(2027, 1, 1)], settings.YearLimits.Select(limit => limit.EffectiveFrom));
         Assert.Equal((PayCodeProrationRule.CalendarDays, 50), (settings.Proration, settings.Priority));
@@ -274,10 +276,10 @@ public sealed class PayCodeRulesTests
 
     private static PayrollPayCodeDisplayDriver Driver()
     {
-        var categories = new PayrollTaxCategoryOptions();
+        var categories = new IncomeTaxCategoryOptions();
 
-        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.IncomeTax, LocalizationSource.Create<PayCodeRulesTests>("Income tax")));
-        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.Unemployment, LocalizationSource.Create<PayCodeRulesTests>("Unemployment")));
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.IncomeTax, LocalizationSource.Create<PayCodeRulesTests>("Income tax")));
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.Unemployment, LocalizationSource.Create<PayCodeRulesTests>("Unemployment")));
 
         return new PayrollPayCodeDisplayDriver(
             new HttpContextAccessor(),

@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Taxation.Services;
 
 /// <summary>
 /// Tells what uses a tax table, so it is not deleted while in use. Sales tax rules are checked by Taxation itself; a
-/// module whose records point at tables (such as payroll tax rules) registers one.
+/// module whose records point at tables (such as income tax rules) registers one.
 /// </summary>
 public interface ITaxTableUsage
 {

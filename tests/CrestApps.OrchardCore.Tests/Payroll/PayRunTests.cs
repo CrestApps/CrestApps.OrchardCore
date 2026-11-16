@@ -13,6 +13,9 @@ using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Taxation.Core;
+using CrestApps.OrchardCore.Taxation.Core.Services;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Approvals;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -531,13 +534,13 @@ public sealed class PayRunTests
             schedule.Name = "Every two weeks";
             await schedules.CreateAsync(schedule);
 
-            var rules = services.GetRequiredService<IPayrollTaxRuleManager>();
+            var rules = services.GetRequiredService<IIncomeTaxRuleManager>();
             var rule = await rules.NewAsync();
 
             rule.Name = "Social insurance";
             rule.TaxCode = "US-SS";
             rule.Jurisdiction = "US";
-            rule.Category = PayrollTaxCategories.SocialInsurance;
+            rule.Category = IncomeTaxCategories.SocialInsurance;
             rule.Method = "Percentage";
             rule.Rate = 6.2m;
             rule.EffectiveFrom = new DateOnly(2026, 1, 1);
@@ -597,7 +600,7 @@ public sealed class PayRunTests
                 services.AddApprovalsCore();
                 services.AddApprovalsHandlers();
                 services.AddPayrollCore();
-                services.AddPayrollTaxTablesCore();
+                services.AddIncomeTaxCore();
                 services.AddPayrollHandlers();
                 services.AddSingleton<INamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>>(new InMemoryNamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>());
                 services.AddSingleton<INamedCatalog<ApprovalPolicy>>(new InMemoryNamedCatalog<ApprovalPolicy>());
@@ -613,11 +616,11 @@ public sealed class PayRunTests
             async schemaBuilder =>
             {
                 await PayrollIndexSchema.CreateAsync(schemaBuilder);
-                await PayrollTaxRuleIndexSchema.CreateAsync(schemaBuilder);
+                await IncomeTaxRuleIndexSchema.CreateAsync(schemaBuilder);
                 await GarnishmentOrderIndexSchema.CreateAsync(schemaBuilder);
                 await PayrollFilingIndexSchema.CreateAsync(schemaBuilder);
             },
-            [.. PayrollIndexSchema.Providers(), new PayrollTaxRuleIndexProvider(), new GarnishmentOrderIndexProvider(), new PayrollFilingIndexProvider(), new PayrollFilingRecordIndexProvider()]);
+            [.. PayrollIndexSchema.Providers(), new IncomeTaxRuleIndexProvider(), new GarnishmentOrderIndexProvider(), new PayrollFilingIndexProvider(), new PayrollFilingRecordIndexProvider()]);
 
     /// <summary>
     /// Names approvers by the permission a rule gives, through the harness's claim authorization.

@@ -3,6 +3,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -25,7 +26,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IPayCodeManager _codes;
-    private readonly PayrollTaxCategoryOptions _categories;
+    private readonly IncomeTaxCategoryOptions _categories;
     private readonly PayrollFormBoxOptions _formBoxes;
     private readonly IStringLocalizerFactory _localizerFactory;
 
@@ -35,7 +36,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IPayCodeManager codes,
-        IOptions<PayrollTaxCategoryOptions> categories,
+        IOptions<IncomeTaxCategoryOptions> categories,
         IOptions<PayrollFormBoxOptions> formBoxes,
         IStringLocalizerFactory localizerFactory,
         IStringLocalizer<PayrollPayCodeDisplayDriver> stringLocalizer)

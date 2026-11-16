@@ -1,8 +1,10 @@
+@using CrestApps.OrchardCore.Taxation.Core
+
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <breadcrumb name="PayrollTaxRulesCreate" title="@T["New tax rule"]">
-        <breadcrumb-item id="PayrollTaxRules" action="Index" controller="PayrollTaxRules" area="CrestApps.OrchardCore.Payroll" permission="@PayrollPermissions.ManagePayrollSettings.Name">@T["Tax rules"]</breadcrumb-item>
+    <breadcrumb name="IncomeTaxRulesCreate" title="@T["New income tax rule"]">
+        <breadcrumb-item id="IncomeTaxRules" action="Index" controller="IncomeTaxRules" area="CrestApps.OrchardCore.Taxation" permission="@TaxationPermissions.ManageIncomeTaxRules.Name">@T["Income tax rules"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

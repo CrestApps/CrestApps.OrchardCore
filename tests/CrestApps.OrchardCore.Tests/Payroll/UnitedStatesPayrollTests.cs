@@ -12,8 +12,13 @@ using CrestApps.OrchardCore.Payroll.Core.UnitedStates;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Recipes;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Core;
+using CrestApps.OrchardCore.Taxation.Core.Services;
+using CrestApps.OrchardCore.Taxation.Core.UnitedStates;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Recipes;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Workforce;
@@ -70,7 +75,7 @@ public sealed class UnitedStatesPayrollTests
 
         if (values is not null)
         {
-            request.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = values }];
+            request.Elections = [new IncomeTaxElection { Jurisdiction = "US", Values = values }];
         }
 
         var lines = await CalculateAsync(harness, request);
@@ -87,7 +92,7 @@ public sealed class UnitedStatesPayrollTests
 
         var request = Request(2000m);
 
-        request.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = new() { ["FormYear"] = "2020", ["Exempt"] = "true" } }];
+        request.Elections = [new IncomeTaxElection { Jurisdiction = "US", Values = new() { ["FormYear"] = "2020", ["Exempt"] = "true" } }];
 
         var lines = await CalculateAsync(harness, request);
 
@@ -107,10 +112,10 @@ public sealed class UnitedStatesPayrollTests
         var request = Request(10000m);
 
         // 180000 of Social Security wages and the 7000 of FUTA wages already taxed; 195000 of wages paid this year.
-        request.Accumulators.Totals[PayAccumulators.TaxKey("US-SS-EE")] = new PayAccumulator { YearTaxableWages = 180000m };
-        request.Accumulators.Totals[PayAccumulators.TaxKey("US-SS-ER")] = new PayAccumulator { YearTaxableWages = 180000m };
-        request.Accumulators.Totals[PayAccumulators.TaxKey("US-FUTA")] = new PayAccumulator { YearTaxableWages = 7000m };
-        request.YearWages[PayrollTaxCategories.SocialInsurance] = 195000m;
+        request.TaxesToDate["US-SS-EE"] = new IncomeTaxToDate { YearTaxableIncome = 180000m };
+        request.TaxesToDate["US-SS-ER"] = new IncomeTaxToDate { YearTaxableIncome = 180000m };
+        request.TaxesToDate["US-FUTA"] = new IncomeTaxToDate { YearTaxableIncome = 7000m };
+        request.YearIncome[IncomeTaxCategories.SocialInsurance] = 195000m;
 
         var lines = await CalculateAsync(harness, request);
 
@@ -122,7 +127,7 @@ public sealed class UnitedStatesPayrollTests
         Assert.DoesNotContain(lines, line => line.TaxCode == "US-FUTA");
 
         // Below the threshold no Additional Medicare line at all.
-        request.YearWages[PayrollTaxCategories.SocialInsurance] = 20000m;
+        request.YearIncome[IncomeTaxCategories.SocialInsurance] = 20000m;
 
         Assert.DoesNotContain(await CalculateAsync(harness, request), line => line.TaxCode == "US-MED-ADD");
     }
@@ -136,14 +141,14 @@ public sealed class UnitedStatesPayrollTests
 
         var request = Request(0m);
 
-        request.SupplementalMethod = PayrollSupplementalMethod.Flat;
-        request.SupplementalWages[PayrollTaxCategories.IncomeTax] = 5000m;
-        request.YearSupplementalWages[PayrollTaxCategories.IncomeTax] = 998000m;
+        request.SupplementalMethod = SupplementalWithholdingMethod.Flat;
+        request.SupplementalIncome[IncomeTaxCategories.IncomeTax] = 5000m;
+        request.YearSupplementalIncome[IncomeTaxCategories.IncomeTax] = 998000m;
 
         // 2000 under the million at 22% = 440; 3000 over it at 37% = 1110.
         Assert.Equal((1550.00m, 5000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
 
-        request.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = new() { ["Exempt"] = "true" } }];
+        request.Elections = [new IncomeTaxElection { Jurisdiction = "US", Values = new() { ["Exempt"] = "true" } }];
 
         Assert.Equal((1110.00m, 3000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
     }
@@ -158,8 +163,8 @@ public sealed class UnitedStatesPayrollTests
         var request = Request(1000m);
 
         // The regular pay of the period was 2000, withheld on already.
-        request.Accumulators.Totals[PayAccumulators.TaxKey("US-FIT")] = new PayAccumulator { PeriodTaxableWages = 2000m, Period = 166.15m };
-        request.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single", ["ExtraWithholding"] = "10" } }];
+        request.TaxesToDate["US-FIT"] = new IncomeTaxToDate { PeriodTaxableIncome = 2000m };
+        request.Elections = [new IncomeTaxElection { Jurisdiction = "US", Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single", ["ExtraWithholding"] = "10" } }];
 
         // W(3000) = (78000 - 8600 = 69400: 5800 + 22% of 11500 = 8330) / 26 = 320.3846; W(2000) = 156.1538: 164.23.
         Assert.Equal((164.23m, 1000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
@@ -175,28 +180,28 @@ public sealed class UnitedStatesPayrollTests
         var request = Request(2000m);
 
         // A 5000 bonus paid on its own earlier in the period, withheld on at the flat 22% (1100).
-        request.Accumulators.Totals[PayAccumulators.TaxKey("US-FIT")] = new PayAccumulator { PeriodTaxableWages = 5000m, PeriodFlatWages = 5000m, Period = 1100m };
-        request.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single" } }];
+        request.TaxesToDate["US-FIT"] = new IncomeTaxToDate { PeriodTaxableIncome = 5000m, PeriodFlatIncome = 5000m };
+        request.Elections = [new IncomeTaxElection { Jurisdiction = "US", Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single" } }];
 
         // W(2000) = 156.15, as for a period with no bonus; counting the bonus as wages already withheld on by the tables
         // gave W(7000) - W(5000) = 480.00.
         Assert.Equal((156.15m, 2000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
 
         // Step 4(c) applies to that pay: 10 more.
-        request.Elections = [new TaxElection { Jurisdiction = "US", EffectiveFrom = new DateOnly(2026, 1, 1), Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single", ["ExtraWithholding"] = "10" } }];
+        request.Elections = [new IncomeTaxElection { Jurisdiction = "US", Values = new() { ["FormYear"] = "2020", ["FilingStatus"] = "Single", ["ExtraWithholding"] = "10" } }];
 
         Assert.Equal((166.15m, 2000m), Taxed(await CalculateAsync(harness, request), "US-FIT"));
 
         // The bonus itself records its flat wages, and no extra withholding.
         var bonus = Request(0m);
 
-        bonus.SupplementalMethod = PayrollSupplementalMethod.Flat;
-        bonus.SupplementalWages[PayrollTaxCategories.IncomeTax] = 5000m;
+        bonus.SupplementalMethod = SupplementalWithholdingMethod.Flat;
+        bonus.SupplementalIncome[IncomeTaxCategories.IncomeTax] = 5000m;
         bonus.Elections = request.Elections;
 
         var line = Assert.Single(await CalculateAsync(harness, bonus), candidate => candidate.TaxCode == "US-FIT");
 
-        Assert.Equal((1100.00m, 5000m), (Math.Round(line.Amount, 2), line.FlatWages));
+        Assert.Equal((1100.00m, 5000m), (Math.Round(line.Amount, 2), line.FlatIncome));
     }
 
     [Fact]
@@ -211,7 +216,7 @@ public sealed class UnitedStatesPayrollTests
         {
             var settings = PayrollPayCodeSettingsExtensions.DefaultsFor(code);
 
-            settings.TaxTreatment[PayrollTaxCategories.IncomeTax] = treatment;
+            settings.TaxTreatment[IncomeTaxCategories.IncomeTax] = treatment;
             settings.Supplemental = supplemental;
             code.Put(settings);
         }
@@ -234,16 +239,16 @@ public sealed class UnitedStatesPayrollTests
         // The employer's match carries the deduction's code: it never lowers wages again.
         context.Lines.Add(new PayStatementLine { Type = PayLineType.EmployerContribution, PayCodeId = "401k", Amount = 500, PayItemId = "item", Payer = PayLinePayer.Employer });
 
-        var categories = new PayrollTaxCategoryOptions();
+        var categories = new IncomeTaxCategoryOptions();
 
-        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.IncomeTax, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesPayrollTests>("Income tax")));
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.IncomeTax, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesPayrollTests>("Income tax")));
 
         var step = new TaxesPayCalculationStep([], Options.Create(categories), new ServiceCollection().BuildServiceProvider(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<TaxesPayCalculationStep>());
 
         // 1000 regular less 1500 taken before tax: 0 regular, and the 500 left lowers the 2000 bonus to 1500.
         var request = step.Request(context);
 
-        Assert.Equal((0m, 1500m), (request.Wages[PayrollTaxCategories.IncomeTax], request.SupplementalWages[PayrollTaxCategories.IncomeTax]));
+        Assert.Equal((0m, 1500m), (request.Income[IncomeTaxCategories.IncomeTax], request.SupplementalIncome[IncomeTaxCategories.IncomeTax]));
 
         // Contributions and reimbursements now come before the taxes: a taxable car allowance adds to the wages.
         Assert.True(PayCalculationOrder.Contributions < PayCalculationOrder.Taxes && PayCalculationOrder.Contributions > PayCalculationOrder.PreTaxDeductions);
@@ -253,7 +258,7 @@ public sealed class UnitedStatesPayrollTests
         // 1000 + 300 - 1500 = -200: still no regular wages, and the bonus is lowered by 200 to 1800.
         var withAllowance = step.Request(context);
 
-        Assert.Equal((0m, 1800m), (withAllowance.Wages[PayrollTaxCategories.IncomeTax], withAllowance.SupplementalWages[PayrollTaxCategories.IncomeTax]));
+        Assert.Equal((0m, 1800m), (withAllowance.Income[IncomeTaxCategories.IncomeTax], withAllowance.SupplementalIncome[IncomeTaxCategories.IncomeTax]));
     }
 
     [Fact]
@@ -265,20 +270,20 @@ public sealed class UnitedStatesPayrollTests
 
         var (missing, usages) = await harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IPayrollTaxRuleManager>();
+            var manager = services.GetRequiredService<IIncomeTaxRuleManager>();
             var rule = (await manager.ListAsync()).Single(candidate => candidate.TaxCode == "US-FIT");
 
-            var singleTableId = rule.Tables[UnitedStatesPayroll.FilingStatuses.Single];
+            var singleTableId = rule.Tables[UnitedStatesIncomeTax.FilingStatuses.Single];
 
             rule.ItemId = CrestApps.Core.UniqueId.GenerateId();
             rule.EffectiveFrom = new DateOnly(2027, 1, 1);
             rule.EffectiveTo = null;
-            rule.Tables.Remove(UnitedStatesPayroll.FilingStatuses.HeadOfHousehold);
+            rule.Tables.Remove(UnitedStatesIncomeTax.FilingStatuses.HeadOfHousehold);
 
             var result = await manager.ValidateAsync(rule);
             var table = await services.GetRequiredService<INamedCatalog<TaxTable>>().FindByIdAsync(singleTableId);
 
-            return (result, await services.GetRequiredService<PayrollTaxRuleTableUsage>().GetUsagesAsync(table));
+            return (result, await services.GetRequiredService<IncomeTaxRuleTableUsage>().GetUsagesAsync(table));
         }, commit: false);
 
         Assert.False(missing.Succeeded);
@@ -303,14 +308,14 @@ public sealed class UnitedStatesPayrollTests
     [Fact]
     public void FormW4Fields_AreTheUSElection_AndOtherJurisdictionsKeepTheGenericOne()
     {
-        var options = new PayrollElectionOptions();
+        var options = new IncomeTaxElectionOptions();
 
         options.FieldSets.Add(GenericElectionFields.Create());
         options.FieldSets.Add(UnitedStatesElectionFields.Create());
 
         var federal = options.For("US");
 
-        Assert.Equal(UnitedStatesPayroll.Jurisdiction, federal.Jurisdiction);
+        Assert.Equal(UnitedStatesIncomeTax.Jurisdiction, federal.Jurisdiction);
         Assert.Equal(["FormYear", "FilingStatus", "MultipleJobs", "Dependents", "OtherIncome", "Deductions", "ExtraWithholding", "Allowances", "Exempt"], federal.Fields.Select(field => field.Name));
         Assert.Equal(["Single", "MarriedFilingJointly", "HeadOfHousehold"], federal.Fields.Single(field => field.Name == "FilingStatus").Choices.Select(choice => choice.Value));
         Assert.Equal("*", options.For("US-CA").Jurisdiction);
@@ -331,15 +336,15 @@ public sealed class UnitedStatesPayrollTests
         context.Accumulators.Totals[PayAccumulators.CodeKey("reg")] = new PayAccumulator { Year = 190000m };
         context.Accumulators.Totals[PayAccumulators.CodeKey("bonus")] = new PayAccumulator { Year = 12000m };
 
-        var categories = new PayrollTaxCategoryOptions();
+        var categories = new IncomeTaxCategoryOptions();
 
-        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.IncomeTax, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesPayrollTests>("Income tax")));
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.IncomeTax, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesPayrollTests>("Income tax")));
 
         var step = new TaxesPayCalculationStep([], Options.Create(categories), new ServiceCollection().BuildServiceProvider(), new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<TaxesPayCalculationStep>());
         var request = step.Request(context);
 
-        Assert.Equal(202000m, request.YearWages[PayrollTaxCategories.IncomeTax]);
-        Assert.Equal(12000m, request.YearSupplementalWages[PayrollTaxCategories.IncomeTax]);
+        Assert.Equal(202000m, request.YearIncome[IncomeTaxCategories.IncomeTax]);
+        Assert.Equal(12000m, request.YearSupplementalIncome[IncomeTaxCategories.IncomeTax]);
     }
 
     [Fact]
@@ -362,35 +367,35 @@ public sealed class UnitedStatesPayrollTests
         Assert.Equal((7000m, 5000m), (bonusTotals.PeriodTaxableWages, bonusTotals.PeriodFlatWages));
     }
 
-    private static (decimal Amount, decimal TaxableWages) Taxed(IReadOnlyList<PayrollTaxLine> lines, string taxCode)
+    private static (decimal Amount, decimal TaxableIncome) Taxed(IReadOnlyList<IncomeTaxLine> lines, string taxCode)
     {
         var line = Assert.Single(lines, candidate => candidate.TaxCode == taxCode);
 
-        return (Math.Round(line.Amount, 2, MidpointRounding.AwayFromZero), line.TaxableWages);
+        return (Math.Round(line.Amount, 2, MidpointRounding.AwayFromZero), line.TaxableIncome);
     }
 
-    private static PayrollTaxRequest Request(decimal wages, int periods = 26)
+    private static IncomeTaxRequest Request(decimal wages, int periods = 26)
         => new()
         {
-            Employer = new Employer { Registrations = [new EmployerTaxRegistration { Jurisdiction = "US" }] },
+            RegisteredJurisdictions = ["US"],
             PayDate = new DateOnly(2026, 11, 20),
             PeriodsPerYear = periods,
-            Wages = new Dictionary<string, decimal>
+            Income = new Dictionary<string, decimal>
             {
-                [PayrollTaxCategories.IncomeTax] = wages,
-                [PayrollTaxCategories.SocialInsurance] = wages,
-                [PayrollTaxCategories.Unemployment] = wages,
+                [IncomeTaxCategories.IncomeTax] = wages,
+                [IncomeTaxCategories.SocialInsurance] = wages,
+                [IncomeTaxCategories.Unemployment] = wages,
             },
         };
 
-    private static async Task<IReadOnlyList<PayrollTaxLine>> CalculateAsync(CalendarTestHarness harness, PayrollTaxRequest request)
+    private static async Task<IReadOnlyList<IncomeTaxLine>> CalculateAsync(CalendarTestHarness harness, IncomeTaxRequest request)
         => await harness.RunAsync(async services =>
         {
-            var result = await services.GetServices<IPayrollTaxProvider>().Single().CalculateAsync(request);
+            var result = await services.GetServices<IIncomeTaxProvider>().Single().CalculateAsync(request);
 
             Assert.Empty(result.Warnings);
 
-            return (IReadOnlyList<PayrollTaxLine>)[.. result.Lines];
+            return (IReadOnlyList<IncomeTaxLine>)[.. result.Lines];
         }, commit: false);
 
     // Imports the shipped recipe: its tax tables into the catalog, its rules through the rules step (and their handler).
@@ -399,10 +404,10 @@ public sealed class UnitedStatesPayrollTests
         var recipe = JsonNode.Parse(await File.ReadAllTextAsync(RecipePath(), TestContext.Current.CancellationToken))!.AsObject();
         var steps = recipe["steps"]!.AsArray();
 
-        Assert.Equal(["CrestApps.OrchardCore.Payroll.TaxTables", PayrollConstants.Features.UnitedStates], steps.Single(step => step!["name"]!.GetValue<string>() == "Feature")!["enable"]!.AsArray().Select(feature => feature!.GetValue<string>()));
+        Assert.Equal([TaxationConstants.Feature.IncomeTax, TaxationConstants.Feature.IncomeTaxUnitedStates], steps.Single(step => step!["name"]!.GetValue<string>() == "Feature")!["enable"]!.AsArray().Select(feature => feature!.GetValue<string>()));
 
         var tables = steps.Single(step => step!["name"]!.GetValue<string>() == "TaxTable")!["TaxTables"].Deserialize<List<TaxTable>>(_options);
-        var rules = steps.Single(step => step!["name"]!.GetValue<string>() == PayrollConstants.TaxRulesRecipeStepName)!.AsObject();
+        var rules = steps.Single(step => step!["name"]!.GetValue<string>() == TaxationConstants.IncomeTaxRulesRecipeStepName)!.AsObject();
 
         return await harness.RunAsync(async services =>
         {
@@ -413,9 +418,9 @@ public sealed class UnitedStatesPayrollTests
                 await catalog.CreateAsync(table);
             }
 
-            var context = new RecipeExecutionContext { Name = PayrollConstants.TaxRulesRecipeStepName, Step = rules.DeepClone().AsObject() };
+            var context = new RecipeExecutionContext { Name = TaxationConstants.IncomeTaxRulesRecipeStepName, Step = rules.DeepClone().AsObject() };
 
-            await ActivatorUtilities.CreateInstance<PayrollTaxRulesRecipeStep>(services).ExecuteAsync(context);
+            await ActivatorUtilities.CreateInstance<IncomeTaxRulesRecipeStep>(services).ExecuteAsync(context);
 
             return (IReadOnlyList<string>)[.. context.Errors];
         });
@@ -430,7 +435,7 @@ public sealed class UnitedStatesPayrollTests
             directory = directory.Parent;
         }
 
-        return Path.Combine(directory?.FullName ?? throw new InvalidOperationException("The repository root was not found."), "src", "Modules", "CrestApps.OrchardCore.Payroll", "Recipes", "payroll-united-states-2026.recipe.json");
+        return Path.Combine(directory?.FullName ?? throw new InvalidOperationException("The repository root was not found."), "src", "Modules", "CrestApps.OrchardCore.Taxation", "Recipes", "income-tax-united-states-2026.recipe.json");
     }
 
     private static Task<CalendarTestHarness> CreateHarnessAsync()
@@ -440,17 +445,17 @@ public sealed class UnitedStatesPayrollTests
                 services.AddDataProtection();
                 services.AddTaxTablesCore();
                 services.AddPayrollCore();
-                services.AddPayrollTaxTablesCore();
+                services.AddIncomeTaxCore();
                 services.AddPayrollHandlers();
-                services.AddScoped<PayrollTaxRuleTableUsage>();
+                services.AddScoped<IncomeTaxRuleTableUsage>();
                 services.AddSingleton<INamedCatalog<TaxTable>>(new InMemoryNamedCatalog<TaxTable>());
                 services.AddElectionFieldSet(UnitedStatesElectionFields.Create());
-                services.AddPayrollWithholdingMethod<UnitedStatesFormW4WithholdingMethod>();
+                services.AddIncomeTaxWithholdingMethod<UnitedStatesFormW4WithholdingMethod>();
             },
             async schemaBuilder =>
             {
                 await PayrollIndexSchema.CreateAsync(schemaBuilder);
-                await PayrollTaxRuleIndexSchema.CreateAsync(schemaBuilder);
+                await IncomeTaxRuleIndexSchema.CreateAsync(schemaBuilder);
             },
-            [.. PayrollIndexSchema.Providers(), new PayrollTaxRuleIndexProvider()]);
+            [.. PayrollIndexSchema.Providers(), new IncomeTaxRuleIndexProvider()]);
 }

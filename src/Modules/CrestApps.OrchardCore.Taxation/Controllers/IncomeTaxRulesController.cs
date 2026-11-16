@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Core.Controllers;
-using CrestApps.OrchardCore.Payroll.Models;
-using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Core;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -12,72 +13,72 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.Payroll.Controllers;
+namespace CrestApps.OrchardCore.Taxation.Controllers;
 
 /// <summary>
-/// Payroll &gt; Setup &gt; Tax rules: the rules the built-in tax provider works taxes out with. They are the same for
-/// every employer, so they need the permission for every employer.
+/// Taxes &gt; Income tax rules: the rules the built-in income tax provider works taxes on income out with. They are the
+/// same for every payer, and editing them is setup, so they need their own permission.
 /// </summary>
 [Admin]
-[Feature(PayrollConstants.Features.TaxTables)]
-public sealed class PayrollTaxRulesController : CatalogAdminController<PayrollTaxRule>
+[Feature(TaxationConstants.Feature.IncomeTax)]
+public sealed class IncomeTaxRulesController : CatalogAdminController<IncomeTaxRule>
 {
-    public PayrollTaxRulesController(
-        IPayrollTaxRuleManager manager,
+    public IncomeTaxRulesController(
+        IIncomeTaxRuleManager manager,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        IDisplayManager<PayrollTaxRule> displayManager,
+        IDisplayManager<IncomeTaxRule> displayManager,
         INotifier notifier,
-        IHtmlLocalizer<PayrollTaxRulesController> htmlLocalizer,
-        IStringLocalizer<PayrollTaxRulesController> stringLocalizer)
+        IHtmlLocalizer<IncomeTaxRulesController> htmlLocalizer,
+        IStringLocalizer<IncomeTaxRulesController> stringLocalizer)
         : base(manager, authorizationService, updateModelAccessor, displayManager, notifier, htmlLocalizer, stringLocalizer)
     {
     }
 
     protected override Permission ManagePermission
-        => PayrollPermissions.ManagePayrollSettings;
+        => TaxationPermissions.ManageIncomeTaxRules;
 
     protected override LocalizedString CreateDisplayName
-        => S["Tax rule"];
+        => S["Income tax rule"];
 
     protected override LocalizedString NewDisplayName
-        => S["New tax rule"];
+        => S["New income tax rule"];
 
     protected override LocalizedHtmlString CreatedNotification
-        => H["The tax rule has been added."];
+        => H["The income tax rule has been added."];
 
     protected override LocalizedHtmlString UpdatedNotification
-        => H["The tax rule has been updated."];
+        => H["The income tax rule has been updated."];
 
     protected override LocalizedHtmlString DeletedNotification
-        => H["The tax rule has been removed."];
+        => H["The income tax rule has been removed."];
 
-    [Admin("payroll/setup/tax-rules", "PayrollTaxRulesIndex")]
+    [Admin("taxation/income-tax-rules", "IncomeTaxRulesIndex")]
     public Task<IActionResult> Index()
         => IndexAllAsync();
 
-    [Admin("payroll/setup/tax-rules/create", "PayrollTaxRulesCreate")]
+    [Admin("taxation/income-tax-rules/create", "IncomeTaxRulesCreate")]
     public Task<IActionResult> Create()
         => CreateAsync();
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("payroll/setup/tax-rules/create", "PayrollTaxRulesCreate")]
+    [Admin("taxation/income-tax-rules/create", "IncomeTaxRulesCreate")]
     public Task<IActionResult> CreatePost()
         => CreatePostAsync();
 
-    [Admin("payroll/setup/tax-rules/edit/{id}", "PayrollTaxRulesEdit")]
+    [Admin("taxation/income-tax-rules/edit/{id}", "IncomeTaxRulesEdit")]
     public Task<IActionResult> Edit(string id)
         => EditAsync(id);
 
     [HttpPost]
     [ActionName(nameof(Edit))]
-    [Admin("payroll/setup/tax-rules/edit/{id}", "PayrollTaxRulesEdit")]
+    [Admin("taxation/income-tax-rules/edit/{id}", "IncomeTaxRulesEdit")]
     public Task<IActionResult> EditPost(string id)
         => EditPostAsync(id);
 
     [HttpPost]
-    [Admin("payroll/setup/tax-rules/delete/{id}", "PayrollTaxRulesDelete")]
+    [Admin("taxation/income-tax-rules/delete/{id}", "IncomeTaxRulesDelete")]
     public Task<IActionResult> Delete(string id)
         => DeleteAsync(id);
 }

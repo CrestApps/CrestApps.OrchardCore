@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -21,7 +22,7 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IEnumerable<IPayrollTaxProvider> _taxProviders;
+    private readonly IEnumerable<IIncomeTaxProvider> _taxProviders;
     private readonly PayRunApprovalPolicySeeder _policySeeder;
     private readonly IStringLocalizerFactory _localizerFactory;
 
@@ -30,7 +31,7 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
     public PayrollSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IEnumerable<IPayrollTaxProvider> taxProviders,
+        IEnumerable<IIncomeTaxProvider> taxProviders,
         PayRunApprovalPolicySeeder policySeeder,
         IStringLocalizerFactory localizerFactory,
         IStringLocalizer<PayrollSettingsDisplayDriver> stringLocalizer)

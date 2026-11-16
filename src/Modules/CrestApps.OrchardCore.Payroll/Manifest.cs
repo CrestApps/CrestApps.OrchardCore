@@ -36,29 +36,19 @@ using OrchardCore.Modules.Manifest;
         StaffConstants.Features.Compensation,
         ApprovalsConstants.Features.Approvals,
         AddressConstants.Feature.ModuleId,
-    ]
-)]
-
-[assembly: Feature(
-    Id = PayrollConstants.Features.TaxTables,
-    Name = "Payroll Tax Tables",
-    Description = "The built-in tax provider: payroll tax rules for any jurisdiction (a rate, a fixed amount, a table or brackets, a wage base, elections and a supplemental rate), worked out over Taxation's tax tables.",
-    Category = "Payroll",
-    Dependencies =
-    [
-        PayrollConstants.Features.Payroll,
-        TaxationConstants.Feature.Tables,
+        TaxationConstants.Feature.IncomeTax,
     ]
 )]
 
 [assembly: Feature(
     Id = PayrollConstants.Features.UnitedStates,
-    Name = "United States Payroll",
-    Description = "Form W-4 as the federal tax election and its withholding method (IRS percentage method for automated payroll), with the federal income tax, Social Security, Medicare, Additional Medicare and federal unemployment rules as dated recipes.",
+    Name = "United States Payroll Filings",
+    Description = "The employer's federal payroll returns made from pay statements: Forms 941, 940 and 945, W-2 and W-3, 1099-NEC and 1096, the SSA EFW2 wage file and year end. The taxes themselves come from Taxation's United States Income Tax.",
     Category = "Payroll",
     Dependencies =
     [
-        PayrollConstants.Features.TaxTables,
+        PayrollConstants.Features.Payroll,
+        TaxationConstants.Feature.IncomeTaxUnitedStates,
     ]
 )]
 

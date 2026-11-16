@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -399,10 +400,10 @@ public sealed class TaxLiabilityService : ITaxLiabilityService
             {
                 var group = line.TaxCategory switch
                 {
-                    PayrollTaxCategories.Unemployment => TaxLiabilityGroups.Unemployment,
+                    IncomeTaxCategories.Unemployment => TaxLiabilityGroups.Unemployment,
 
                     // Withheld from a contractor's payments: not a payroll tax, deposited and filed on its own.
-                    PayrollTaxCategories.ContractorWithholding => TaxLiabilityGroups.NonPayrollWithholding,
+                    IncomeTaxCategories.ContractorWithholding => TaxLiabilityGroups.NonPayrollWithholding,
                     _ => TaxLiabilityGroups.Withholding,
                 };
                 var schedule = group == TaxLiabilityGroups.Unemployment

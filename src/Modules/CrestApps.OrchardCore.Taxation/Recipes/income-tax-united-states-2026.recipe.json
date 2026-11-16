@@ -1,15 +1,16 @@
 {
-  "name": "PayrollUnitedStatesFederal2026",
-  "displayName": "United States Payroll: federal tax rules for 2026",
-  "description": "Adds the federal payroll taxes for pay dates in 2026: income tax withheld by the IRS percentage method for automated payroll systems (Publication 15-T, Form W-4 from 2020 or later and 2019 or earlier, 22% flat rate on supplemental pay and 37% on a year's supplemental pay over $1,000,000), Social Security (6.2% each on $184,500), Medicare (1.45% each), Additional Medicare (0.9% withheld above $200,000 of a year's wages) and federal unemployment (0.6% on $7,000, after the full credit for state unemployment tax) and backup withholding on contractors (24%, when the IRS says so or no TIN is on file). They apply to employers registered in US. Check the amounts against the IRS's current publications before paying people with them.",
+  "name": "IncomeTaxUnitedStatesFederal2026",
+  "displayName": "United States Income Tax: federal rules for 2026",
+  "description": "Adds the federal taxes on wages for pay dates in 2026: income tax withheld by the IRS percentage method for automated payroll systems (Publication 15-T, Form W-4 from 2020 or later and 2019 or earlier, 22% flat rate on supplemental pay and 37% on a year's supplemental pay over $1,000,000), Social Security (6.2% each on $184,500), Medicare (1.45% each), Additional Medicare (0.9% withheld above $200,000 of a year's wages) and federal unemployment (0.6% on $7,000, after the full credit for state unemployment tax) and backup withholding on contractors (24%, when the IRS says so or no TIN is on file). They apply to employers registered in US. Check the amounts against the IRS's current publications before paying people with them.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
   "issetuprecipe": false,
   "categories": [
-    "payroll"
+    "taxation"
   ],
   "tags": [
+    "income tax",
     "payroll",
     "taxes",
     "united states",
@@ -19,8 +20,8 @@
     {
       "name": "Feature",
       "enable": [
-        "CrestApps.OrchardCore.Payroll.TaxTables",
-        "CrestApps.OrchardCore.Payroll.UnitedStates"
+        "CrestApps.OrchardCore.Taxation.IncomeTax",
+        "CrestApps.OrchardCore.Taxation.IncomeTax.UnitedStates"
       ]
     },
     {
@@ -413,7 +414,7 @@
       ]
     },
     {
-      "name": "PayrollTaxRules",
+      "name": "IncomeTaxRules",
       "Rules": [
         {
           "ItemId": "4hht3q4bvwtmv9mtb2r7qgfm5p",

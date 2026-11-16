@@ -4,6 +4,9 @@ using CrestApps.OrchardCore.Payroll.Core.Calculation;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Pdf;
+using CrestApps.OrchardCore.Taxation.Core.UnitedStates;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Localization;
 
@@ -100,7 +103,7 @@ public static class UnitedStatesFilingSums
     /// <param name="group">The group.</param>
     /// <returns>The amount.</returns>
     public static decimal Deposited(IEnumerable<TaxDeposit> deposits, string group)
-        => deposits.Where(deposit => deposit.Group == group && string.Equals(deposit.Jurisdiction, UnitedStatesPayroll.Jurisdiction, StringComparison.OrdinalIgnoreCase)).Sum(deposit => deposit.Amount);
+        => deposits.Where(deposit => deposit.Group == group && string.Equals(deposit.Jurisdiction, UnitedStatesIncomeTax.Jurisdiction, StringComparison.OrdinalIgnoreCase)).Sum(deposit => deposit.Amount);
 }
 
 /// <summary>
@@ -122,7 +125,7 @@ public sealed class Form941 : IPayrollFilingForm
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
-    public string Jurisdiction => UnitedStatesPayroll.Jurisdiction;
+    public string Jurisdiction => UnitedStatesIncomeTax.Jurisdiction;
 
     /// <inheritdoc />
     public bool IsQuarterly => true;
@@ -144,7 +147,7 @@ public sealed class Form941 : IPayrollFilingForm
         var additional = UnitedStatesFilingSums.Taxable(statements, UnitedStatesTaxCodes.AdditionalMedicare);
 
         boxes["1"] = statements.Where(statement => statement.VoidOf is null && statement.PeriodStart <= twelfth && statement.PeriodEnd >= twelfth && statement.Gross > 0).Select(statement => statement.StaffMemberId).Distinct(StringComparer.Ordinal).Count();
-        boxes["2"] = UnitedStatesFilingSums.Wages(statements, context.Codes, PayrollTaxCategories.IncomeTax);
+        boxes["2"] = UnitedStatesFilingSums.Wages(statements, context.Codes, IncomeTaxCategories.IncomeTax);
         boxes["3"] = UnitedStatesFilingSums.Tax(statements, UnitedStatesTaxCodes.IncomeTax);
         boxes["5a"] = socialSecurity;
         boxes["5a.tax"] = Math.Round(socialSecurity * 0.124m, 2, MidpointRounding.AwayFromZero);
@@ -187,7 +190,7 @@ public sealed class Form945 : IPayrollFilingForm
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
-    public string Jurisdiction => UnitedStatesPayroll.Jurisdiction;
+    public string Jurisdiction => UnitedStatesIncomeTax.Jurisdiction;
 
     /// <inheritdoc />
     public bool IsQuarterly => false;
@@ -231,7 +234,7 @@ public sealed class Form940 : IPayrollFilingForm
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
-    public string Jurisdiction => UnitedStatesPayroll.Jurisdiction;
+    public string Jurisdiction => UnitedStatesIncomeTax.Jurisdiction;
 
     /// <inheritdoc />
     public bool IsQuarterly => false;
@@ -244,7 +247,7 @@ public sealed class Form940 : IPayrollFilingForm
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var rule = context.Services.GetService<IPayrollTaxRuleManager>() is { } rules
+        var rule = context.Services.GetService<IIncomeTaxRuleManager>() is { } rules
             ? (await rules.ListAsync(cancellationToken)).FirstOrDefault(candidate => candidate.TaxCode == UnitedStatesTaxCodes.Unemployment && candidate.AppliesOn(context.To))
             : null;
         var wageBase = rule?.WageBase ?? 7000m;
@@ -252,9 +255,9 @@ public sealed class Form940 : IPayrollFilingForm
         var boxes = context.Filing.Boxes;
         var employees = UnitedStatesFilingSums.Employees(context);
         var payments = employees.Sum(statement => statement.Gross);
-        var subject = UnitedStatesFilingSums.Wages(employees, context.Codes, PayrollTaxCategories.Unemployment);
+        var subject = UnitedStatesFilingSums.Wages(employees, context.Codes, IncomeTaxCategories.Unemployment);
         var overBase = employees.GroupBy(statement => statement.StaffMemberId, StringComparer.Ordinal)
-            .Sum(person => Math.Max(0, UnitedStatesFilingSums.Wages(person, context.Codes, PayrollTaxCategories.Unemployment) - wageBase));
+            .Sum(person => Math.Max(0, UnitedStatesFilingSums.Wages(person, context.Codes, IncomeTaxCategories.Unemployment) - wageBase));
 
         boxes["3"] = payments;
         boxes["4"] = Math.Max(0, payments - subject);
@@ -291,7 +294,7 @@ public sealed class FormW2 : IPayrollFilingForm
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
-    public string Jurisdiction => UnitedStatesPayroll.Jurisdiction;
+    public string Jurisdiction => UnitedStatesIncomeTax.Jurisdiction;
 
     /// <inheritdoc />
     public bool IsQuarterly => false;
@@ -361,7 +364,7 @@ public sealed class FormW2 : IPayrollFilingForm
         var socialSecurity = UnitedStatesFilingSums.Taxable(statements, UnitedStatesTaxCodes.SocialSecurity);
         var boxes = new Dictionary<string, decimal>(StringComparer.Ordinal)
         {
-            ["1"] = UnitedStatesFilingSums.Wages(statements, codes, PayrollTaxCategories.IncomeTax),
+            ["1"] = UnitedStatesFilingSums.Wages(statements, codes, IncomeTaxCategories.IncomeTax),
             ["2"] = UnitedStatesFilingSums.Tax(statements, UnitedStatesTaxCodes.IncomeTax),
             ["3"] = Math.Max(0, socialSecurity - tips),
             ["4"] = UnitedStatesFilingSums.Tax(statements, UnitedStatesTaxCodes.SocialSecurity),
@@ -412,7 +415,7 @@ public sealed class Form1099Nec : IPayrollFilingForm
     public LocalizationSource DisplayName => _displayName;
 
     /// <inheritdoc />
-    public string Jurisdiction => UnitedStatesPayroll.Jurisdiction;
+    public string Jurisdiction => UnitedStatesIncomeTax.Jurisdiction;
 
     /// <inheritdoc />
     public bool IsQuarterly => false;

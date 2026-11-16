@@ -13,7 +13,13 @@ using CrestApps.OrchardCore.Payroll.Recipes;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
 using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Taxation;
+using CrestApps.OrchardCore.Taxation.Controllers;
 using CrestApps.OrchardCore.Taxation.Core;
+using CrestApps.OrchardCore.Taxation.Core.Services;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Recipes;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Workforce;
@@ -94,14 +100,14 @@ public sealed class PayEngineTests
 
         await harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IPayrollTaxRuleManager>();
+            var manager = services.GetRequiredService<IIncomeTaxRuleManager>();
 
             await manager.CreateAsync(Rule("US-SS", new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31), 6.2m));
         });
 
         var (noRate, overlapping, nextYear, badRate) = await harness.RunAsync(async services =>
         {
-            var manager = services.GetRequiredService<IPayrollTaxRuleManager>();
+            var manager = services.GetRequiredService<IIncomeTaxRuleManager>();
 
             return (
                 (await manager.ValidateAsync(Rule("US-FIT", new DateOnly(2026, 1, 1), null, null))).Succeeded,
@@ -122,7 +128,7 @@ public sealed class PayEngineTests
         await using var harness = await CreateHarnessAsync();
         var step = JsonNode.Parse("""
             {
-              "name": "PayrollTaxRules",
+              "name": "IncomeTaxRules",
               "Rules": [
                 { "Name": "Social insurance", "TaxCode": "US-SS", "Jurisdiction": "US", "Category": "SocialInsurance", "Payer": "Employee", "Method": "Percentage", "Rate": 6.2, "WageBase": 176100, "EffectiveFrom": "2026-01-01" }
               ]
@@ -132,9 +138,9 @@ public sealed class PayEngineTests
         async Task<IReadOnlyList<string>> ImportAsync()
             => await harness.RunAsync(async services =>
             {
-                var context = new RecipeExecutionContext { Name = PayrollConstants.TaxRulesRecipeStepName, Step = step.DeepClone().AsObject() };
+                var context = new RecipeExecutionContext { Name = TaxationConstants.IncomeTaxRulesRecipeStepName, Step = step.DeepClone().AsObject() };
 
-                await ActivatorUtilities.CreateInstance<PayrollTaxRulesRecipeStep>(services).ExecuteAsync(context);
+                await ActivatorUtilities.CreateInstance<IncomeTaxRulesRecipeStep>(services).ExecuteAsync(context);
 
                 return context.Errors.ToList();
             });
@@ -144,7 +150,7 @@ public sealed class PayEngineTests
         step["Rules"]![0]!["Rate"] = 6.3m;
 
         var second = await ImportAsync();
-        var rules = await harness.RunAsync(services => services.GetRequiredService<IPayrollTaxRuleManager>().ListAsync(), commit: false);
+        var rules = await harness.RunAsync(services => services.GetRequiredService<IIncomeTaxRuleManager>().ListAsync(), commit: false);
 
         Assert.Empty(first);
         Assert.Empty(second);
@@ -191,19 +197,23 @@ public sealed class PayEngineTests
         var profile = await SetUpAsync(harness, lee.ItemId, inputs);
         var fabrikamClerk = CalendarTestHarness.User("clerk", PayrollPermissionTemplates.For(PayrollPermissions.ViewPayProfiles, "fabrikam").Name);
         var contosoClerk = CalendarTestHarness.User("clerk2", PayrollPermissionTemplates.For(PayrollPermissions.ManagePayrollSettings, profile.EmployerId).Name, PayrollPermissionTemplates.For(PayrollPermissions.ViewPayProfiles, profile.EmployerId).Name);
-        var admin = CalendarTestHarness.User("admin", PayrollPermissions.ManagePayrollSettings.Name, PayrollPermissions.ViewPayProfiles.Name);
+        var payrollAdmin = CalendarTestHarness.User("payroll", PayrollPermissions.ManagePayrollSettings.Name, PayrollPermissions.ViewPayProfiles.Name);
+        var taxAdmin = CalendarTestHarness.User("admin", TaxationPermissions.ManageIncomeTaxRules.Name);
 
-        var (otherPreview, ownPreview, clerkRules, adminRules) = await harness.RunAsync(async services => (
+        var (otherPreview, ownPreview, clerkRules, payrollRules, adminRules) = await harness.RunAsync(async services => (
             await Preview(services, fabrikamClerk).Index(profile.ItemId, new DateOnly(2026, 11, 5)),
             await Preview(services, contosoClerk).Index(profile.ItemId, new DateOnly(2026, 11, 5)),
             await Rules(services, contosoClerk).Index(),
-            await Rules(services, admin).Index()), commit: false);
+            await Rules(services, payrollAdmin).Index(),
+            await Rules(services, taxAdmin).Index()), commit: false);
 
         Assert.IsType<ForbidResult>(otherPreview);
         Assert.Equal(1500.80m, Assert.IsType<PayPreviewViewModel>(Assert.IsType<ViewResult>(ownPreview).Model).Net);
 
-        // Tax rules are the same for every employer: the settings of one employer are not enough.
+        // Income tax rules are Taxation's setup, the same for every employer: no Payroll permission opens them, only
+        // Manage income tax rules.
         Assert.IsType<ForbidResult>(clerkRules);
+        Assert.IsType<ForbidResult>(payrollRules);
         Assert.IsType<ViewResult>(adminRules);
     }
 
@@ -226,26 +236,26 @@ public sealed class PayEngineTests
 
             rule.Method = "Progressive";
             rule.TaxTableId = "brackets";
-            rule.Category = PayrollTaxCategories.IncomeTax;
-            await services.GetRequiredService<IPayrollTaxRuleManager>().CreateAsync(rule);
+            rule.Category = IncomeTaxCategories.IncomeTax;
+            await services.GetRequiredService<IIncomeTaxRuleManager>().CreateAsync(rule);
         });
 
         var (uses, result) = await harness.RunAsync(async services =>
         {
             var table = await services.GetRequiredService<INamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>>().FindByIdAsync("brackets");
-            var usages = await services.GetRequiredService<PayrollTaxRuleTableUsage>().GetUsagesAsync(table);
-            var taxes = await services.GetServices<IPayrollTaxProvider>().Single().CalculateAsync(new PayrollTaxRequest
+            var usages = await services.GetRequiredService<IncomeTaxRuleTableUsage>().GetUsagesAsync(table);
+            var taxes = await services.GetServices<IIncomeTaxProvider>().Single().CalculateAsync(new IncomeTaxRequest
             {
-                Employer = new Employer { Registrations = [new EmployerTaxRegistration { Jurisdiction = "US" }] },
+                RegisteredJurisdictions = ["US"],
                 PayDate = new DateOnly(2026, 11, 20),
                 PeriodsPerYear = 26,
-                Wages = new Dictionary<string, decimal> { [PayrollTaxCategories.IncomeTax] = 1000 },
+                Income = new Dictionary<string, decimal> { [IncomeTaxCategories.IncomeTax] = 1000 },
             });
 
             return (usages, taxes);
         }, commit: false);
 
-        Assert.Equal(["the payroll tax rule US-FIT"], uses);
+        Assert.Equal(["the income tax rule US-FIT"], uses);
         Assert.Empty(result.Lines);
         Assert.Contains("not in effect", Assert.Single(result.Warnings), StringComparison.Ordinal);
     }
@@ -273,7 +283,7 @@ public sealed class PayEngineTests
             schedule.AnchorDate = new DateOnly(2026, 1, 4);
             await schedules.CreateAsync(schedule);
 
-            await services.GetRequiredService<IPayrollTaxRuleManager>().CreateAsync(Rule("US-SS", new DateOnly(2026, 1, 1), null, 6.2m));
+            await services.GetRequiredService<IIncomeTaxRuleManager>().CreateAsync(Rule("US-SS", new DateOnly(2026, 1, 1), null, 6.2m));
 
             var profiles = services.GetRequiredService<IPayProfileManager>();
             var profile = await profiles.NewAsync();
@@ -289,15 +299,15 @@ public sealed class PayEngineTests
         });
     }
 
-    private static PayrollTaxRule Rule(string code, DateOnly from, DateOnly? to, decimal? rate)
+    private static IncomeTaxRule Rule(string code, DateOnly from, DateOnly? to, decimal? rate)
         => new()
         {
             ItemId = Guid.NewGuid().ToString("n")[..26],
             Name = code,
             TaxCode = code,
             Jurisdiction = "US",
-            Category = PayrollTaxCategories.SocialInsurance,
-            Payer = PayLinePayer.Employee,
+            Category = IncomeTaxCategories.SocialInsurance,
+            Payer = IncomeTaxPayer.Employee,
             Method = "Percentage",
             Rate = rate,
             EffectiveFrom = from,
@@ -335,15 +345,15 @@ public sealed class PayEngineTests
             ControllerContext = Context(user),
         };
 
-    private static PayrollTaxRulesController Rules(IServiceProvider services, ClaimsPrincipal user)
+    private static IncomeTaxRulesController Rules(IServiceProvider services, ClaimsPrincipal user)
         => new(
-            services.GetRequiredService<IPayrollTaxRuleManager>(),
+            services.GetRequiredService<IIncomeTaxRuleManager>(),
             services.GetRequiredService<IAuthorizationService>(),
             Mock.Of<IUpdateModelAccessor>(),
-            Mock.Of<IDisplayManager<PayrollTaxRule>>(),
+            Mock.Of<IDisplayManager<IncomeTaxRule>>(),
             Mock.Of<INotifier>(),
-            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughHtmlLocalizer<PayrollTaxRulesController>(),
-            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<PayrollTaxRulesController>())
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughHtmlLocalizer<IncomeTaxRulesController>(),
+            new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<IncomeTaxRulesController>())
         {
             ControllerContext = Context(user),
         };
@@ -368,9 +378,9 @@ public sealed class PayEngineTests
                 services.AddDataProtection();
                 services.AddTaxTablesCore();
                 services.AddPayrollCore();
-                services.AddPayrollTaxTablesCore();
+                services.AddIncomeTaxCore();
                 services.AddPayrollHandlers();
-                services.AddScoped<PayrollTaxRuleTableUsage>();
+                services.AddScoped<IncomeTaxRuleTableUsage>();
                 services.AddSingleton<INamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>>(new CrestApps.OrchardCore.Tests.Taxation.Fakes.InMemoryNamedCatalog<CrestApps.OrchardCore.Taxation.Models.TaxTable>());
                 services.AddScoped<PayrollNames>();
                 services.AddSingleton<ILocalClock>(new FixedOffsetLocalClock(() => DateTime.UtcNow, TimeSpan.Zero));
@@ -379,9 +389,9 @@ public sealed class PayEngineTests
             async schemaBuilder =>
             {
                 await PayrollIndexSchema.CreateAsync(schemaBuilder);
-                await PayrollTaxRuleIndexSchema.CreateAsync(schemaBuilder);
+                await IncomeTaxRuleIndexSchema.CreateAsync(schemaBuilder);
             },
-            [.. PayrollIndexSchema.Providers(), new PayrollTaxRuleIndexProvider()]);
+            [.. PayrollIndexSchema.Providers(), new IncomeTaxRuleIndexProvider()]);
 
     private sealed class FixedInputs : IPayInputService
     {

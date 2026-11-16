@@ -47,7 +47,7 @@ public static class TaxationServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds what sales tax and payroll share, with no Commerce dependency: the catalogs of tax jurisdictions and tax
+    /// Adds what Sales Tax and Income Tax share, with no Commerce dependency: the catalogs of tax jurisdictions and tax
     /// tables, the jurisdiction resolver and the calculation methods. Calling it twice adds nothing twice.
     /// </summary>
     /// <param name="services">The service collection.</param>

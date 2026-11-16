@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Payroll.ViewModels;
 using CrestApps.OrchardCore.Staff;
 using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -43,7 +44,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
     private readonly IShapeFactory _shapeFactory;
     private readonly IServiceProvider _services;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly PayrollElectionOptions _elections;
+    private readonly IncomeTaxElectionOptions _elections;
     private readonly IStringLocalizerFactory _localizerFactory;
     private readonly PayProfileEditTracker _tracker;
     private readonly IClock _clock;
@@ -60,7 +61,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
         IShapeFactory shapeFactory,
         IServiceProvider services,
         IHttpContextAccessor httpContextAccessor,
-        IOptions<PayrollElectionOptions> elections,
+        IOptions<IncomeTaxElectionOptions> elections,
         IStringLocalizerFactory localizerFactory,
         PayProfileEditTracker tracker,
         IClock clock,

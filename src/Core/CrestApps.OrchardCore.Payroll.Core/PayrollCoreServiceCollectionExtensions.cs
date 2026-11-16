@@ -88,14 +88,6 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayCalculationStep, DistributionPayCalculationStep>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPaySetupUsage, PayCodeBaseUsage>());
 
-        // Any jurisdiction gets the usual withholding fields until a country pack gives its own form.
-        services.AddElectionFieldSet(GenericElectionFields.Create());
-
-        // The tax categories every country has; a country pack adds its own.
-        services.AddPayrollTaxCategory(PayrollTaxCategories.IncomeTax, LocalizationSource.Create("Income tax", typeof(PayrollCoreServiceCollectionExtensions)));
-        services.AddPayrollTaxCategory(PayrollTaxCategories.SocialInsurance, LocalizationSource.Create("Social insurance", typeof(PayrollCoreServiceCollectionExtensions)));
-        services.AddPayrollTaxCategory(PayrollTaxCategories.Unemployment, LocalizationSource.Create("Unemployment insurance", typeof(PayrollCoreServiceCollectionExtensions)));
-
         return services;
     }
 

@@ -72,12 +72,12 @@
                 <div class="ocat-end">
                     @switch (field.Kind)
                     {
-                        case CrestApps.OrchardCore.Payroll.Services.ElectionFieldKind.Boolean:
+                        case CrestApps.OrchardCore.Taxation.Services.ElectionFieldKind.Boolean:
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="election-@field.Name" name="@name" value="true" checked="@(value == "true")" />
                             </div>
                             break;
-                        case CrestApps.OrchardCore.Payroll.Services.ElectionFieldKind.Choice:
+                        case CrestApps.OrchardCore.Taxation.Services.ElectionFieldKind.Choice:
                             <select class="form-select" id="election-@field.Name" name="@name" style="max-width: 18rem">
                                 <option value="">@T["Choose…"]</option>
                                 @foreach (var choice in field.Choices)
@@ -87,7 +87,7 @@
                             </select>
                             break;
                         default:
-                            <input class="form-control" id="election-@field.Name" name="@name" value="@value" style="max-width: 14rem" inputmode="@(field.Kind == CrestApps.OrchardCore.Payroll.Services.ElectionFieldKind.Text ? "text" : "decimal")" />
+                            <input class="form-control" id="election-@field.Name" name="@name" value="@value" style="max-width: 14rem" inputmode="@(field.Kind == CrestApps.OrchardCore.Taxation.Services.ElectionFieldKind.Text ? "text" : "decimal")" />
                             break;
                     }
                 </div>

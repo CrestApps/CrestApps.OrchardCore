@@ -43,35 +43,22 @@ public static class PaySetupServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds the fields of a tax election for jurisdictions, such as a country pack's withholding form.
+    /// Adds a box of a tax form that a pay code's amounts can go to.
     /// </summary>
     /// <param name="services">The services.</param>
-    /// <param name="fieldSet">The field set.</param>
+    /// <param name="name">The stored name; it never changes.</param>
+    /// <param name="displayName">What people see.</param>
     /// <returns>The services.</returns>
-    public static IServiceCollection AddElectionFieldSet(this IServiceCollection services, CrestApps.OrchardCore.Payroll.Services.ElectionFieldSet fieldSet)
+    public static IServiceCollection AddPayrollFormBox(this IServiceCollection services, string name, LocalizationSource displayName)
     {
         ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(fieldSet);
+        ArgumentException.ThrowIfNullOrEmpty(name);
 
-        services.Configure<CrestApps.OrchardCore.Payroll.Services.PayrollElectionOptions>(options => options.FieldSets.Add(fieldSet));
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds a withholding method that payroll tax rules can name, such as a country's withholding form.
-    /// </summary>
-    /// <typeparam name="TMethod">The method.</typeparam>
-    /// <param name="services">The services.</param>
-    /// <returns>The services.</returns>
-    public static IServiceCollection AddPayrollWithholdingMethod<TMethod>(this IServiceCollection services)
-        where TMethod : class, IPayrollWithholdingMethod
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IPayrollWithholdingMethod, TMethod>());
-
-        return services;
+        return services.Configure<PayrollFormBoxOptions>(options =>
+        {
+            options.Boxes.RemoveAll(box => box.Name == name);
+            options.Boxes.Add(new PayrollFormBox(name, displayName));
+        });
     }
 
     /// <summary>

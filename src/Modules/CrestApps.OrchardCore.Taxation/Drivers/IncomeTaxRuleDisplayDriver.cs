@@ -1,9 +1,9 @@
 using System.Globalization;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Payroll.Models;
-using CrestApps.OrchardCore.Payroll.Services;
-using CrestApps.OrchardCore.Payroll.ViewModels;
+using CrestApps.OrchardCore.Taxation.Core.Models;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
+using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -13,28 +13,28 @@ using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
-namespace CrestApps.OrchardCore.Payroll.Drivers;
+namespace CrestApps.OrchardCore.Taxation.Drivers;
 
 /// <summary>
-/// The rows and the editor of payroll tax rules.
+/// The rows and the editor of income tax rules.
 /// </summary>
-internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule>
+internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
 {
-    private readonly PayrollTaxCategoryOptions _categories;
+    private readonly IncomeTaxCategoryOptions _categories;
     private readonly TaxCalculationMethodOptions _methods;
     private readonly INamedCatalog<TaxTable> _tables;
-    private readonly IEnumerable<IPayrollWithholdingMethod> _withholdingMethods;
+    private readonly IEnumerable<IIncomeTaxWithholdingMethod> _withholdingMethods;
     private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
 
-    public PayrollTaxRuleDisplayDriver(
-        IOptions<PayrollTaxCategoryOptions> categories,
+    public IncomeTaxRuleDisplayDriver(
+        IOptions<IncomeTaxCategoryOptions> categories,
         IOptions<TaxCalculationMethodOptions> methods,
         INamedCatalog<TaxTable> tables,
-        IEnumerable<IPayrollWithholdingMethod> withholdingMethods,
+        IEnumerable<IIncomeTaxWithholdingMethod> withholdingMethods,
         IStringLocalizerFactory localizerFactory,
-        IStringLocalizer<PayrollTaxRuleDisplayDriver> stringLocalizer)
+        IStringLocalizer<IncomeTaxRuleDisplayDriver> stringLocalizer)
     {
         _categories = categories.Value;
         _methods = methods.Value;
@@ -44,7 +44,7 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
         S = stringLocalizer;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(PayrollTaxRule rule, BuildDisplayContext context)
+    public override Task<IDisplayResult> DisplayAsync(IncomeTaxRule rule, BuildDisplayContext context)
     {
         if (context.DisplayType is not (OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid))
         {
@@ -58,29 +58,36 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
         }
 
         return CombineAsync(
-            View("PayrollTaxRule_Fields_SummaryAdmin", rule)
+            View("IncomeTaxRule_Fields_SummaryAdmin", rule)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
-            View("PayrollTaxRule_Tags_SummaryAdmin", rule)
+            View("IncomeTaxRule_Tags_SummaryAdmin", rule)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"),
-            View("PayrollTaxRule_Buttons_SummaryAdmin", rule).Location("Actions:5"),
-            View("PayrollTaxRule_ActionsMenu_SummaryAdmin", rule).Location("ActionsMenu:10"));
+            View("IncomeTaxRule_Buttons_SummaryAdmin", rule).Location("Actions:5"),
+            View("IncomeTaxRule_ActionsMenu_SummaryAdmin", rule).Location("ActionsMenu:10"));
     }
 
-    public override IDisplayResult Edit(PayrollTaxRule rule, BuildEditorContext context)
-        => Initialize<PayrollTaxRuleViewModel>("PayrollTaxRuleFields_Edit", async model =>
+    public override IDisplayResult Edit(IncomeTaxRule rule, BuildEditorContext context)
+        => Initialize<IncomeTaxRuleViewModel>("IncomeTaxRuleFields_Edit", async model =>
         {
             model.Name = rule.Name;
             model.TaxCode = rule.TaxCode;
             model.Jurisdiction = rule.Jurisdiction;
+            model.CollectedBy = rule.CollectedBy;
+            model.ExceptJurisdictions = string.Join(", ", rule.ExceptJurisdictions ?? []);
             model.Category = rule.Category;
+            model.IncomeKinds = [.. (rule.IncomeKinds ?? []).Select(kind => kind.ToString())];
             model.Payer = rule.Payer.ToString();
             model.Method = rule.Method;
             model.Rate = Text(rule.Rate);
             model.FixedAmount = Text(rule.FixedAmount);
             model.TaxTableId = rule.TaxTableId;
             model.WageBase = Text(rule.WageBase);
+            model.YearlyExemption = Text(rule.YearlyExemption);
+            model.YearlyMaximum = Text(rule.YearlyMaximum);
+            model.ShareOfTaxCode = rule.ShareOfTaxCode;
+            model.ShareMultiplier = Text(rule.ShareMultiplier);
             model.Annualize = rule.Annualize;
             model.UsesElections = rule.UsesElections;
             model.AllowanceAmount = Text(rule.AllowanceAmount);
@@ -106,22 +113,29 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
             await OptionsAsync(model);
         }).Location("Content:1");
 
-    public override async Task<IDisplayResult> UpdateAsync(PayrollTaxRule rule, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)
     {
-        var model = new PayrollTaxRuleViewModel();
+        var model = new IncomeTaxRuleViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         rule.Name = model.Name;
         rule.TaxCode = model.TaxCode;
         rule.Jurisdiction = model.Jurisdiction;
+        rule.CollectedBy = string.IsNullOrWhiteSpace(model.CollectedBy) ? null : model.CollectedBy;
+        rule.ExceptJurisdictions = [.. (model.ExceptJurisdictions ?? string.Empty).Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
         rule.Category = model.Category;
-        rule.Payer = Enum.TryParse<PayLinePayer>(model.Payer, out var payer) ? payer : PayLinePayer.Employee;
+        rule.IncomeKinds = [.. (model.IncomeKinds ?? []).Select(kind => Enum.TryParse<IncomeKind>(kind, out var parsed) ? (IncomeKind?)parsed : null).Where(kind => kind is not null).Select(kind => kind.Value)];
+        rule.Payer = Enum.TryParse<IncomeTaxPayer>(model.Payer, out var payer) ? payer : IncomeTaxPayer.Employee;
         rule.Method = model.Method;
         rule.Rate = Number(model.Rate, nameof(model.Rate), context);
         rule.FixedAmount = Number(model.FixedAmount, nameof(model.FixedAmount), context);
         rule.TaxTableId = string.IsNullOrEmpty(model.TaxTableId) ? null : model.TaxTableId;
         rule.WageBase = Number(model.WageBase, nameof(model.WageBase), context);
+        rule.YearlyExemption = Number(model.YearlyExemption, nameof(model.YearlyExemption), context);
+        rule.YearlyMaximum = Number(model.YearlyMaximum, nameof(model.YearlyMaximum), context);
+        rule.ShareOfTaxCode = string.IsNullOrWhiteSpace(model.ShareOfTaxCode) ? null : model.ShareOfTaxCode;
+        rule.ShareMultiplier = Number(model.ShareMultiplier, nameof(model.ShareMultiplier), context);
         rule.Annualize = model.Annualize;
         rule.UsesElections = model.UsesElections;
         rule.AllowanceAmount = Number(model.AllowanceAmount, nameof(model.AllowanceAmount), context);
@@ -160,8 +174,15 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
         return Edit(rule, context);
     }
 
-    private async Task OptionsAsync(PayrollTaxRuleViewModel model)
+    private async Task OptionsAsync(IncomeTaxRuleViewModel model)
     {
+        model.AvailableIncomeKinds =
+        [
+            new SelectListItem(S["Employment income"], nameof(IncomeKind.Employment), model.IncomeKinds.Contains(nameof(IncomeKind.Employment))),
+            new SelectListItem(S["Contractor payments"], nameof(IncomeKind.Contractor), model.IncomeKinds.Contains(nameof(IncomeKind.Contractor))),
+            new SelectListItem(S["Pensions and annuities"], nameof(IncomeKind.Pension), model.IncomeKinds.Contains(nameof(IncomeKind.Pension))),
+            new SelectListItem(S["Other income"], nameof(IncomeKind.Other), model.IncomeKinds.Contains(nameof(IncomeKind.Other))),
+        ];
         model.Categories = [.. _categories.Categories.Select(category => new SelectListItem(_localizerFactory.Localize(category.DisplayName).Value, category.Name, category.Name == model.Category))];
 
         if (!string.IsNullOrEmpty(model.Category) && model.Categories.All(option => option.Value != model.Category))
@@ -178,7 +199,7 @@ internal sealed class PayrollTaxRuleDisplayDriver : DisplayDriver<PayrollTaxRule
             var displayName = _localizerFactory.Localize(withholding.DisplayName).Value;
 
             model.Methods.Add(new SelectListItem(displayName, withholding.Name, string.Equals(withholding.Name, model.Method, StringComparison.OrdinalIgnoreCase)));
-            model.WithholdingMethods.Add(new PayrollWithholdingMethodViewModel
+            model.WithholdingMethods.Add(new IncomeTaxWithholdingMethodViewModel
             {
                 Name = withholding.Name,
                 DisplayName = displayName,

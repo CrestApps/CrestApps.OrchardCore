@@ -177,14 +177,14 @@ public sealed class PayEngineGoldenTests
 
     private static PayCalculator Calculator(GoldenCase golden)
     {
-        var categories = new PayrollTaxCategoryOptions();
+        var categories = new IncomeTaxCategoryOptions();
 
-        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.IncomeTax, LocalizationSource.Create<PayEngineGoldenTests>("Income tax")));
-        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.SocialInsurance, LocalizationSource.Create<PayEngineGoldenTests>("Social insurance")));
-        categories.Categories.Add(new PayrollTaxCategory(PayrollTaxCategories.Unemployment, LocalizationSource.Create<PayEngineGoldenTests>("Unemployment")));
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.IncomeTax, LocalizationSource.Create<PayEngineGoldenTests>("Income tax")));
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.SocialInsurance, LocalizationSource.Create<PayEngineGoldenTests>("Social insurance")));
+        categories.Categories.Add(new IncomeTaxCategory(IncomeTaxCategories.Unemployment, LocalizationSource.Create<PayEngineGoldenTests>("Unemployment")));
 
         var tables = new InMemoryNamedCatalog<TaxTable>();
-        var rules = new List<PayrollTaxRule>();
+        var rules = new List<IncomeTaxRule>();
 
         foreach (var (rule, index) in golden.TaxRules.Select((rule, index) => (rule, index)))
         {
@@ -204,11 +204,11 @@ public sealed class PayEngineGoldenTests
             new PercentageTaxCalculationMethod(), new FixedAmountTaxCalculationMethod(), new TaxTableTaxCalculationMethod(),
             new ProgressiveTaxCalculationMethod(), new ThresholdTaxCalculationMethod(),
         ];
-        var ruleManager = new Moq.Mock<IPayrollTaxRuleManager>();
+        var ruleManager = new Moq.Mock<IIncomeTaxRuleManager>();
 
         ruleManager.Setup(manager => manager.ListAsync(Moq.It.IsAny<CancellationToken>())).ReturnsAsync(rules);
 
-        var provider = new TaxTablesPayrollTaxProvider(ruleManager.Object, new DefaultTaxCalculationMethodProvider(methods), tables, [], new PassThroughStringLocalizer<TaxTablesPayrollTaxProvider>());
+        var provider = new IncomeTaxRulesProvider(ruleManager.Object, new DefaultTaxCalculationMethodProvider(methods), tables, [], new PassThroughStringLocalizer<IncomeTaxRulesProvider>());
         var services = new ServiceCollection().BuildServiceProvider();
 
         return new PayCalculator(
@@ -355,7 +355,7 @@ public sealed class PayEngineGoldenTests
     private sealed class GoldenRule
     {
         [JsonPropertyName("rule")]
-        public PayrollTaxRule Rule { get; set; }
+        public IncomeTaxRule Rule { get; set; }
 
         public List<TaxTableRow> Table { get; set; }
     }

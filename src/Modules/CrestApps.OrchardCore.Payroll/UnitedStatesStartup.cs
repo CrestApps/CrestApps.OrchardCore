@@ -6,8 +6,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Payroll;
 
 /// <summary>
-/// United States Payroll: the Form W-4 election fields and the federal withholding method. The federal tax rules come
-/// as dated recipes (Tools > Recipes).
+/// United States Payroll Filings: Forms 941, 940, 945, W-2 and 1099-NEC made from pay statements. Form W-4 and the
+/// federal rules are Taxation's United States Income Tax.
 /// </summary>
 [Feature(PayrollConstants.Features.UnitedStates)]
 public sealed class UnitedStatesStartup : StartupBase
@@ -15,14 +15,11 @@ public sealed class UnitedStatesStartup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddElectionFieldSet(UnitedStatesElectionFields.Create());
-        services.AddPayrollWithholdingMethod<UnitedStatesFormW4WithholdingMethod>();
         services.AddPayrollFilingForm<Form941>();
         services.AddPayrollFilingForm<Form940>();
         services.AddPayrollFilingForm<FormW2>();
         services.AddPayrollFilingForm<Form1099Nec>();
         services.AddPayrollFilingForm<Form945>();
-        services.AddPayrollTaxCategory(CrestApps.OrchardCore.Payroll.Models.PayrollTaxCategories.ContractorWithholding, global::OrchardCore.Localization.LocalizationSource.Create<UnitedStatesStartup>("Backup withholding (contractors)"));
     }
 }
 

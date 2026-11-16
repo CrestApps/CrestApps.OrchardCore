@@ -1,28 +1,28 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Core.Recipes;
-using CrestApps.OrchardCore.Payroll.Models;
-using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Recipes.Core;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Json.Schema;
 
-namespace CrestApps.OrchardCore.Payroll.Recipes;
+namespace CrestApps.OrchardCore.Taxation.Recipes;
 
 /// <summary>
-/// Imports payroll tax rules, matched by id and then by tax code and first day (a dated version).
+/// Imports income tax rules, matched by id and then by tax code and first day (a dated version).
 /// </summary>
-internal sealed class PayrollTaxRulesRecipeStep : CatalogRecipeStep<PayrollTaxRule>
+internal sealed class IncomeTaxRulesRecipeStep : CatalogRecipeStep<IncomeTaxRule>
 {
     public const string EntriesName = "Rules";
 
-    private readonly IPayrollTaxRuleManager _manager;
+    private readonly IIncomeTaxRuleManager _manager;
 
-    public PayrollTaxRulesRecipeStep(IPayrollTaxRuleManager manager)
-        : base(PayrollConstants.TaxRulesRecipeStepName, EntriesName, manager)
+    public IncomeTaxRulesRecipeStep(IIncomeTaxRuleManager manager)
+        : base(TaxationConstants.IncomeTaxRulesRecipeStepName, EntriesName, manager)
     {
         _manager = manager;
     }
 
-    protected override async ValueTask<PayrollTaxRule> FindExistingAsync(string id, JsonObject data)
+    protected override async ValueTask<IncomeTaxRule> FindExistingAsync(string id, JsonObject data)
     {
         if (await base.FindExistingAsync(id, data) is { } byId)
         {
@@ -39,37 +39,44 @@ internal sealed class PayrollTaxRulesRecipeStep : CatalogRecipeStep<PayrollTaxRu
 }
 
 /// <summary>
-/// Describes the "PayrollTaxRules" recipe step to CrestApps Recipes.
+/// Describes the "IncomeTaxRules" recipe step to CrestApps Recipes.
 /// </summary>
-internal sealed class PayrollTaxRulesRecipeStepSchema : IRecipeStep
+internal sealed class IncomeTaxRulesRecipeStepSchema : IRecipeStep
 {
     private JsonSchema _cached;
 
-    public string Name => PayrollConstants.TaxRulesRecipeStepName;
+    public string Name => TaxationConstants.IncomeTaxRulesRecipeStepName;
 
     public ValueTask<JsonSchema> GetSchemaAsync(CancellationToken cancellationToken = default)
     {
         _cached ??= new JsonSchemaBuilder()
             .Type(SchemaValueType.Object)
             .Properties(
-                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(PayrollConstants.TaxRulesRecipeStepName).Description("Recipe step discriminator. Must be 'PayrollTaxRules'.")),
-                (PayrollTaxRulesRecipeStep.EntriesName, new JsonSchemaBuilder()
+                ("name", new JsonSchemaBuilder().Type(SchemaValueType.String).Const(TaxationConstants.IncomeTaxRulesRecipeStepName).Description("Recipe step discriminator. Must be 'IncomeTaxRules'.")),
+                (IncomeTaxRulesRecipeStep.EntriesName, new JsonSchemaBuilder()
                     .Type(SchemaValueType.Array)
                     .Items(new JsonSchemaBuilder()
                         .Type(SchemaValueType.Object)
                         .Properties(
                             ("ItemId", Text("The rule's 26-character id; omit it to match by tax code and first day, or create one.")),
                             ("Name", Text("What a statement shows.")),
-                            ("TaxCode", Text("The tax's code, the same for every dated version, such as US-CA-SIT.")),
-                            ("Jurisdiction", Text("The jurisdiction, such as US or US-CA.")),
-                            ("Category", Text("The tax category whose wages are taxed: IncomeTax, SocialInsurance, Unemployment or one a country pack adds.")),
+                            ("TaxCode", Text("The tax's code, the same for every dated version, such as US-CA-SIT or CA-CPP.")),
+                            ("Jurisdiction", Text("The jurisdiction, such as US, US-CA, CA or CA-QC.")),
+                            ("CollectedBy", Text("The jurisdiction whose registration covers the tax when it isn't the rule's own, such as CA for a province's tax the CRA collects.")),
+                            ("ExceptJurisdictions", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Jurisdictions whose people the rule doesn't apply to, such as CA-QC for the Canada Pension Plan.")),
+                            ("IncomeKinds", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Employment", "Contractor", "Pension", "Other")).Description("The kinds of income the rule applies to; empty for employment income (or contractor payments for ContractorWithholding).")),
+                            ("Category", Text("The tax category whose income is taxed: IncomeTax, SocialInsurance, Unemployment or one a country pack adds.")),
                             ("Payer", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Employee", "Employer").Description("Who pays.")),
-                            ("Method", Text("A Taxation calculation method (Percentage, FixedAmount, TaxTable, Progressive or Threshold) or a payroll withholding method a country pack adds, such as UnitedStatesFormW4.")),
+                            ("Method", Text("A Taxation calculation method (Percentage, FixedAmount, TaxTable, Progressive or Threshold) or a withholding method a country pack adds, such as UnitedStatesFormW4, CanadaFederal, CanadaProvincial or QuebecTP1015.")),
                             ("Rate", Number("The rate as a percent, such as 6.2.")),
                             ("FixedAmount", Number("The fixed amount.")),
                             ("TaxTableId", Text("The id of a Taxation tax table (rates in its rows are fractions).")),
-                            ("WageBase", Number("The most wages taxed in a calendar year.")),
-                            ("WageThreshold", Number("The wages of a calendar year above which the tax starts; only the part over it is taxed.")),
+                            ("WageBase", Number("The most income taxed in a calendar year.")),
+                            ("WageThreshold", Number("The income of a calendar year above which the tax starts; only the part over it is taxed (such as CPP2 above the first ceiling).")),
+                            ("YearlyExemption", Number("An amount of a year's income never taxed, taken off each pay in proportion to the periods of a year, such as the CPP basic exemption.")),
+                            ("YearlyMaximum", Number("The most tax taken in a calendar year, such as a contribution's maximum.")),
+                            ("ShareOfTaxCode", Text("The code of another tax of the same pay this rule is a share of, such as the employer's share of a contribution.")),
+                            ("ShareMultiplier", Number("How many times that tax the rule takes, such as 1.4 for the employer's EI premium.")),
                             ("Tables", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("A withholding method's Taxation tax table ids, by the method's key (for UnitedStatesFormW4: Single, MarriedFilingJointly, HeadOfHousehold and each with .Step2).")),
                             ("Parameters", new JsonSchemaBuilder().Type(SchemaValueType.Object).AdditionalProperties(new JsonSchemaBuilder().Type(SchemaValueType.Number)).Description("A withholding method's amounts, by the method's key (for UnitedStatesFormW4: AdjustmentMarriedFilingJointly and Adjustment).")),
                             ("Annualize", new JsonSchemaBuilder().Type(SchemaValueType.Boolean).Description("Work the tax out on a year's wages.")),
@@ -84,7 +91,7 @@ internal sealed class PayrollTaxRulesRecipeStepSchema : IRecipeStep
                         .Required("TaxCode", "Jurisdiction", "EffectiveFrom")
                         .AdditionalProperties(true))
                     .Description("The tax rules to create, or update by id or by tax code and first day.")))
-            .Required("name", PayrollTaxRulesRecipeStep.EntriesName)
+            .Required("name", IncomeTaxRulesRecipeStep.EntriesName)
             .AdditionalProperties(true)
             .Build();
 

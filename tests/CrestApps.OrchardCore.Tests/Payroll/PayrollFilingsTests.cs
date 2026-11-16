@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Core.UnitedStates;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Tests.Calendars;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -314,7 +315,7 @@ public sealed class PayrollFilingsTests
                 Lines =
                 [
                     new PayStatementLine { Type = PayLineType.Earning, PayCodeId = setup.BonusCodeId, Amount = 3000 },
-                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = Form1099Nec.BackupWithholdingCode, TaxCategory = PayrollTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 720 },
+                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = Form1099Nec.BackupWithholdingCode, TaxCategory = IncomeTaxCategories.ContractorWithholding, Jurisdiction = "US", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 720 },
                 ],
             });
 
@@ -451,7 +452,7 @@ public sealed class PayrollFilingsTests
 
             var settings = PayrollPayCodeSettingsExtensions.DefaultsFor(retirement);
 
-            settings.TaxTreatment[PayrollTaxCategories.IncomeTax] = PayCodeTaxTreatment.Exempt;
+            settings.TaxTreatment[IncomeTaxCategories.IncomeTax] = PayCodeTaxTreatment.Exempt;
             settings.FormBoxes = ["W2:12D"];
             retirement.Put(settings);
             await codes.CreateAsync(retirement);
@@ -481,12 +482,12 @@ public sealed class PayrollFilingsTests
                 [
                     new PayStatementLine { Type = PayLineType.Earning, PayCodeId = regular.ItemId, Amount = 5000 },
                     new PayStatementLine { Type = PayLineType.Deduction, PayCodeId = retirement.ItemId, Amount = 500 },
-                    Tax(UnitedStatesTaxCodes.IncomeTax, PayrollTaxCategories.IncomeTax, PayLinePayer.Employee, 4500, 400),
-                    Tax(UnitedStatesTaxCodes.SocialSecurity, PayrollTaxCategories.SocialInsurance, PayLinePayer.Employee, 5000, 310),
-                    Tax(UnitedStatesTaxCodes.SocialSecurityEmployer, PayrollTaxCategories.SocialInsurance, PayLinePayer.Employer, 5000, 310),
-                    Tax(UnitedStatesTaxCodes.Medicare, PayrollTaxCategories.SocialInsurance, PayLinePayer.Employee, 5000, 72.50m),
-                    Tax(UnitedStatesTaxCodes.MedicareEmployer, PayrollTaxCategories.SocialInsurance, PayLinePayer.Employer, 5000, 72.50m),
-                    Tax(UnitedStatesTaxCodes.Unemployment, PayrollTaxCategories.Unemployment, PayLinePayer.Employer, 5000, 30),
+                    Tax(UnitedStatesTaxCodes.IncomeTax, IncomeTaxCategories.IncomeTax, PayLinePayer.Employee, 4500, 400),
+                    Tax(UnitedStatesTaxCodes.SocialSecurity, IncomeTaxCategories.SocialInsurance, PayLinePayer.Employee, 5000, 310),
+                    Tax(UnitedStatesTaxCodes.SocialSecurityEmployer, IncomeTaxCategories.SocialInsurance, PayLinePayer.Employer, 5000, 310),
+                    Tax(UnitedStatesTaxCodes.Medicare, IncomeTaxCategories.SocialInsurance, PayLinePayer.Employee, 5000, 72.50m),
+                    Tax(UnitedStatesTaxCodes.MedicareEmployer, IncomeTaxCategories.SocialInsurance, PayLinePayer.Employer, 5000, 72.50m),
+                    Tax(UnitedStatesTaxCodes.Unemployment, IncomeTaxCategories.Unemployment, PayLinePayer.Employer, 5000, 30),
                 ],
             });
 
@@ -508,12 +509,12 @@ public sealed class PayrollFilingsTests
                 Lines =
                 [
                     new PayStatementLine { Type = PayLineType.Earning, PayCodeId = regular.ItemId, Amount = 3000 },
-                    Tax(UnitedStatesTaxCodes.IncomeTax, PayrollTaxCategories.IncomeTax, PayLinePayer.Employee, 3000, 200),
-                    Tax(UnitedStatesTaxCodes.SocialSecurity, PayrollTaxCategories.SocialInsurance, PayLinePayer.Employee, 3000, 186),
-                    Tax(UnitedStatesTaxCodes.SocialSecurityEmployer, PayrollTaxCategories.SocialInsurance, PayLinePayer.Employer, 3000, 186),
-                    Tax(UnitedStatesTaxCodes.Medicare, PayrollTaxCategories.SocialInsurance, PayLinePayer.Employee, 3000, 43.50m),
-                    Tax(UnitedStatesTaxCodes.MedicareEmployer, PayrollTaxCategories.SocialInsurance, PayLinePayer.Employer, 3000, 43.50m),
-                    Tax(UnitedStatesTaxCodes.Unemployment, PayrollTaxCategories.Unemployment, PayLinePayer.Employer, 2000, 12),
+                    Tax(UnitedStatesTaxCodes.IncomeTax, IncomeTaxCategories.IncomeTax, PayLinePayer.Employee, 3000, 200),
+                    Tax(UnitedStatesTaxCodes.SocialSecurity, IncomeTaxCategories.SocialInsurance, PayLinePayer.Employee, 3000, 186),
+                    Tax(UnitedStatesTaxCodes.SocialSecurityEmployer, IncomeTaxCategories.SocialInsurance, PayLinePayer.Employer, 3000, 186),
+                    Tax(UnitedStatesTaxCodes.Medicare, IncomeTaxCategories.SocialInsurance, PayLinePayer.Employee, 3000, 43.50m),
+                    Tax(UnitedStatesTaxCodes.MedicareEmployer, IncomeTaxCategories.SocialInsurance, PayLinePayer.Employer, 3000, 43.50m),
+                    Tax(UnitedStatesTaxCodes.Unemployment, IncomeTaxCategories.Unemployment, PayLinePayer.Employer, 2000, 12),
                 ],
             });
 

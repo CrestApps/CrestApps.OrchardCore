@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Services;
 using OrchardCore.Localization;
 
-namespace CrestApps.OrchardCore.Payroll.Core.Services;
+namespace CrestApps.OrchardCore.Taxation.Core.Services;
 
 /// <summary>
 /// The election fields of any jurisdiction a country pack gives no form for: a filing status, allowances, extra

@@ -80,10 +80,6 @@ public static class PayrollConstants
     /// </summary>
     public const string PayItemsRecipeStepName = "PayrollPayItems";
 
-    /// <summary>
-    /// The name of the recipe step that imports payroll tax rules.
-    /// </summary>
-    public const string TaxRulesRecipeStepName = "PayrollTaxRules";
 
     /// <summary>
     /// The name of the recipe and deployment step of garnishment orders.
@@ -185,10 +181,6 @@ public static class PayrollConstants
         /// </summary>
         public const string Payroll = "CrestApps.OrchardCore.Payroll";
 
-        /// <summary>
-        /// Payroll Tax Tables: the built-in tax provider, payroll tax rules over Taxation's tables.
-        /// </summary>
-        public const string TaxTables = "CrestApps.OrchardCore.Payroll.TaxTables";
 
         /// <summary>
         /// Direct Deposit: net pay deposited to people's bank accounts through Disbursements.
@@ -212,9 +204,16 @@ public static class PayrollConstants
         public const string AI = "CrestApps.OrchardCore.Payroll.AI";
 
         /// <summary>
-        /// United States Payroll: the Form W-4 election and withholding method, and the federal tax rules as recipes.
+        /// United States Payroll Filings: Forms 941, 940, 945, W-2 and W-3, 1099-NEC and 1096, the EFW2 file and year
+        /// end, over Taxation's United States Income Tax.
         /// </summary>
         public const string UnitedStates = "CrestApps.OrchardCore.Payroll.UnitedStates";
+
+        /// <summary>
+        /// Canada Payroll Filings: source deductions remittances to the CRA and Revenu Québec, T4 and RL-1 slips with
+        /// their summaries, and the T4 XML file, over Taxation's Canada Income Tax.
+        /// </summary>
+        public const string Canada = "CrestApps.OrchardCore.Payroll.Canada";
 
         /// <summary>
         /// Garnishments: orders withheld from pay within the law's limits and sent to their payees.

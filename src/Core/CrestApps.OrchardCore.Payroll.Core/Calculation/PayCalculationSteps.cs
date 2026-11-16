@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Models;
+using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Settings;
@@ -512,13 +514,14 @@ public sealed class PreTaxDeductionsPayCalculationStep : IPayCalculationStep
 }
 
 /// <summary>
-/// Taxes: the regular and supplemental wages of each tax category from the treatment matrix, worked out by the tax
-/// provider the settings name (or the only one there is). A contractor has nothing withheld.
+/// Taxes: the regular and supplemental wages of each tax category from the treatment matrix, worked out by the income
+/// tax provider the settings name (or the only one there is). The statement is mapped to Taxation's neutral request and
+/// the result back to tax lines. A contractor has nothing withheld unless contractor withholding applies.
 /// </summary>
 public sealed class TaxesPayCalculationStep : IPayCalculationStep
 {
-    private readonly IEnumerable<IPayrollTaxProvider> _providers;
-    private readonly PayrollTaxCategoryOptions _categories;
+    private readonly IEnumerable<IIncomeTaxProvider> _providers;
+    private readonly IncomeTaxCategoryOptions _categories;
     private readonly IServiceProvider _services;
 
     internal readonly IStringLocalizer S;
@@ -526,11 +529,11 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
     /// <summary>
     /// Initializes a new instance of the <see cref="TaxesPayCalculationStep"/> class.
     /// </summary>
-    /// <param name="providers">The tax providers.</param>
+    /// <param name="providers">The income tax providers.</param>
     /// <param name="categories">The tax categories.</param>
     /// <param name="services">The services, for the settings when there are any.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public TaxesPayCalculationStep(IEnumerable<IPayrollTaxProvider> providers, IOptions<PayrollTaxCategoryOptions> categories, IServiceProvider services, IStringLocalizer<TaxesPayCalculationStep> stringLocalizer)
+    public TaxesPayCalculationStep(IEnumerable<IIncomeTaxProvider> providers, IOptions<IncomeTaxCategoryOptions> categories, IServiceProvider services, IStringLocalizer<TaxesPayCalculationStep> stringLocalizer)
     {
         _providers = providers;
         _categories = categories.Value;
@@ -573,9 +576,9 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
                 TaxCategory = tax.Category,
                 Description = tax.Name,
                 Jurisdiction = tax.Jurisdiction,
-                Payer = tax.Payer,
-                TaxableWages = context.Round(tax.TaxableWages),
-                FlatWages = tax.FlatWages > 0 ? context.Round(tax.FlatWages) : null,
+                Payer = tax.Payer == IncomeTaxPayer.Employer ? PayLinePayer.Employer : PayLinePayer.Employee,
+                TaxableWages = context.Round(tax.TaxableIncome),
+                FlatWages = tax.FlatIncome > 0 ? context.Round(tax.FlatIncome) : null,
                 Amount = context.Round(tax.Amount),
             });
         }
@@ -584,11 +587,12 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
     }
 
     /// <summary>
-    /// Builds the tax request of a calculation: wages per category, split into regular and supplemental.
+    /// Builds the income tax request of a calculation: the employer's registrations, the person's jurisdictions and
+    /// elections, wages per category split into regular and supplemental, and what each tax came to earlier.
     /// </summary>
     /// <param name="context">The calculation.</param>
     /// <returns>The request.</returns>
-    public PayrollTaxRequest Request(PayCalculationContext context)
+    public IncomeTaxRequest Request(PayCalculationContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -603,26 +607,47 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
         var categories = _categories.Categories.Select(category => category.Name)
             .Concat(amounts.SelectMany(pair => pair.Code.GetPayrollSettings().TaxTreatment.Keys))
             .Distinct(StringComparer.Ordinal);
-        var request = new PayrollTaxRequest
+        var request = new IncomeTaxRequest
         {
-            Employer = context.Employer,
-            StaffMemberId = context.Profile?.StaffMemberId,
-            WorkerType = context.Profile?.WorkerType ?? PayWorkerType.Employee,
+            PayerId = context.Employer?.ItemId,
+            RegisteredJurisdictions = [.. (context.Employer?.Registrations ?? [])
+                .Select(registration => registration.Jurisdiction)
+                .Where(jurisdiction => !string.IsNullOrEmpty(jurisdiction))
+                .Distinct(StringComparer.OrdinalIgnoreCase)],
+            EarnerId = context.Profile?.StaffMemberId,
+            IncomeKind = context.Profile?.WorkerType == PayWorkerType.Contractor ? IncomeKind.Contractor : IncomeKind.Employment,
             ContractorWithholding = context.Profile is { WorkerType: PayWorkerType.Contractor } profile && WithholdsOnContractor(profile),
             HomeJurisdictions = context.HomeJurisdictions,
             WorkJurisdictions = context.WorkJurisdictions,
             PayDate = context.PayDate,
-            Frequency = context.Schedule?.Frequency ?? PayFrequency.Biweekly,
             PeriodsPerYear = PayCalculator.PeriodsPerYear(context.Schedule?.Frequency ?? PayFrequency.Biweekly),
-            SupplementalMethod = context.SupplementalMethod,
-            Accumulators = context.Accumulators,
+            SupplementalMethod = context.SupplementalMethod == PayrollSupplementalMethod.Flat ? SupplementalWithholdingMethod.Flat : SupplementalWithholdingMethod.Aggregate,
             Currency = context.Currency,
             Elections = [.. (context.Profile?.Elections ?? [])
                 .Select(election => election.Jurisdiction)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Select(jurisdiction => context.Profile.ElectionOn(jurisdiction, context.PayDate))
-                .Where(election => election is not null)],
+                .Where(election => election is not null)
+                .Select(election => new IncomeTaxElection
+                {
+                    Jurisdiction = election.Jurisdiction,
+                    Values = new Dictionary<string, string>(election.Values ?? [], StringComparer.Ordinal),
+                })],
         };
+
+        // What each tax was worked out on and came to earlier, from the accumulators, for wage bases and maximums.
+        var taxPrefix = PayAccumulators.TaxKey(string.Empty);
+
+        foreach (var (key, totals) in context.Accumulators.Totals.Where(pair => pair.Key.StartsWith(taxPrefix, StringComparison.Ordinal)))
+        {
+            request.TaxesToDate[key[taxPrefix.Length..]] = new IncomeTaxToDate
+            {
+                YearTaxableIncome = totals.YearTaxableWages,
+                YearTax = totals.Year,
+                PeriodTaxableIncome = totals.PeriodTaxableWages,
+                PeriodFlatIncome = totals.PeriodFlatWages,
+            };
+        }
 
         // What was paid earlier in the year, from the pay codes' totals, for taxes that start above a threshold.
         var codePrefix = PayAccumulators.CodeKey(string.Empty);
@@ -640,10 +665,10 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
             var net = PayCodeTaxMatrix.NetWagesFor(category, regular);
             var yearNet = PayCodeTaxMatrix.NetWagesFor(category, yearRegular);
 
-            request.Wages[category] = Math.Max(0, net);
-            request.SupplementalWages[category] = Math.Max(0, PayCodeTaxMatrix.WagesFor(category, supplemental) + Math.Min(0, net));
-            request.YearSupplementalWages[category] = Math.Max(0, PayCodeTaxMatrix.WagesFor(category, yearSupplemental) + Math.Min(0, yearNet));
-            request.YearWages[category] = Math.Max(0, yearNet) + request.YearSupplementalWages[category];
+            request.Income[category] = Math.Max(0, net);
+            request.SupplementalIncome[category] = Math.Max(0, PayCodeTaxMatrix.WagesFor(category, supplemental) + Math.Min(0, net));
+            request.YearSupplementalIncome[category] = Math.Max(0, PayCodeTaxMatrix.WagesFor(category, yearSupplemental) + Math.Min(0, yearNet));
+            request.YearIncome[category] = Math.Max(0, yearNet) + request.YearSupplementalIncome[category];
         }
 
         return request;
@@ -653,7 +678,7 @@ public sealed class TaxesPayCalculationStep : IPayCalculationStep
     private static bool WithholdsOnContractor(EmployeePayProfile profile)
         => profile.BackupWithholding || profile.TaxId is not { HasValue: true };
 
-    private async Task<IPayrollTaxProvider> ProviderAsync()
+    private async Task<IIncomeTaxProvider> ProviderAsync()
     {
         var name = _services.GetService(typeof(ISiteService)) is ISiteService site
             ? (await site.GetSettingsAsync<PayrollSettings>())?.TaxProvider

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Payroll.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
@@ -256,7 +257,7 @@ public class PayProfileElectionsViewModel
     public IList<string> Jurisdictions { get; set; } = [];
 
     [BindNever]
-    public IList<CrestApps.OrchardCore.Payroll.Services.ElectionField> Fields { get; set; } = [];
+    public IList<CrestApps.OrchardCore.Taxation.Services.ElectionField> Fields { get; set; } = [];
 
     [BindNever]
     public IDictionary<string, string> FieldLabels { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -446,82 +447,6 @@ public class DatedAmountViewModel
     public DateOnly? EffectiveFrom { get; set; }
 
     public string Amount { get; set; }
-}
-
-/// <summary>
-/// The payroll tax rule editor.
-/// </summary>
-public class PayrollTaxRuleViewModel
-{
-    public string Name { get; set; }
-
-    public string TaxCode { get; set; }
-
-    public string Jurisdiction { get; set; }
-
-    public string Category { get; set; }
-
-    public string Payer { get; set; }
-
-    public string Method { get; set; }
-
-    public string Rate { get; set; }
-
-    public string FixedAmount { get; set; }
-
-    public string TaxTableId { get; set; }
-
-    public string WageBase { get; set; }
-
-    public bool Annualize { get; set; }
-
-    public bool UsesElections { get; set; }
-
-    public string AllowanceAmount { get; set; }
-
-    public string SupplementalRate { get; set; }
-
-    public string SupplementalExcessRate { get; set; }
-
-    public string SupplementalExcessThreshold { get; set; }
-
-    public string WageThreshold { get; set; }
-
-    public Dictionary<string, string> WithholdingTables { get; set; } = [];
-
-    public Dictionary<string, string> WithholdingParameters { get; set; } = [];
-
-    [BindNever]
-    public IList<PayrollWithholdingMethodViewModel> WithholdingMethods { get; set; } = [];
-
-    public DateOnly? EffectiveFrom { get; set; }
-
-    public DateOnly? EffectiveTo { get; set; }
-
-    public bool Enabled { get; set; }
-
-    [BindNever]
-    public IList<SelectListItem> Categories { get; set; } = [];
-
-    [BindNever]
-    public IList<SelectListItem> Methods { get; set; } = [];
-
-    [BindNever]
-    public IList<SelectListItem> Tables { get; set; } = [];
-}
-
-/// <summary>
-/// The tables and amounts of a withholding method, in the tax rule editor.
-/// </summary>
-public class PayrollWithholdingMethodViewModel
-{
-    public string Name { get; set; }
-
-    public string DisplayName { get; set; }
-
-    public IList<(string Key, string Label)> Tables { get; set; } = [];
-
-    public IList<(string Key, string Label)> Parameters { get; set; } = [];
 }
 
 /// <summary>
