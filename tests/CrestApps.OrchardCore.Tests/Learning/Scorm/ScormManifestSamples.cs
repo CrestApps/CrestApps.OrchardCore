@@ -157,10 +157,109 @@ internal static class ScormManifestSamples
         </manifest>
         """;
 
-    public const string Scorm2004 = """
+    /// <summary>
+    /// A SCORM 2004 3rd Edition single-SCO package without sequencing, written from the CAM: <c>adlcp:scormType</c>, the
+    /// 3rd Edition <c>adlcp:completionThreshold</c> as text, <c>adlcp:dataFromLMS</c>, <c>adlcp:timeLimitAction</c> and
+    /// <c>xml:base</c> on the resources and the resource.
+    /// </summary>
+    public const string Scorm2004Third = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <manifest identifier="com.example.s2004.third" version="1"
+                  xmlns="http://www.imsglobal.org/xsd/imscp_v1p1"
+                  xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_v1p3"
+                  xmlns:adlseq="http://www.adlnet.org/xsd/adlseq_v1p3"
+                  xmlns:adlnav="http://www.adlnet.org/xsd/adlnav_v1p3"
+                  xmlns:imsss="http://www.imsglobal.org/xsd/imsss"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://www.imsglobal.org/xsd/imscp_v1p1 imscp_v1p1.xsd http://www.adlnet.org/xsd/adlcp_v1p3 adlcp_v1p3.xsd http://www.adlnet.org/xsd/adlseq_v1p3 adlseq_v1p3.xsd http://www.adlnet.org/xsd/adlnav_v1p3 adlnav_v1p3.xsd http://www.imsglobal.org/xsd/imsss imsss_v1p0.xsd">
+          <metadata>
+            <schema>ADL SCORM</schema>
+            <schemaversion>2004 3rd Edition</schemaversion>
+          </metadata>
+          <organizations default="ORG">
+            <organization identifier="ORG">
+              <title>Hazard Communication</title>
+              <item identifier="ITEM-HAZCOM" identifierref="RES-HAZCOM">
+                <title>Hazard Communication Lesson</title>
+                <adlcp:timeLimitAction>continue,message</adlcp:timeLimitAction>
+                <adlcp:dataFromLMS>chapter=1</adlcp:dataFromLMS>
+                <adlcp:completionThreshold>0.8</adlcp:completionThreshold>
+              </item>
+            </organization>
+          </organizations>
+          <resources xml:base="content/">
+            <resource identifier="RES-HAZCOM" type="webcontent" adlcp:scormType="sco" xml:base="hazcom/" href="index.html?mode=lms">
+              <file href="index.html"/>
+            </resource>
+          </resources>
+        </manifest>
+        """;
+
+    /// <summary>
+    /// A SCORM 2004 4th Edition package with sequencing: an organization and item <c>imsss:sequencing</c>, a primary
+    /// objective satisfied by measure, a second objective, limit conditions, the 4th Edition
+    /// <c>adlcp:completionThreshold</c> attributes, a second SCO and an asset.
+    /// </summary>
+    public const string Scorm2004Fourth = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <manifest identifier="com.example.s2004.fourth" version="1"
+                  xmlns="http://www.imsglobal.org/xsd/imscp_v1p1"
+                  xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_v1p3"
+                  xmlns:adlseq="http://www.adlnet.org/xsd/adlseq_v1p3"
+                  xmlns:adlnav="http://www.adlnet.org/xsd/adlnav_v1p3"
+                  xmlns:imsss="http://www.imsglobal.org/xsd/imsss">
+          <metadata>
+            <schema>ADL SCORM</schema>
+            <schemaversion>2004 4th Edition</schemaversion>
+          </metadata>
+          <organizations default="ORG">
+            <organization identifier="ORG" adlseq:objectivesGlobalToSystem="false">
+              <title>Forklift Operation</title>
+              <item identifier="ITEM-PRE" identifierref="RES-PRE">
+                <title>Pre-operation Check</title>
+                <adlcp:completionThreshold completedByMeasure="true" minProgressMeasure="0.75" progressWeight="1.0"/>
+                <imsss:sequencing>
+                  <imsss:limitConditions attemptAbsoluteDurationLimit="PT30M"/>
+                  <imsss:objectives>
+                    <imsss:primaryObjective objectiveID="PRIMARY-PRE" satisfiedByMeasure="true">
+                      <imsss:minNormalizedMeasure>0.6</imsss:minNormalizedMeasure>
+                    </imsss:primaryObjective>
+                    <imsss:objective objectiveID="obj-mast-check"/>
+                  </imsss:objectives>
+                  <imsss:deliveryControls completionSetByContent="true" objectiveSetByContent="true"/>
+                </imsss:sequencing>
+              </item>
+              <item identifier="ITEM-GLOSSARY" identifierref="RES-GLOSSARY">
+                <title>Glossary</title>
+              </item>
+              <item identifier="ITEM-DRIVE" identifierref="RES-DRIVE">
+                <title>Driving</title>
+              </item>
+              <imsss:sequencing>
+                <imsss:controlMode choice="true" flow="true"/>
+              </imsss:sequencing>
+            </organization>
+          </organizations>
+          <resources>
+            <resource identifier="RES-PRE" type="webcontent" adlcp:scormType="sco" href="pre/index.html">
+              <file href="pre/index.html"/>
+            </resource>
+            <resource identifier="RES-GLOSSARY" type="webcontent" adlcp:scormType="asset" href="glossary.html">
+              <file href="glossary.html"/>
+            </resource>
+            <resource identifier="RES-DRIVE" type="webcontent" adlcp:scormType="sco" href="drive/index.html">
+              <file href="drive/index.html"/>
+            </resource>
+          </resources>
+        </manifest>
+        """;
+
+    /// <summary>
+    /// A SCORM 2004 package with no metadata: the SCORM 2004 namespaces alone say what it is.
+    /// </summary>
+    public const string Scorm2004NamespacesOnly = """
         <?xml version="1.0" encoding="UTF-8"?>
         <manifest identifier="S2004" xmlns="http://www.imsglobal.org/xsd/imscp_v1p1" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_v1p3">
-          <metadata><schema>ADL SCORM</schema><schemaversion>2004 4th Edition</schemaversion></metadata>
           <organizations default="O">
             <organization identifier="O"><title>T</title><item identifier="I" identifierref="R"><title>I</title></item></organization>
           </organizations>

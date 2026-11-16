@@ -31,7 +31,7 @@ public static class PackagesConstants
     public static class Features
     {
         /// <summary>
-        /// SCORM 1.2 packages.
+        /// SCORM packages: SCORM 1.2 and SCORM 2004 (3rd and 4th Edition).
         /// </summary>
         public const string Scorm = "CrestApps.OrchardCore.Learning.Packages.Scorm";
     }
@@ -56,5 +56,23 @@ public static class PackagesConstants
         /// ADL SCORM 1.2.
         /// </summary>
         public const string Scorm12 = "SCORM 1.2";
+
+        /// <summary>
+        /// ADL SCORM 2004 3rd Edition.
+        /// </summary>
+        public const string Scorm2004ThirdEdition = "SCORM 2004 3rd Edition";
+
+        /// <summary>
+        /// ADL SCORM 2004 4th Edition.
+        /// </summary>
+        public const string Scorm2004FourthEdition = "SCORM 2004 4th Edition";
+
+        /// <summary>
+        /// Gets whether a standard is an edition of SCORM 2004.
+        /// </summary>
+        /// <param name="standard">The standard.</param>
+        /// <returns><see langword="true"/> for SCORM 2004 3rd or 4th Edition.</returns>
+        public static bool IsScorm2004(string standard)
+            => standard is Scorm2004ThirdEdition or Scorm2004FourthEdition;
     }
 }

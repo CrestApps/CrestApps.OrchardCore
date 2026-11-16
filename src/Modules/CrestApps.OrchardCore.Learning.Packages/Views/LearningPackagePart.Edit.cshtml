@@ -3,6 +3,7 @@
 @{
     var part = Model.Part;
     var imported = !string.IsNullOrEmpty(part?.PackageFileId);
+    var scorm2004 = PackagesConstants.Standards.IsScorm2004(part?.Standard);
 }
 
 <div class="card text-bg-theme mb-3">
@@ -12,7 +13,7 @@
         {
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
-                    <span class="hint">@T["Save the item first; then import a SCORM 1.2 package into it."]</span>
+                    <span class="hint">@T["Save the item first; then import a SCORM 1.2 or SCORM 2004 package into it."]</span>
                 </div>
             </div>
         }
@@ -21,7 +22,7 @@
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
                     <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("LearningPackageUpload", new { contentItemId = Model.ContentItemId })"><i class="fa-solid fa-file-zipper me-1" aria-hidden="true"></i>@(imported ? T["Import another package"] : T["Import a package"])</a>
-                    <span class="hint">@T["A .zip file of a SCORM 1.2 package. The import goes into a draft; publish the item to give it to learners."]</span>
+                    <span class="hint">@T["A .zip file of a SCORM 1.2 or SCORM 2004 (3rd or 4th Edition) package. The import goes into a draft; publish the item to give it to learners."]</span>
                 </div>
             </div>
         }
@@ -47,6 +48,13 @@
                 </div>
             </div>
             <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Version"]</span>
+                <div class="ocat-end">
+                    <p class="form-control-plaintext mb-0" data-package-standard>@(part.Standard ?? PackagesConstants.Standards.Scorm12)</p>
+                    <span class="hint">@T["Detected from the package's manifest."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
                 <span class="ocat-label">@T["Launched SCO"]</span>
                 <div class="ocat-end">
                     <p class="form-control-plaintext mb-0">@(part.LaunchItemTitle ?? part.LaunchItemIdentifier)</p>
@@ -55,15 +63,39 @@
                     {
                         <span class="hint">@T["The package has {0} SCOs; learners launch the first one.", part.ScoCount]</span>
                     }
+                    @if (part.HasSequencing)
+                    {
+                        <span class="hint">@T["The manifest has sequencing rules. They are not applied: learners run the first SCO, without sequencing, rollup or navigation between SCOs."]</span>
+                    }
                 </div>
             </div>
-            <div class="ocat-wrapper">
-                <span class="ocat-label">@T["Mastery score"]</span>
-                <div class="ocat-end">
-                    <p class="form-control-plaintext mb-0">@(part.MasteryScore is { } mastery ? T["{0}%", mastery.ToString("0.##")] : T["None"])</p>
-                    <span class="hint">@T["From the manifest. When the package sends a score without passing or failing the learner, the score is compared with it."]</span>
+            @if (scorm2004)
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Completion threshold"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@(part.CompletionThreshold is { } threshold ? threshold.ToString("0.###", System.Globalization.CultureInfo.CurrentCulture) : T["None"])</p>
+                        <span class="hint">@T["From the manifest. When the package reports its progress measure, the package is completed once the measure reaches the threshold."]</span>
+                    </div>
                 </div>
-            </div>
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Scaled passing score"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@(part.ScaledPassingScore is { } passing ? passing.ToString("0.###", System.Globalization.CultureInfo.CurrentCulture) : T["None"])</p>
+                        <span class="hint">@T["From the manifest's primary objective, from -1 to 1. When the package reports a scaled score, the learner passes once the score reaches it."]</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Mastery score"]</span>
+                    <div class="ocat-end">
+                        <p class="form-control-plaintext mb-0">@(part.MasteryScore is { } mastery ? T["{0}%", mastery.ToString("0.##")] : T["None"])</p>
+                        <span class="hint">@T["From the manifest. When the package sends a score without passing or failing the learner, the score is compared with it."]</span>
+                    </div>
+                </div>
+            }
             @if (part.ImportedUtc is { } importedUtc)
             {
                 <div class="ocat-wrapper">

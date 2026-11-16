@@ -58,7 +58,7 @@ public static class PackageImportErrors
 public sealed class PackageImportResult
 {
     /// <summary>Gets or sets the error: one of <see cref="PackageImportErrors"/>, <see cref="PackageArchiveErrors"/> or
-    /// <see cref="Scorm12ManifestErrors"/>; <see langword="null"/> when the package was imported.</summary>
+    /// <see cref="ScormManifestErrors"/>; <see langword="null"/> when the package was imported.</summary>
     public string Error { get; set; }
 
     /// <summary>Gets or sets the archive entry that was refused, when there is one.</summary>
@@ -68,7 +68,7 @@ public sealed class PackageImportResult
     public ProtectedFile File { get; set; }
 
     /// <summary>Gets or sets the manifest.</summary>
-    public Scorm12Manifest Manifest { get; set; }
+    public ScormManifest Manifest { get; set; }
 
     /// <summary>Gets or sets how many files the package has.</summary>
     public int FileCount { get; set; }
@@ -99,7 +99,7 @@ public sealed class PackageImportResult
 
         part.PackageFileId = File.FileId;
         part.FileName = fileName;
-        part.Standard = PackagesConstants.Standards.Scorm12;
+        part.Standard = Manifest.Standard;
         part.ManifestIdentifier = Manifest.Identifier;
         part.Title = Manifest.Title;
         part.LaunchItemIdentifier = launch.ItemIdentifier;
@@ -110,6 +110,12 @@ public sealed class PackageImportResult
         part.MaxTimeAllowed = launch.MaxTimeAllowed;
         part.TimeLimitAction = launch.TimeLimitAction;
         part.LaunchData = launch.DataFromLms;
+
+        // The SCORM 2004 values; a SCORM 1.2 package clears what an earlier SCORM 2004 import wrote.
+        part.CompletionThreshold = launch.CompletionThreshold;
+        part.ScaledPassingScore = launch.ScaledPassingScore;
+        part.ObjectiveIds = [.. launch.ObjectiveIds];
+        part.HasSequencing = Manifest.HasSequencing;
         part.ScoCount = Manifest.Scos.Count;
         part.FileCount = FileCount;
         part.ExpandedSize = ExpandedSize;
@@ -122,7 +128,7 @@ public sealed class PackageImportResult
 }
 
 /// <summary>
-/// Imports an uploaded SCORM 1.2 package: the archive is extracted into a temporary folder with safe paths and within
+/// Imports an uploaded SCORM 1.2 or SCORM 2004 package: the archive is extracted into a temporary folder with safe paths and within
 /// the limits, its manifest is read, the launch file is checked, and a clean archive of only the extracted files is kept
 /// in the protected store, through Orchard Core's file creation pipeline (an antivirus scanner, for one). The temporary
 /// folder is always deleted.
@@ -206,15 +212,15 @@ public sealed class LearningPackageImporter
             if (manifestPath is null)
             {
                 return PackageImportResult.Fail(archive.Files.Any(file => string.Equals(file, "cmi5.xml", StringComparison.OrdinalIgnoreCase))
-                    ? Scorm12ManifestErrors.Cmi5
-                    : Scorm12ManifestErrors.Missing);
+                    ? ScormManifestErrors.Cmi5
+                    : ScormManifestErrors.Missing);
             }
 
-            Scorm12ManifestResult parsed;
+            ScormManifestResult parsed;
 
             await using (var manifest = new FileStream(Path.Combine(extracted, manifestPath), FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                parsed = Scorm12ManifestParser.Parse(manifest);
+                parsed = ScormManifestParser.Parse(manifest);
             }
 
             if (!parsed.Succeeded)
@@ -231,7 +237,7 @@ public sealed class LearningPackageImporter
 
                 if (file is null)
                 {
-                    return PackageImportResult.Fail(Scorm12ManifestErrors.LaunchFileMissing);
+                    return PackageImportResult.Fail(ScormManifestErrors.LaunchFileMissing);
                 }
 
                 sco.Path = file;

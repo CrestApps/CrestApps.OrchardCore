@@ -102,7 +102,7 @@ public sealed class PackagesAdminController : Controller
 
         if (package is null || package.Length == 0)
         {
-            ModelState.AddModelError(nameof(package), S["Choose a .zip file of a SCORM 1.2 package."]);
+            ModelState.AddModelError(nameof(package), S["Choose a .zip file of a SCORM 1.2 or SCORM 2004 package."]);
 
             return View(nameof(Upload), BuildModel(item));
         }
@@ -178,16 +178,17 @@ public sealed class PackagesAdminController : Controller
             PackageArchiveErrors.TooLarge => S["The package is larger than {0} MB once extracted.", _options.MaxExpandedBytes / (1024 * 1024)],
             PackageArchiveErrors.DuplicateEntry => S["The package has two files with the same path: {0}.", result.Entry],
             PackageArchiveErrors.Empty => S["The package has no files."],
-            Scorm12ManifestErrors.Missing => S["The package has no imsmanifest.xml at its root."],
-            Scorm12ManifestErrors.InvalidXml => S["The imsmanifest.xml of the package is not valid XML."],
-            Scorm12ManifestErrors.Scorm2004 => S["The package is SCORM 2004, which is not supported yet. Import a SCORM 1.2 package."],
-            Scorm12ManifestErrors.Cmi5 => S["The package is a cmi5 course, which is not supported yet. Import a SCORM 1.2 package."],
-            Scorm12ManifestErrors.NoOrganization => S["The manifest has no organization with items."],
-            Scorm12ManifestErrors.NoSco => S["The manifest has no SCO to launch; a package of assets only cannot report progress."],
-            Scorm12ManifestErrors.ExternalLaunch => S["A SCO of the package opens a web address outside the package, which is not supported."],
-            Scorm12ManifestErrors.UnsafeHref => S["A SCO of the package opens a file path that is not allowed."],
-            Scorm12ManifestErrors.LaunchFileMissing => S["A SCO of the package opens a file that is not in the package."],
-            Scorm12ManifestErrors.InvalidMasteryScore => S["The mastery score of a SCO is not a number from 0 to 100."],
+            ScormManifestErrors.Missing => S["The package has no imsmanifest.xml at its root."],
+            ScormManifestErrors.InvalidXml => S["The imsmanifest.xml of the package is not valid XML."],
+            ScormManifestErrors.Cmi5 => S["The package is a cmi5 course, which is not supported yet. Import a SCORM 1.2 or SCORM 2004 package."],
+            ScormManifestErrors.NoOrganization => S["The manifest has no organization with items."],
+            ScormManifestErrors.NoSco => S["The manifest has no SCO to launch; a package of assets only cannot report progress."],
+            ScormManifestErrors.ExternalLaunch => S["A SCO of the package opens a web address outside the package, which is not supported."],
+            ScormManifestErrors.UnsafeHref => S["A SCO of the package opens a file path that is not allowed."],
+            ScormManifestErrors.LaunchFileMissing => S["A SCO of the package opens a file that is not in the package."],
+            ScormManifestErrors.InvalidMasteryScore => S["The mastery score of a SCO is not a number from 0 to 100."],
+            ScormManifestErrors.InvalidCompletionThreshold => S["The completion threshold of a SCO is not a number from 0 to 1."],
+            ScormManifestErrors.InvalidPassingScore => S["The minimum normalized measure of a SCO's primary objective is not a number from -1 to 1."],
             _ => S["The package could not be imported."],
         };
 }

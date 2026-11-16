@@ -62,13 +62,60 @@ public sealed class LearningPackageImporterTests : IDisposable
     }
 
     [Fact]
+    public async Task ApplyTo_WritesTheScorm2004VersionAndValuesOntoThePart()
+    {
+        using var zip = PackageZip.Create(
+            ("imsmanifest.xml", ScormManifestSamples.Scorm2004Fourth.TrimStart()),
+            ("pre/index.html", "<html></html>"),
+            ("drive/index.html", "<html></html>"),
+            ("glossary.html", "<html></html>"));
+
+        var result = await Importer().ImportAsync("forklift.zip", zip, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded, result.Error);
+
+        var part = new LearningPackagePart { MasteryScore = 50 };
+
+        result.ApplyTo(part, "forklift.zip", "author1", new DateTime(2026, 11, 16, 9, 0, 0, DateTimeKind.Utc));
+
+        Assert.Equal(PackagesConstants.Standards.Scorm2004FourthEdition, part.Standard);
+        Assert.Equal("Forklift Operation", part.Title);
+        Assert.Equal("ITEM-PRE", part.LaunchItemIdentifier);
+        Assert.Equal("pre/index.html", part.LaunchPath);
+        Assert.Equal(0.75m, part.CompletionThreshold);
+        Assert.Equal(0.6m, part.ScaledPassingScore);
+        Assert.Equal(["PRIMARY-PRE", "obj-mast-check"], part.ObjectiveIds);
+        Assert.True(part.HasSequencing);
+        Assert.Equal("PT30M", part.MaxTimeAllowed);
+        Assert.Null(part.MasteryScore);
+        Assert.Equal(2, part.ScoCount);
+    }
+
+    [Fact]
+    public async Task ApplyTo_AScorm12PackageAfterA2004One_ClearsThe2004Values()
+    {
+        using var zip = PackageZip.SingleScoPackage();
+
+        var result = await Importer().ImportAsync("ladder.zip", zip, TestContext.Current.CancellationToken);
+        var part = new LearningPackagePart { CompletionThreshold = 0.5m, ScaledPassingScore = 0.7m, ObjectiveIds = ["old"], HasSequencing = true };
+
+        result.ApplyTo(part, "ladder.zip", "author1", new DateTime(2026, 11, 16, 9, 0, 0, DateTimeKind.Utc));
+
+        Assert.Equal(PackagesConstants.Standards.Scorm12, part.Standard);
+        Assert.Null(part.CompletionThreshold);
+        Assert.Null(part.ScaledPassingScore);
+        Assert.Empty(part.ObjectiveIds);
+        Assert.False(part.HasSequencing);
+    }
+
+    [Fact]
     public async Task LaunchFileMissing_IsRefused()
     {
         using var zip = PackageZip.Create(("imsmanifest.xml", ScormManifestSamples.SingleSco.TrimStart()), ("other.html", "x"));
 
         var result = await Importer().ImportAsync("p.zip", zip, TestContext.Current.CancellationToken);
 
-        Assert.Equal(Scorm12ManifestErrors.LaunchFileMissing, result.Error);
+        Assert.Equal(ScormManifestErrors.LaunchFileMissing, result.Error);
         Assert.Empty(_files.Stored);
     }
 
@@ -88,7 +135,7 @@ public sealed class LearningPackageImporterTests : IDisposable
     {
         using var zip = PackageZip.Create(("index.html", "x"));
 
-        Assert.Equal(Scorm12ManifestErrors.Missing, (await Importer().ImportAsync("p.zip", zip, TestContext.Current.CancellationToken)).Error);
+        Assert.Equal(ScormManifestErrors.Missing, (await Importer().ImportAsync("p.zip", zip, TestContext.Current.CancellationToken)).Error);
     }
 
     [Fact]
@@ -96,7 +143,7 @@ public sealed class LearningPackageImporterTests : IDisposable
     {
         using var zip = PackageZip.Create(("cmi5.xml", "<courseStructure xmlns=\"https://w3id.org/xapi/profiles/cmi5/v1/CourseStructure.xsd\"/>"), ("index.html", "x"));
 
-        Assert.Equal(Scorm12ManifestErrors.Cmi5, (await Importer().ImportAsync("p.zip", zip, TestContext.Current.CancellationToken)).Error);
+        Assert.Equal(ScormManifestErrors.Cmi5, (await Importer().ImportAsync("p.zip", zip, TestContext.Current.CancellationToken)).Error);
     }
 
     [Fact]

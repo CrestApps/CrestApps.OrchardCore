@@ -20,7 +20,8 @@ public sealed class LearningPackagePart : ContentPart
     public string FileName { get; set; }
 
     /// <summary>
-    /// Gets or sets the standard of the package, such as <see cref="PackagesConstants.Standards.Scorm12"/>.
+    /// Gets or sets the standard of the package, detected from its manifest: <see cref="PackagesConstants.Standards.Scorm12"/>,
+    /// <see cref="PackagesConstants.Standards.Scorm2004ThirdEdition"/> or <see cref="PackagesConstants.Standards.Scorm2004FourthEdition"/>.
     /// </summary>
     public string Standard { get; set; }
 
@@ -56,24 +57,49 @@ public sealed class LearningPackagePart : ContentPart
     public string LaunchQuery { get; set; }
 
     /// <summary>
-    /// Gets or sets the mastery score of the launched item (<c>adlcp:masteryscore</c>), from 0 to 100.
+    /// Gets or sets the SCORM 1.2 mastery score of the launched item (<c>adlcp:masteryscore</c>), from 0 to 100.
     /// </summary>
     public decimal? MasteryScore { get; set; }
 
     /// <summary>
-    /// Gets or sets the time the learner is allowed (<c>adlcp:maxtimeallowed</c>), as a CMITimespan.
+    /// Gets or sets the time the learner is allowed: <c>adlcp:maxtimeallowed</c> as a CMITimespan (SCORM 1.2), or the
+    /// <c>attemptAbsoluteDurationLimit</c> of the item's limit conditions as an ISO 8601 duration (SCORM 2004).
     /// </summary>
     public string MaxTimeAllowed { get; set; }
 
     /// <summary>
-    /// Gets or sets what the content does when the time is up (<c>adlcp:timelimitaction</c>).
+    /// Gets or sets what the content does when the time is up (<c>adlcp:timelimitaction</c>, or <c>adlcp:timeLimitAction</c> in SCORM 2004).
     /// </summary>
     public string TimeLimitAction { get; set; }
 
     /// <summary>
-    /// Gets or sets the launch data of the item (<c>adlcp:datafromlms</c>).
+    /// Gets or sets the launch data of the item (<c>adlcp:datafromlms</c>, or <c>adlcp:dataFromLMS</c> in SCORM 2004).
     /// </summary>
     public string LaunchData { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SCORM 2004 completion threshold of the launched item (<c>adlcp:completionThreshold</c>), from 0 to
+    /// 1; <c>cmi.completion_threshold</c>.
+    /// </summary>
+    public decimal? CompletionThreshold { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SCORM 2004 scaled passing score of the launched item (the <c>imsss:minNormalizedMeasure</c> of its
+    /// primary objective when it is satisfied by measure), from -1 to 1; <c>cmi.scaled_passing_score</c>.
+    /// </summary>
+    public decimal? ScaledPassingScore { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ids of the SCORM 2004 objectives of the launched item, which a new attempt starts with in
+    /// <c>cmi.objectives</c>.
+    /// </summary>
+    public IList<string> ObjectiveIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the SCORM 2004 manifest has sequencing information. Sequencing and Navigation are not
+    /// implemented, so it is not applied.
+    /// </summary>
+    public bool HasSequencing { get; set; }
 
     /// <summary>
     /// Gets or sets how many SCOs the default organization has. Only the first one is launched.
