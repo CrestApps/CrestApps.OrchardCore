@@ -104,7 +104,7 @@
                 for (const box of /** @type {NodeListOf<HTMLInputElement>} */ (row.querySelectorAll('[data-board-status]'))) {
                     const owner = taken[box.value];
                     const elsewhere = owner !== undefined && owner !== index && !box.checked;
-                    const option = box.closest('[data-board-status-option]');
+                    const option = /** @type {HTMLElement} */ (box.closest('[data-board-status-option]'));
 
                     box.disabled = elsewhere;
                     option.classList.toggle('text-muted', elsewhere);
