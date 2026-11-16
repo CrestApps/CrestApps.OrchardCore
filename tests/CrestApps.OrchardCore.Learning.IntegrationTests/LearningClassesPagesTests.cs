@@ -1,9 +1,11 @@
 using System.Net;
 using CrestApps.OrchardCore.Learning.Classes;
+using CrestApps.OrchardCore.Learning.Classes.Core.Services;
 using CrestApps.OrchardCore.Learning.Classes.Models;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Services;
+using CrestApps.OrchardCore.WorkQueues;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 
@@ -21,6 +23,47 @@ public sealed class LearningClassesPagesTests
     public LearningClassesPagesTests(LearningSiteFixture fixture)
     {
         _fixture = fixture;
+    }
+
+    [Fact]
+    public async Task TheFollowUpQueue_KeepsAndHandsOutWorkOnARunningSite()
+    {
+        // Arrange: the queue that retries class registration work lives in a collection of its own, whose document
+        // table the store creates only for collections a module registers. Unregistered, every hourly run failed with
+        // "no such table: LearningClassFollowUps_Document".
+        var work = new ClassFollowUpWork
+        {
+            ItemId = Guid.NewGuid().ToString("n"),
+            AppointmentId = "missing-" + Guid.NewGuid().ToString("n"),
+            Kind = "attendance",
+            Actor = "test",
+            NextAttemptUtc = DateTime.UtcNow.AddMinutes(-1),
+        };
+
+        // Act
+        await _fixture.InTenantAsync(async services =>
+        {
+            await services.GetRequiredService<ILeasedWorkQueue<ClassFollowUpWork>>().EnqueueAsync(work, TestContext.Current.CancellationToken);
+            await services.GetRequiredService<global::YesSql.ISession>().SaveChangesAsync(TestContext.Current.CancellationToken);
+        });
+
+        var claimed = await _fixture.InTenantAsync(async services =>
+        {
+            var queue = services.GetRequiredService<ILeasedWorkQueue<ClassFollowUpWork>>();
+            var due = await queue.ClaimDueAsync(100, TimeSpan.FromMinutes(1), TestContext.Current.CancellationToken);
+            var mine = due.SingleOrDefault(item => item.ItemId == work.ItemId);
+
+            if (mine is not null)
+            {
+                await queue.CompleteAsync(mine, cancellationToken: TestContext.Current.CancellationToken);
+            }
+
+            return mine;
+        });
+
+        // Assert
+        Assert.NotNull(claimed);
+        Assert.Equal(work.AppointmentId, claimed.AppointmentId);
     }
 
     [Fact]

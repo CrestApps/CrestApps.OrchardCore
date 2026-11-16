@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -28,6 +29,11 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddLearningClassesCore();
+
+        // The queue that retries class registration work keeps its items in a collection of its own; the store creates
+        // the document table only for a registered collection.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ClassFollowUpWork.CollectionName));
+
         services.AddDataMigration<ClassesMigrations>();
         services.AddContentPart<ClassPart>()
             .UseDisplayDriver<ClassPartDisplayDriver>()
