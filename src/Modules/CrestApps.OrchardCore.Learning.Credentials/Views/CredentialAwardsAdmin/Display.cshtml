@@ -1,0 +1,89 @@
+@using CrestApps.OrchardCore.Learning.Credentials.Core.Services
+@model CredentialAwardDetailViewModel
+
+@{
+    var award = Model.Award;
+    var (css, text) = Model.Status switch
+    {
+        CredentialAwardStatus.Revoked => ("text-bg-danger", T["Revoked"]),
+        CredentialAwardStatus.Expired => ("text-bg-secondary", T["Expired"]),
+        _ => ("text-bg-success", T["Active"]),
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="LearningCredentialAward" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(award.Achievement?.Name ?? T["Credential award"].Value))">
+        <breadcrumb-item id="LearningCredentialAwards" route-name="LearningCredentialAwards" permission="@LearningCredentialsPermissions.ViewCredentialAwards.Name">@T["Credential awards"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="card mb-3">
+    <div class="card-header">@T["Award"] <span class="badge @css fw-normal ms-2" data-award-status="@Model.Status">@text</span></div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Recipient"]</dt>
+            <dd class="col-sm-9">@(Model.RecipientName ?? (award.ErasedUtc is null ? T["Unknown person"].Value : T["Personal data erased"].Value))</dd>
+            <dt class="col-sm-3">@T["Issued"]</dt>
+            <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(award.IssuedUtc, DateTimeKind.Utc), Format: "g"))</dd>
+            <dt class="col-sm-3">@T["Valid until"]</dt>
+            <dd class="col-sm-9">
+                @if (award.ExpiresUtc is { } expires)
+                {
+                    @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(expires, DateTimeKind.Utc), Format: "g"))
+                }
+                else
+                {
+                    @T["Does not expire"]
+                }
+            </dd>
+            <dt class="col-sm-3">@T["Awarded by"]</dt>
+            <dd class="col-sm-9">@award.RuleKind@(string.IsNullOrEmpty(Model.AwardedByName) ? string.Empty : " · " + Model.AwardedByName)</dd>
+            @if (!string.IsNullOrEmpty(award.AwardReason))
+            {
+                <dt class="col-sm-3">@T["Reason"]</dt>
+                <dd class="col-sm-9">@award.AwardReason</dd>
+            }
+            @if (award.RevokedUtc is { } revoked)
+            {
+                <dt class="col-sm-3">@T["Revoked"]</dt>
+                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(revoked, DateTimeKind.Utc), Format: "g"))@(string.IsNullOrEmpty(Model.RevokedByName) ? string.Empty : " · " + Model.RevokedByName)</dd>
+                <dt class="col-sm-3">@T["Why"]</dt>
+                <dd class="col-sm-9">@award.RevokedReason</dd>
+            }
+            <dt class="col-sm-3">@T["Status list"]</dt>
+            <dd class="col-sm-9">@T["List {0}, entry {1}", award.StatusListNumber, award.StatusListIndex]</dd>
+            <dt class="col-sm-3">@T["Check"]</dt>
+            <dd class="col-sm-9">
+                @(Model.Verification.Outcome switch
+                {
+                    CredentialVerificationOutcome.Valid => T["The signature verifies with a published key; not expired; not revoked."],
+                    CredentialVerificationOutcome.Expired => T["The signature verifies; the credential has expired."],
+                    CredentialVerificationOutcome.Revoked => T["The status list says revoked."],
+                    _ => T["The signature does not verify with a published key."],
+                })
+            </dd>
+            @if (!string.IsNullOrEmpty(Model.VerifyUrl))
+            {
+                <dt class="col-sm-3">@T["Verification page"]</dt>
+                <dd class="col-sm-9"><a href="@Model.VerifyUrl" target="_blank" rel="noopener">@Model.VerifyUrl</a></dd>
+            }
+        </dl>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.CredentialJson))
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Credential as issued"]</div>
+        <div class="card-body">
+            <pre class="mb-0 small"><code>@Model.CredentialJson</code></pre>
+        </div>
+    </div>
+}
+
+@if (Model.CanRevoke)
+{
+    <div class="mb-3">
+        <a class="btn btn-danger" href="@Url.RouteUrl("LearningCredentialAwardRevoke", new { id = award.ItemId })">@T["Revoke"]</a>
+    </div>
+}

@@ -28,6 +28,12 @@ internal sealed class CredentialsAdminMenu : AdminNavigationProvider
                 .Id("learningCredentialDefinitions")
                 .Action("List", "Admin", new { area = "OrchardCore.Contents", contentTypeId = CredentialsConstants.ContentTypes.CredentialDefinition })
                 .Permission(LearningCredentialsPermissions.ManageCredentialDefinitions)
+                .LocalNav())
+            .Add(S["Credential Awards"], S["Credential Awards"].PrefixPosition(), awards => awards
+                .AddClass("learning-credential-awards")
+                .Id("learningCredentialAwards")
+                .Action("Index", "CredentialAwardsAdmin", CredentialsConstants.Features.DigitalCredentials)
+                .Permission(LearningCredentialsPermissions.ViewCredentialAwards)
                 .LocalNav()));
 
         return ValueTask.CompletedTask;

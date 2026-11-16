@@ -134,4 +134,67 @@ public sealed class CredentialAwardStore : DocumentCatalog<CredentialAward, Cred
     /// <returns><see langword="true"/> when an award is in it.</returns>
     public async Task<bool> ListExistsAsync(int listNumber, CancellationToken cancellationToken = default)
         => await CountInListAsync(listNumber, cancellationToken) > 0;
+
+    /// <summary>
+    /// Pages the awards for the admin list, newest first.
+    /// </summary>
+    /// <param name="filter">The filters.</param>
+    /// <param name="utcNow">The current moment, for the expired and active states.</param>
+    /// <param name="skip">How many to skip.</param>
+    /// <param name="take">How many to return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The count of matching awards and the page.</returns>
+    public async Task<(int Count, IReadOnlyList<CredentialAward> Items)> PageForAdminAsync(CredentialAwardAdminFilter filter, DateTime utcNow, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+
+        var query = Session.Query<CredentialAward, CredentialAwardIndex>(collection: CollectionName);
+
+        if (!string.IsNullOrEmpty(filter.DefinitionId))
+        {
+            query = query.Where(index => index.DefinitionId == filter.DefinitionId);
+        }
+
+        if (!string.IsNullOrEmpty(filter.RecipientUserId))
+        {
+            query = query.Where(index => index.RecipientUserId == filter.RecipientUserId);
+        }
+
+        if (filter.IssuedFromUtc is { } from)
+        {
+            query = query.Where(index => index.IssuedUtc >= from);
+        }
+
+        if (filter.IssuedToUtc is { } to)
+        {
+            query = query.Where(index => index.IssuedUtc < to);
+        }
+
+        query = filter.Status switch
+        {
+            CredentialAwardStatus.Revoked => query.Where(index => index.Revoked),
+            CredentialAwardStatus.Expired => query.Where(index => !index.Revoked && index.ExpiresUtc != null && index.ExpiresUtc <= utcNow),
+            CredentialAwardStatus.Active => query.Where(index => !index.Revoked && (index.ExpiresUtc == null || index.ExpiresUtc > utcNow)),
+            _ => query,
+        };
+
+        var count = await query.CountAsync(cancellationToken);
+        var items = await query.OrderByDescending(index => index.IssuedUtc).ThenByDescending(index => index.Id).Skip(skip).Take(take).ListAsync(cancellationToken);
+
+        return (count, items.ToArray());
+    }
+
+    /// <summary>
+    /// Pages every award in the order they were stored, for exports and data sets.
+    /// </summary>
+    /// <param name="skip">How many to skip.</param>
+    /// <param name="take">How many to return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The page.</returns>
+    public async Task<IReadOnlyList<CredentialAward>> PageAllAsync(int skip, int take, CancellationToken cancellationToken = default)
+        => (await Session.Query<CredentialAward, CredentialAwardIndex>(collection: CollectionName)
+            .OrderBy(index => index.Id)
+            .Skip(skip)
+            .Take(take)
+            .ListAsync(cancellationToken)).ToArray();
 }

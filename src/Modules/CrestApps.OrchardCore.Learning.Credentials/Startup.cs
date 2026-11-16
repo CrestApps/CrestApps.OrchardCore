@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Certifications;
+using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Credentials.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Credentials.Drivers;
 using CrestApps.OrchardCore.Learning.Credentials.Migrations;
@@ -7,16 +8,20 @@ using CrestApps.OrchardCore.Learning.Credentials.Models;
 using CrestApps.OrchardCore.Learning.Credentials.Navigation;
 using CrestApps.OrchardCore.Learning.Credentials.Rules;
 using CrestApps.OrchardCore.Learning.Credentials.Services;
+using CrestApps.OrchardCore.Learning.Credentials.ViewModels;
 using CrestApps.OrchardCore.Learning.Programs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Learning.Credentials;
 
@@ -41,6 +46,22 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAuthorizationHandler, CredentialDefinitionAuthorizationHandler>();
         services.AddPermissionProvider<CredentialsPermissionProvider>();
         services.AddNavigationProvider<CredentialsAdminMenu>();
+        services.TryAddScoped<LearnerUserLookup>();
+        services.AddDisplayDriver<CredentialAwardRow, CredentialAwardRowDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// My credentials in the storefront account menu, or in the user menu when the storefront account is off.
+/// </summary>
+[RequireFeatures(LearningConstants.Features.LearnerPages)]
+public sealed class LearnerPagesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddNavigationProvider<CredentialsAccountMenu>();
+        services.AddDisplayDriver<UserMenu, CredentialsUserMenuDisplayDriver>();
     }
 }
 

@@ -1,0 +1,82 @@
+@model MyCredentialsViewModel
+
+@{
+    ViewData["Title"] = T["My credentials"];
+}
+
+<div class="container my-4">
+    <div class="product-breadcrumb">
+        <breadcrumb name="LearningMyCredentials" title="@T["My credentials"]">
+            <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+            <breadcrumb-item id="LearningMyLearning" url="@Url.RouteUrl("LearningMyLearning")">@T["My learning"]</breadcrumb-item>
+        </breadcrumb>
+    </div>
+    <h1 class="h3 mb-2">@T["My credentials"]</h1>
+    <p class="text-muted mb-4">@T["Digital credentials are Open Badges 3.0 credentials, signed by this site. Download one to keep it in a wallet, or share its verification page."]</p>
+
+    @if (Model.Entries.Count == 0)
+    {
+        <p class="text-muted">@T["You have no credentials yet. Completing a course or a learning path that awards one adds it here."]</p>
+    }
+
+    <div class="row g-3">
+        @foreach (var entry in Model.Entries)
+        {
+            var award = entry.Award;
+            var (css, text) = entry.Status switch
+            {
+                CredentialAwardStatus.Revoked => ("bg-danger text-white", T["Revoked"]),
+                CredentialAwardStatus.Expired => ("bg-secondary text-white", T["Expired"]),
+                _ => ("bg-success text-white", T["Valid"]),
+            };
+            var shareId = "credential-share-" + award.ItemId;
+
+            <div class="col-12 col-lg-6">
+                <div class="card h-100" data-credential="@award.ItemId">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                            <div class="d-flex align-items-center gap-3">
+                                @if (!string.IsNullOrEmpty(award.Achievement?.ImageUrl))
+                                {
+                                    <img src="@award.Achievement.ImageUrl" alt="" width="56" height="56" class="rounded" style="object-fit: contain" />
+                                }
+                                <h2 class="h5 mb-0">@award.Achievement?.Name</h2>
+                            </div>
+                            <span class="badge @css">@text</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(award.Achievement?.Description))
+                        {
+                            <p class="mb-2">@award.Achievement.Description</p>
+                        }
+                        <p class="mb-1 small">@T["Issued"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(award.IssuedUtc, DateTimeKind.Utc), Format: "D"))</p>
+                        @if (award.ExpiresUtc is { } expires)
+                        {
+                            <p class="mb-1 small">@T["Valid until"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(expires, DateTimeKind.Utc), Format: "D"))</p>
+                        }
+                        @if (!string.IsNullOrEmpty(award.Credential))
+                        {
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <a class="btn btn-sm btn-primary" asp-action="Download" asp-route-id="@award.ItemId" asp-route-format="json"><i class="fa-solid fa-download" aria-hidden="true"></i> @T["Download (JSON)"]</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Download" asp-route-id="@award.ItemId" asp-route-format="jwt"><i class="fa-solid fa-signature" aria-hidden="true"></i> @T["Download signed (JWT)"]</a>
+                                @if (!string.IsNullOrEmpty(entry.ShareUrl))
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" href="@entry.ShareUrl" target="_blank" rel="noopener">@T["Verification page"]</a>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(entry.ShareUrl))
+                            {
+                                <label for="@shareId" class="form-label small mt-3 mb-1">@T["Share link"]</label>
+                                <input id="@shareId" class="form-control form-control-sm font-monospace" value="@entry.ShareUrl" readonly onfocus="this.select()" />
+                            }
+                            <form method="post" asp-action="ShowName" asp-route-id="@award.ItemId" class="mt-3">
+                                <input type="hidden" name="showName" value="@(award.ShowName ? "false" : "true")" />
+                                <span class="small me-2">@(award.ShowName ? T["Your name shows on the verification page."] : T["Your name does not show on the verification page."])</span>
+                                <button type="submit" class="btn btn-sm btn-link p-0">@(award.ShowName ? T["Hide my name"] : T["Show my name"])</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
