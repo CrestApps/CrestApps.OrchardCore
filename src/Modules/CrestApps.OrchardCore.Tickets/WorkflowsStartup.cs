@@ -154,7 +154,7 @@ public sealed class StaffStartup : StartupBase
 }
 
 /// <summary>
-/// The Tickets tab of an account's page.
+/// The Tickets tab of an account's page, and the Service level card of its Service tab.
 /// </summary>
 [RequireFeatures(AccountsConstants.Feature)]
 public sealed class AccountsStartup : StartupBase
@@ -163,6 +163,8 @@ public sealed class AccountsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IContentDisplayDriver, AccountTicketsTabDisplayDriver>();
+        services.AddScoped<Services.TicketAccountServiceLevels>();
+        services.AddScoped<IContentDisplayDriver, Drivers.AccountServiceLevelDisplayDriver>();
         services.AddContentPart<Models.TicketAccountPart>()
             .UseDisplayDriver<Drivers.TicketAccountPartDisplayDriver>();
         services.AddDataMigration<Migrations.TicketAccountMigrations>();
