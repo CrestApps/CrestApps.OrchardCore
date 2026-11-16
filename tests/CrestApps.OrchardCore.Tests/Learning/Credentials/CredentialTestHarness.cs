@@ -43,7 +43,7 @@ internal sealed class CredentialTestHarness : IAsyncDisposable
 
     public TestClock Clock => Inner.Clock;
 
-    public static async Task<CredentialTestHarness> CreateAsync()
+    public static async Task<CredentialTestHarness> CreateAsync(Action<IServiceCollection> configure = null)
     {
         var definitions = new InMemoryCredentialDefinitions();
         var queue = new RecordingCredentialAwardQueue();
@@ -65,6 +65,7 @@ internal sealed class CredentialTestHarness : IAsyncDisposable
                 services.AddScoped<CredentialIssuerContext, FixedIssuerContext>();
                 services.RemoveAll<CredentialRecipientResolver>();
                 services.AddScoped<CredentialRecipientResolver, TestRecipientResolver>();
+                configure?.Invoke(services);
             },
             CredentialsIndexSchema.CreateAsync,
             [new CredentialAwardIndexProvider()],
