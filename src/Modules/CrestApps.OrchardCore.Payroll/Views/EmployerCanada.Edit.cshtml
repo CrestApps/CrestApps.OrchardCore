@@ -1,0 +1,22 @@
+@model EmployerCanadaViewModel
+
+<div class="card mb-3">
+    <div class="card-header">@T["Canada"]</div>
+    <div class="card-body">
+        <div class="ocat-wrapper" asp-validation-class-for="DentalBenefitsCode">
+            <label asp-for="DentalBenefitsCode" class="ocat-label">@T["Dental benefits (T4 box 45)"]</label>
+            <div class="ocat-end">
+                <select asp-for="DentalBenefitsCode" class="form-select" style="max-width: 32rem">
+                    <option value="">@T["Not chosen yet"]</option>
+                    <option value="1">@T["1 - No access to dental care insurance or coverage of dental services"]</option>
+                    <option value="2">@T["2 - The employee only"]</option>
+                    <option value="3">@T["3 - The employee, a spouse and dependent children"]</option>
+                    <option value="4">@T["4 - The employee and a spouse"]</option>
+                    <option value="5">@T["5 - The employee and dependent children"]</option>
+                </select>
+                <span asp-validation-for="DentalBenefitsCode" class="text-danger"></span>
+                <span class="hint">@T["The dental care the employer offered that the employees could have had on December 31. Every T4 slip reports it, and the T4 XML file is refused without it."]</span>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.Payroll.Core.Canada;
 using CrestApps.OrchardCore.Payroll.DataSources;
+using CrestApps.OrchardCore.Payroll.Drivers;
+using CrestApps.OrchardCore.Payroll.Models;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Payroll;
@@ -18,6 +21,7 @@ public sealed class CanadaStartup : StartupBase
     {
         services.AddPayrollFilingForm<FormT4>();
         services.AddPayrollFilingForm<FormRl1>();
+        services.AddDisplayDriver<Employer, EmployerCanadaDisplayDriver>();
     }
 }
 

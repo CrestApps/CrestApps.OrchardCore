@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Payroll;
 using CrestApps.OrchardCore.Payroll.Core;
 using CrestApps.OrchardCore.Payroll.Core.Calculation;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Taxation.Core.Canada;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.DataSources;
@@ -55,6 +57,9 @@ public sealed class CanadaPayrollFilingsTests
 
         Assert.Equal((5000m, 290.49m, 81.50m, 900m, 5000m, 5000m), (lee.Boxes["14"], lee.Boxes["16"], lee.Boxes["18"], lee.Boxes["22"], lee.Boxes["24"], lee.Boxes["26"]));
         Assert.Equal("6789", lee.TaxIdHint);
+
+        // Box 10, stored with the slip: the province of the statements' provincial tax.
+        Assert.Equal("CA-ON", lee.Jurisdiction);
 
         // The Summary: the employer's CPP and EI (1.4 times), total deductions, the remittance and the balance.
         Assert.Equal((290.49m, 114.10m, 1676.58m, 600m, 1076.58m, 1m), (t4.Boxes["27"], t4.Boxes["19"], t4.Boxes["80"], t4.Boxes["82"], t4.Boxes["86"], t4.Boxes["88"]));
@@ -130,9 +135,169 @@ public sealed class CanadaPayrollFilingsTests
     }
 
     [Fact]
+    public async Task T4_HasASlipForEachProvinceOfEmployment_AndNotesAMissingDentalBenefitsCode()
+    {
+        await using var harness = await CreateHarnessAsync();
+        var (setup, employer) = await SeedAsync(harness, quebec: false);
+        var filer = CalendarTestHarness.User("filer", PayrollPermissions.ManagePayrollFilings.Name);
+
+        var t4 = await harness.RunAsync(async services =>
+        {
+            var regular = await services.GetRequiredService<IPayCodeManager>().FindByCodeAsync("REG");
+            var profile = (await services.GetRequiredService<IPayProfileManager>().ListByEmployersAsync([setup.EmployerId])).Single();
+
+            // Lee moves to British Columbia in December: a second slip, box 10 BC.
+            await services.GetRequiredService<PayStatementStore>().CreateAsync(new PayStatement
+            {
+                ItemId = "castatement000000000000002",
+                RunId = setup.RunId,
+                Number = "2",
+                EmployerId = setup.EmployerId,
+                StaffMemberId = setup.StaffMemberId,
+                ProfileId = profile.ItemId,
+                PeriodStart = new DateOnly(2026, 11, 29),
+                PeriodEnd = new DateOnly(2026, 12, 12),
+                PayDate = new DateOnly(2026, 12, 18),
+                Status = PayStatementStatus.Paid,
+                Currency = "CAD",
+                Gross = 3000,
+                Snapshot = new PayStatementSnapshot { EmployeeName = "Lee Park" },
+                Lines =
+                [
+                    new PayStatementLine { Type = PayLineType.Earning, PayCodeId = regular.ItemId, Amount = 3000 },
+                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = CanadaIncomeTax.TaxCodes.FederalIncomeTax, TaxCategory = IncomeTaxCategories.IncomeTax, Jurisdiction = "CA", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 340 },
+                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = "CA-BC-PIT", TaxCategory = IncomeTaxCategories.IncomeTax, Jurisdiction = "CA-BC", RemittedTo = "CA", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 140 },
+                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = CanadaIncomeTax.TaxCodes.Cpp, TaxCategory = IncomeTaxCategories.SocialInsurance, Jurisdiction = "CA", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 170.49m },
+                    new PayStatementLine { Type = PayLineType.Tax, TaxCode = CanadaIncomeTax.TaxCodes.EmploymentInsurance, TaxCategory = CanadaIncomeTax.Categories.InsurableEarnings, Jurisdiction = "CA", Payer = PayLinePayer.Employee, TaxableWages = 3000, Amount = 48.90m },
+                ],
+            });
+
+            employer.Put(new CanadaEmployerSettings());
+
+            return (await services.GetRequiredService<IPayrollFilingService>().PrepareAsync(employer, FormT4.FormName, 2026, 0, filer)).Filing;
+        });
+
+        Assert.Equal([("CA-ON", 5000m, 900m), ("CA-BC", 3000m, 480m)], t4.People.Select(person => (person.Jurisdiction, person.Boxes["14"], person.Boxes["22"])));
+        Assert.Equal((8000m, 2m), (t4.Boxes["14"], t4.Boxes["88"]));
+        Assert.Contains(t4.Notes, note => note.Contains("box 45", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ByProvinceOfEmployment_PutsAStatementWithNoProvinceWithTheOneBefore()
+    {
+        static PayStatement Statement(int day, string province)
+            => new()
+            {
+                PayDate = new DateOnly(2026, 3, day),
+                Lines = province is null ? [] : [new PayStatementLine { Type = PayLineType.Tax, TaxCode = province + "-PIT", Jurisdiction = province, Amount = 1 }],
+            };
+
+        var groups = FormT4.ByProvinceOfEmployment([Statement(20, "CA-AB"), Statement(6, null), Statement(13, "CA-ON"), Statement(27, null)]);
+
+        // The first statement has none before it: the first province after it.
+        Assert.Equal([("ON", 2), ("AB", 2)], groups.Select(group => (group.Province, group.Statements.Count)));
+    }
+
+    [Theory]
+    [InlineData("046 454 286", true)]
+    [InlineData("046-454-286", true)]
+    [InlineData("130 692 544", true)]
+    [InlineData("046 454 287", false)]
+    [InlineData("046 454 28", false)]
+    [InlineData("046 454 2860", false)]
+    [InlineData("000 000 000", false)]
+    [InlineData("O46 454 286", false)]
+    public void ASocialInsuranceNumber_PassesItsCheckDigit(string sin, bool valid)
+        => Assert.Equal(valid, CanadaSin.IsValid(sin));
+
+    [Fact]
+    public void ThePayProfileEditor_RefusesASinThatFailsItsCheckDigit_ForACanadianEmployerOnly()
+    {
+        var canadian = new Employer { Registrations = [new EmployerTaxRegistration { Jurisdiction = "CA" }] };
+        var american = new Employer { CountryPack = "US" };
+
+        Assert.True(CrestApps.OrchardCore.Payroll.Drivers.PayProfileDisplayDriver.RefusesTaxId(canadian, "046 454 287"));
+        Assert.False(CrestApps.OrchardCore.Payroll.Drivers.PayProfileDisplayDriver.RefusesTaxId(canadian, "046 454 286"));
+        Assert.True(CrestApps.OrchardCore.Payroll.Drivers.PayProfileDisplayDriver.RefusesTaxId(new Employer { CountryPack = "CA" }, "123-45-6789"));
+        Assert.False(CrestApps.OrchardCore.Payroll.Drivers.PayProfileDisplayDriver.RefusesTaxId(american, "123-45-6789"));
+    }
+
+    [Fact]
+    public async Task T4Xml_WritesEveryRequiredElement_AndNoEmptyOne()
+    {
+        var protection = new EphemeralDataProtectionProvider();
+        var format = new T4XmlDataFileFormat(protection);
+        var row = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["Year"] = 2026,
+            ["BusinessNumber"] = "123456789RP0001",
+            ["EmployerName"] = "Contoso Canada",
+            ["ContactName"] = "Pat Lee",
+            ["ContactPhone"] = "867 555 0100",
+            ["DentalBenefitsCode"] = 1,
+            ["StaffMemberId"] = "kim",
+            [T4SlipsDataSet.ProtectedSinField] = FileTaxIds.Protect(protection, "130 692 544"),
+
+            // One name only, no address, and no EI or CPP earnings (an employee exempt from both).
+            ["LastName"] = "Kim",
+            ["ProvinceOfEmployment"] = "NU",
+            ["Box14"] = 1200m,
+        };
+        var fields = row.Keys.Select(name => new DataField(name, name, DataFieldType.Text)).ToList();
+
+        using var stream = new MemoryStream();
+
+        await format.WriteAsync(stream, fields, Batches(fields, row), new DataFileOptions(), TestContext.Current.CancellationToken);
+
+        var xml = XDocument.Parse(System.Text.Encoding.UTF8.GetString(stream.ToArray()).TrimStart('\uFEFF'));
+        var slip = xml.Descendants("T4Slip").Single();
+
+        // The T4 XML specification's required elements of a slip, checked one by one (the CRA's XSD is not shipped
+        // with the tests), with boxes 24 and 26 written at zero rather than left to be read as box 14.
+        foreach (var path in new[] { "EMPE_NM/snm", "EMPE_ADDR/cntry_cd", "sin", "bn", "rpt_tcd", "empt_prov_cd", "empr_dntl_ben_rpt_cd", "T4_AMT/empt_incamt", "T4_AMT/ei_insu_ern_amt", "T4_AMT/cpp_qpp_ern_amt" })
+        {
+            Assert.True(path.Split('/').Aggregate((XElement)slip, (element, name) => element?.Element(name)) is not null, path);
+        }
+
+        Assert.Equal(("130692544", "1", "0.00", "0.00"), (slip.Element("sin")!.Value, slip.Element("empr_dntl_ben_rpt_cd")!.Value, slip.Element("T4_AMT")!.Element("ei_insu_ern_amt")!.Value, slip.Element("T4_AMT")!.Element("cpp_qpp_ern_amt")!.Value));
+
+        // And the Summary's.
+        var summary = xml.Descendants("T4Summary").Single();
+
+        foreach (var path in new[] { "bn", "EMPR_NM/l1_nm", "tx_yr", "slp_cnt", "rpt_tcd", "T4_TAMT/tot_empt_incamt", "T4_TAMT/tot_itx_ddct_amt" })
+        {
+            Assert.True(path.Split('/').Aggregate((XElement)summary, (element, name) => element?.Element(name)) is not null, path);
+        }
+
+        // An optional element with nothing to say is left out, never written empty.
+        Assert.Empty(xml.Descendants().Where(element => !element.HasElements && string.IsNullOrWhiteSpace(element.Value)).Select(element => element.Name.LocalName));
+        Assert.Null(slip.Element("EMPE_NM")!.Element("gvn_nm"));
+
+        // A SIN that fails its check digit, no dental benefits code or no province of employment: refused.
+        async Task<string> RefusedAsync(string name, object value)
+        {
+            var changed = new Dictionary<string, object>(row, StringComparer.Ordinal) { [name] = value };
+
+            using var refused = new MemoryStream();
+
+            return (await Assert.ThrowsAsync<InvalidOperationException>(() => format.WriteAsync(refused, fields, Batches(fields, changed), new DataFileOptions(), TestContext.Current.CancellationToken))).Message;
+        }
+
+        Assert.Contains("check digit", await RefusedAsync(T4SlipsDataSet.ProtectedSinField, FileTaxIds.Protect(protection, "130 692 545")), StringComparison.Ordinal);
+        Assert.Contains("dental benefits code", await RefusedAsync("DentalBenefitsCode", null), StringComparison.Ordinal);
+        Assert.Contains("province of employment", await RefusedAsync("ProvinceOfEmployment", null), StringComparison.Ordinal);
+        Assert.Contains("contact name and phone", await RefusedAsync("ContactPhone", null), StringComparison.Ordinal);
+
+        // A SIN typed into the encrypted field, or encrypted by another site, is no SIN.
+        Assert.Contains("full social insurance number", await RefusedAsync(T4SlipsDataSet.ProtectedSinField, "130 692 544"), StringComparison.Ordinal);
+        Assert.Contains("full social insurance number", await RefusedAsync(T4SlipsDataSet.ProtectedSinField, FileTaxIds.Protect(new EphemeralDataProtectionProvider(), "130 692 544")), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task T4Xml_WritesTheSlipsAndSummary_AndRefusesAMissingNumber()
     {
-        var format = new T4XmlDataFileFormat();
+        var protection = new EphemeralDataProtectionProvider();
+        var format = new T4XmlDataFileFormat(protection);
         var values = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["Year"] = 2026,
@@ -147,8 +312,9 @@ public sealed class CanadaPayrollFilingsTests
             ["EmployerCpp"] = 290.49m,
             ["EmployerCpp2"] = 0m,
             ["EmployerEi"] = 114.10m,
+            ["DentalBenefitsCode"] = 3,
             ["StaffMemberId"] = "lee",
-            ["Sin"] = "046 454 286",
+            [T4SlipsDataSet.ProtectedSinField] = FileTaxIds.Protect(protection, "046 454 286"),
             ["FirstName"] = "Lee",
             ["LastName"] = "Park",
             ["Address"] = "2 Bay St",
@@ -184,7 +350,7 @@ public sealed class CanadaPayrollFilingsTests
         Assert.Equal(("2026", "1", "290.49", "114.10"), (summary.Element("tx_yr")!.Value, summary.Element("slp_cnt")!.Value, summary.Element("T4_TAMT")!.Element("tot_empr_cpp_amt")!.Value, summary.Element("T4_TAMT")!.Element("tot_empr_eip_amt")!.Value));
 
         // No full SIN, or no RP account: refused rather than written.
-        await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(new Dictionary<string, object>(values, StringComparer.Ordinal) { ["Sin"] = null }));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(new Dictionary<string, object>(values, StringComparer.Ordinal) { [T4SlipsDataSet.ProtectedSinField] = null }));
         await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(new Dictionary<string, object>(values, StringComparer.Ordinal) { ["BusinessNumber"] = "123456789" }));
     }
 
@@ -205,6 +371,7 @@ public sealed class CanadaPayrollFilingsTests
             var employer = await employers.FindByIdAsync(setup.EmployerId);
 
             employer.Currency = "CAD";
+            employer.Put(new CanadaEmployerSettings { DentalBenefitsCode = 3 });
             employer.Registrations =
             [
                 new EmployerTaxRegistration { Jurisdiction = "CA", Agency = "CRA", AccountId = "123456789RP0001", DepositFrequency = DepositSchedules.TwiceMonthly },

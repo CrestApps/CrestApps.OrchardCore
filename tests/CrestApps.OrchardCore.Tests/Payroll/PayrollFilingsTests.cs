@@ -246,7 +246,8 @@ public sealed class PayrollFilingsTests
 
         // The exporter may not see tax ids: the file is refused, never written with zeros.
         var row = Assert.Single(await ReadAsync("WageRecords", exporter));
-        var format = new CrestApps.OrchardCore.Payroll.DataSources.Efw2DataFileFormat();
+        var protection = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>()), commit: false);
+        var format = new CrestApps.OrchardCore.Payroll.DataSources.Efw2DataFileFormat(protection);
 
         async Task WriteAsync(Dictionary<string, object> values)
         {
@@ -264,16 +265,28 @@ public sealed class PayrollFilingsTests
             await format.WriteAsync(stream, fields, Batches(fields, [.. values.Values]), null, TestContext.Current.CancellationToken);
         }
 
-        Assert.Null(row["Ssn"]);
+        Assert.Null(row[CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.ProtectedSsnField]);
+        Assert.False(row.ContainsKey("Ssn"));
         Assert.Contains("full social security number", (await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(row))).Message, StringComparison.Ordinal);
 
-        row["Ssn"] = "123-45-6789";
+        // A number typed into the field is no number: only one the data set encrypted is read.
+        row[CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.ProtectedSsnField] = "123-45-6789";
+        Assert.Contains("full social security number", (await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(row))).Message, StringComparison.Ordinal);
+
+        row[CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.ProtectedSsnField] = CrestApps.OrchardCore.Payroll.DataSources.FileTaxIds.Protect(protection, "123-45-6789");
         row[CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.OtherBoxesField] = "12W 1200.00";
 
         Assert.Contains("12W 1200.00", (await Assert.ThrowsAsync<InvalidOperationException>(() => WriteAsync(row))).Message, StringComparison.Ordinal);
 
         row[CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.OtherBoxesField] = null;
         await WriteAsync(row);
+
+        // Who may see tax ids reads the number encrypted: a preview or a CSV shows ciphertext, EFW2 reads it back.
+        var revealer = CalendarTestHarness.User("revealer", PayrollPermissions.ExportPayrollData.Name, PayrollPermissions.ViewTaxIds.Name);
+        var encrypted = Convert.ToString(Assert.Single(await ReadAsync("WageRecords", revealer))[CrestApps.OrchardCore.Payroll.DataSources.WageRecordsDataSet.ProtectedSsnField], System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.DoesNotContain("6789", encrypted, StringComparison.Ordinal);
+        Assert.EndsWith("6789", CrestApps.OrchardCore.Payroll.DataSources.FileTaxIds.Unprotect(protection, encrypted), StringComparison.Ordinal);
     }
 
     [Fact]

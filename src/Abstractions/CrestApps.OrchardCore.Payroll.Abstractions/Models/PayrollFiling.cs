@@ -242,6 +242,12 @@ public sealed class PayrollFilingPerson
     /// <summary>Gets or sets the last characters of the tax id, as printed.</summary>
     public string TaxIdHint { get; set; }
 
+    /// <summary>
+    /// Gets or sets the jurisdiction the statement is for, when a person has one statement per jurisdiction, such as a
+    /// T4 slip per province of employment (its box 10): stored when the filing is prepared, as statements said it then.
+    /// </summary>
+    public string Jurisdiction { get; set; }
+
     /// <summary>Gets or sets the boxes.</summary>
     public Dictionary<string, decimal> Boxes { get; set; } = new(StringComparer.Ordinal);
 }

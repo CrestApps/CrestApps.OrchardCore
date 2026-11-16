@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Payroll.Core.UnitedStates;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Reports.DataSources;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Files;
@@ -96,12 +97,16 @@ public sealed record WageRecordRow(PayrollFiling Filing, PayrollFilingPerson Per
 /// <summary>
 /// W-2 wage records: one row per person of each employer's current wage statements (the draft or the filed ones, not
 /// an amended one), with the employer's and the submitter's details the SSA file needs. The full social security
-/// number is read only for a user who may see full tax ids of the employer, and each one read is recorded.
+/// number is read only for a user who may see full tax ids of the employer, each one read is recorded, and it is
+/// encrypted for the EFW2 file format: a preview or another file never shows it.
 /// </summary>
 public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollDataSet
 {
     /// <summary>The agency a registration names to carry the SSA submitter's user id as its account id.</summary>
     public const string SsaAgency = "SSA";
+
+    /// <summary>The field of the social security number, encrypted: only the EFW2 file format reads it.</summary>
+    public const string ProtectedSsnField = "ProtectedSsn";
 
     private readonly IPayrollFilingManager _filings;
     private readonly IEmployerManager _employers;
@@ -109,9 +114,10 @@ public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollD
     private readonly IPayProfileService _profileService;
     private readonly IPayrollScopeService _scope;
     private readonly PayrollReportReader _reader;
+    private readonly IDataProtectionProvider _dataProtection;
 
-    public WageRecordsDataSet(IPayrollFilingManager filings, IEmployerManager employers, IPayProfileManager profiles, IPayProfileService profileService, IPayrollScopeService scope, PayrollReportReader reader, IStringLocalizer<WageRecordsDataSet> stringLocalizer)
-        : base(new DataSetDescriptor("WageRecords", stringLocalizer["W-2 wage records"], stringLocalizer["One row per person of each employer's current Form W-2 filing: the employer and submitter, the person's name, address and social security number (only for those who may see full tax ids), and the boxes. Write them as an SSA EFW2 file with the EFW2 file format."]))
+    public WageRecordsDataSet(IPayrollFilingManager filings, IEmployerManager employers, IPayProfileManager profiles, IPayProfileService profileService, IPayrollScopeService scope, PayrollReportReader reader, IDataProtectionProvider dataProtection, IStringLocalizer<WageRecordsDataSet> stringLocalizer)
+        : base(new DataSetDescriptor("WageRecords", stringLocalizer["W-2 wage records"], stringLocalizer["One row per person of each employer's current Form W-2 filing: the employer and submitter, the person's name and address, their social security number encrypted for the EFW2 file format (only for those who may see full tax ids), and the boxes. Write them as an SSA EFW2 file with the EFW2 file format."]))
     {
         _filings = filings;
         _employers = employers;
@@ -119,6 +125,7 @@ public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollD
         _profileService = profileService;
         _scope = scope;
         _reader = reader;
+        _dataProtection = dataProtection;
 
         var S = stringLocalizer;
         var employerGroup = S["Employer"].Value;
@@ -138,7 +145,7 @@ public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollD
         AddField("ContactPhone", S["Contact phone"], DataFieldType.Text, row => row.Employer?.ContactPhone, employerGroup);
         AddField("ContactEmail", S["Contact email"], DataFieldType.Text, row => row.Employer?.ContactEmail, employerGroup);
         AddField("StaffMemberId", S["Staff member ID"], DataFieldType.Text, row => row.Person.StaffMemberId, person);
-        AddField("Ssn", S["Social security number"], DataFieldType.Text, row => row.Ssn, person);
+        AddField(ProtectedSsnField, S["Social security number (encrypted for the EFW2 file)"], DataFieldType.Text, row => row.Ssn, person);
         AddField("FirstName", S["First name"], DataFieldType.Text, row => Names(row.Person.Name).First, person);
         AddField("MiddleName", S["Middle name"], DataFieldType.Text, row => Names(row.Person.Name).Middle, person);
         AddField("LastName", S["Last name"], DataFieldType.Text, row => Names(row.Person.Name).Last, person);
@@ -206,7 +213,7 @@ public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollD
                 var profile = string.IsNullOrEmpty(person.ProfileId) ? null : await _profiles.FindByIdAsync(person.ProfileId, cancellationToken);
                 var ssn = mayReveal && profile is not null ? await _profileService.RevealTaxIdAsync(profile, $"W-2 wage records {filing.Year}", cancellationToken) : null;
 
-                yield return new WageRecordRow(filing, person, employer, profile, ssn, submitter);
+                yield return new WageRecordRow(filing, person, employer, profile, FileTaxIds.Protect(_dataProtection, ssn), submitter);
             }
         }
     }
@@ -232,6 +239,17 @@ public sealed class WageRecordsDataSet : RecordDataSet<WageRecordRow>, IPayrollD
 /// </summary>
 public sealed class Efw2DataFileFormat : IDataFileFormat
 {
+    private readonly IDataProtectionProvider _dataProtection;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Efw2DataFileFormat"/> class.
+    /// </summary>
+    /// <param name="dataProtection">The data protection provider, to read the social security numbers.</param>
+    public Efw2DataFileFormat(IDataProtectionProvider dataProtection)
+    {
+        _dataProtection = dataProtection;
+    }
+
     private static readonly LocalizationSource _displayName = LocalizationSource.Create<Efw2DataFileFormat>("SSA EFW2 (W-2 wage records)");
 
     /// <inheritdoc />
@@ -292,7 +310,8 @@ public sealed class Efw2DataFileFormat : IDataFileFormat
 
         // Every person needs their full number: a row without it is the publisher not seeing tax ids, or a profile
         // with none. The file is refused rather than written with zeros.
-        var missing = rows.Where(row => new string([.. (Text(row, "Ssn") ?? string.Empty).Where(char.IsAsciiDigit)]).Length != 9).ToList();
+        var ssns = rows.ToDictionary(row => row, row => FileTaxIds.Unprotect(_dataProtection, Text(row, WageRecordsDataSet.ProtectedSsnField)));
+        var missing = rows.Where(row => new string([.. (ssns[row] ?? string.Empty).Where(char.IsAsciiDigit)]).Length != 9).ToList();
 
         if (missing.Count > 0)
         {
@@ -315,7 +334,7 @@ public sealed class Efw2DataFileFormat : IDataFileFormat
                 Text(group.First(), "EmployerName"),
                 new Efw2Address(null, Text(group.First(), "EmployerAddress"), Text(group.First(), "EmployerCity"), Text(group.First(), "EmployerState"), Text(group.First(), "EmployerZip"), null),
                 [.. group.Select(row => new Efw2Person(
-                    Text(row, "Ssn"),
+                    ssns[row],
                     Text(row, "FirstName"),
                     Text(row, "MiddleName"),
                     Text(row, "LastName"),

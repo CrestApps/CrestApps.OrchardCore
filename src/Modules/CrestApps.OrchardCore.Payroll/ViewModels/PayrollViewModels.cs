@@ -81,6 +81,14 @@ public class EmployerFundingViewModel
 }
 
 /// <summary>
+/// The employer's Canada card, with Canada Payroll Filings on.
+/// </summary>
+public class EmployerCanadaViewModel
+{
+    public int? DentalBenefitsCode { get; set; }
+}
+
+/// <summary>
 /// Payroll's card on a team.
 /// </summary>
 public class PayrollTeamViewModel

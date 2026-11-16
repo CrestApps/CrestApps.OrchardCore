@@ -2,6 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Banking.Services;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Payroll.Core.Canada;
 using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
@@ -165,6 +166,11 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
         {
             await _profiles.SetTaxIdAsync(profile, null);
             _tracker.Changes.Add(PayProfileChangeKind.TaxIdChanged);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.TaxId) && RefusesTaxId(string.IsNullOrEmpty(profile.EmployerId) ? null : await _employers.FindByIdAsync(profile.EmployerId), model.TaxId))
+        {
+            // A Canadian SIN carries a check digit: a typo is caught here rather than on the T4.
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TaxId), S["The social insurance number isn't valid: check its nine digits."]);
         }
         else if (!string.IsNullOrWhiteSpace(model.TaxId))
         {
@@ -445,6 +451,19 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             model.AddressEditor = editor;
         }).Location("Content:3");
     }
+
+    /// <summary>
+    /// Gets whether a tax id entered for a person of an employer is refused: a social insurance number that fails its
+    /// check digit, for an employer whose country pack is Canada's or that is registered with the CRA.
+    /// </summary>
+    /// <param name="employer">The employer, or <see langword="null"/>.</param>
+    /// <param name="taxId">The tax id entered.</param>
+    /// <returns>Whether it is refused.</returns>
+    public static bool RefusesTaxId(Employer employer, string taxId)
+        => employer is not null
+            && (string.Equals(employer.CountryPack, "CA", StringComparison.OrdinalIgnoreCase)
+                || employer.Registrations.Any(registration => string.Equals(registration.Jurisdiction, "CA", StringComparison.OrdinalIgnoreCase)))
+            && !CanadaSin.IsValid(taxId);
 
     private async Task<ShapeResult> ElectionsAsync(EmployeePayProfile profile, PayProfileElectionsViewModel typed)
     {

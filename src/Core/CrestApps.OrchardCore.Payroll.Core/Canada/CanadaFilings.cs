@@ -141,40 +141,53 @@ public sealed class FormT4 : IPayrollFilingForm
             context.Filing.Notes.Add("The employer's CA registration needs the CRA business number with its payroll program account, such as 123456789RP0001.");
         }
 
+        if (!CanadaEmployerSettings.IsDentalBenefitsCode(context.Employer.GetCanadaSettings().DentalBenefitsCode))
+        {
+            context.Filing.Notes.Add("The employer needs its dental benefits code (T4 box 45) under Canada on the employer: every T4 slip reports it.");
+        }
+
         var employerCpp = 0m;
         var employerCpp2 = 0m;
         var employerEi = 0m;
 
         foreach (var person in CanadaFilingSums.People(context, CanadaIncomeTax.Jurisdiction))
         {
-            var statements = person.ToList();
-            var latest = statements.Where(statement => statement.VoidOf is null).OrderBy(statement => statement.PayDate).LastOrDefault() ?? statements.Last();
+            var all = person.ToList();
+            var latest = all.Where(statement => statement.VoidOf is null).OrderBy(statement => statement.PayDate).LastOrDefault() ?? all.Last();
             var profile = latest.ProfileId is not null && context.Profiles.TryGetValue(latest.ProfileId, out var found) ? found : null;
-            var boxes = Boxes(statements, context.Codes);
+            var noted = false;
 
-            if (boxes.Values.All(value => value == 0))
+            // One slip for each province the person was employed in.
+            foreach (var (province, statements) in ByProvinceOfEmployment(all))
             {
-                continue;
+                var boxes = Boxes(statements, context.Codes);
+
+                if (boxes.Values.All(value => value == 0))
+                {
+                    continue;
+                }
+
+                if (profile?.TaxId is null && !noted)
+                {
+                    context.Filing.Notes.Add($"{latest.Snapshot?.EmployeeName}: no social insurance number on file.");
+                    noted = true;
+                }
+
+                employerCpp += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Cpp + CanadaFilingSums.EmployerSuffix);
+                employerCpp2 += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Cpp2 + CanadaFilingSums.EmployerSuffix);
+                employerEi += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.EmploymentInsurance + CanadaFilingSums.EmployerSuffix, CanadaIncomeTax.TaxCodes.EmploymentInsuranceQuebec + CanadaFilingSums.EmployerSuffix);
+
+                context.Filing.People.Add(new PayrollFilingPerson
+                {
+                    StaffMemberId = latest.StaffMemberId,
+                    ProfileId = latest.ProfileId,
+                    Name = string.IsNullOrEmpty(profile?.LegalName) ? latest.Snapshot?.EmployeeName : profile.LegalName,
+                    Address = [.. latest.Snapshot?.EmployeeAddress ?? []],
+                    TaxIdHint = profile?.TaxId?.Hint,
+                    Jurisdiction = province is null ? null : CanadaIncomeTax.Jurisdiction + "-" + province,
+                    Boxes = boxes,
+                });
             }
-
-            if (profile?.TaxId is null)
-            {
-                context.Filing.Notes.Add($"{latest.Snapshot?.EmployeeName}: no social insurance number on file.");
-            }
-
-            employerCpp += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Cpp + CanadaFilingSums.EmployerSuffix);
-            employerCpp2 += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.Cpp2 + CanadaFilingSums.EmployerSuffix);
-            employerEi += UnitedStatesFilingSums.Tax(statements, CanadaIncomeTax.TaxCodes.EmploymentInsurance + CanadaFilingSums.EmployerSuffix, CanadaIncomeTax.TaxCodes.EmploymentInsuranceQuebec + CanadaFilingSums.EmployerSuffix);
-
-            context.Filing.People.Add(new PayrollFilingPerson
-            {
-                StaffMemberId = latest.StaffMemberId,
-                ProfileId = latest.ProfileId,
-                Name = string.IsNullOrEmpty(profile?.LegalName) ? latest.Snapshot?.EmployeeName : profile.LegalName,
-                Address = [.. latest.Snapshot?.EmployeeAddress ?? []],
-                TaxIdHint = profile?.TaxId?.Hint,
-                Boxes = boxes,
-            });
         }
 
         // The T4 Summary: the slips' totals, the employer's contributions, the remittances and the balance.
@@ -197,6 +210,41 @@ public sealed class FormT4 : IPayrollFilingForm
         context.Filing.Boxes["88"] = context.Filing.People.Count;
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Splits a person's statements of a year by their province of employment (box 10): the CRA wants a T4 slip for each
+    /// province the person was employed in. A statement with no province of its own (no provincial tax or QPP line, such
+    /// as one under the basic amounts) counts with the latest province before it, else the first one after it.
+    /// </summary>
+    /// <param name="statements">The statements.</param>
+    /// <returns>The statements of each province, by its two letters, in the order the person was employed there.</returns>
+    public static IReadOnlyList<(string Province, IReadOnlyList<PayStatement> Statements)> ByProvinceOfEmployment(IReadOnlyList<PayStatement> statements)
+    {
+        ArgumentNullException.ThrowIfNull(statements);
+
+        var ordered = statements.OrderBy(statement => statement.PayDate).ToList();
+        var provinces = ordered.Select(statement => CanadaFilingSums.Province([statement])).ToList();
+        var current = provinces.FirstOrDefault(province => province is not null);
+        var groups = new List<(string Province, List<PayStatement> Statements)>();
+
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            current = provinces[i] ?? current;
+
+            var group = groups.FindIndex(candidate => candidate.Province == current);
+
+            if (group < 0)
+            {
+                groups.Add((current, [ordered[i]]));
+            }
+            else
+            {
+                groups[group].Statements.Add(ordered[i]);
+            }
+        }
+
+        return [.. groups.Select(group => (group.Province, (IReadOnlyList<PayStatement>)group.Statements))];
     }
 
     /// <summary>
@@ -360,7 +408,8 @@ public sealed class FormRl1 : IPayrollFilingForm
 /// <param name="ProvinceOfEmployment">Box 10, the province of employment.</param>
 /// <param name="EmployeeNumber">The employee's number.</param>
 /// <param name="Boxes">The amounts, by box.</param>
-public sealed record T4XmlSlip(string Sin, string FirstName, string LastName, string AddressLine, string City, string Province, string Country, string PostalCode, string ProvinceOfEmployment, string EmployeeNumber, IReadOnlyDictionary<string, decimal> Boxes);
+/// <param name="DentalBenefitsCode">Box 45, the employer-offered dental benefits code (1 to 5).</param>
+public sealed record T4XmlSlip(string Sin, string FirstName, string LastName, string AddressLine, string City, string Province, string Country, string PostalCode, string ProvinceOfEmployment, string EmployeeNumber, IReadOnlyDictionary<string, decimal> Boxes, int? DentalBenefitsCode = null);
 
 /// <summary>The employer of a T4 XML file.</summary>
 /// <param name="BusinessNumber">The business number with its payroll program account (123456789RP0001).</param>
@@ -381,6 +430,12 @@ public sealed record T4XmlEmployer(string BusinessNumber, string Name, string Ad
 /// </summary>
 public static class CanadaT4Xml
 {
+    /// <summary>
+    /// The boxes every slip writes, zero or not: the CRA reads a missing insurable or pensionable earnings amount as
+    /// the employment income.
+    /// </summary>
+    public static readonly IReadOnlyList<string> RequiredAmounts = ["24", "26"];
+
     /// <summary>The slip's amounts, by box, and their element names.</summary>
     public static readonly IReadOnlyList<(string Box, string Element)> SlipAmounts =
     [
@@ -441,14 +496,14 @@ public static class CanadaT4Xml
                 writer.WriteStartElement("T4Slip");
                 writer.WriteStartElement("EMPE_NM");
                 writer.WriteElementString("snm", Cut(slip.LastName, 20));
-                writer.WriteElementString("gvn_nm", Cut(slip.FirstName, 12));
+                Optional(writer, "gvn_nm", Cut(slip.FirstName, 12));
                 writer.WriteEndElement();
                 writer.WriteStartElement("EMPE_ADDR");
-                writer.WriteElementString("addr_l1_txt", Cut(slip.AddressLine, 30));
-                writer.WriteElementString("cty_nm", Cut(slip.City, 28));
-                writer.WriteElementString("prov_cd", slip.Province);
+                Optional(writer, "addr_l1_txt", Cut(slip.AddressLine, 30));
+                Optional(writer, "cty_nm", Cut(slip.City, 28));
+                Optional(writer, "prov_cd", slip.Province);
                 writer.WriteElementString("cntry_cd", slip.Country ?? "CAN");
-                writer.WriteElementString("pstl_cd", CanadaFilingSums.Normalize(slip.PostalCode));
+                Optional(writer, "pstl_cd", CanadaFilingSums.Normalize(slip.PostalCode));
                 writer.WriteEndElement();
                 writer.WriteElementString("sin", Digits(slip.Sin));
 
@@ -460,11 +515,12 @@ public static class CanadaT4Xml
                 writer.WriteElementString("bn", CanadaFilingSums.Normalize(employer.BusinessNumber));
                 writer.WriteElementString("rpt_tcd", "O");
                 writer.WriteElementString("empt_prov_cd", slip.ProvinceOfEmployment);
+                Optional(writer, "empr_dntl_ben_rpt_cd", slip.DentalBenefitsCode?.ToString(CultureInfo.InvariantCulture));
                 writer.WriteStartElement("T4_AMT");
 
                 foreach (var (box, element) in SlipAmounts)
                 {
-                    if (slip.Boxes.GetValueOrDefault(box) is var amount && amount != 0)
+                    if (slip.Boxes.GetValueOrDefault(box) is var amount && (amount != 0 || RequiredAmounts.Contains(box)))
                     {
                         writer.WriteElementString(element, Money(amount));
                     }
@@ -480,11 +536,11 @@ public static class CanadaT4Xml
             writer.WriteElementString("l1_nm", Cut(employer.Name, 30));
             writer.WriteEndElement();
             writer.WriteStartElement("EMPR_ADDR");
-            writer.WriteElementString("addr_l1_txt", Cut(employer.AddressLine, 30));
-            writer.WriteElementString("cty_nm", Cut(employer.City, 28));
-            writer.WriteElementString("prov_cd", employer.Province);
+            Optional(writer, "addr_l1_txt", Cut(employer.AddressLine, 30));
+            Optional(writer, "cty_nm", Cut(employer.City, 28));
+            Optional(writer, "prov_cd", employer.Province);
             writer.WriteElementString("cntry_cd", employer.Country ?? "CAN");
-            writer.WriteElementString("pstl_cd", CanadaFilingSums.Normalize(employer.PostalCode));
+            Optional(writer, "pstl_cd", CanadaFilingSums.Normalize(employer.PostalCode));
             writer.WriteEndElement();
             Contact(writer, employer, email: false);
             writer.WriteElementString("tx_yr", year.ToString(CultureInfo.InvariantCulture));
@@ -516,7 +572,7 @@ public static class CanadaT4Xml
         var phone = Digits(employer.ContactPhone);
 
         writer.WriteStartElement("CNTC");
-        writer.WriteElementString("cntc_nm", Cut(employer.ContactName, 22));
+        Optional(writer, "cntc_nm", Cut(employer.ContactName, 22));
 
         if (phone.Length >= 10)
         {
@@ -531,6 +587,15 @@ public static class CanadaT4Xml
         }
 
         writer.WriteEndElement();
+    }
+
+    // An optional element is left out rather than written empty.
+    private static void Optional(XmlWriter writer, string name, string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            writer.WriteElementString(name, value);
+        }
     }
 
     private static string Money(decimal amount)

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Payroll.Core.Canada;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Reports.DataSources;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Files;
@@ -19,18 +20,22 @@ namespace CrestApps.OrchardCore.Payroll.DataSources;
 /// <param name="Person">The person's slip.</param>
 /// <param name="Employer">The employer.</param>
 /// <param name="Profile">The person's pay profile.</param>
-/// <param name="Sin">The full social insurance number, or <see langword="null"/>.</param>
+/// <param name="Sin">The full social insurance number, encrypted for the T4 XML file format, or <see langword="null"/>.</param>
 public sealed record T4SlipRow(PayrollFiling Filing, PayrollFilingPerson Person, Employer Employer, EmployeePayProfile Profile, string Sin);
 
 /// <summary>
-/// One row per person of each employer's current T4 filing: the employer, the person's name, address and social
-/// insurance number (only for those who may see full tax ids), the province of employment and the boxes, with the T4
-/// Summary's employer amounts. Write them as the CRA's T4 XML file with the T4 XML file format.
+/// One row per T4 slip of each employer's current T4 filing (a person employed in two provinces has two): the employer,
+/// the person's name and address, their social insurance number encrypted for the T4 XML file format (only for those who
+/// may see full tax ids, and never readable in a preview or another file), the province of employment and the boxes,
+/// with the T4 Summary's employer amounts. Write them as the CRA's T4 XML file with the T4 XML file format.
 /// </summary>
 public sealed class T4SlipsDataSet : RecordDataSet<T4SlipRow>, IPayrollDataSet
 {
     /// <summary>The parameter that reads the draft (a first filing being prepared, or an amendment).</summary>
     public const string DraftParameter = "Draft";
+
+    /// <summary>The field of the social insurance number, encrypted: only the T4 XML file format reads it.</summary>
+    public const string ProtectedSinField = "ProtectedSin";
 
     private readonly IPayrollFilingManager _filings;
     private readonly IEmployerManager _employers;
@@ -38,6 +43,7 @@ public sealed class T4SlipsDataSet : RecordDataSet<T4SlipRow>, IPayrollDataSet
     private readonly IPayProfileService _profileService;
     private readonly IPayrollScopeService _scope;
     private readonly PayrollReportReader _reader;
+    private readonly IDataProtectionProvider _dataProtection;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="T4SlipsDataSet"/> class.
@@ -48,9 +54,10 @@ public sealed class T4SlipsDataSet : RecordDataSet<T4SlipRow>, IPayrollDataSet
     /// <param name="profileService">The pay profile service, to reveal tax ids.</param>
     /// <param name="scope">The employer scope.</param>
     /// <param name="reader">The report reader.</param>
+    /// <param name="dataProtection">The data protection provider, to encrypt the social insurance number.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public T4SlipsDataSet(IPayrollFilingManager filings, IEmployerManager employers, IPayProfileManager profiles, IPayProfileService profileService, IPayrollScopeService scope, PayrollReportReader reader, IStringLocalizer<T4SlipsDataSet> stringLocalizer)
-        : base(new DataSetDescriptor("T4Slips", stringLocalizer["T4 slips"], stringLocalizer["One row per person of each employer's current T4 filing: the employer's business number, the person's name, address and social insurance number (only for those who may see full tax ids), the province of employment and the boxes. Write them as the CRA's T4 XML file with the T4 XML file format."]))
+    public T4SlipsDataSet(IPayrollFilingManager filings, IEmployerManager employers, IPayProfileManager profiles, IPayProfileService profileService, IPayrollScopeService scope, PayrollReportReader reader, IDataProtectionProvider dataProtection, IStringLocalizer<T4SlipsDataSet> stringLocalizer)
+        : base(new DataSetDescriptor("T4Slips", stringLocalizer["T4 slips"], stringLocalizer["One row per T4 slip of each employer's current T4 filing: the employer's business number, the person's name and address, their social insurance number encrypted for the T4 XML file format (only for those who may see full tax ids), the province of employment and the boxes. Write them as the CRA's T4 XML file with the T4 XML file format."]))
     {
         _filings = filings;
         _employers = employers;
@@ -58,13 +65,14 @@ public sealed class T4SlipsDataSet : RecordDataSet<T4SlipRow>, IPayrollDataSet
         _profileService = profileService;
         _scope = scope;
         _reader = reader;
+        _dataProtection = dataProtection;
 
         var S = stringLocalizer;
         var employerGroup = S["Employer"].Value;
         var person = S["Employee"].Value;
         var boxes = S["Boxes"].Value;
 
-        AddField("RecordId", S["Record ID"], DataFieldType.Text, row => $"{row.Filing.ItemId}:{row.Person.ProfileId}", person).Identifier();
+        AddField("RecordId", S["Record ID"], DataFieldType.Text, row => string.IsNullOrEmpty(row.Person.Jurisdiction) ? $"{row.Filing.ItemId}:{row.Person.ProfileId}" : $"{row.Filing.ItemId}:{row.Person.ProfileId}:{row.Person.Jurisdiction}", person).Identifier();
         AddField("Year", S["Year"], DataFieldType.Integer, row => row.Filing.Year, employerGroup);
         AddField("BusinessNumber", S["Business number (RP)"], DataFieldType.Text, row => CanadaFilingSums.PayrollAccount(row.Employer), employerGroup);
         AddField("EmployerName", S["Employer name"], DataFieldType.Text, row => row.Employer?.LegalName ?? row.Employer?.Name, employerGroup);
@@ -78,8 +86,9 @@ public sealed class T4SlipsDataSet : RecordDataSet<T4SlipRow>, IPayrollDataSet
         AddField("EmployerCpp", S["Employer's CPP (27)"], DataFieldType.Decimal, row => row.Filing.Boxes.GetValueOrDefault("27"), employerGroup);
         AddField("EmployerCpp2", S["Employer's second CPP (27A)"], DataFieldType.Decimal, row => row.Filing.Boxes.GetValueOrDefault("27A"), employerGroup);
         AddField("EmployerEi", S["Employer's EI (19)"], DataFieldType.Decimal, row => row.Filing.Boxes.GetValueOrDefault("19"), employerGroup);
+        AddField("DentalBenefitsCode", S["Dental benefits code (45)"], DataFieldType.Integer, row => row.Employer.GetCanadaSettings().DentalBenefitsCode, employerGroup);
         AddField("StaffMemberId", S["Staff member ID"], DataFieldType.Text, row => row.Person.StaffMemberId, person);
-        AddField("Sin", S["Social insurance number"], DataFieldType.Text, row => row.Sin, person);
+        AddField(ProtectedSinField, S["Social insurance number (encrypted for the T4 XML file)"], DataFieldType.Text, row => row.Sin, person);
         AddField("FirstName", S["Given name"], DataFieldType.Text, row => Names(row.Person.Name).First, person);
         AddField("LastName", S["Surname"], DataFieldType.Text, row => Names(row.Person.Name).Last, person);
         AddField("Address", S["Address"], DataFieldType.Text, row => row.Profile?.HomeAddress?.AddressLine1, person);
@@ -136,16 +145,14 @@ public sealed class T4SlipsDataSet : RecordDataSet<T4SlipRow>, IPayrollDataSet
                 var profile = string.IsNullOrEmpty(person.ProfileId) ? null : await _profiles.FindByIdAsync(person.ProfileId, cancellationToken);
                 var sin = mayReveal && profile is not null ? await _profileService.RevealTaxIdAsync(profile, $"T4 slips {filing.Year}", cancellationToken) : null;
 
-                yield return new T4SlipRow(filing, person, employer, profile, sin);
+                yield return new T4SlipRow(filing, person, employer, profile, FileTaxIds.Protect(_dataProtection, sin));
             }
         }
     }
 
-    // Box 10: the province of employment: Quebec when QPP was paid, else the province of the person's home.
+    // Box 10: the province of employment the slip was prepared for, from the statements.
     private static string ProvinceOfEmployment(T4SlipRow row)
-        => row.Person.Boxes.TryGetValue("17", out var qpp) && qpp != 0
-            ? "QC"
-            : row.Profile?.HomeAddress?.Region?.ToUpperInvariant();
+        => row.Person.Jurisdiction is { Length: > 3 } jurisdiction ? jurisdiction[3..].ToUpperInvariant() : null;
 
     private static (string First, string Last) Names(string name)
     {
@@ -162,11 +169,23 @@ public sealed class T4SlipsDataSet : RecordDataSet<T4SlipRow>, IPayrollDataSet
 
 /// <summary>
 /// Writes T4 slips as the CRA's T4 XML file (Internet file transfer), one employer and one tax year a file: the latest
-/// year and the first business number among the rows. A slip with no full social insurance number, or an employer with
-/// no business number and payroll program account, is refused rather than written.
+/// year and the first business number among the rows. The social insurance number is read from the T4 slips data set's
+/// encrypted field. A slip with no full social insurance number or no province of employment, or an employer with no
+/// business number and payroll program account or no dental benefits code, is refused rather than written.
 /// </summary>
 public sealed class T4XmlDataFileFormat : IDataFileFormat
 {
+    private readonly IDataProtectionProvider _dataProtection;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="T4XmlDataFileFormat"/> class.
+    /// </summary>
+    /// <param name="dataProtection">The data protection provider, to read the social insurance numbers.</param>
+    public T4XmlDataFileFormat(IDataProtectionProvider dataProtection)
+    {
+        _dataProtection = dataProtection;
+    }
+
     private static readonly LocalizationSource _displayName = LocalizationSource.Create<T4XmlDataFileFormat>("CRA T4 XML (T4 slips and Summary)");
 
     /// <summary>Gets the stored name.</summary>
@@ -229,11 +248,38 @@ public sealed class T4XmlDataFileFormat : IDataFileFormat
             throw new InvalidOperationException("The T4 XML file needs the employer's CRA business number with its payroll program account (such as 123456789RP0001) on its CA registration.");
         }
 
-        var missing = rows.Where(row => new string([.. (Text(row, "Sin") ?? string.Empty).Where(char.IsAsciiDigit)]).Length != 9).ToList();
+        var sins = rows.ToDictionary(row => row, row => FileTaxIds.Unprotect(_dataProtection, Text(row, T4SlipsDataSet.ProtectedSinField)));
+        var missing = rows.Where(row => new string([.. (sins[row] ?? string.Empty).Where(char.IsAsciiDigit)]).Length != 9).ToList();
 
         if (missing.Count > 0)
         {
-            throw new InvalidOperationException($"The T4 XML file needs each person's full social insurance number, and {missing.Count} rows have none (staff members {string.Join(", ", missing.Select(row => Text(row, "StaffMemberId")).Distinct(StringComparer.Ordinal))}): the user who published the pipeline needs View tax ids for the employer, and each person needs a tax id on file.");
+            throw new InvalidOperationException($"The T4 XML file needs each person's full social insurance number, and {missing.Count} rows have none (staff members {string.Join(", ", missing.Select(row => Text(row, "StaffMemberId")).Distinct(StringComparer.Ordinal))}): the user who published the pipeline needs View tax ids for the employer, each person needs a tax id on file, and the rows must come from the T4 slips data set the same day.");
+        }
+
+        var invalid = rows.Where(row => !CanadaSin.IsValid(sins[row])).ToList();
+
+        if (invalid.Count > 0)
+        {
+            throw new InvalidOperationException($"The T4 XML file can't hold a social insurance number that fails its check digit, and {invalid.Count} rows have one (staff members {string.Join(", ", invalid.Select(row => Text(row, "StaffMemberId")).Distinct(StringComparer.Ordinal))}): correct it on the pay profile.");
+        }
+
+        var unplaced = rows.Where(row => string.IsNullOrEmpty(Text(row, "ProvinceOfEmployment"))).ToList();
+
+        if (unplaced.Count > 0)
+        {
+            throw new InvalidOperationException($"The T4 XML file needs each slip's province of employment (box 10), and {unplaced.Count} rows have none (staff members {string.Join(", ", unplaced.Select(row => Text(row, "StaffMemberId")).Distinct(StringComparer.Ordinal))}): prepare the T4 filing again.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Text(rows[0], "ContactName")) || new string([.. (Text(rows[0], "ContactPhone") ?? string.Empty).Where(char.IsAsciiDigit)]).Length < 10)
+        {
+            throw new InvalidOperationException("The T4 XML file needs the employer's contact name and phone number (with its area code), set on the employer.");
+        }
+
+        var dental = int.TryParse(Text(rows[0], "DentalBenefitsCode"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var code) ? code : (int?)null;
+
+        if (!CanadaEmployerSettings.IsDentalBenefitsCode(dental))
+        {
+            throw new InvalidOperationException("The T4 XML file needs the employer's dental benefits code (T4 box 45, 1 to 5), set under Canada on the employer.");
         }
 
         var first = rows[0];
@@ -249,7 +295,7 @@ public sealed class T4XmlDataFileFormat : IDataFileFormat
             Text(first, "ContactPhone"),
             Text(first, "ContactEmail"));
         var slips = rows.Select(row => new T4XmlSlip(
-            Text(row, "Sin"),
+            sins[row],
             Text(row, "FirstName"),
             Text(row, "LastName"),
             Text(row, "Address"),
@@ -259,7 +305,8 @@ public sealed class T4XmlDataFileFormat : IDataFileFormat
             Text(row, "PostalCode"),
             Text(row, "ProvinceOfEmployment"),
             null,
-            CanadaT4Xml.SlipAmounts.ToDictionary(field => field.Box, field => Money(row, "Box" + field.Box), StringComparer.Ordinal))).ToList();
+            CanadaT4Xml.SlipAmounts.ToDictionary(field => field.Box, field => Money(row, "Box" + field.Box), StringComparer.Ordinal),
+            dental)).ToList();
         var summary = new Dictionary<string, decimal>(StringComparer.Ordinal)
         {
             ["19"] = Money(first, "EmployerEi"),
