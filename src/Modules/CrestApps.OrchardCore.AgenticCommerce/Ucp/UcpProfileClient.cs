@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AgenticCommerce.Core.Models;
+using CrestApps.OrchardCore.AgenticCommerce.Endpoints;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Ucp;
@@ -84,10 +85,12 @@ public sealed class UcpProfileClient
                 return Fail(uri, "profile_malformed");
             }
 
-            // A chunked body has no length to check first, so the read itself stops past the limit.
+            // A chunked body has no length to check first, so the read itself stops past the limit. It is parsed as strictly
+            // as a request body: a property named twice made the first read of the object throw past the JsonException
+            // handler, a 500 that was never remembered as a failure.
             var body = await ReadBoundedAsync(response.Content, timeout.Token);
 
-            if (body is null || JsonNode.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
+            if (body is null || AgentRequestBody.Parse(body) is not JsonObject profile || profile["ucp"] is not JsonObject)
             {
                 return Fail(uri, "profile_malformed");
             }
@@ -161,20 +164,31 @@ public sealed class UcpProfileClient
     }
 
     /// <summary>
-    /// Returns the made-up id an unregistered platform's checkouts are kept under, from its profile's origin: scheme, host
-    /// and port, in lower case. The path and query are left out, so a caller can't be a new platform for each spelling of
-    /// its profile's address.
+    /// Returns the made-up id an unregistered platform's checkouts are kept under. It starts with a hash of its profile's
+    /// origin (scheme, host without a trailing dot, and port, in lower case), which the allowance of one origin is counted
+    /// by, and ends with a hash of the origin and the profile's path, which every ownership check compares: someone who can
+    /// put a file on the same origin as another platform's profile is still another platform. The query is left out.
     /// </summary>
     /// <param name="profileUrl">The profile's address.</param>
     public static string GetUnregisteredPlatformId(string profileUrl)
-        => AgentPlatform.UnregisteredIdPrefix + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(GetOrigin(profileUrl) ?? profileUrl ?? string.Empty)).AsSpan(0, 11));
+    {
+        var origin = GetOrigin(profileUrl) ?? profileUrl ?? string.Empty;
+        var path = Uri.TryCreate(profileUrl, UriKind.Absolute, out var uri) ? uri.AbsolutePath : string.Empty;
+
+        // The id fits the 26 characters the index keeps: the prefix, 3 bytes of the origin's hash and 8 of the owner's.
+        return AgentPlatform.UnregisteredIdPrefix + Hash(origin, (AgentPlatform.UnregisteredOriginKeyLength - AgentPlatform.UnregisteredIdPrefix.Length) / 2) + Hash(origin + path, 8);
+    }
 
     /// <summary>
-    /// Returns an address's origin (scheme, host and port, in lower case), or <see langword="null"/> when it isn't one.
+    /// Returns an address's origin (scheme, host and port, in lower case, without the trailing dot of a fully qualified
+    /// name), or <see langword="null"/> when it isn't one.
     /// </summary>
     /// <param name="url">The address.</param>
     public static string GetOrigin(string url)
-        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.IdnHost}:{uri.Port}".ToLowerInvariant() : null;
+        => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? $"{uri.Scheme}://{uri.IdnHost.TrimEnd('.')}:{uri.Port}".ToLowerInvariant() : null;
+
+    private static string Hash(string value, int bytes)
+        => Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value)).AsSpan(0, bytes));
 
     /// <summary>
     /// The storage key of where a UCP platform's order updates go, on an agent checkout.

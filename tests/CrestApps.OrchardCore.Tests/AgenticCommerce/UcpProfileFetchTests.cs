@@ -124,6 +124,33 @@ public sealed class UcpProfileFetchTests
         Assert.All(errors, error => Assert.Equal("profile_malformed", error));
     }
 
+    /// <summary>
+    /// The duplicate-property Mild (fix verification): the strict parse went into the request bodies only. A profile with
+    /// a property named twice threw past the JsonException handler, a 500, and was never remembered as unreadable.
+    /// </summary>
+    [Fact]
+    public async Task GetAsync_AProfileWithAPropertyNamedTwice_IsMalformed_AndNotFetchedAgainRightAway()
+    {
+        // Arrange
+        var handler = new ProfileHandler(() => new StringContent("""{ "ucp": { "version": "2026-08-25" }, "ucp": {} }""", Encoding.UTF8, "application/json"));
+
+        using var provider = CreateServices(handler);
+
+        // Act
+        var errors = new List<string>();
+
+        for (var i = 0; i < 2; i++)
+        {
+            using var scope = provider.CreateScope();
+
+            errors.Add((await scope.ServiceProvider.GetRequiredService<UcpProfileClient>().GetAsync(ProfileUrl, TestContext.Current.CancellationToken)).Error);
+        }
+
+        // Assert
+        Assert.Equal(1, handler.Requests);
+        Assert.All(errors, error => Assert.Equal("profile_malformed", error));
+    }
+
     private static ServiceProvider CreateServices(ProfileHandler handler, AgenticCommerceSettings settings = null)
     {
         var services = new ServiceCollection();

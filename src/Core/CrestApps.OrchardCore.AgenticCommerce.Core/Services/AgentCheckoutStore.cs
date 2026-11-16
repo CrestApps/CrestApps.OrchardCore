@@ -68,4 +68,22 @@ public sealed class AgentCheckoutStore : DocumentCatalog<AgentCheckout, AgentChe
         return Session.QueryIndex<AgentCheckoutIndex>(index => index.PlatformId == platformId && !index.IsTerminal, collection: AgenticCommerceStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
+
+    /// <inheritdoc />
+    public Task<int> CountOpenFromSameOriginAsync(string platformId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(platformId);
+
+        if (!platformId.StartsWith(AgentPlatform.UnregisteredIdPrefix, StringComparison.Ordinal) || platformId.Length < AgentPlatform.UnregisteredOriginKeyLength)
+        {
+            return Session.QueryIndex<AgentCheckoutIndex>(index => index.PlatformId == platformId && !index.IsTerminal, collection: AgenticCommerceStorage.CollectionName)
+                .CountAsync(cancellationToken);
+        }
+
+        // The start of the id is the origin's: every profile path on that origin has it.
+        var origin = platformId[..AgentPlatform.UnregisteredOriginKeyLength];
+
+        return Session.QueryIndex<AgentCheckoutIndex>(index => index.PlatformId.StartsWith(origin) && !index.IsTerminal, collection: AgenticCommerceStorage.CollectionName)
+            .CountAsync(cancellationToken);
+    }
 }

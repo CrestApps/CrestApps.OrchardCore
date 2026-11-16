@@ -1,8 +1,15 @@
 using System.Net;
 using System.Text;
+using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Core.Models;
 using CrestApps.OrchardCore.Stripe.Services;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Stripe;
 
 namespace CrestApps.OrchardCore.Tests.Stripe;
@@ -39,6 +46,58 @@ public sealed class StripeSubscriptionCancelTests
         Assert.True(voided >= 0, string.Join(", ", stripe.Calls));
         Assert.True(canceled > voided, string.Join(", ", stripe.Calls));
     }
+
+    /// <summary>
+    /// The supersede Mild (fix verification): an attempt set aside because the total changed went through the plain
+    /// cancel, which canceled the subscription without voiding its open first invoice, and canceled it even when the buyer
+    /// had just paid that invoice. Every cancel of an attempt that isn't paid now voids first.
+    /// </summary>
+    [Fact]
+    public async Task SupersedingAnUnpaidSubscriptionAttempt_VoidsItsFirstInvoiceBeforeCancelingIt()
+    {
+        var stripe = new StripeHandler { InvoiceStatus = "open", SubscriptionStatus = "incomplete" };
+
+        var result = await CreateProvider(stripe).CancelAsync(Superseding(), TestContext.Current.CancellationToken);
+
+        var voided = stripe.Calls.IndexOf("POST /v1/invoices/in_1/void");
+        var canceled = stripe.Calls.IndexOf("DELETE /v1/subscriptions/sub_1");
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.True(voided >= 0, string.Join(", ", stripe.Calls));
+        Assert.True(canceled > voided, string.Join(", ", stripe.Calls));
+    }
+
+    [Fact]
+    public async Task SupersedingASubscriptionAttempt_WhoseFirstInvoiceWasJustPaid_LeavesTheSubscriptionActive()
+    {
+        var stripe = new StripeHandler { InvoiceStatus = "paid", SubscriptionStatus = "active" };
+
+        var result = await CreateProvider(stripe).CancelAsync(Superseding(), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.DoesNotContain("DELETE /v1/subscriptions/sub_1", stripe.Calls);
+    }
+
+    // What TrySupersedeAsync sends once its verify said the attempt isn't paid: no OnlyIfUnpaid.
+    private static CancelPaymentContext Superseding()
+        => new()
+        {
+            Attempt = new PaymentAttempt { ItemId = "attempt-1", ProviderReference = "sub_1", State = PaymentAttemptState.Pending },
+            Reason = "The total changed before it was paid.",
+        };
+
+    private static StripeCheckoutPaymentProvider CreateProvider(StripeHandler handler)
+        => new(
+            Mock.Of<IStripePaymentIntentService>(),
+            Mock.Of<IStripePaymentMethodService>(),
+            Create(handler),
+            Mock.Of<IStripeRefundService>(),
+            Mock.Of<IStripeCheckoutCustomerResolver>(),
+            Mock.Of<IStripeWalletService>(),
+            Mock.Of<IPaymentRefundStore>(),
+            new TestClock(DateTime.UtcNow),
+            NullLogger<StripeCheckoutPaymentProvider>.Instance,
+            new PassThroughStringLocalizer<StripeCheckoutPaymentProvider>());
 
     private static CancelSubscriptionRequest Request()
         => new()

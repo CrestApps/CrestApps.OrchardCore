@@ -200,9 +200,10 @@ public sealed class UcpRequestFilter : IEndpointFilter
     }
 
     // The platform of a request signed in by its signature alone: the one registered with its profile's address, or, when
-    // the store sells to platforms it doesn't know, an unregistered one known by the profile's origin. A profile on the host
-    // of a registered platform is that platform's or no one's, so a disabled or restricted platform can't come back as an
-    // unregistered one by changing its address.
+    // the store sells to platforms it doesn't know, an unregistered one known by the profile's address. A profile on the
+    // host of a registered platform, with or without a trailing dot, is that platform's or no one's, so a disabled or
+    // restricted platform can't come back as an unregistered one by changing the rest of its address. From another host it
+    // controls it can, like any unregistered platform; only turning unregistered platforms off keeps it out.
     private static async Task<AgentPlatform> FindSigningPlatformAsync(IServiceProvider services, string profileUrl, CancellationToken cancellationToken)
     {
         var platforms = services.GetRequiredService<IAgentPlatformStore>();

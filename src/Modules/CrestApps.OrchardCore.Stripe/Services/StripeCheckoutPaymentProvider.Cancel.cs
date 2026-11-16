@@ -8,6 +8,8 @@ namespace CrestApps.OrchardCore.Stripe.Services;
 public sealed partial class StripeCheckoutPaymentProvider
 {
     private const string AwaitingCardStatus = "requires_payment_method";
+    private const string DeclinedReason = "Too many cards were declined for the first payment of this subscription.";
+    private const string RolledBackReason = "The checkout this subscription belonged to was rolled back.";
 
     // Cancels a payment only while Stripe says it took nothing and waits for another card, the state a decline leaves it
     // in (CancelPaymentContext.OnlyIfUnpaid). Never refunds: a payment that succeeded, is processing, holds an
@@ -28,7 +30,7 @@ public sealed partial class StripeCheckoutPaymentProvider
 
             // Canceling the subscription leaves its open first invoice payable, so that invoice is voided too, which ends
             // the client secret the cards were tried against.
-            return await CancelSubscriptionAsync(attempt, voidOpenInvoice: true);
+            return await CancelSubscriptionAsync(attempt, voidOpenInvoice: true, DeclinedReason);
         }
 
         var intent = await _paymentIntentService.RetrieveAsync(new RetrievePaymentIntentRequest
@@ -56,7 +58,11 @@ public sealed partial class StripeCheckoutPaymentProvider
         return PaymentCancelResult.Success();
     }
 
-    private async Task<PaymentCancelResult> CancelSubscriptionAsync(PaymentAttempt attempt, bool voidOpenInvoice = false)
+    // Every cancel of a subscription whose attempt isn't paid (declined, set aside because the total changed, or because
+    // the buyer paid another way) voids its open first invoice first: canceling alone leaves that invoice payable, and a
+    // void fails for one the buyer paid in the meantime, so what the buyer now pays for is never canceled. Only a paid
+    // subscription, rolled back with its checkout, is canceled as it is.
+    private async Task<PaymentCancelResult> CancelSubscriptionAsync(PaymentAttempt attempt, bool voidOpenInvoice, string reason)
     {
         try
         {
@@ -64,9 +70,7 @@ public sealed partial class StripeCheckoutPaymentProvider
             {
                 SubscriptionId = attempt.ProviderReference,
                 AtPeriodEnd = false,
-                Reason = voidOpenInvoice
-                    ? "Too many cards were declined for the first payment of this subscription."
-                    : "The checkout this subscription belonged to was rolled back.",
+                Reason = string.IsNullOrWhiteSpace(reason) ? RolledBackReason : reason,
                 IdempotencyKey = "cancel_" + attempt.ItemId,
                 VoidOpenInvoice = voidOpenInvoice,
             });

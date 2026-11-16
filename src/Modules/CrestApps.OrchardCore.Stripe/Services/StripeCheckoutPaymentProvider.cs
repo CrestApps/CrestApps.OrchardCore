@@ -426,7 +426,7 @@ public sealed partial class StripeCheckoutPaymentProvider : ICheckoutPaymentProv
 
         if (IsSubscriptionReference(attempt.ProviderReference) && !context.OnlyIfUnpaid)
         {
-            return await CancelSubscriptionAsync(attempt);
+            return await CancelSubscriptionAsync(attempt, voidOpenInvoice: attempt.State != PaymentAttemptState.Succeeded, context.Reason);
         }
 
         try
