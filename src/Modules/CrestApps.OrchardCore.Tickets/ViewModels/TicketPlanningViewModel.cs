@@ -36,4 +36,14 @@ public class TicketPlanningViewModel
     /// Gets or sets whether the user may change the values.
     /// </summary>
     public bool CanEdit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agreements of the ticket's account it may work under, when agreements are on.
+    /// </summary>
+    public IReadOnlyList<TicketAgreementInfo> Agreements { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether agreements are on.
+    /// </summary>
+    public bool HasAgreements { get; set; }
 }

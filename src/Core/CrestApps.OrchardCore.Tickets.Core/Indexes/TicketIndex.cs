@@ -121,6 +121,11 @@ public sealed class TicketIndex : MapIndex
     public string SolvedById { get; set; }
 
     /// <summary>
+    /// Gets or sets the agreement the ticket works under.
+    /// </summary>
+    public string AgreementId { get; set; }
+
+    /// <summary>
     /// Gets or sets when the ticket was last given to its assignee.
     /// </summary>
     public DateTime? AssignedUtc { get; set; }

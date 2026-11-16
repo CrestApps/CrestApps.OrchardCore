@@ -243,6 +243,15 @@ public sealed partial class DefaultTicketService : ITicketService
         part.LastCustomerActivityUtc = now;
         ApplyPlanning(part, request);
 
+        var (agreement, agreementError) = await ResolveAgreementAsync(request, part, cancellationToken);
+
+        if (agreementError is not null)
+        {
+            return new TicketResult { Errors = [agreementError] };
+        }
+
+        part.AgreementId = agreement?.AgreementId;
+
         ticket.DisplayText = subject;
         SetTitle(ticket, subject);
 
@@ -294,8 +303,8 @@ public sealed partial class DefaultTicketService : ITicketService
             await AddEventAsync(ticket.ContentItemId, TicketActor.Site, S["Follow-up of a closed ticket."], [], cancellationToken);
         }
 
-        // The account's entitlement first, then the category's, the ticket type's and the desk's.
-        var policyId = FirstNonEmpty(await AccountPolicyAsync(part.AccountId), category?.ServiceLevelPolicyId, settings.ServiceLevelPolicyId, desk.ServiceLevelPolicyId);
+        // The agreement's policy first, then the account's entitlement, the category's, the ticket type's and the desk's.
+        var policyId = FirstNonEmpty(agreement?.ServiceLevelPolicyId, await AccountPolicyAsync(part.AccountId), category?.ServiceLevelPolicyId, settings.ServiceLevelPolicyId, desk.ServiceLevelPolicyId);
 
         if (!string.IsNullOrEmpty(policyId))
         {
@@ -935,6 +944,7 @@ public sealed partial class DefaultTicketService : ITicketService
         }
 
         CheckPlanning(update, errors);
+        await CheckAgreementAsync(part, update, errors, cancellationToken);
 
         return errors;
     }
@@ -1040,6 +1050,7 @@ public sealed partial class DefaultTicketService : ITicketService
         }
 
         await ApplyPlanningAsync(ticket, part, update, changes, cancellationToken);
+        await ApplyAgreementAsync(ticket, part, update, changes, cancellationToken);
 
         if (update.TeamId is not null && NullIfEmpty(update.TeamId) is { } newTeam && newTeam != part.TeamId
             && _serviceProvider.GetService<ITeamManager>() is { } teamManager && await teamManager.FindByIdAsync(newTeam, cancellationToken) is null)

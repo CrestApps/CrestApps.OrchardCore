@@ -1,6 +1,7 @@
 ---
 sidebar_label: Agreements
 title: Agreements
+user_manual: user-manual/administration/agreements
 description: "The shared agreements building block: an agreement with an account (period, status, the hours it covers as a block or a monthly allowance, rounding), the usage providers modules register to count time spent under it, its balance, the observers told when it is about to end or passes 80% and 100% of its hours, the admin pages, the account tab, and the recipe and deployment step."
 ---
 
@@ -74,5 +75,9 @@ The `Agreements` step creates or updates agreements by `ItemId`, with every valu
 - Register an `IAgreementUsageProvider` for the time your module spends under an agreement.
 - Register an `IAgreementObserver` to act when an agreement is about to end or passes a share of its hours.
 - Register an `IAgreementTermsValidator` to check your terms: the agreement's own rules call every validator, so the editor and recipes check the same set whichever feature carries the terms.
+
+With Notifications on, `AgreementAccountManagerNotifier` sends the account's manager (`AccountTeamPart.OwnerStaffId`, through the staff directory, to their user) a notification when an agreement passes 80% and 100% of its hours and when it is about to end.
+
+Tickets is a consumer: its terms are `TicketAgreementTerms` (the desks and ticket types it covers, the service-level policy of its tickets) with a **Tickets** panel, a new ticket takes the agreement that covers it, and its billable time counts against the hours (see [Tickets](./tickets.md#agreements)).
 
 Work Orders is one consumer: its visit schedules are `WorkOrderAgreementTerms` with a **Visits** panel, and the billable labor of its completed work orders counts against the hours (see [Work Orders](./work-orders.md#service-agreements)).

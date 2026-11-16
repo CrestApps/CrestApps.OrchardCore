@@ -74,6 +74,19 @@
                         }
                     </select>
                 </div>
+                @if (Model.HasAgreements)
+                {
+                    <div class="mb-2">
+                        <label for="ticket-agreement" class="form-label small mb-1">@T["Agreement"]</label>
+                        <select id="ticket-agreement" name="AgreementId" class="form-select form-select-sm">
+                            <option value="">@T["None"]</option>
+                            @foreach (var agreement in Model.Agreements)
+                            {
+                                <option value="@agreement.AgreementId" selected="@(part.AgreementId == agreement.AgreementId)">@agreement.Number @agreement.Name</option>
+                            }
+                        </select>
+                    </div>
+                }
                 <button type="submit" class="btn btn-sm btn-secondary">@T["Save planning"]</button>
             </form>
         }

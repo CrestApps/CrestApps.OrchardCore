@@ -54,6 +54,18 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
+/// With Notifications on, the account's manager hears when an agreement passes 80% and 100% of its hours or is about to
+/// end.
+/// </summary>
+[RequireFeatures(OrchardCoreFeatureIds.Notifications)]
+public sealed class AgreementNotificationsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IAgreementObserver, AgreementAccountManagerNotifier>();
+}
+
+/// <summary>
 /// Provides the agreement permissions.
 /// </summary>
 internal sealed class AgreementsPermissionsProvider : IPermissionProvider

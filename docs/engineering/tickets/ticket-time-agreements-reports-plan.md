@@ -1,6 +1,6 @@
 # Ticket time, support agreements and business reports
 
-Status: slices 1 and 2 built (2026-11-15). Mike took every recommendation in section 9 (2026-11-15); slices 3 to 7 are being built.
+Status: slices 1 to 6 built (2026-11-15). Mike took every recommendation in section 9 (2026-11-15); slice 7 (agreement reports) is next.
 
 Builds on the Tickets module ([`ticket-support-plan.md`](ticket-support-plan.md), branch `ma/tickets-phase-2`) on Orchard Core 4 preview-19225 and .NET 11. Ticket boards, the intake plan (categories and conditional questions, [`ticket-intake-plan.md`](ticket-intake-plan.md) on `ma/pensive-jackson-c56dcb`) and business hours are planned in other sessions and are only referenced here.
 
@@ -159,14 +159,16 @@ Optional and later: a support plan sold through Carts, Checkout and Subscription
 - Time logged on the ticket counts against the ticket's agreement when its stage counts as billable and the agreement covers it; the entry remembers the agreement in its `Properties` so a later change of the ticket's agreement doesn't move past usage (decision 4).
 - The account page's Agreements tab shows hours used and left; the ticket's Time panel shows the agreement's balance.
 
+Built in slice 6, with one difference: the time counts against the ticket's current agreement (`TicketAgreementUsageProvider` reads the agreement's tickets from the index, then their entries), and entries don't remember the agreement yet, so changing a ticket's agreement moves its past time with it. The change is on the timeline. Keeping past usage needs the entry to carry the agreement in a form the provider can query, which Time Tracker's index doesn't offer without naming agreements; it waits for a decision. The ticket's balance shows on an **Agreement** card beside the ticket rather than in the Time panel, since it is there with Time Tracker off too.
+
 ## 7. Order of work
 
 1. **Manual ticket time** (built): `ITimeTrackerService.InsertAsync`, `TimeEntryQuery.Source`, the desk's not-billed stage, the **Log time** form and the entry list on the Time panel.
 2. **Time reports** (built): Ticket Time, Ticket Resolution and Work Time.
-3. **Service level by account** in the service level report (no decision needed).
-4. **Ticket fields** from section 5 that Mike approves (decision 8): `SolvedById`, `Impact` and `Urgency` with the priority matrix, estimates, site, billing type.
-5. **Agreements building block** (after decisions 1 to 3), migrating Work Orders' agreements.
-6. **Support coverage and usage** in Tickets: `AgreementId`, usage, balances, warnings.
+3. **Service level by account** in the service level report (built).
+4. **Ticket fields** from section 5 (built, decision 8): `SolvedById`, `Impact` and `Urgency` with the priority matrix, estimates, billing type (site and owner only on request).
+5. **Agreements building block** (built, decisions 1 to 3), migrating Work Orders' agreements.
+6. **Support coverage and usage** in Tickets (built): `AgreementId`, usage, balances, warnings to the account's manager.
 7. **Agreement reports**: usage, burn-down, account health.
 
 ## 8. Tests

@@ -18,6 +18,8 @@ public static class TicketChangeKeys
 
     public const string BillingType = "BillingType";
 
+    public const string Agreement = "Agreement";
+
     public const string Status = "Status";
 
     public const string Priority = "Priority";

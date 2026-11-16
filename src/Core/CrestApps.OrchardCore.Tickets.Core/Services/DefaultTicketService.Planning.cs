@@ -1,5 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Parties.Models;
+using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Timeline.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -109,6 +110,77 @@ public sealed partial class DefaultTicketService
             await _serviceLevels.RetargetAsync(subject, timer.PolicyId, priority.ItemId, cancellationToken);
 
             break;
+        }
+    }
+
+    // The agreement a new ticket works under: the one the request names, or the account's that covers it.
+    private async Task<(TicketAgreementInfo Agreement, string Error)> ResolveAgreementAsync(TicketCreateRequest request, TicketPart part, CancellationToken cancellationToken)
+    {
+        if (_serviceProvider.GetService<ITicketAgreementResolver>() is not { } agreements)
+        {
+            return (null, null);
+        }
+
+        if (!string.IsNullOrEmpty(request.AgreementId))
+        {
+            var named = await agreements.FindAsync(request.AgreementId, cancellationToken);
+
+            return named is null || named.AccountId != part.AccountId
+                ? (null, S["The agreement doesn't exist or isn't with the ticket's account."])
+                : (named, null);
+        }
+
+        return string.IsNullOrEmpty(part.AccountId)
+            ? (null, null)
+            : (await agreements.FindForNewTicketAsync(part.AccountId, part.DeskId, part.ContentItem?.ContentType, cancellationToken), null);
+    }
+
+    // The check of a change of agreement, made before anything changes.
+    private async Task CheckAgreementAsync(TicketPart part, TicketUpdate update, List<string> errors, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(update.AgreementId) || update.AgreementId == part.AgreementId)
+        {
+            return;
+        }
+
+        var agreement = _serviceProvider.GetService<ITicketAgreementResolver>() is { } agreements
+            ? await agreements.FindAsync(update.AgreementId, cancellationToken)
+            : null;
+
+        if (agreement is null || agreement.AccountId != part.AccountId)
+        {
+            errors.Add(S["The agreement doesn't exist or isn't with the ticket's account."]);
+        }
+    }
+
+    // Changes the agreement, on the timeline; the ticket's timers follow the new agreement's policy when it brings one.
+    private async Task ApplyAgreementAsync(ContentItem ticket, TicketPart part, TicketUpdate update, List<TimelineFieldChange> changes, CancellationToken cancellationToken)
+    {
+        if (update.AgreementId is null || (update.AgreementId.Length == 0 ? part.AgreementId is null : update.AgreementId == part.AgreementId))
+        {
+            return;
+        }
+
+        var agreements = _serviceProvider.GetService<ITicketAgreementResolver>();
+        var from = agreements is null || string.IsNullOrEmpty(part.AgreementId) ? null : await agreements.FindAsync(part.AgreementId, cancellationToken);
+        var to = agreements is null || update.AgreementId.Length == 0 ? null : await agreements.FindAsync(update.AgreementId, cancellationToken);
+
+        changes.Add(new TimelineFieldChange
+        {
+            Field = S["Agreement"],
+            Key = TicketChangeKeys.Agreement,
+            From = from?.Name ?? part.AgreementId,
+            To = to?.Name,
+            FromValue = part.AgreementId,
+            ToValue = to?.AgreementId,
+        });
+        part.AgreementId = to?.AgreementId;
+
+        if (!string.IsNullOrEmpty(to?.ServiceLevelPolicyId))
+        {
+            var subject = SubjectOf(ticket.ContentItemId);
+
+            await _serviceLevels.RetargetAsync(subject, to.ServiceLevelPolicyId, part.PriorityId, cancellationToken);
         }
     }
 

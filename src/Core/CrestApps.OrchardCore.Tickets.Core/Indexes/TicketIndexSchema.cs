@@ -52,7 +52,8 @@ public static class TicketIndexSchema
             .Column<DateTime>("RatingRequestedUtc", column => column.Nullable())
             .Column<string>("CategoryId", column => column.Nullable().WithLength(26))
             .Column<string>("CategoryPath", column => column.Nullable().WithLength(TicketIndexProvider.CategoryPathLength))
-            .Column<string>("SolvedById", column => column.Nullable().WithLength(26)));
+            .Column<string>("SolvedById", column => column.Nullable().WithLength(26))
+            .Column<string>("AgreementId", column => column.Nullable().WithLength(26)));
 
         await schemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
         {

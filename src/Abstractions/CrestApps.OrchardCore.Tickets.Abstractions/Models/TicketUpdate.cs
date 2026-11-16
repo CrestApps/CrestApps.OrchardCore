@@ -101,4 +101,9 @@ public sealed class TicketUpdate
     /// Gets or sets how long the work is expected to take, in minutes.
     /// </summary>
     public int? EstimatedMinutes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agreement the ticket works under; <see langword="null"/> leaves it and empty clears it.
+    /// </summary>
+    public string AgreementId { get; set; }
 }

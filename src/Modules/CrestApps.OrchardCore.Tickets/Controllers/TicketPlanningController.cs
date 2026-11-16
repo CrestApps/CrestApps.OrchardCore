@@ -85,6 +85,7 @@ public sealed class TicketPlanningController : Controller
                 BillingType = model?.BillingType,
                 EstimatedStartUtc = model?.EstimatedStart is { } start ? await _localClock.ToUtcLenientAsync(start) : null,
                 EstimatedMinutes = minutes,
+                AgreementId = model?.AgreementId is null ? null : model.AgreementId.Trim(),
             },
             TicketActor.User(User.FindFirstValue(ClaimTypes.NameIdentifier), User.Identity?.Name),
             cancellationToken);

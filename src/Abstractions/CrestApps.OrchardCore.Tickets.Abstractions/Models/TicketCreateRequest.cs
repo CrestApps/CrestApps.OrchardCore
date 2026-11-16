@@ -91,6 +91,12 @@ public sealed class TicketCreateRequest
     public TicketBillingType? BillingType { get; set; }
 
     /// <summary>
+    /// Gets or sets the agreement the ticket works under; <see langword="null"/> finds the account's agreement that covers
+    /// it, when agreements are on.
+    /// </summary>
+    public string AgreementId { get; set; }
+
+    /// <summary>
     /// Gets or sets who asked.
     /// </summary>
     public PartyRef Requester { get; set; }

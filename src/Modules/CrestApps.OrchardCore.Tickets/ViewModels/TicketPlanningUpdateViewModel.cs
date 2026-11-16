@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.Tickets.Models;
 
 namespace CrestApps.OrchardCore.Tickets.ViewModels;
@@ -31,4 +32,12 @@ public class TicketPlanningUpdateViewModel
     /// Gets or sets how the work is charged.
     /// </summary>
     public TicketBillingType? BillingType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agreement the ticket works under; empty for none, <see langword="null"/> when agreements are off.
+    /// The empty value of None is kept, since MVC would otherwise bind it as <see langword="null"/>, which leaves the
+    /// agreement as it is.
+    /// </summary>
+    [DisplayFormat(ConvertEmptyStringToNull = false)]
+    public string AgreementId { get; set; }
 }

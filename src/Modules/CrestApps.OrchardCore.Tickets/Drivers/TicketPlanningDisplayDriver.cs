@@ -56,6 +56,22 @@ internal sealed class TicketPlanningDisplayDriver : ContentPartDisplayDriver<Tic
                 && !TicketLifecycle.IsReadOnly(part)
                 && await _access.CanAsync(user, part.ContentItem, TicketOperation.Edit, cancellationToken);
 
+            if (httpContext?.RequestServices.GetService<ITicketAgreementResolver>() is { } agreements)
+            {
+                model.HasAgreements = true;
+
+                var listed = (await agreements.ListForAccountAsync(part.AccountId, cancellationToken)).ToList();
+
+                // The ticket's own agreement stays a choice after it ends.
+                if (!string.IsNullOrEmpty(part.AgreementId) && listed.All(agreement => agreement.AgreementId != part.AgreementId)
+                    && await agreements.FindAsync(part.AgreementId, cancellationToken) is { } current)
+                {
+                    listed.Insert(0, current);
+                }
+
+                model.Agreements = listed;
+            }
+
             if (!string.IsNullOrEmpty(part.SolvedById) && httpContext is not null)
             {
                 model.SolvedByName = part.SolvedById;

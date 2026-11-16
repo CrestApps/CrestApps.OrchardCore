@@ -81,7 +81,7 @@ internal sealed class TicketsMigrations : DataMigration
         await DefineCategoriesAsync();
         await SeedAsync();
 
-        return 14;
+        return 15;
     }
 
     /// <summary>
@@ -270,6 +270,21 @@ internal sealed class TicketsMigrations : DataMigration
         await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table => table.AddColumn<string>("SolvedById", column => column.Nullable().WithLength(26)));
 
         return 14;
+    }
+
+    /// <summary>
+    /// Adds the agreement a ticket works under to the ticket index.
+    /// </summary>
+    /// <returns>The version.</returns>
+    public async Task<int> UpdateFrom14Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TicketIndex>(table =>
+        {
+            table.AddColumn<string>("AgreementId", column => column.Nullable().WithLength(26));
+            table.CreateIndex("IDX_TicketIndex_Agreement", "AgreementId", "DocumentId");
+        });
+
+        return 15;
     }
 
     // The part a ticket category's term carries, and a term type with it for taxonomies of ticket categories.

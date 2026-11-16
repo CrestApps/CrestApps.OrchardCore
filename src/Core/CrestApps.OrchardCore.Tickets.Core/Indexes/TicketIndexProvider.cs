@@ -59,6 +59,7 @@ public sealed class TicketIndexProvider : IndexProvider<ContentItem>
                     DueSortUtc = part.NextDueUtc ?? NoDueUtc,
                     SolvedUtc = part.SolvedUtc,
                     SolvedById = part.SolvedById,
+                    AgreementId = part.AgreementId,
                     AssignedUtc = part.AssignedUtc,
                     ClosedUtc = part.ClosedUtc,
                     FirstResponseUtc = part.FirstResponseUtc,

@@ -68,6 +68,7 @@ The **Conversation** shows what people wrote: replies and internal notes. Every 
 - Change the status, priority, desk, team or assignee in the ticket's values, or select **Assign to me**.
 - Use **Actions** to run an action your administrator set up, such as **Escalate to tier 2**.
 - Under **Planning**, set the **Impact** (how much of the business it touches) and **Urgency** (how soon it must be dealt with), when work should start and how long it should take, and the **Billing type**: billable, covered by the agreement, no charge or not billable. When the desk has a priority matrix, impact and urgency set the priority. Once solved, the panel says who solved it.
+- With [agreements](./agreements.md) on, **Agreement** under **Planning** is the account's agreement the ticket works under: a new ticket takes the one that covers it. The ticket's time counts against that agreement's hours, and the **Agreement** card beside the ticket shows how many are left.
 
 While you have a ticket open, a note above it says who else has it open and who is writing on it, so two people don't answer the same ticket. When someone changes the ticket while you have it open, the note says so; select **Reload** to see the change before you answer.
 

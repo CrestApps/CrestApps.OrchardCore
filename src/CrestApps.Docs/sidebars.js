@@ -272,6 +272,7 @@ const sidebars = {
                 'user-manual/administration/do-not-call-lists',
                 'user-manual/administration/phone-number-verification',
                 'user-manual/administration/time-zones',
+                'user-manual/administration/agreements',
                 'user-manual/administration/business-hours-schedules',
                 'user-manual/administration/service-levels',
                 'user-manual/administration/timeline',

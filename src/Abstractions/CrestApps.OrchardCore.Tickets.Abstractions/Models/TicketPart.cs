@@ -224,4 +224,9 @@ public sealed class TicketPart : ContentPart
     /// Gets or sets how the work is charged.
     /// </summary>
     public TicketBillingType? BillingType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agreement with the account the ticket works under, when agreements are on.
+    /// </summary>
+    public string AgreementId { get; set; }
 }
