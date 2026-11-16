@@ -55,6 +55,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Lti/CrestApps.OrchardCore.Learning.Lti.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Programs/CrestApps.OrchardCore.Learning.Programs.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.Commerce/CrestApps.OrchardCore.Learning.Commerce.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Learning.AI/CrestApps.OrchardCore.Learning.AI.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Wizard.Abstractions/CrestApps.OrchardCore.Wizard.Abstractions.csproj" />
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Inventory.Core/CrestApps.OrchardCore.Inventory.Core.csproj" />

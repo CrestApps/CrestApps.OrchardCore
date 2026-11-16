@@ -84,6 +84,9 @@ public sealed partial class LearningSiteFixture : IAsyncLifetime
         "OrchardCore.Media",
         "CrestApps.OrchardCore.ContentTransfer",
         CrestApps.OrchardCore.Learning.Assessments.AssessmentsConstants.Features.QtiImport,
+        CrestApps.OrchardCore.AI.Core.AIConstants.Feature.Area,
+        CrestApps.OrchardCore.AI.Core.AIConstants.Feature.DataSources,
+        CrestApps.OrchardCore.Learning.AI.LearningAIConstants.Features.Assistant,
     ];
 
     private WebApplication _application;

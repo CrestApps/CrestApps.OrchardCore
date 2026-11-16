@@ -30,6 +30,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Calendars.Abstractions/CrestApps.OrchardCore.Calendars.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.FileStorage.Abstractions/CrestApps.OrchardCore.FileStorage.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Abstractions/CrestApps.OrchardCore.Learning.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.AI.Abstractions/CrestApps.OrchardCore.Learning.AI.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Certifications.Abstractions/CrestApps.OrchardCore.Learning.Certifications.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Classes.Abstractions/CrestApps.OrchardCore.Learning.Classes.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Learning.Coursework.Abstractions/CrestApps.OrchardCore.Learning.Coursework.Abstractions.csproj" />
@@ -153,6 +154,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Assets/CrestApps.OrchardCore.Assets.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Dispatch/CrestApps.OrchardCore.Dispatch.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning/CrestApps.OrchardCore.Learning.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Learning.AI/CrestApps.OrchardCore.Learning.AI.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Assessments/CrestApps.OrchardCore.Learning.Assessments.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Certifications/CrestApps.OrchardCore.Learning.Certifications.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Learning.Classes/CrestApps.OrchardCore.Learning.Classes.csproj" />
