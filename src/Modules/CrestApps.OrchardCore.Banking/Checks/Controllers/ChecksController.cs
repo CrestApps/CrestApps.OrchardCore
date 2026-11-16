@@ -31,6 +31,7 @@ namespace CrestApps.OrchardCore.Banking.Checks.Controllers;
 /// the next check number of each bank account.
 /// </summary>
 [Admin]
+[Feature(ChecksConstants.Features.Checks)]
 public sealed class ChecksController : Controller
 {
     private readonly ICheckManager _manager;

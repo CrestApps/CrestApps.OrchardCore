@@ -3,7 +3,7 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Checks/Assets/js/check-layout-designer.js
+	//#region src/Modules/CrestApps.OrchardCore.Banking/Assets/js/check-layout-designer.js
 	(function() {
 		"use strict";
 		var CHECK_WIDTH = 612;

@@ -15,6 +15,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Banking.Disbursements.Controllers;
@@ -24,6 +25,7 @@ namespace CrestApps.OrchardCore.Banking.Disbursements.Controllers;
 /// import the bank's return and change file.
 /// </summary>
 [Admin]
+[Feature(DisbursementsConstants.Features.Disbursements)]
 public sealed class DisbursementBatchesController : Controller
 {
     private const int MaxReturnFileBytes = 5 * 1024 * 1024;

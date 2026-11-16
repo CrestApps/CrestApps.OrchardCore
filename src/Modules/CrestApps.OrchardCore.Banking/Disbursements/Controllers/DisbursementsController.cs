@@ -27,6 +27,7 @@ namespace CrestApps.OrchardCore.Banking.Disbursements.Controllers;
 /// Banking › Disbursements: the money the business sends out, disbursements written by hand, batching and cancelling.
 /// </summary>
 [Admin]
+[Feature(DisbursementsConstants.Features.Disbursements)]
 public sealed class DisbursementsController : Controller
 {
     private readonly IDisbursementManager _manager;

@@ -47,6 +47,28 @@ public sealed class BankingModuleTests
         Assert.DoesNotContain("CrestApps.OrchardCore.Payroll.Checks", payroll);
     }
 
+    [Fact]
+    public void EveryChecksAndDisbursementsController_BelongsToItsFeature()
+    {
+        // Without [Feature], Orchard puts a controller in the module's base feature (Bank Accounts),
+        // so its pages answered while Checks or Disbursements was off.
+        var controllers = typeof(global::CrestApps.OrchardCore.Banking.Startup).Assembly.GetTypes()
+            .Where(type => !type.IsAbstract && typeof(Microsoft.AspNetCore.Mvc.ControllerBase).IsAssignableFrom(type))
+            .Where(type => type.Namespace != "CrestApps.OrchardCore.Banking.Controllers")
+            .ToList();
+
+        Assert.Equal(4, controllers.Count);
+        Assert.All(controllers, controller =>
+        {
+            var feature = controller.GetCustomAttribute<global::OrchardCore.Modules.FeatureAttribute>();
+
+            Assert.True(feature is not null, $"{controller.Name} has no [Feature].");
+            Assert.Equal(
+                controller.Namespace.Contains(".Checks.", StringComparison.Ordinal) ? ChecksConstants.Features.Checks : DisbursementsConstants.Features.Disbursements,
+                feature.FeatureName);
+        });
+    }
+
     private static IEnumerable<MenuItem> Flatten(IEnumerable<MenuItem> items)
         => items.SelectMany(item => new[] { item }.Concat(Flatten(item.Items ?? [])));
 }

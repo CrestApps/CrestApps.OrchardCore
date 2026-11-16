@@ -9,6 +9,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Banking.Checks.Controllers;
@@ -17,6 +18,7 @@ namespace CrestApps.OrchardCore.Banking.Checks.Controllers;
 /// Banking › Check Layouts: how checks print on the business's stock.
 /// </summary>
 [Admin]
+[Feature(ChecksConstants.Features.Checks)]
 public sealed class CheckLayoutsController : CatalogAdminController<CheckLayout>
 {
     public CheckLayoutsController(
