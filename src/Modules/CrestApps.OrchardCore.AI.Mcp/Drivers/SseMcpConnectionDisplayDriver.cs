@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Mcp;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Core.Drivers;
 using CrestApps.OrchardCore.AI.Mcp.ViewModels;
+using CrestApps.OrchardCore.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -74,10 +75,11 @@ internal sealed class SseMcpConnectionDisplayDriver : ConnectionAuthDisplayDrive
         }
 
         var metadata = connection.GetOrCreate<SseMcpConnectionMetadata>();
+        var samePlace = SecretDestination.SameOrigin(metadata.Endpoint, endpoint);
 
         metadata.Endpoint = endpoint;
 
-        ApplyAuthFields(context, model, metadata);
+        ApplyAuthFields(context, model, metadata, samePlace);
 
         connection.Put(metadata);
 

@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Core.Recipes;
 using CrestApps.OrchardCore.Core.Recipes;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -55,8 +56,16 @@ internal sealed class AIDataSourceStep : CatalogRecipeStepBase<AIDataSource>
     protected override ValueTask<AIDataSource> FindByIdAsync(string id)
         => _dataManager.FindByIdAsync(id);
 
-    protected override ValueTask UpdateAsync(AIDataSource entry, JsonObject token)
-        => _dataManager.UpdateAsync(entry, token);
+    protected override async ValueTask UpdateAsync(AIDataSource entry, JsonObject token)
+    {
+        // A recipe that leaves a secret out keeps the stored one; when it also changes where the entry sends it, the
+        // kept secret is dropped, as the editor drops it.
+        var before = RecipeSecretDestinations.Snapshot(entry);
+
+        await _dataManager.UpdateAsync(entry, token);
+
+        RecipeSecretDestinations.DropKeptSecrets(entry, before);
+    }
 
     protected override ValueTask<AIDataSource> NewAsync(JsonObject token, RecipeExecutionContext context)
         => _dataManager.NewAsync(GetSource(token), token);

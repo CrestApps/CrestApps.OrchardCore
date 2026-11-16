@@ -79,6 +79,15 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
 
         deployment.Properties ??= new Dictionary<string, object>();
 
+        // The stored key was given for one endpoint and one way of signing in; changing either drops it.
+        var storedAuthentication = Enum.TryParse<AzureAuthenticationType>(GetPropertyString(deployment, "AuthenticationType"), true, out var parsed) ? parsed : default;
+
+        if (!SecretDestination.SameOrigin(GetPropertyString(deployment, "Endpoint"), model.Endpoint) ||
+            storedAuthentication != model.AuthenticationType)
+        {
+            deployment.Properties.Remove("ApiKey");
+        }
+
         if (model.Endpoint is null || !Uri.TryCreate(model.Endpoint, UriKind.Absolute, out _))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Endpoint), S["A valid endpoint URL is required."]);

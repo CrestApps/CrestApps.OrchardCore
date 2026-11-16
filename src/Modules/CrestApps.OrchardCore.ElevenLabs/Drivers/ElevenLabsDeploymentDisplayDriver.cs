@@ -62,6 +62,13 @@ internal sealed class ElevenLabsDeploymentDisplayDriver : DisplayDriver<AIDeploy
 
         deployment.Properties ??= new Dictionary<string, object>();
 
+        // The stored key was given for one endpoint, the provider's own when it is blank; pointing the deployment
+        // elsewhere drops it, so it must be entered again.
+        if (!SecretDestination.SameOrigin(GetProperty(deployment, EndpointProperty), model.Endpoint))
+        {
+            deployment.Properties.Remove(ApiKeyProperty);
+        }
+
         if (string.IsNullOrWhiteSpace(model.Endpoint))
         {
             deployment.Properties.Remove(EndpointProperty);

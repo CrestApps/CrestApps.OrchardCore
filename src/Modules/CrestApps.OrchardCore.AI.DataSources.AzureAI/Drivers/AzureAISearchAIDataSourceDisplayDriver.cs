@@ -114,7 +114,13 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
                 StringComparison.OrdinalIgnoreCase)
                 ? AzureAISearchSourceMetadata.DefaultAuthenticationType
                 : AzureAISearchSourceMetadata.ApiKeyAuthenticationType;
-        var existingMetadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
+        var previousMetadata = dataSource.GetOrCreate<AzureAISearchSourceMetadata>();
+
+        // The stored key was given for one endpoint and one way of signing in; changing either drops it.
+        var existingMetadata = SecretDestination.SameOrigin(previousMetadata.Endpoint, model.Endpoint) &&
+            string.Equals(previousMetadata.GetAuthenticationType(), authenticationType, StringComparison.OrdinalIgnoreCase)
+            ? previousMetadata
+            : new AzureAISearchSourceMetadata();
 
         if (string.IsNullOrWhiteSpace(model.Endpoint))
         {

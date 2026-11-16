@@ -131,7 +131,12 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 
         var environmentType = NormalizeEnvironmentType(model.EnvironmentType);
         var authenticationType = NormalizeAuthenticationType(model.AuthenticationType);
-        var existingMetadata = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
+        var previousMetadata = dataSource.GetOrCreate<ElasticsearchSourceMetadata>();
+
+        // The stored credentials were given for one cluster and one way of signing in; changing either drops them.
+        var existingMetadata = SendsToSamePlace(previousMetadata, environmentType, model.Url, model.CloudId, authenticationType)
+            ? previousMetadata
+            : new ElasticsearchSourceMetadata();
 
         if (string.Equals(environmentType, ElasticsearchSourceMetadata.SelfManagedEnvironmentType, StringComparison.OrdinalIgnoreCase) &&
             string.IsNullOrWhiteSpace(model.Url))
@@ -227,6 +232,19 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         });
 
         return Edit(dataSource, context);
+    }
+
+    private static bool SendsToSamePlace(ElasticsearchSourceMetadata stored, string environmentType, string url, string cloudId, string authenticationType)
+    {
+        if (!string.Equals(NormalizeEnvironmentType(stored.EnvironmentType), environmentType, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(NormalizeAuthenticationType(stored.AuthenticationType), authenticationType, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return string.Equals(environmentType, ElasticsearchSourceMetadata.CloudHostedEnvironmentType, StringComparison.OrdinalIgnoreCase)
+            ? string.Equals(stored.CloudId?.Trim(), cloudId?.Trim(), StringComparison.Ordinal)
+            : SecretDestination.SameOrigin(stored.Url, url);
     }
 
     private static bool HasStoredConnection(ElasticsearchSourceMetadata metadata)
