@@ -9,6 +9,16 @@
         CredentialAwardStatus.Expired => ("text-bg-secondary", T["Expired"]),
         _ => ("text-bg-success", T["Active"]),
     };
+    var rule = award.RuleKind switch
+    {
+        CredentialsConstants.RuleKinds.CourseCompleted => T["Course completed"].Value,
+        CredentialsConstants.RuleKinds.QuizPassed => T["Quiz passed"].Value,
+        CredentialsConstants.RuleKinds.LearningPathCompleted => T["Learning path completed"].Value,
+        CredentialsConstants.RuleKinds.CertificationIssued => T["Certification issued"].Value,
+        CredentialsConstants.RuleKinds.Manual => T["By hand"].Value,
+        CredentialsConstants.RuleKinds.Workflow => T["Workflow"].Value,
+        _ => award.RuleKind,
+    };
 }
 
 <zone Name="Title">
@@ -37,7 +47,7 @@
                 }
             </dd>
             <dt class="col-sm-3">@T["Awarded by"]</dt>
-            <dd class="col-sm-9">@award.RuleKind@(string.IsNullOrEmpty(Model.AwardedByName) ? string.Empty : " · " + Model.AwardedByName)</dd>
+            <dd class="col-sm-9">@rule@(string.IsNullOrEmpty(Model.AwardedByName) ? string.Empty : " · " + Model.AwardedByName)</dd>
             @if (!string.IsNullOrEmpty(award.AwardReason))
             {
                 <dt class="col-sm-3">@T["Reason"]</dt>
